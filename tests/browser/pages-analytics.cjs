@@ -186,7 +186,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       assert.equal(pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/demo/report.html').length, 1);
       await page.goto(publicOrigin + '/lixity/', {waitUntil: 'domcontentloaded'});
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/').length).toBe(1);
-      await page.locator('.site-return a[href="#installation"]').click();
+      await page.locator('.site-header a[href="#installation"]').click();
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length,
         {message: 'The current landing-page Install section link records one installation event'}).toBe(2);
       await expect(page.locator('#installation')).toBeInViewport();

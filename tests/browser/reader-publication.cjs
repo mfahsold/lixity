@@ -79,6 +79,10 @@ print(json.dumps(documents))
       if(locale==='en') await page.screenshot({path:path.join(artifacts,`reader-initial-${width}.png`)});
       if (width === 1440) {
         const firstChapter = await page.locator('#publication-chapter-1').boundingBox();
+        const manuscript = await page.locator('#chapters').boundingBox();
+        const context = await page.locator('#publication-context').boundingBox();
+        assert.ok(Math.abs(manuscript.y - context.y) <= 1,
+          'The reading surface aligns with its adjacent context panel');
         assert.ok(firstChapter.y < 350, `The manuscript should begin beside its context controls, near the top (${firstChapter.y}px; ${artifacts})`);
       }
       await expect(page.locator('#publication-contents')).not.toContainText('Later revelation');

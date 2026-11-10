@@ -16,6 +16,11 @@ into its research dossier, and prepare a reading copy or spoken review from the
 same project. The browser app, CLI and Python API share one analysis engine.
 
 **Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
+
+**Product introductions:** [Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
+[English](https://mfahsold.github.io/lixity/) · [Français](https://mfahsold.github.io/lixity/index-fr.html) ·
+[Español](https://mfahsold.github.io/lixity/index-es.html) · [Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
+[Português](https://mfahsold.github.io/lixity/index-pt.html) · [Nederlands](https://mfahsold.github.io/lixity/index-nl.html).
 Technical documentation is maintained in **English only**. German and English
 have the broadest analysis resources; see the [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
@@ -254,12 +259,12 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.7.9**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.8.0**, in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
 
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.7.9.md)
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.8.0.md)
 cover archive compatibility and upgrades. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
 The repository's generated demo follows the interface documented here, using a fictional project and read-only research. Importing

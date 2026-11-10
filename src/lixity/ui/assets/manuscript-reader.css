@@ -3,9 +3,9 @@
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--surface-glass-header);
+  background: var(--surface);
   /* Fixed settings panels must escape this bounded toolbar scrollport. */
-  border-bottom: 1px solid var(--line);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
@@ -98,7 +98,7 @@
   min-height: 32px;
   height: 32px;
   padding: .2rem .65rem;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   border-radius: var(--radius-sm);
   box-sizing: border-box;
 }
@@ -213,6 +213,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 .manuscript-reading .chapter {
   --reader-action-gutter: 2.75rem;

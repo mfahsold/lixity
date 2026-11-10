@@ -620,3 +620,22 @@ Historical fixes and release-specific evidence remain in [CHANGELOG](https://git
 Empty optional signal fields, unavailable small-sample metrics and missing
 rankings must be interpreted using their configuration/availability metadata.
 They are not evidence of no signal or equal literary effect.
+
+## Sensory and micro-pacing descriptors (v0.8.0)
+
+Sensory lexicon matches can be figurative, negated or ambiguous and can miss
+implicit description. Cue density and the cue/filter ratio are not validated
+immersion measures; a higher value is not better writing. A zero denominator
+makes the ratio unavailable. Language-specific lexical coverage differs, so
+raw values should not be used to rank translations or languages.
+
+Stratified MATTR uses morphology-based categories rather than contextual POS
+tagging. Category membership can be wrong and sparse subsets return unknown.
+Compare only equivalent category/window settings; the statistic describes
+word-form repetition, not semantic depth or action quality.
+
+Sentence-length CV and rolling means depend on tokenization and sentence
+boundaries. Short chapters offer little evidence, and smoothing hides local
+variation. Each sparkline has its own scale: equal bar heights across chapters
+do not imply equal sentence lengths or narrative speed. No sentences means
+no measured rhythm, even though the current CV field uses a zero sentinel.

@@ -74,6 +74,7 @@ docs-generated-check: ## Check generated version pins, documentation bundle and 
 	$(PYTHON) scripts/sync_docs.py --check
 	$(PYTHON) scripts/build_llms_full.py --check
 	$(PYTHON) scripts/build_guide_markdown.py --check
+	$(PYTHON) scripts/build_public_site.py --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
 	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
@@ -82,6 +83,7 @@ docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/sync_docs.py
 	$(PYTHON) scripts/build_llms_full.py
 	$(PYTHON) scripts/build_guide_markdown.py
+	$(PYTHON) scripts/build_public_site.py
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \

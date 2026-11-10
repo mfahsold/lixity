@@ -30,6 +30,8 @@ from pathlib import Path
 DOCS_ROOT_FILES = {
     ".nojekyll",
     "index.html",
+    "index-de.html", "index-fr.html", "index-es.html",
+    "index-it.html", "index-pt.html", "index-nl.html",
     "robots.txt",
     "sitemap.xml",
     "indexnow-key.txt",  # Public ownership proof, scoped to /lixity/ via keyLocation.

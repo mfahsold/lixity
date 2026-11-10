@@ -54,9 +54,10 @@ def test_profile_editor_retains_malformed_existing_data_for_explicit_recovery():
 
 
 def test_profile_editor_asset_is_in_the_shared_native_bundle():
-    from lixity.ui.dashboard import _JS_FILES
+    from lixity.ui.dashboard import _JS_FILES, _REPORT_JS_FILES
 
     assert "site-publication-settings.js" in _JS_FILES
+    assert "site-publication-settings.js" not in _REPORT_JS_FILES
     runtime = Path(__file__).parents[1] / "src/lixity/ui/assets/site-publication-settings.js"
     assert runtime.is_file()
 

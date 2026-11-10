@@ -22,7 +22,7 @@
 .publication-site .reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; }
 .publication-site .chapter { margin-block: 2rem; }
 .publication-site #chapters > .chapter:first-child { margin-top: 0; }
-.publication-site #chapters { font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
+.publication-site #chapters { margin-top: 0; font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
 .publication-site footer { margin-top: 2rem; }
 .publication-navigation { flex-wrap: wrap; margin-block: 1rem; }
 .publication-audio { margin-block: 1rem; min-width: 0; }

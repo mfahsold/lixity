@@ -9,7 +9,7 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this documentation describes **v0.7.9**. Verify packages at
+> **Version scope:** this documentation describes **v0.8.0**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -90,7 +90,7 @@ lixity doctor
 lixity service start --open
 ```
 
-See the [release notes](releases/v0.7.9.md)
+See the [release notes](releases/v0.8.0.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 

@@ -147,10 +147,14 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
 
         // The same central mechanism also preserves a position across an
         // unrelated size change, while normal capture reports real geometry.
+        // Establish a real reader scroll at the document boundary; an earlier
+        // pending layout restoration must not race this new scenario.
+        await page.mouse.move(width / 3, 450);
+        await page.mouse.wheel(0, 10000);
+        await page.waitForFunction(() => Math.abs(scrollY -
+          (document.scrollingElement.scrollHeight - innerHeight)) <= 1);
         const original = await page.evaluate(async () => {
           const spacer = document.getElementById('test-end-spacer');
-          window.scrollTo(0, document.documentElement.scrollHeight);
-          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           const anchor = LixityReader.capture(); window.__testResizeAnchor = anchor.panel;
           LixityReader.retain(() => { spacer.style.height = '0px'; });
           return anchor.top;

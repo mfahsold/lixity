@@ -138,8 +138,8 @@ async function keyboardActions(page) {
   await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'false');
   await page.keyboard.press('Escape');
   await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'true');
-  await expect(menu).toBeVisible();
-  await page.keyboard.press('Escape');
+  // Focus remains in the menu: hovering its opener must not consume the
+  // menu's Escape. Close both transient surfaces and restore the opener.
   await expect(menu).toBeHidden();
   await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'true');
   assert.equal(await action.evaluate(node => node === document.activeElement), true,

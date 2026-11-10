@@ -1,16 +1,16 @@
 /* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#fafaf7, #0b0d12);
+  --bg: light-dark(#f2f4fa, #111625);
   --surface: light-dark(#ffffff, #181d29);
-  --fg: light-dark(#242925, #eef2f8);
-  --fg-secondary: light-dark(#4b554f, #b6c2d2);
-  --muted: light-dark(#5e665f, #9aa5b8);
-  --line: light-dark(#e2e5df, #283144);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #b6c2d2);
+  --muted: light-dark(#56647b, #9aa5b8);
+  --line: light-dark(#dce2ef, #283144);
   --line-strong: light-dark(#94a3b8, #64748b);
-  --accent: light-dark(#245b85, #93c5fd);
-  --accent-hover: light-dark(#1b4566, #bfdbfe);
-  --accent-light: light-dark(#eaf2f8, #202f43);
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
   --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
   /* Solid metric spans use this role; saved research uses neutral dotted borders. */
   --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
@@ -26,20 +26,24 @@
   --past: light-dark(#b57635, #fbbf24);
   --past-light: light-dark(#fef3e2, #451a03);
   --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
   --neutral: light-dark(#d8dee6, #2c323d);
   --flag: light-dark(#c0392b, #f87171);
   --flag-light: light-dark(#fce8e6, #450a0a);
-  --action-bg: #245b85;
-  --action-hover: #1b4566;
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
   --on-action: #ffffff;
   /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
      inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
      large surfaces --radius-lg; only true pills (badges, status chips, tracks)
      use --radius-pill. Rules never hard-code a radius. */
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 12px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
   --shadow: 0 1px 2px rgba(0, 0, 0, .04);
   --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
@@ -70,8 +74,8 @@
   --panel-padding: 1.25rem;
   --section-gap: 1.5rem;
 
-  --bg-subtle: light-dark(#f1f3ee, #121620);
-  --surface-raised: light-dark(#fafaf7, #202738);
+  --bg-subtle: light-dark(#e9edf6, #121620);
+  --surface-raised: light-dark(#f2f4fa, #202738);
   --surface-hover: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
   --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(24, 29, 41, 0.88));
   --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(11, 13, 18, 0.85));
@@ -90,7 +94,7 @@
   --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
   --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
 
-  --fg-heading: light-dark(#242925, #ffffff);
+  --fg-heading: light-dark(#19263d, #ffffff);
   --status-success-fg: light-dark(#166534, #86efac);
   --status-success-bg: light-dark(#e6f4ea, #14532d);
   --status-success-border: light-dark(#b7ddc1, #24734b);

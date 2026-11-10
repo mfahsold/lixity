@@ -24,7 +24,8 @@ const path = require('node:path');
   try {
     for (const width of [1440,320]) {
       const page = await browser.newPage({viewport:{width,height:900}}), errors = [], plans = [];
-      let failPlan = false;
+      let failPlan = false, releasePlan;
+      const planReady = new Promise(resolve => { releasePlan = resolve; });
       page.on('pageerror',error=>errors.push(error.message));
       await page.route('http://localhost:41739/**', async route => {
         const url = new URL(route.request().url());
@@ -34,6 +35,7 @@ const path = require('node:path');
         if(url.pathname.endsWith('/speech-plan')) {
           assert.equal(route.request().method(),'POST');
           plans.push(route.request().postDataJSON());
+          await planReady;
           return route.fulfill({status:failPlan?409:200,json:failPlan?{ok:false,message:'Synthetic stale direction'}:{ok:true,timeline}});
         }
         // The old UI's GET is kept only to demonstrate the failing regression.
@@ -49,6 +51,10 @@ const path = require('node:path');
       }
       try {
         await page.locator('#reader-teleprompter').click();
+        // Establish the initial active passage before releasing the async plan.
+        // The runway selects it on a deferred layout tick, independently of fetch.
+        await page.waitForFunction(() => document.querySelectorAll('.teleprompter-paragraph.is-active').length === 1);
+        releasePlan();
         for (const selector of ['.teleprompter-toolbar .teleprompter-btn-close','.teleprompter-btn-record','.teleprompter-speed-control input']) {
           const rect=await page.locator(selector).boundingBox();
           assert.ok(rect.x>=0 && rect.x+rect.width<=width,selector+' must remain reachable on compact screens');

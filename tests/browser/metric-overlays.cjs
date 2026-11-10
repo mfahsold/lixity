@@ -104,7 +104,9 @@ async function verifyComparisonPaint(browser) {
         // Hide ink only for a paint sample: the browser must composite the real
         // wash over its actual reader surface, not merely report backgroundColor.
         await paragraph.evaluate(node => node.querySelectorAll(':scope > *').forEach(child => { child.style.visibility = 'hidden'; }));
-        const samples = await paintedPixels(paragraph, [0, .325, .65, .95]);
+        // Sample inside the paint area: a fractional CSS left edge produces
+        // an antialiased boundary pixel in a locator screenshot.
+        const samples = await paintedPixels(paragraph, [.05, .325, .65, .95]);
         await paragraph.evaluate(node => {node.style.background = 'transparent';});
         const [base] = await paintedPixels(paragraph, [.325]);
         await paragraph.evaluate(node => {

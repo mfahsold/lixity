@@ -363,6 +363,8 @@ class TestPagesStaging(unittest.TestCase):
                     "index.html": "SoftwareApplication",
                     "blog/index.html": "Blog",
                 }.get(relative, "TechArticle")
+                if relative.startswith("index-") and relative.endswith(".html"):
+                    expected = "SoftwareApplication"
                 entities = [item for item in head.structured
                             if expected in ([item.get("@type")] if isinstance(item.get("@type"), str) else item.get("@type", []))]
                 self.assertEqual(len(entities), 1, f"{relative}: one primary {expected}")
@@ -436,3 +438,41 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
                     config.write_text(json.dumps({"site_code": value}), encoding="utf-8")
                     with self.assertRaises(ValueError):
                         _analytics_endpoint(root)
+
+
+class TestPublicLanguages(unittest.TestCase):
+    def test_generated_languages_are_complete_and_reciprocal(self):
+        from scripts.build_public_site import LANGUAGES, ROOT, page_path, page_url, render_pages
+
+        pages = render_pages()
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                text = pages[page_path(language)]
+                self.assertEqual((ROOT / 'docs' / page_path(language)).read_text(encoding='utf-8'), text)
+                self.assertIn(f'<html lang="{language}"', text)
+                head = PageHead()
+                head.feed(text)
+                alternates = {item['hreflang']: item['href'] for item in head.links
+                              if 'hreflang' in item}
+                self.assertEqual(alternates, {**{code: page_url(code) for code in LANGUAGES},
+                                              'x-default': SITE})
+                self.assertIn(f'href="{page_url(language)}"', text)
+                self.assertIn('href="demo/report.html"', text)
+                self.assertIn('href="guides/installation.html"', text)
+
+    def test_missing_translation_fails_instead_of_falling_back(self):
+        from unittest.mock import patch
+
+        from scripts.build_public_site import render_pages
+
+        original = json.loads
+
+        def missing_key(value):
+            content = original(value)
+            if content.get('language') == 'Sprache':
+                del content['intro']
+            return content
+
+        with (patch('scripts.build_public_site.json.loads', side_effect=missing_key),
+              self.assertRaisesRegex(ValueError, 'Incomplete public translation: de')):
+            render_pages()

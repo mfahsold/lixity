@@ -203,6 +203,9 @@ async function settleGeometry(page) {
       assert.equal((await passageContext.textContent()).trim(), await page.evaluate(() => uiLabel('reading_passage_context')),
         'The existing passage tool has a localized context label');
       assert.ok((await page.locator('#reader-inspector-body').textContent()).trim());
+      assert.equal(await inspector.locator('.reader-backlinks-panel svg').count(), 3);
+      assert.ok(!(await inspector.textContent()).includes('[object SVGSVGElement]'),
+        'Context icons render as SVG rather than stringified DOM nodes');
       assert.equal(await inspector.locator('[data-reader-action=evidence]').count(), 1,
         'The passage context keeps explicit measurement inspection reachable');
       assert.equal(await inspector.locator('[data-reader-action=research]').count(), 1,

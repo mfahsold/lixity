@@ -362,6 +362,14 @@ entry pages deliberately, with accurate language alternatives;
 do not imply that all technical documentation or language validation is translated
 or equivalent.
 
+Public home pages are generated from `docs/templates/*.template` and complete
+`docs/locales/*.json` dictionaries by `scripts/build_public_site.py`. Run
+`make docs-sync` after editing them; `make docs-check` rejects missing translations
+and stale output. Each language has a static URL, a self canonical and reciprocal
+`hreflang` links. No browser-language redirect is applied. Keep the seven versions
+equivalent; link to English technical references explicitly. The existing page-path
+measurement distinguishes these entry pages without collecting manuscript data.
+
 Search and AI retrieval use the same maintained public evidence: descriptive
 page titles, one canonical URL, readable HTML, accurate application/article
 metadata, source links and real modification dates. Keep release information

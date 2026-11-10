@@ -163,9 +163,9 @@ color: var(--fg);
 &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
 &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
 &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-&.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
-&.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
-&.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+&.badge-present, &.tense-present { background: var(--present-light); color: var(--present-ink); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+&.badge-past, &.tense-past { background: var(--past-light); color: var(--past-ink); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+&.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed-ink); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
 &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
 &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
 &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }

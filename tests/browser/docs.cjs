@@ -22,12 +22,13 @@ function htmlRoutes(directory, prefix = '') {
   });
 }
 const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').sort();
+const homeRoutes = new Set(['', ...['de', 'fr', 'es', 'it', 'pt', 'nl'].map(lang => `index-${lang}.html`)]);
 const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
 const publicationAnalysisRoutes = new Set(['demo/reader/analysis.html']);
 for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
 for (const route of publicationAnalysisRoutes) assert.ok(routes.includes(route), `Missing curated analysis: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
-const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/first-look-de.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
+const fullMatrixRoutes = new Set([...homeRoutes, 'guides/first-look.html', 'guides/first-look-de.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
   'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
@@ -147,11 +148,11 @@ async function checkReturnNavigation(page, route, exercise) {
   }
   const top = page.locator('body#top.site-page');
   await expect(top).toHaveAttribute('tabindex', '-1');
-  const navigation = page.locator('nav.site-return[aria-label="Lixity navigation"]');
+  const navigation = homeRoutes.has(route) ? page.locator('nav.home-nav') : page.locator('nav.site-return[aria-label="Lixity navigation"]');
   await expect(navigation).toBeVisible();
   const breadcrumbs = page.locator('.site-breadcrumbs');
-  if (!route) {
-    await expect(page.locator('.brand[href="./"]')).toHaveAttribute('aria-current', 'page');
+  if (homeRoutes.has(route)) {
+    await expect(page.locator('.site-header .brand')).toHaveAttribute('aria-current', 'page');
     await expect(navigation.getByRole('link', {name: 'Home', exact: true})).toHaveCount(0);
     await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
   } else if (route === 'demo/report.html') {
@@ -171,16 +172,17 @@ async function checkReturnNavigation(page, route, exercise) {
       await expect(demo).toHaveAttribute('href', '../demo/report.html');
       await expect(demo).not.toHaveAttribute('aria-current', /.+/);
     } else {
-      await expect(page.locator('.site-header .brand')).toHaveAttribute('href', '../');
-      const german = route === 'guides/first-look-de.html' || route.endsWith('-de.html');
-      await expect(navigation.getByRole('link', {name: german ? 'Anleitungen' : 'Guides', exact: true})).toHaveAttribute('href', '../#guides');
+      const german = route.endsWith('-de.html');
+      const home = german ? '../index-de.html' : '../';
+      await expect(page.locator('.site-header .brand')).toHaveAttribute('href', home);
+      await expect(navigation.getByRole('link', {name: german ? 'Anleitungen' : 'Guides', exact: true})).toHaveAttribute('href', home + '#guides');
       await expect(navigation.getByRole('link', {name: german ? 'Installieren' : 'Install', exact: true})).toHaveAttribute('href', route.startsWith('blog/') ? '../guides/installation.html' : 'installation.html');
       await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
       await expect(page.locator('.guide-nav')).toHaveCount(0);
     }
     await expect(breadcrumbs).toBeVisible();
     await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
-    const parent = route.startsWith('guides/') ? '../#guides'
+    const parent = route.startsWith('guides/') ? (route.endsWith('-de.html') ? '../index-de.html#guides' : '../#guides')
       : route === 'blog/index.html' ? '../'
         : route.startsWith('blog/') ? 'index.html' : '../';
     await expect(breadcrumbs.locator('a').last()).toHaveAttribute('href', parent);
@@ -1190,6 +1192,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           }
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
+          const overflowingCells = await page.locator('.guide table td, .guide table th').evaluateAll(cells =>
+            cells.filter(cell => cell.scrollWidth > cell.clientWidth + 1).map(cell => cell.textContent));
+          assert.deepEqual(overflowingCells, [], `${route}: guide table text must stay inside its own column at ${width}px`);
           await checkReturnNavigation(page, route,
             colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
           if (javaScriptEnabled && colorScheme === 'light' && width !== 390 &&
@@ -1219,90 +1224,28 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(page).toHaveURL(/#search$/);
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
-          if (!route) {
-            if (width === 1440) {
-              const columns = await page.locator('.hero').evaluate(hero => {
-                const copy = hero.querySelector('.hero-copy').getBoundingClientRect();
-                const image = hero.querySelector('.frame').getBoundingClientRect();
-                return {copyRight: copy.right, imageLeft: image.left};
-              });
-              assert.ok(columns.copyRight < columns.imageLeft, 'Desktop introduction and preview share one row');
-            }
-            await expect(page.locator('.hero-cta a.primary[href="demo/report.html"]')).toHaveAccessibleName('Explore interactive demo');
-            await expect(page.locator('.hero-cta a[href="guides/first-look.html"]')).toHaveAccessibleName('Short tour (English)');
-            await expect(page.locator('.site-header a[href="#installation"]')).toBeVisible();
-            const commandLink = page.locator('.site-header a[href="#command-line"]');
-            await expect(commandLink).toBeVisible();
-            await commandLink.focus();
+          if (homeRoutes.has(route)) {
+            const locale = route ? route.slice(6, 8) : 'en';
+            await expect(page.locator('html')).toHaveAttribute('lang', locale);
+            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'demo/report.html');
+            await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html');
+            await expect(page.locator('.language-list a')).toHaveCount(7);
+            await expect(page.locator('head link[hreflang]')).toHaveCount(8);
+            await expect(page.locator('.language-list a[aria-current=page]')).toHaveAttribute('lang', locale);
+            const picker = page.locator('.language-picker');
+            await picker.locator('summary').focus();
             await page.keyboard.press('Enter');
-            await expect(page).toHaveURL(/#command-line$/);
-            const commands = page.locator('#command-line');
-            await expect(commands).toBeInViewport();
-            const commandColumns = await commands.locator('article').evaluateAll(nodes => nodes.map(node => {
-              const box = node.getBoundingClientRect();
-              return {left: box.left, right: box.right, top: box.top, bottom: box.bottom,
-                codeTop: node.querySelector('pre').getBoundingClientRect().top};
-            }));
-            assert.equal(commandColumns.length, 2);
-            if (width === 1440) assert.ok(commandColumns[0].right < commandColumns[1].left,
-              'Desktop command examples share one row');
-            if (width === 1440) assert.ok(Math.abs(commandColumns[0].codeTop - commandColumns[1].codeTop) < 1,
-              'Desktop command examples align their code blocks despite different note lengths');
-            if (width === 320) assert.ok(commandColumns[0].bottom < commandColumns[1].top,
-              'Narrow command examples stack in reading order');
-            await page.locator('h1').scrollIntoViewIfNeeded();
-            await expect(page.locator('#installation')).toHaveCount(1);
-            assert.equal(await page.locator('#installation').evaluate(node => node.tagName), 'SECTION',
-              'The installation fragment opens its own author-facing section');
-            await expect(page.locator('#installation a[href="guides/installation.html"]')).toBeVisible();
-            for (const destination of ['demo/report.html', 'guides/installation.html']) {
-              await expect(page.locator(`#guides a[href="${destination}"]`)).toHaveCount(0);
-            }
-            await expect(page.locator('#guides > p a[href="guides/first-look.html"]')).toHaveAccessibleName('First session');
-            await expect(page.locator('#guides > p a[href="guides/first-look-de.html"]')).toHaveAccessibleName('Einstieg auf Deutsch');
-            await expect(page.locator('#guides > p a[href="AUDIO.md#author-voice-recording-and-listening"]')).toHaveAccessibleName('Author voice and audio');
-            await expect(page.locator('#guides > p a[href="guides/interpretation.html"]')).toBeVisible();
-            await expect(page.locator('#features blockquote')).toHaveText(demoQuote);
-            await expect(page.locator('#features a[href="demo/report.html#p-0"]')).toBeVisible();
-            await expect(page.locator('#features a[href="demo/report.html#matrix"]')).toBeVisible();
-            const readingCopies = page.locator('#reading-copies');
-            await expect(readingCopies.locator('article')).toHaveCount(3);
-            for (const destination of ['demo/report.html', 'demo/reader/index.html', 'demo/companion/index.html']) {
-              await expect(readingCopies.locator(`a[href="${destination}"]`)).toBeVisible();
-            }
-            await expect(readingCopies).toContainText('not access control');
-            const dossierPreview = page.locator('#passage-context img');
-            await ensureImageDecoded(dossierPreview);
-            assert.deepEqual(await dossierPreview.evaluate(element => [element.naturalWidth, element.naturalHeight]),
-              [Number(await dossierPreview.getAttribute('width')), Number(await dossierPreview.getAttribute('height'))],
-              'The research preview reserves its actual image dimensions');
-            const reference = page.locator('#guides details');
-            await expect(reference).toHaveCount(1);
-            assert.equal(await reference.evaluate(node => node.open), false,
-              'Technical references start behind one reversible disclosure');
-            await expect(reference.locator('a[href="AGENTS.md"]')).toBeHidden();
-            await reference.locator(':scope > summary').focus();
-            await page.keyboard.press('Enter');
-            await expect(reference.locator('a[href="AGENTS.md"]')).toBeVisible();
-            await expect(reference.locator('#methods')).toHaveCount(1);
-            await expect(reference.locator('#cli-api')).toHaveCount(1);
-            await reference.locator(':scope > summary').press('Enter');
-            await expect(reference.locator('a[href="AGENTS.md"]')).toBeHidden();
-            await expect(reference.locator(':scope > summary')).toBeFocused();
-            const image = page.locator('.hero .frame img');
-            await expect(image).toHaveCount(1);
+            await expect(picker.locator('nav')).toBeVisible();
+            await picker.locator('a[hreflang=de]').click();
+            await expect(page).toHaveURL(origin + '/lixity/index-de.html');
+            await expect(page.locator('h1')).toHaveText('Dein Text.Ein neuer Blick.');
+            await page.goto(origin + '/lixity/' + route);
+            const image = page.locator('.product-preview img');
             await ensureImageDecoded(image);
-            assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')),
-              await image.getAttribute('src'), 'The product image opens at full size without JavaScript');
-            assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
+            assert.deepEqual(await image.evaluate(el => [el.naturalWidth, el.naturalHeight]),
               [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
-            assert.ok(await image.evaluate(element => {
-              const box = element.getBoundingClientRect();
-              return Math.abs(box.width / box.height - element.naturalWidth / element.naturalHeight) < .01;
-            }), 'The homepage preserves the complete screenshot aspect ratio');
-            await expect(page.locator('#impressum > summary')).toBeVisible();
+            assert.ok(await image.evaluate(el => Math.abs(el.clientWidth / el.clientHeight - el.naturalWidth / el.naturalHeight) < .01));
             await page.locator('#impressum > summary').click();
-            await expect(page.locator('#impressum address')).toBeVisible();
             await expect(page.locator('#impressum address')).toContainText('ROST Services GmbH');
             await page.locator('#impressum > summary').click();
             await page.locator('h1').scrollIntoViewIfNeeded();
@@ -1328,9 +1271,9 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         assert.ok(page.url().endsWith('/guides/first-look.html'), 'The report returns to the walkthrough');
         await page.locator('.site-breadcrumbs a[href="../#guides"]').click();
         await expect(page).toHaveURL(origin + '/lixity/#guides');
-        await expect(page.locator('#guides h2')).toBeInViewport();
+        await expect(page.locator('#guides h2').first()).toBeInViewport();
         await returnToTop(page, 'Guides parent');
-        await page.locator('.brand[href="./"]').click();
+        await page.locator('.site-header .brand[href="./"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');

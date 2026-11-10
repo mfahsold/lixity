@@ -7,16 +7,16 @@
 <style>/* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#fafaf7, #0b0d12);
+  --bg: light-dark(#f2f4fa, #111625);
   --surface: light-dark(#ffffff, #181d29);
-  --fg: light-dark(#242925, #eef2f8);
-  --fg-secondary: light-dark(#4b554f, #b6c2d2);
-  --muted: light-dark(#5e665f, #9aa5b8);
-  --line: light-dark(#e2e5df, #283144);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #b6c2d2);
+  --muted: light-dark(#56647b, #9aa5b8);
+  --line: light-dark(#dce2ef, #283144);
   --line-strong: light-dark(#94a3b8, #64748b);
-  --accent: light-dark(#245b85, #93c5fd);
-  --accent-hover: light-dark(#1b4566, #bfdbfe);
-  --accent-light: light-dark(#eaf2f8, #202f43);
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
   --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
   /* Solid metric spans use this role; saved research uses neutral dotted borders. */
   --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
@@ -32,20 +32,24 @@
   --past: light-dark(#b57635, #fbbf24);
   --past-light: light-dark(#fef3e2, #451a03);
   --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
   --neutral: light-dark(#d8dee6, #2c323d);
   --flag: light-dark(#c0392b, #f87171);
   --flag-light: light-dark(#fce8e6, #450a0a);
-  --action-bg: #245b85;
-  --action-hover: #1b4566;
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
   --on-action: #ffffff;
   /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
      inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
      large surfaces --radius-lg; only true pills (badges, status chips, tracks)
      use --radius-pill. Rules never hard-code a radius. */
   --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 12px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
   --shadow: 0 1px 2px rgba(0, 0, 0, .04);
   --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
@@ -76,8 +80,8 @@
   --panel-padding: 1.25rem;
   --section-gap: 1.5rem;
 
-  --bg-subtle: light-dark(#f1f3ee, #121620);
-  --surface-raised: light-dark(#fafaf7, #202738);
+  --bg-subtle: light-dark(#e9edf6, #121620);
+  --surface-raised: light-dark(#f2f4fa, #202738);
   --surface-hover: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
   --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(24, 29, 41, 0.88));
   --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(11, 13, 18, 0.85));
@@ -96,7 +100,7 @@
   --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
   --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
 
-  --fg-heading: light-dark(#242925, #ffffff);
+  --fg-heading: light-dark(#19263d, #ffffff);
   --status-success-fg: light-dark(#166534, #86efac);
   --status-success-bg: light-dark(#e6f4ea, #14532d);
   --status-success-border: light-dark(#b7ddc1, #24734b);
@@ -276,9 +280,9 @@ color: var(--fg);
 &.badge-success { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
 &.badge-warning, &.badge-warn { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); }
 &.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
-&.badge-present, &.tense-present { background: var(--present-light); color: var(--present); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
-&.badge-past, &.tense-past { background: var(--past-light); color: var(--past); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
-&.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
+&.badge-present, &.tense-present { background: var(--present-light); color: var(--present-ink); border-color: color-mix(in srgb, var(--present) 25%, transparent); }
+&.badge-past, &.tense-past { background: var(--past-light); color: var(--past-ink); border-color: color-mix(in srgb, var(--past) 25%, transparent); }
+&.badge-mixed, &.tense-mixed { background: color-mix(in srgb, var(--mixed) 15%, var(--surface)); color: var(--mixed-ink); border-color: color-mix(in srgb, var(--mixed) 28%, transparent); }
 &.badge-neutral-tense, &.tense-neutral { background: var(--neutral); color: var(--status-neutral-fg); border-color: color-mix(in srgb, var(--neutral) 35%, transparent); }
 &.badge-flag, &.badge-danger { background: var(--flag-light); color: var(--flag); border-color: color-mix(in srgb, var(--flag) 28%, transparent); font-weight: var(--weight-bold, 700); }
 &.badge-deviation { background: var(--status-warning-bg); color: var(--status-warning-fg); border-color: var(--status-warning-border); font-weight: var(--weight-bold, 700); }
@@ -1720,6 +1724,9 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
 body { padding: var(--space-4) var(--space-3) var(--space-5); }
 .dist .row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
 .dist .label { grid-column: 1 / -1; }
+/* Pacing summaries include a sparkline; reserve a full row for the actual bar. */
+#pacing .dist :is(.bar, .val) { grid-column: 1 / -1; }
+#pacing .dist .val { text-align: start; white-space: normal; overflow-wrap: anywhere; }
 .band-row { grid-template-columns: minmax(0, 1fr) 2rem; gap: var(--space-2); padding-block: var(--space-2); }
 .band-label { grid-column: 1 / -1; white-space: normal; }
 .band-summary { display: inline; margin-left: var(--space-2); }
@@ -1826,11 +1833,12 @@ selected destinations, display state and explicit primary save actions. */
 @media screen and (min-width: 1100px) {
 body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace > .page { max-width: 96rem; }
-.lixity-workspace .workspace-shell { position: fixed; inset: 0 auto 0 0; width: 15.5rem; z-index: 20; padding: 1.25rem 1rem; overflow-y: auto; overscroll-behavior: contain; align-content: start; gap: 1.5rem; background: var(--surface); border-right: 1px solid var(--line); }
+.lixity-workspace .workspace-shell { position: fixed; inset: 0 auto 0 0; width: 15.5rem; z-index: 20; padding: 1.25rem 1rem; overflow-y: auto; overscroll-behavior: contain; align-content: start; gap: 1.5rem; background: var(--bg-subtle); border-right: 1px solid var(--line); }
 .has-workspace-navigation .workspace-shell-header { position: relative; min-height: 2.75rem; padding-left: 3.25rem; }
 .lixity-workspace .workspace-shell .project-meta { overflow-wrap: anywhere; }
 .lixity-workspace .view-navigation { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; border: 0; overflow: visible; gap: .35rem; }
-.lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; }
+.lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; min-height: 3rem; padding-inline: 1rem; }
+.lixity-workspace .view-nav-tab.active { box-shadow: 0 4px 12px color-mix(in srgb, var(--action-bg) 20%, transparent); }
 .lixity-workspace .workspace-actions { border-top: 1px solid var(--line); padding-top: .5rem; }
 .lixity-workspace .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr); padding: .5rem 0 0; border: 0; border-radius: 0; gap: 1rem; }
 .lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
@@ -3402,9 +3410,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .45rem; padding: .45rem var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--surface-glass-header);
+  background: var(--surface);
   /* Fixed settings panels must escape this bounded toolbar scrollport. */
-  border-bottom: 1px solid var(--line);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
@@ -3497,7 +3505,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   min-height: 32px;
   height: 32px;
   padding: .2rem .65rem;
-  font-size: var(--text-note);
+  font-size: var(--text-control);
   border-radius: var(--radius-sm);
   box-sizing: border-box;
 }
@@ -3612,6 +3620,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
 .manuscript-reading .chapter {
   --reader-action-gutter: 2.75rem;
@@ -4104,7 +4114,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .publication-site .reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; }
 .publication-site .chapter { margin-block: 2rem; }
 .publication-site #chapters > .chapter:first-child { margin-top: 0; }
-.publication-site #chapters { font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
+.publication-site #chapters { margin-top: 0; font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
 .publication-site footer { margin-top: 2rem; }
 .publication-navigation { flex-wrap: wrap; margin-block: 1rem; }
 .publication-audio { margin-block: 1rem; min-width: 0; }
@@ -4191,7 +4201,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <meta property="og:url" content="https://mfahsold.github.io/lixity/demo/reader/analysis.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2180"/>
+<meta property="og:image:height" content="2184"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Warehouse 4 — chapter analysis"/>
@@ -4199,7 +4209,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2180, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2184, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
 </script>
 </head>
 <body class="lixity-report" data-read-only="true"><main class="page">

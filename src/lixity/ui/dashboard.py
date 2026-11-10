@@ -150,8 +150,12 @@ _JS_FILES = (
     "teleprompter.js",
 )
 _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
-# The passage inspector requires the workspace shell; classic reports have none.
-_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in ("manuscript-reader.js", "teleprompter.js", "speech-presentation.js", "audio-take.js"))
+# The passage inspector and publication settings require workspace controls;
+# classic reports render neither and must not ship their dormant editors.
+_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
+    "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
+    "audio-take.js", "site-publication-settings.js",
+))
 _REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name != "teleprompter.css")
 
 # Curated publications reuse the shared renderers without dormant workspace controls.

@@ -581,8 +581,8 @@
 
     var header = document.createElement("div");
     header.className = "reader-backlinks-header";
-    var iconSvg = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
-      window.LixityIcons.create("link", "lixity-icon") : "";
+    var iconSvg = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("link") : "";
     header.innerHTML = (iconSvg || "") + " <span>" + (isDe ? "Verknüpfungen & Kontext" : "Linked Context & Backlinks") + "</span>";
     backlinksWrap.appendChild(header);
 
@@ -594,8 +594,8 @@
 
     var rTitle = document.createElement("span");
     rTitle.className = "reader-backlink-title";
-    var rIcon = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
-      window.LixityIcons.create("book-open", "lixity-icon") : "";
+    var rIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("book-open") : "";
     rTitle.innerHTML = (rIcon || "") + " <span>" + (isDe ? "Historischer Beleg / Dossier" : "Historical Evidence / Dossier") + "</span>";
 
     var rSnippet = document.createElement("span");
@@ -631,8 +631,8 @@
 
     var aTitle = document.createElement("span");
     aTitle.className = "reader-backlink-title";
-    var aIcon = window.LixityIcons && typeof window.LixityIcons.create === "function" ?
-      window.LixityIcons.create("mic", "lixity-icon") : "";
+    var aIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("mic") : "";
     aTitle.innerHTML = (aIcon || "") + " <span>" + (isDe ? "Regieanweisungen & Teleprompter" : "Vocal Directions & Teleprompter") + "</span>";
 
     var aSnippet = document.createElement("span");

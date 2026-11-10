@@ -345,7 +345,10 @@ async function companionOverviewReturn(browser, motion) {
     await page.mouse.move(0,0);
     await expect(tip).toHaveAttribute('aria-hidden','true');
     for(const selector of ['#workbench-overview-back','#reader-speech']) {
+     // Reader audio belongs to the document toolbar, not the overview.
+     if(selector==='#reader-speech') await page.locator('#workbench-overview-back').click();
      const button=page.locator(selector);
+     await expect(button).toBeVisible();
      await button.focus();
      await expect(tip.locator('.tooltip-copy')).toHaveText(await button.getAttribute('data-help'));
      await expect(tip).toHaveAttribute('aria-hidden','false');
@@ -353,6 +356,7 @@ async function companionOverviewReturn(browser, motion) {
      await page.keyboard.press('Escape');
      await expect(tip).toHaveAttribute('aria-hidden','true');
     }
+    await page.locator('#workbench-overview-open').click();
    }
    await analysis.locator('[data-section-link=matrix]')[touch?'tap':'click']();
 

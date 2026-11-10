@@ -7,7 +7,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-10
+
+### Fixed
+
+- Render passage-context icons as SVG instead of stringified DOM elements.
+- Keep regenerated GIF previews within their existing size budget at five frames
+  per second; full-quality MP4 walkthroughs retain their existing encoding.
+
 ### Documentation
+
+- Replace the long English homepage with seven equivalent static product entries,
+  native language navigation, reciprocal search metadata and shared generation checks.
+  Introduce an ultramarine product presentation and keep technical manuals in English.
+  Keep German entry-page return navigation in German and align the public mark
+  with the shared action color. Use language-aware heading hyphenation on narrow
+  article and guide layouts; keep long comparison-table labels within their columns.
 
 - Align the README, documentation map and public landing page on seven interface
   languages, English-only technical documentation and the read-only English demo.
@@ -19,6 +34,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   entry page title for manuscript revision.
 - Stage a public IndexNow ownership file for `/lixity/` and document post-deployment
   URL notification. This does not submit URLs or establish indexing.
+
+### Changed
+
+- Align the metric selector with the shared reader control typography and the
+  exported reading surface with its adjacent context panel.
+- Improve tense badge text contrast in both themes without changing chart colors.
+- Share a stronger blue identity, clearer navigation and a distinct manuscript
+  document surface across the local workspace and public Pages.
+- Omit the dormant publication-settings editor from classic read-only report
+  bundles, saving about 19 KB without changing chapters or the example size limit.
+- Keep the sensory summary on the same spacing rhythm as other analysis content;
+  prevent long mobile pacing summaries from squeezing their actual bars to zero width.
+
 
 ### Added
 - **Pacing & Micro-Dynamics (`lixity.pacing`)**: Rolling sentence length analysis (`compute_rolling_asl`) with adaptive window size, sentence length coefficient of variation (`sentence_cv`), 12-point chapter condensed timelines (`pacing_curve`), and 8-level Unicode sparklines (`pacing_sparkline`) surfaced across CLI and Dashboard UI.
@@ -3602,7 +3630,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.9...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/mfahsold/lixity/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/mfahsold/lixity/compare/v0.7.7...v0.7.9
 [0.7.7]: https://github.com/mfahsold/lixity/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/mfahsold/lixity/compare/v0.7.5...v0.7.6

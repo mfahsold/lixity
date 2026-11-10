@@ -105,4 +105,4 @@ Im **Teleprompter** (`P`) liest du den geplanten Sprechtext mit Regiehinweisen u
 
 Weiter geht es im [UI-Handbuch](../WORKSPACE.md), in der [CLI-Referenz](../USAGE.md) oder über die [Dokumentationsübersicht](../README.md) (Englisch).
 
-[Über Lixity](../)[Installation](installation.html)[Lizenz](../LICENSING.md)[Website-Messung](../#website-measurement)[Impressum](../#impressum)
+[Über Lixity](../index-de.html)[Installation](installation.html)[Lizenz](../LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

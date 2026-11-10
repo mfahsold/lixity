@@ -342,6 +342,24 @@ async function checkScale(page, label) {
         }));
         assert.ok(heatmapColors.length > 0);
         heatmapColors.forEach(([text, fill]) => assert.ok(contrast(text, fill) >= 4.5, `${theme} heatmap label contrast`));
+        const tenseColors = await app.evaluate(() => {
+          const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+          const context = canvas.getContext('2d');
+          const rgb = color => {
+            context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+            return 'rgb(' + Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3).join(',') + ')';
+          };
+          return ['present', 'past', 'mixed'].map(tense => {
+            const badge = document.createElement('span');
+            badge.className = 'badge tense-' + tense; badge.textContent = tense;
+            document.body.append(badge);
+            const css = getComputedStyle(badge);
+            const colors = [tense, rgb(css.color), rgb(css.backgroundColor)];
+            badge.remove(); return colors;
+          });
+        });
+        tenseColors.forEach(([tense, text, fill]) => assert.ok(contrast(text, fill) >= 4.5,
+          `${theme} ${tense} badge text contrast: ${text} / ${fill}`));
         await app.locator('#tab-view-analysis').focus();
         await app.keyboard.press('Enter');
         for (const [page, selector, label] of [[app, 'a.ctl.primary', 'app'], [site, 'a.ctl.primary', 'site']]) {

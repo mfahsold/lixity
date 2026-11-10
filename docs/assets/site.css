@@ -75,7 +75,7 @@ body {
 a { color: var(--accent); text-underline-offset: .18em; }
 a:hover { text-decoration-thickness: 2px; }
 p, li, figcaption { overflow-wrap: anywhere; }
-h1, h2, h3 { color: var(--fg-heading); line-height: 1.2; }
+h1, h2, h3 { color: var(--fg-heading); line-height: 1.2; hyphens: auto; }
 h1, h2 { font-family: var(--font-title); text-wrap: balance; font-weight: var(--weight-strong); }
 h2 { font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 1rem; }
 h3 { font-size: 1.08rem; }
@@ -242,7 +242,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
   .analysis-mark-key { grid-template-columns: 1fr; gap: 1rem; }
 }
 .guide table { width: 100%; min-width: 44rem; table-layout: fixed; }
-.guide td, .guide th { overflow-wrap: anywhere; vertical-align: top; }
+.guide table td, .guide table th { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
 .guide img { width: 100%; height: auto; border-radius: var(--radius); }
 .feature-table-wrapper { overflow-x: auto; margin: 1.5rem 0; border: 1px solid var(--line); border-radius: var(--radius); }
 .feature-table-wrapper:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }

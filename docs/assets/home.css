@@ -1,0 +1,79 @@
+/* Public product identity; the reading workspace shares the foundation tokens. */
+.public-home { --home-blue: #2544d8; --home-ink: #16233e; --home-paper: #eef1fb; padding: 0; }
+.public-home .site-header { padding-block: 1rem; background: var(--surface); }
+.public-home .header-inner { max-width: 90rem; gap: 1rem 2rem; }
+.public-home .brand { gap: .5rem; font-size: 1.5rem; font-weight: 750; letter-spacing: -.06em; }
+.public-home .brand-name { font-size: inherit; font-weight: inherit; }
+.home-nav { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin-left: auto; }
+.home-nav a { color: var(--fg); text-decoration: none; font-size: .95rem; }
+.home-nav a:hover { color: var(--accent); text-decoration: underline; }
+.language-picker { position: relative; }
+.language-picker > summary { min-height: 2.75rem; cursor: pointer; }
+.language-picker nav { position: absolute; right: 0; top: 100%; z-index: 35; display: grid; min-width: 12rem; padding: .5rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-modal); }
+.language-picker nav a { padding: .5rem .75rem; text-decoration: none; }
+.language-picker [aria-current], .language-list [aria-current] { font-weight: 750; text-decoration: underline; text-underline-offset: .3em; }
+.public-home main { max-width: none; margin: 0; padding: 0; }
+.home-hero { overflow: hidden; background: var(--home-blue); color: white; padding: clamp(2rem, 5vw, 5rem) max(1.25rem, calc((100vw - 82rem) / 2)) 0; }
+.home-intro { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); column-gap: 4rem; align-items: end; }
+.home-eyebrow { grid-column: 1 / -1; margin-bottom: 1.5rem; font-size: 1.1rem; }
+.home-intro h1 { grid-row: span 3; margin: 0; font-family: var(--font); font-size: clamp(3.25rem, 7.8vw, 7.5rem); font-weight: 750; line-height: .98; letter-spacing: -.065em; color: white; text-wrap: balance; padding-bottom: .12em; }
+.home-lead { font-size: clamp(1.05rem, 1.5vw, 1.35rem); line-height: 1.55; max-width: 38rem; }
+.home-hero .hero-cta { margin: .5rem 0 1rem; gap: 1rem; align-items: center; }
+.home-hero a { color: white; }
+.home-hero .ctl.primary { color: var(--home-blue); background: white; border-color: white; font-weight: 700; padding: .8rem 1.2rem; }
+.home-hero .ctl.primary:hover { background: #e5ebff; border-color: #e5ebff; }
+.home-note { font-size: .9rem; max-width: 34rem; opacity: .9; }
+.product-preview { margin: 3.5rem 0 0; padding: .65rem .65rem 0; background: white; border-radius: 1rem 1rem 0 0; box-shadow: 0 -1rem 4rem rgb(8 20 80 / .22); }
+.product-preview img { display: block; width: 100%; height: auto; border-radius: .5rem .5rem 0 0; }
+.product-preview figcaption { padding: 1rem; color: var(--home-ink); font-size: .9rem; line-height: 1.5; background: white; }
+.home-section { max-width: 86rem; margin: auto; padding: clamp(3rem, 7vw, 6rem) 2rem; }
+.public-home h2 { font-family: var(--font); font-size: clamp(2rem, 3.5vw, 3.5rem); letter-spacing: -.045em; font-weight: 700; line-height: 1.08; max-width: 22ch; margin-bottom: 2rem; }
+.home-tasks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5rem; }
+.home-tasks article { border-top: 3px solid var(--accent); padding-top: 1.5rem; }
+.home-tasks h3 { font-size: 1.5rem; letter-spacing: -.025em; font-weight: 650; margin: 0 0 1rem; }
+.home-tasks p { color: var(--fg-secondary); }
+.home-principle { display: grid; grid-template-columns: auto minmax(0, 46rem); justify-content: center; gap: 2rem; padding: 4rem 2rem; background: var(--accent-light); }
+.principle-mark { font-family: Georgia, serif; font-size: 12rem; color: var(--accent); line-height: .9; }
+.home-principle p { font-size: 1.2rem; line-height: 1.7; margin-bottom: 0; }
+.home-principle h2 { margin-bottom: 1rem; }
+.home-start { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+.install-command { padding: 2rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.install-command pre { padding: 0; border: 0; background: none; font-size: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--accent); }
+.install-command p { font-size: .9rem; color: var(--muted); }
+#languages { border-top: 1px solid var(--line); }
+#languages > p { max-width: 70ch; }
+.language-list { display: flex; flex-wrap: wrap; gap: .75rem 2rem; margin: 2rem 0; font-size: 1.4rem; }
+.language-list a { padding: .4rem 0; }
+.home-resources { display: grid; grid-template-columns: 1.25fr 1fr; gap: 4rem; background: var(--surface); border-radius: var(--radius-lg); margin-bottom: 3rem; }
+.resource-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1.5rem; }
+.home-resources h2 { font-size: 2rem; }
+.home-footer { padding: 3rem max(1.25rem, calc((100vw - 82rem) / 2)); border-top: 1px solid var(--line); background: var(--surface); }
+.footer-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1rem 2rem; margin-bottom: 2rem; }
+.home-footer details { max-width: 70ch; font-size: .9rem; }
+.home-footer details > div { padding: 1rem 0; }
+.public-home .site-back-top { position: static; margin: 1rem 1.5rem 1rem auto; display: flex; width: max-content; }
+@media (max-width: 900px) {
+  .home-intro { display: block; }
+  .home-intro h1 { margin-bottom: 1.75rem; }
+  .home-tasks { grid-template-columns: 1fr; gap: 2rem; }
+  .home-start, .home-resources { grid-template-columns: 1fr; gap: 2rem; }
+  .home-nav { order: 3; width: 100%; margin: 0; }
+  .language-picker { margin-left: auto; }
+  .public-home .theme-btn { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  .home-section { padding: 3rem 1.25rem; }
+  .home-hero { padding-top: 2rem; }
+  .home-principle { grid-template-columns: 1fr; gap: 0; padding: 2rem 1.25rem; }
+  .principle-mark { font-size: 6rem; height: 3.5rem; }
+  .install-command { padding: 1.25rem; }
+  .resource-links { grid-template-columns: 1fr; }
+  .public-home .header-inner { gap: .5rem 1rem; }
+  .public-home .site-header { padding-inline: 1.25rem; }
+  .product-preview { margin-top: 2rem; padding: .25rem .25rem 0; }
+}
+/* Keep the language control and appearance switch on the first mobile row. */
+@media (max-width: 900px) {
+  .public-home .theme-btn { font-size: 0; min-width: 2.75rem; min-height: 2.75rem; padding: .4rem; }
+  .public-home .theme-btn::before { content: "◐"; font-size: 1.25rem; }
+}

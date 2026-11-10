@@ -6,7 +6,7 @@ Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscri
 
 Updated 5 November 2026
 
-**Version line:** This source guide describes **v0.7.9**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+**Version line:** This source guide describes **v0.8.0**; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability, in the pre-1.0 **0.x** line. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
 
 ## What do I need?
 
@@ -53,7 +53,7 @@ lixity service start --open
 
 If `lixity` is not found, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory. The health check reports installation/service issues, not linguistic validity.
 
-This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Check `lixity --version` and the [release notes](../releases/v0.7.9.md) for changes and compatibility.
+This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Check `lixity --version` and the [release notes](../releases/v0.8.0.md) for changes and compatibility.
 
 ## Start the workspace
 

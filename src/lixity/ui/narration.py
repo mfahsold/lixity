@@ -595,7 +595,7 @@ def render_showing_panel(
             pills.append(
                 f'<span class="immersion-pill"><b>{N(float(showing["immersion_ratio_mean"]), 2)}</b> {imm_term}</span>'
             )
-        parts.append(f'<p class="ctl-note" style="margin-top:.4rem">{" · ".join(pills)}</p>')
+        parts.append(f'<p class="ctl-note">{" · ".join(pills)}</p>')
     parts.append(f'<p class="signal-scale">{L("showing_axis_note")} '
                  '<span class="signal-scale-key" aria-hidden="true"><span>−</span><span>0</span><span>+</span></span></p>')
 

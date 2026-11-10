@@ -994,3 +994,30 @@ References:
 - Zenker, F., & Kyle, K. (2020). Investigating minimum text lengths for lexical
   diversity indices. *Assessing Writing* 47, 100505.
   doi:10.1016/j.asw.2020.100505
+
+## Sensory cues, stratified vocabulary and sentence-length dynamics
+
+Introduced in v0.8.0. These deterministic descriptors support passage review;
+they do not estimate literary quality or a reader's experienced immersion.
+
+- `sensory_density = 1000 * sensory_count / token_count`, using the selected
+  language's combined sensory regular expression on prose. The lexicons cover
+  auditory, visual, haptic/thermal and olfactory/gustatory cues in seven languages.
+  `immersion_ratio = sensory_density / filter_density`; a zero filter density
+  returns `null`, not an infinite or ideal score. Showing-report means use the
+  comparable chapters, omitting unavailable ratios.
+- `verb_mattr` and `desc_mattr` apply MATTR to ordered, lowercased token subsets.
+  Verb candidates match present/past morphology; descriptive candidates match
+  adjective or nominal morphology with nominal exclusions. These are heuristic
+  categories, not contextual POS tags. For a category sequence of length N and
+  window w, MATTR is the mean of `unique(window) / w` over its N-w+1 windows.
+  Fewer than w category tokens returns `null`. The implementation's default
+  category window is defined by `DEFAULT_STRATIFIED_WINDOW` in `diversity.py`.
+- For sentence token lengths L, `sentence_cv = population_stddev(L) / mean(L)`.
+  Rolling sentence length uses w=N for fewer than six sentences, otherwise
+  `w=min(15,max(3,N//3))`. Sliding means are rounded to one decimal and, when
+  longer than twelve points, averaged into twelve contiguous index bins.
+  `pacing_curve` retains those means; `pacing_sparkline` rescales each chapter's
+  own minimum and maximum to eight display levels. A constant curve uses one
+  middle level. Empty sentence input has an empty curve and sparkline; its
+  current numeric CV sentinel is zero and must not be read as measured regularity.
