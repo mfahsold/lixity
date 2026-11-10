@@ -73,6 +73,8 @@ require the local application and, where applicable, separately installed tools.
 - [Automation contracts](AGENTS.md): discovery, CLI/JSON, Python and HTTP interfaces. Repository agent instructions live separately in [AGENTS.md](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 - [Architecture](ARCHITECTURE.md) and [research documentation map](research/README.md): implementation boundaries, storage and clearly marked proposals.
 - [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the unreleased first implementation from future work.
+- [Rust evaluation RFC](RUST_EVALUATION_RFC.md): question, evidence and acceptance gates for a possible future native implementation; no rewrite authorized.
+- Agent skill (`skills/lixity/SKILL.md` in the checkout): entry point for AI-assisted workflows; `docs/AGENTS.md` remains normative on conflicts.
 - [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development, checks and release workflow.
 - [Licensing](LICENSING.md) and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): usage terms and reporting issues.
 

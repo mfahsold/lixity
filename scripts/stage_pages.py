@@ -45,6 +45,7 @@ DOCS_ROOT_FILES = {
     "AGENTS.md",
     "ARCHITECTURE.md",
     "MANUSCRIPT_EDITING_RFC.md",
+    "RUST_EVALUATION_RFC.md",
     "INSTALLATION.md",
     "LICENSING.md",
     "LOCALIZATION.md",
