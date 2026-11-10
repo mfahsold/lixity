@@ -12,6 +12,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Separate synthetic example-project creation from screenshot HTTP fixtures.
   Provide a non-overwriting project generator with explicit manuscript/language
   configuration; public examples use that same ordinary project and exporter.
+  Keep reviewed Pages publication wrappers independent of screenshot adapters
+  and share their metadata/navigation with the public-domain examples.
 
 ### Documentation
 

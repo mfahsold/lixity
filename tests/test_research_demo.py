@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import make_screenshots  # noqa: E402
 
+from scripts import example_project, example_publications  # noqa: E402
+
 
 def site_data(document):
     match = re.search(r'<script[^>]*id="lixity-site-data"[^>]*>(.*?)</script>', document, re.DOTALL)
@@ -51,7 +53,7 @@ def public_demo(tmp_path, research_fixture, monkeypatch):
     monkeypatch.setattr(pdf_export, "compose_pdf", synthetic_pdf)
     project = tmp_path / "research-demo"
     before = {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()}
-    target = make_screenshots.build_research_demo(tmp_path, project)
+    target = example_publications.build_research_demo(tmp_path, project)
     assert {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()} == before
     return target
 
@@ -62,10 +64,10 @@ def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
     image = assets / "hamburg-free-port-1900.jpg"
     image.write_bytes(image.read_bytes() + b"changed")
     with pytest.raises(ValueError, match="reviewed"):
-        make_screenshots.reviewed_visual_sources(assets)
+        example_project.reviewed_visual_sources(assets)
     image.unlink()
     with pytest.raises((OSError, ValueError)):
-        make_screenshots.reviewed_visual_sources(assets)
+        example_project.reviewed_visual_sources(assets)
 
 
 def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_boundaries(tmp_path, research_fixture):
@@ -347,9 +349,7 @@ vm.runInNewContext(runtime, {window, document, URL, Request, Response, Map, Set}
 
 @pytest.fixture
 def public_publications(tmp_path, research_fixture):
-    builder = getattr(make_screenshots, 'build_publication_examples', None)
-    assert callable(builder), 'The public reader and companion examples are missing'
-    return builder(tmp_path, tmp_path / 'research-demo')
+    return example_publications.build_publication_examples(tmp_path, tmp_path / 'research-demo')
 
 
 def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_path, public_publications):
@@ -467,3 +467,19 @@ def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_pat
     public_publications['reader'].write_text('Changed after review', encoding='utf-8')
     with pytest.raises(ValueError, match=r'changed|checksum'):
         stage(docs, tmp_path / 'changed-output')
+
+
+@pytest.mark.parametrize("builder", [
+    example_publications.build_research_demo,
+    example_publications.build_publication_examples,
+])
+def test_public_build_rejects_an_unreviewed_manuscript_before_writing(tmp_path, builder):
+    project = tmp_path / "project"
+    project.mkdir()
+    manuscript = project / "harbour-manuscript.md"
+    manuscript.write_text("Synthetic but unreviewed replacement.", encoding="utf-8")
+    destination = tmp_path / "public"
+    with pytest.raises(ValueError, match="reviewed synthetic manuscript"):
+        builder(destination, project)
+    assert not destination.exists()
+    assert manuscript.read_text(encoding="utf-8") == "Synthetic but unreviewed replacement."

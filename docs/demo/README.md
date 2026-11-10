@@ -106,8 +106,12 @@ For an unwrapped local analysis/research website, use the regular export command
 ```
 
 Project creation lives in `scripts/example_project.py`; screenshot HTTP fixtures
-are a separate adapter. The public build creates the same ordinary project and
-passes it through the production exporter, then adds the reviewed website wrapper.
+are a separate adapter in `scripts/make_screenshots.py`.
+`scripts/example_publications.py` owns the reviewed Pages wrappers, metadata and
+publication profiles. Both build entrypoints call this shared publication module;
+it does not import the screenshot adapter or the build entrypoint. The public
+build creates the same ordinary project and passes it through the production
+exporter, then adds the reviewed website wrapper.
 No screenshot fixture is needed to create or export the editable project.
 
 A future real-book sample should be a separately prepared, explicitly selected

@@ -74,7 +74,7 @@ class TestPagesStaging(unittest.TestCase):
             self.assertTrue((output / "guides/first-look-de.html.md").is_file())
 
     def test_compact_demo_navigation_keeps_orientation_without_repeating_the_title(self):
-        from scripts.build_examples import _site_navigation
+        from scripts.example_publications import _site_navigation
 
         document = (
             '<html><head></head><body id="top" class="lixity-workspace">'
@@ -90,7 +90,7 @@ class TestPagesStaging(unittest.TestCase):
         self.assertNotIn('<nav class="site-breadcrumbs"', ordinary)
 
     def test_public_navigation_preserves_workspace_and_report_classes(self):
-        from scripts.build_examples import _insert_notice, _site_navigation
+        from scripts.example_publications import _insert_notice, _site_navigation
 
         for mode in ("lixity-workspace", "lixity-report"):
             with self.subTest(mode=mode):
@@ -120,7 +120,7 @@ class TestPagesStaging(unittest.TestCase):
                     self.assertIn('</header><section id="demo-notice">About</section><main>', page)
 
     def test_report_title_replacement_ignores_embedded_svg_script_literals(self):
-        from scripts.build_examples import _replace_title
+        from scripts.example_publications import _replace_title
 
         report = '<html><head><title>Original</title></head><body><script>var svg = "<title>Feature</title>";</script></body></html>'
         self.assertEqual(_replace_title(report, "Research & maps"), report.replace(
@@ -411,7 +411,7 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
 
     def test_public_example_head_loads_analytics_without_instrumenting_exports(self):
         from lixity import api
-        from scripts.build_examples import _head_metadata
+        from scripts.example_publications import _head_metadata
 
         head = _head_metadata(canonical=SITE + "demo/report.html", title="Synthetic demo",
                               description="Synthetic public example", language="en")
@@ -421,7 +421,7 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
         self.assertNotIn("goatcounter", local)
 
     def test_demo_counter_policy_uses_validated_public_configuration(self):
-        from scripts.build_examples import _analytics_endpoint
+        from scripts.example_publications import _analytics_endpoint
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

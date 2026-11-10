@@ -21,10 +21,7 @@ example grows beyond a size the site should ship.
 
 from __future__ import annotations
 
-import html
-import json
 import re
-import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,9 +31,21 @@ from lixity.api import dashboard
 from lixity.pdf_export import compose_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
-SITE = "https://mfahsold.github.io/lixity"
-OG_IMAGE_ALT = "Lixity continuous manuscript reader with chapter navigation and contextual tools"
-LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
+sys.path.insert(0, str(ROOT))
+
+from scripts.example_publications import (  # noqa: E402
+    LICENSE_URL,
+    SITE,
+    _finalize,
+    _head_metadata,
+    _insert_notice,
+    _notice,
+    _replace_title,
+    _require,
+    _site_navigation,
+    build_publication_examples,
+    build_research_demo,
+)
 
 #: A published example stays a quick page load; past this size the excerpt is
 #: cut further instead of shipping a multi-megabyte HTML document. The shared
@@ -92,188 +101,9 @@ EXAMPLES = (
 )
 
 
-def _finalize(report: str) -> str:
-    return "\n".join(line.rstrip() for line in report.splitlines()) + "\n"
-
-
-def _require(condition: bool, message: str) -> None:
-    if not condition:
-        raise SystemExit(message)
-
-
-def _analytics_endpoint(root: Path) -> str | None:
-    """Derive the demo's narrow image policy from its reviewed public config."""
-    try:
-        config = json.loads((root / "docs/assets/analytics.json").read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return None
-    if not isinstance(config, dict) or "site_code" not in config:
-        raise ValueError("Public analytics configuration must declare site_code")
-    code = config["site_code"]
-    if code is None:
-        return None
-    if not isinstance(code, str) or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", code):
-        raise ValueError("Public analytics site_code must be a hosted GoatCounter subdomain")
-    return f"https://{code}.goatcounter.com/count"
-
-
-def _head_metadata(
-    *,
-    canonical: str,
-    title: str,
-    description: str,
-    language: str,
-    about: tuple[str, str] | None = None,
-    preview_image: tuple[str, str] | None = None,
-    analytics: bool = True,
-) -> str:
-    escaped = html.escape(description, quote=True)
-    escaped_title = html.escape(title, quote=True)
-    image_path, image_alt = preview_image or ("screenshots/dashboard-light.png", OG_IMAGE_ALT)
-    image_url = f"{SITE}/{image_path}"
-    image_header = (ROOT / "docs" / image_path).read_bytes()[:24]
-    _require(image_header[:8] == b"\x89PNG\r\n\x1a\n", "the preview image must be a PNG")
-    width, height = struct.unpack(">II", image_header[16:24])
-    structured: dict[str, object] = {
-        "@context": "https://schema.org",
-        "@type": "TechArticle",
-        "headline": title,
-        "description": description,
-        "url": canonical,
-        "mainEntityOfPage": canonical,
-        "image": {"@type": "ImageObject", "url": image_url, "width": width, "height": height,
-                  "caption": image_alt},
-        "inLanguage": language,
-        "author": {
-            "@type": "Person",
-            "name": "Matthias Fahsold",
-            "url": "https://github.com/mfahsold",
-        },
-        "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": f"{SITE}/"},
-        "license": LICENSE_URL,
-    }
-    if about is not None:
-        structured["about"] = {
-            "@type": "Book",
-            "name": about[0],
-            "author": {"@type": "Person", "name": about[1]},
-        }
-    return (
-        f'<link rel="canonical" href="{canonical}"/>\n'
-        + ('<script defer src="../assets/analytics.js"></script>\n' if analytics else '')
-        + f'<meta name="description" content="{escaped}"/>\n'
-        '<meta property="og:type" content="article"/>\n'
-        '<meta property="og:site_name" content="Lixity"/>\n'
-        f'<meta property="og:title" content="{escaped_title}"/>\n'
-        f'<meta property="og:description" content="{escaped}"/>\n'
-        f'<meta property="og:url" content="{canonical}"/>\n'
-        f'<meta property="og:image" content="{image_url}"/>\n'
-        f'<meta property="og:image:width" content="{width}"/>\n'
-        f'<meta property="og:image:height" content="{height}"/>\n'
-        f'<meta property="og:image:alt" content="{html.escape(image_alt, quote=True)}"/>\n'
-        '<meta name="twitter:card" content="summary_large_image"/>\n'
-        f'<meta name="twitter:title" content="{escaped_title}"/>\n'
-        f'<meta name="twitter:description" content="{escaped}"/>\n'
-        f'<meta name="twitter:image" content="{image_url}"/>\n'
-        f'<meta name="twitter:image:alt" content="{html.escape(image_alt, quote=True)}"/>\n'
-        '<script type="application/ld+json">\n'
-        + json.dumps(structured, ensure_ascii=False)
-        + "\n</script>\n"
-    )
-
-
-def _replace_title(report: str, title: str) -> str:
-    head = report.partition("</head>")[0]
-    match = re.search(r"<title>[^<]*</title>", head)
-    _require(match is not None, "the dashboard must carry one title element")
-    _require(head.count("<title>") == 1, "the dashboard head must carry exactly one title")
-    return report.replace(match.group(0), f"<title>{html.escape(title)}</title>", 1)
-
-
-def _insert_notice(report: str, notice: str) -> str:
-    _require(report.count("</header>") == 1, "the dashboard must carry exactly one header")
-    # Public explanation belongs to the document, outside the native project rail.
-    shell = '<div class="workspace-shell">'
-    if shell in report:
-        # The renderer emits this boundary after the complete shell and status
-        # strip. Its position does not depend on nested action disclosures.
-        boundary = "<!--dashboard-freshness-->"
-        _require(report.count(shell) == report.count(boundary) == 1,
-                 "the workspace must carry one shell and one content boundary")
-        content_start = report.index(boundary)
-        _require(content_start > report.index(shell), "workspace content must follow the shell")
-        return report[:content_start] + notice + report[content_start:]
-    return report.replace("</header>", "</header>" + notice, 1)
-
-
-def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -> str:
-    body = "\n".join(f"<p>{text}</p>" for text in paragraphs)
-    anchors = "\n".join(f'<a href="{href}">{label}</a>' for href, label in links)
-    return f"""
-<section class="panel" id="example-context" aria-labelledby="example-heading">
-<h2 id="example-heading">{heading}</h2>
-{body}
-<div class="license-links">{anchors}</div>
-</section>
-"""
-
-
-def _site_navigation(
-    report: str, title: str, *, demo: bool = False, breadcrumbs: bool = True,
-    links: tuple[tuple[str, str], ...] | None = None,
-) -> str:
-    """Keep public examples connected without adding external report assets."""
-    stylesheet = (ROOT / "docs/assets/site.css").read_text(encoding="utf-8")
-    start, end = "/* Public navigation start */", "/* Public navigation end */"
-    _require(stylesheet.count(start) == stylesheet.count(end) == 1,
-             "the shared public navigation stylesheet must have one bounded block")
-    styles = stylesheet.partition(start)[2].partition(end)[0]
-    navigation = (
-        '<nav class="site-return" aria-label="Lixity navigation">'
-        '<a href="../">About Lixity</a>'
-        '<span class="demo-context">Read-only demo · Fictional manuscript</span>'
-        '</nav>'
-    ) if demo else (
-        '<nav class="site-return" aria-label="Lixity navigation">'
-        '<a href="../">Home</a><a href="../#guides">Guides</a>'
-        '<a href="../blog/index.html">Articles</a>'
-        '<a href="../demo/report.html">Demo</a>'
-        '</nav>'
-    )
-    if links is not None:
-        navigation = '<nav class="site-return" aria-label="Lixity navigation">' + ''.join(
-            f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a>' for href, label in links) + '</nav>'
-    if breadcrumbs and not demo:
-        navigation += (
-            '<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
-            '<li><a href="../">Home</a></li>' +
-            f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
-        )
-    if not re.search(r'<body\b[^>]*\bid="top"', report):
-        report = re.sub(r'<body(?=\s|>)', '<body id="top"', report, count=1)
-    _require(report.count('<body id="top"') == 1, "the report must have one top target")
-    report = report.replace('<body id="top"', '<body id="top" tabindex="-1"', 1)
-    report, class_count = re.subn(
-        r'(<body\b[^>]*\bclass=")([^"]*)"',
-        lambda match: match[1] + match[2] + ' site-page"', report, count=1,
-    )
-    _require(class_count == 1, "the report must retain its native body class")
-    page = re.search(r'<div class="page"(?: id="[^"]*")?>', report)
-    _require(page is not None, "the report must have one page container")
-    if page is not None:
-        report = report[:page.end()] + navigation + report[page.end():]
-    report = report.replace('</head>', '<style>' + styles + '</style></head>', 1)
-    return report.replace('</body>', '<a class="site-back-top" href="#top">Back to top ↑</a></body>', 1)
-
-
 def build_demo(root: Path) -> Path:
     """Build the one public project through the shared native workspace builder."""
     from tempfile import TemporaryDirectory
-
-    from make_screenshots import (
-        build_publication_examples,
-        build_research_demo,
-    )
 
     with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
         from scripts.example_project import create_example_project

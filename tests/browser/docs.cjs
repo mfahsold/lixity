@@ -806,8 +806,9 @@ async function checkDemoCapabilities(page, width) {
           const box = canvas.getBoundingClientRect();
           const toolbar = document.getElementById('manuscript-reader-controls').getBoundingClientRect();
           const visible = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, toolbar.bottom, 0));
-          return visible / box.height;
-        })).toBeGreaterThan(0.8);
+          // Allow one CSS pixel for fractional layout/scroll rounding.
+          return visible + 1 >= box.height * 0.8;
+        })).toBe(true);
       }
     }
   }
@@ -995,10 +996,11 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await checkDemoCapabilities(page, width);
   // The saved research quotation belongs to the very manuscript being analysed.
   await page.locator('#text-search').fill(demoQuote);
+  await page.locator('#text-search').press('Enter');
   const passage = page.locator('#chapters .ptext.open').filter({hasText: demoQuote}).first();
   await expect(passage.locator('mark.text-hit')).toHaveText(demoQuote);
   await expect(page.locator('#text-search-status')).toContainText('1 matching blocks');
-  await expect.poll(() => passage.evaluate(node => node.classList.contains('flash')), {
+  await expect.poll(() => passage.locator('mark.text-hit').evaluate(node => node.classList.contains('flash')), {
     message: 'The manuscript search reaches its marked passage before opening Values',
   }).toBe(true);
   await openValues(page, passage);
