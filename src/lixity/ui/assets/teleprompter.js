@@ -27,7 +27,7 @@
   var lastRecordedBlobUrl = null;
 
   var wordsPerMinute = 130;
-  var fontSize = 32;
+  var fontSize = 28;
   var animFrameId = null;
   var lastTimestamp = 0;
   var activeParagraphSha = null;
@@ -569,11 +569,13 @@
     if (scrollPane.scrollTop <= 20) {
       closest = paragraphs[0];
     } else {
-      var targetY = window.innerHeight * 0.28;
+      var paneRect = scrollPane.getBoundingClientRect();
+      var targetY = paneRect.top + scrollPane.clientHeight * 0.28;
       var minDiff = Infinity;
       paragraphs.forEach(function(p) {
         var rect = p.getBoundingClientRect();
-        var diff = Math.abs(rect.top - targetY);
+        // Distance to the paragraph interval, not only its beginning.
+        var diff = targetY < rect.top ? rect.top - targetY : Math.max(0, targetY - rect.bottom);
         if (diff < minDiff) {
           minDiff = diff;
           closest = p;
@@ -582,6 +584,7 @@
     }
 
     if (closest) {
+      chapterSelect.value = closest.dataset.chapterId;
       updateDossierSidebar(closest);
     }
   }

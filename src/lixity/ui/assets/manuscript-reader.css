@@ -16,7 +16,7 @@
 }
 .reader-secondary-controls { display: none; }
 .reader-analysis-toggle-controls { display: inline-flex; align-items: center; gap: .35rem; }
-.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.25rem; justify-content: center; padding: .35rem; }
+.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.5rem; justify-content: center; padding: .35rem; }
 .reader-analysis-guide > summary::after { display: none; }
 .reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
 .reader-analysis-guide p, .reader-analysis-guide li { line-height: var(--line-reading); }
@@ -472,3 +472,41 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 .manuscript-reading.reader-inspector-open .ptext.reader-inspector-target::before,
 .manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }
+
+/* Keep reading tools compact without truncating labels or hiding actions. */
+.manuscript-reader-controls { gap: .2rem; padding: .25rem .4rem; }
+.manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; max-width: 14rem; }
+.manuscript-reader-controls > button.ctl,
+.manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
+.manuscript-reader-controls .reader-controls > button.ctl {
+  padding: .3rem .4rem; min-height: 2.5rem;
+}
+.manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
+.manuscript-reader-controls .reader-controls { gap: .25rem; }
+body.lixity-workspace.reader-focus {
+  --bg: light-dark(#e9edf4, #080c13);
+  --surface: light-dark(#fff, #111824);
+}
+.reader-focus .manuscript-reader-controls { box-shadow: none; }
+.reader-focus .toolbar { margin-block: .5rem; }
+.reader-focus #chapters { margin-top: .75rem; }
+@media (prefers-reduced-motion: no-preference) {
+  body.lixity-workspace { transition: background-color 160ms ease; }
+  .reader-focus .manuscript-reader-controls { transition: border-color 160ms ease; }
+  .reader-focus .manuscript-reader-controls:focus-within,
+  .reader-focus .manuscript-reader-controls:hover { border-color: var(--line-strong); }
+}
+@media (max-width: 600px) {
+  .manuscript-reader-controls select.reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: 100%; }
+}
+@media (pointer: coarse) {
+  .manuscript-reader-controls > button.ctl,
+  .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
+  .manuscript-reader-controls .reader-controls > button.ctl,
+  .manuscript-reader-controls select.reader-chapter,
+  .manuscript-reader-controls .reader-settings > summary { min-height: 2.75rem; }
+}
+
+@media (min-width: 601px) and (max-width: 1600px) {
+  .manuscript-reader-controls .analysis-state { display: none; }
+}

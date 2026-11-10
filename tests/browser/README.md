@@ -13,6 +13,11 @@ track selection, WAV downloads and unchanged dossier disclosure at desktop/mobil
 sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises the
 native, source-bound WAV import with a synthetic project and muted playback.
 
+`reader-toolbar.cjs` checks the complete German native toolbar at desktop and
+mobile widths, bounded focus controls and keyboard exit.
+`teleprompter-scroll.cjs` checks long-paragraph selection, chapter synchronization
+and continuous automatic scrolling.
+
 `teleprompter-context.cjs` checks lazy, project-bound context loading and clearing
 previous speech context on reopening without audio capability.
 

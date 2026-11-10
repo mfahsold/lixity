@@ -638,6 +638,10 @@ without synthesizing speech:
    - **Variable Speed (WPM):** Adjust the scrolling pace with the speed slider or **`↑` / `↓`** arrow
      keys (60–240, default: 130). This is an approximate scrolling setting, not measured
      speech timing or automatic tracking of your voice.
+   - The active paragraph follows the reading position inside the scroll pane,
+     including within long paragraphs. The chapter selector follows that passage.
+     Initial text size is 28 px and can be adjusted with the size controls;
+     active text has no full-paragraph highlight box.
    - **Play / Pause:** Toggle scrolling with the **`Space`** bar or the top toolbar button.
    - **Typographic Controls:** Adjust font size on the fly with **`A−`** and **`A+`** (20–56px).
 

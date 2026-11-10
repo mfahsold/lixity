@@ -20,9 +20,17 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
     page.on('pageerror', error => errors.push(error.message));
     await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
       ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: fixture.stdout}));
-    for (const width of [1440, 768, 390, 320]) {
+    for (const width of [1920, 1440, 768, 390, 320]) {
       await page.setViewportSize({width, height: 900});
       await page.goto('http://lixity.test/');
+      if (width >= 1440) {
+        const toolbar = await page.locator('#manuscript-reader-controls').boundingBox();
+        await page.locator('#reader-focus').click();
+        const chapter = await page.locator('#reader-chapter').boundingBox();
+        assert.ok(chapter.width <= 240, `Chapter selector does not stretch across focus toolbar: ${chapter.width}px`);
+        await page.locator('#reader-focus').click();
+        assert.ok(toolbar.height <= 64, `Wide desktop reading toolbar stays one compact row: ${toolbar.height}px`);
+      }
       assert.ok(await page.locator('#license-terms').isVisible());
       assert.ok((await page.locator('#license-terms').textContent()).includes('self-publishing'));
       await page.locator('.license-badge').focus();

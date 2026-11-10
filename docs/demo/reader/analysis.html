@@ -3423,7 +3423,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .reader-secondary-controls { display: none; }
 .reader-analysis-toggle-controls { display: inline-flex; align-items: center; gap: .35rem; }
-.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.25rem; justify-content: center; padding: .35rem; }
+.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.5rem; justify-content: center; padding: .35rem; }
 .reader-analysis-guide > summary::after { display: none; }
 .reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
 .reader-analysis-guide p, .reader-analysis-guide li { line-height: var(--line-reading); }
@@ -3880,6 +3880,44 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading.reader-inspector-open .ptext.reader-inspector-target::before,
 .manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }
 
+/* Keep reading tools compact without truncating labels or hiding actions. */
+.manuscript-reader-controls { gap: .2rem; padding: .25rem .4rem; }
+.manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; max-width: 14rem; }
+.manuscript-reader-controls > button.ctl,
+.manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
+.manuscript-reader-controls .reader-controls > button.ctl {
+  padding: .3rem .4rem; min-height: 2.5rem;
+}
+.manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
+.manuscript-reader-controls .reader-controls { gap: .25rem; }
+body.lixity-workspace.reader-focus {
+  --bg: light-dark(#e9edf4, #080c13);
+  --surface: light-dark(#fff, #111824);
+}
+.reader-focus .manuscript-reader-controls { box-shadow: none; }
+.reader-focus .toolbar { margin-block: .5rem; }
+.reader-focus #chapters { margin-top: .75rem; }
+@media (prefers-reduced-motion: no-preference) {
+  body.lixity-workspace { transition: background-color 160ms ease; }
+  .reader-focus .manuscript-reader-controls { transition: border-color 160ms ease; }
+  .reader-focus .manuscript-reader-controls:focus-within,
+  .reader-focus .manuscript-reader-controls:hover { border-color: var(--line-strong); }
+}
+@media (max-width: 600px) {
+  .manuscript-reader-controls select.reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: 100%; }
+}
+@media (pointer: coarse) {
+  .manuscript-reader-controls > button.ctl,
+  .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
+  .manuscript-reader-controls .reader-controls > button.ctl,
+  .manuscript-reader-controls select.reader-chapter,
+  .manuscript-reader-controls .reader-settings > summary { min-height: 2.75rem; }
+}
+
+@media (min-width: 601px) and (max-width: 1600px) {
+  .manuscript-reader-controls .analysis-state { display: none; }
+}
+
 /* Exact saved decision and dossier records in the existing Review surface. */
 .research-decision-review { margin-block: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-2); }
 .research-decision-review > summary,
@@ -4201,7 +4239,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <meta property="og:url" content="https://mfahsold.github.io/lixity/demo/reader/analysis.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="2184"/>
+<meta property="og:image:height" content="2078"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Warehouse 4 — chapter analysis"/>
@@ -4209,7 +4247,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2184, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2078, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
 </script>
 </head>
 <body class="lixity-report" data-read-only="true"><main class="page">

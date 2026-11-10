@@ -272,7 +272,9 @@ Use Shift+right-click to open the browser's native context menu instead.
 **Focus reading** temporarily hides surrounding navigation and
 tools, counted-text underlines and paragraph comparison markers; its visible exit
 or Escape restores the workspace and prior display choices. Opening a tool exits
-focus coherently. Text-size, layout and companion changes retain the visible
+focus coherently. The compact toolbar keeps chapter selection bounded; dark-mode
+surroundings become quieter without lowering manuscript contrast. Subtle color
+transitions respect reduced motion. Text-size, layout and companion changes retain the visible
 source block's position where available. Menus close on scrolling or resizing;
 switching workspace closes temporary menus and reading settings.
 

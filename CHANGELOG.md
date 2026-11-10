@@ -7,6 +7,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the reading toolbar compact and bound chapter selection width in focus
+  mode. Dark focus surroundings are quieter without dimming manuscript text.
+- Track the paragraph containing the teleprompter reading position, synchronize
+  its chapter selector and avoid smooth-scroll interference during playback.
+  Use smaller initial text and restrained highlighting for long paragraphs.
+
 ### Documentation
 
 - Present manuscript revision and exploratory linguistic text analysis consistently

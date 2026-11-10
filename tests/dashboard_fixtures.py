@@ -37,7 +37,7 @@ SAMPLE = (
 )
 
 
-def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_evidence: bool = False) -> str:
+def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_evidence: bool = False, language_key: str | None = None) -> str:
     # Three complete, varying chapters exercise the optional rank-space panel.
     complete = SAMPLE.replace(
         "## Kap 2",
@@ -72,6 +72,7 @@ def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_ev
         motifs=motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         title="Testroman",
+        **({"language_key": language_key} if language_key is not None else {}),
         controls=True,
         **({"enabled_actions": enabled_actions} if enabled_actions is not None else {}),
     )
