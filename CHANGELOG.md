@@ -7,6 +7,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add a minimal read-only MCP server (`python -m lixity.mcp`, stdlib-only
+  stdio transport, no writes) exposing `about`, `analyze` and `profile`
+  over `tools/list` / `tools/call`. Documented in `docs/AGENTS.md`.
+
 ### Changed
 
 - Memoize per-token verb/descriptive classification in the analyzer: the

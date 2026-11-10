@@ -170,6 +170,14 @@ aliases both before writing and immediately before replacement.
 [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
 defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout limits.
 
+### 2.1 MCP server (read-only)
+
+`python -m lixity.mcp` serves a minimal stdio MCP endpoint (stdlib only,
+no writes): `lixity_about`, `lixity_analyze` and `lixity_profile`. It wraps
+the same Python API as section 5, so contracts and operating boundaries are
+unchanged; manuscript text stays data, never instruction. Prefer the CLI or
+HTTP API where they fit; use MCP where the client only speaks tools.
+
 ## 3. JSON contracts
 
 ### 3.1 `analyze --json` (schema_version 2)
