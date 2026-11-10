@@ -606,7 +606,7 @@ class TestJsDomContract(unittest.TestCase):
             "data-marker-resolve=",
             'data-jump="#ch-',
             'id="flags"',
-            'class="row-link flag-row"',
+            'class="flag-row"',
             'data-target="p-',
             'class="ptext" id="p-',
             'data-start="',
@@ -617,13 +617,13 @@ class TestJsDomContract(unittest.TestCase):
             self.assertIn(hook, html, hook)
 
     def test_flags_panel_contract(self):
-        """Flagged list: row → paragraph jump, filter context, marker quick-add."""
+        """Review records retain identity; explicit read buttons own navigation."""
         html = _full_dashboard()
         self.assertIn('id="flags"', html)
-        # rows carry line anchor + paragraph target + only-flags drill-down
+        # Review identity must not make the whole record a navigation control.
         self.assertRegex(
             html,
-            r'class="row-link flag-row" data-line="\d+" data-target="p-\d+" data-flags="1"',
+            r'class="flag-row" data-review-line="\d+" data-target="p-\d+" data-flags="1"',
         )
         # quick TODO button with its own note slot inside the row
         self.assertIn('data-marker-kind="todo"', html)

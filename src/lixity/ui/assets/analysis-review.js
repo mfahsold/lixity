@@ -61,10 +61,10 @@
     var observations = new Map(data.observations.map(function(item) {
       return [item.start_line + ":" + item.paragraph_sha256, item];
     }));
-    if (!rows.every(function(row) {return observations.has(row.dataset.line + ":" + row.dataset.reviewSha);})) return false;
+    if (!rows.every(function(row) {return observations.has(row.dataset.reviewLine + ":" + row.dataset.reviewSha);})) return false;
     accepted = data;
     rows.forEach(function(row) {
-      var item = observations.get(row.dataset.line + ":" + row.dataset.reviewSha);
+      var item = observations.get(row.dataset.reviewLine + ":" + row.dataset.reviewSha);
       row.dataset.observationId = item.id;
       row.dataset.reviewState = item.status;
       row.querySelector(".triage-saved-state").textContent = label(item.status);
@@ -88,7 +88,7 @@
   function passageRow(passage) {
     if (!native || !passage || !passage.isConnected) return null;
     return rows.find(function(row) {
-      return row.dataset.target === passage.id && row.dataset.line === passage.dataset.start &&
+      return row.dataset.target === passage.id && row.dataset.reviewLine === passage.dataset.start &&
         row.dataset.reviewSha === passage.dataset.paragraphSha256;
     }) || null;
   }

@@ -15,6 +15,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep flagged-passage review records passive: only the read action navigates.
+  Remove inherited whole-row hover fills and jump tooltips from decision controls.
+
 - Keep manuscript search available while scrolling; typing updates matches without
   jumping or leaving the overview. Explicit navigation targets the highlighted text
   and uses the latest query even before its debounce completes.

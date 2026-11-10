@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const {startNativeServer} = require('./support/native-server.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-triage-layout-'));
@@ -36,10 +36,10 @@ server.serve_forever()
   let browser;
   const measurements = [];
   try {
-    browser = await launchChromium();
+    browser = await (process.argv.includes('--firefox') ? launchFirefox() : launchChromium());
     const source = fs.readFileSync(server.fixture.source);
     for (const width of [1440, 1280, 1024, 768, 320]) {
-      const page = await browser.newPage({viewport:{width,height:950}, reducedMotion:'reduce'});
+      const page = await browser.newPage({viewport:{width,height:950}, reducedMotion:'reduce', colorScheme:'dark'});
       const errors = [], writes = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => {
@@ -55,6 +55,21 @@ server.serve_forever()
         const button = row.locator('.triage-read-cell button');
         await expect(button).toHaveText('Textstelle lesen');
         await expect(row.locator('.triage-choice')).toBeEnabled();
+        await page.mouse.move(0, 0);
+        const cellColors = () => row.locator('td').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));
+        const restingColors = await cellColors();
+        // A review record contains independent controls, not a nested row button.
+        await row.locator('.flag-excerpt').click({position:{x:8,y:8}});
+        await expect(page.locator('#flags')).toBeVisible();
+        assert.deepEqual(await cellColors(), restingColors, 'Hovering a record must not highlight every cell');
+        assert.equal(await row.getAttribute('title'), null);
+        assert.equal(await row.getAttribute('data-line'), null);
+        assert.equal(await row.evaluate(el => getComputedStyle(el).cursor), 'auto');
+        const reason = row.locator('.triage-reason');
+        await reason.locator('summary').click();
+        await expect(reason).toHaveAttribute('open', '');
+        await expect(page.locator('#flags')).toBeVisible();
+        await reason.locator('summary').click();
         await page.locator('#flags').scrollIntoViewIfNeeded();
         const dimensions = await row.evaluate(row => {
           const button = row.querySelector('.triage-read-cell button').getBoundingClientRect();

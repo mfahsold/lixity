@@ -1587,11 +1587,10 @@ def render_dashboard(
                 else f"{L('chapter')} {p.chapter_num}"
             )
             parts.append(
-                f'<tr class="row-link flag-row" data-line="{p.start_line}" '
+                f'<tr class="flag-row" data-review-line="{p.start_line}" '
                 f'data-target="p-{idx}" data-flags="1" '
                 f'data-triage-chapter="{p.chapter_num}" data-triage-severity="{p.severity}" '
-                f'data-review-sha="{paragraph_identity(p)["paragraph_sha256"]}" '
-                f'title="{esc(label(labels, "click_hint_para"), quote=True)}">'
+                f'data-review-sha="{paragraph_identity(p)["paragraph_sha256"]}">'
                 f'<td><span class="badge sev-{p.severity}">'
                 f"{esc(label(labels, f'severity_{p.severity}'))}</span></td>"
                 f"<td>{chapter_cell}</td>"
