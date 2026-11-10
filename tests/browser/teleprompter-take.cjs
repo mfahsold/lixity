@@ -3,8 +3,8 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const {execFileSync} = require('node:child_process');
-const labels=JSON.parse(execFileSync('.venv/bin/python',['-c','import json; from lixity.workspace_labels import WORKSPACE_LABELS; print(json.dumps(WORKSPACE_LABELS["de"]))'],{env:{...process.env,PYTHONPATH:'src'},encoding:'utf8'}));
+const {pythonFixture} = require('./support/python-fixture.cjs');
+const labels=pythonFixture('import json; from lixity.workspace_labels import WORKSPACE_LABELS; print(json.dumps(WORKSPACE_LABELS["de"]))');
 
 (async () => {
   const browser = await launchChromium();

@@ -182,6 +182,7 @@ async function checkScale(page, label) {
     browser = await launchChromium();
     for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
+      context.setDefaultTimeout(30000);
       const errors = [];
       await context.route('http://lixity.test/**', route => {
         const url = new URL(route.request().url());
