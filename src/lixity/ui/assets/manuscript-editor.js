@@ -336,7 +336,7 @@
   }
   async function open() {
     if (loading) return;
-    if (editor) {section.hidden = false; document.body.classList.add('manuscript-writing'); closeButton.hidden = false; editor.focus(); return;}
+    if (editor) {section.hidden = false; document.body.classList.add('manuscript-writing'); openButton.hidden = true; closeButton.hidden = false; editor.focus(); return;}
     loading = true; openButton.disabled = true; openButton.textContent = text(17);
     try {
       snapshot = await request('/manuscript-edit');
@@ -344,7 +344,7 @@
       openingLine = visible ? Number(visible.dataset.start) : 1;
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
       loaded = true; section.hidden = false; document.body.classList.add('manuscript-writing');
-      closeButton.hidden = false;
+      openButton.hidden = true; closeButton.hidden = false;
       editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
       editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
     } catch (error) {section.hidden = false; show('error', error.message);}
@@ -353,10 +353,11 @@
   async function close() {
     if (reading.open || comparison.open) return;
     if (inflight) return;
-    if (dirty) await flush();
+    if (dirty && !paused) await flush();
+    if (paused) return;
     // Keep the mounted editor and its undo history; only leave the writing surface.
     section.hidden = true; document.body.classList.remove('manuscript-writing');
-    closeButton.hidden = true;
+    closeButton.hidden = true; openButton.hidden = false;
     if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
     openButton.focus();
   }
