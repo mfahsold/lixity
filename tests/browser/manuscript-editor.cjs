@@ -27,6 +27,13 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('.cm-content').waitFor();
     assert.equal(await page.locator('#manuscript-close').isVisible(), true, 'Close writing button is visible while editing');
     assert.equal(await page.locator('#manuscript-write').isHidden(), true, 'Write button is replaced by Close writing while editing');
+    assert.equal(await page.locator('.cm-content').getAttribute('spellcheck'), 'false', 'CodeMirror editor disables browser spellcheck underlines');
+    assert.equal(await page.locator('#manuscript-recover').isHidden(), true, 'Recover button stays hidden until a recovery entry is selected');
+    assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');
+    await page.locator('#manuscript-undo').focus();
+    assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
+    await page.locator('#manuscript-compare').focus();
+    assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true', 'Buttons without distinct help or shortcuts do not open redundant echo tooltips');
     await page.locator('.cm-content').click();
     await page.keyboard.press('Control+End');
     await page.keyboard.type('New sentence.');
@@ -94,6 +101,10 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.match(await reading.locator('#chapters').innerText(), /Read cycle/);
     assert.equal(await reading.locator('html').evaluate(el => getComputedStyle(el).colorScheme), await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme));
     assert.equal(await reading.locator('#project-actions').isVisible(), false);
+    assert.equal(await reading.locator('.workspace-shell-header').isVisible(), false, 'Disposable reading frame hides duplicate app brand header');
+    assert.equal(await reading.locator('.workspace-shell .project-header').isVisible(), false, 'Disposable reading frame hides duplicate project metadata');
+    assert.equal(await reading.locator('.workspace-product-details').isVisible(), false, 'Disposable reading frame hides duplicate version/license chrome');
+    assert.doesNotMatch(await page.locator('#manuscript-reading-status').textContent(), /[0-9a-f]{12}/i, 'Saved revision reader status does not expose raw SHA-256 hex');
     await page.locator('#manuscript-review-links').click();
     await reading.locator('.manuscript-link-review-item').first().waitFor();
     assert.match(await reading.locator('.manuscript-link-review-item').first().innerText(), /A quiet morning beside the river/);

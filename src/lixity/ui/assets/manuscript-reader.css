@@ -28,8 +28,9 @@
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
-.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: var(--surface-raised); border: 1px solid var(--line); color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
-.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line-strong); }
+.reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
+.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line); }
 .reader-compact-control[aria-pressed="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 @media (max-width: 900px) {
   .reader-control-label { display: none; }

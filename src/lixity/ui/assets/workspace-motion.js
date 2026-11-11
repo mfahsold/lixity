@@ -72,11 +72,34 @@
       layers.set(node, setTimeout(function() { node.classList.remove("reader-layer-enter"); layers.delete(node); }, 220));
     });
   }
+  function surface(node) {
+    if (!node) return;
+    var previous = animations.get(node);
+    var opacity = previous ? Number(getComputedStyle(node).opacity) : .78;
+    cancel(node);
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
+    // Opacity-only entrance preserves layout rectangles for synchronous measurements.
+    var animation = node.animate([{opacity: opacity}, {opacity: 1}], {
+      duration: 180, easing: "cubic-bezier(.16,1,.3,1)", id: "lixity-surface"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
+  function status(node) {
+    if (!node) return;
+    cancel(node);
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
+    var animation = node.animate([{opacity: .55}, {opacity: 1}], {
+      duration: 160, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-status"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
   reduced.addEventListener("change", function() {
     if (!reduced.matches) return;
     animations.forEach(function(_, node) { cancel(node); });
     layers.forEach(function(timer, node) { clearTimeout(timer); node.classList.remove("reader-layer-enter"); });
     layers.clear();
   });
-  window.LixityMotion = {reveal: reveal, view: view, analysis: analysis, passage: markPassage};
+  window.LixityMotion = {reveal: reveal, surface: surface, status: status, view: view, analysis: analysis, passage: markPassage};
 })();

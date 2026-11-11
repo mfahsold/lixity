@@ -38,7 +38,9 @@ class EditingRoutesMixin(ResponseMixin):
                 # This reading session is bound to one project. Switching projects
                 # belongs to the outer workspace, where editor state is visible.
                 html = html.replace("</head>", "<style>"
-                    "#project-actions,[data-view=project],#view-pane-project {display:none!important;}"
+                    "#project-actions,[data-view=project],#view-pane-project,"
+                    ".workspace-shell-header,.workspace-shell .project-header,.workspace-product-details "
+                    "{display:none!important;}"
                     "</style></head>", 1)
                 self._send_dashboard_shell(html, language=self.language, editor_view=True)
         except EditConflict as exc:

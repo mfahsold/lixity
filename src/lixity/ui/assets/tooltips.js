@@ -45,7 +45,7 @@
 
   function formatShortcutKey(key) {
     if (!key) return "";
-    var k = key.trim();
+    var k = key.trim().replace(/^Control\+/i, "Ctrl+");
     var lower = k.toLowerCase();
     if (lower === "escape") return "Esc";
     if (lower === "arrowleft") return "←";
@@ -53,6 +53,31 @@
     if (lower === "arrowup") return "↑";
     if (lower === "arrowdown") return "↓";
     return k;
+  }
+
+  var SHORTCUT_SUFFIX_RE = /\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter|P)\)\s*$/i;
+
+  function visibleControlText(el) {
+    if (!el || !el.matches("button, a, summary")) return "";
+    var labelNode = el.querySelector(".reader-control-label, .editor-tool-label, .teleprompter-btn-label");
+    if (labelNode) {
+      if (labelNode.hidden || getComputedStyle(labelNode).display === "none" || getComputedStyle(labelNode).visibility === "hidden") {
+        return "";
+      }
+      return (labelNode.textContent || "").replace(/\s+/g, " ").trim();
+    }
+    var parts = [];
+    Array.from(el.childNodes).forEach(function(node) {
+      if (node.nodeType === 3) {
+        parts.push(node.textContent || "");
+      } else if (node.nodeType === 1) {
+        if (node.hidden || node.getAttribute("aria-hidden") === "true") return;
+        var st = getComputedStyle(node);
+        if (st.display === "none" || st.visibility === "hidden") return;
+        parts.push(node.textContent || "");
+      }
+    });
+    return parts.join(" ").replace(/\s+/g, " ").trim();
   }
 
   function helpText(el) {
@@ -66,7 +91,14 @@
         (el.labels && el.labels.length ? el.labels[0].textContent :
           el.matches("button, a, summary, .help") ? el.textContent : "");
     }
-    return text ? text.trim() : "";
+    text = text ? text.trim() : "";
+    if (text && el.matches("button, a, summary") && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text)) {
+      var visibleText = visibleControlText(el);
+      if (visibleText && visibleText.toLowerCase() === text.replace(/\s+/g, " ").toLowerCase()) {
+        return "";
+      }
+    }
+    return text;
   }
 
   function hasPersistentFocus(el) {
@@ -129,12 +161,11 @@
     name = (name || "").trim();
 
     var shortcut = el.getAttribute("aria-keyshortcuts") || "";
-    var shortcutMatch = !shortcut && (
-      (text && text.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i)) ||
-      (name && name.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i))
-    );
-    if (!shortcut && shortcutMatch) {
-      shortcut = shortcutMatch[1];
+    var shortcutMatch =
+      (text && text.match(SHORTCUT_SUFFIX_RE)) ||
+      (name && name.match(SHORTCUT_SUFFIX_RE));
+    if (shortcutMatch) {
+      if (!shortcut) shortcut = shortcutMatch[1];
       if (text) text = text.replace(shortcutMatch[0], "").trim();
       if (name) name = name.replace(shortcutMatch[0], "").trim();
     }
@@ -284,9 +315,10 @@
     place(visible.left, visible.top);
     tip.style.maxHeight = "";
     tip.style.maxWidth = "";
-    tip.style.maxWidth = Math.min(tip.offsetWidth, Math.max(0, visible.right - visible.left)) + "px";
-    var tipW = tip.offsetWidth;
-    var tipH = tip.offsetHeight;
+    var naturalW = Math.ceil(tip.getBoundingClientRect().width);
+    tip.style.maxWidth = Math.min(naturalW, Math.max(0, visible.right - visible.left)) + "px";
+    var tipW = Math.ceil(tip.getBoundingClientRect().width);
+    var tipH = Math.ceil(tip.getBoundingClientRect().height);
     var below = Math.max(0, visible.bottom - anchorBottom - 8);
     var above = Math.max(0, anchorTop - visible.top - 8);
     if (Math.max(below, above) < 16) { hide(); return; }

@@ -469,9 +469,15 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 }
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
-/* --- Icons ------------------------------------------------------------- */
-.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 2; }
+/* --- Icons & Motion ---------------------------------------------------- */
+.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
+  :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
+  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade 160ms var(--ease); }
+}
+@keyframes lixity-dialog-fade { from { opacity: .82; } to { opacity: 1; } }
 /* --- Markdown enhancements -------------------------------------------- */
 .markdown-highlight, mark.markdown-highlight { background-color: rgba(234, 179, 8, .25); color: inherit; padding: .08em .25em; border-radius: 2px; }
 .lixity-wikilink { text-decoration: underline; text-decoration-style: dashed; }
@@ -1347,10 +1353,12 @@ footer { max-width: 72rem; margin: 3rem auto 0; padding-top: 1rem; border-top: 1
 position: fixed;
 z-index: 10000;
 pointer-events: none;
+width: max-content;
 max-width: min(18rem, 84vw);
 max-height: calc(100dvh - 20px);
 overflow-y: auto;
-overflow-wrap: anywhere;
+overflow-wrap: break-word;
+word-break: normal;
 padding: .32rem .58rem;
 border-radius: var(--radius-sm);
 background: var(--surface-popover);
@@ -3449,8 +3457,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
-.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: var(--surface-raised); border: 1px solid var(--line); color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
-.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line-strong); }
+.reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
+.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line); }
 .reader-compact-control[aria-pressed="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 @media (max-width: 900px) {
   .reader-control-label { display: none; }

@@ -840,13 +840,19 @@ def render_dashboard(
 
     reader_controls = ""
     if controls and has_reading:
+        dossier_icon = (
+            '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
+            'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M14 3v18"/>'
+            '<path d="M17 8h1"/><path d="M17 12h1"/></svg>'
+        )
         reader_controls = (
             '<div class="reader-controls">'
             '<button type="button" class="ctl reader-compact-control" id="workspace-reader-toggle" '
             f'aria-label="{L("reader_toggle")}" title="{L("reader_toggle")}" '
             f'data-help="{L("reader_hint")}" '
             'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
-            '<span class="reader-control-icon" aria-hidden="true">▤</span>'
+            f'<span class="reader-control-icon" aria-hidden="true">{dossier_icon}</span>'
             f'<span class="reader-control-label">{L("reader_toggle")}</span></button><p class="ctl-note">'
             f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
         ) if reader_enabled else ""

@@ -1791,7 +1791,10 @@
     var readerSpeech = existingSpeech || button(toolbar, "reader_title", function() { open("reader"); });
     readerSpeech.id = "reader-speech";
     readerSpeech.className = "ctl reader-compact-control";
-    readerSpeech.innerHTML = '<span class="reader-control-icon" aria-hidden="true">🎙</span> <span class="reader-control-label">' + label("reader_title") + '</span>';
+    var micSvg = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("mic", { size: 15 }) :
+      '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>';
+    readerSpeech.innerHTML = '<span class="reader-control-icon" aria-hidden="true">' + micSvg + '</span> <span class="reader-control-label">' + label("reader_title") + '</span>';
     readerSpeech.dataset.help = label(canRender ? "reader_help" : "reader_help_plan");
     var anchor = toolbar.querySelector(".reader-analysis-toggle-controls") ||
                  toolbar.querySelector("#workbench-overview-open") ||

@@ -583,10 +583,12 @@ footer { max-width: 72rem; margin: 3rem auto 0; padding-top: 1rem; border-top: 1
 position: fixed;
 z-index: 10000;
 pointer-events: none;
+width: max-content;
 max-width: min(18rem, 84vw);
 max-height: calc(100dvh - 20px);
 overflow-y: auto;
-overflow-wrap: anywhere;
+overflow-wrap: break-word;
+word-break: normal;
 padding: .32rem .58rem;
 border-radius: var(--radius-sm);
 background: var(--surface-popover);

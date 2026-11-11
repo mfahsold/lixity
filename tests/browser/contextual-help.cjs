@@ -120,6 +120,20 @@ async function helpControls(page, labels, locale, width) {
       await expect(tip).toHaveAttribute('aria-hidden', 'true');
     }
   }
+  const echoSuppressed = await page.evaluate(() => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ctl';
+    btn.textContent = 'Wiederholen';
+    btn.title = 'Wiederholen';
+    btn.setAttribute('data-help', 'Wiederholen');
+    document.body.appendChild(btn);
+    btn.focus();
+    const hidden = document.getElementById('lixity-tooltip').getAttribute('aria-hidden');
+    btn.remove();
+    return hidden === 'true';
+  });
+  assert.equal(echoSuppressed, true, 'Redundant echo tooltip repeating a visible button label without shortcuts must stay suppressed');
 }
 
 async function keyboardActions(page) {

@@ -470,9 +470,15 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 }
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
-/* --- Icons ------------------------------------------------------------- */
-.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 2; }
+/* --- Icons & Motion ---------------------------------------------------- */
+.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
+  :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
+  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade 160ms var(--ease); }
+}
+@keyframes lixity-dialog-fade { from { opacity: .82; } to { opacity: 1; } }
 /* --- Markdown enhancements -------------------------------------------- */
 .markdown-highlight, mark.markdown-highlight { background-color: rgba(234, 179, 8, .25); color: inherit; padding: .08em .25em; border-radius: 2px; }
 .lixity-wikilink { text-decoration: underline; text-decoration-style: dashed; }
@@ -1348,10 +1354,12 @@ footer { max-width: 72rem; margin: 3rem auto 0; padding-top: 1rem; border-top: 1
 position: fixed;
 z-index: 10000;
 pointer-events: none;
+width: max-content;
 max-width: min(18rem, 84vw);
 max-height: calc(100dvh - 20px);
 overflow-y: auto;
-overflow-wrap: anywhere;
+overflow-wrap: break-word;
+word-break: normal;
 padding: .32rem .58rem;
 border-radius: var(--radius-sm);
 background: var(--surface-popover);
@@ -3450,8 +3458,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
-.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: var(--surface-raised); border: 1px solid var(--line); color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
-.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line-strong); }
+.reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
+.reader-compact-control { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .65rem; font-size: var(--text-control); font-weight: 500; border-radius: var(--radius-sm); background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.reader-compact-control:hover { background: var(--surface-hover); border-color: var(--line); }
 .reader-compact-control[aria-pressed="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 @media (max-width: 900px) {
   .reader-control-label { display: none; }
@@ -4881,6 +4890,19 @@ body.lixity-workspace.reader-focus {
     "sigma": '<path d="M18 7V4H6l6 8-6 8h12v-3"/>',
     "undo": '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
     "redo": '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>',
+    "pen-line": '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    "maximize-2": '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+    "teleprompter": '<rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 8h8"/><path d="m8 12 2 1.5L8 15"/><path d="M12 13.5h4"/>',
+    "layout-grid": '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+    "panel-right": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M14 3v18"/><path d="M17 8h1"/><path d="M17 12h1"/>',
+    "git-compare": '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/>',
+    "history": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    "rotate-ccw": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    "save": '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>',
+    "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    "folder-open": '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+    "sparkles": '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',
+    "type": '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
 
     // Core Controls & Actions
     "check": '<polyline points="20 6 9 17 4 12"/>',
@@ -4909,12 +4931,14 @@ body.lixity-workspace.reader-focus {
   };
 
   function svg(name, options) {
+    if (typeof options === "string") options = { className: options };
     options = options || {};
     var inner = ICONS[name] || ICONS["info"];
     var size = options.size || 16;
+    var strokeWidth = options.strokeWidth || 1.75;
     var cls = "lixity-icon" + (options.className ? " " + options.className : "");
     var aria = options.label ? ' role="img" aria-label="' + options.label.replace(/"/g, "&quot;") + '"' : ' aria-hidden="true"';
-    return '<svg class="' + cls + '" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' + aria + '>' + inner + '</svg>';
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="' + strokeWidth + '" stroke-linecap="round" stroke-linejoin="round"' + aria + '>' + inner + '</svg>';
   }
 
   function create(name, options) {
@@ -4934,6 +4958,14 @@ body.lixity-workspace.reader-focus {
       var node = create(iconName, { size: size, className: cls, label: label });
       el.replaceWith(node);
     });
+  }
+
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function () { replace(document.body); });
+    } else if (document.body) {
+      replace(document.body);
+    }
   }
 
   window.LixityIcons = {
@@ -5156,7 +5188,7 @@ body.lixity-workspace.reader-focus {
 
   function formatShortcutKey(key) {
     if (!key) return "";
-    var k = key.trim();
+    var k = key.trim().replace(/^Control\+/i, "Ctrl+");
     var lower = k.toLowerCase();
     if (lower === "escape") return "Esc";
     if (lower === "arrowleft") return "←";
@@ -5164,6 +5196,31 @@ body.lixity-workspace.reader-focus {
     if (lower === "arrowup") return "↑";
     if (lower === "arrowdown") return "↓";
     return k;
+  }
+
+  var SHORTCUT_SUFFIX_RE = /\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter|P)\)\s*$/i;
+
+  function visibleControlText(el) {
+    if (!el || !el.matches("button, a, summary")) return "";
+    var labelNode = el.querySelector(".reader-control-label, .editor-tool-label, .teleprompter-btn-label");
+    if (labelNode) {
+      if (labelNode.hidden || getComputedStyle(labelNode).display === "none" || getComputedStyle(labelNode).visibility === "hidden") {
+        return "";
+      }
+      return (labelNode.textContent || "").replace(/\s+/g, " ").trim();
+    }
+    var parts = [];
+    Array.from(el.childNodes).forEach(function(node) {
+      if (node.nodeType === 3) {
+        parts.push(node.textContent || "");
+      } else if (node.nodeType === 1) {
+        if (node.hidden || node.getAttribute("aria-hidden") === "true") return;
+        var st = getComputedStyle(node);
+        if (st.display === "none" || st.visibility === "hidden") return;
+        parts.push(node.textContent || "");
+      }
+    });
+    return parts.join(" ").replace(/\s+/g, " ").trim();
   }
 
   function helpText(el) {
@@ -5177,7 +5234,14 @@ body.lixity-workspace.reader-focus {
         (el.labels && el.labels.length ? el.labels[0].textContent :
           el.matches("button, a, summary, .help") ? el.textContent : "");
     }
-    return text ? text.trim() : "";
+    text = text ? text.trim() : "";
+    if (text && el.matches("button, a, summary") && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text)) {
+      var visibleText = visibleControlText(el);
+      if (visibleText && visibleText.toLowerCase() === text.replace(/\s+/g, " ").toLowerCase()) {
+        return "";
+      }
+    }
+    return text;
   }
 
   function hasPersistentFocus(el) {
@@ -5240,12 +5304,11 @@ body.lixity-workspace.reader-focus {
     name = (name || "").trim();
 
     var shortcut = el.getAttribute("aria-keyshortcuts") || "";
-    var shortcutMatch = !shortcut && (
-      (text && text.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i)) ||
-      (name && name.match(/\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter)\)\s*$/i))
-    );
-    if (!shortcut && shortcutMatch) {
-      shortcut = shortcutMatch[1];
+    var shortcutMatch =
+      (text && text.match(SHORTCUT_SUFFIX_RE)) ||
+      (name && name.match(SHORTCUT_SUFFIX_RE));
+    if (shortcutMatch) {
+      if (!shortcut) shortcut = shortcutMatch[1];
       if (text) text = text.replace(shortcutMatch[0], "").trim();
       if (name) name = name.replace(shortcutMatch[0], "").trim();
     }
@@ -5395,9 +5458,10 @@ body.lixity-workspace.reader-focus {
     place(visible.left, visible.top);
     tip.style.maxHeight = "";
     tip.style.maxWidth = "";
-    tip.style.maxWidth = Math.min(tip.offsetWidth, Math.max(0, visible.right - visible.left)) + "px";
-    var tipW = tip.offsetWidth;
-    var tipH = tip.offsetHeight;
+    var naturalW = Math.ceil(tip.getBoundingClientRect().width);
+    tip.style.maxWidth = Math.min(naturalW, Math.max(0, visible.right - visible.left)) + "px";
+    var tipW = Math.ceil(tip.getBoundingClientRect().width);
+    var tipH = Math.ceil(tip.getBoundingClientRect().height);
     var below = Math.max(0, visible.bottom - anchorBottom - 8);
     var above = Math.max(0, anchorTop - visible.top - 8);
     if (Math.max(below, above) < 16) { hide(); return; }
@@ -14064,13 +14128,36 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
       layers.set(node, setTimeout(function() { node.classList.remove("reader-layer-enter"); layers.delete(node); }, 220));
     });
   }
+  function surface(node) {
+    if (!node) return;
+    var previous = animations.get(node);
+    var opacity = previous ? Number(getComputedStyle(node).opacity) : .78;
+    cancel(node);
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
+    // Opacity-only entrance preserves layout rectangles for synchronous measurements.
+    var animation = node.animate([{opacity: opacity}, {opacity: 1}], {
+      duration: 180, easing: "cubic-bezier(.16,1,.3,1)", id: "lixity-surface"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
+  function status(node) {
+    if (!node) return;
+    cancel(node);
+    if (reduced.matches || document.hidden || !node.animate || !node.getClientRects().length) return;
+    var animation = node.animate([{opacity: .55}, {opacity: 1}], {
+      duration: 160, easing: "cubic-bezier(.2,.7,.3,1)", id: "lixity-status"
+    });
+    animations.set(node, animation);
+    animation.onfinish = function() { if (animations.get(node) === animation) animations.delete(node); };
+  }
   reduced.addEventListener("change", function() {
     if (!reduced.matches) return;
     animations.forEach(function(_, node) { cancel(node); });
     layers.forEach(function(timer, node) { clearTimeout(timer); node.classList.remove("reader-layer-enter"); });
     layers.clear();
   });
-  window.LixityMotion = {reveal: reveal, view: view, analysis: analysis, passage: markPassage};
+  window.LixityMotion = {reveal: reveal, surface: surface, status: status, view: view, analysis: analysis, passage: markPassage};
 })();
 
 // Project surfaces: import, recent projects, view switching and the

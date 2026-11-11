@@ -627,7 +627,7 @@ direction, pronunciation cues and linked research context. It can be used
 without synthesizing speech:
 
 1. **Opening the Teleprompter:**
-   In the manuscript reader view, click the **Teleprompter** button (`📜`) in the reader controls
+   In the manuscript reader view, click the **Teleprompter** button in the reader controls
    toolbar or press the keyboard shortcut **`P`**. The prompter opens at the currently selected or active paragraph.
    Choose a chapter in its header. `D` toggles the context drawer; `Esc` closes
    the prompter. Keyboard shortcuts do not replace text entry in its fields.

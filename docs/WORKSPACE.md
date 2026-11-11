@@ -195,9 +195,9 @@ fictional project. They are fixed exports; they cannot import, record or save to
 
 The workspace groups controls by how they affect your reading context. In the
 manuscript toolbar, actions follow one left-to-right flow:
-**Reading & Presentation** (`Chapter…`, `Aa Appearance`, `⛶ Focus`, `📜 Teleprompter`,
-`🎙 Listen and direct`), **Review & Companion Dock** (`Analysis Off/On`, `? Guide`,
-`▥ Analysis overview`, `▤ Dossiers`), and **Writing** (`Write` / `Close writing`).
+**Reading & Presentation** (`Chapter…`, `Aa Appearance`, `Focus`, `Teleprompter`,
+`Listen and direct`), **Review & Companion Dock** (`Analysis Off/On`, `? Guide`,
+`Analysis overview`, `Dossiers`), and **Writing** (`Write` / `Close writing`).
 
 Across the application, controls use six distinct interaction patterns:
 
@@ -205,7 +205,7 @@ Across the application, controls use six distinct interaction patterns:
   switch the whole workspace context. Scroll position and draft state are
   preserved; nothing is saved or discarded by switching views.
 - **Context dock panels** (`Explore passage`, `Research for this passage`, and
-  `▤ Dossiers` in the right-hand split dock): open beside the manuscript on
+  `Dossiers` in the right-hand split dock): open beside the manuscript on
   desktop (or stacked with a passage-return action on mobile) so you can inspect
   values, claims and notes without losing your place in the prose.
 - **In-place disclosures** (`details`/`summary`, e.g. `Aa Appearance`, `? Guide`,
@@ -215,11 +215,11 @@ Across the application, controls use six distinct interaction patterns:
   heatmap cells, 3D style-space chapter links): scroll to the target passage or
   panel, reveal any required surface or disclosure automatically, and flash the
   arrival target while preserving active filters.
-- **Dialogs** (project create/open, `Listen and direct` audio studio, `📜 Teleprompter`,
+- **Dialogs** (project create/open, `Listen and direct` audio studio, `Teleprompter`,
   command palette `Ctrl+K` / `Ctrl+P`, version comparison, saved-revision reading,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`
   or close button) and keep the underlying buffer, selection and undo history intact.
-- **Surface switches** (`▥ Analysis overview` and unreleased `Write` mode):
+- **Surface switches** (`Analysis overview` and unreleased `Write` mode):
   replace continuous reading with the statistical overview panels or the
   manuscript editor. Leave the overview with `Back to passage` (restoring your
   exact paragraph and prior analysis layer) and leave writing with `Close writing`
@@ -234,7 +234,7 @@ Happy path for an author or lector (no technical setup beyond the local app):
 3. Start comparisons from **Mit der Prüfung beginnen / Start the review**:
    passage first, then chapter, rhythm, style-space. Each route lands on the same
    panels the right-hand **Analyse** nav reaches; the routes are the guided order.
-4. Follow research beside the text via **▤ Dossiers** or **Explore passage →
+4. Follow research beside the text via **Dossiers** or **Explore passage →
    Research for this passage**. Distinguish the exact retained quotation from
    the current dossier record; a changed source never silently updates a saved link.
 5. Leave a work marker (`+ Review`, `+ Fact check`, `+ To-do`, `+ Attention`) or
@@ -246,15 +246,15 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 
 | Goal | Happy path | Other ways that work |
 | --- | --- | --- |
-| Chapter comparison | Review route `Kapitel erkunden` | `▥ Analysis overview` → `Kapitelmatrix`, right-hand outline nav, heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
+| Chapter comparison | Review route `Kapitel erkunden` | `Analysis overview` → `Kapitelmatrix`, right-hand outline nav, heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
 | Sentence rhythm & dialogue | Review route `Satzrhythmus öffnen` or `Analysis On` → `Measure` | Command palette `Highlight Sentence Length & Rhythm` / `Highlight Dialogue & Direct Speech`, KPI tile drill-down, outlier stepper `◀` / `▶` |
 | Tense review | `Analysis On` with `Measure: None` or review badge on paragraph | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
 | Style-space & scenes | Review route `3D-Stilraum öffnen` | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Dimensionen`), 3D canvas point click |
 | Passage values & evidence | Paragraph `…` button → `Explore passage` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
-| Research & quotation linking | `Research for this passage` in inspector or `▤ Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
-| Spoken review & teleprompter | `🎙 Listen and direct` or `📜 Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
+| Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
+| Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
-| Writing (unreleased) | `Write`, then `Close writing` in reader toolbar | `Read and refresh` opens the saved revision in a modal reader; selecting text there and clicking `Back to writing` jumps the editor cursor to that exact passage. |
+| Writing (unreleased) | `Write`, then `Close writing` in reader toolbar | Unified editor toolbar (`Undo` `Ctrl+Z`, `Redo` `Ctrl+Y`, `Find / replace` `Ctrl+F`, `Read and refresh`, `Compare versions`, recovery drafts); selecting text in `Read and refresh` and clicking `Back to writing` jumps the editor cursor to that exact passage. |
 
 If a control opens a side panel, it stays beside your text. If it clicks a view tab,
 the whole workspace switches. If it opens a dialog, close it explicitly with `Escape`.

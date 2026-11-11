@@ -352,9 +352,15 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 }
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
-/* --- Icons ------------------------------------------------------------- */
-.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 2; }
+/* --- Icons & Motion ---------------------------------------------------- */
+.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
 .btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+@media (prefers-reduced-motion: no-preference) {
+  :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
+  :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
+  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade 160ms var(--ease); }
+}
+@keyframes lixity-dialog-fade { from { opacity: .82; } to { opacity: 1; } }
 /* --- Markdown enhancements -------------------------------------------- */
 .markdown-highlight, mark.markdown-highlight { background-color: rgba(234, 179, 8, .25); color: inherit; padding: .08em .25em; border-radius: 2px; }
 .lixity-wikilink { text-decoration: underline; text-decoration-style: dashed; }

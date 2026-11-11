@@ -136,7 +136,9 @@
 
     var brand = document.createElement("div");
     brand.className = "teleprompter-brand";
-    brand.innerHTML = '<span aria-hidden="true">📜</span> <strong class="teleprompter-title-text">' + label("reading_teleprompter", "Teleprompter") + "</strong>";
+    var brandIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("teleprompter", { size: 15 }) : "";
+    brand.innerHTML = brandIcon + ' <strong class="teleprompter-title-text">' + label("reading_teleprompter", "Teleprompter") + "</strong>";
     leftGroup.appendChild(brand);
 
     chapterSelect = document.createElement("select");
@@ -226,7 +228,9 @@
     sidebarToggleBtn = document.createElement("button");
     sidebarToggleBtn.type = "button";
     sidebarToggleBtn.className = "teleprompter-btn teleprompter-dossier-toggle";
-    sidebarToggleBtn.innerHTML = '🏛 <span class="teleprompter-btn-label">' + label("teleprompter_dossiers", "Dossiers") + "</span>";
+    var dossierIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("panel-right", { size: 15 }) : "";
+    sidebarToggleBtn.innerHTML = dossierIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_dossiers", "Dossiers") + "</span>";
     sidebarToggleBtn.title = label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder") + " (D)";
     sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder"));
     sidebarToggleBtn.addEventListener("click", function() {
@@ -240,13 +244,17 @@
     recordBtn = document.createElement("button");
     recordBtn.type = "button";
     recordBtn.className = "teleprompter-btn teleprompter-btn-record";
-    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
+    var micIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("mic", { size: 15 }) : "";
+    recordBtn.innerHTML = micIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
     recordBtn.title = label("teleprompter_record_hint", "Lese-Take aufnehmen") + " (R)";
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
     takeImportBtn = document.createElement("button"); takeImportBtn.type = "button";
-    takeImportBtn.className = "teleprompter-btn"; takeImportBtn.textContent = "📂";
+    var folderIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("folder-open", { size: 15 }) : "📂";
+    takeImportBtn.className = "teleprompter-btn"; takeImportBtn.innerHTML = folderIcon;
     takeImportBtn.setAttribute("aria-label", label("teleprompter_take_import", "WAV + JSON importieren"));
     takeImportBtn.title = label("teleprompter_take_import", "WAV + JSON importieren");
     takeImportBtn.addEventListener("click", function() { takeFiles.click(); });
@@ -645,7 +653,9 @@
     if (pcmMediaStream) { pcmMediaStream.getTracks().forEach(function(track) { track.stop(); }); pcmMediaStream = null; }
     if (pcmAudioContext) { pcmAudioContext.close().catch(function() {}); pcmAudioContext = null; }
     recordBtn.classList.remove("is-active"); recordBtn.removeAttribute("aria-busy");
-    recordBtn.innerHTML = '🎙 <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
+    var micIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
+      window.LixityIcons.svg("mic", { size: 15 }) : "";
+    recordBtn.innerHTML = micIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
     takeImportBtn.disabled = false;
   }

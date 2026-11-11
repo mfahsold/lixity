@@ -37,6 +37,24 @@ def reading_controls(
             options = "".join(choices)
         if not reader_document[0].is_chapter and source_chapters:
             options = f'<option value="reader-preface">{text("reading_view")}</option>' + options
+    focus_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>'
+        '<path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>'
+    )
+    teleprompter_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 8h8"/>'
+        '<path d="m8 12 2 1.5L8 15"/><path d="M12 13.5h4"/></svg>'
+    )
+    overview_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/>'
+        '<rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>'
+    )
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
@@ -65,11 +83,11 @@ def reading_controls(
         '</dl></div></div></details>'
         f'<button class="ctl reader-compact-control" type="button" id="reader-focus" aria-pressed="false" '
         f'aria-label="{text("reading_focus")}" title="{text("reading_focus")}" '
-        f'data-help="{text("reading_help_focus")}"><span class="reader-control-icon" aria-hidden="true">⛶</span>'
+        f'data-help="{text("reading_help_focus")}"><span class="reader-control-icon" aria-hidden="true">{focus_icon}</span>'
         f'<span class="reader-control-label">{text("reading_focus")}</span></button>'
         f'<button class="ctl reader-compact-control" type="button" id="reader-teleprompter" aria-pressed="false" '
-        f'aria-label="{text("reading_teleprompter")}" title="{text("reading_teleprompter")}" '
-        f'data-help="{text("reading_help_teleprompter")}"><span class="reader-control-icon" aria-hidden="true">📜</span>'
+        f'aria-label="{text("reading_teleprompter")}" title="{text("reading_teleprompter")}" aria-keyshortcuts="P" '
+        f'data-help="{text("reading_help_teleprompter")}"><span class="reader-control-icon" aria-hidden="true">{teleprompter_icon}</span>'
         f'<span class="reader-control-label">{text("reading_teleprompter")}</span></button>'
         '<div class="reader-analysis-toggle-controls">'
         f'<button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" '
@@ -92,7 +110,7 @@ def reading_controls(
         '</div></details></div>'
         f'<button class="ctl reader-compact-control" type="button" id="workbench-overview-open" '
         f'aria-label="{text("reading_overview")}" title="{text("reading_overview")}" '
-        f'data-help="{text("reading_help_overview")}"><span class="reader-control-icon" aria-hidden="true">▥</span>'
+        f'data-help="{text("reading_help_overview")}"><span class="reader-control-icon" aria-hidden="true">{overview_icon}</span>'
         f'<span class="reader-control-label">{text("reading_overview")}</span></button>'
         f'{companion_controls}'
         f'<strong class="workbench-surface-label" id="workbench-overview-label" hidden>{text("reading_overview")}</strong>'
