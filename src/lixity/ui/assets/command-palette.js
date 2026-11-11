@@ -31,9 +31,13 @@
         subtitle: isDe ? "Text, Metriken und Lektorat" : "Text, metrics and editing",
         icon: "file-text",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "analysis" });
-          var btn = document.querySelector('[data-view-pane="analysis"]');
-          if (btn) btn.click();
+          if (typeof switchActiveView === "function") {
+            switchActiveView("analysis");
+          } else {
+            if (workbench) workbench.dispatch({ type: "view", value: "analysis" });
+            var btn = document.querySelector('[data-view="analysis"], [data-view-pane="analysis"]');
+            if (btn) btn.click();
+          }
         }
       },
       {
@@ -43,9 +47,13 @@
         subtitle: isDe ? "Dossiers, Quellen, Zeitstrahl und Karten" : "Dossiers, sources, timeline and maps",
         icon: "archive",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var btn = document.querySelector('[data-view-pane="research"]');
-          if (btn) btn.click();
+          if (typeof switchActiveView === "function") {
+            switchActiveView("research");
+          } else {
+            if (workbench) workbench.dispatch({ type: "view", value: "research" });
+            var btn = document.querySelector('[data-view="research"], [data-view-pane="research"]');
+            if (btn) btn.click();
+          }
         }
       },
       {
@@ -55,9 +63,13 @@
         subtitle: isDe ? "Konfiguration, Autorenziele und Register" : "Configuration, targets and registers",
         icon: "settings",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "project" });
-          var btn = document.querySelector('[data-view-pane="project"]');
-          if (btn) btn.click();
+          if (typeof switchActiveView === "function") {
+            switchActiveView("project");
+          } else {
+            if (workbench) workbench.dispatch({ type: "view", value: "project" });
+            var btn = document.querySelector('[data-view="project"], [data-view-pane="project"]');
+            if (btn) btn.click();
+          }
         }
       },
       {
@@ -101,9 +113,14 @@
         subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
         icon: "sigma",
         action: function () {
-          if (typeof selectAnalysisMetric === "function") selectAnalysisMetric("asl");
-          var sel = document.getElementById("style-layer");
-          if (sel) { sel.value = "asl"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          if (typeof switchActiveView === "function") switchActiveView("analysis");
+          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
+          if (typeof selectAnalysisMetric === "function") {
+            selectAnalysisMetric("asl");
+          } else {
+            var sel = document.getElementById("style-layer");
+            if (sel) { sel.value = "asl"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          }
         }
       },
       {
@@ -113,9 +130,14 @@
         subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
         icon: "quote",
         action: function () {
-          if (typeof selectAnalysisMetric === "function") selectAnalysisMetric("dialogue_share");
-          var sel = document.getElementById("style-layer");
-          if (sel) { sel.value = "dialogue_share"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          if (typeof switchActiveView === "function") switchActiveView("analysis");
+          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
+          if (typeof selectAnalysisMetric === "function") {
+            selectAnalysisMetric("dialogue");
+          } else {
+            var sel = document.getElementById("style-layer");
+            if (sel) { sel.value = "dialogue"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          }
         }
       },
       {
@@ -125,9 +147,14 @@
         subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
         icon: "tag",
         action: function () {
-          if (typeof selectAnalysisMetric === "function") selectAnalysisMetric("dominant_tense");
-          var sel = document.getElementById("style-layer");
-          if (sel) { sel.value = "dominant_tense"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          if (typeof switchActiveView === "function") switchActiveView("analysis");
+          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
+          if (typeof selectAnalysisMetric === "function") {
+            selectAnalysisMetric("");
+          } else {
+            var sel = document.getElementById("style-layer");
+            if (sel) { sel.value = ""; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          }
         }
       },
       {
@@ -138,7 +165,9 @@
         icon: "layout",
         action: function () {
           var target = document.getElementById("pacing") || document.querySelector('[data-jump="#pacing"]');
-          if (target) {
+          if (target && typeof scrollAndFlash === "function") {
+            scrollAndFlash(target);
+          } else if (target) {
             target.scrollIntoView({ behavior: "smooth" });
           } else if (typeof selectAnalysisMetric === "function") {
             selectAnalysisMetric("pacing");
@@ -153,7 +182,11 @@
         icon: "sliders",
         action: function () {
           var target = document.getElementById("style") || document.querySelector('[data-jump="#style"]');
-          if (target) target.scrollIntoView({ behavior: "smooth" });
+          if (target && typeof scrollAndFlash === "function") {
+            scrollAndFlash(target);
+          } else if (target) {
+            target.scrollIntoView({ behavior: "smooth" });
+          }
         }
       },
       {
@@ -164,7 +197,11 @@
         icon: "table",
         action: function () {
           var target = document.getElementById("scenes") || document.querySelector('[data-jump="#scenes"]');
-          if (target) target.scrollIntoView({ behavior: "smooth" });
+          if (target && typeof scrollAndFlash === "function") {
+            scrollAndFlash(target);
+          } else if (target) {
+            target.scrollIntoView({ behavior: "smooth" });
+          }
         }
       },
 
@@ -177,8 +214,11 @@
         shortcut: "S",
         icon: "search",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var searchField = document.querySelector("#research-search, .research-search-input, input[name='q']");
+          if (typeof switchActiveView === "function") switchActiveView("research");
+          else if (workbench) workbench.dispatch({ type: "view", value: "research" });
+          var searchTab = document.querySelector('#research-tab-search, [data-rtab="search"]');
+          if (searchTab) searchTab.click();
+          var searchField = document.querySelector("#r-search-query, #research-search, .research-search-input, input[name='q']");
           if (searchField) {
             searchField.focus();
             searchField.select();
@@ -192,9 +232,19 @@
         subtitle: isDe ? "Neues Notizblatt mit Markdown & Belegen verfassen" : "Draft new dossier note with citations",
         icon: "edit",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var newBtn = document.querySelector("#research-new-dossier, [data-research-action='new-dossier']");
-          if (newBtn) newBtn.click();
+          if (typeof switchActiveView === "function") switchActiveView("research");
+          else if (workbench) workbench.dispatch({ type: "view", value: "research" });
+          var dosTab = document.querySelector('#research-tab-dossiers, [data-rtab="dossiers"]');
+          if (dosTab) dosTab.click();
+          var composer = document.getElementById("r-dos-composer");
+          if (composer) composer.open = true;
+          var titleField = document.getElementById("r-dos-title");
+          if (titleField) {
+            titleField.focus();
+          } else {
+            var newBtn = document.querySelector("#research-new-dossier, [data-research-action='new-dossier']");
+            if (newBtn) newBtn.click();
+          }
         }
       },
       {
@@ -204,9 +254,12 @@
         subtitle: isDe ? "Ereignisse, Behauptungen und Belege auf der Zeitachse" : "Inspect claims and events over time",
         icon: "list-ordered",
         action: function () {
-          if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var tab = document.querySelector('[data-research-tab="timeline"]');
-          if (tab) tab.click();
+          if (typeof switchActiveView === "function") switchActiveView("research");
+          else if (workbench) workbench.dispatch({ type: "view", value: "research" });
+          var claimsTab = document.querySelector('#research-tab-claims, [data-rtab="claims"]');
+          if (claimsTab) claimsTab.click();
+          var timelineBtn = document.querySelector('#r-open-timeline, [data-claim-view="timeline"], [data-research-tab="timeline"]');
+          if (timelineBtn) timelineBtn.click();
         }
       },
       {
@@ -262,7 +315,18 @@
         icon: "download",
         action: function () {
           var pdfBtn = document.querySelector("#export-pdf-trigger, button[data-export='pdf'], [data-action='export-pdf']");
-          if (pdfBtn) pdfBtn.click();
+          if (pdfBtn) {
+            pdfBtn.click();
+            return;
+          }
+          var projectActions = document.getElementById("project-actions");
+          if (projectActions) projectActions.open = true;
+          var manuscriptPdf = document.getElementById("manuscript-pdf");
+          if (manuscriptPdf) {
+            manuscriptPdf.open = true;
+            var layoutSelect = document.getElementById("manuscript-pdf-layout");
+            if (layoutSelect) layoutSelect.focus();
+          }
         }
       },
       {

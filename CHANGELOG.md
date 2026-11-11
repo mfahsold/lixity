@@ -15,6 +15,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Group manuscript reader controls into a left-to-right reading, review/companion
+  and authoring flow with a explicit `Close writing` return action, keep desktop
+  search and paragraph filters on one shared toolbar row, offset the sticky
+  overview outline below the reader toolbar, and align Command Palette (`Ctrl+K`
+  / `Ctrl+P`) and inspector backlink routes with the active workspace views,
+  metrics, disclosures and panels. Document the interaction taxonomy, author/lector
+  happy path and alternative click paths in `docs/WORKSPACE.md`.
+
 - Memoize per-token verb/descriptive classification in the analyzer: the
   vocabulary of a manuscript is far smaller than its token count, so repeated
   regex fullmatches are evaluated once per unique token. Analysis JSON output

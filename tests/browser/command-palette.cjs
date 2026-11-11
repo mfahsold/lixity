@@ -32,6 +32,11 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
 <body class="manuscript-reading">
   <div id="workspace">
     <button id="reader-focus" type="button">Focus</button>
+    <select id="style-layer"><option value="">None</option><option value="asl">ASL</option><option value="dialogue">Dialogue</option></select>
+    <button id="research-tab-search" data-rtab="search" type="button">Search</button>
+    <input id="r-search-query" type="search" />
+    <button id="research-tab-dossiers" data-rtab="dossiers" type="button">Dossiers</button>
+    <details id="r-dos-composer"><summary>New</summary><input id="r-dos-title" type="text" /></details>
     <div id="content">Reading Area</div>
   </div>
 </body>
@@ -73,6 +78,23 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
   await page.keyboard.press('Control+k');
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Ctrl+K shortcut opens palette');
   await page.keyboard.press('Escape');
+
+  // 10. Test command execution reaches real DOM targets
+  await page.keyboard.press('Control+k');
+  await page.fill('#command-palette-search', 'Dialoge');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#style-layer').inputValue(), 'dialogue', 'Dialogue command selects real #style-layer option');
+
+  await page.keyboard.press('Control+k');
+  await page.fill('#command-palette-search', 'Suchmaske');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'r-search-query', 'Research search command focuses #r-search-query');
+
+  await page.keyboard.press('Control+k');
+  await page.fill('#command-palette-search', 'Neues Forschungs-Dossier');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#r-dos-composer').evaluate(el => el.open), true, 'New dossier command opens #r-dos-composer');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'r-dos-title', 'New dossier command focuses #r-dos-title');
 
   await browser.close();
   console.log('Command palette browser checks passed successfully.');

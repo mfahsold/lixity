@@ -610,8 +610,10 @@
       e.preventDefault();
       if (window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function") {
         window.LixityManuscriptLinks.review(panel);
+      } else if (typeof switchActiveView === "function") {
+        switchActiveView("research");
       } else {
-        var researchBtn = document.querySelector('[data-view-pane="research"]');
+        var researchBtn = document.querySelector('[data-view="research"], [data-view-pane="research"]');
         if (researchBtn) researchBtn.click();
       }
     });
