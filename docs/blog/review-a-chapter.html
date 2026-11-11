@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Review a novel chapter without smoothing away its voice — Lixity blog</title>
+<meta name="description" content="A chapter reads differently from the rest: choose one concrete question, compare an observation with its surroundings, read the research and finish a bounded revision round."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/review-a-chapter.html"/>
+<link rel="alternate" hreflang="de" href="https://mfahsold.github.io/lixity/blog/romankapitel-pruefen-de.html"/>
+<link rel="alternate" hreflang="en" href="https://mfahsold.github.io/lixity/blog/review-a-chapter.html"/>
+<link rel="icon" href="../assets/mark.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Review a novel chapter without smoothing away its voice"/>
+<meta property="og:description" content="Choose one concrete question, compare an observation with the chapter's surroundings and return to the passage – a bounded review round, not a ranking."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/review-a-chapter.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta property="og:image:width" content="2194"/>
+<meta property="og:image:height" content="1040"/>
+<meta property="og:image:alt" content="Chapter comparison with measurements in their own units"/>
+<meta property="article:author" content="https://github.com/mfahsold"/>
+<meta property="article:published_time" content="2026-11-11"/>
+<meta property="article:modified_time" content="2026-11-11"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Review a novel chapter without smoothing away its voice"/>
+<meta name="twitter:description" content="Choose one concrete question, compare an observation with the chapter's surroundings and return to the passage."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
+<meta name="twitter:image:alt" content="Chapter comparison with measurements in their own units"/>
+<link rel="alternate" type="text/markdown" href="review-a-chapter.html.md" title="Markdown version of this page"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": [
+    "BlogPosting",
+    "TechArticle"
+  ],
+  "headline": "Review a novel chapter without smoothing away its voice",
+  "description": "A chapter reads differently from the rest: choose one concrete question, compare an observation with its surroundings, read the research and finish a bounded revision round.",
+  "url": "https://mfahsold.github.io/lixity/blog/review-a-chapter.html",
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/review-a-chapter.html",
+  "inLanguage": "en",
+  "datePublished": "2026-11-11",
+  "dateModified": "2026-11-11",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Lixity blog",
+    "url": "https://mfahsold.github.io/lixity/blog/index.html"
+  },
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png",
+    "width": 2194,
+    "height": 1040,
+    "caption": "Chapter comparison with measurements in their own units"
+  }
+}
+</script>
+</head>
+<body id="top" tabindex="-1" class="site-page">
+<a class="skip-link" href="#content">Skip to article</a>
+<header class="site-header"><div class="header-inner">
+<a class="brand" href="../"><span class="brand-name">Lixity</span></a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../#guides">Guides</a><a href="../guides/installation.html">Install</a></nav>
+<button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme: system</button>
+</div></header>
+<main class="guide" id="content">
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Review a chapter</span></li></ol></nav>
+<h1>Review a novel chapter without smoothing away its voice</h1>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-11">11 November 2026</time> · 5 minutes · <a href="romankapitel-pruefen-de.html" hreflang="de" lang="de">Deutsche Fassung</a></p>
+
+<p>A chapter suddenly reads differently from the rest. Sentences get shorter, dialogue becomes denser, a few words keep returning. Is something wrong, or is the scene doing exactly what it needs to do?</p>
+<p>Lixity helps you investigate that question in the text. The local open-source workspace connects manuscripts, linguistic observations and research. A conspicuous number is a starting point: it should lead to a passage you can read and judge in context.</p>
+
+<h2 id="one-question">Start with one question</h2>
+<p>Choose a specific question for a revision session: “Does the arrival scene become hurried before the character has a reason to hurry?” That gives you something clearer to investigate than every highlighted passage in a whole novel.</p>
+<p>Read the scene first with analysis marks switched off. Notice where you speed up, stumble or lose the thread. Lixity keeps the continuous manuscript at the centre of the workspace; the analysis layer is optional.</p>
+<p>Consider this invented miniature:</p>
+<blockquote><p>She waited at the gate. Footsteps. A key fell. Nobody picked it up.</p></blockquote>
+<p>The short sentences might build tension. In another scene they might interrupt an otherwise quiet narrative voice. Sentence length alone cannot make that decision.</p>
+
+<h2 id="compare">Compare an observation with its surroundings</h2>
+<p>Open the chapter comparisons. Does this scene differ from its surroundings in sentence rhythm or the share of quoted words? Lixity makes those differences visible and provides explanations of its measurements. The important next move is back to the passage.</p>
+<p>A high or low value initially tells you that something differs. A flashback, letter, change of viewpoint or dialogue scene may explain it. Making the distribution more uniform would not automatically improve the novel.</p>
+<p>The same applies to linguistic investigation. Studying sentence patterns or vocabulary requires understandable counts and known limits. Lixity documents its <a href="../METHODS.md">methods</a> and identifies language-dependent heuristics. Measurements do not replace interpretation or establish literary quality.</p>
+
+<h2 id="research">Read research where you need it</h2>
+<p>Sometimes the question is not about rhythm. The scene may depend on a historical detail, a change of location or a deliberate decision about a character.</p>
+<p>You can open a dossier alongside the manuscript. Sources, claims and author decisions have distinct roles in the research archive. Saved relationships retain their versions rather than silently following a source that has since changed. This does not make a claim true. It makes the basis of a decision inspectable.</p>
+<p>The revision loop becomes short: read the passage, inspect the observation, consult its background, make a decision. Not every difference requires an edit. A well-grounded decision to leave something alone is a useful result too.</p>
+
+<h2 id="bounded-review">Finish a bounded review</h2>
+<p>Choose one passage where you learned something. What was your original question? What did the comparison actually establish? Which decision follows, and what remains unresolved?</p>
+<p>For feedback from other readers, you can prepare a selected reading copy and explicitly choose which research and analysis views to include. That copy is a snapshot, not a complete project backup or a collaborative editor.</p>
+<p>Lixity runs as a local browser application. Built-in analysis works offline; optional external research and speech services are configured separately. The interface has seven languages and technical documentation is maintained in English. Analysis coverage varies by language.</p>
+
+<h2 id="try">Try a fictional project</h2>
+<p>The public demo contains six invented English harbour chapters with linked case notes. It is read-only and requires neither an account nor your manuscript. Try one small task: open a chapter comparison, read an explanation and return to its passage. Is it clearer what you want to examine?</p>
+<p><a class="ctl primary" href="../demo/report.html">Open the Lixity demo</a> <a href="../guides/first-look.html">First look</a> <a href="../METHODS.md">Methods and limits</a></p>
+
+<p class="section-note">Development status: an integrated writing editor with undo, local autosave and conflict handling is implemented in development but remains unreleased. The public demo demonstrates reading and inspection, not saving a manuscript.</p>
+
+<footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="../LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
+</main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
+</body>
+</html>

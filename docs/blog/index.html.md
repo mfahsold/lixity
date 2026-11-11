@@ -2,6 +2,24 @@
 
 Practical articles for authors, editors and manuscript reviewers: investigate a passage, examine the research behind a scene detail and prepare the right reading copy. Each article connects a concrete question to a reading decision. All examples use public-domain or synthetic texts.
 
+## [Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln](romankapitel-pruefen-de.html)
+
+Veröffentlicht 11. November 2026 · 5 Minuten · [English version](review-a-chapter.html)
+
+Ein Kapitel liest sich anders als der Rest. Wähle eine konkrete Frage, vergleiche die Beobachtung mit dem Umfeld und kehre zur Textstelle zurück – eine begrenzte Überarbeitungsrunde statt einer Rangliste.
+
+## [Review a novel chapter without smoothing away its voice](review-a-chapter.html)
+
+Published 11 November 2026 · 5 minutes · [Deutsche Fassung](romankapitel-pruefen-de.html)
+
+A chapter suddenly reads differently. Choose one concrete question, compare an observation with its surroundings and return to the passage – a bounded review round, not a ranking.
+
+## [Adding a manuscript editor changes more than the text box](revision-aware-workspace.html)
+
+Published 11 November 2026 · 6 minutes
+
+Why a revision-aware writing workspace needs explicit sessions, conditional saves, analysis bound to the saved text and separate recovery, backup and research records. The editor described here is unreleased.
+
 ## [What makes a novel read well? Literary research, editorial craft and manuscript data](literary-quality-and-editorial-metrics.html)
 
 Published 2 November 2026 · 10 minutes · [Deutsche Fassung](leseguete-und-lektoratsmetriken-de.html)
