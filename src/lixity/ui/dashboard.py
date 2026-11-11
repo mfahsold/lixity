@@ -113,6 +113,7 @@ _JS_FILES = (
     "research-media.js",
     "icons.js",
     "component-layer.js",
+    "logging.js",
     "tooltips.js",
     "interactions.js",
     "command-palette.js",

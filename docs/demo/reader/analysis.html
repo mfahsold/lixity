@@ -3632,7 +3632,10 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
-.manuscript-reading .text-search-group { flex-basis: 100%; }
+.manuscript-reading .text-search-group { flex: 1 1 18rem; max-width: 34rem; }
+@media (max-width: 900px) {
+  .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
+}
 .manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
@@ -3908,6 +3911,13 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
 .manuscript-reader-controls .reader-controls { gap: .25rem; }
 /* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
+@container reader-tools (min-width: 72rem) {
+  .manuscript-reader-controls .reader-analysis-toggle-controls {
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: .35rem;
+    margin-inline-start: .1rem;
+  }
+}
 @container reader-tools (max-width: 80rem) {
   #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
   #reader-focus .reader-control-label,
@@ -4054,8 +4064,8 @@ body.lixity-workspace.reader-focus {
   .analysis-outline-document { grid-column: 1; grid-row: 1; }
   .analysis-outline-contents {
     grid-column: 2; grid-row: 1; position: sticky;
-    top: calc(1rem + var(--workbench-return-height, 0px)); align-self: start;
-    min-width: 0; --outline-available-height: calc(100dvh - 2rem - var(--workbench-return-height, 0px));
+    top: calc(1rem + var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); align-self: start;
+    min-width: 0; --outline-available-height: calc(100dvh - 2rem - var(--workbench-return-height, 0px) - var(--reader-controls-height, 0px));
     margin: 0; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--line);
     font-size: var(--text-control);
   }

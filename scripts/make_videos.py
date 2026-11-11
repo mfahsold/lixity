@@ -127,13 +127,17 @@ def convert_product_tour() -> None:
 
     # Ease into a bounded detail view, hold it, then restore the overview before
     # the next dissolve. Captions remain outside the encoded camera transform.
+    # Upscale before zoompan: fractional zoom steps on a 2x canvas avoid the
+    # integer rounding that made slow pushes look jerky, then downscale.
     phase = "mod(in_time,8)"
-    ease = (f"if(lt({phase},0.9),0,if(lt({phase},2.1),(1-cos(PI*({phase}-0.9)/1.2))/2,"
-            f"if(lt({phase},6.2),1,if(lt({phase},7.2),(1+cos(PI*({phase}-6.2)/1.0))/2,0))))")
-    filters = (f"fps=20,zoompan=z='1+({value('zoom')}-1)*({ease})':"
+    ease = (f"if(lt({phase},0.7),0,if(lt({phase},2.3),(1-cos(PI*({phase}-0.7)/1.6))/2,"
+            f"if(lt({phase},5.9),1,if(lt({phase},7.3),(1+cos(PI*({phase}-5.9)/1.4))/2,0))))")
+    filters = ("fps=20,scale=2880:1800:flags=lanczos,"
+               f"zoompan=z='1+({value('zoom')}-1)*({ease})':"
                f"x='max(0,min(iw-iw/zoom,iw*({value('x')})-iw/zoom/2))':"
                f"y='max(0,min(ih-ih/zoom,ih*({value('y')})-ih/zoom/2))':"
-               "d=1:s=1440x900:fps=20")
+               "d=1:s=2880x1800:fps=20,"
+               "scale=1440:900:flags=lanczos,fps=20")
     for suffix, codec in (
         ("mp4", ["-c:v", "libx264", "-preset", "veryslow", "-crf", "30", "-movflags", "+faststart"]),
         ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "40", "-b:v", "0", "-row-mt", "1", "-threads", "4"]),

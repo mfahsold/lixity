@@ -18,14 +18,30 @@
   };
   const words = translations[language] || translations.en;
   const text = i => words[i];
-  function button(label, id, action) {
+  function button(label, id, action, help) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'ctl'; b.textContent = label; b.id = id;
+    const tip = help || label;
+    b.title = label; b.setAttribute('data-help', tip);
     b.addEventListener('click', action); return b;
   }
   let editor, snapshot, dirty = false, paused = false, inflight = false, pending = null, timer, maximum, loading = false;
   let loaded = false, generation = 0, openingLine = 1;
-  const openButton = button(text(0), 'manuscript-write', open);
-  controls.prepend(openButton);
+  const closeLabels = {
+    en: ['Close writing', 'Return to reading. The editor keeps undo history; unsaved work is saved automatically, a conflict keeps your draft.'],
+    de: ['Schreiben schließen', 'Zurück zum Lesen. Der Editor behält den Verlauf; ungespeicherte Arbeit wird automatisch gesichert, ein Konflikt behält deinen Entwurf.'],
+    fr: ['Quitter l’écriture', 'Retour à la lecture. L’historique est conservé ; le travail est enregistré automatiquement, un conflit garde le brouillon.'],
+    es: ['Cerrar escritura', 'Volver a la lectura. Se conserva el historial; el trabajo se guarda automáticamente, un conflicto conserva el borrador.'],
+    it: ['Chiudi scrittura', 'Torna alla lettura. La cronologia è conservata; il lavoro è salvato automaticamente, un conflitto conserva la bozza.'],
+    pt: ['Fechar escrita', 'Voltar à leitura. O histórico é mantido; o trabalho é guardado automaticamente, um conflito mantém o rascunho.'],
+    nl: ['Schrijven sluiten', 'Terug naar lezen. De geschiedenis blijft bewaard; werk wordt automatisch opgeslagen, een conflict behoudt het concept.'],
+  };
+  const closeWords = closeLabels[language] || closeLabels.en;
+  const openButton = button(text(0), 'manuscript-write', open, text(0));
+  const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1]);
+  closeButton.hidden = true;
+  const overviewAnchor = controls.querySelector('#workbench-overview-label') || controls.querySelector('#reader-analysis-settings');
+  if (overviewAnchor) overviewAnchor.before(openButton, closeButton);
+  else controls.append(openButton, closeButton);
   const section = document.createElement('section'); section.id = 'manuscript-editor'; section.hidden = true;
   section.setAttribute('aria-label', text(13)); chapters.before(section);
   const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools'; section.append(tools);
@@ -36,9 +52,12 @@
   const host = document.createElement('div'); host.id = 'manuscript-editor-host';
   const recovery = document.createElement('select'); recovery.className = 'ctl'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
   const recoveryTools = document.createElement('div'); recoveryTools.className = 'manuscript-edit-tools';
-  const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();});
-  tools.append(button(text(1), 'manuscript-read', read), button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}),
-  button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}), retry, status);
+  const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, text(11));
+  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2));
+  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3));
+  const readBtn = button(text(1), 'manuscript-read', read, text(1));
+  // Order follows the writing loop: correct (undo/redo), find, check the saved revision.
+  tools.append(undoBtn, redoBtn, readBtn, retry, status);
   const readingLabels = {
     en: ['Back to writing', 'Reading saved revision', 'Could not open this revision. Return to writing and retry.', 'Source changed while reading. Your editor text is preserved; review before saving.'],
     de: ['Zurück zum Schreiben', 'Gespeicherte Fassung lesen', 'Diese Fassung konnte nicht geöffnet werden. Zum Schreiben zurückkehren und erneut versuchen.', 'Die Quelle wurde beim Lesen geändert. Dein Editorinhalt bleibt erhalten; vor dem Speichern prüfen.'],
@@ -203,7 +222,9 @@
     nl:['Zoeken / vervangen','Versies vergelijken','Laatst bevestigde tekst','Huidig bestand','Concept ter controle','Als concept gebruiken','Annuleren','Controleer voor het opslaan. Het concept gebruiken wijzigt het manuscript nog niet.','Het document is veranderd. Herlaad voor het vergelijken.'],
   };
   const comparisonWords = comparisonLabels[language] || comparisonLabels.en;
-  tools.prepend(button(comparisonWords[0], 'manuscript-search', () => editor && editor.search()));
+  const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0]);
+  // Search sits between correction and review: undo/redo, find, read the saved revision.
+  redoBtn.after(searchBtn);
   const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.setAttribute('aria-label', comparisonWords[1]);
   const comparisonTitle = document.createElement('h2'); comparisonTitle.textContent = comparisonWords[1];
   const comparisonNote = document.createElement('p'); comparisonNote.textContent = comparisonWords[7];
@@ -269,7 +290,9 @@
     #manuscript-recovery {max-width:100%;min-width:0;}
     #manuscript-editor-host {min-width:0;overflow:hidden;}
     body.manuscript-writing #chapters,body.manuscript-writing #text-search {display:none!important;}
-    body.manuscript-writing #manuscript-reader-controls > :not(#manuscript-write):not(.reader-controls) {display:none!important;}
+    body.manuscript-writing #manuscript-reader-controls > :not(#manuscript-write):not(#manuscript-close):not(.reader-controls) {display:none!important;}
+    body.workbench-overview #manuscript-write, body.workbench-overview #manuscript-close,
+    body.reader-focus #manuscript-write, body.reader-focus #manuscript-close {display:none!important;}
   `; document.head.append(css);
   function show(state, message) {freshness.hidden = !dirty && (!snapshot || snapshot.revision === document.body.dataset.manuscriptSourceSha256); status.dataset.state = state; status.textContent = message;
     retry.hidden = state === 'saved' || state === 'saving';
@@ -313,7 +336,7 @@
   }
   async function open() {
     if (loading) return;
-    if (editor) {section.hidden = false; document.body.classList.add('manuscript-writing'); editor.focus(); return;}
+    if (editor) {section.hidden = false; document.body.classList.add('manuscript-writing'); closeButton.hidden = false; editor.focus(); return;}
     loading = true; openButton.disabled = true; openButton.textContent = text(17);
     try {
       snapshot = await request('/manuscript-edit');
@@ -321,10 +344,21 @@
       openingLine = visible ? Number(visible.dataset.start) : 1;
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
       loaded = true; section.hidden = false; document.body.classList.add('manuscript-writing');
+      closeButton.hidden = false;
       editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
       editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
     } catch (error) {section.hidden = false; show('error', error.message);}
     finally {loading = false; openButton.disabled = false; openButton.textContent = text(0);}
+  }
+  async function close() {
+    if (reading.open || comparison.open) return;
+    if (inflight) return;
+    if (dirty) await flush();
+    // Keep the mounted editor and its undo history; only leave the writing surface.
+    section.hidden = true; document.body.classList.remove('manuscript-writing');
+    closeButton.hidden = true;
+    if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
+    openButton.focus();
   }
   window.addEventListener('beforeunload', event => {if (dirty || inflight || comparisonDirty()) {event.preventDefault(); event.returnValue = '';}});
   document.addEventListener('visibilitychange', () => {if (document.hidden) flush();});

@@ -1,62 +1,12 @@
 // Tooltip popups for help terms and measurable values (data-help).
+// Logging lives in logging.js; this module only consumes window.LixityLog.
 (function () {
-  var isDebug = (function() {
-    try {
-      var saved = localStorage.getItem("lixity_debug");
-      if (saved === "1") return true;
-      if (saved === "0") return false;
-    } catch (_) {}
-    if (window.LIXITY_DEBUG) return true;
-    var meta = document.querySelector('meta[name="lixity-debug"]');
-    return !!(meta && meta.content === "true");
-  })();
-
-  var LixityLog = {
-    isDebug: function() { return isDebug; },
-    setDebug: function(enable) {
-      isDebug = !!enable;
-      try {
-        localStorage.setItem("lixity_debug", isDebug ? "1" : "0");
-      } catch (_) {}
-      console.info("[Lixity] Debug logging " + (isDebug ? "enabled" : "disabled"));
-    },
-    debug: function() {
-      if (isDebug && console.debug) {
-        console.debug.apply(console, ["[Lixity:debug]"].concat(Array.prototype.slice.call(arguments)));
-      }
-    },
-    info: function() {
-      if (isDebug && console.info) {
-        console.info.apply(console, ["[Lixity:info]"].concat(Array.prototype.slice.call(arguments)));
-      }
-    },
-    warn: function() {
-      if (console.warn) {
-        console.warn.apply(console, ["[Lixity:warn]"].concat(Array.prototype.slice.call(arguments)));
-      }
-    },
-    error: function() {
-      if (console.error) {
-        console.error.apply(console, ["[Lixity:error]"].concat(Array.prototype.slice.call(arguments)));
-      }
-    },
-    api: function(method, url, durationMs, status) {
-      if (!isDebug) return;
-      var label = "[Lixity:api] " + method + " " + url + " -> " + status + " (" + durationMs.toFixed(1) + "ms)";
-      if (status >= 400) {
-        console.error(label);
-      } else {
-        console.debug(label);
-      }
-    }
+  var LixityLog = window.LixityLog || {
+    debug: function () {}, info: function () {},
+    warn: function () { if (console.warn) console.warn.apply(console, arguments); },
+    error: function () { if (console.error) console.error.apply(console, arguments); },
+    api: function () {}, event: function () {},
   };
-
-  window.LixityLog = LixityLog;
-  window.setLixityDebug = LixityLog.setDebug;
-
-  if (isDebug) {
-    console.info("[Lixity] Debug mode active. API logs and runtime diagnostics are enabled. Use setLixityDebug(false) to disable.");
-  }
 
   var tip = document.createElement("div");
   tip.id = "lixity-tooltip";

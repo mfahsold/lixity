@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -17,6 +18,9 @@ from threading import RLock
 from typing import Any
 
 from .io import FileUtils
+from .log import get_logger, log_event
+
+logger = get_logger("manuscript")
 
 SOURCE_WRITE_LOCK = RLock()
 MAX_TEXT_BYTES = 4 * 1024 * 1024
@@ -95,6 +99,7 @@ class ManuscriptStore:
                 with closing(self._database()) as db:
                     recovery = [{"id": row[0], "kind": row[1], "created": row[2]}
                                 for row in db.execute("SELECT id,kind,created FROM recovery WHERE document=? ORDER BY created DESC", (self.document,))]
+            log_event(logger, "manuscript_open", level=logging.DEBUG, bytes=len(data), recovery=len(recovery))
             return {"schema_version": "lixity-editor/1", "document": self.document,
                     "revision": _digest(data), "text": text, "recovery": recovery}
 
@@ -143,11 +148,13 @@ class ManuscriptStore:
             # A retry after replacement but before receipt persistence is safe
             # only when this exact operation was already journaled.
             if _digest(original) != revision and not (prior and original == candidate):
+                log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="revision-mismatch")
                 raise EditConflict("Manuscript changed elsewhere; your draft is retained")
             identity = self.source.stat()
             def guard() -> None:
                 current = self.source.stat()
                 if (current.st_dev, current.st_ino) != (identity.st_dev, identity.st_ino) or self._read() != original:
+                    log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="write-guard")
                     raise EditConflict("Manuscript changed while saving; your draft is retained")
             if original != candidate:
                 with db:
@@ -159,6 +166,7 @@ class ManuscriptStore:
                 db.execute("INSERT INTO receipts VALUES (?,?,?,?,?)", (document, operation, request, json.dumps(response), time.time()))
                 db.execute("DELETE FROM recovery WHERE document=? AND kind='version' AND id NOT IN (SELECT id FROM recovery WHERE document=? AND kind='version' ORDER BY created DESC LIMIT 20)", (document, document))
                 db.execute("DELETE FROM receipts WHERE document=? AND id NOT IN (SELECT id FROM receipts WHERE document=? ORDER BY created DESC LIMIT 100)", (document, document))
+            log_event(logger, "manuscript_save", changed=original != candidate, bytes=len(candidate))
             return response
 
     def discard(self, identifier: str) -> None:
@@ -167,3 +175,4 @@ class ManuscriptStore:
             raise ValueError("Invalid recovery identifier")
         with SOURCE_WRITE_LOCK, closing(self._database()) as db, db:
             db.execute("DELETE FROM recovery WHERE document=? AND id=?", (self.document, identifier))
+        log_event(logger, "manuscript_discard", kind="recovery")
