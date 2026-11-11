@@ -115,7 +115,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
         'Every label is wholly visible inside the overview navigation');
       if (width<=390) assert.ok(new Set(orientation.links.map(rect=>Math.round(rect.top))).size>1, 'Mobile section links wrap');
       if ((locale === 'en' || locale === 'de') && [1440, 320].includes(width)) {
-        const entry = page.locator('#analysis-review a[data-jump="#dim-3d-view"]');
+        const entry = page.locator('#analysis-review a[data-jump="#dim-canvas"]');
         assert.equal(await page.locator('#dimensions').isVisible(), false, 'Another style tab starts selected');
         await entry.click();
         assert.equal(await page.locator('#dimensions').isVisible(), true, 'The direct route reveals the style space');

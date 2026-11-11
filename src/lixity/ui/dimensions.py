@@ -99,7 +99,7 @@ def style_dimensions(
             incomplete_key = "dim_incomplete_axes_one" if len(axes_data) == 1 else "dim_incomplete_axes"
             parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')
         missing_axes_description = " dim-incomplete-axes" if len(axes_data) < 3 else ""
-        parts.append(f'<div class="dim-canvas-wrap"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
+        parts.append(f'<div class="dim-canvas-wrap" id="dim-canvas"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
         parts.append(f'<p id="dim-legend-note" class="dim-legend-note">{translated("dim_legend_note")}</p>')
         parts.append('<div class="dim-3d-actions dim-display-options">')
         for control_id, key, pressed in (

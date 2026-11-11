@@ -475,7 +475,7 @@ async function main() {
         await page.evaluate(value => {
           if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
         }, text);
-        await page.waitForTimeout(1500);
+        await page.waitForTimeout(1200);
         await page.evaluate(() => window.setWalkthroughCaption(''));
       };
       const assertCaptionClear = async selector => {
@@ -507,11 +507,11 @@ async function main() {
         await page.addStyleTag({content: `
           #walkthrough-cursor { width:16px!important;height:16px!important;margin:-8px!important;
             background:rgba(115,146,255,.4)!important;border-color:#a8baff!important;
-            transition:opacity .4s,transform .15s; }
+            transition:opacity .4s,transform .1s; }
           .tour-focus-ring { position:fixed;pointer-events:none;z-index:2147483645;
             border:2px solid #809aff;border-radius:9px;box-shadow:0 0 0 5px rgba(100,130,255,.14);
-            animation:tour-ring 4.8s ease both; }
-          @keyframes tour-ring { 0% {opacity:0;transform:scale(.99)} 15%,80% {opacity:1;transform:scale(1)} 100% {opacity:0} }
+            animation:tour-ring 3.6s ease both; }
+          @keyframes tour-ring { 0% {opacity:0;transform:scale(.99)} 15%,75% {opacity:1;transform:scale(1)} 100% {opacity:0} }
         `});
         const started = Date.now();
         const scenes = [];
@@ -519,8 +519,8 @@ async function main() {
           await locator.scrollIntoViewIfNeeded();
           const box = await locator.boundingBox();
           assert.ok(box, 'A directed action must target a visible control');
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 24});
-          await page.waitForTimeout(250);
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 16});
+          await page.waitForTimeout(180);
           await locator.click();
         };
         const scene = async (name, action, focus, marker = null) => {
@@ -530,14 +530,14 @@ async function main() {
             const previous = await page.screenshot();
             await page.evaluate(data => {
               const image = document.createElement('img'); image.id = 'tour-dissolve';
-              image.src = data; image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483646;pointer-events:none;transition:opacity .65s ease';
+              image.src = data; image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483646;pointer-events:none;transition:opacity .45s ease';
               document.body.appendChild(image);
             }, 'data:image/png;base64,' + previous.toString('base64'));
           }
           await action();
           await page.evaluate(() => {
             const image = document.getElementById('tour-dissolve');
-            if (image) { image.style.opacity = '0'; setTimeout(() => image.remove(), 700); }
+            if (image) { image.style.opacity = '0'; setTimeout(() => image.remove(), 500); }
           });
           const box = await page.locator(focus).first().boundingBox();
           assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region');
@@ -546,7 +546,7 @@ async function main() {
           scenes.push({name, start: (start - started) / 1000,
             x: (framed.x + framed.width / 2) / 1440, y: (framed.y + framed.height / 2) / 900,
             zoom: Math.max(1, Math.min(1.5, 1440 / (framed.width + 100), 900 / (framed.height + 130)))});
-          await page.waitForTimeout(750);
+          await page.waitForTimeout(600);
           const marked = marker ? await page.locator(marker).first().evaluate(node => {
             // A summary's hit area spans the panel; emphasize its label instead.
             const range = document.createRange(); range.selectNodeContents(node);
@@ -607,16 +607,16 @@ async function main() {
         }, '#chapters .ptext p');
         fs.writeFileSync(capture.videoTarget.replace('.webm', '.json'), JSON.stringify({scenes, duration: 48, trim: (started - recordingStarted) / 1000}));
       } else if (flow === 'editorial-loop') {
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(1000);
         await say('Flagged passages become your review queue');
         await page.locator('#flags').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(1100);
+        await page.waitForTimeout(900);
         const flagRow = page.locator('#flags [data-marker-kind]').first();
         if (await flagRow.count()) {
           await flagRow.hover();
-          await page.waitForTimeout(1200);
+          await page.waitForTimeout(900);
         }
-        await say('Explore a passage for its values and source lines');
+        await say('Open a flagged passage: values and source lines');
         await page.locator('#workbench-overview-back').click();
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
         await paragraph.locator('[data-reader-paragraph]').click();
@@ -624,25 +624,25 @@ async function main() {
         assert.equal(await page.locator('#reader-inspector').isVisible(), true);
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Local paragraph Values leave global Analysis Off');
-        await page.waitForTimeout(1500);
-        await say('Read the values, source lines and tense flags');
+        await page.waitForTimeout(1200);
+        await say('Values, source lines, tense flags \u2014 per paragraph');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
         await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
         await page.waitForTimeout(1300);
-        await say('Draft a note, then review existing manuscript markers');
+        await say('Draft a note, then review the marker list');
         await page.locator('#workbench-overview-open').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(1500);
       } else if (flow === 'analysis-review') {
-        await page.waitForTimeout(1300);
-        await say('Read the continuous manuscript with Analysis off');
+        await page.waitForTimeout(1000);
+        await say('Start with Analysis off: plain reading view');
         const paragraph = page.locator('#chapters .ptext').first();
         await paragraph.scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
-        await page.waitForTimeout(1500);
-        await say('Explore a passage and its source lines');
+        await page.waitForTimeout(1200);
+        await say('Open any paragraph: values on demand');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         assert.equal(await page.locator('#reader-inspector').isVisible(), true);
@@ -653,18 +653,18 @@ async function main() {
         await page.locator('#workbench-overview-open').click();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
-          await say('Switch to the style dimensions for the same data');
+          await say('See the same data as style dimensions');
           await dimensions.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(900);
+          await page.waitForTimeout(700);
           await dimensions.click();
-          await page.waitForTimeout(1700);
+          await page.waitForTimeout(1300);
         }
-        await say('Select a chapter to keep its measured scores in view');
+        await say('Pin a chapter to keep its scores in view');
         await page.locator('#dim-chapter-select').selectOption('2');
         await page.locator('.dim-selection-panel').scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
-        await page.waitForTimeout(1300);
-        await say('Use a flat view to inspect the same chapter positions');
+        await page.waitForTimeout(1000);
+        await say('Flatten the view to compare chapter positions');
         await page.locator('#dim-projection').selectOption('d1-d2');
         await page.locator('.dim-view-control').evaluate(element => {
           const toolbar = document.querySelector('.toolbar');
@@ -677,33 +677,33 @@ async function main() {
           const toolbar = document.querySelector('.toolbar');
           return bounds.top >= (toolbar ? toolbar.getBoundingClientRect().bottom : 0) && bounds.bottom <= innerHeight;
         }), 'The walkthrough shows the full planar chart below the manuscript toolbar');
-        await page.waitForTimeout(1300);
+        await page.waitForTimeout(1000);
       } else {
-        await page.waitForTimeout(1100);
+        await page.waitForTimeout(900);
         await say('The timeline places dated claims on one shared axis');
         await page.locator('[data-view="research"]').click();
         await page.locator('[data-rtab="claims"]').click();
         await page.waitForTimeout(1200);
         await page.locator('#r-open-timeline').click();
         await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-        await page.waitForTimeout(750);
+        await page.waitForTimeout(600);
         const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
         const count = await rows.count();
         for (let index = 0; index < count; index++) {
           await rows.nth(index).hover();
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(400);
         }
         await say('Open a claim to read its card and evidence');
         await rows.first().click();
         await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
-        await page.waitForTimeout(1600);
+        await page.waitForTimeout(1200);
         await page.mouse.wheel(0, 300);
-        await page.waitForTimeout(1700);
+        await page.waitForTimeout(1300);
         await page.mouse.wheel(0, -700);
-        await page.waitForTimeout(900);
-        await say('Every bar links back to its claim and evidence');
+        await page.waitForTimeout(700);
+        await say('Each bar links to its claim and evidence');
         await rows.nth(Math.min(1, count - 1)).hover();
-        await page.waitForTimeout(1700);
+        await page.waitForTimeout(1300);
       }
       assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
       const video = page.video();

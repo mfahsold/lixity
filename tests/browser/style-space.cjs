@@ -204,9 +204,37 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
       try {
         await review.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:reviewHtml}));
         await review.goto('http://lixity.test/');
-        await review.locator('#analysis-review [data-jump="#dim-3d-view"]').click();
+        await review.locator('#analysis-review [data-jump="#dim-canvas"]').click();
         const next = review.locator('#dim-next-threshold');
-        await review.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await review.waitForTimeout(250);
+        // The review jump targets the plot body; the threshold control sits
+        // just above it. Align that control immediately below any covering
+        // sticky bar (or 8px from the top) so the click needs no scroll of its
+        // own and the whole plot stays visible.
+        await next.evaluate((button) => {
+          const rect = button.getBoundingClientRect();
+          let top = 8;
+          document.querySelectorAll('#workbench-thread, #manuscript-reader-controls, .toolbar').forEach(bar => {
+            if (!bar.getClientRects().length) return;
+            const style = getComputedStyle(bar);
+            if (style.position !== 'sticky' && style.position !== 'fixed') return;
+            const box = bar.getBoundingClientRect();
+            if (box.bottom > 0 && box.top < innerHeight && box.left < rect.right && box.right > rect.left) {
+              top = Math.max(top, box.bottom + 8);
+            }
+          });
+          window.scrollBy(0, rect.top - top);
+        });
+        let uncovered = false;
+        for (let attempt = 0; attempt < 20 && !uncovered; attempt++) {
+          await review.waitForTimeout(50);
+          uncovered = await next.evaluate((button) => {
+            const rect = button.getBoundingClientRect();
+            const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+            return !!hit && (hit === button || button.contains(hit));
+          });
+        }
+        assert.ok(uncovered, 'threshold control must be clickable without sticky overlap');
         const beforeScroll = await review.evaluate(() => scrollY);
         await next.click();
         assert.equal(await review.evaluate(() => scrollY), beforeScroll, 'Selecting a point does not force scrolling');

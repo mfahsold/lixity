@@ -791,14 +791,14 @@ async function checkDemoCapabilities(page, width) {
   const reviewLinks = page.locator('#analysis-review [data-jump]');
   await expect(reviewLinks).toHaveCount(3);
   assert.deepEqual(await reviewLinks.evaluateAll(links => links.map(link => link.getAttribute('data-jump'))),
-    ['#heatmap', '#dist', '#dim-3d-view'], 'The review entry includes the direct style-space route');
+    ['#heatmap', '#dist', '#dim-canvas'], 'The review entry includes the direct style-space route');
   for (const link of await reviewLinks.all()) {
     await link.click();
     const target = await link.getAttribute('data-jump');
     await expect(page).toHaveURL(new RegExp(target + '$'));
     await expect(page.locator(target)).toBeVisible();
     await expect(page.locator(target)).toBeInViewport();
-    if (target === '#dim-3d-view') {
+    if (target === '#dim-canvas') {
       await expect(page.locator('#style-tab-dimensions')).toHaveAttribute('aria-selected', 'true');
       await expect(page.locator('#dim-3d-canvas')).toBeVisible();
       if (width === 320) {

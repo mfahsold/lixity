@@ -128,8 +128,8 @@ def convert_product_tour() -> None:
     # Ease into a bounded detail view, hold it, then restore the overview before
     # the next dissolve. Captions remain outside the encoded camera transform.
     phase = "mod(in_time,8)"
-    ease = (f"if(lt({phase},1.2),0,if(lt({phase},2.4),(1-cos(PI*({phase}-1.2)/1.2))/2,"
-            f"if(lt({phase},6),1,if(lt({phase},7.4),(1+cos(PI*({phase}-6)/1.4))/2,0))))")
+    ease = (f"if(lt({phase},0.9),0,if(lt({phase},2.1),(1-cos(PI*({phase}-0.9)/1.2))/2,"
+            f"if(lt({phase},6.2),1,if(lt({phase},7.2),(1+cos(PI*({phase}-6.2)/1.0))/2,0))))")
     filters = (f"fps=20,zoompan=z='1+({value('zoom')}-1)*({ease})':"
                f"x='max(0,min(iw-iw/zoom,iw*({value('x')})-iw/zoom/2))':"
                f"y='max(0,min(ih-ih/zoom,ih*({value('y')})-ih/zoom/2))':"

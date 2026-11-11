@@ -9429,7 +9429,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
-| `#analysis-review [data-jump="#dim-3d-view"]` | available in 0.8.0: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the existing dimensions tab |
+| `#analysis-review [data-jump="#dim-canvas"]` | available in 0.8.0: direct style-space route, present only when the rendered dimensions have chapter scores; reveals the canvas with the existing dimensions tab |
 | `#dim-legend` / `#dim-legend-note` / `#dim-incomplete-axes` | available in 0.8.0: style-space point/selection/cutoff key, cutoff caveat, and optional display-only zero-coordinate disclosure |
 | `#dim-fallback` | available in 0.8.0: visible when the plot cannot initialize; the chapter-score table remains readable |
 | `#dim-threshold-summary` / `#dim-next-threshold` | available in 0.8.0: count of scored chapters at an axis cutoff and, when available with JavaScript, a control cycling through them in manuscript order |
