@@ -33,6 +33,11 @@ return fixture.stdout;
    assert(await page.locator('#manuscript-write').isVisible());
    const toolbar=page.locator('#manuscript-reader-controls');
    if(width>=1024) assert((await toolbar.boundingBox()).height<=64,`All native tools including Write fit one desktop row at ${width}px (${language}, ${theme})`);
+   const chapterSelect=page.locator('#reader-chapter');
+   if(await chapterSelect.isVisible() && width>=768) {
+    const isTruncated=await chapterSelect.evaluate(el=>el.scrollWidth>el.clientWidth);
+    assert.equal(isTruncated,false,`Chapter select in ${language} at ${width}px must not be truncated`);
+   }
    assert(await page.locator('#reader-speech').isVisible());
    assert(await page.locator('#workspace-reader-toggle').isVisible());
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

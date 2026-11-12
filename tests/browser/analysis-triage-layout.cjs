@@ -53,7 +53,7 @@ server.serve_forever()
         await page.locator('#workbench-overview-open').click();
         const row = page.locator('#flags .flag-row').first();
         const button = row.locator('.triage-read-cell button');
-        await expect(button).toHaveText('Textstelle lesen');
+        await expect(button).toHaveText('Im Manuskript ansehen');
         await expect(row.locator('.triage-choice')).toBeEnabled();
         await page.mouse.move(0, 0);
         const cellColors = () => row.locator('td').evaluateAll(cells => cells.map(cell => getComputedStyle(cell).backgroundColor));

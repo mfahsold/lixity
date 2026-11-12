@@ -170,8 +170,8 @@ class ParagraphMatcher:
                 asl_spans.append({"start": s_start, "end": s_end, "count": 1, "words": w_count})
         if self._fast_cues:
             f_cnt = s_cnt = n_cnt = 0
-            for w in tokens:
-                is_f, is_s, is_n = self._classify_cue(w)
+            for w in _WORD_RE.findall(clean):
+                is_f, is_s, is_n = self._classify_cue(w.lower())
                 if is_f:
                     f_cnt += 1
                 if is_s:

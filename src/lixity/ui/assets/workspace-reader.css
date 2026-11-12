@@ -27,18 +27,19 @@
 .context-tool-tabs {
   display: flex;
   gap: 2px;
-  padding: 3px;
+  padding: 4px;
   background: var(--surface-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  margin: var(--space-3) var(--space-3) var(--space-2);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  margin: 0;
 }
 .context-tool-tabs .ctl {
   flex: 1 1 0;
   min-width: 0;
-  padding: 0.35rem 0.6rem;
+  padding: 0.45rem 0.65rem;
   font-size: var(--text-small);
-  border-radius: calc(var(--radius-sm) - 2px);
+  border-radius: var(--radius-xs);
   border: 0;
   background: transparent;
   color: var(--fg-secondary);
@@ -48,6 +49,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  font-weight: 500;
 }
 .context-tool-tabs .ctl:hover {
   color: var(--fg);
@@ -69,7 +71,14 @@
   box-shadow: none !important;
   background: transparent !important;
 }
-.workspace-reader-panel { min-width: 0; overflow-wrap: anywhere; }
+.workspace-context-panel .workspace-reader-panel .workspace-reader-head {
+  display: none;
+}
+.workspace-reader-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: var(--space-4);
+}
 .workspace-reader-divider { grid-column: 2; grid-row: 1; position: sticky; top: 1rem; height: calc(100dvh - 2rem); cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); background: linear-gradient(to right, transparent 40%, var(--line-strong) 40%, var(--line-strong) 60%, transparent 60%); }
 .workspace-reader-divider[hidden] { display: none; }
 .workspace-reader-divider:hover { background-color: var(--accent-light); }
