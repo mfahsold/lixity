@@ -3938,6 +3938,9 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
 }
 .manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
+.manuscript-reading :is(.chapter, .ptext) {
+  scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + 4.5rem);
+}
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;
@@ -6439,10 +6442,12 @@ function setPassageScrollMargin(target) {
     if (!bar.getClientRects().length || target.contains(bar) || passageScrollContainers(bar)[0] !== container) return;
     var style = getComputedStyle(bar), bounds = bar.getBoundingClientRect();
     if (style.position === "sticky" && bounds.right > rect.left && bounds.left < rect.right) {
-      height = Math.max(height, (parseFloat(style.top) || 0) + bounds.height);
+      var topVal = parseFloat(style.top);
+      var barTop = Number.isFinite(topVal) ? topVal : Math.max(0, bounds.top);
+      height = Math.max(height, barTop + bounds.height, bounds.bottom);
     }
   });
-  target.style.scrollMarginTop = (height + 12) + "px";
+  target.style.scrollMarginTop = (height + 20) + "px";
 }
 
 var paragraphContentNode = document.getElementById("paragraph-content");
@@ -19677,6 +19682,19 @@ window.LixityManuscriptLinks = {
     var below = innerHeight - rect.bottom - 12, above = rect.top - 12;
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
     var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
+    var contextPanel = document.getElementById("workspace-context-panel");
+    if (contextPanel && !contextPanel.hidden && card && card.trigger && contextPanel.contains(card.trigger)) {
+      var panelRect = contextPanel.getBoundingClientRect();
+      if (panelRect.left > bounds.width + 24) {
+        left = panelRect.left - bounds.width - 16;
+        if (card.record && card.record.panel && card.record.panel.isConnected) {
+          var pRect = card.record.panel.getBoundingClientRect();
+          if (pRect.bottom > 0 && pRect.top < innerHeight) {
+            top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+          }
+        }
+      }
+    }
     host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
@@ -19769,7 +19787,7 @@ window.LixityManuscriptLinks = {
       var bottom = bounds.top + container.clientTop + container.clientHeight - 12;
       if (rect.top < top || rect.bottom > bottom) container.scrollBy({top:rect.top - top, behavior:"instant"});
     });
-    var rect = range.getClientRects()[0], top = containers.length ? 12 : margin;
+    var rect = range.getClientRects()[0], top = margin;
     if (rect.top < top || rect.bottom > innerHeight - 12) window.scrollBy({top:rect.top - top, behavior:"instant"});
     return containers;
   }

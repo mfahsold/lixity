@@ -213,10 +213,12 @@ function setPassageScrollMargin(target) {
     if (!bar.getClientRects().length || target.contains(bar) || passageScrollContainers(bar)[0] !== container) return;
     var style = getComputedStyle(bar), bounds = bar.getBoundingClientRect();
     if (style.position === "sticky" && bounds.right > rect.left && bounds.left < rect.right) {
-      height = Math.max(height, (parseFloat(style.top) || 0) + bounds.height);
+      var topVal = parseFloat(style.top);
+      var barTop = Number.isFinite(topVal) ? topVal : Math.max(0, bounds.top);
+      height = Math.max(height, barTop + bounds.height, bounds.bottom);
     }
   });
-  target.style.scrollMarginTop = (height + 12) + "px";
+  target.style.scrollMarginTop = (height + 20) + "px";
 }
 
 var paragraphContentNode = document.getElementById("paragraph-content");

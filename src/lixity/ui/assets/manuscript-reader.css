@@ -251,6 +251,9 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
 }
 .manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
+.manuscript-reading :is(.chapter, .ptext) {
+  scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + 4.5rem);
+}
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
   margin: 1.5rem auto 4rem;

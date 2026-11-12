@@ -161,6 +161,19 @@
     var below = innerHeight - rect.bottom - 12, above = rect.top - 12;
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
     var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
+    var contextPanel = document.getElementById("workspace-context-panel");
+    if (contextPanel && !contextPanel.hidden && card && card.trigger && contextPanel.contains(card.trigger)) {
+      var panelRect = contextPanel.getBoundingClientRect();
+      if (panelRect.left > bounds.width + 24) {
+        left = panelRect.left - bounds.width - 16;
+        if (card.record && card.record.panel && card.record.panel.isConnected) {
+          var pRect = card.record.panel.getBoundingClientRect();
+          if (pRect.bottom > 0 && pRect.top < innerHeight) {
+            top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+          }
+        }
+      }
+    }
     host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
@@ -253,7 +266,7 @@
       var bottom = bounds.top + container.clientTop + container.clientHeight - 12;
       if (rect.top < top || rect.bottom > bottom) container.scrollBy({top:rect.top - top, behavior:"instant"});
     });
-    var rect = range.getClientRects()[0], top = containers.length ? 12 : margin;
+    var rect = range.getClientRects()[0], top = margin;
     if (rect.top < top || rect.bottom > innerHeight - 12) window.scrollBy({top:rect.top - top, behavior:"instant"});
     return containers;
   }
