@@ -27,6 +27,10 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('.cm-content').waitFor();
     assert.equal(await page.locator('#manuscript-close').isVisible(), true, 'Close writing button is visible while editing');
     assert.equal(await page.locator('#manuscript-write').isHidden(), true, 'Write button is replaced by Close writing while editing');
+    assert.equal(await page.locator('#manuscript-reader-controls').isHidden(), true, 'Reader toolbar is hidden in Write mode so only one unified editor toolbar is shown');
+    const editorToolbarBox = await page.locator('.manuscript-editor-toolbar').boundingBox();
+    assert.ok(editorToolbarBox && editorToolbarBox.height <= 60, 'Unified editor toolbar fits on a single desktop row');
+    assert.equal(await page.evaluate(() => Boolean(window.LixityChrome && typeof window.LixityChrome.hide === 'function' && typeof window.LixityChrome.reveal === 'function')), true, 'Central LixityChrome auto-hide controller is mounted');
     assert.equal(await page.locator('.cm-content').getAttribute('spellcheck'), 'false', 'CodeMirror editor disables browser spellcheck underlines');
     assert.equal(await page.locator('#manuscript-recover').isHidden(), true, 'Recover button stays hidden until a recovery entry is selected');
     assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');

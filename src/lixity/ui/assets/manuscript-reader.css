@@ -208,7 +208,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
 .manuscript-reading .toolbar {
-  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .35rem 0; gap: .4rem 1rem;
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .3rem 0; gap: .4rem 1rem;
+  max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem)); margin-inline: auto;
   background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
@@ -481,30 +482,38 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }
 
 /* Keep reading tools compact without truncating labels or hiding actions. */
-.manuscript-reader-controls { gap: .2rem; padding: .25rem .4rem; }
-.manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; max-width: 14rem; }
+.manuscript-reader-controls { gap: .25rem; padding: .25rem .45rem; }
+.manuscript-reader-controls select.reader-chapter { flex: 0 1 9rem; width: 9rem; max-width: 14rem; }
 .manuscript-reader-controls > button.ctl,
 .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
 .manuscript-reader-controls .reader-controls > button.ctl {
-  padding: .3rem .4rem; min-height: 2.5rem;
+  padding: .3rem .45rem; min-height: 2.5rem;
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
 .manuscript-reader-controls .reader-controls { gap: .25rem; }
 /* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
-@container reader-tools (min-width: 72rem) {
+@container reader-tools (min-width: 68rem) {
+  .manuscript-reader-controls > #manuscript-write,
+  .manuscript-reader-controls > .reader-controls:first-of-type:not(#manuscript-write ~ .reader-controls) {
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: .45rem;
+    margin-inline-start: .15rem;
+  }
   .manuscript-reader-controls .reader-analysis-toggle-controls {
     border-inline-start: 1px solid var(--line);
-    padding-inline-start: .35rem;
-    margin-inline-start: .1rem;
+    padding-inline-start: .4rem;
+    margin-inline-start: auto;
   }
 }
 @container reader-tools (max-width: 80rem) {
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7.5rem; width: 7.5rem; }
   #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
   #reader-focus .reader-control-label,
   #reader-teleprompter .reader-control-label { display: none; }
   .analysis-state { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; }
   .reader-control-label { display: none; }
   .reader-compact-control { min-width: 2.5rem; }
 }

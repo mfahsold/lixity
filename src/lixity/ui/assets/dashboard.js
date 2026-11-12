@@ -156,13 +156,13 @@ if (filter) {
   function unmark(paragraph) {
     if (paragraph.matches(".reader-structural")) {
       if (!structuralText.has(paragraph)) structuralText.set(paragraph, paragraph.textContent);
-      paragraph.textContent = structuralText.get(paragraph);
+      else if (paragraph.querySelector("mark")) paragraph.textContent = structuralText.get(paragraph);
     } else renderParagraphText(paragraph, "");
   }
-  function mark(paragraph, query) {
+  function mark(paragraph, query, pattern) {
     if (!paragraph.matches(".reader-structural")) { renderParagraphText(paragraph, query); return; }
     var text = structuralText.get(paragraph);
-    var pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = pattern.exec(text);
+    var regex = pattern || new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = regex.exec(text);
     if (!match) return;
     var index = match.index;
     var hit = document.createElement("mark"); hit.className = "text-hit"; hit.textContent = match[0];
@@ -173,6 +173,7 @@ if (filter) {
     query = input.value.trim();
     hits = [];
     cursor = -1;
+    var pattern = query ? new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
     var blocks = Array.prototype.slice.call(
       document.querySelectorAll("#chapters .ptext, #chapters .reader-structural")
     );
@@ -184,14 +185,13 @@ if (filter) {
       var paragraph = structural ? block : block.querySelector("p");
       if (paragraph) unmark(paragraph);
       var content = structural ? [structuralText.get(block)] : paragraphContent[block.id];
-      var match = Boolean(content) && Boolean(query)
-        && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(content[0]);
+      var match = Boolean(content) && Boolean(pattern) && pattern.test(content[0]);
       block.classList.toggle("text-miss", Boolean(query) && !match);
       var chip = paragraphChips[block.id];
       if (restored !== null && chip) {
         toggleParagraph(chip, !query && restored.indexOf(block) >= 0);
       }
-      if (match) { hits.push(block); if (paragraph) mark(paragraph, query); }
+      if (match) { hits.push(block); if (paragraph) mark(paragraph, query, pattern); }
     });
     if (!query) restored = null;
     document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
@@ -411,12 +411,15 @@ function syncEvidenceLegend() {
   if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
 }
 
+var allChips = null;
 function applyLayer() {
   var key = layer ? layer.value : "";
   var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
-  document.querySelectorAll(".chip").forEach(function (chip) {
+  if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var nextOutliers = [];
+  allChips.forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
     var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
@@ -427,7 +430,8 @@ function applyLayer() {
       chip.removeAttribute("title");
       chip.classList.toggle("outlier", notable);
       chip.setAttribute("aria-label", info[1]);
-    } else {
+      if (notable) nextOutliers.push(chip);
+    } else if (chip.classList.contains("has-layer") || chip.classList.contains("outlier") || chip.hasAttribute("data-tip") || !chip.hasAttribute("title")) {
       chip.style.removeProperty("--layer-color");
       chip.classList.remove("has-layer");
       chip.classList.remove("outlier");
@@ -436,13 +440,19 @@ function applyLayer() {
       if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
     }
     if (panel) {
-      panel.classList.toggle("metric-notable", notable);
-      if (notable) panel.style.setProperty("--paragraph-layer-color", info[0]);
-      else panel.style.removeProperty("--paragraph-layer-color");
-      paintLayerAction(panel, info);
+      if (notable) {
+        panel.classList.add("metric-notable");
+        panel.style.setProperty("--paragraph-layer-color", info[0]);
+      } else if (panel.classList.contains("metric-notable")) {
+        panel.classList.remove("metric-notable");
+        panel.style.removeProperty("--paragraph-layer-color");
+      }
+      if (info || panel.querySelector(".paragraph-layer-marker")) {
+        paintLayerAction(panel, info);
+      }
     }
   });
-  layerOutliers = Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
+  layerOutliers = nextOutliers;
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {

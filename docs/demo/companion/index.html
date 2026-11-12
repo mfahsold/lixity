@@ -768,6 +768,46 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 .markdown-editor-wrap > .markdown-editor-area:focus { outline: none; }
 @media (pointer: coarse) { .editor-tool-btn { width: 2.75rem; height: 2.75rem; } }
 
+/* Central distraction-free chrome auto-hide (scroll direction + inactivity timeout).
+   Uses opacity fade without collapsing layout boxes so prose never jumps (CLS = 0)
+   and keyboard focus (:focus-within) reveals the toolbar instantaneously. */
+:is(
+  #manuscript-reader-controls,
+  .manuscript-reading .toolbar,
+  .manuscript-editor-toolbar,
+  #manuscript-reading .manuscript-reading-bar,
+  .teleprompter-toolbar
+) {
+  transition:
+    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+body.chrome-autohidden :is(
+  #manuscript-reader-controls,
+  .manuscript-reading .toolbar,
+  .manuscript-editor-toolbar,
+  #manuscript-reading .manuscript-reading-bar,
+  .teleprompter-toolbar
+):not(:focus-within) {
+  opacity: 0;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    #manuscript-reader-controls,
+    .manuscript-reading .toolbar,
+    .manuscript-editor-toolbar,
+    #manuscript-reading .manuscript-reading-bar,
+    .teleprompter-toolbar
+  ) {
+    transition: none;
+  }
+}
+
 * { box-sizing: border-box; }
 /* Keep the reading width stable when short and long views alternate. */
 html { scrollbar-gutter: stable; }
@@ -884,7 +924,7 @@ min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--l
 .kpi-drawer-btn { background: transparent; border: 0; cursor: pointer; font-size: var(--text-micro); color: var(--accent); padding: .25rem 0; user-select: none; text-align: left; &:hover { color: var(--fg); } }
 .kpi-drawer-row { margin-top: .35rem; }
 .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: var(--space-2); }
-.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .65rem .85rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 4.2rem; position: relative; overflow: hidden; min-width: 0; transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); } & .kpi-bar { position: absolute; inset-inline-start: 0; inset-block-end: 0; height: 2px; width: var(--v); background: var(--accent); opacity: .55; border-radius: 0 var(--radius-xs) 0 0; transition: width .3s var(--ease); } & b { display: block; font-size: 1.25rem; font-weight: var(--weight-strong); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; } & span { color: var(--muted); font-size: var(--text-micro); line-height: 1.35; margin-top: .25rem; text-wrap: balance; overflow-wrap: anywhere; } }
+.kpi { contain: layout style; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .65rem .85rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 4.2rem; position: relative; overflow: hidden; min-width: 0; transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); } & .kpi-bar { position: absolute; inset-inline-start: 0; inset-block-end: 0; height: 2px; width: var(--v); background: var(--accent); opacity: .55; border-radius: 0 var(--radius-xs) 0 0; transition: width .3s var(--ease); } & b { display: block; font-size: 1.25rem; font-weight: var(--weight-strong); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; } & span { color: var(--muted); font-size: var(--text-micro); line-height: 1.35; margin-top: .25rem; text-wrap: balance; overflow-wrap: anywhere; } }
 .kpi-link { cursor: pointer; user-select: none; &:hover b { color: var(--accent); } &:active { transform: translateY(0); } }
 :is(#analysis-measurements, .scene-measurements) { border-block: 1px solid var(--line); padding-block: .25rem; & > summary { cursor: pointer; min-height: 2.75rem; padding: .6rem .25rem; font-size: var(--text-control); font-weight: var(--weight-semibold); } &[open] > summary { margin-bottom: var(--space-3); } & > .kpis { padding-bottom: var(--space-4); } }
 /* --- Sentence-length architecture ------------------------------------- */
@@ -1988,7 +2028,7 @@ anchors while scrolling. */
 #research-revision-batch-list pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; }
 /* Research records styled as clean, structured cards within the workspace. */
 .research-record-list { display: flex; flex-direction: column; gap: 0.75rem; }
-.research-record-list > .research-card { margin: 0; padding: 0.85rem 1.15rem; border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.research-record-list > .research-card { contain: layout style; margin: 0; padding: 0.85rem 1.15rem; border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .research-record-list > .research-card:hover { border-color: var(--line-strong, #888); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .research-card:focus-within { border-color: var(--line-strong); box-shadow: 0 0 0 2px var(--accent-light, rgba(0, 0, 0, 0.08)); }
 .research-card-header { gap: var(--space-2) var(--space-3); display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
@@ -3637,7 +3677,8 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
 .manuscript-reading .toolbar {
-  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .35rem 0; gap: .4rem 1rem;
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .3rem 0; gap: .4rem 1rem;
+  max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem)); margin-inline: auto;
   background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
@@ -3910,30 +3951,38 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }
 
 /* Keep reading tools compact without truncating labels or hiding actions. */
-.manuscript-reader-controls { gap: .2rem; padding: .25rem .4rem; }
-.manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; max-width: 14rem; }
+.manuscript-reader-controls { gap: .25rem; padding: .25rem .45rem; }
+.manuscript-reader-controls select.reader-chapter { flex: 0 1 9rem; width: 9rem; max-width: 14rem; }
 .manuscript-reader-controls > button.ctl,
 .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
 .manuscript-reader-controls .reader-controls > button.ctl {
-  padding: .3rem .4rem; min-height: 2.5rem;
+  padding: .3rem .45rem; min-height: 2.5rem;
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
 .manuscript-reader-controls .reader-controls { gap: .25rem; }
 /* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
-@container reader-tools (min-width: 72rem) {
+@container reader-tools (min-width: 68rem) {
+  .manuscript-reader-controls > #manuscript-write,
+  .manuscript-reader-controls > .reader-controls:first-of-type:not(#manuscript-write ~ .reader-controls) {
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: .45rem;
+    margin-inline-start: .15rem;
+  }
   .manuscript-reader-controls .reader-analysis-toggle-controls {
     border-inline-start: 1px solid var(--line);
-    padding-inline-start: .35rem;
-    margin-inline-start: .1rem;
+    padding-inline-start: .4rem;
+    margin-inline-start: auto;
   }
 }
 @container reader-tools (max-width: 80rem) {
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7.5rem; width: 7.5rem; }
   #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
   #reader-focus .reader-control-label,
   #reader-teleprompter .reader-control-label { display: none; }
   .analysis-state { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7rem; width: 7rem; }
   .reader-control-label { display: none; }
   .reader-compact-control { min-width: 2.5rem; }
 }
@@ -4386,7 +4435,7 @@ body.lixity-workspace.reader-focus {
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter.</p></details><footer><span class="version-badge">Version 0.8.0</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A17afff5f-9c35-43d5-a515-cfa425820dab\u0026version_id=urn%3Auuid%3Ac2461e6b-0a4f-4051-bbe0-380ecc36eb6d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A197a31bb-d07e-4939-80e7-4bc4758056fd\u0026source_id=urn%3Auuid%3A17afff5f-9c35-43d5-a515-cfa425820dab\u0026version_id=urn%3Auuid%3Ac2461e6b-0a4f-4051-bbe0-380ecc36eb6d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ab8e7d85e-efa7-469a-9738-4dedd959f45d\u0026version_id=urn%3Auuid%3Ad8338bd4-4510-4c34-99a5-be2fac12183d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A197a31bb-d07e-4939-80e7-4bc4758056fd\u0026source_id=urn%3Auuid%3Ab8e7d85e-efa7-469a-9738-4dedd959f45d\u0026version_id=urn%3Auuid%3Ad8338bd4-4510-4c34-99a5-be2fac12183d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:197a31bb-d07e-4939-80e7-4bc4758056fd","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:689dc5f2-d19c-4a70-8a7c-0548a0112c8b","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:240e330f-3527-4dd0-a0af-dddc6f33c2a9","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:17afff5f-9c35-43d5-a515-cfa425820dab/urn:uuid:c2461e6b-0a4f-4051-bbe0-380ecc36eb6d)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:197a31bb-d07e-4939-80e7-4bc4758056fd","source_id":"urn:uuid:17afff5f-9c35-43d5-a515-cfa425820dab","source_version_id":"urn:uuid:c2461e6b-0a4f-4051-bbe0-380ecc36eb6d","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A197a31bb-d07e-4939-80e7-4bc4758056fd\u0026source_id=urn%3Auuid%3A17afff5f-9c35-43d5-a515-cfa425820dab\u0026version_id=urn%3Auuid%3Ac2461e6b-0a4f-4051-bbe0-380ecc36eb6d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:240e330f-3527-4dd0-a0af-dddc6f33c2a9","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:b8e7d85e-efa7-469a-9738-4dedd959f45d/urn:uuid:d8338bd4-4510-4c34-99a5-be2fac12183d)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:197a31bb-d07e-4939-80e7-4bc4758056fd","source_id":"urn:uuid:b8e7d85e-efa7-469a-9738-4dedd959f45d","source_version_id":"urn:uuid:d8338bd4-4510-4c34-99a5-be2fac12183d","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A197a31bb-d07e-4939-80e7-4bc4758056fd\u0026source_id=urn%3Auuid%3Ab8e7d85e-efa7-469a-9738-4dedd959f45d\u0026version_id=urn%3Auuid%3Ad8338bd4-4510-4c34-99a5-be2fac12183d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:689dc5f2-d19c-4a70-8a7c-0548a0112c8b","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:689dc5f2-d19c-4a70-8a7c-0548a0112c8b","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"83649ed26fffd7da6499ba26ebda789bb27873a82606ee7e84a0a34aa5b78288"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A67a57cf3-274f-4b2f-8c6b-5b50e57cb19f\u0026version_id=urn%3Auuid%3Ae7c84541-e307-4755-bfe7-a49943b5c1fc":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Af06b060f-12cf-495d-9782-9edfb52fc508\u0026source_id=urn%3Auuid%3A67a57cf3-274f-4b2f-8c6b-5b50e57cb19f\u0026version_id=urn%3Auuid%3Ae7c84541-e307-4755-bfe7-a49943b5c1fc":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Abde21c1e-4824-4f67-963a-c65aeffd3a54\u0026version_id=urn%3Auuid%3A973149d8-d7ec-4608-9e53-609babea29a6":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Af06b060f-12cf-495d-9782-9edfb52fc508\u0026source_id=urn%3Auuid%3Abde21c1e-4824-4f67-963a-c65aeffd3a54\u0026version_id=urn%3Auuid%3A973149d8-d7ec-4608-9e53-609babea29a6":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:f06b060f-12cf-495d-9782-9edfb52fc508","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:a3951123-d8bb-4e34-ad58-e3cbd61bfd57","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:0c7412db-a83c-4025-8485-0a6659158915","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:67a57cf3-274f-4b2f-8c6b-5b50e57cb19f/urn:uuid:e7c84541-e307-4755-bfe7-a49943b5c1fc)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:f06b060f-12cf-495d-9782-9edfb52fc508","source_id":"urn:uuid:67a57cf3-274f-4b2f-8c6b-5b50e57cb19f","source_version_id":"urn:uuid:e7c84541-e307-4755-bfe7-a49943b5c1fc","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Af06b060f-12cf-495d-9782-9edfb52fc508\u0026source_id=urn%3Auuid%3A67a57cf3-274f-4b2f-8c6b-5b50e57cb19f\u0026version_id=urn%3Auuid%3Ae7c84541-e307-4755-bfe7-a49943b5c1fc","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:0c7412db-a83c-4025-8485-0a6659158915","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:bde21c1e-4824-4f67-963a-c65aeffd3a54/urn:uuid:973149d8-d7ec-4608-9e53-609babea29a6)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:f06b060f-12cf-495d-9782-9edfb52fc508","source_id":"urn:uuid:bde21c1e-4824-4f67-963a-c65aeffd3a54","source_version_id":"urn:uuid:973149d8-d7ec-4608-9e53-609babea29a6","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Af06b060f-12cf-495d-9782-9edfb52fc508\u0026source_id=urn%3Auuid%3Abde21c1e-4824-4f67-963a-c65aeffd3a54\u0026version_id=urn%3Auuid%3A973149d8-d7ec-4608-9e53-609babea29a6","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:a3951123-d8bb-4e34-ad58-e3cbd61bfd57","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:a3951123-d8bb-4e34-ad58-e3cbd61bfd57","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"58dfdc857f27dda3ad0be81c0f4cb14e1899c047e176d8671be481cc5e721332"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -4741,6 +4790,223 @@ body.lixity-workspace.reader-focus {
       host.__lixityMounted = false;
     },
   };
+
+  // Central distraction-free chrome controller (Headroom scroll-direction + idle timeout).
+  // Anchors auto-hide behavior across reader, editor, saved-revision reader, and teleprompter
+  // toolbars without shifting document layout or breaking keyboard focus (:focus-within).
+  (function initLixityChrome() {
+    var CHROME_SELECTOR = [
+      "#manuscript-reader-controls",
+      ".manuscript-reading .toolbar",
+      ".manuscript-editor-toolbar",
+      "#manuscript-reading .manuscript-reading-bar",
+      ".teleprompter-toolbar"
+    ].join(", ");
+    var IDLE_MS = 3500;
+    var DOWN_DELTA_THRESHOLD = 36;
+    var UP_DELTA_THRESHOLD = -16;
+    var TOP_PIN_THRESHOLD = 64;
+    var TOP_HOVER_ZONE = 72;
+
+    var hidden = false;
+    var idleTimer = 0;
+    var userScrollUntil = 0;
+    var accumDelta = 0;
+    var lastScrollTops = new WeakMap();
+
+    function getBars() {
+      return Array.from(document.querySelectorAll(CHROME_SELECTOR));
+    }
+
+    function isPrimaryScrollTarget(target) {
+      if (!target || target === document || target === document.documentElement || target === document.body) {
+        return true;
+      }
+      return Boolean(
+        target.nodeType === 1 &&
+        target.matches(".cm-scroller, .teleprompter-scroll-pane")
+      );
+    }
+
+    function getScrollTop(target) {
+      if (!target || target === document || target === document.documentElement || target === document.body) {
+        return window.scrollY || document.documentElement.scrollTop || 0;
+      }
+      return target.scrollTop || 0;
+    }
+
+    function getActiveScrollDepth() {
+      if (document.body.classList.contains("manuscript-writing")) {
+        var cmScroller = document.querySelector("#manuscript-editor-host .cm-scroller");
+        if (cmScroller) return Math.max(window.scrollY || 0, cmScroller.scrollTop || 0);
+      }
+      var telePane = document.querySelector("#teleprompter-modal:not([hidden]) .teleprompter-scroll-pane");
+      if (telePane) return telePane.scrollTop || 0;
+      return window.scrollY || document.documentElement.scrollTop || 0;
+    }
+
+    function shouldHoldVisible() {
+      if (!document.body) return true;
+      if (document.documentElement.style.fontSize === "200%" || window.innerHeight <= 500) return true;
+      var active = document.activeElement;
+      if (active && active !== document.body && active.closest && active.closest(CHROME_SELECTOR)) {
+        return true;
+      }
+      if (document.querySelector("#reader-settings[open], #reader-analysis-guide[open]")) return true;
+      var ctxMenu = document.getElementById("manuscript-context-menu");
+      if (ctxMenu && !ctxMenu.hidden) return true;
+      var selTools = document.getElementById("manuscript-selection-tools");
+      if (selTools && !selTools.hidden) return true;
+      var search = document.getElementById("text-search");
+      if (search && (document.activeElement === search || search.value.trim().length > 0)) return true;
+      if (document.body.classList.contains("text-search-active")) return true;
+      var saveStatus = document.querySelector("#manuscript-save-status");
+      if (saveStatus && (saveStatus.dataset.state === "conflict" || saveStatus.dataset.state === "error")) {
+        return true;
+      }
+      var recovery = document.querySelector("#manuscript-recovery");
+      if (recovery && recovery.value) return true;
+      return false;
+    }
+
+    function canAutoHideByIdle() {
+      if (!document.body || shouldHoldVisible()) return false;
+      if (document.body.classList.contains("reader-focus")) return true;
+      if (document.body.classList.contains("manuscript-writing")) return true;
+      if (document.querySelector("#teleprompter-modal:not([hidden])")) return true;
+      if (document.querySelector("#manuscript-reading[open]")) return true;
+      if (
+        document.body.classList.contains("manuscript-reading") &&
+        !document.body.classList.contains("workbench-overview") &&
+        getActiveScrollDepth() > TOP_PIN_THRESHOLD
+      ) {
+        return true;
+      }
+      return false;
+    }
+
+    function applyState(nextHidden) {
+      if (nextHidden && shouldHoldVisible()) nextHidden = false;
+      hidden = Boolean(nextHidden);
+      if (document.body) {
+        document.body.classList.toggle("chrome-autohidden", hidden);
+      }
+      getBars().forEach(function (bar) {
+        if (hidden) bar.setAttribute("data-chrome-hidden", "true");
+        else bar.removeAttribute("data-chrome-hidden");
+      });
+    }
+
+    function scheduleIdle() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(function () {
+        if (canAutoHideByIdle()) {
+          applyState(true);
+        }
+      }, IDLE_MS);
+    }
+
+    function show() {
+      accumDelta = 0;
+      applyState(false);
+      scheduleIdle();
+    }
+
+    function hide() {
+      if (!shouldHoldVisible()) {
+        applyState(true);
+      }
+    }
+
+    function markUserScrollGesture(event) {
+      if (event && event.type === "wheel" && typeof event.deltaY === "number") {
+        userScrollUntil = performance.now() + 450;
+        if (event.deltaY < -6) {
+          show();
+        }
+      } else {
+        userScrollUntil = performance.now() + 450;
+      }
+    }
+
+    function handleScroll(event) {
+      var target = event ? event.target : document;
+      if (!isPrimaryScrollTarget(target)) return;
+      var key = target === document || target === document.documentElement || target === document.body
+        ? document
+        : target;
+      var currentTop = getScrollTop(target);
+      var prevTop = lastScrollTops.has(key) ? lastScrollTops.get(key) : currentTop;
+      var delta = currentTop - prevTop;
+      lastScrollTops.set(key, currentTop);
+
+      if (Math.abs(delta) < 1) return;
+      if (currentTop <= TOP_PIN_THRESHOLD) {
+        show();
+        return;
+      }
+      var isInteractiveScroll =
+        performance.now() <= userScrollUntil ||
+        (target && target.nodeType === 1 && target.matches(".cm-scroller, .teleprompter-scroll-pane"));
+      if (!isInteractiveScroll) {
+        scheduleIdle();
+        return;
+      }
+      if ((delta > 0 && accumDelta < 0) || (delta < 0 && accumDelta > 0)) {
+        accumDelta = 0;
+      }
+      accumDelta += delta;
+      if (accumDelta >= DOWN_DELTA_THRESHOLD && currentTop > TOP_PIN_THRESHOLD) {
+        hide();
+      } else if (accumDelta <= UP_DELTA_THRESHOLD) {
+        show();
+      }
+    }
+
+    if (typeof document !== "undefined") {
+      window.addEventListener("wheel", markUserScrollGesture, { passive: true });
+      window.addEventListener("touchmove", markUserScrollGesture, { passive: true });
+      document.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+      document.addEventListener("pointermove", function (event) {
+        var nearTop = typeof event.clientY === "number" && event.clientY <= TOP_HOVER_ZONE;
+        var inBar = event.target && event.target.closest && event.target.closest(CHROME_SELECTOR);
+        if (nearTop || inBar) {
+          show();
+        }
+      }, { passive: true });
+      document.addEventListener("pointerdown", function (event) {
+        if (event.target && event.target.closest && event.target.closest(CHROME_SELECTOR)) {
+          show();
+        } else {
+          scheduleIdle();
+        }
+      }, { passive: true });
+      document.addEventListener("focusin", function (event) {
+        if (event.target && event.target.closest && event.target.closest(CHROME_SELECTOR)) {
+          show();
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" || event.key === "Alt" || event.key === "F6" || (event.ctrlKey || event.metaKey)) {
+          show();
+        } else {
+          scheduleIdle();
+        }
+      }, true);
+      document.addEventListener("lixity:viewchange", show);
+      document.addEventListener("lixity:workbench-change", show);
+      scheduleIdle();
+    }
+
+    window.LixityChrome = {
+      show: show,
+      reveal: show,
+      hide: hide,
+      isHidden: function () { return hidden; },
+      resetTimer: scheduleIdle,
+      refresh: function () { applyState(hidden); }
+    };
+  })();
 })();
 
 // Central structured logging for the native workspace (SoC: logging lives here,
@@ -5594,6 +5860,11 @@ var manuscriptParagraphMarks = Object.create(null);
 function renderParagraphText(paragraph, query) {
   var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];
   if (!content) return;
+  var marks = manuscriptParagraphMarks[panel.id];
+  if (!query && (!marks || !marks.length)) {
+    paragraph.dataset.searchQuery = "";
+    if (!paragraph.querySelector("mark") && paragraph.textContent === content[0]) return;
+  }
   var selection = window.getSelection(), selected = null;
   if (selection && selection.rangeCount === 1 &&
       (paragraph.contains(selection.anchorNode) || paragraph.contains(selection.focusNode))) {
@@ -5618,7 +5889,7 @@ function renderParagraphText(paragraph, query) {
       spans.push({start: match.index, end: match.index + match[0].length, search: true});
     }
   }
-  (manuscriptParagraphMarks[panel.id] || []).forEach(function(mark) { spans.push(mark); });
+  (marks || []).forEach(function(mark) { spans.push(mark); });
   var boundaries = Array.from(new Set([0, text.length].concat(spans.flatMap(function(span) {
     return [span.start, span.end];
   })))).sort(function(a, b) { return a - b; });
@@ -5663,8 +5934,11 @@ function renderParagraph(panel, textOnly) {
   if (!inner.querySelector("p")) {
     var text = document.createElement("p");
     text.textContent = content[0];
+    text.dataset.searchQuery = "";
     inner.appendChild(text);
-    renderParagraphText(text, "");
+    if ((manuscriptParagraphMarks[panel.id] || []).length) {
+      renderParagraphText(text, "");
+    }
   }
   if (textOnly) return;
   var values = document.createElement("details");
@@ -6869,13 +7143,13 @@ if (filter) {
   function unmark(paragraph) {
     if (paragraph.matches(".reader-structural")) {
       if (!structuralText.has(paragraph)) structuralText.set(paragraph, paragraph.textContent);
-      paragraph.textContent = structuralText.get(paragraph);
+      else if (paragraph.querySelector("mark")) paragraph.textContent = structuralText.get(paragraph);
     } else renderParagraphText(paragraph, "");
   }
-  function mark(paragraph, query) {
+  function mark(paragraph, query, pattern) {
     if (!paragraph.matches(".reader-structural")) { renderParagraphText(paragraph, query); return; }
     var text = structuralText.get(paragraph);
-    var pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = pattern.exec(text);
+    var regex = pattern || new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = regex.exec(text);
     if (!match) return;
     var index = match.index;
     var hit = document.createElement("mark"); hit.className = "text-hit"; hit.textContent = match[0];
@@ -6886,6 +7160,7 @@ if (filter) {
     query = input.value.trim();
     hits = [];
     cursor = -1;
+    var pattern = query ? new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
     var blocks = Array.prototype.slice.call(
       document.querySelectorAll("#chapters .ptext, #chapters .reader-structural")
     );
@@ -6897,14 +7172,13 @@ if (filter) {
       var paragraph = structural ? block : block.querySelector("p");
       if (paragraph) unmark(paragraph);
       var content = structural ? [structuralText.get(block)] : paragraphContent[block.id];
-      var match = Boolean(content) && Boolean(query)
-        && new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(content[0]);
+      var match = Boolean(content) && Boolean(pattern) && pattern.test(content[0]);
       block.classList.toggle("text-miss", Boolean(query) && !match);
       var chip = paragraphChips[block.id];
       if (restored !== null && chip) {
         toggleParagraph(chip, !query && restored.indexOf(block) >= 0);
       }
-      if (match) { hits.push(block); if (paragraph) mark(paragraph, query); }
+      if (match) { hits.push(block); if (paragraph) mark(paragraph, query, pattern); }
     });
     if (!query) restored = null;
     document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
@@ -7124,12 +7398,15 @@ function syncEvidenceLegend() {
   if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
 }
 
+var allChips = null;
 function applyLayer() {
   var key = layer ? layer.value : "";
   var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
-  document.querySelectorAll(".chip").forEach(function (chip) {
+  if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var nextOutliers = [];
+  allChips.forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
     var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
@@ -7140,7 +7417,8 @@ function applyLayer() {
       chip.removeAttribute("title");
       chip.classList.toggle("outlier", notable);
       chip.setAttribute("aria-label", info[1]);
-    } else {
+      if (notable) nextOutliers.push(chip);
+    } else if (chip.classList.contains("has-layer") || chip.classList.contains("outlier") || chip.hasAttribute("data-tip") || !chip.hasAttribute("title")) {
       chip.style.removeProperty("--layer-color");
       chip.classList.remove("has-layer");
       chip.classList.remove("outlier");
@@ -7149,13 +7427,19 @@ function applyLayer() {
       if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
     }
     if (panel) {
-      panel.classList.toggle("metric-notable", notable);
-      if (notable) panel.style.setProperty("--paragraph-layer-color", info[0]);
-      else panel.style.removeProperty("--paragraph-layer-color");
-      paintLayerAction(panel, info);
+      if (notable) {
+        panel.classList.add("metric-notable");
+        panel.style.setProperty("--paragraph-layer-color", info[0]);
+      } else if (panel.classList.contains("metric-notable")) {
+        panel.classList.remove("metric-notable");
+        panel.style.removeProperty("--paragraph-layer-color");
+      }
+      if (info || panel.querySelector(".paragraph-layer-marker")) {
+        paintLayerAction(panel, info);
+      }
     }
   });
-  layerOutliers = Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
+  layerOutliers = nextOutliers;
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {

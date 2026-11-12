@@ -238,6 +238,11 @@ var manuscriptParagraphMarks = Object.create(null);
 function renderParagraphText(paragraph, query) {
   var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];
   if (!content) return;
+  var marks = manuscriptParagraphMarks[panel.id];
+  if (!query && (!marks || !marks.length)) {
+    paragraph.dataset.searchQuery = "";
+    if (!paragraph.querySelector("mark") && paragraph.textContent === content[0]) return;
+  }
   var selection = window.getSelection(), selected = null;
   if (selection && selection.rangeCount === 1 &&
       (paragraph.contains(selection.anchorNode) || paragraph.contains(selection.focusNode))) {
@@ -262,7 +267,7 @@ function renderParagraphText(paragraph, query) {
       spans.push({start: match.index, end: match.index + match[0].length, search: true});
     }
   }
-  (manuscriptParagraphMarks[panel.id] || []).forEach(function(mark) { spans.push(mark); });
+  (marks || []).forEach(function(mark) { spans.push(mark); });
   var boundaries = Array.from(new Set([0, text.length].concat(spans.flatMap(function(span) {
     return [span.start, span.end];
   })))).sort(function(a, b) { return a - b; });
@@ -307,8 +312,11 @@ function renderParagraph(panel, textOnly) {
   if (!inner.querySelector("p")) {
     var text = document.createElement("p");
     text.textContent = content[0];
+    text.dataset.searchQuery = "";
     inner.appendChild(text);
-    renderParagraphText(text, "");
+    if ((manuscriptParagraphMarks[panel.id] || []).length) {
+      renderParagraphText(text, "");
+    }
   }
   if (textOnly) return;
   var values = document.createElement("details");

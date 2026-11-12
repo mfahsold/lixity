@@ -44,6 +44,7 @@ requests. Finish the edit–review–recover loop before adding more metrics.
 
 | Priority | Proposed improvement | Current gap and acceptance evidence |
 | --- | --- | --- |
+| P0 — implemented, unreleased | Distraction-free auto-hide chrome & unified toolbars | Single-row reader and editor bars with semantic clustering; scroll-direction and inactivity auto-hide with instant keyboard/hover reveal and CLS = 0; browser-tested across seven locales. |
 | P0 — implemented, unreleased | Compare conflicts and recovery copies | Three identified texts, editable candidate, deliberate apply and revision-checked save. Cancellation and intervening external changes are browser-tested. Manual comparison has no automatic merge or line-level diff. |
 | P0 — implemented, unreleased | Protect cross-view drafts | Persistent editor; research forms guard close/reload, block disposal during pending requests and retain failed saves. Chromium and Firefox tests exercise actual navigation cancellation. Browser unload is still best effort. |
 | P0 — release qualification remains | Prove real writing input and recovery behavior | Synthetic long-text and browser tests exist. Real IME, dead keys, screen readers, process interruption and disk failure need acceptance runs. Do not infer power-loss durability from atomic replacement. |

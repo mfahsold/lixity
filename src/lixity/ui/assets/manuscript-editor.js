@@ -34,16 +34,18 @@
       labelWrap.className = opts.labelClass || 'editor-tool-label';
       labelWrap.textContent = label;
       b.append(iconWrap, labelWrap);
+      if (opts.iconOnly) b.classList.add('editor-icon-only');
     } else {
       b.textContent = label;
     }
     if (opts.shortcut) b.setAttribute('aria-keyshortcuts', opts.shortcut);
-    if ((help && help !== label) || opts.shortcut) b.setAttribute('data-help', help || label);
+    b.setAttribute('data-help', help || label);
     b.addEventListener('click', action);
     return b;
   }
   function setButtonLabel(b, newLabel) {
     b.setAttribute('aria-label', newLabel);
+    b.setAttribute('data-help', newLabel);
     const span = b.querySelector('.reader-control-label, .editor-tool-label');
     if (span) span.textContent = newLabel;
     else b.textContent = newLabel;
@@ -63,25 +65,31 @@
   const openButton = button(text(0), 'manuscript-write', open, null, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
   const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1], {icon: 'book-open', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
   closeButton.hidden = true;
-  const overviewAnchor = controls.querySelector('#workbench-overview-label') || controls.querySelector('#reader-analysis-settings');
-  if (overviewAnchor) overviewAnchor.before(openButton, closeButton);
-  else controls.append(openButton, closeButton);
+  const companionControls = controls.querySelector('.reader-controls');
+  const openAnchor = companionControls || controls.querySelector('#reader-teleprompter') || controls.querySelector('#workbench-overview-label') || controls.querySelector('#reader-analysis-settings');
+  if (openAnchor) openAnchor.before(openButton);
+  else controls.append(openButton);
   const section = document.createElement('section'); section.id = 'manuscript-editor'; section.hidden = true;
   section.setAttribute('aria-label', text(13)); chapters.before(section);
   const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools manuscript-editor-toolbar'; section.append(tools);
+  const historyGroup = document.createElement('div'); historyGroup.className = 'editor-tool-group editor-group-history';
+  const versionsGroup = document.createElement('div'); versionsGroup.className = 'editor-tool-group editor-group-versions manuscript-edit-secondary';
+  const contextGroup = document.createElement('div'); contextGroup.className = 'editor-tool-group editor-group-context';
+  const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
+  tools.append(historyGroup, versionsGroup, contextGroup, statusGroup);
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
   document.body.prepend(freshness);
   const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
   const recovery = document.createElement('select'); recovery.className = 'ctl'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
-  const recoveryTools = document.createElement('div'); recoveryTools.className = 'manuscript-edit-tools manuscript-edit-secondary';
   const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl primary'});
-  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z'});
-  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y'});
+  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
+  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
   const readBtn = button(text(1), 'manuscript-read', read, null, {icon: 'book-open'});
-  // Order follows the writing loop: correct (undo/redo), find, check the saved revision.
-  tools.append(undoBtn, redoBtn, readBtn, retry, status);
+  historyGroup.append(undoBtn, redoBtn);
+  contextGroup.append(readBtn);
+  statusGroup.append(status, retry, closeButton);
   const readingLabels = {
     en: ['Back to writing', 'Reading saved revision', 'Could not open this revision. Return to writing and retry.', 'Source changed while reading. Your editor text is preserved; review before saving.'],
     de: ['Zurück zum Schreiben', 'Gespeicherte Fassung lesen', 'Diese Fassung konnte nicht geöffnet werden. Zum Schreiben zurückkehren und erneut versuchen.', 'Die Quelle wurde beim Lesen geändert. Dein Editorinhalt bleibt erhalten; vor dem Speichern prüfen.'],
@@ -233,12 +241,12 @@
       note.textContent = text(14); show('unsaved', text(15)); editor.focus();
     } catch (error) {show('error', error.message);}
   }, null, {icon: 'rotate-ccw'});
-  const downloadBtn = button(text(10), 'manuscript-download', download, null, {icon: 'download'});
+  const downloadBtn = button(text(10), 'manuscript-download', download, text(10), {icon: 'download', iconOnly: true});
   const discardBtn = button(text(12), 'manuscript-discard', async () => {
     if (!recovery.value || !confirm(text(12) + '?')) return;
     try {await request('/manuscript-edit-discard', {document: snapshot.document, id: recovery.value}); await refreshRecovery();}
     catch (error) {show('error', error.message);}
-  }, null, {icon: 'trash-2'});
+  }, text(12), {icon: 'trash-2', iconOnly: true});
   function syncRecoveryActions() {
     const hasSelection = Boolean(recovery.value);
     recoverBtn.hidden = !hasSelection;
@@ -246,7 +254,6 @@
   }
   recovery.addEventListener('change', syncRecoveryActions);
   syncRecoveryActions();
-  recoveryTools.append(recovery, recoverBtn, downloadBtn, discardBtn);
   const comparisonLabels = {
     en:['Find / replace','Compare versions','Last acknowledged text','Current file','Draft to review','Use as draft','Cancel','Review the text before saving. Using it as a draft does not write the manuscript.','The document changed. Reload before comparing.'],
     de:['Suchen / Ersetzen','Fassungen vergleichen','Zuletzt bestätigter Text','Aktuelle Datei','Entwurf zur Prüfung','Als Entwurf übernehmen','Abbrechen','Prüfe den Text vor dem Speichern. Die Übernahme als Entwurf schreibt das Manuskript noch nicht.','Das Dokument hat sich geändert. Vor dem Vergleich neu laden.'],
@@ -258,8 +265,7 @@
   };
   const comparisonWords = comparisonLabels[language] || comparisonLabels.en;
   const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: 'Control+F'});
-  // Search sits between correction and review: undo/redo, find, read the saved revision.
-  redoBtn.after(searchBtn);
+  historyGroup.append(searchBtn);
   const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.setAttribute('aria-label', comparisonWords[1]);
   const comparisonTitle = document.createElement('h2'); comparisonTitle.textContent = comparisonWords[1];
   const comparisonNote = document.createElement('p'); comparisonNote.textContent = comparisonWords[7];
@@ -306,8 +312,13 @@
     } catch (error) {show('error',error.message);}
     finally {comparisonLoading = false;}
   }, null, {icon: 'git-compare'});
-  readBtn.after(reload, compareBtn);
-  tools.append(recoveryTools);
+  versionsGroup.append(recovery, recoverBtn, discardBtn, compareBtn, downloadBtn);
+  contextGroup.append(reload);
+  function dockCompanionTools(intoEditor) {
+    if (!companionControls) return;
+    if (intoEditor) contextGroup.prepend(companionControls);
+    else openButton.after(companionControls);
+  }
   section.append(host);
   const css = document.createElement('style'); css.textContent = `
     #manuscript-comparison {width:min(1200px,95vw);max-height:92dvh;box-sizing:border-box;overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-lg,16px);box-shadow:var(--shadow-modal);padding:24px;}
@@ -326,23 +337,49 @@
     #manuscript-reading-frame[hidden] {display:none;}
     #manuscript-editor {min-width:0;padding:4px 0 24px;width:100%;}
     .manuscript-edit-tools {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0;}
-    .manuscript-editor-toolbar {padding:6px 8px;margin-bottom:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);box-shadow:var(--shadow);}
-    .manuscript-edit-secondary {margin-inline-start:auto;padding-inline-start:8px;border-inline-start:1px solid var(--line);}
+    .manuscript-editor-toolbar {container:editor-tools / inline-size;position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius,12px);box-shadow:var(--shadow);}
+    .editor-tool-group {display:inline-flex;align-items:center;gap:4px;min-width:0;flex-shrink:0;}
+    .editor-group-versions,.editor-group-context {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
+    .editor-group-status {margin-inline-start:auto;padding-inline-start:6px;gap:6px;}
+    .manuscript-editor-toolbar .reader-controls {display:inline-flex;align-items:center;flex-basis:auto;gap:4px;}
+    .manuscript-editor-toolbar button.ctl {padding:.3rem .5rem;min-height:2.25rem;white-space:nowrap;}
+    .manuscript-editor-toolbar button.editor-icon-only .editor-tool-label {display:none;}
+    .manuscript-editor-toolbar button.editor-icon-only {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
     .manuscript-editor-toolbar button.ctl:not(.primary),
     .manuscript-reading-bar button.ctl:not(.primary) {border-color:transparent;background:transparent;}
     .manuscript-editor-toolbar button.ctl:not(.primary):hover,
     .manuscript-reading-bar button.ctl:not(.primary):hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
-    #manuscript-save-status {font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);}
+    #manuscript-save-status {font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14rem;}
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
-    #manuscript-recovery {max-width:14rem;min-width:0;}
+    #manuscript-recovery {max-width:11rem;min-width:6.5rem;flex:0 1 11rem;min-height:2.25rem;padding-block:.25rem;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
-    @media(max-width:960px) {
-      .manuscript-edit-secondary {margin-inline-start:0;padding-inline-start:0;border-inline-start:0;}
-      #manuscript-undo .editor-tool-label,#manuscript-redo .editor-tool-label,#manuscript-search .editor-tool-label,#manuscript-download .editor-tool-label {display:none;}
+    @container editor-tools (max-width: 76rem) {
+      #manuscript-search .editor-tool-label,
+      .manuscript-editor-toolbar #workspace-reader-toggle .reader-control-label {display:none;}
+      #manuscript-search,
+      .manuscript-editor-toolbar #workspace-reader-toggle {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
+      #manuscript-recovery {max-width:9rem;flex-basis:9rem;}
     }
-    body.manuscript-writing #chapters,body.manuscript-writing #text-search {display:none!important;}
-    body.manuscript-writing #manuscript-reader-controls > :not(#manuscript-write):not(#manuscript-close):not(.reader-controls) {display:none!important;}
+    @container editor-tools (max-width: 60rem) {
+      #manuscript-read .editor-tool-label,
+      #manuscript-recover .editor-tool-label,
+      .manuscript-editor-toolbar #manuscript-close .reader-control-label {display:none;}
+      #manuscript-read,
+      #manuscript-recover,
+      .manuscript-editor-toolbar #manuscript-close {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
+      #manuscript-recovery {max-width:7.5rem;flex-basis:7.5rem;}
+      #manuscript-save-status {max-width:9rem;padding-inline:7px;}
+    }
+    @media(max-width:760px) {
+      .manuscript-editor-toolbar {flex-wrap:wrap;}
+      .editor-tool-group {flex-wrap:wrap;}
+      .editor-group-versions,.editor-group-context {padding-inline-start:0;border-inline-start:0;}
+      .editor-group-status {margin-inline-start:0;padding-inline-start:0;}
+      #manuscript-compare .editor-tool-label {display:none;}
+    }
+    body.manuscript-writing #chapters,body.manuscript-writing #text-search,body.manuscript-writing .toolbar {display:none!important;}
+    body.manuscript-writing #manuscript-reader-controls {display:none!important;}
     body.workbench-overview #manuscript-write, body.workbench-overview #manuscript-close,
     body.reader-focus #manuscript-write, body.reader-focus #manuscript-close {display:none!important;}
   `; document.head.append(css);
@@ -397,8 +434,10 @@
   async function open() {
     if (loading) return;
     if (editor) {
+      dockCompanionTools(true);
       section.hidden = false; document.body.classList.add('manuscript-writing');
       openButton.hidden = true; closeButton.hidden = false;
+      if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
       editor.focus(); return;
     }
@@ -408,8 +447,11 @@
       const visible = Array.from(chapters.querySelectorAll('[data-start]')).find(node => node.getBoundingClientRect().bottom > controls.getBoundingClientRect().bottom);
       openingLine = visible ? Number(visible.dataset.start) : 1;
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
-      loaded = true; section.hidden = false; document.body.classList.add('manuscript-writing');
+      loaded = true;
+      dockCompanionTools(true);
+      section.hidden = false; document.body.classList.add('manuscript-writing');
       openButton.hidden = true; closeButton.hidden = false;
+      if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
       const cmContent = host.querySelector('.cm-content');
       if (cmContent) {
@@ -429,7 +471,9 @@
     if (paused) return;
     // Keep the mounted editor and its undo history; only leave the writing surface.
     section.hidden = true; document.body.classList.remove('manuscript-writing');
+    dockCompanionTools(false);
     closeButton.hidden = true; openButton.hidden = false;
+    if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
     if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(chapters);
     if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
     openButton.focus();

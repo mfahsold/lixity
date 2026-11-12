@@ -25,7 +25,8 @@ copy. The browser app, CLI and Python API share one analysis engine.
 
 **Writing joins the workspace (unreleased).** The development checkout now has
 an integrated manuscript editor with undo, local autosave, conflict detection
-and recovery, search/replace and manual conflict comparison. Read and refresh opens the ordinary workspace for the saved text revision
+and recovery, search/replace, manual conflict comparison, and a distraction-free
+single-row writing bar with smooth auto-hiding chrome. Read and refresh opens the ordinary workspace for the saved text revision
 while keeping editor undo and the writing buffer alive. Research links remain
 reviewable after text changes; saved evidence is never silently rewritten. The public demo remains read-only.
 See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).

@@ -13,6 +13,7 @@
   host.id = "analysis-evidence-card"; host.className = "analysis-evidence-card"; host.hidden = true;
   document.body.appendChild(host);
   var html = LixityComponents.html;
+  var textEncoder = null, zFormatters = Object.create(null);
   var tensePanel = null;
   function clearTense() {
     tensePanel = null;
@@ -80,7 +81,7 @@
           !/^[a-f0-9]{64}$/.test(evidence.paragraph_sha256 || "") || prose.textContent !== record.text ||
           !evidence.layers || typeof evidence.layers !== "object") return record;
       var digest;
-      try { digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(record.text)); }
+      try { digest = await crypto.subtle.digest("SHA-256", (textEncoder || (textEncoder = new TextEncoder())).encode(record.text)); }
       catch (_) { record.error = "evidence_verification_unavailable"; return record; }
       var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
       if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return record;
@@ -188,9 +189,11 @@
       layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
     var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
     var comparison = info && Number.isFinite(info[2]) ? info : null;
-    var z = comparison && new Intl.NumberFormat(document.documentElement.lang, {
+    var lang = document.documentElement.lang || "en";
+    var zFmt = zFormatters[lang] || (zFormatters[lang] = new Intl.NumberFormat(lang, {
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
-    }).format(comparison[2]);
+    }));
+    var z = comparison && zFmt.format(comparison[2]);
     var marker = comparison && Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50));
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
       <strong id="analysis-evidence-title">${option.textContent}</strong>

@@ -15,6 +15,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Streamline reader and writing toolbars into single-row desktop layouts with
+  semantic grouping, and introduce central distraction-free auto-hide chrome
+  (`window.LixityChrome`) fading sticky header bars on downward scroll or after
+  3.5s of reading/writing inactivity, with zero layout shift (`CLS = 0`) and
+  instant reveal on upward scroll, top-edge hover, keyboard focus (`:focus-within`)
+  or shortcut keys (`Escape`, `Alt`, `F6`, `Ctrl/Cmd`).
+- Fast-path paragraph and search DOM rendering in `interactions.js` and
+  `dashboard.js`, skipping redundant `getSelection()` and `DocumentFragment`
+  allocations on initial load and search clearing, precompiling search regular
+  expressions, caching chip elements and isolating outlier DOM writes. Replace
+  linear paragraph traversals with `O(log N)` binary-search geometry capture in
+  `manuscript-reader.js` and throttle broad `document.body` mutation records.
 - Group manuscript reader controls into a left-to-right reading, review/companion
   and authoring flow with a explicit `Close writing` return action, keep desktop
   search and paragraph filters on one shared toolbar row, offset the sticky

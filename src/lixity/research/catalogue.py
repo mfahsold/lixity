@@ -73,24 +73,20 @@ def reindex(repository: Repository) -> dict[str, Any]:
                 connection.execute("INSERT INTO metadata VALUES (?)", (snapshot.digest,))
                 connection.execute("CREATE VIRTUAL TABLE passages USING fts5(passage_id UNINDEXED, content, tokenize='unicode61 remove_diacritics 0')")
                 connection.execute("CREATE VIRTUAL TABLE documents USING fts5(record_id UNINDEXED, revision UNINDEXED, kind UNINDEXED, title, content, tokenize='unicode61 remove_diacritics 0')")
-                passage_rows: list[tuple[str, str]] = []
-                document_rows: list[tuple[str, int, str, str, str]] = []
                 for record in snapshot.records.values():
                     if isinstance(record, Passage):
                         extraction = snapshot.get(record.extraction_ref, Extraction)
                         if extraction.source_version_ref.id in selected:
                             repository.quote(snapshot, record)
-                            passage_rows.append((record.id, record.verbatim))
+                            connection.execute("INSERT INTO passages VALUES (?, ?)", (record.id, record.verbatim))
                             version = snapshot.get(extraction.source_version_ref, SourceVersion)
                             source = snapshot.get(version.source_ref, Source)
-                            document_rows.append((record.id, record.revision, record.kind, source.title, record.verbatim))
+                            connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
+                                               (record.id, record.revision, record.kind, source.title, record.verbatim))
                             count += 1
                     elif isinstance(record, (Dossier, Claim, Decision)) and record.id not in unavailable:
-                        document_rows.append((record.id, record.revision, record.kind, record.title, authored_text(record)))
-                if passage_rows:
-                    connection.executemany("INSERT INTO passages VALUES (?, ?)", passage_rows)
-                if document_rows:
-                    connection.executemany("INSERT INTO documents VALUES (?, ?, ?, ?, ?)", document_rows)
+                        connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
+                                           (record.id, record.revision, record.kind, record.title, authored_text(record)))
             with open(temporary, "r+b") as stream:
                 os.fsync(stream.fileno())
             os.replace(temporary, destination)

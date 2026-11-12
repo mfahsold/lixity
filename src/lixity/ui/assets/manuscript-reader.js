@@ -83,7 +83,16 @@
   var dialog = document.getElementById("modal-research-revision");
   if (dialog) dialog.addEventListener("close", function() { if (!dialog.open) pendingDossier = null; });
   document.addEventListener("lixity:workbench-change", update);
-  new MutationObserver(update).observe(document.body, {subtree: true, childList: true, attributes: true,
+  new MutationObserver(function(records) {
+    if (!dossier && !pendingDossier && !passage) {
+      var hasAttr = false;
+      for (var i = 0; i < records.length; i++) {
+        if (records[i].type === "attributes") { hasAttr = true; break; }
+      }
+      if (!hasAttr) return;
+    }
+    update();
+  }).observe(document.body, {subtree: true, childList: true, attributes: true,
     attributeFilter: ["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256", "data-dossier-reading", "open"]});
   button.addEventListener("click", function() {
     update();
@@ -174,6 +183,7 @@
   }
 
   var panels = Array.from(chapters.querySelectorAll(".ptext"));
+  var readingBlocks = Array.from(chapters.querySelectorAll(".ptext, .reader-structural"));
   var menu = document.getElementById("manuscript-context-menu");
   var selectionTools = document.getElementById("manuscript-selection-tools");
   var inspector = document.getElementById("reader-inspector");
@@ -249,10 +259,37 @@
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
     var boundary = readingViewportTop();
-    var panel = Array.from(chapters.querySelectorAll(".ptext, .reader-structural")).find(function(candidate) {
-      var rect = candidate.getBoundingClientRect();
-      return rect.height > 0 && rect.bottom > boundary + 8 && rect.top < innerHeight;
-    });
+    var threshold = boundary + 8;
+    var panel = null;
+    var unfiltered = !document.body.classList.contains("only-flags") &&
+      !document.body.classList.contains("text-search-active") &&
+      !chapters.querySelector(".chapter.collapsed");
+    if (unfiltered && readingBlocks.length > 16) {
+      var low = 0, high = readingBlocks.length - 1, candidateIdx = -1;
+      while (low <= high) {
+        var mid = (low + high) >> 1;
+        var midRect = readingBlocks[mid].getBoundingClientRect();
+        if (midRect.height === 0) { candidateIdx = -1; break; }
+        if (midRect.bottom > threshold) {
+          candidateIdx = mid;
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      if (candidateIdx >= 0) {
+        var candRect = readingBlocks[candidateIdx].getBoundingClientRect();
+        if (candRect.height > 0 && candRect.bottom > threshold && candRect.top < innerHeight) {
+          panel = readingBlocks[candidateIdx];
+        }
+      }
+    }
+    if (!panel) {
+      panel = readingBlocks.find(function(candidate) {
+        var rect = candidate.getBoundingClientRect();
+        return rect.height > 0 && rect.bottom > threshold && rect.top < innerHeight;
+      });
+    }
     if (!panel) return null;
     var anchor = {panel: panel, top: panel.getBoundingClientRect().top};
     var prose = panel.querySelector(".ptext-inner > p");
