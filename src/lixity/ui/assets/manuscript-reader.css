@@ -525,7 +525,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   padding: .3rem .45rem; min-height: 2.5rem;
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
-.manuscript-reader-controls .reader-controls { gap: .25rem; }
+.manuscript-reader-controls .reader-controls { display: inline-flex; align-items: center; flex-basis: auto; gap: .25rem; }
+.manuscript-reader-controls .reader-controls .ctl-note { display: none !important; }
 /* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
 @container reader-tools (min-width: 68rem) {
   .manuscript-reader-controls > #manuscript-write,

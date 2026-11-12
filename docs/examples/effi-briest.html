@@ -3480,8 +3480,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* The controls row aligns the button with the select box, so the field keeps
    no bottom margin here (specific enough to win over the panel rule). */
 .workspace-reader-panel .workspace-reader-controls .setting-field { margin: 0; flex-basis: 6rem; }
-.reader-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; flex-basis: 100%; }
-.reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
+.reader-controls { display: inline-flex; align-items: center; gap: .25rem; flex-basis: auto; }
+.reader-controls .ctl-note { display: none !important; }
 .workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, var(--manuscript-share, 62%)) .75rem minmax(0, 1fr); gap: .35rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
 .workspace-context-panel {
@@ -4212,7 +4212,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   padding: .3rem .45rem; min-height: 2.5rem;
 }
 .manuscript-reader-controls .reader-settings > summary { min-height: 2.5rem; padding-block: .3rem; }
-.manuscript-reader-controls .reader-controls { gap: .25rem; }
+.manuscript-reader-controls .reader-controls { display: inline-flex; align-items: center; flex-basis: auto; gap: .25rem; }
+.manuscript-reader-controls .reader-controls .ctl-note { display: none !important; }
 /* Account for sidebar, browser zoom and native-only tools, not viewport alone. */
 @container reader-tools (min-width: 68rem) {
   .manuscript-reader-controls > #manuscript-write,
@@ -4392,6 +4393,8 @@ body.lixity-workspace.reader-focus {
     overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
 }
+#view-pane-analysis .analysis-outline-contents { display: none !important; }
+#view-pane-analysis .analysis-outline-layout { display: block !important; }
 
 /* Native metric ranges coexist with neutral dotted research marks and selection. */
 ::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {
@@ -19709,19 +19712,25 @@ window.LixityManuscriptLinks = {
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
     var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
     var contextPanel = document.getElementById("workspace-context-panel");
-    if (contextPanel && !contextPanel.hidden && card && card.trigger && contextPanel.contains(card.trigger)) {
+    var maxRight = innerWidth - bounds.width - 8;
+    if (contextPanel && !contextPanel.hidden && contextPanel.offsetWidth > 0) {
       var panelRect = contextPanel.getBoundingClientRect();
       if (panelRect.left > bounds.width + 24) {
-        left = panelRect.left - bounds.width - 16;
-        if (card.record && card.record.panel && card.record.panel.isConnected) {
-          var pRect = card.record.panel.getBoundingClientRect();
-          if (pRect.bottom > 0 && pRect.top < innerHeight) {
-            top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+        maxRight = panelRect.left - bounds.width - 12;
+      }
+      if (card && card.trigger && contextPanel.contains(card.trigger)) {
+        if (panelRect.left > bounds.width + 24) {
+          left = panelRect.left - bounds.width - 16;
+          if (card.record && card.record.panel && card.record.panel.isConnected) {
+            var pRect = card.record.panel.getBoundingClientRect();
+            if (pRect.bottom > 0 && pRect.top < innerHeight) {
+              top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+            }
           }
         }
       }
     }
-    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
+    host.style.left = Math.max(8, Math.min(maxRight, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
   function scrollPosition(containers, trigger) {

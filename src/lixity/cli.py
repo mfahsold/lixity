@@ -512,6 +512,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("doctor", "Inspect installed versions, module location and local service without changing them"),
     ("about", "Installed metadata: commands, configuration, languages, features and heuristics"),
     ("schema", "Installed metadata: commands, configuration, languages, features and heuristics"),
+    ("mcp", "Run read-only Model Context Protocol (MCP) server on stdio for AI assistants"),
     ("completion", "Shell completion script (bash or zsh)"),
 )
 
@@ -2719,6 +2720,9 @@ def _main(argv: list[str] | None = None) -> int:
     if args.command == "schema":
         _print_about_json(args.section)
         return EXIT_OK
+    if args.command == "mcp":
+        from .mcp import main as mcp_main
+        return mcp_main()
     if args.command == "completion":
         shell = (args.shell or "bash").strip().lower()
         if shell in ("bash", "sh"):

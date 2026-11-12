@@ -1,10 +1,10 @@
 """Minimal MCP server for Lixity (read-only, stdlib only).
 
 Exposes the existing analysis API over JSON-RPC 2.0 on stdio following the
-Model Context Protocol (``tools/list`` / ``tools/call``). No writes: manuscript
-text travels only into the analysis functions and back as JSON.
+Model Context Protocol (``tools/list`` / ``tools/call``, ``prompts/list`` / ``prompts/get``).
+No writes: manuscript text travels only into the analysis functions and back as JSON.
 
-Run: ``python -m lixity.mcp`` (one JSON-RPC message per line on stdin).
+Run: ``python -m lixity.mcp`` or ``lixity mcp`` (one JSON-RPC message per line on stdin).
 """
 
 from __future__ import annotations
@@ -31,6 +31,27 @@ _ANALYZE_DESCRIPTION = (
 _PROFILE_DESCRIPTION = (
     "Paragraph tense/style profile with line anchors. "
     "flag_min_severity floors the paragraph flag cut (1|2|3)."
+)
+_PACING_DESCRIPTION = (
+    "Scene structure, pacing metrics, sentence rhythm, and chapter opening/closing hooks."
+)
+_DIALOGUE_DESCRIPTION = (
+    "Quoted speech detection, speaker shares, and dialogue-to-narrative distribution."
+)
+_SHOWING_DESCRIPTION = (
+    "Sensory showing-vs-telling signals: sensory detail density vs perception filter verbs."
+)
+_MOTIFS_DESCRIPTION = (
+    "Thematic motifs, repetition tracking, and local phrase echoes across chapters."
+)
+_CHARACTERS_DESCRIPTION = (
+    "Cast presence, declared point-of-view (POV) and character name mentions across chapters."
+)
+_MARKERS_DESCRIPTION = (
+    "Extract embedded editorial review markers (pruefen, sachcheck, todo, achtung) with line anchors."
+)
+_FINGERPRINT_DESCRIPTION = (
+    "Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference."
 )
 
 _TOOLS = (
@@ -77,7 +98,226 @@ _TOOLS = (
             "additionalProperties": False,
         },
     },
+    {
+        "name": "lixity_pacing",
+        "description": _PACING_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_dialogue",
+        "description": _DIALOGUE_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_showing",
+        "description": _SHOWING_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_motifs",
+        "description": _MOTIFS_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_characters",
+        "description": _CHARACTERS_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "names": {
+                    "type": ["array", "object", "null"],
+                    "description": "Character names list or alias mapping (e.g. ['Matteo', 'Chiara']).",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_markers",
+        "description": _MARKERS_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_fingerprint",
+        "description": _FINGERPRINT_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
 )
+
+_PROMPTS = (
+    {
+        "name": "manuscript_pacing_audit",
+        "description": "Analyze chapter pacing, sentence length distribution, and scene progression without rewriting prose.",
+        "arguments": [
+            {"name": "text", "description": "Markdown manuscript text", "required": True},
+            {"name": "language", "description": "Analysis language code (default: en)", "required": False},
+        ],
+    },
+    {
+        "name": "manuscript_dialogue_review",
+        "description": "Review dialogue-to-narration ratio, quoted speech balance, and character voices.",
+        "arguments": [
+            {"name": "text", "description": "Markdown manuscript text", "required": True},
+            {"name": "language", "description": "Analysis language code (default: en)", "required": False},
+        ],
+    },
+    {
+        "name": "manuscript_showing_triage",
+        "description": "Inspect sensory cues versus perception filter words to help the author deepen immediacy.",
+        "arguments": [
+            {"name": "text", "description": "Markdown manuscript text", "required": True},
+            {"name": "language", "description": "Analysis language code (default: en)", "required": False},
+        ],
+    },
+)
+
+
+def _handle_prompt_pacing(arguments: dict[str, Any]) -> dict[str, Any]:
+    text = arguments.get("text", "")
+    lang = arguments.get("language") or "en"
+    return {
+        "description": "Examine chapter pacing and sentence cadence without rewriting prose.",
+        "messages": [
+            {
+                "role": "user",
+                "content": {
+                    "type": "text",
+                    "text": (
+                        f"Please analyze the prose pacing and sentence rhythms for this manuscript in {lang}. "
+                        "Observe sentence length variations, scene hooks, and acceleration/deceleration. "
+                        "Respect the author's creative intent: present observations as prompts for review, "
+                        "not as quality scores or instructions to rewrite prose.\n\n"
+                        f"Manuscript:\n{text}"
+                    ),
+                },
+            }
+        ],
+    }
+
+
+def _handle_prompt_dialogue(arguments: dict[str, Any]) -> dict[str, Any]:
+    text = arguments.get("text", "")
+    lang = arguments.get("language") or "en"
+    return {
+        "description": "Review dialogue-to-narration ratio and quoted speech balance.",
+        "messages": [
+            {
+                "role": "user",
+                "content": {
+                    "type": "text",
+                    "text": (
+                        f"Please review the dialogue-to-narration distribution for this manuscript in {lang}. "
+                        "Examine dialogue percentage per chapter, character speech tags, and scene balance. "
+                        "Treat statistical metrics as mirrors of structure, never as arbitrary target quotas.\n\n"
+                        f"Manuscript:\n{text}"
+                    ),
+                },
+            }
+        ],
+    }
+
+
+def _handle_prompt_showing(arguments: dict[str, Any]) -> dict[str, Any]:
+    text = arguments.get("text", "")
+    lang = arguments.get("language") or "en"
+    return {
+        "description": "Inspect sensory cues versus perception filter words to deepen immediacy.",
+        "messages": [
+            {
+                "role": "user",
+                "content": {
+                    "type": "text",
+                    "text": (
+                        f"Please evaluate the sensory showing and perception filter signals in this manuscript ({lang}). "
+                        "Highlight visceral details (sight, sound, tactile cues) and locate filter phrases ('she heard', 'he saw') "
+                        "that may create narrative distance. Present these as artistic choices for the author to weigh.\n\n"
+                        f"Manuscript:\n{text}"
+                    ),
+                },
+            }
+        ],
+    }
+
+
+_PROMPT_HANDLERS = {
+    "manuscript_pacing_audit": _handle_prompt_pacing,
+    "manuscript_dialogue_review": _handle_prompt_dialogue,
+    "manuscript_showing_triage": _handle_prompt_showing,
+}
 
 _ERROR_PARSE = -32700
 _ERROR_INVALID_REQUEST = -32600
@@ -96,6 +336,7 @@ def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
 
 def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
     """Run a read-only tool; returns an MCP content result (never raises)."""
+    payload: Any
     try:
         if name == "lixity_about":
             payload = _api.about()
@@ -118,6 +359,62 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                 str(arguments.get("language") or "en"),
                 flag_min_severity=int(severity) if severity is not None else None,
             )
+        elif name == "lixity_pacing":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_pacing requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.pacing(arguments["text"], str(arguments.get("language") or "en"))
+        elif name == "lixity_dialogue":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_dialogue requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.dialogue(arguments["text"], str(arguments.get("language") or "en"))
+        elif name == "lixity_showing":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_showing requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.showing(arguments["text"], str(arguments.get("language") or "en"))
+        elif name == "lixity_motifs":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_motifs requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.motifs(arguments["text"], language=str(arguments.get("language") or "en"))
+        elif name == "lixity_characters":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_characters requires a text string."}],
+                    "isError": True,
+                }
+            names = arguments.get("names")
+            if not names:
+                names = ["Narrator"]
+            payload = _api.characters(
+                arguments["text"],
+                names=names,
+                language=str(arguments.get("language") or "en"),
+            )
+        elif name == "lixity_markers":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_markers requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.markers(arguments["text"])
+        elif name == "lixity_fingerprint":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_fingerprint requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.fingerprint(arguments["text"], str(arguments.get("language") or "en"))
         else:
             return {
                 "content": [{"type": "text", "text": f"unknown tool: {name}"}],
@@ -154,7 +451,10 @@ def handle_message(message: Any) -> dict[str, Any] | None:
             request_id,
             {
                 "protocolVersion": PROTOCOL_VERSION,
-                "capabilities": {"tools": {"listChanged": False}},
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "prompts": {"listChanged": False},
+                },
                 "serverInfo": {"name": SERVER_NAME, "version": __version__},
             },
         )
@@ -171,6 +471,15 @@ def handle_message(message: Any) -> dict[str, Any] | None:
         if not isinstance(tool_name, str):
             return _error(request_id, _ERROR_INVALID_PARAMS, "tool name must be a string")
         return _response(request_id, _call_tool(tool_name, params.get("arguments", {})))
+    if method == "prompts/list":
+        return _response(request_id, {"prompts": list(_PROMPTS)})
+    if method == "prompts/get":
+        if not isinstance(params, dict):
+            return _error(request_id, _ERROR_INVALID_PARAMS, "params must be an object")
+        prompt_name = params.get("name")
+        if not isinstance(prompt_name, str) or prompt_name not in _PROMPT_HANDLERS:
+            return _error(request_id, _ERROR_INVALID_PARAMS, f"unknown prompt: {prompt_name}")
+        return _response(request_id, _PROMPT_HANDLERS[prompt_name](params.get("arguments", {})))
     if request_id is None:
         return None
     return _error(request_id, _ERROR_METHOD_NOT_FOUND, f"unknown method: {method}")

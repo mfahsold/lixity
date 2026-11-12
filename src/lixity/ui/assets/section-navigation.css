@@ -89,3 +89,5 @@
     overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
 }
+#view-pane-analysis .analysis-outline-contents { display: none !important; }
+#view-pane-analysis .analysis-outline-layout { display: block !important; }

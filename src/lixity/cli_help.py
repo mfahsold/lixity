@@ -51,7 +51,7 @@ def command_group(name: str) -> str:
         return "Audio"
     if name in {"dashboard", "export-site", "pdf", "build"}:
         return "Reports and sharing"
-    if name in {"serve", "doctor", "about", "schema", "completion"}:
+    if name in {"serve", "doctor", "about", "schema", "completion", "mcp"}:
         return "Setup and automation"
     return "Manuscript analysis"
 
@@ -242,6 +242,15 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
             'schema.'
         ),
         ('lixity schema', 'lixity schema --section configuration'),
+    ),
+    'mcp': (
+        'AGENTS.md#21-mcp-server-read-only',
+        (
+            'Runs the read-only Model Context Protocol (MCP) server over standard input and output '
+            'using JSON-RPC 2.0. Exposes tools for corpus analysis, style profiles, pacing, dialogue, '
+            'showing-vs-telling, motifs, characters, and review markers. Completely offline and safe.'
+        ),
+        ('lixity mcp',),
     ),
     'completion': (
         'INSTALLATION.md#optional-shell-completion',

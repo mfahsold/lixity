@@ -162,19 +162,25 @@
     var top = below >= bounds.height || below >= above ? rect.bottom + 8 : rect.top - bounds.height - 8;
     var left = card && card.pointerX !== undefined ? card.pointerX + 12 : rect.left;
     var contextPanel = document.getElementById("workspace-context-panel");
-    if (contextPanel && !contextPanel.hidden && card && card.trigger && contextPanel.contains(card.trigger)) {
+    var maxRight = innerWidth - bounds.width - 8;
+    if (contextPanel && !contextPanel.hidden && contextPanel.offsetWidth > 0) {
       var panelRect = contextPanel.getBoundingClientRect();
       if (panelRect.left > bounds.width + 24) {
-        left = panelRect.left - bounds.width - 16;
-        if (card.record && card.record.panel && card.record.panel.isConnected) {
-          var pRect = card.record.panel.getBoundingClientRect();
-          if (pRect.bottom > 0 && pRect.top < innerHeight) {
-            top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+        maxRight = panelRect.left - bounds.width - 12;
+      }
+      if (card && card.trigger && contextPanel.contains(card.trigger)) {
+        if (panelRect.left > bounds.width + 24) {
+          left = panelRect.left - bounds.width - 16;
+          if (card.record && card.record.panel && card.record.panel.isConnected) {
+            var pRect = card.record.panel.getBoundingClientRect();
+            if (pRect.bottom > 0 && pRect.top < innerHeight) {
+              top = Math.max(12, Math.min(innerHeight - bounds.height - 12, pRect.top));
+            }
           }
         }
       }
     }
-    host.style.left = Math.max(8, Math.min(innerWidth - bounds.width - 8, left)) + "px";
+    host.style.left = Math.max(8, Math.min(maxRight, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
   }
   function scrollPosition(containers, trigger) {

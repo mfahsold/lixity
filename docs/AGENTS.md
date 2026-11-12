@@ -77,11 +77,41 @@ Use the installed executable as the command reference:
 ```sh
 lixity --help
 lixity analyze --help
+lixity mcp --help
 lixity research --help
 lixity research ingest --help
 lixity about --json
 lixity doctor --json
 ```
+
+### Model Context Protocol (MCP) Server
+
+Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the Model Context Protocol (MCP) via `lixity mcp`. AI assistants (Claude Desktop, Cursor, Antigravity, OpenCode, Codex) can connect directly:
+
+```json
+{
+  "mcpServers": {
+    "lixity": {
+      "command": "lixity",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+The server exposes 10 deterministic read-only analysis tools:
+- `lixity_about`: Engine version, languages, supported features and thresholds.
+- `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
+- `lixity_profile`: Word, sentence, and vocabulary profile summary.
+- `lixity_pacing`: Sentence-length rhythm, variation, and narrative pacing.
+- `lixity_dialogue`: Dialogue share, speaker cadence, and balance.
+- `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
+- `lixity_motifs`: Recurring motif and keyword distribution across chapters.
+- `lixity_characters`: Character mentions and co-occurrence matrix.
+- `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
+- `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
+
+And 3 structured editorial prompts: `manuscript_pacing_audit`, `manuscript_dialogue_review`, and `manuscript_showing_triage`.
 
 `about` (also `schema --json`) reports installed command metadata, languages,
 feature identifiers/units and default heuristics; it is not a complete JSON

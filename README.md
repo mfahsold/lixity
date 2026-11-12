@@ -91,6 +91,9 @@ not rigid steps:
   Every metric is grounded in transparent counts against chapter medians.
 - **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
   Connect facts, character motives, and scene geography directly to paragraphs.
+- **Collaborate with AI on Your Terms (MCP)**: Run `lixity mcp` to connect Claude Desktop,
+  Cursor, Antigravity, or local coding agents directly to 10 read-only analytical tools
+  and 3 structured editorial prompts. Keep your manuscript strictly local with zero telemetry.
 - **Curate Standalone Editions**: Generate beautiful print PDFs or self-contained,
   offline companion websites for beta readers and editors without exposing
   private working notes.
@@ -100,6 +103,7 @@ not rigid steps:
 | Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
 | Back up a saved project (unreleased) | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
 | Edit manuscript prose (unreleased) | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
+| Audit pacing, dialogue, and showing with AI | `lixity mcp` stdio server with 10 tools and 3 structured prompts | Deterministic, read-only analysis; no manuscript bytes or telemetry ever leave your machine. |
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
 | Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
 | Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |
