@@ -8,6 +8,11 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
+> **A private, local workspace for novelists, editors, and scholars.**
+> Inspect chapter rhythms, verify scene research, and share standalone reading copies — 100% offline, privacy-first, and deterministic.
+>
+> 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
+
 **Read closely. Trace the evidence. Understand your text.**
 
 Lixity is a local manuscript workspace for writers, editors and linguistic text

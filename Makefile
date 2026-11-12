@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check audit build release-check screenshots videos examples clean docs-check docs-generated-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check audit build release-check release-prepare screenshots videos examples clean docs-check docs-generated-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -59,6 +59,10 @@ release-check: ## Validate the tag first, then test once, check generated docs, 
 	@test -s "docs/releases/$(RELEASE_TAG).md" || (echo "Missing release notes: docs/releases/$(RELEASE_TAG).md"; exit 1)
 	$(MAKE) check docs-generated-check audit
 	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
+
+release-prepare: ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
+	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
+	$(PYTHON) scripts/prepare_release.py "$(VERSION)"
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	$(PYTHON) scripts/make_screenshots.py

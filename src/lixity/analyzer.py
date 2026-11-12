@@ -10,6 +10,7 @@ import math
 import os
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .diversity import (
@@ -122,6 +123,14 @@ class CorpusAnalyzer:
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
         self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
         self._content_blacklist = self.lang.function_words | self.lang.stopwords
+        self._compiled_signals = {
+            name: re.compile(pat, re.IGNORECASE)
+            for name, pat in self.lang.signal_keywords.items()
+        }
+        self._compiled_motifs = {
+            name: compile_pattern(pat)
+            for name, pat in self.config.motif_regexes.items()
+        }
         # Memoized per-token classification: the vocabulary of a manuscript is
         # far smaller than its token count, so caching avoids re-running the
         # same regex fullmatches for every repeated token. The cache is
@@ -151,7 +160,9 @@ class CorpusAnalyzer:
             self._cue_cache[token] = hit
         return hit
 
-    def _count_cue_tokens(self, text: str) -> tuple[int, int, int, int]:
+    def _count_cue_tokens(
+        self, text: str, lower_tokens: Sequence[str] | None = None
+    ) -> tuple[int, int, int, int]:
         """Return (filter, sensory, nominal, adjective) match counts for text."""
         if not self._fast_cues:
             return (
@@ -161,7 +172,12 @@ class CorpusAnalyzer:
                 len(self._adjective_re.findall(text)),
             )
         f_cnt = s_cnt = n_cnt = a_cnt = 0
-        for word, count in Counter(_RE_WORD_TOKEN.findall(text.lower())).items():
+        token_items = (
+            Counter(lower_tokens).items()
+            if lower_tokens is not None
+            else Counter(w.lower() for w in _RE_WORD_TOKEN.findall(text)).items()
+        )
+        for word, count in token_items:
             is_f, is_s, is_n, is_a = self._classify_cue_token(word)
             if is_f:
                 f_cnt += count
@@ -448,14 +464,14 @@ class CorpusAnalyzer:
         c_dial_pct = (c_dial_words / n_cw) * 100.0 if n_cw else 0.0
         c_ttr = len(set(c_lower)) / n_cw if n_cw else 0.0
         c_signals = {
-            s_name: len(re.findall(s_pat, cl_b, re.IGNORECASE))
-            for s_name, s_pat in self.lang.signal_keywords.items()
+            s_name: len(s_re.findall(cl_b))
+            for s_name, s_re in self._compiled_signals.items()
         }
         c_motifs = {
-            m_name: len(compile_pattern(m_pat).findall(cl_b))
-            for m_name, m_pat in self.config.motif_regexes.items()
+            m_name: len(m_re.findall(cl_b))
+            for m_name, m_re in self._compiled_motifs.items()
         }
-        c_fil, c_sensory_cnt, c_nominal_cnt, c_adjective_cnt = self._count_cue_tokens(cl_b)
+        c_fil, c_sensory_cnt, c_nominal_cnt, c_adjective_cnt = self._count_cue_tokens(cl_b, lower_tokens=c_lower)
         dominance = dominance_from_hits(*self._tense.count(cl_b))
 
         c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sentences)
@@ -614,10 +630,10 @@ class CorpusAnalyzer:
         total_paras, avg_para_len, single_line_paras = self._paragraph_stats(prose_units)
         punctuation = self._punctuation_profile(prose_main)
         signal_counts = {
-            name: len(re.findall(pat, prose_main, re.IGNORECASE))
-            for name, pat in self.lang.signal_keywords.items()
+            name: len(s_re.findall(prose_main))
+            for name, s_re in self._compiled_signals.items()
         }
-        filter_cnt, sensory_cnt, nominal_cnt, adjective_cnt = self._count_cue_tokens(prose_main)
+        filter_cnt, sensory_cnt, nominal_cnt, adjective_cnt = self._count_cue_tokens(prose_main, lower_tokens=lower_tokens)
 
         # 8. Style densities (per 1,000 tokens, length-comparable)
         passive_density = self._density(len(self._passive_re.findall(prose_main)), n_tokens)

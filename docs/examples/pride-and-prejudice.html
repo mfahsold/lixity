@@ -8,13 +8,14 @@
 <style>/* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f2f4fa, #111625);
-  --surface: light-dark(#ffffff, #181d29);
+  --bg: light-dark(#f2f4fa, #0c1017);
+  --surface: light-dark(#ffffff, #121822);
   --fg: light-dark(#19263d, #eef2f8);
-  --fg-secondary: light-dark(#465570, #b6c2d2);
-  --muted: light-dark(#56647b, #9aa5b8);
-  --line: light-dark(#dce2ef, #283144);
-  --line-strong: light-dark(#94a3b8, #64748b);
+  --fg-secondary: light-dark(#465570, #9ba7b8);
+  --muted: light-dark(#56647b, #8a96a8);
+  --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
+  --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
+  --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
   --accent: light-dark(#2949cc, #b4c3ff);
   --accent-hover: light-dark(#203ba6, #d5deff);
   --accent-light: light-dark(#e9edff, #242f51);
@@ -81,13 +82,13 @@
   --panel-padding: 1.25rem;
   --section-gap: 1.5rem;
 
-  --bg-subtle: light-dark(#e9edf6, #121620);
-  --surface-raised: light-dark(#f2f4fa, #202738);
-  --surface-hover: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
-  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(24, 29, 41, 0.88));
-  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(11, 13, 18, 0.85));
-  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(20, 24, 34, 0.92));
-  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(40, 49, 68, 0.75));
+  --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-raised: light-dark(#f2f4fa, #1a2230);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
   --glass-blur: 12px;
   --glass-blur-sm: 8px;
 
@@ -960,11 +961,112 @@ font-size: var(--text-small);
 & .toolbar-note { flex-basis: 100%; margin: 0; }
 }
 .text-search-group {
-display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; flex: 1 1 22rem; min-width: 0;
-& input[type="search"] { flex: 1 1 8rem; min-width: 0; }
-& .ctl-note { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-& .ctl-note:empty { display: none; }
-& button.ctl { flex: 0 0 2.5rem; padding-inline: .35rem; }
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (min-width: 540px) {
+  .text-search-group {
+    flex-wrap: nowrap;
+  }
+}
+.search-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.search-input-wrap .search-icon-wrap {
+  position: absolute;
+  left: .65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--muted);
+}
+.search-input-wrap input[type="search"] {
+  width: 100%;
+  padding-left: 2.15rem;
+  padding-right: 3.5rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--text-control);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  box-sizing: border-box;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.search-input-wrap input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  outline: none;
+}
+.search-input-wrap .search-kbd-badge {
+  position: absolute;
+  right: .5rem;
+  pointer-events: none;
+  font-size: .6875rem;
+  padding: .15rem .35rem;
+  background: var(--surface-hover);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 500;
+  transition: opacity .15s ease;
+}
+@media (max-width: 480px) {
+  .search-kbd-badge { display: none !important; }
+  .search-input-wrap input[type="search"] { padding-right: 1.5rem !important; }
+}
+.search-input-wrap input[type="search"]:focus ~ .search-kbd-badge,
+.search-input-wrap input[type="search"]:not(:placeholder-shown) ~ .search-kbd-badge {
+  opacity: 0;
+  visibility: hidden;
+}
+.text-search-group button.ctl {
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.text-search-group button.ctl:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+.text-search-group .ctl-note#text-search-status {
+  display: inline-flex;
+  align-items: center;
+  padding: .2rem .55rem;
+  font-size: var(--text-small);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-radius: var(--radius-pill, 999px);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.text-search-group .ctl-note:empty {
+  display: none;
 }
 /* A paragraph that does not match the query leaves the page entirely, so the
 result list is the manuscript filtered down to what was searched for. */
@@ -1887,7 +1989,7 @@ selected destinations, display state and explicit primary save actions. */
 .workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
 .manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
-.manuscript-reader-controls .reader-settings > summary:hover { background: var(--neutral); border-color: var(--line); color: var(--fg); }
+.manuscript-reader-controls .reader-settings > summary:hover { background: var(--surface-hover); border-color: var(--line-strong); color: var(--fg); }
 @media screen and (min-width: 1100px) {
 body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace > .page { max-width: 96rem; }
@@ -3382,13 +3484,66 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
 .workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, var(--manuscript-share, 62%)) .75rem minmax(0, 1fr); gap: .35rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
-.workspace-context-panel { min-width: 0; grid-column: 3; grid-row: 1; position: sticky; top: calc(1rem + var(--workbench-return-height, 0px)); max-height: min(calc(100dvh - 2rem - var(--workbench-return-height, 0px)), var(--context-available-height, 100dvh)); overflow: auto; overflow-wrap: anywhere; background: transparent; }
+.workspace-context-panel {
+  min-width: 0;
+  grid-column: 3;
+  grid-row: 1;
+  position: sticky;
+  top: calc(1rem + var(--workbench-return-height, 0px));
+  max-height: min(calc(100dvh - 2rem - var(--workbench-return-height, 0px)), var(--context-available-height, 100dvh));
+  overflow: auto;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
 .workspace-context-panel[hidden], .workspace-reader-panel[hidden] { display: none; }
-.context-tool-tabs { display: flex; gap: .35rem; padding: .6rem; border-bottom: 1px solid var(--line); }
-.context-tool-tabs .ctl { flex: 1; white-space: normal; }
-.context-tool-tabs .ctl:not([aria-pressed="true"]) { background: transparent; border-color: transparent; color: var(--fg-secondary); }
-.context-tool-tabs .ctl[aria-pressed="true"] { color: var(--accent); background: var(--accent-light); border-color: transparent; box-shadow: inset 0 -2px var(--accent); }
-.workspace-context-panel .panel { margin: 0; border: 0; box-shadow: none; background: transparent; }
+.context-tool-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin: var(--space-3) var(--space-3) var(--space-2);
+}
+.context-tool-tabs .ctl {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: var(--text-small);
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--fg-secondary);
+  box-shadow: none;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.context-tool-tabs .ctl:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+.context-tool-tabs .ctl[aria-pressed="true"],
+.context-tool-tabs [data-context-tool="research"][aria-pressed="true"] {
+  color: var(--fg);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  font-weight: var(--weight-semibold);
+}
+.workspace-context-panel .panel,
+.workspace-context-panel aside.panel,
+.passage-research {
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  background: transparent !important;
+}
 .workspace-reader-panel { min-width: 0; overflow-wrap: anywhere; }
 .workspace-reader-divider { grid-column: 2; grid-row: 1; position: sticky; top: 1rem; height: calc(100dvh - 2rem); cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); background: linear-gradient(to right, transparent 40%, var(--line-strong) 40%, var(--line-strong) 60%, transparent 60%); }
 .workspace-reader-divider[hidden] { display: none; }
@@ -3416,32 +3571,61 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* Passage research shares the existing context dock and its scrollport. */
 .workspace-context-panel.passage-research-open { scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--space-3)); }
 .passage-research[hidden] { display: none; }
-.passage-research { padding: var(--space-4); min-width: 0; }
-.passage-research .workspace-reader-head { margin-bottom: var(--space-4); align-items: flex-start; }
-.passage-research-item { padding-block: var(--space-4); border-top: 1px solid var(--line); }
+.passage-research { padding: var(--space-3) var(--space-4) var(--space-4); min-width: 0; }
+.passage-research .workspace-reader-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+.passage-research .workspace-reader-head h2 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--fg);
+}
+.passage-research .workspace-reader-head button.ctl {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
+  min-height: auto;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  line-height: 1;
+}
+.passage-research .workspace-reader-head button.ctl:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+.passage-research-item { padding-block: var(--space-3); border-top: 1px solid var(--line-subtle, var(--line)); }
 .passage-research-item .ctl { max-width: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
 .passage-research-record { margin-bottom: var(--space-3); }
 .passage-research-record > .ctl-note { margin: 0; }
 .passage-research-item .passage-record-title { display: block; width: 100%; padding: var(--space-2); margin-inline: calc(-1 * var(--space-2)); border-color: transparent; background: transparent; color: var(--accent); font-weight: var(--weight-semibold); }
 .passage-research-item .passage-record-title:hover { background: var(--accent-light); color: var(--accent); }
-.passage-research-item .passage-record-pin { margin-top: var(--space-1); color: var(--fg-secondary); background: transparent; border-color: var(--line); }
-.passage-research-item .research-details { margin-top: var(--space-2); }
-.passage-research-item .research-details > .research-details { margin-inline-start: var(--space-3); }
-.passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; }
-.passage-research-open .context-tool-tabs { flex-wrap: wrap; }
-.passage-research-open .context-tool-tabs .ctl { flex: 1 1 0; min-width: 0; overflow-wrap: normal; }
-
-/* Research context keeps a document identity beside statistical inspection. */
-.ptext.reader-audio-active {
-  background: var(--accent-light);
-  border-left: 3px solid var(--accent);
-  padding-left: calc(var(--space-2) - 3px);
-  border-radius: var(--radius-xs);
-  transition: background 0.25s ease, border-color 0.25s ease;
+.passage-research-item .passage-record-pin,
+.passage-research > button.ctl {
+  margin-top: var(--space-2);
+  color: var(--fg);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.passage-research .workspace-reader-head h2 { display: flex; align-items: center; gap: var(--space-2); }
-.context-tool-tabs [data-context-tool="research"][aria-pressed="true"] { color: var(--fg); background: var(--surface); box-shadow: inset 0 -2px var(--fg-secondary); }
-.passage-research blockquote { border-inline-start-color: var(--line-strong); }
+.passage-research-item .passage-record-pin:hover,
+.passage-research > button.ctl:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+}
+.passage-research-item .research-details { margin-top: var(--space-2); border: 0; background: transparent; }
+.passage-research-item .research-details > .research-details { margin-inline-start: var(--space-3); }
+.passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; border-inline-start-color: var(--line-strong); }
 
 .manuscript-link-controls { margin-top: var(--space-3); }
 .manuscript-link-controls .ctl { white-space: normal; }
@@ -3588,6 +3772,21 @@ svg.leaflet-image-layer.leaflet-interactive path {
   gap: .45rem;
   min-width: 0;
 }
+.reader-analysis-controls .form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+.reader-analysis-controls #paragraph-filter-reset {
+  padding: .2rem .55rem;
+  font-size: var(--text-small);
+  min-height: 2rem;
+  border-radius: var(--radius-sm);
+}
 .reader-outlier-navigation {
   display: inline-flex;
   align-items: center;
@@ -3677,13 +3876,31 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .toolbar > .toolbar-note,
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
+.manuscript-reading #manuscript-reader-controls:not([hidden]) {
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
 .manuscript-reading .toolbar {
-  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .3rem 0; gap: .4rem 1rem;
-  max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem)); margin-inline: auto;
-  background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px));
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2) var(--space-3);
+  padding: .35rem var(--space-3);
+  max-width: 100%;
+  margin-inline: 0;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
-.manuscript-reading .text-search-group { flex: 1 1 18rem; max-width: 34rem; }
+.manuscript-reading .text-search-group { flex: 1 1 auto; max-width: 100%; min-width: 0; }
 @media (max-width: 900px) {
   .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
 }
@@ -3835,7 +4052,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
-.manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > label { display: inline-flex !important; }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
 .workbench-thread { display: grid; gap: var(--space-2); min-width: 0; padding-block: var(--space-3); border-top: 1px solid var(--line); }
@@ -3880,8 +4096,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 
 .manuscript-reading.workbench-overview .toolbar-sections { display: flex !important; }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]),
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .toolbar > #paragraph-filter-reset { display: flex !important; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]) { display: flex !important; }
 .manuscript-reading.workbench-overview .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .toolbar > .legend { display: flex !important; }
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
@@ -4434,10 +4649,10 @@ body.lixity-workspace.reader-focus {
 </div></section>
 <div class="toolbar">
 <span class="text-search-group">
-<input class="ctl" type="search" id="text-search" autocomplete="off" placeholder="Search the manuscript" aria-label="Search the manuscript" aria-controls="chapters" data-help="Search this manuscript. Enter: next result; Shift+Enter: previous; Esc: clear." aria-keyshortcuts="Enter Shift+Enter Escape"/>
-<button type="button" class="ctl" id="text-search-prev" hidden aria-label="Previous match" title="Previous match" aria-keyshortcuts="Shift+Enter">↑</button>
-<button type="button" class="ctl" id="text-search-next" hidden aria-label="Next match" title="Next match" aria-keyshortcuts="Enter">↓</button>
-<button type="button" class="ctl" id="text-search-clear" hidden aria-label="Clear search" title="Clear search" aria-keyshortcuts="Escape"><span aria-hidden="true">&times;</span></button>
+<span class="search-input-wrap"><span class="search-icon-wrap" aria-hidden="true"><svg class="lixity-icon search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span><input class="ctl" type="search" id="text-search" autocomplete="off" placeholder="Search the manuscript" aria-label="Search the manuscript" aria-controls="chapters" data-help="Search this manuscript. Enter: next result; Shift+Enter: previous; Esc: clear." aria-keyshortcuts="Enter Shift+Enter Escape"/><kbd class="search-kbd-badge" title="Tastaturkürzel">Strg+F</kbd></span>
+<button type="button" class="ctl" id="text-search-prev" hidden aria-label="Previous match" title="Previous match" aria-keyshortcuts="Shift+Enter"><svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
+<button type="button" class="ctl" id="text-search-next" hidden aria-label="Next match" title="Next match" aria-keyshortcuts="Enter"><svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+<button type="button" class="ctl" id="text-search-clear" hidden aria-label="Clear search" title="Clear search" aria-keyshortcuts="Escape"><svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 <span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>
 </span>
 <label class="form-checkbox js-analysis-control"><input type="checkbox" id="filter-flags"/> Flagged only</label>
@@ -4497,7 +4712,7 @@ body.lixity-workspace.reader-focus {
 <div class="ptext" id="p-23" data-start="78" data-end="78" data-paragraph-sha256="a49d007faae5566b7806c69c0ca98bb744029cc6cfd4315d025b3ac828504714" data-markers="0"><noscript><div class="ptext-inner"><p>“It is more than I engage for, I assure you.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 78 · Neutral · unremarkable</div><div class="stats">Present 1 · Past 0 · ASL 10.0 · Quoted words 100.0% · function words 60.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 10 words</div></details></div></noscript></div>
 <div class="ptext flagged sev-2" id="p-24" data-start="80" data-end="84" data-paragraph-sha256="0f5094278b3e89123bf69fbea41ce9aff4ae85774134350bfed6f5619bfaaf30" data-markers="0" data-severity="2" data-pre="8" data-pas="3" data-mix="1" data-swi="0" data-tense-trigger="mixed"><noscript><div class="ptext-inner"><p>“But consider your daughters. Only think what an establishment it would be for one of them. Sir William and Lady Lucas are determined to go, merely on that account; for in general, you know, they visit no new comers. Indeed you must go, for it will be impossible for us to visit him, if you do not.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 80–84 · Present · noticeable</div><div class="stats">Present 8 · Past 3 · ASL 14.2 · Quoted words 100.0% · function words 57.9% · Perception filters 17.5 · Sensory cues 0.0 · Modals 17.5 · Noun endings 17.5 · Passive patterns 17.5 · 57 words</div></details></div></noscript></div>
 <div class="ptext" id="p-25" data-start="86" data-end="89" data-paragraph-sha256="5138aa0db1dfb25422c4ed7a7e9089f457ad830216ff583e0a1c5c5343213094" data-markers="0"><noscript><div class="ptext-inner"><p>“You are over scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls--though I must throw in a good word for my little Lizzy.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 86–89 · Present · unremarkable</div><div class="stats">Present 7 · Past 0 · ASL 27.0 · Quoted words 100.0% · function words 57.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 0.0 · Passive patterns 0.0 · 54 words</div></details></div></noscript></div>
-<div class="ptext" id="p-26" data-start="91" data-end="93" data-paragraph-sha256="86fbe39b3bd3582d30ae67414e307eaf3dc0149b875aa8d573a9c9e7d1dd8378" data-markers="0"><noscript><div class="ptext-inner"><p>“I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 91–93 · Present · unremarkable</div><div class="stats">Present 6 · Past 1 · ASL 14.3 · Quoted words 100.0% · function words 46.5% · Perception filters 0.0 · Sensory cues 23.3 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words</div></details></div></noscript></div>
+<div class="ptext" id="p-26" data-start="91" data-end="93" data-paragraph-sha256="86fbe39b3bd3582d30ae67414e307eaf3dc0149b875aa8d573a9c9e7d1dd8378" data-markers="0"><noscript><div class="ptext-inner"><p>“I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 91–93 · Present · unremarkable</div><div class="stats">Present 6 · Past 1 · ASL 14.3 · Quoted words 100.0% · function words 46.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words</div></details></div></noscript></div>
 <div class="ptext" id="p-27" data-start="95" data-end="97" data-paragraph-sha256="1f434dc4a7f1cd5fe42660a4fc440c59ec766943b65a4317fc8a58fdfc07b8a4" data-markers="0"><noscript><div class="ptext-inner"><p>“They have none of them much to recommend them,” replied he: “they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 95–97 · Present · unremarkable</div><div class="stats">Present 3 · Past 1 · ASL 30.0 · Quoted words 93.3% · function words 46.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 33.3 · Passive patterns 0.0 · 30 words</div></details></div></noscript></div>
 <div class="ptext" id="p-28" data-start="99" data-end="100" data-paragraph-sha256="a917e740ed6f4176da622628f026c98d949ff042a8224215eb1149c7cf0a69a5" data-markers="0"><noscript><div class="ptext-inner"><p>“Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion on my poor nerves.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 99–100 · Present · unremarkable</div><div class="stats">Present 3 · Past 0 · ASL 9.0 · Quoted words 100.0% · function words 44.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 37.0 · Passive patterns 0.0 · 27 words</div></details></div></noscript></div>
 <div class="ptext" id="p-29" data-start="102" data-end="104" data-paragraph-sha256="2250ab0a5659bb6a5db9c4815fcb6a225e86b626c2ca932deb5f4f5535072150" data-markers="0"><noscript><div class="ptext-inner"><p>“You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these twenty years at least.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 102–104 · Present · unremarkable</div><div class="stats">Present 3 · Past 1 · ASL 7.8 · Quoted words 100.0% · function words 58.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 64.5 · Passive patterns 0.0 · 31 words</div></details></div></noscript></div>
@@ -4564,7 +4779,7 @@ body.lixity-workspace.reader-focus {
 <div class="ptext flagged sev-2" id="p-86" data-start="397" data-end="402" data-paragraph-sha256="9a131b60d77cf41571b56121b1dbe159adb1c49115c58c20b5da4f97aba56b2c" data-markers="0" data-severity="2" data-pre="4" data-pas="6" data-mix="1" data-swi="0" data-tense-trigger="mixed"><noscript><div class="ptext-inner"><p>“But I can assure you,” she added, “that Lizzy does not lose much by not suiting his fancy; for he is a most disagreeable, horrid man, not at all worth pleasing. So high and so conceited, that there was no enduring him! He walked here, and he walked there, fancying himself so very great! Not handsome enough to dance with! I wish you had been there, my dear, to have given him one of your set-downs. I quite detest the man.”</p><details class="paragraph-values"><summary>Values</summary><div class="anchor">l. 397–402 · Past · noticeable</div><div class="stats">Present 4 · Past 6 · ASL 13.5 · Quoted words 97.5% · function words 48.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 12.3 · Noun endings 24.7 · Passive patterns 12.3 · 81 words</div></details></div></noscript></div>
 </section>
 </main>
-<script type="application/json" id="paragraph-content">{"p-0":["It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","l. 11–12 · Present · unremarkable","Present 3 · Past 1 · ASL 23.0 · Quoted words 0.0% · function words 56.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 43.5 · Noun endings 87.0 · Passive patterns 0.0 · 23 words"],"p-1":["However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.","l. 14–17 · Mixed · watch","Present 3 · Past 2 · ASL 48.0 · Quoted words 0.0% · function words 52.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 20.8 · Noun endings 41.7 · Passive patterns 20.8 · 48 words"],"p-2":["“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”","l. 19–20 · Mixed · watch","Present 2 · Past 2 · ASL 21.0 · Quoted words 66.7% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 21 words"],"p-3":["Mr. Bennet replied that he had not.","l. 22 · Past · unremarkable","Present 0 · Past 2 · ASL 7.0 · Quoted words 0.0% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-4":["“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”","l. 24–25 · Mixed · watch","Present 2 · Past 2 · ASL 19.0 · Quoted words 89.5% · function words 68.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 52.6 · 19 words"],"p-5":["Mr. Bennet made no answer.","l. 27 · Neutral · unremarkable","Present 0 · Past 1 · ASL 5.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 5 words"],"p-6":["“Do not you want to know who has taken it?” cried his wife, impatiently.","l. 29 · Present · unremarkable","Present 4 · Past 1 · ASL 7.0 · Quoted words 71.4% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 14 words"],"p-7":["“You want to tell me, and I have no objection to hearing it.”","l. 31 · Present · unremarkable","Present 3 · Past 0 · ASL 13.0 · Quoted words 100.0% · function words 61.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 76.9 · Passive patterns 0.0 · 13 words"],"p-8":["]","l. 33 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-9":["This was invitation enough.","l. 35 · Neutral · unremarkable","Present 0 · Past 1 · ASL 4.0 · Quoted words 0.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 250.0 · Passive patterns 0.0 · 4 words"],"p-10":["“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”","l. 37–42 · Present · noticeable","Present 8 · Past 4 · ASL 79.0 · Quoted words 100.0% · function words 55.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 12.7 · Noun endings 25.3 · Passive patterns 12.7 · 79 words"],"p-11":["“What is his name?”","l. 44 · Neutral · unremarkable","Present 1 · Past 0 · ASL 4.0 · Quoted words 100.0% · function words 75.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 4 words"],"p-12":["“Bingley.”","l. 46 · Neutral · unremarkable","Present 0 · Past 0 · ASL 1.0 · Quoted words 100.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 1 words"],"p-13":["“Is he married or single?”","l. 48 · Mixed · unremarkable","Present 1 · Past 1 · ASL 5.0 · Quoted words 100.0% · function words 60.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 5 words"],"p-14":["“Oh, single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!”","l. 50–51 · Neutral · unremarkable","Present 0 · Past 0 · ASL 8.7 · Quoted words 100.0% · function words 42.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-15":["“How so? how can it affect them?”","l. 53 · Neutral · unremarkable","Present 1 · Past 0 · ASL 3.5 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 142.9 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-16":["“My dear Mr. Bennet,” replied his wife, “how can you be so tiresome? You must know that I am thinking of his marrying one of them.”","l. 55–56 · Present · unremarkable","Present 4 · Past 1 · ASL 13.0 · Quoted words 88.5% · function words 57.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 76.9 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-17":["“Is that his design in settling here?”","l. 58 · Neutral · unremarkable","Present 1 · Past 0 · ASL 7.0 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-18":["“Design? Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.”","l. 60–62 · Present · unremarkable","Present 7 · Past 0 · ASL 11.0 · Quoted words 100.0% · function words 54.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 90.9 · Noun endings 0.0 · Passive patterns 0.0 · 33 words"],"p-19":["“I see no occasion for that. You and the girls may go--or you may send them by themselves, which perhaps will be still better; for as you are as handsome as any of them, Mr. Bingley might like you the best of the party.”","l. 64–67 · Present · unremarkable","Present 7 · Past 1 · ASL 22.5 · Quoted words 100.0% · function words 57.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 66.7 · Noun endings 22.2 · Passive patterns 0.0 · 45 words"],"p-20":["“My dear, you flatter me. I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now. When a woman has five grown-up daughters, she ought to give over thinking of her own beauty.”","l. 69–71 · Present · unremarkable","Present 4 · Past 1 · ASL 13.3 · Quoted words 100.0% · function words 55.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 25.0 · Noun endings 0.0 · Passive patterns 0.0 · 40 words"],"p-21":["“In such cases, a woman has not often much beauty to think of.”","l. 73 · Present · unremarkable","Present 2 · Past 0 · ASL 13.0 · Quoted words 100.0% · function words 38.5% · Perception filters 76.9 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 13 words"],"p-22":["“But, my dear, you must indeed go and see Mr. Bingley when he comes into the neighbourhood.”","l. 75–76 · Present · unremarkable","Present 4 · Past 1 · ASL 17.0 · Quoted words 100.0% · function words 52.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 58.8 · Noun endings 58.8 · Passive patterns 0.0 · 17 words"],"p-23":["“It is more than I engage for, I assure you.”","l. 78 · Neutral · unremarkable","Present 1 · Past 0 · ASL 10.0 · Quoted words 100.0% · function words 60.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 10 words"],"p-24":["“But consider your daughters. Only think what an establishment it would be for one of them. Sir William and Lady Lucas are determined to go, merely on that account; for in general, you know, they visit no new comers. Indeed you must go, for it will be impossible for us to visit him, if you do not.”","l. 80–84 · Present · noticeable","Present 8 · Past 3 · ASL 14.2 · Quoted words 100.0% · function words 57.9% · Perception filters 17.5 · Sensory cues 0.0 · Modals 17.5 · Noun endings 17.5 · Passive patterns 17.5 · 57 words"],"p-25":["“You are over scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls--though I must throw in a good word for my little Lizzy.”","l. 86–89 · Present · unremarkable","Present 7 · Past 0 · ASL 27.0 · Quoted words 100.0% · function words 57.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 0.0 · Passive patterns 0.0 · 54 words"],"p-26":["“I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.”","l. 91–93 · Present · unremarkable","Present 6 · Past 1 · ASL 14.3 · Quoted words 100.0% · function words 46.5% · Perception filters 0.0 · Sensory cues 23.3 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words"],"p-27":["“They have none of them much to recommend them,” replied he: “they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.”","l. 95–97 · Present · unremarkable","Present 3 · Past 1 · ASL 30.0 · Quoted words 93.3% · function words 46.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 33.3 · Passive patterns 0.0 · 30 words"],"p-28":["“Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion on my poor nerves.”","l. 99–100 · Present · unremarkable","Present 3 · Past 0 · ASL 9.0 · Quoted words 100.0% · function words 44.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 37.0 · Passive patterns 0.0 · 27 words"],"p-29":["“You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these twenty years at least.”","l. 102–104 · Present · unremarkable","Present 3 · Past 1 · ASL 7.8 · Quoted words 100.0% · function words 58.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 64.5 · Passive patterns 0.0 · 31 words"],"p-30":["“Ah, you do not know what I suffer.”","l. 106 · Present · unremarkable","Present 2 · Past 0 · ASL 8.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 8 words"],"p-31":["“But I hope you will get over it, and live to see many young men of four thousand a year come into the neighbourhood.”","l. 108–109 · Present · unremarkable","Present 4 · Past 0 · ASL 24.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 41.7 · Passive patterns 0.0 · 24 words"],"p-32":["“It will be no use to us, if twenty such should come, since you will not visit them.”","l. 111–112 · Present · unremarkable","Present 3 · Past 1 · ASL 18.0 · Quoted words 100.0% · function words 61.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 55.6 · Noun endings 0.0 · Passive patterns 0.0 · 18 words"],"p-33":["“Depend upon it, my dear, that when there are twenty, I will visit them all.”","l. 114–115 · Present · unremarkable","Present 2 · Past 0 · ASL 15.0 · Quoted words 100.0% · function words 53.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 15 words"],"p-34":["Mr. Bennet was so odd a mixture of quick parts, sarcastic humour, reserve, and caprice, that the experience of three-and-twenty years had been insufficient to make his wife understand his character. Her mind was less difficult to develope. She was a woman of mean understanding, little information, and uncertain temper. When she was discontented, she fancied herself nervous. The business of her life was to get her daughters married: its solace was visiting and news.","l. 117–123 · Past · noticeable","Present 2 · Past 10 · ASL 15.0 · Quoted words 0.0% · function words 45.3% · Perception filters 0.0 · Sensory cues 13.3 · Modals 0.0 · Noun endings 40.0 · Passive patterns 26.7 · 75 words"],"p-35":["]","l. 125 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-36":["]","l. 127 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-37":["Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it. It was then disclosed in the following manner. Observing his second daughter employed in trimming a hat, he suddenly addressed her with,--","l. 130–135 · Past · unremarkable","Present 1 · Past 12 · ASL 17.5 · Quoted words 0.0% · function words 51.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 14.3 · Noun endings 0.0 · Passive patterns 0.0 · 70 words"],"p-38":["“I hope Mr. Bingley will like it, Lizzy.”","l. 137 · Neutral · unremarkable","Present 1 · Past 0 · ASL 8.0 · Quoted words 100.0% · function words 37.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 8 words"],"p-39":["“We are not in a way to know what Mr. Bingley likes,” said her mother, resentfully, “since we are not to visit.”","l. 139–140 · Present · unremarkable","Present 3 · Past 1 · ASL 22.0 · Quoted words 81.8% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 22 words"],"p-40":["“But you forget, mamma,” said Elizabeth, “that we shall meet him at the assemblies, and that Mrs. Long has promised to introduce him.”","l. 142–143 · Present · watch","Present 4 · Past 2 · ASL 23.0 · Quoted words 91.3% · function words 56.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 43.5 · Noun endings 43.5 · Passive patterns 0.0 · 23 words"],"p-41":["“I do not believe Mrs. Long will do any such thing. She has two nieces of her own. She is a selfish, hypocritical woman, and I have no opinion of her.”","l. 145–147 · Present · unremarkable","Present 6 · Past 0 · ASL 10.3 · Quoted words 100.0% · function words 51.6% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 31 words"],"p-42":["“No more have I,” said Mr. Bennet; “and I am glad to find that you do not depend on her serving you.”","l. 149–150 · Present · unremarkable","Present 4 · Past 1 · ASL 22.0 · Quoted words 86.4% · function words 54.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 22 words"],"p-43":["Mrs. Bennet deigned not to make any reply; but, unable to contain herself, began scolding one of her daughters.","l. 152–153 · Past · watch","Present 1 · Past 2 · ASL 19.0 · Quoted words 0.0% · function words 26.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 19 words"],"p-44":["“Don’t keep coughing so, Kitty, for heaven’s sake! Have a little compassion on my nerves. You tear them to pieces.”","l. 155–156 · Present · watch","Present 2 · Past 0 · ASL 6.7 · Quoted words 100.0% · function words 45.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 50.0 · Passive patterns 0.0 · 20 words"],"p-45":["“Kitty has no discretion in her coughs,” said her father; “she times them ill.”","l. 158–159 · Mixed · unremarkable","Present 1 · Past 1 · ASL 14.0 · Quoted words 78.6% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 71.4 · Passive patterns 0.0 · 14 words"],"p-46":["“I do not cough for my own amusement,” replied Kitty, fretfully. “When is your next ball to be, Lizzy?”","l. 161–162 · Present · unremarkable","Present 2 · Past 1 · ASL 9.5 · Quoted words 84.2% · function words 47.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 52.6 · Passive patterns 0.0 · 19 words"],"p-47":["“To-morrow fortnight.”","l. 164 · Neutral · unremarkable","Present 0 · Past 0 · ASL 2.0 · Quoted words 100.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 2 words"],"p-48":["“Ay, so it is,” cried her mother, “and Mrs. Long does not come back till the day before; so, it will be impossible for her to introduce him, for she will not know him herself.”","l. 166–168 · Present · unremarkable","Present 6 · Past 1 · ASL 35.0 · Quoted words 91.4% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 35 words"],"p-49":["“Then, my dear, you may have the advantage of your friend, and introduce Mr. Bingley to her.”","l. 170–171 · Present · unremarkable","Present 2 · Past 0 · ASL 17.0 · Quoted words 100.0% · function words 58.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 58.8 · Noun endings 0.0 · Passive patterns 0.0 · 17 words"],"p-50":["“Impossible, Mr. Bennet, impossible, when I am not acquainted with him myself; how can you be so teasing?”","l. 173–174 · Present · unremarkable","Present 2 · Past 1 · ASL 18.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 55.6 · Noun endings 0.0 · Passive patterns 0.0 · 18 words"],"p-51":["“I honour your circumspection. A fortnight’s acquaintance is certainly very little. One cannot know what a man really is by the end of a fortnight. But if we do not venture, somebody else will; and after all, Mrs. Long and her nieces must stand their chance; and, therefore, as she will think it an act of kindness, if you decline the office, I will take it on myself.”","l. 176–181 · Present · unremarkable","Present 11 · Past 0 · ASL 17.0 · Quoted words 100.0% · function words 52.9% · Perception filters 14.7 · Sensory cues 0.0 · Modals 14.7 · Noun endings 58.8 · Passive patterns 0.0 · 68 words"],"p-52":["The girls stared at their father. Mrs. Bennet said only, “Nonsense, nonsense!”","l. 183–184 · Past · watch","Present 0 · Past 2 · ASL 6.0 · Quoted words 16.7% · function words 33.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 12 words"],"p-53":["“What can be the meaning of that emphatic exclamation?” cried he. “Do you consider the forms of introduction, and the stress that is laid on them, as nonsense? I cannot quite agree with you there. What say you, Mary? For you are a young lady of deep reflection, I know, and read great books, and make extracts.”","l. 186–190 · Present · noticeable","Present 7 · Past 2 · ASL 9.5 · Quoted words 96.5% · function words 54.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 17.5 · Noun endings 52.6 · Passive patterns 0.0 · 57 words"],"p-54":["Mary wished to say something very sensible, but knew not how.","l. 192 · Past · watch","Present 1 · Past 2 · ASL 11.0 · Quoted words 0.0% · function words 18.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 11 words"],"p-55":["“While Mary is adjusting her ideas,” he continued, “let us return to Mr. Bingley.”","l. 194–195 · Mixed · unremarkable","Present 1 · Past 1 · ASL 14.0 · Quoted words 85.7% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 14 words"],"p-56":["“I am sick of Mr. Bingley,” cried his wife.","l. 197 · Mixed · unremarkable","Present 1 · Past 1 · ASL 9.0 · Quoted words 66.7% · function words 44.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 9 words"],"p-57":["“I am sorry to hear that; but why did you not tell me so before? If I had known as much this morning, I certainly would not have called on him. It is very unlucky; but as I have actually paid the visit, we cannot escape the acquaintance now.”","l. 199–202 · Mixed · noticeable","Present 6 · Past 5 · ASL 16.3 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 20.4 · Passive patterns 0.0 · 49 words"],"p-58":["The astonishment of the ladies was just what he wished--that of Mrs. Bennet perhaps surpassing the rest; though when the first tumult of joy was over, she began to declare that it was what she had expected all the while.","l. 204–207 · Past · unremarkable","Present 0 · Past 7 · ASL 41.0 · Quoted words 0.0% · function words 63.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 24.4 · Passive patterns 0.0 · 41 words"],"p-59":["“How good it was in you, my dear Mr. Bennet! But I knew I should persuade you at last. I was sure you loved your girls too well to neglect such an acquaintance. Well, how pleased I am! And it is such a good joke, too, that you should have gone this morning, and never said a word about it till now.”","l. 209–213 · Past · noticeable","Present 3 · Past 7 · ASL 12.4 · Quoted words 100.0% · function words 54.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 32.3 · Noun endings 16.1 · Passive patterns 0.0 · 62 words"],"p-60":["“Now, Kitty, you may cough as much as you choose,” said Mr. Bennet; and, as he spoke, he left the room, fatigued with the raptures of his wife.","l. 215–216 · Past · unremarkable","Present 1 · Past 4 · ASL 28.0 · Quoted words 35.7% · function words 39.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 35.7 · Noun endings 0.0 · Passive patterns 0.0 · 28 words"],"p-61":["“What an excellent father you have, girls,” said she, when the door was shut. “I do not know how you will ever make him amends for his kindness; or me either, for that matter. At our time of life, it is not so pleasant, I can tell you, to be making new acquaintances every day; but for your sakes we would do anything. Lydia, my love, though you are the youngest, I dare say Mr. Bingley will dance with you at the next ball.”","l. 218–224 · Present · noticeable","Present 13 · Past 4 · ASL 21.0 · Quoted words 91.7% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 23.8 · Noun endings 35.7 · Passive patterns 0.0 · 84 words"],"p-62":["“Oh,” said Lydia, stoutly, “I am not afraid; for though I am the youngest, I’m the tallest.”","l. 226–227 · Present · unremarkable","Present 2 · Past 1 · ASL 17.0 · Quoted words 82.4% · function words 47.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 17 words"],"p-63":["The rest of the evening was spent in conjecturing how soon he would return Mr. Bennet’s visit, and determining when they should ask him to dinner.","l. 229–231 · Past · watch","Present 1 · Past 4 · ASL 26.0 · Quoted words 0.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 38.5 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-64":["Not all that Mrs. Bennet, however, with the assistance of her five daughters, could ask on the subject, was sufficient to draw from her husband any satisfactory description of Mr. Bingley. They attacked him in various ways, with barefaced questions, ingenious suppositions, and distant surmises; but he eluded the skill of them all; and they were at last obliged to accept the second-hand intelligence of their neighbour, Lady Lucas. Her report was highly favourable. Sir William had been delighted with him. He was quite young, wonderfully handsome, extremely agreeable, and, to crown the whole, he meant to be at the next assembly with a large party. Nothing could be more delightful! To be fond of dancing was a certain step towards falling in love; and very lively hopes of Mr. Bingley’s heart were entertained.","l. 234–245 · Past · unremarkable","Present 2 · Past 15 · ASL 19.1 · Quoted words 0.0% · function words 45.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 14.9 · Noun endings 37.3 · Passive patterns 14.9 · 134 words"],"p-65":["“If I can but see one of my daughters happily settled at Netherfield,” said Mrs. Bennet to her husband, “and all the others equally well married, I shall have nothing to wish for.”","l. 247–249 · Mixed · noticeable","Present 4 · Past 3 · ASL 33.0 · Quoted words 81.8% · function words 51.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 60.6 · Noun endings 0.0 · Passive patterns 0.0 · 33 words"],"p-66":["In a few days Mr. Bingley returned Mr. Bennet’s visit, and sat about ten minutes with him in his library. He had entertained hopes of being admitted to a sight of the young ladies, of whose beauty he had heard much; but he saw only the father. The ladies were somewhat more fortunate, for they had the advantage of ascertaining, from an upper window, that he wore a blue coat and rode a black horse.","l. 251–256 · Past · unremarkable","Present 0 · Past 12 · ASL 25.0 · Quoted words 0.0% · function words 48.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 13.3 · 75 words"],"p-67":["An invitation to dinner was soon afterwards despatched; and already had Mrs. Bennet planned the courses that were to do credit to her housekeeping, when an answer arrived which deferred it all. Mr. Bingley was obliged to be in town the following day, and consequently unable to accept the honour of their invitation, etc. Mrs. Bennet was quite disconcerted. She could not imagine what business he could have in town so soon after his arrival in Hertfordshire; and she began to fear that he might always be flying about from one place to another, and never settled at Netherfield as he ought to be. Lady Lucas quieted her fears a little by starting the idea of his","l. 258–267 · Past · unremarkable","Present 2 · Past 17 · ASL 29.2 · Quoted words 0.0% · function words 52.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 34.2 · Noun endings 25.6 · Passive patterns 8.5 · 117 words"],"p-68":["]","l. 269 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-69":["being gone to London only to get a large party for the ball; and a report soon followed that Mr. Bingley was to bring twelve ladies and seven gentlemen with him to the assembly. The girls grieved over such a number of ladies; but were comforted the day before the ball by hearing that, instead of twelve, he had brought only six with him from London, his five sisters and a cousin. And when the party entered the assembly-room, it consisted of only five altogether: Mr. Bingley, his two sisters, the husband of the eldest, and another young man.","l. 271–278 · Past · unremarkable","Present 0 · Past 9 · ASL 33.0 · Quoted words 0.0% · function words 49.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 20.2 · 99 words"],"p-70":["Mr. Bingley was good-looking and gentlemanlike: he had a pleasant countenance, and easy, unaffected manners. His sisters were fine women, with an air of decided fashion. His brother-in-law, Mr. Hurst, merely looked the gentleman; but his friend Mr. Darcy soon drew the attention of the room by his fine, tall person, handsome features, noble mien, and the report, which was in general circulation within five minutes after his entrance, of his having ten thousand a year. The gentlemen pronounced him to be a fine figure of a man, the ladies declared he was much handsomer than Mr. Bingley, and he was looked at with great admiration for about half the evening, till his manners gave a disgust which turned the tide of his popularity; for he was discovered to be proud, to be above his company, and above being pleased; and not all his large estate in Derbyshire could save him from having a most forbidding, disagreeable countenance, and being unworthy to be compared with his friend.","l. 280–294 · Past · unremarkable","Present 0 · Past 18 · ASL 41.8 · Quoted words 0.0% · function words 46.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 6.0 · Noun endings 41.9 · Passive patterns 29.9 · 167 words"],"p-71":["Mr. Bingley had soon made himself acquainted with all the principal people in the room: he was lively and unreserved, danced every dance, was angry that the ball closed so early, and talked of giving one himself at Netherfield. Such amiable qualities must speak for themselves. What a contrast between him and his friend! Mr. Darcy danced only once with Mrs. Hurst and once with Miss Bingley, declined being introduced to any other lady, and spent the rest of the evening in walking about the room, speaking occasionally to one of his own party. His character was decided. He was the proudest, most disagreeable man in the world, and everybody hoped that he would never come there again. Amongst the most violent against him was Mrs. Bennet, whose dislike of his general behaviour was sharpened into particular resentment by his having slighted one of her daughters.","l. 296–308 · Past · unremarkable","Present 3 · Past 22 · ASL 20.9 · Quoted words 0.0% · function words 41.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 6.8 · Noun endings 20.5 · Passive patterns 20.5 · 146 words"],"p-72":["Elizabeth Bennet had been obliged, by the scarcity of gentlemen, to sit down for two dances; and during part of that time, Mr. Darcy had been standing near enough for her to overhear a conversation between him and Mr. Bingley, who came from the dance for a few minutes to press his friend to join it.","l. 310–314 · Past · unremarkable","Present 1 · Past 4 · ASL 56.0 · Quoted words 0.0% · function words 53.6% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 89.3 · Passive patterns 35.7 · 56 words"],"p-73":["“Come, Darcy,” said he, “I must have you dance. I hate to see you standing about by yourself in this stupid manner. You had much better dance.”","l. 316–318 · Present · noticeable","Present 4 · Past 2 · ASL 9.0 · Quoted words 92.6% · function words 51.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 74.1 · Passive patterns 0.0 · 27 words"],"p-74":["“I certainly shall not. You know how I detest it, unless I am particularly acquainted with my partner. At such an assembly as this, it would be insupportable. Your sisters are engaged, and there is not another woman in the room whom it would not be a punishment to me to stand up with.”","l. 320–324 · Mixed · noticeable","Present 6 · Past 4 · ASL 13.5 · Quoted words 100.0% · function words 57.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 18.5 · Noun endings 18.5 · Passive patterns 37.0 · 54 words"],"p-75":["“I would not be so fastidious as you are,” cried Bingley, “for a kingdom! Upon my honour, I never met with so many pleasant girls in my life as I have this evening; and there are several of them, you see, uncommonly pretty.”","l. 326–329 · Mixed · noticeable","Present 4 · Past 3 · ASL 21.5 · Quoted words 95.3% · function words 51.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words"],"p-76":["“You are dancing with the only handsome girl in the room,” said Mr. Darcy, looking at the eldest Miss Bennet.","l. 331–332 · Mixed · unremarkable","Present 1 · Past 1 · ASL 20.0 · Quoted words 55.0% · function words 45.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 20 words"],"p-77":["“Oh, she is the most beautiful creature I ever beheld! But there is one of her sisters sitting down just behind you, who is very pretty, and I dare say very agreeable. Do let me ask my partner to introduce you.”","l. 334–336 · Present · unremarkable","Present 6 · Past 0 · ASL 13.7 · Quoted words 100.0% · function words 51.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 24.4 · Noun endings 0.0 · Passive patterns 0.0 · 41 words"],"p-78":["]","l. 338 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-79":["“Which do you mean?” and turning round, he looked for a moment at Elizabeth, till, catching her eye, he withdrew his own, and coldly said, “She is tolerable: but not handsome enough to tempt me; and I am in no humour at present to give consequence to young ladies who are slighted by other men. You had better return to your partner and enjoy her smiles, for you are wasting your time with me.”","l. 340–345 · Present · noticeable","Present 7 · Past 4 · ASL 24.7 · Quoted words 71.6% · function words 52.7% · Perception filters 0.0 · Sensory cues 13.5 · Modals 0.0 · Noun endings 40.5 · Passive patterns 13.5 · 74 words"],"p-80":["Mr. Bingley followed his advice. Mr. Darcy walked off; and Elizabeth remained with no very cordial feelings towards him. She told the story, however, with great spirit among her friends; for she had a lively, playful disposition, which delighted in anything ridiculous.","l. 347–350 · Past · watch","Present 0 · Past 6 · ASL 14.0 · Quoted words 0.0% · function words 35.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 47.6 · Passive patterns 0.0 · 42 words"],"p-81":["The evening altogether passed off pleasantly to the whole family. Mrs. Bennet had seen her eldest daughter much admired by the Netherfield party. Mr. Bingley had danced with her twice, and she had been distinguished by his sisters. Jane was as much gratified by this as her mother could be, though in a quieter way. Elizabeth felt Jane’s pleasure. Mary had heard herself mentioned to Miss Bingley as the most accomplished girl in the neighbourhood; and Catherine and Lydia had been fortunate enough to be never without partners, which was all that they had yet learnt to care for at a ball. They returned, therefore, in good spirits to Longbourn, the village where they lived, and of which they were the principal inhabitants. They found Mr. Bennet still up. With a book, he was regardless of time; and on the present occasion he had a good deal of curiosity as to the event of an evening which had raised such splendid expectations. He had rather hoped that all his wife’s views on the stranger would be disappointed; but he soon found that he had a very different story to hear.","l. 352–367 · Past · unremarkable","Present 1 · Past 32 · ASL 19.0 · Quoted words 0.0% · function words 49.5% · Perception filters 5.3 · Sensory cues 0.0 · Modals 5.3 · Noun endings 26.3 · Passive patterns 15.8 · 190 words"],"p-82":["“Oh, my dear Mr. Bennet,” as she entered the room, “we have had a most delightful evening, a most excellent ball. I wish you had been there. Jane was so admired, nothing could be like it. Everybody said how well she looked; and Mr. Bingley thought her quite beautiful, and danced with her twice. Only think of that, my dear: he actually danced with her twice; and she was the only creature in the room that he asked a second time. First of all, he asked Miss Lucas. I was so vexed to see him stand up with her; but, however, he did not admire her at all; indeed, nobody can, you know; and he seemed quite struck with Jane as she was going down the dance. So he inquired who she was, and got introduced, and asked her for the two next. Then, the two third he danced with Miss King, and the two fourth with Maria Lucas, and the two fifth with Jane again, and the two sixth with Lizzy, and the Boulanger----”","l. 369–381 · Past · unremarkable","Present 6 · Past 26 · ASL 19.4 · Quoted words 97.1% · function words 52.6% · Perception filters 11.4 · Sensory cues 0.0 · Modals 11.4 · Noun endings 22.9 · Passive patterns 5.7 · 175 words"],"p-83":["“If he had had any compassion for me,” cried her husband impatiently, “he would not have danced half so much! For God’s sake, say no more of his partners. O that he had sprained his ancle in the first dance!”","l. 383–385 · Past · unremarkable","Present 2 · Past 7 · ASL 13.3 · Quoted words 90.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 50.0 · Passive patterns 0.0 · 40 words"],"p-84":["“Oh, my dear,” continued Mrs. Bennet, “I am quite delighted with him. He is so excessively handsome! and his sisters are charming women. I never in my life saw anything more elegant than their dresses. I dare say the lace upon Mrs. Hurst’s gown----”","l. 387–390 · Mixed · noticeable","Present 4 · Past 3 · ASL 8.8 · Quoted words 93.2% · function words 43.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 22.7 · Noun endings 0.0 · Passive patterns 0.0 · 44 words"],"p-85":["Here she was interrupted again. Mr. Bennet protested against any description of finery. She was therefore obliged to seek another branch of the subject, and related, with much bitterness of spirit, and some exaggeration, the shocking rudeness of Mr. Darcy.","l. 392–395 · Past · unremarkable","Present 0 · Past 5 · ASL 13.3 · Quoted words 0.0% · function words 37.5% · Perception filters 0.0 · Sensory cues 25.0 · Modals 0.0 · Noun endings 100.0 · Passive patterns 25.0 · 40 words"],"p-86":["“But I can assure you,” she added, “that Lizzy does not lose much by not suiting his fancy; for he is a most disagreeable, horrid man, not at all worth pleasing. So high and so conceited, that there was no enduring him! He walked here, and he walked there, fancying himself so very great! Not handsome enough to dance with! I wish you had been there, my dear, to have given him one of your set-downs. I quite detest the man.”","l. 397–402 · Past · noticeable","Present 4 · Past 6 · ASL 13.5 · Quoted words 97.5% · function words 48.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 12.3 · Noun endings 24.7 · Passive patterns 12.3 · 81 words"]}</script>
+<script type="application/json" id="paragraph-content">{"p-0":["It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.","l. 11–12 · Present · unremarkable","Present 3 · Past 1 · ASL 23.0 · Quoted words 0.0% · function words 56.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 43.5 · Noun endings 87.0 · Passive patterns 0.0 · 23 words"],"p-1":["However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.","l. 14–17 · Mixed · watch","Present 3 · Past 2 · ASL 48.0 · Quoted words 0.0% · function words 52.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 20.8 · Noun endings 41.7 · Passive patterns 20.8 · 48 words"],"p-2":["“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”","l. 19–20 · Mixed · watch","Present 2 · Past 2 · ASL 21.0 · Quoted words 66.7% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 21 words"],"p-3":["Mr. Bennet replied that he had not.","l. 22 · Past · unremarkable","Present 0 · Past 2 · ASL 7.0 · Quoted words 0.0% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-4":["“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”","l. 24–25 · Mixed · watch","Present 2 · Past 2 · ASL 19.0 · Quoted words 89.5% · function words 68.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 52.6 · 19 words"],"p-5":["Mr. Bennet made no answer.","l. 27 · Neutral · unremarkable","Present 0 · Past 1 · ASL 5.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 5 words"],"p-6":["“Do not you want to know who has taken it?” cried his wife, impatiently.","l. 29 · Present · unremarkable","Present 4 · Past 1 · ASL 7.0 · Quoted words 71.4% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 14 words"],"p-7":["“You want to tell me, and I have no objection to hearing it.”","l. 31 · Present · unremarkable","Present 3 · Past 0 · ASL 13.0 · Quoted words 100.0% · function words 61.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 76.9 · Passive patterns 0.0 · 13 words"],"p-8":["]","l. 33 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-9":["This was invitation enough.","l. 35 · Neutral · unremarkable","Present 0 · Past 1 · ASL 4.0 · Quoted words 0.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 250.0 · Passive patterns 0.0 · 4 words"],"p-10":["“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”","l. 37–42 · Present · noticeable","Present 8 · Past 4 · ASL 79.0 · Quoted words 100.0% · function words 55.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 12.7 · Noun endings 25.3 · Passive patterns 12.7 · 79 words"],"p-11":["“What is his name?”","l. 44 · Neutral · unremarkable","Present 1 · Past 0 · ASL 4.0 · Quoted words 100.0% · function words 75.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 4 words"],"p-12":["“Bingley.”","l. 46 · Neutral · unremarkable","Present 0 · Past 0 · ASL 1.0 · Quoted words 100.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 1 words"],"p-13":["“Is he married or single?”","l. 48 · Mixed · unremarkable","Present 1 · Past 1 · ASL 5.0 · Quoted words 100.0% · function words 60.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 5 words"],"p-14":["“Oh, single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!”","l. 50–51 · Neutral · unremarkable","Present 0 · Past 0 · ASL 8.7 · Quoted words 100.0% · function words 42.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-15":["“How so? how can it affect them?”","l. 53 · Neutral · unremarkable","Present 1 · Past 0 · ASL 3.5 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 142.9 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-16":["“My dear Mr. Bennet,” replied his wife, “how can you be so tiresome? You must know that I am thinking of his marrying one of them.”","l. 55–56 · Present · unremarkable","Present 4 · Past 1 · ASL 13.0 · Quoted words 88.5% · function words 57.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 76.9 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-17":["“Is that his design in settling here?”","l. 58 · Neutral · unremarkable","Present 1 · Past 0 · ASL 7.0 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 7 words"],"p-18":["“Design? Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.”","l. 60–62 · Present · unremarkable","Present 7 · Past 0 · ASL 11.0 · Quoted words 100.0% · function words 54.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 90.9 · Noun endings 0.0 · Passive patterns 0.0 · 33 words"],"p-19":["“I see no occasion for that. You and the girls may go--or you may send them by themselves, which perhaps will be still better; for as you are as handsome as any of them, Mr. Bingley might like you the best of the party.”","l. 64–67 · Present · unremarkable","Present 7 · Past 1 · ASL 22.5 · Quoted words 100.0% · function words 57.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 66.7 · Noun endings 22.2 · Passive patterns 0.0 · 45 words"],"p-20":["“My dear, you flatter me. I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now. When a woman has five grown-up daughters, she ought to give over thinking of her own beauty.”","l. 69–71 · Present · unremarkable","Present 4 · Past 1 · ASL 13.3 · Quoted words 100.0% · function words 55.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 25.0 · Noun endings 0.0 · Passive patterns 0.0 · 40 words"],"p-21":["“In such cases, a woman has not often much beauty to think of.”","l. 73 · Present · unremarkable","Present 2 · Past 0 · ASL 13.0 · Quoted words 100.0% · function words 38.5% · Perception filters 76.9 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 13 words"],"p-22":["“But, my dear, you must indeed go and see Mr. Bingley when he comes into the neighbourhood.”","l. 75–76 · Present · unremarkable","Present 4 · Past 1 · ASL 17.0 · Quoted words 100.0% · function words 52.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 58.8 · Noun endings 58.8 · Passive patterns 0.0 · 17 words"],"p-23":["“It is more than I engage for, I assure you.”","l. 78 · Neutral · unremarkable","Present 1 · Past 0 · ASL 10.0 · Quoted words 100.0% · function words 60.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 10 words"],"p-24":["“But consider your daughters. Only think what an establishment it would be for one of them. Sir William and Lady Lucas are determined to go, merely on that account; for in general, you know, they visit no new comers. Indeed you must go, for it will be impossible for us to visit him, if you do not.”","l. 80–84 · Present · noticeable","Present 8 · Past 3 · ASL 14.2 · Quoted words 100.0% · function words 57.9% · Perception filters 17.5 · Sensory cues 0.0 · Modals 17.5 · Noun endings 17.5 · Passive patterns 17.5 · 57 words"],"p-25":["“You are over scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls--though I must throw in a good word for my little Lizzy.”","l. 86–89 · Present · unremarkable","Present 7 · Past 0 · ASL 27.0 · Quoted words 100.0% · function words 57.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 0.0 · Passive patterns 0.0 · 54 words"],"p-26":["“I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.”","l. 91–93 · Present · unremarkable","Present 6 · Past 1 · ASL 14.3 · Quoted words 100.0% · function words 46.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words"],"p-27":["“They have none of them much to recommend them,” replied he: “they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.”","l. 95–97 · Present · unremarkable","Present 3 · Past 1 · ASL 30.0 · Quoted words 93.3% · function words 46.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 33.3 · Passive patterns 0.0 · 30 words"],"p-28":["“Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion on my poor nerves.”","l. 99–100 · Present · unremarkable","Present 3 · Past 0 · ASL 9.0 · Quoted words 100.0% · function words 44.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 37.0 · Passive patterns 0.0 · 27 words"],"p-29":["“You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these twenty years at least.”","l. 102–104 · Present · unremarkable","Present 3 · Past 1 · ASL 7.8 · Quoted words 100.0% · function words 58.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 64.5 · Passive patterns 0.0 · 31 words"],"p-30":["“Ah, you do not know what I suffer.”","l. 106 · Present · unremarkable","Present 2 · Past 0 · ASL 8.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 8 words"],"p-31":["“But I hope you will get over it, and live to see many young men of four thousand a year come into the neighbourhood.”","l. 108–109 · Present · unremarkable","Present 4 · Past 0 · ASL 24.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 41.7 · Passive patterns 0.0 · 24 words"],"p-32":["“It will be no use to us, if twenty such should come, since you will not visit them.”","l. 111–112 · Present · unremarkable","Present 3 · Past 1 · ASL 18.0 · Quoted words 100.0% · function words 61.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 55.6 · Noun endings 0.0 · Passive patterns 0.0 · 18 words"],"p-33":["“Depend upon it, my dear, that when there are twenty, I will visit them all.”","l. 114–115 · Present · unremarkable","Present 2 · Past 0 · ASL 15.0 · Quoted words 100.0% · function words 53.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 15 words"],"p-34":["Mr. Bennet was so odd a mixture of quick parts, sarcastic humour, reserve, and caprice, that the experience of three-and-twenty years had been insufficient to make his wife understand his character. Her mind was less difficult to develope. She was a woman of mean understanding, little information, and uncertain temper. When she was discontented, she fancied herself nervous. The business of her life was to get her daughters married: its solace was visiting and news.","l. 117–123 · Past · noticeable","Present 2 · Past 10 · ASL 15.0 · Quoted words 0.0% · function words 45.3% · Perception filters 0.0 · Sensory cues 13.3 · Modals 0.0 · Noun endings 40.0 · Passive patterns 26.7 · 75 words"],"p-35":["]","l. 125 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-36":["]","l. 127 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-37":["Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it. It was then disclosed in the following manner. Observing his second daughter employed in trimming a hat, he suddenly addressed her with,--","l. 130–135 · Past · unremarkable","Present 1 · Past 12 · ASL 17.5 · Quoted words 0.0% · function words 51.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 14.3 · Noun endings 0.0 · Passive patterns 0.0 · 70 words"],"p-38":["“I hope Mr. Bingley will like it, Lizzy.”","l. 137 · Neutral · unremarkable","Present 1 · Past 0 · ASL 8.0 · Quoted words 100.0% · function words 37.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 8 words"],"p-39":["“We are not in a way to know what Mr. Bingley likes,” said her mother, resentfully, “since we are not to visit.”","l. 139–140 · Present · unremarkable","Present 3 · Past 1 · ASL 22.0 · Quoted words 81.8% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 22 words"],"p-40":["“But you forget, mamma,” said Elizabeth, “that we shall meet him at the assemblies, and that Mrs. Long has promised to introduce him.”","l. 142–143 · Present · watch","Present 4 · Past 2 · ASL 23.0 · Quoted words 91.3% · function words 56.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 43.5 · Noun endings 43.5 · Passive patterns 0.0 · 23 words"],"p-41":["“I do not believe Mrs. Long will do any such thing. She has two nieces of her own. She is a selfish, hypocritical woman, and I have no opinion of her.”","l. 145–147 · Present · unremarkable","Present 6 · Past 0 · ASL 10.3 · Quoted words 100.0% · function words 51.6% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 31 words"],"p-42":["“No more have I,” said Mr. Bennet; “and I am glad to find that you do not depend on her serving you.”","l. 149–150 · Present · unremarkable","Present 4 · Past 1 · ASL 22.0 · Quoted words 86.4% · function words 54.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 22 words"],"p-43":["Mrs. Bennet deigned not to make any reply; but, unable to contain herself, began scolding one of her daughters.","l. 152–153 · Past · watch","Present 1 · Past 2 · ASL 19.0 · Quoted words 0.0% · function words 26.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 19 words"],"p-44":["“Don’t keep coughing so, Kitty, for heaven’s sake! Have a little compassion on my nerves. You tear them to pieces.”","l. 155–156 · Present · watch","Present 2 · Past 0 · ASL 6.7 · Quoted words 100.0% · function words 45.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 50.0 · Passive patterns 0.0 · 20 words"],"p-45":["“Kitty has no discretion in her coughs,” said her father; “she times them ill.”","l. 158–159 · Mixed · unremarkable","Present 1 · Past 1 · ASL 14.0 · Quoted words 78.6% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 71.4 · Passive patterns 0.0 · 14 words"],"p-46":["“I do not cough for my own amusement,” replied Kitty, fretfully. “When is your next ball to be, Lizzy?”","l. 161–162 · Present · unremarkable","Present 2 · Past 1 · ASL 9.5 · Quoted words 84.2% · function words 47.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 52.6 · Passive patterns 0.0 · 19 words"],"p-47":["“To-morrow fortnight.”","l. 164 · Neutral · unremarkable","Present 0 · Past 0 · ASL 2.0 · Quoted words 100.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 2 words"],"p-48":["“Ay, so it is,” cried her mother, “and Mrs. Long does not come back till the day before; so, it will be impossible for her to introduce him, for she will not know him herself.”","l. 166–168 · Present · unremarkable","Present 6 · Past 1 · ASL 35.0 · Quoted words 91.4% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 35 words"],"p-49":["“Then, my dear, you may have the advantage of your friend, and introduce Mr. Bingley to her.”","l. 170–171 · Present · unremarkable","Present 2 · Past 0 · ASL 17.0 · Quoted words 100.0% · function words 58.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 58.8 · Noun endings 0.0 · Passive patterns 0.0 · 17 words"],"p-50":["“Impossible, Mr. Bennet, impossible, when I am not acquainted with him myself; how can you be so teasing?”","l. 173–174 · Present · unremarkable","Present 2 · Past 1 · ASL 18.0 · Quoted words 100.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 55.6 · Noun endings 0.0 · Passive patterns 0.0 · 18 words"],"p-51":["“I honour your circumspection. A fortnight’s acquaintance is certainly very little. One cannot know what a man really is by the end of a fortnight. But if we do not venture, somebody else will; and after all, Mrs. Long and her nieces must stand their chance; and, therefore, as she will think it an act of kindness, if you decline the office, I will take it on myself.”","l. 176–181 · Present · unremarkable","Present 11 · Past 0 · ASL 17.0 · Quoted words 100.0% · function words 52.9% · Perception filters 14.7 · Sensory cues 0.0 · Modals 14.7 · Noun endings 58.8 · Passive patterns 0.0 · 68 words"],"p-52":["The girls stared at their father. Mrs. Bennet said only, “Nonsense, nonsense!”","l. 183–184 · Past · watch","Present 0 · Past 2 · ASL 6.0 · Quoted words 16.7% · function words 33.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 12 words"],"p-53":["“What can be the meaning of that emphatic exclamation?” cried he. “Do you consider the forms of introduction, and the stress that is laid on them, as nonsense? I cannot quite agree with you there. What say you, Mary? For you are a young lady of deep reflection, I know, and read great books, and make extracts.”","l. 186–190 · Present · noticeable","Present 7 · Past 2 · ASL 9.5 · Quoted words 96.5% · function words 54.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 17.5 · Noun endings 52.6 · Passive patterns 0.0 · 57 words"],"p-54":["Mary wished to say something very sensible, but knew not how.","l. 192 · Past · watch","Present 1 · Past 2 · ASL 11.0 · Quoted words 0.0% · function words 18.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 11 words"],"p-55":["“While Mary is adjusting her ideas,” he continued, “let us return to Mr. Bingley.”","l. 194–195 · Mixed · unremarkable","Present 1 · Past 1 · ASL 14.0 · Quoted words 85.7% · function words 42.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 14 words"],"p-56":["“I am sick of Mr. Bingley,” cried his wife.","l. 197 · Mixed · unremarkable","Present 1 · Past 1 · ASL 9.0 · Quoted words 66.7% · function words 44.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 9 words"],"p-57":["“I am sorry to hear that; but why did you not tell me so before? If I had known as much this morning, I certainly would not have called on him. It is very unlucky; but as I have actually paid the visit, we cannot escape the acquaintance now.”","l. 199–202 · Mixed · noticeable","Present 6 · Past 5 · ASL 16.3 · Quoted words 100.0% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 20.4 · Passive patterns 0.0 · 49 words"],"p-58":["The astonishment of the ladies was just what he wished--that of Mrs. Bennet perhaps surpassing the rest; though when the first tumult of joy was over, she began to declare that it was what she had expected all the while.","l. 204–207 · Past · unremarkable","Present 0 · Past 7 · ASL 41.0 · Quoted words 0.0% · function words 63.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 24.4 · Passive patterns 0.0 · 41 words"],"p-59":["“How good it was in you, my dear Mr. Bennet! But I knew I should persuade you at last. I was sure you loved your girls too well to neglect such an acquaintance. Well, how pleased I am! And it is such a good joke, too, that you should have gone this morning, and never said a word about it till now.”","l. 209–213 · Past · noticeable","Present 3 · Past 7 · ASL 12.4 · Quoted words 100.0% · function words 54.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 32.3 · Noun endings 16.1 · Passive patterns 0.0 · 62 words"],"p-60":["“Now, Kitty, you may cough as much as you choose,” said Mr. Bennet; and, as he spoke, he left the room, fatigued with the raptures of his wife.","l. 215–216 · Past · unremarkable","Present 1 · Past 4 · ASL 28.0 · Quoted words 35.7% · function words 39.3% · Perception filters 0.0 · Sensory cues 0.0 · Modals 35.7 · Noun endings 0.0 · Passive patterns 0.0 · 28 words"],"p-61":["“What an excellent father you have, girls,” said she, when the door was shut. “I do not know how you will ever make him amends for his kindness; or me either, for that matter. At our time of life, it is not so pleasant, I can tell you, to be making new acquaintances every day; but for your sakes we would do anything. Lydia, my love, though you are the youngest, I dare say Mr. Bingley will dance with you at the next ball.”","l. 218–224 · Present · noticeable","Present 13 · Past 4 · ASL 21.0 · Quoted words 91.7% · function words 57.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 23.8 · Noun endings 35.7 · Passive patterns 0.0 · 84 words"],"p-62":["“Oh,” said Lydia, stoutly, “I am not afraid; for though I am the youngest, I’m the tallest.”","l. 226–227 · Present · unremarkable","Present 2 · Past 1 · ASL 17.0 · Quoted words 82.4% · function words 47.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 17 words"],"p-63":["The rest of the evening was spent in conjecturing how soon he would return Mr. Bennet’s visit, and determining when they should ask him to dinner.","l. 229–231 · Past · watch","Present 1 · Past 4 · ASL 26.0 · Quoted words 0.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 38.5 · Noun endings 0.0 · Passive patterns 0.0 · 26 words"],"p-64":["Not all that Mrs. Bennet, however, with the assistance of her five daughters, could ask on the subject, was sufficient to draw from her husband any satisfactory description of Mr. Bingley. They attacked him in various ways, with barefaced questions, ingenious suppositions, and distant surmises; but he eluded the skill of them all; and they were at last obliged to accept the second-hand intelligence of their neighbour, Lady Lucas. Her report was highly favourable. Sir William had been delighted with him. He was quite young, wonderfully handsome, extremely agreeable, and, to crown the whole, he meant to be at the next assembly with a large party. Nothing could be more delightful! To be fond of dancing was a certain step towards falling in love; and very lively hopes of Mr. Bingley’s heart were entertained.","l. 234–245 · Past · unremarkable","Present 2 · Past 15 · ASL 19.1 · Quoted words 0.0% · function words 45.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 14.9 · Noun endings 37.3 · Passive patterns 14.9 · 134 words"],"p-65":["“If I can but see one of my daughters happily settled at Netherfield,” said Mrs. Bennet to her husband, “and all the others equally well married, I shall have nothing to wish for.”","l. 247–249 · Mixed · noticeable","Present 4 · Past 3 · ASL 33.0 · Quoted words 81.8% · function words 51.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 60.6 · Noun endings 0.0 · Passive patterns 0.0 · 33 words"],"p-66":["In a few days Mr. Bingley returned Mr. Bennet’s visit, and sat about ten minutes with him in his library. He had entertained hopes of being admitted to a sight of the young ladies, of whose beauty he had heard much; but he saw only the father. The ladies were somewhat more fortunate, for they had the advantage of ascertaining, from an upper window, that he wore a blue coat and rode a black horse.","l. 251–256 · Past · unremarkable","Present 0 · Past 12 · ASL 25.0 · Quoted words 0.0% · function words 48.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 13.3 · 75 words"],"p-67":["An invitation to dinner was soon afterwards despatched; and already had Mrs. Bennet planned the courses that were to do credit to her housekeeping, when an answer arrived which deferred it all. Mr. Bingley was obliged to be in town the following day, and consequently unable to accept the honour of their invitation, etc. Mrs. Bennet was quite disconcerted. She could not imagine what business he could have in town so soon after his arrival in Hertfordshire; and she began to fear that he might always be flying about from one place to another, and never settled at Netherfield as he ought to be. Lady Lucas quieted her fears a little by starting the idea of his","l. 258–267 · Past · unremarkable","Present 2 · Past 17 · ASL 29.2 · Quoted words 0.0% · function words 52.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 34.2 · Noun endings 25.6 · Passive patterns 8.5 · 117 words"],"p-68":["]","l. 269 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-69":["being gone to London only to get a large party for the ball; and a report soon followed that Mr. Bingley was to bring twelve ladies and seven gentlemen with him to the assembly. The girls grieved over such a number of ladies; but were comforted the day before the ball by hearing that, instead of twelve, he had brought only six with him from London, his five sisters and a cousin. And when the party entered the assembly-room, it consisted of only five altogether: Mr. Bingley, his two sisters, the husband of the eldest, and another young man.","l. 271–278 · Past · unremarkable","Present 0 · Past 9 · ASL 33.0 · Quoted words 0.0% · function words 49.5% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 20.2 · 99 words"],"p-70":["Mr. Bingley was good-looking and gentlemanlike: he had a pleasant countenance, and easy, unaffected manners. His sisters were fine women, with an air of decided fashion. His brother-in-law, Mr. Hurst, merely looked the gentleman; but his friend Mr. Darcy soon drew the attention of the room by his fine, tall person, handsome features, noble mien, and the report, which was in general circulation within five minutes after his entrance, of his having ten thousand a year. The gentlemen pronounced him to be a fine figure of a man, the ladies declared he was much handsomer than Mr. Bingley, and he was looked at with great admiration for about half the evening, till his manners gave a disgust which turned the tide of his popularity; for he was discovered to be proud, to be above his company, and above being pleased; and not all his large estate in Derbyshire could save him from having a most forbidding, disagreeable countenance, and being unworthy to be compared with his friend.","l. 280–294 · Past · unremarkable","Present 0 · Past 18 · ASL 41.8 · Quoted words 0.0% · function words 46.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 6.0 · Noun endings 41.9 · Passive patterns 29.9 · 167 words"],"p-71":["Mr. Bingley had soon made himself acquainted with all the principal people in the room: he was lively and unreserved, danced every dance, was angry that the ball closed so early, and talked of giving one himself at Netherfield. Such amiable qualities must speak for themselves. What a contrast between him and his friend! Mr. Darcy danced only once with Mrs. Hurst and once with Miss Bingley, declined being introduced to any other lady, and spent the rest of the evening in walking about the room, speaking occasionally to one of his own party. His character was decided. He was the proudest, most disagreeable man in the world, and everybody hoped that he would never come there again. Amongst the most violent against him was Mrs. Bennet, whose dislike of his general behaviour was sharpened into particular resentment by his having slighted one of her daughters.","l. 296–308 · Past · unremarkable","Present 3 · Past 22 · ASL 20.9 · Quoted words 0.0% · function words 41.8% · Perception filters 0.0 · Sensory cues 0.0 · Modals 6.8 · Noun endings 20.5 · Passive patterns 20.5 · 146 words"],"p-72":["Elizabeth Bennet had been obliged, by the scarcity of gentlemen, to sit down for two dances; and during part of that time, Mr. Darcy had been standing near enough for her to overhear a conversation between him and Mr. Bingley, who came from the dance for a few minutes to press his friend to join it.","l. 310–314 · Past · unremarkable","Present 1 · Past 4 · ASL 56.0 · Quoted words 0.0% · function words 53.6% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 89.3 · Passive patterns 35.7 · 56 words"],"p-73":["“Come, Darcy,” said he, “I must have you dance. I hate to see you standing about by yourself in this stupid manner. You had much better dance.”","l. 316–318 · Present · noticeable","Present 4 · Past 2 · ASL 9.0 · Quoted words 92.6% · function words 51.9% · Perception filters 0.0 · Sensory cues 0.0 · Modals 37.0 · Noun endings 74.1 · Passive patterns 0.0 · 27 words"],"p-74":["“I certainly shall not. You know how I detest it, unless I am particularly acquainted with my partner. At such an assembly as this, it would be insupportable. Your sisters are engaged, and there is not another woman in the room whom it would not be a punishment to me to stand up with.”","l. 320–324 · Mixed · noticeable","Present 6 · Past 4 · ASL 13.5 · Quoted words 100.0% · function words 57.4% · Perception filters 0.0 · Sensory cues 0.0 · Modals 18.5 · Noun endings 18.5 · Passive patterns 37.0 · 54 words"],"p-75":["“I would not be so fastidious as you are,” cried Bingley, “for a kingdom! Upon my honour, I never met with so many pleasant girls in my life as I have this evening; and there are several of them, you see, uncommonly pretty.”","l. 326–329 · Mixed · noticeable","Present 4 · Past 3 · ASL 21.5 · Quoted words 95.3% · function words 51.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 23.3 · Passive patterns 0.0 · 43 words"],"p-76":["“You are dancing with the only handsome girl in the room,” said Mr. Darcy, looking at the eldest Miss Bennet.","l. 331–332 · Mixed · unremarkable","Present 1 · Past 1 · ASL 20.0 · Quoted words 55.0% · function words 45.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 20 words"],"p-77":["“Oh, she is the most beautiful creature I ever beheld! But there is one of her sisters sitting down just behind you, who is very pretty, and I dare say very agreeable. Do let me ask my partner to introduce you.”","l. 334–336 · Present · unremarkable","Present 6 · Past 0 · ASL 13.7 · Quoted words 100.0% · function words 51.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 24.4 · Noun endings 0.0 · Passive patterns 0.0 · 41 words"],"p-78":["]","l. 338 · Neutral · unremarkable","Present 0 · Past 0 · ASL 0.0 · Quoted words 0.0% · function words 0.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 0.0 · Passive patterns 0.0 · 0 words"],"p-79":["“Which do you mean?” and turning round, he looked for a moment at Elizabeth, till, catching her eye, he withdrew his own, and coldly said, “She is tolerable: but not handsome enough to tempt me; and I am in no humour at present to give consequence to young ladies who are slighted by other men. You had better return to your partner and enjoy her smiles, for you are wasting your time with me.”","l. 340–345 · Present · noticeable","Present 7 · Past 4 · ASL 24.7 · Quoted words 71.6% · function words 52.7% · Perception filters 0.0 · Sensory cues 13.5 · Modals 0.0 · Noun endings 40.5 · Passive patterns 13.5 · 74 words"],"p-80":["Mr. Bingley followed his advice. Mr. Darcy walked off; and Elizabeth remained with no very cordial feelings towards him. She told the story, however, with great spirit among her friends; for she had a lively, playful disposition, which delighted in anything ridiculous.","l. 347–350 · Past · watch","Present 0 · Past 6 · ASL 14.0 · Quoted words 0.0% · function words 35.7% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 47.6 · Passive patterns 0.0 · 42 words"],"p-81":["The evening altogether passed off pleasantly to the whole family. Mrs. Bennet had seen her eldest daughter much admired by the Netherfield party. Mr. Bingley had danced with her twice, and she had been distinguished by his sisters. Jane was as much gratified by this as her mother could be, though in a quieter way. Elizabeth felt Jane’s pleasure. Mary had heard herself mentioned to Miss Bingley as the most accomplished girl in the neighbourhood; and Catherine and Lydia had been fortunate enough to be never without partners, which was all that they had yet learnt to care for at a ball. They returned, therefore, in good spirits to Longbourn, the village where they lived, and of which they were the principal inhabitants. They found Mr. Bennet still up. With a book, he was regardless of time; and on the present occasion he had a good deal of curiosity as to the event of an evening which had raised such splendid expectations. He had rather hoped that all his wife’s views on the stranger would be disappointed; but he soon found that he had a very different story to hear.","l. 352–367 · Past · unremarkable","Present 1 · Past 32 · ASL 19.0 · Quoted words 0.0% · function words 49.5% · Perception filters 5.3 · Sensory cues 0.0 · Modals 5.3 · Noun endings 26.3 · Passive patterns 15.8 · 190 words"],"p-82":["“Oh, my dear Mr. Bennet,” as she entered the room, “we have had a most delightful evening, a most excellent ball. I wish you had been there. Jane was so admired, nothing could be like it. Everybody said how well she looked; and Mr. Bingley thought her quite beautiful, and danced with her twice. Only think of that, my dear: he actually danced with her twice; and she was the only creature in the room that he asked a second time. First of all, he asked Miss Lucas. I was so vexed to see him stand up with her; but, however, he did not admire her at all; indeed, nobody can, you know; and he seemed quite struck with Jane as she was going down the dance. So he inquired who she was, and got introduced, and asked her for the two next. Then, the two third he danced with Miss King, and the two fourth with Maria Lucas, and the two fifth with Jane again, and the two sixth with Lizzy, and the Boulanger----”","l. 369–381 · Past · unremarkable","Present 6 · Past 26 · ASL 19.4 · Quoted words 97.1% · function words 52.6% · Perception filters 11.4 · Sensory cues 0.0 · Modals 11.4 · Noun endings 22.9 · Passive patterns 5.7 · 175 words"],"p-83":["“If he had had any compassion for me,” cried her husband impatiently, “he would not have danced half so much! For God’s sake, say no more of his partners. O that he had sprained his ancle in the first dance!”","l. 383–385 · Past · unremarkable","Present 2 · Past 7 · ASL 13.3 · Quoted words 90.0% · function words 50.0% · Perception filters 0.0 · Sensory cues 0.0 · Modals 0.0 · Noun endings 50.0 · Passive patterns 0.0 · 40 words"],"p-84":["“Oh, my dear,” continued Mrs. Bennet, “I am quite delighted with him. He is so excessively handsome! and his sisters are charming women. I never in my life saw anything more elegant than their dresses. I dare say the lace upon Mrs. Hurst’s gown----”","l. 387–390 · Mixed · noticeable","Present 4 · Past 3 · ASL 8.8 · Quoted words 93.2% · function words 43.2% · Perception filters 0.0 · Sensory cues 0.0 · Modals 22.7 · Noun endings 0.0 · Passive patterns 0.0 · 44 words"],"p-85":["Here she was interrupted again. Mr. Bennet protested against any description of finery. She was therefore obliged to seek another branch of the subject, and related, with much bitterness of spirit, and some exaggeration, the shocking rudeness of Mr. Darcy.","l. 392–395 · Past · unremarkable","Present 0 · Past 5 · ASL 13.3 · Quoted words 0.0% · function words 37.5% · Perception filters 0.0 · Sensory cues 25.0 · Modals 0.0 · Noun endings 100.0 · Passive patterns 25.0 · 40 words"],"p-86":["“But I can assure you,” she added, “that Lizzy does not lose much by not suiting his fancy; for he is a most disagreeable, horrid man, not at all worth pleasing. So high and so conceited, that there was no enduring him! He walked here, and he walked there, fancying himself so very great! Not handsome enough to dance with! I wish you had been there, my dear, to have given him one of your set-downs. I quite detest the man.”","l. 397–402 · Past · noticeable","Present 4 · Past 6 · ASL 13.5 · Quoted words 97.5% · function words 48.1% · Perception filters 0.0 · Sensory cues 0.0 · Modals 12.3 · Noun endings 24.7 · Passive patterns 12.3 · 81 words"]}</script>
 <div id="manuscript-analysis-panels">
 <details id="analysis-measurements" open>
 <summary>Manuscript measurements</summary>
@@ -5318,8 +5533,14 @@ body.lixity-workspace.reader-focus {
     return !!(meta && meta.content === 'true');
   })();
 
+  var BADGE_BRAND = 'background: #2563eb; color: #ffffff; font-weight: 700; font-size: 10px; padding: 2px 5px; border-radius: 3px 0 0 3px;';
+  var BADGE_CAT = 'background: #334155; color: #f1f5f9; font-weight: 600; font-size: 10px; padding: 2px 5px; border-radius: 0 3px 3px 0;';
+  var BADGE_PERF = 'background: #059669; color: #ffffff; font-weight: 600; font-size: 10px; padding: 2px 5px; border-radius: 0 3px 3px 0;';
+  var BADGE_WARN = 'background: #d97706; color: #ffffff; font-weight: 600; font-size: 10px; padding: 2px 5px; border-radius: 0 3px 3px 0;';
+  var BADGE_ERR = 'background: #dc2626; color: #ffffff; font-weight: 700; font-size: 10px; padding: 2px 5px; border-radius: 0 3px 3px 0;';
+
   function prefix(kind) { return '[Lixity:' + kind + ']'; }
-  function withId(fields) {
+  function withId() {
     try {
       var id = sessionStorage.getItem('lixity_diagnostic_id');
       if (!id) {
@@ -5332,24 +5553,66 @@ body.lixity-workspace.reader-focus {
     } catch (_) { return null; }
   }
 
+  function formatParams(kind, args, defaultBadge) {
+    var first = args[0];
+    var cat = kind;
+    var rest = [].slice.call(args, 1);
+    var msg = first;
+    if (typeof first === 'string') {
+      var colon = first.indexOf(':');
+      if (colon > 0 && colon < 24) {
+        cat = first.slice(0, colon);
+        msg = first.slice(colon + 1).trim();
+      }
+    }
+    return {
+      format: '%c Lixity %c ' + cat + ' %c ' + (typeof msg === 'string' ? msg : ''),
+      styles: [BADGE_BRAND, defaultBadge, 'color: inherit;'],
+      extra: (typeof msg === 'string' ? rest : [msg].concat(rest))
+    };
+  }
+
   var LixityLog = {
     isDebug: function () { return isDebug; },
     setDebug: function (enable) {
       isDebug = !!enable;
       try { localStorage.setItem(KEY, isDebug ? '1' : '0'); } catch (_) {}
-      try { console.info('[Lixity] Debug logging ' + (isDebug ? 'enabled' : 'disabled')); } catch (_) {}
+      try {
+        console.info(
+          '%c Lixity %c Debug Mode ' + (isDebug ? 'ENABLED' : 'DISABLED'),
+          BADGE_BRAND,
+          isDebug ? 'background: #059669; color: #fff; padding: 2px 5px; border-radius: 0 3px 3px 0;' : BADGE_CAT
+        );
+      } catch (_) {}
     },
     debug: function () {
-      if (isDebug && console.debug) console.debug.apply(console, [prefix('debug')].concat([].slice.call(arguments)));
+      if (!isDebug || !console.debug) return;
+      var p = formatParams('debug', arguments, BADGE_CAT);
+      console.debug.apply(console, [p.format].concat(p.styles, p.extra));
     },
     info: function () {
-      if (isDebug && console.info) console.info.apply(console, [prefix('info')].concat([].slice.call(arguments)));
+      if (!isDebug || !console.info) return;
+      var p = formatParams('info', arguments, BADGE_CAT);
+      console.info.apply(console, [p.format].concat(p.styles, p.extra));
+    },
+    perf: function (operation, durationMs, details) {
+      if (!console.info) return;
+      var label = operation + ' (' + Number(durationMs).toFixed(1) + 'ms)';
+      if (details !== undefined) {
+        console.info('%c Lixity %c PERF %c ' + label, BADGE_BRAND, BADGE_PERF, 'color: inherit;', details);
+      } else {
+        console.info('%c Lixity %c PERF %c ' + label, BADGE_BRAND, BADGE_PERF, 'color: inherit;');
+      }
     },
     warn: function () {
-      if (console.warn) console.warn.apply(console, [prefix('warn')].concat([].slice.call(arguments)));
+      if (!console.warn) return;
+      var p = formatParams('warn', arguments, BADGE_WARN);
+      console.warn.apply(console, [p.format].concat(p.styles, p.extra));
     },
     error: function () {
-      if (console.error) console.error.apply(console, [prefix('error')].concat([].slice.call(arguments)));
+      if (!console.error) return;
+      var p = formatParams('error', arguments, BADGE_ERR);
+      console.error.apply(console, [p.format].concat(p.styles, p.extra));
     },
     event: function (name, fields) {
       if (!isDebug) return;
@@ -5361,25 +5624,40 @@ body.lixity-workspace.reader-focus {
         if (v === null || v === undefined) return;
         parts.push(k + '=' + (typeof v === 'string' && /[\s="]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : String(v)));
       });
-      if (console.debug) console.debug(prefix('event') + ' ' + parts.join(' '));
+      if (console.debug) console.debug('%c Lixity %c event ', BADGE_BRAND, BADGE_CAT, parts.join(' '));
     },
     api: function (method, url, durationMs, status) {
       if (!isDebug) return;
       var clean = String(url).split('?')[0];
-      var label = prefix('api') + ' ' + method + ' ' + clean + ' -> ' + status + ' (' + Number(durationMs).toFixed(1) + 'ms)';
-      if (status >= 400) { if (console.error) console.error(label); }
-      else if (console.debug) console.debug(label);
+      var label = method + ' ' + clean + ' -> ' + status + ' (' + Number(durationMs).toFixed(1) + 'ms)';
+      var badge = status >= 400 ? BADGE_ERR : BADGE_PERF;
+      if (status >= 400) {
+        if (console.error) console.error('%c Lixity %c API ', BADGE_BRAND, badge, label);
+      } else if (console.debug) {
+        console.debug('%c Lixity %c API ', BADGE_BRAND, badge, label);
+      }
     },
   };
 
   if (!window.LixityLog) {
     window.LixityLog = LixityLog;
     window.setLixityDebug = LixityLog.setDebug;
-    if (isDebug && console.info) console.info('[Lixity] Debug mode active. Use setLixityDebug(false) to disable.');
+    if (console.info) {
+      console.info(
+        '%c Lixity %c Manuscript Engine ready %c [Ctrl+F] Search · [P] Audio/Teleprompter · [?] Guide',
+        BADGE_BRAND,
+        'background: #1e293b; color: #cbd5e1; font-size: 10px; padding: 2px 6px;',
+        'background: transparent; color: var(--muted, #64748b); font-size: 10px; padding: 2px 4px;'
+      );
+      if (isDebug) {
+        console.info('[Lixity] Debug mode active. Use setLixityDebug(false) to disable.');
+      }
+    }
   } else {
     // Older bundle order: keep the single instance, add the structured event API.
     if (!window.LixityLog.event) window.LixityLog.event = LixityLog.event;
     if (!window.LixityLog.api) window.LixityLog.api = LixityLog.api;
+    if (!window.LixityLog.perf) window.LixityLog.perf = LixityLog.perf;
   }
 
   function redact(value) {
@@ -7606,6 +7884,7 @@ if (filter) {
   }
 
   function apply(direction) {
+    var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
     query = input.value.trim();
     hits = [];
     cursor = -1;
@@ -7645,6 +7924,10 @@ if (filter) {
         matches: hits.length,
         paragraphs: blocks.length
       });
+    }
+    var dur = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+    if (window.LixityLog && query) {
+      window.LixityLog.perf("search", dur, {queryLength: query.length, matches: hits.length, total: blocks.length});
     }
     if (hits.length && direction) {
       if (direction === -1) cursor = 0;
@@ -7688,6 +7971,23 @@ if (filter) {
   if (next) next.addEventListener("click", function () { navigate(1); });
   if (prev) prev.addEventListener("click", function () { navigate(-1); });
   if (clear) clear.addEventListener("click", function () { clearTimeout(pending); pending = null; input.value = ""; apply(); input.focus(); });
+  window.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+      if (!e.defaultPrevented) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var target = e.target;
+      var isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (!isInput) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    }
+  });
 })();
 
 var paragraphReset = document.getElementById("paragraph-filter-reset");

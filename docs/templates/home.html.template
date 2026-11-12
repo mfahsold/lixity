@@ -12,6 +12,10 @@ $alternates
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
 <link rel="alternate" type="text/plain" href="llms.txt" title="Automation summary"/>
 <link rel="icon" href="assets/mark.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="assets/mark.svg"/>
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)"/>
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
+<meta name="fediverse:creator" content="@lixity@mastodon.social"/>
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site.js" defer></script>
@@ -74,7 +78,7 @@ $alternates
 <section class="home-section" id="languages"><h2>$languages_title</h2><p>$languages_text</p><nav class="language-list" aria-label="$language">$language_links</nav><p class="section-note">$limits</p></section>
 <section class="home-section home-resources" id="guides"><div><h2>$docs</h2><p lang="en">Technical guides, methods and automation contracts are maintained in English.</p><nav class="resource-links" lang="en" aria-label="English documentation"><a href="guides/first-look.html">First session</a><a href="guides/first-look-de.html" lang="de" hreflang="de">Einstieg auf Deutsch</a><a href="guides/interpretation.html">Understand the measurements</a><a href="guides/research-pdf.html">Sources and reading copies</a><a href="AUDIO.md">Audio and teleprompter</a><a href="README.md">All documentation</a><a href="blog/index.html">Articles</a><a href="AGENTS.md" id="cli-api">CLI and API</a><a href="METHODS.md" id="methods">Methods and limits</a></nav></div><div id="feedback"><h2>$feedback_title</h2><p>$feedback_text</p><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20feedback">$feedback_link</a></div></section>
 </main>
-<footer class="home-footer"><div class="footer-top"><a class="brand" href="$home_path">Lixity</a><span>© 2026 Matthias Fahsold</span><a href="LICENSING.md" lang="en">AGPL-3.0-or-later · Open source</a><a href="https://github.com/mfahsold/lixity">$source</a></div>
+<footer class="home-footer"><div class="footer-top"><a class="brand" href="$home_path">Lixity</a><span>© 2026 Matthias Fahsold</span><a href="LICENSING.md" lang="en">AGPL-3.0-or-later · Open source</a><a href="https://github.com/mfahsold/lixity">$source</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></div>
 <p lang="en">Free for private and commercial writing, including self-publishing your book. A separate commercial license is available for integrations that cannot meet the AGPL. <a href="LICENSING.md">License details</a>.</p>
 $footer
 </footer>

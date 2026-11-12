@@ -161,7 +161,8 @@ def _site_navigation(
     navigation = (
         '<nav class="site-return" aria-label="Lixity navigation">'
         '<a href="../">About Lixity</a>'
-        '<span class="demo-context">Read-only demo · Fictional manuscript</span>'
+        '<span class="demo-context">Read-only demo · Fictional manuscript · '
+        '<a href="../guides/installation.html">Install local app</a></span>'
         '</nav>'
     ) if demo else (
         '<nav class="site-return" aria-label="Lixity navigation">'
@@ -397,7 +398,8 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
         document = document.replace("</head>", metadata + "</head>", 1)
         document = _site_navigation(document, title, demo=True, breadcrumbs=False, links=(
             ("../report.html", "Author workspace"), ("../reader/", "Read with context"),
-            ("../companion/", "Companion only"), ("../../guides/first-look.html", "Short tour")))
+            ("../companion/", "Companion only"), ("../../guides/first-look.html", "Short tour"),
+            ("../../guides/installation.html", "Install app")))
         notice = ('<details class="panel"><summary>About this synthetic reading example</summary>'
             '<p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. '
             'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>'
@@ -410,7 +412,9 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
                'voice reference is used and the other five chapters have no audio.</p>' if mode == "reader" else '') +
             '<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
             '<a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. '
-            'The ordinary product export has the same reading interface and no visitor counter.</p></details>')
+            'The ordinary product export has the same reading interface and no visitor counter. '
+            'To export your own manuscript with private offline reading websites, '
+            '<a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details>')
         document = document.replace("<footer>", notice + "<footer>", 1)
         files = {**bundle.files, "index.html": _finalize(document).encode("utf-8")}
         if mode == "reader":

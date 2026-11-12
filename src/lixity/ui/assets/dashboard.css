@@ -149,11 +149,112 @@ font-size: var(--text-small);
 & .toolbar-note { flex-basis: 100%; margin: 0; }
 }
 .text-search-group {
-display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; flex: 1 1 22rem; min-width: 0;
-& input[type="search"] { flex: 1 1 8rem; min-width: 0; }
-& .ctl-note { flex-basis: 100%; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-& .ctl-note:empty { display: none; }
-& button.ctl { flex: 0 0 2.5rem; padding-inline: .35rem; }
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+@media (min-width: 540px) {
+  .text-search-group {
+    flex-wrap: nowrap;
+  }
+}
+.search-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.search-input-wrap .search-icon-wrap {
+  position: absolute;
+  left: .65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--muted);
+}
+.search-input-wrap input[type="search"] {
+  width: 100%;
+  padding-left: 2.15rem;
+  padding-right: 3.5rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  font-size: var(--text-control);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  box-sizing: border-box;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.search-input-wrap input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  outline: none;
+}
+.search-input-wrap .search-kbd-badge {
+  position: absolute;
+  right: .5rem;
+  pointer-events: none;
+  font-size: .6875rem;
+  padding: .15rem .35rem;
+  background: var(--surface-hover);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 500;
+  transition: opacity .15s ease;
+}
+@media (max-width: 480px) {
+  .search-kbd-badge { display: none !important; }
+  .search-input-wrap input[type="search"] { padding-right: 1.5rem !important; }
+}
+.search-input-wrap input[type="search"]:focus ~ .search-kbd-badge,
+.search-input-wrap input[type="search"]:not(:placeholder-shown) ~ .search-kbd-badge {
+  opacity: 0;
+  visibility: hidden;
+}
+.text-search-group button.ctl {
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.text-search-group button.ctl:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+.text-search-group .ctl-note#text-search-status {
+  display: inline-flex;
+  align-items: center;
+  padding: .2rem .55rem;
+  font-size: var(--text-small);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  border-radius: var(--radius-pill, 999px);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.text-search-group .ctl-note:empty {
+  display: none;
 }
 /* A paragraph that does not match the query leaves the page entirely, so the
 result list is the manuscript filtered down to what was searched for. */
@@ -1076,7 +1177,7 @@ selected destinations, display state and explicit primary save actions. */
 .workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
 .manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
-.manuscript-reader-controls .reader-settings > summary:hover { background: var(--neutral); border-color: var(--line); color: var(--fg); }
+.manuscript-reader-controls .reader-settings > summary:hover { background: var(--surface-hover); border-color: var(--line-strong); color: var(--fg); }
 @media screen and (min-width: 1100px) {
 body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace > .page { max-width: 96rem; }

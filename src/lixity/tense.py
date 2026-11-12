@@ -129,19 +129,20 @@ class TenseMatcher:
             for position in range(index + 1, stop):
                 c_start, c_end, c_raw, word = tokens[position]
                 separator = text[previous_end:c_start]
-                if not separator.isspace() or ("\n" in separator and _BLANK_LINE.search(separator)):
+                if not separator.isspace() or ("\n\n" in separator or ("\n" in separator and _BLANK_LINE.search(separator))):
                     break
+                is_known = word in self._known_participles
                 productive = c_raw.islower() and self._is_productive_participle(word)
                 if (
                     aux_low in self._sein_forms
-                    and (word in self._known_participles or productive)
+                    and (is_known or productive)
                     and position + 1 < n_words
                 ):
                     f_start, f_end, _f_raw, f_low = tokens[position + 1]
                     gap = text[c_end:f_start]
                     # Passive perfect has a second, distinct participial marker.
                     # https://grammis.ids-mannheim.de/progr@mm/1695
-                    if f_low == "worden" and gap.isspace() and not ("\n" in gap and _BLANK_LINE.search(gap)):
+                    if f_low == "worden" and gap.isspace() and not ("\n\n" in gap or ("\n" in gap and _BLANK_LINE.search(gap))):
                         best = (aux_start, f_end, True)
                         break
                 # Unknown ge-/-iert words can also be attributive adjectives.
@@ -154,11 +155,7 @@ class TenseMatcher:
                     best = (aux_start, c_end, True)
                     previous_end = c_end
                     continue
-                if word in self._known_participles:
-                    # Auxiliary choice depends on regional usage, transitivity
-                    # and meaning. Missing licensing is not a negative verdict.
-                    # Continue to the bounded rightmost head: in "geschlossen
-                    # gehalten" the first participle is not the perfect head.
+                if is_known:
                     best = (aux_start, c_end, word in participles)
                     previous_end = c_end
                     continue

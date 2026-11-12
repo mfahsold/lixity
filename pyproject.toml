@@ -34,6 +34,11 @@ keywords = [
     "manuscript-analysis",
     "book-editing",
     "writing-tools",
+    "novel-writing",
+    "novel-editing",
+    "lektorat",
+    "authors",
+    "creative-writing",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

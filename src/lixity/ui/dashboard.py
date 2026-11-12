@@ -982,6 +982,8 @@ def render_dashboard(
     analysis_outline = analysis_outline_nav(outline_sections, labels)
 
     if has_reading and controls:
+        flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
+                                       extra_class="js-analysis-control")
         analysis_controls = (
             f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_text_analysis")}">'
@@ -995,7 +997,10 @@ def render_dashboard(
             f'data-help="{L("reading_help_comparison")}"/> '
             f'<span class="analysis-comparison-key">{L("legend_paragraph_comparison")}</span></label>'
             f'{layer_navigation}'
-            '</div></div></div>'
+            '</div>'
+            f'{flag_checkbox}'
+            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+            '</div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
@@ -1062,38 +1067,62 @@ def render_dashboard(
         parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
+    search_icon = (
+        '<svg class="lixity-icon search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" '
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
+    )
+    prev_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
+        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="m18 15-6-6-6 6"/></svg>'
+    )
+    next_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
+        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="m6 9 6 6 6-6"/></svg>'
+    )
+    clear_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
+        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M18 6 6 18M6 6l12 12"/></svg>'
+    )
     parts.append('<div class="toolbar">')
     parts.append('<span class="text-search-group">')
     parts.append(
+        '<span class="search-input-wrap">'
+        f'<span class="search-icon-wrap" aria-hidden="true">{search_icon}</span>'
         f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
         f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
         f'aria-controls="chapters" data-help="{L("reading_help_search")}" '
         'aria-keyshortcuts="Enter Shift+Enter Escape"/>'
+        '<kbd class="search-kbd-badge" title="Tastaturkürzel">Strg+F</kbd>'
+        '</span>'
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-prev" hidden '
-        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}" aria-keyshortcuts="Shift+Enter">↑</button>'
+        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}" aria-keyshortcuts="Shift+Enter">{prev_icon}</button>'
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-next" hidden '
-        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}" aria-keyshortcuts="Enter">↓</button>'
+        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}" aria-keyshortcuts="Enter">{next_icon}</button>'
     )
     parts.append(
         f'<button type="button" class="ctl" id="text-search-clear" hidden '
         f'aria-label="{L("text_search_clear")}" title="{L("text_search_clear")}" aria-keyshortcuts="Escape">'
-        '<span aria-hidden="true">&times;</span></button>'
+        f'{clear_icon}</button>'
     )
     parts.append(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
     )
     parts.append("</span>")
-    parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
-                                extra_class="js-analysis-control"))
-    if paragraphs:
-        parts.append(
-            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
-        )
-        if not controls:
+    if not (has_reading and controls):
+        parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
+                                    extra_class="js-analysis-control"))
+        if paragraphs:
+            parts.append(
+                f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+            )
             parts.append(metric_control)
     parts.append('<span class="legend">')
     for key, color in (

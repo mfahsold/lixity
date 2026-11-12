@@ -61,6 +61,16 @@ def render_pages() -> dict[str, str]:
             'description': content['description'], 'inLanguage': list(LANGUAGES),
             'license': 'https://github.com/mfahsold/lixity/blob/main/LICENSE',
             'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},
+            'sameAs': [
+                'https://github.com/mfahsold/lixity',
+                'https://mastodon.social/@lixity',
+                'https://bsky.app/profile/lixity.bsky.social',
+            ],
+            'author': {
+                '@type': 'Person',
+                'name': 'Matthias Fahsold',
+                'url': 'https://github.com/mfahsold',
+            },
         }, ensure_ascii=False).replace('<', '\\u003c')
         fields['footer'] = footer.substitute(fields)
         results[page_path(lang)] = template.substitute(fields)

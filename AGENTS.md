@@ -1,5 +1,11 @@
 # Repository guidance
 
+> [!IMPORTANT]
+> **Agent Documentation Architecture**:
+> - **`AGENTS.md` (Repository Root — this document)**: Operational instructions, coding constraints, and development gates for AI agents and maintainers **working on the Lixity codebase**.
+> - **`docs/AGENTS.md` (Documentation & GitHub Pages)**: Shipped API, JSON schema contracts, and heuristic boundaries for external AI agents and programs **using Lixity as a tool**.
+> - **`AGENT_PROFILE.md`**: Core operational disciplines for delegated agent execution (verify before asserting, surgical diffs, explicit unknowns).
+
 Lixity is a shared manuscript-analysis engine, CLI and local browser app for
 authors. Keep book-specific content and adapters in their own projects; reuse
 the existing pipeline, configuration, localization and UI components instead

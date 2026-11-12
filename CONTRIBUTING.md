@@ -226,8 +226,13 @@ threads, dependencies, a database service or a native extension.
 
 ### Preparing a release
 
-After updating the source version, changelog, release notes and documentation
-pins (`make docs-sync`), run:
+To prepare a new release, bump the version, scaffold release notes and synchronize documentation pins in one step:
+
+```bash
+make release-prepare VERSION=X.Y.Z
+```
+
+Review and complete the draft in `docs/releases/vX.Y.Z.md`. When the UI or published guides change, regenerate examples (`make examples`). Then validate the complete release gate before committing:
 
 ```bash
 make release-check RELEASE_TAG=vX.Y.Z

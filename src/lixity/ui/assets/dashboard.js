@@ -170,6 +170,7 @@ if (filter) {
   }
 
   function apply(direction) {
+    var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
     query = input.value.trim();
     hits = [];
     cursor = -1;
@@ -209,6 +210,10 @@ if (filter) {
         matches: hits.length,
         paragraphs: blocks.length
       });
+    }
+    var dur = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+    if (window.LixityLog && query) {
+      window.LixityLog.perf("search", dur, {queryLength: query.length, matches: hits.length, total: blocks.length});
     }
     if (hits.length && direction) {
       if (direction === -1) cursor = 0;
@@ -252,6 +257,23 @@ if (filter) {
   if (next) next.addEventListener("click", function () { navigate(1); });
   if (prev) prev.addEventListener("click", function () { navigate(-1); });
   if (clear) clear.addEventListener("click", function () { clearTimeout(pending); pending = null; input.value = ""; apply(); input.focus(); });
+  window.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+      if (!e.defaultPrevented) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var target = e.target;
+      var isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (!isInput) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    }
+  });
 })();
 
 var paragraphReset = document.getElementById("paragraph-filter-reset");

@@ -12,8 +12,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Add a minimal read-only MCP server (`python -m lixity.mcp`, stdlib-only
   stdio transport, no writes) exposing `about`, `analyze` and `profile`
   over `tools/list` / `tools/call`. Documented in `docs/AGENTS.md`.
+- Automated release preparation tooling via `scripts/prepare_release.py` and
+  `make release-prepare VERSION=vX.Y.Z`, drafting release notes, updating
+  `_version.py`, and running documentation synchronization in one verified step.
 
 ### Changed
+
+- Harmonize UI visual hierarchy and resolve container border fatigue: introduce
+  a unified 3-tier dark surface palette (`#0c1017` base canvas, `#121822` surface,
+  `#1a2230` raised controls) paired with translucent `rgba(255, 255, 255, 0.08)`
+  hairlines. Modernize context dock tabs into a seamless Segmented Pill Control
+  (`Textstelle | Dossier daneben | Recherche`), flatten nested boxes within
+  passage research, and eliminate awkward corner seams between sticky controls
+  and the search toolbar.
+- Refocus public site metadata and search engine snippets on offline manuscript
+  analysis and evidence research across all 7 supported languages, adhering to
+  optimal SERP length limits (≤60 char titles, ≤155 char descriptions) and adding
+  Mastodon and Bluesky `rel="me"` federation links.
+- Precompile motif and signal regular expressions in `CorpusAnalyzer`, directly
+  reuse lowercased word token streams in `ParagraphMatcher._fast_cues`, and fast-path
+  paragraph separation in German tense matching while strictly preserving transitive
+  motion verb semantics.
 
 - Streamline reader and writing toolbars into single-row desktop layouts with
   semantic grouping, and introduce central distraction-free auto-hide chrome

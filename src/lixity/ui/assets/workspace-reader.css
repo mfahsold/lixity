@@ -9,13 +9,66 @@
 .reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
 .workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, var(--manuscript-share, 62%)) .75rem minmax(0, 1fr); gap: .35rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
-.workspace-context-panel { min-width: 0; grid-column: 3; grid-row: 1; position: sticky; top: calc(1rem + var(--workbench-return-height, 0px)); max-height: min(calc(100dvh - 2rem - var(--workbench-return-height, 0px)), var(--context-available-height, 100dvh)); overflow: auto; overflow-wrap: anywhere; background: transparent; }
+.workspace-context-panel {
+  min-width: 0;
+  grid-column: 3;
+  grid-row: 1;
+  position: sticky;
+  top: calc(1rem + var(--workbench-return-height, 0px));
+  max-height: min(calc(100dvh - 2rem - var(--workbench-return-height, 0px)), var(--context-available-height, 100dvh));
+  overflow: auto;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
 .workspace-context-panel[hidden], .workspace-reader-panel[hidden] { display: none; }
-.context-tool-tabs { display: flex; gap: .35rem; padding: .6rem; border-bottom: 1px solid var(--line); }
-.context-tool-tabs .ctl { flex: 1; white-space: normal; }
-.context-tool-tabs .ctl:not([aria-pressed="true"]) { background: transparent; border-color: transparent; color: var(--fg-secondary); }
-.context-tool-tabs .ctl[aria-pressed="true"] { color: var(--accent); background: var(--accent-light); border-color: transparent; box-shadow: inset 0 -2px var(--accent); }
-.workspace-context-panel .panel { margin: 0; border: 0; box-shadow: none; background: transparent; }
+.context-tool-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin: var(--space-3) var(--space-3) var(--space-2);
+}
+.context-tool-tabs .ctl {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: var(--text-small);
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: 0;
+  background: transparent;
+  color: var(--fg-secondary);
+  box-shadow: none;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.context-tool-tabs .ctl:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+.context-tool-tabs .ctl[aria-pressed="true"],
+.context-tool-tabs [data-context-tool="research"][aria-pressed="true"] {
+  color: var(--fg);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  font-weight: var(--weight-semibold);
+}
+.workspace-context-panel .panel,
+.workspace-context-panel aside.panel,
+.passage-research {
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  background: transparent !important;
+}
 .workspace-reader-panel { min-width: 0; overflow-wrap: anywhere; }
 .workspace-reader-divider { grid-column: 2; grid-row: 1; position: sticky; top: 1rem; height: calc(100dvh - 2rem); cursor: col-resize; touch-action: none; border-radius: var(--radius-sm); background: linear-gradient(to right, transparent 40%, var(--line-strong) 40%, var(--line-strong) 60%, transparent 60%); }
 .workspace-reader-divider[hidden] { display: none; }
@@ -43,29 +96,58 @@
 /* Passage research shares the existing context dock and its scrollport. */
 .workspace-context-panel.passage-research-open { scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--space-3)); }
 .passage-research[hidden] { display: none; }
-.passage-research { padding: var(--space-4); min-width: 0; }
-.passage-research .workspace-reader-head { margin-bottom: var(--space-4); align-items: flex-start; }
-.passage-research-item { padding-block: var(--space-4); border-top: 1px solid var(--line); }
+.passage-research { padding: var(--space-3) var(--space-4) var(--space-4); min-width: 0; }
+.passage-research .workspace-reader-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+.passage-research .workspace-reader-head h2 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--fg);
+}
+.passage-research .workspace-reader-head button.ctl {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
+  min-height: auto;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  line-height: 1;
+}
+.passage-research .workspace-reader-head button.ctl:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+.passage-research-item { padding-block: var(--space-3); border-top: 1px solid var(--line-subtle, var(--line)); }
 .passage-research-item .ctl { max-width: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
 .passage-research-record { margin-bottom: var(--space-3); }
 .passage-research-record > .ctl-note { margin: 0; }
 .passage-research-item .passage-record-title { display: block; width: 100%; padding: var(--space-2); margin-inline: calc(-1 * var(--space-2)); border-color: transparent; background: transparent; color: var(--accent); font-weight: var(--weight-semibold); }
 .passage-research-item .passage-record-title:hover { background: var(--accent-light); color: var(--accent); }
-.passage-research-item .passage-record-pin { margin-top: var(--space-1); color: var(--fg-secondary); background: transparent; border-color: var(--line); }
-.passage-research-item .research-details { margin-top: var(--space-2); }
-.passage-research-item .research-details > .research-details { margin-inline-start: var(--space-3); }
-.passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; }
-.passage-research-open .context-tool-tabs { flex-wrap: wrap; }
-.passage-research-open .context-tool-tabs .ctl { flex: 1 1 0; min-width: 0; overflow-wrap: normal; }
-
-/* Research context keeps a document identity beside statistical inspection. */
-.ptext.reader-audio-active {
-  background: var(--accent-light);
-  border-left: 3px solid var(--accent);
-  padding-left: calc(var(--space-2) - 3px);
-  border-radius: var(--radius-xs);
-  transition: background 0.25s ease, border-color 0.25s ease;
+.passage-research-item .passage-record-pin,
+.passage-research > button.ctl {
+  margin-top: var(--space-2);
+  color: var(--fg);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-.passage-research .workspace-reader-head h2 { display: flex; align-items: center; gap: var(--space-2); }
-.context-tool-tabs [data-context-tool="research"][aria-pressed="true"] { color: var(--fg); background: var(--surface); box-shadow: inset 0 -2px var(--fg-secondary); }
-.passage-research blockquote { border-inline-start-color: var(--line-strong); }
+.passage-research-item .passage-record-pin:hover,
+.passage-research > button.ctl:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+}
+.passage-research-item .research-details { margin-top: var(--space-2); border: 0; background: transparent; }
+.passage-research-item .research-details > .research-details { margin-inline-start: var(--space-3); }
+.passage-research blockquote { margin-inline: 0; padding-inline: var(--space-3); overflow-wrap: anywhere; border-inline-start-color: var(--line-strong); }

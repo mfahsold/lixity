@@ -118,6 +118,21 @@
   gap: .45rem;
   min-width: 0;
 }
+.reader-analysis-controls .form-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  font-size: var(--text-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+.reader-analysis-controls #paragraph-filter-reset {
+  padding: .2rem .55rem;
+  font-size: var(--text-small);
+  min-height: 2rem;
+  border-radius: var(--radius-sm);
+}
 .reader-outlier-navigation {
   display: inline-flex;
   align-items: center;
@@ -207,13 +222,31 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .toolbar > .toolbar-note,
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
+.manuscript-reading #manuscript-reader-controls:not([hidden]) {
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
 .manuscript-reading .toolbar {
-  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px)); padding: .3rem 0; gap: .4rem 1rem;
-  max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem)); margin-inline: auto;
-  background: var(--bg); border: 0; backdrop-filter: none; -webkit-backdrop-filter: none;
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px));
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2) var(--space-3);
+  padding: .35rem var(--space-3);
+  max-width: 100%;
+  margin-inline: 0;
+  background: color-mix(in srgb, var(--surface) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
-.manuscript-reading .text-search-group { flex: 1 1 18rem; max-width: 34rem; }
+.manuscript-reading .text-search-group { flex: 1 1 auto; max-width: 100%; min-width: 0; }
 @media (max-width: 900px) {
   .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
 }
@@ -365,7 +398,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
-.manuscript-reading.workbench-analysis:not(.workbench-overview) .toolbar > label { display: inline-flex !important; }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
 .workbench-thread { display: grid; gap: var(--space-2); min-width: 0; padding-block: var(--space-3); border-top: 1px solid var(--line); }
@@ -410,8 +442,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 
 .manuscript-reading.workbench-overview .toolbar-sections { display: flex !important; }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]),
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .toolbar > #paragraph-filter-reset { display: flex !important; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]) { display: flex !important; }
 .manuscript-reading.workbench-overview .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .toolbar > .legend { display: flex !important; }
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }

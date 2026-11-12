@@ -1,5 +1,9 @@
 # AGENTS.md – Lixity interface for AI agents and automation
 
+> [!NOTE]
+> This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
+> For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+
 ## Native manuscript editing (unreleased)
 
 `GET /api/manuscript-edit` returns `lixity-editor/1`, selected `document`, original
