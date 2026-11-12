@@ -103,6 +103,12 @@ and investigate reported bugs before changing behavior.
 - One current product path, no legacy UI modes: forward existing projects via
   explicit, reviewed release migrations (CONTRIBUTING.md), preserving retained
   sources, immutable revisions and evidence links.
+- Revision & time-series analytics: Historical manuscript snapshots stay immutable,
+  local (`recovery.sqlite3`), and strictly stdlib-based (`sqlite3`, `difflib.SequenceMatcher`).
+  Time-series progression enriches existing UI touchpoints (status lines, comparison
+  dialogs, chapter matrix cells) rather than injecting parallel dashboard views.
+  Never interpolate fictitious measurements across sparse revisions; report missing
+  intervals honestly as gaps.
 
 ## Committing
 

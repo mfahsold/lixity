@@ -37,6 +37,10 @@ When editing browser surfaces, verify live geometry across breakpoints (320px–
    over active sidebars or produce duplicate dismiss controls (`✕`) in the same column.
 4. **Automated truncation detection:** All localized selectors and labels must verify
    `scrollWidth <= clientWidth` in Playwright suites before asserting a pass.
+5. **Enrich existing touchpoints for temporal features:** When adding progression or
+   time-series capabilities, anchor them in established surfaces (editor status bar,
+   comparison dialogs, chapter matrix cells). Do not invent standalone telemetry
+   panels or heavy analytical dashboards that clutter the author's workspace.
 
 ## Evolve one current product path
 
