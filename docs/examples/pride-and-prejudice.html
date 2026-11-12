@@ -3546,8 +3546,29 @@ svg.leaflet-image-layer.leaflet-interactive path {
   box-shadow: none !important;
   background: transparent !important;
 }
-.workspace-context-panel .workspace-reader-panel .workspace-reader-head {
+.workspace-context-panel .workspace-reader-panel .workspace-reader-head h2 {
   display: none;
+}
+.workspace-context-panel .workspace-reader-panel .workspace-reader-head {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 var(--space-2);
+  min-height: auto;
+}
+.workspace-context-panel .workspace-reader-panel .workspace-reader-head #workspace-reader-close {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  padding: .25rem .5rem;
+  font-size: 0.95rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  line-height: 1;
+  transition: background .15s ease, color .15s ease;
+}
+.workspace-context-panel .workspace-reader-panel .workspace-reader-head #workspace-reader-close:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
 }
 .workspace-reader-panel {
   min-width: 0;
@@ -3558,7 +3579,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .workspace-reader-divider[hidden] { display: none; }
 .workspace-reader-divider:hover { background-color: var(--accent-light); }
 .workspace-reader-divider:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
-.workspace-reader-panel .setting-field { margin-bottom: .7rem; }
+.workspace-reader-panel .workspace-reader-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); align-items: flex-end; }
+.workspace-reader-panel .setting-field { margin: 0; flex: 1 1 10rem; }
+.workspace-reader-panel .setting-field label { font-size: var(--text-small); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); }
+.workspace-reader-panel .setting-field select.ctl { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.4rem 0.65rem; }
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }
@@ -4226,7 +4250,7 @@ body.lixity-workspace.reader-focus {
   .reader-focus .manuscript-reader-controls:hover { border-color: var(--line-strong); }
 }
 @media (max-width: 600px) {
-  .manuscript-reader-controls select.reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: 100%; }
+  .manuscript-reader-controls select.reader-chapter { flex: 1 1 auto; min-width: 7rem; width: auto; max-width: 100%; }
 }
 @media (pointer: coarse) {
   .manuscript-reader-controls > button.ctl,
