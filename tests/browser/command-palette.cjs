@@ -8,7 +8,10 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  const preactJs = fs.readFileSync('src/lixity/ui/assets/vendor/preact-10.29.8.min.js', 'utf8');
+  const htmJs = fs.readFileSync('src/lixity/ui/assets/vendor/htm-3.1.1.umd.js', 'utf8');
   const iconsJs = fs.readFileSync('src/lixity/ui/assets/icons.js', 'utf8');
+  const componentLayerJs = fs.readFileSync('src/lixity/ui/assets/component-layer.js', 'utf8');
   const paletteJs = fs.readFileSync('src/lixity/ui/assets/command-palette.js', 'utf8');
   const css = fs.readFileSync('src/lixity/ui/assets/components.css', 'utf8');
 
@@ -16,7 +19,10 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
 <html lang="de">
 <head>
   <style>${css}</style>
+  <script>${preactJs}</script>
+  <script>${htmJs}</script>
   <script>${iconsJs}</script>
+  <script>${componentLayerJs}</script>
   <script>
     window.LixityWorkbench = {
       _state: { view: "analysis", focus: false },

@@ -177,6 +177,10 @@ def count_nominal_matches(
     words. Explicit custom regexes pass an empty set to preserve their match
     counts, including capturing groups, phrases and zero-width matches.
     """
+    if not excluded_words:
+        return sum(1 for _ in pattern.finditer(text))
+    if pattern.groups == 0:
+        return sum(word.lower() not in excluded_words for word in pattern.findall(text))
     return sum(match.group(0).lower() not in excluded_words for match in pattern.finditer(text))
 
 

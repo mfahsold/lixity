@@ -9,7 +9,10 @@ const { launchChromium, launchFirefox } = require('../../scripts/browser_tools.c
   const context = await browser.newContext();
   const page = await context.newPage();
 
+  const preactJs = fs.readFileSync('src/lixity/ui/assets/vendor/preact-10.29.8.min.js', 'utf8');
+  const htmJs = fs.readFileSync('src/lixity/ui/assets/vendor/htm-3.1.1.umd.js', 'utf8');
   const iconsJs = fs.readFileSync('src/lixity/ui/assets/icons.js', 'utf8');
+  const componentLayerJs = fs.readFileSync('src/lixity/ui/assets/component-layer.js', 'utf8');
   const editorJs = fs.readFileSync('src/lixity/ui/assets/markdown-editor.js', 'utf8');
   const css = fs.readFileSync('src/lixity/ui/assets/components.css', 'utf8');
 
@@ -17,7 +20,10 @@ const { launchChromium, launchFirefox } = require('../../scripts/browser_tools.c
 <html>
 <head>
   <style>${css}</style>
+  <script>${preactJs}</script>
+  <script>${htmJs}</script>
   <script>${iconsJs}</script>
+  <script>${componentLayerJs}</script>
   <script>${editorJs}</script>
 </head>
 <body>

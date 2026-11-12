@@ -7,8 +7,13 @@ import unittest
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from itertools import combinations
+from pathlib import Path
 
+from lixity.analyzer import CorpusAnalyzer
 from lixity.diversity import hd_d, hd_d_stats, maas_a2, mattr, mtld, stratified_mattr, yules_k
+from lixity.models import CorpusConfig
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _directional_mtld_reference(tokens: list[str], threshold: Fraction) -> Fraction | None:
@@ -212,6 +217,77 @@ class StratifiedMATTRTests(unittest.TestCase):
     def test_invalid_window_raises(self) -> None:
         with self.assertRaises(ValueError):
             stratified_mattr(["a"] * 10, lambda t: True, window=0)
+
+
+class BookScalePlausibilityTests(unittest.TestCase):
+    """Book-scale cross-validation and scientific plausibility bands on public-domain novels."""
+
+    def test_public_domain_novels_satisfy_formula_identities_and_plausibility_bands(self) -> None:
+        novels = (
+            (
+                "effi-briest",
+                ROOT / "samples" / "effi-briest.md",
+                "de",
+                "Flesch Reading Ease (Amstad)",
+                lambda asl, asw: 180.0 - 1.0 * asl - 58.5 * asw,
+            ),
+            (
+                "pride-and-prejudice",
+                ROOT / "samples" / "pride-and-prejudice.md",
+                "en",
+                "Flesch Reading Ease",
+                lambda asl, asw: 206.835 - 1.015 * asl - 84.6 * asw,
+            ),
+        )
+        for slug, path, lang, expected_variant, flesch_fn in novels:
+            with self.subTest(novel=slug):
+                text = path.read_text(encoding="utf-8")
+                cfg = CorpusConfig(language=lang)
+                analyzer = CorpusAnalyzer(cfg, sample_text=text)
+                metrics = analyzer.analyze_text(text)
+
+                self.assertGreater(metrics.tokens, 80_000)
+                self.assertEqual(metrics.flesch_variant, expected_variant)
+                self.assertAlmostEqual(
+                    metrics.flesch_de,
+                    flesch_fn(metrics.asl, metrics.asw),
+                    places=10,
+                )
+                # 19th-century literary prose plausibility bands (Björnsson 1968; McCarthy & Jarvis 2010)
+                self.assertTrue(50.0 <= metrics.flesch_de <= 80.0, f"Unexpected Flesch: {metrics.flesch_de}")
+                self.assertTrue(30.0 <= metrics.lix <= 50.0, f"Unexpected LIX: {metrics.lix}")
+                self.assertIsNotNone(metrics.hd_d)
+                self.assertIsNotNone(metrics.mattr)
+                self.assertIsNotNone(metrics.mtld)
+                self.assertIsNotNone(metrics.maas_a2)
+                assert metrics.hd_d is not None
+                assert metrics.mattr is not None
+                assert metrics.mtld is not None
+                assert metrics.maas_a2 is not None
+                self.assertTrue(0.80 <= metrics.hd_d <= 0.95)
+                self.assertTrue(0.75 <= metrics.mattr <= 0.92)
+                self.assertTrue(70.0 <= metrics.mtld <= 160.0)
+                self.assertTrue(40.0 <= metrics.yules_k <= 120.0)
+                self.assertTrue(0.02 <= metrics.maas_a2 <= 0.08)
+
+                # Cross-validate exact hypergeometric HD-D and Yule's K on a 2,000-token book slice
+                chapter_tokens = [w.lower() for w in analyzer._word_re.findall(text[:25_000])][:2_000]
+                n = len(chapter_tokens)
+                denom = math.comb(n, 42)
+                from collections import Counter
+
+                freqs = Counter(chapter_tokens)
+                ref_hdd = float(
+                    sum(
+                        (Fraction(denom - math.comb(n - c, 42), denom) for c in freqs.values()),
+                        start=Fraction(0),
+                    )
+                    / 42
+                )
+                self.assertAlmostEqual(hd_d(chapter_tokens), ref_hdd, places=13)
+                spec = Counter(freqs.values())
+                ref_yule = 10_000.0 * (sum(m * m * vm for m, vm in spec.items()) - n) / (n * n)
+                self.assertAlmostEqual(yules_k(chapter_tokens), ref_yule, places=12)
 
 
 if __name__ == "__main__":

@@ -61,6 +61,7 @@ _RE_HTML_COMMENT = COMMENT_STRIP_RE
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 _RE_DASHES = re.compile(r"[–—]")
 _RE_ELLIPSES = re.compile(r"(?:…|\.{3})")
+_RE_WORD_TOKEN = re.compile(r"\w+")
 
 
 @dataclass(frozen=True)
@@ -127,39 +128,101 @@ class CorpusAnalyzer:
         # instance-local and the predicates depend only on the fixed language
         # configuration, therefore results are identical with or without it.
         self._token_kind_cache: dict[str, tuple[bool, bool]] = {}
+        self._verb_cache: dict[str, bool] = {}
+        self._desc_cache: dict[str, bool] = {}
+        self._fast_cues = (
+            self.config.filter_verbs_regex is None
+            and self.config.sensory_regex is None
+            and self.config.nominal_regex is None
+            and self.config.adjective_regex is None
+        )
+        self._cue_cache: dict[str, tuple[bool, bool, bool, bool]] = {}
+
+    def _classify_cue_token(self, token: str) -> tuple[bool, bool, bool, bool]:
+        """Classify a lowercase \\w+ token as (filter, sensory, nominal, adjective)."""
+        hit = self._cue_cache.get(token)
+        if hit is None:
+            hit = (
+                self._filter_re.fullmatch(token) is not None,
+                self._sensory_re.fullmatch(token) is not None,
+                self._nominal_re.fullmatch(token) is not None and token not in self._nominal_exclusions,
+                self._adjective_re.fullmatch(token) is not None,
+            )
+            self._cue_cache[token] = hit
+        return hit
+
+    def _count_cue_tokens(self, text: str) -> tuple[int, int, int, int]:
+        """Return (filter, sensory, nominal, adjective) match counts for text."""
+        if not self._fast_cues:
+            return (
+                len(self._filter_re.findall(text)),
+                len(self._sensory_re.findall(text)),
+                count_nominal_matches(text, self._nominal_re, self._nominal_exclusions),
+                len(self._adjective_re.findall(text)),
+            )
+        f_cnt = s_cnt = n_cnt = a_cnt = 0
+        for word, count in Counter(_RE_WORD_TOKEN.findall(text.lower())).items():
+            is_f, is_s, is_n, is_a = self._classify_cue_token(word)
+            if is_f:
+                f_cnt += count
+            if is_s:
+                s_cnt += count
+            if is_n:
+                n_cnt += count
+            if is_a:
+                a_cnt += count
+        return f_cnt, s_cnt, n_cnt, a_cnt
 
     def _token_kinds(self, token: str) -> tuple[bool, bool]:
         """Classify a token once as (is_verb, is_descriptive)."""
-        try:
-            return self._token_kind_cache[token]
-        except KeyError:
-            pass
+        hit = self._token_kind_cache.get(token)
+        if hit is not None:
+            return hit
         if self.lang.praesens_regex or self.lang.praeteritum_regex:
-            is_verb = bool(
-                self._praesens_re.fullmatch(token) or self._praeteritum_re.fullmatch(token)
-            )
+            if self._tense._protect_finite_forms:
+                is_verb = (
+                    token in self._tense._curated_present_words
+                    or token in self._tense._curated_past_words
+                    or self._tense._is_single_productive_past(token)
+                )
+            else:
+                is_verb = bool(
+                    self._praesens_re.fullmatch(token) or self._praeteritum_re.fullmatch(token)
+                )
         else:
             is_verb = False
         if self.lang.adjective_regex or self.lang.nominal_regex:
-            is_desc = bool(
-                self._adjective_re.fullmatch(token)
-                or (
-                    self._nominal_re.fullmatch(token)
-                    and token not in self._nominal_exclusions
+            if self._fast_cues:
+                _f, _s, is_n, is_a = self._classify_cue_token(token)
+                is_desc = is_a or is_n
+            else:
+                is_desc = bool(
+                    self._adjective_re.fullmatch(token)
+                    or (
+                        self._nominal_re.fullmatch(token)
+                        and token not in self._nominal_exclusions
+                    )
                 )
-            )
         else:
             is_desc = False
         result = (is_verb, is_desc)
         self._token_kind_cache[token] = result
+        self._verb_cache[token] = is_verb
+        self._desc_cache[token] = is_desc
         return result
 
     def _is_verb(self, token: str) -> bool:
         """Deterministic POS heuristic: matches present or past tense inflection patterns."""
+        hit = self._verb_cache.get(token)
+        if hit is not None:
+            return hit
         return self._token_kinds(token)[0]
 
     def _is_desc(self, token: str) -> bool:
         """Deterministic POS heuristic: matches descriptive adjective or nominal morphology."""
+        hit = self._desc_cache.get(token)
+        if hit is not None:
+            return hit
         return self._token_kinds(token)[1]
 
     @staticmethod
@@ -178,12 +241,19 @@ class CorpusAnalyzer:
         """
         starters: Counter[str] = Counter()
         first_person = 0
+        group = 1 if self._word_re.groups == 1 else 0
         for s in sentences:
-            tokens = self._word_re.findall(s)
-            if not tokens:
-                continue
+            if group == 0:
+                match = self._word_re.search(s)
+                if match is None:
+                    continue
+                first = match.group(0).lower()
+            else:
+                tokens = self._word_re.findall(s)
+                if not tokens:
+                    continue
+                first = tokens[0].lower()
             # Elision-aware match (fr: "J'aime" -> "je"/"j", en: "I'm" -> "i")
-            first = tokens[0].lower()
             stem = first.replace("’", "'").split("'", 1)[0]
             starters[first] += 1
             if first in self._starters or stem in self._starters:
@@ -385,15 +455,12 @@ class CorpusAnalyzer:
             m_name: len(compile_pattern(m_pat).findall(cl_b))
             for m_name, m_pat in self.config.motif_regexes.items()
         }
-        c_fil = len(self._filter_re.findall(cl_b))
+        c_fil, c_sensory_cnt, c_nominal_cnt, c_adjective_cnt = self._count_cue_tokens(cl_b)
         dominance = dominance_from_hits(*self._tense.count(cl_b))
 
         c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sentences)
         c_passive_cnt = len(self._passive_re.findall(cl_b))
-        c_nominal_cnt = count_nominal_matches(cl_b, self._nominal_re, self._nominal_exclusions)
-        c_adjective_cnt = len(self._adjective_re.findall(cl_b))
         c_modal_cnt = sum(1 for t in c_lower if t in self._modals)
-        c_sensory_cnt = len(self._sensory_re.findall(cl_b))
         c_sensory_dens = self._density(c_sensory_cnt, n_cw)
         c_verb_mattr = stratified_mattr(c_lower, self._is_verb)
         c_desc_mattr = stratified_mattr(c_lower, self._is_desc)
@@ -550,17 +617,14 @@ class CorpusAnalyzer:
             name: len(re.findall(pat, prose_main, re.IGNORECASE))
             for name, pat in self.lang.signal_keywords.items()
         }
-        filter_cnt = len(self._filter_re.findall(prose_main))
+        filter_cnt, sensory_cnt, nominal_cnt, adjective_cnt = self._count_cue_tokens(prose_main)
 
         # 8. Style densities (per 1,000 tokens, length-comparable)
         passive_density = self._density(len(self._passive_re.findall(prose_main)), n_tokens)
-        nominalization_density = self._density(
-            count_nominal_matches(prose_main, self._nominal_re, self._nominal_exclusions), n_tokens
-        )
-        adjective_density = self._density(len(self._adjective_re.findall(prose_main)), n_tokens)
+        nominalization_density = self._density(nominal_cnt, n_tokens)
+        adjective_density = self._density(adjective_cnt, n_tokens)
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
-        sensory_cnt = len(self._sensory_re.findall(prose_main))
         sensory_density = self._density(sensory_cnt, n_tokens)
         verb_mattr = stratified_mattr(lower_tokens, self._is_verb)
         desc_mattr = stratified_mattr(lower_tokens, self._is_desc)

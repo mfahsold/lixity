@@ -461,8 +461,49 @@
       return text.indexOf(query) !== -1;
     });
 
-    resultsList.replaceChildren();
     selectedIndex = 0;
+    var components = window.LixityComponents;
+    if (components && typeof components.html === "function" && typeof components.mount === "function") {
+      var html = components.html;
+      if (activeCommands.length === 0) {
+        var isDeEmpty = (document.documentElement.lang || "en").startsWith("de");
+        components.mount(
+          resultsList,
+          html`<li class="command-palette-empty">${isDeEmpty ? "Keine passenden Befehle gefunden." : "No matching commands found."}</li>`
+        );
+        return;
+      }
+      var nodes = [];
+      var cat = null;
+      activeCommands.forEach(function (cmd, idx) {
+        if (cmd.category !== cat) {
+          cat = cmd.category;
+          nodes.push(html`<li key=${"cat-" + cat} class="command-palette-category">${cat}</li>`);
+        }
+        var isSel = idx === 0;
+        nodes.push(html`
+          <li
+            key=${cmd.id}
+            class=${"command-palette-item" + (isSel ? " selected" : "")}
+            role="option"
+            aria-selected=${isSel ? "true" : "false"}
+            onClick=${function () { selectedIndex = idx; executeSelected(); }}
+            onMouseMove=${function () { if (selectedIndex !== idx) setSelectedIndex(idx); }}
+          >
+            <span class="command-palette-item-icon" dangerouslySetInnerHTML=${{ __html: icon(cmd.icon || "command") }}></span>
+            <div class="command-palette-item-text">
+              <span class="command-palette-item-title">${cmd.title}</span>
+              <span class="command-palette-item-sub">${cmd.subtitle}</span>
+            </div>
+            ${cmd.shortcut ? html`<kbd class="command-palette-item-shortcut">${cmd.shortcut}</kbd>` : null}
+          </li>
+        `);
+      });
+      components.mount(resultsList, nodes);
+      return;
+    }
+
+    resultsList.replaceChildren();
 
     if (activeCommands.length === 0) {
       var isDe = (document.documentElement.lang || "en").startsWith("de");

@@ -73,20 +73,24 @@ def reindex(repository: Repository) -> dict[str, Any]:
                 connection.execute("INSERT INTO metadata VALUES (?)", (snapshot.digest,))
                 connection.execute("CREATE VIRTUAL TABLE passages USING fts5(passage_id UNINDEXED, content, tokenize='unicode61 remove_diacritics 0')")
                 connection.execute("CREATE VIRTUAL TABLE documents USING fts5(record_id UNINDEXED, revision UNINDEXED, kind UNINDEXED, title, content, tokenize='unicode61 remove_diacritics 0')")
+                passage_rows: list[tuple[str, str]] = []
+                document_rows: list[tuple[str, int, str, str, str]] = []
                 for record in snapshot.records.values():
                     if isinstance(record, Passage):
                         extraction = snapshot.get(record.extraction_ref, Extraction)
                         if extraction.source_version_ref.id in selected:
                             repository.quote(snapshot, record)
-                            connection.execute("INSERT INTO passages VALUES (?, ?)", (record.id, record.verbatim))
+                            passage_rows.append((record.id, record.verbatim))
                             version = snapshot.get(extraction.source_version_ref, SourceVersion)
                             source = snapshot.get(version.source_ref, Source)
-                            connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
-                                               (record.id, record.revision, record.kind, source.title, record.verbatim))
+                            document_rows.append((record.id, record.revision, record.kind, source.title, record.verbatim))
                             count += 1
                     elif isinstance(record, (Dossier, Claim, Decision)) and record.id not in unavailable:
-                        connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
-                                           (record.id, record.revision, record.kind, record.title, authored_text(record)))
+                        document_rows.append((record.id, record.revision, record.kind, record.title, authored_text(record)))
+                if passage_rows:
+                    connection.executemany("INSERT INTO passages VALUES (?, ?)", passage_rows)
+                if document_rows:
+                    connection.executemany("INSERT INTO documents VALUES (?, ?, ?, ?, ?)", document_rows)
             with open(temporary, "r+b") as stream:
                 os.fsync(stream.fileno())
             os.replace(temporary, destination)
@@ -122,14 +126,11 @@ def search(
         needs_reindex = not path.is_file()
         if not needs_reindex:
             try:
-                conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
-                try:
+                with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as conn:
                     conn.execute("PRAGMA trusted_schema=OFF")
                     meta = conn.execute("SELECT snapshot FROM metadata").fetchall()
                     if meta != [(snapshot.digest,)]:
                         needs_reindex = True
-                finally:
-                    conn.close()
             except sqlite3.Error:
                 needs_reindex = True
         if needs_reindex:
@@ -147,23 +148,24 @@ def search(
     hits: list[dict[str, Any]] = []
     warnings: list[str] = ["Search index was refreshed to current project snapshot"] if refreshed else []
     try:
-        connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
-        try:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as connection:
+            connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA trusted_schema=OFF")
             metadata = connection.execute("SELECT snapshot FROM metadata").fetchall()
-            if metadata != [(snapshot.digest,)]:
+            if [row["snapshot"] for row in metadata] != [snapshot.digest]:
                 if ensure_fresh:
                     reindex(repository)
                     return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
                 raise ResearchError("Search index is stale; run research reindex")
             if scope != "sources":
                 rows = connection.execute(
-                    "SELECT record_id, revision, kind, bm25(documents, 0, 0, 0, 4, 1) FROM documents "
+                    "SELECT record_id, revision, kind, bm25(documents, 0, 0, 0, 4, 1) AS rank FROM documents "
                     "WHERE documents MATCH ? AND (? IS NULL OR kind = ?) "
-                    "ORDER BY bm25(documents, 0, 0, 0, 4, 1), record_id LIMIT ?",
+                    "ORDER BY rank, record_id LIMIT ?",
                     (expression, SEARCH_SCOPES[scope], SEARCH_SCOPES[scope], limit),
                 ).fetchall() if expression else []
-                for identifier, revision, kind, rank in rows:
+                for row in rows:
+                    identifier, revision, kind, rank = row["record_id"], row["revision"], row["kind"], row["rank"]
                     record = snapshot.records.get(identifier)
                     if (not isinstance(record, (Passage, Dossier, Claim, Decision))
                             or record.revision != revision or record.kind != kind or record.id in unavailable):
@@ -186,10 +188,11 @@ def search(
                         "snapshot": snapshot.digest, "mode": "lexical", "scope": scope,
                         "hits": hits, "completeness": "complete", "warnings": warnings}
             rows = connection.execute(
-                "SELECT passage_id, bm25(passages) FROM passages WHERE passages MATCH ? ORDER BY bm25(passages), passage_id LIMIT ?",
+                "SELECT passage_id, bm25(passages) AS rank FROM passages WHERE passages MATCH ? ORDER BY rank, passage_id LIMIT ?",
                 (expression, limit),
             ).fetchall() if expression else []
-            for identifier, rank in rows:
+            for row in rows:
+                identifier, rank = row["passage_id"], row["rank"]
                 record = snapshot.records.get(identifier)
                 if not isinstance(record, Passage):
                     raise ResearchError("Invalid index reference; run research reindex")
@@ -199,8 +202,6 @@ def search(
                 citation = repository.citation(snapshot, record)
                 citation.update({"rank_score": rank, "score_type": "fts5_bm25", "route": "lexical"})
                 hits.append(citation)
-        finally:
-            connection.close()
     except sqlite3.Error as exc:
         raise ResearchError(f"Search index unavailable at {path}: {exc}; check storage and run research reindex") from exc
     if scope == "sources" and not hits:

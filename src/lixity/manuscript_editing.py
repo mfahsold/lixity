@@ -84,9 +84,13 @@ class ManuscriptStore:
             fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             os.close(fd)
         db = sqlite3.connect(path)
+        db.row_factory = sqlite3.Row
+        db.execute("PRAGMA busy_timeout=5000")
         db.execute("PRAGMA synchronous=FULL")
         db.execute("CREATE TABLE IF NOT EXISTS recovery (document TEXT, id TEXT, kind TEXT, content BLOB, created REAL, PRIMARY KEY(document,id))")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_recovery_doc_created ON recovery (document, kind, created DESC)")
         db.execute("CREATE TABLE IF NOT EXISTS receipts (document TEXT, id TEXT, request TEXT, response TEXT, created REAL, PRIMARY KEY(document,id))")
+        db.execute("CREATE INDEX IF NOT EXISTS idx_receipts_doc_created ON receipts (document, created DESC)")
         db.commit()
         return db
 
@@ -97,7 +101,7 @@ class ManuscriptStore:
             recovery: list[dict[str, Any]] = []
             if self.directory.exists():
                 with closing(self._database()) as db:
-                    recovery = [{"id": row[0], "kind": row[1], "created": row[2]}
+                    recovery = [{"id": row["id"], "kind": row["kind"], "created": row["created"]}
                                 for row in db.execute("SELECT id,kind,created FROM recovery WHERE document=? ORDER BY created DESC", (self.document,))]
             log_event(logger, "manuscript_open", level=logging.DEBUG, bytes=len(data), recovery=len(recovery))
             return {"schema_version": "lixity-editor/1", "document": self.document,
@@ -112,9 +116,10 @@ class ManuscriptStore:
             row = db.execute("SELECT content,kind FROM recovery WHERE document=? AND id=?", (self.document, identifier)).fetchone()
             if row is None:
                 raise ValueError("Recovery entry is unavailable")
+            content = bytes(row["content"])
             return {"schema_version": "lixity-editor/1", "document": self.document,
-                    "revision": _digest(row[0]), "id": identifier, "kind": row[1],
-                    "text": _decode(row[0])[0]}
+                    "revision": _digest(content), "id": identifier, "kind": str(row["kind"]),
+                    "text": _decode(content)[0]}
 
     def save(self, document: str, revision: str, operation: str, text: str) -> dict[str, str]:
         if document != self.document or not re.fullmatch(r"[a-f0-9]{64}", revision) or not re.fullmatch(r"[a-f0-9]{32}", operation):
@@ -127,10 +132,10 @@ class ManuscriptStore:
         request = _digest(revision.encode() + b"\0" + encoded)
         with SOURCE_WRITE_LOCK, closing(self._database()) as db:
             receipt = db.execute("SELECT request,response FROM receipts WHERE document=? AND id=?", (document, operation)).fetchone()
-            if receipt:
-                if receipt[0] != request:
+            if receipt is not None:
+                if receipt["request"] != request:
                     raise ValueError("Operation identifier was reused for different content")
-                response: dict[str, str] = json.loads(receipt[1])
+                response: dict[str, str] = json.loads(str(receipt["response"]))
                 return response
             original = self._read()
             _, newline, bom = _decode(original)
@@ -138,16 +143,20 @@ class ManuscriptStore:
             if len(candidate) > MAX_TEXT_BYTES:
                 raise ValueError("Encoded manuscript exceeds the 4 MiB editing limit")
             prior = db.execute("SELECT content FROM recovery WHERE document=? AND id=?", (document, operation)).fetchone()
-            if prior and prior[0] != candidate:
+            if prior is not None and bytes(prior["content"]) != candidate:
                 raise ValueError("Operation identifier was reused for different content")
-            count = db.execute("SELECT count(*) FROM recovery WHERE document=? AND kind='draft'", (document,)).fetchone()[0]
-            if not prior and count >= 8:
+            count = int(db.execute("SELECT count(*) AS n FROM recovery WHERE document=? AND kind='draft'", (document,)).fetchone()["n"])
+            if prior is None and count >= 8:
                 raise ValueError("Eight recovery drafts retained; recover or remove a draft before saving")
             with db:
-                db.execute("INSERT OR REPLACE INTO recovery VALUES (?,?,?,?,?)", (document, operation, "draft", candidate, time.time()))
+                db.execute(
+                    "INSERT INTO recovery (document, id, kind, content, created) VALUES (?,?,?,?,?) "
+                    "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, created=excluded.created",
+                    (document, operation, "draft", candidate, time.time()),
+                )
             # A retry after replacement but before receipt persistence is safe
             # only when this exact operation was already journaled.
-            if _digest(original) != revision and not (prior and original == candidate):
+            if _digest(original) != revision and not (prior is not None and original == candidate):
                 log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="revision-mismatch")
                 raise EditConflict("Manuscript changed elsewhere; your draft is retained")
             identity = self.source.stat()
@@ -158,14 +167,28 @@ class ManuscriptStore:
                     raise EditConflict("Manuscript changed while saving; your draft is retained")
             if original != candidate:
                 with db:
-                    db.execute("INSERT OR REPLACE INTO recovery VALUES (?,?,?,?,?)", (document, _digest(original), "version", original, time.time()))
+                    db.execute(
+                        "INSERT INTO recovery (document, id, kind, content, created) VALUES (?,?,?,?,?) "
+                        "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, created=excluded.created",
+                        (document, _digest(original), "version", original, time.time()),
+                    )
                 FileUtils.atomic_write_bytes_if_changed(str(self.source), candidate, before_replace=guard)
             response = {"document": document, "revision": _digest(candidate)}
             with db:
                 db.execute("DELETE FROM recovery WHERE document=? AND id=? AND kind='draft'", (document, operation))
-                db.execute("INSERT INTO receipts VALUES (?,?,?,?,?)", (document, operation, request, json.dumps(response), time.time()))
-                db.execute("DELETE FROM recovery WHERE document=? AND kind='version' AND id NOT IN (SELECT id FROM recovery WHERE document=? AND kind='version' ORDER BY created DESC LIMIT 20)", (document, document))
-                db.execute("DELETE FROM receipts WHERE document=? AND id NOT IN (SELECT id FROM receipts WHERE document=? ORDER BY created DESC LIMIT 100)", (document, document))
+                db.execute("INSERT INTO receipts (document, id, request, response, created) VALUES (?,?,?,?,?)", (document, operation, request, json.dumps(response), time.time()))
+                db.execute(
+                    "DELETE FROM recovery WHERE document=? AND kind='version' AND id IN ("
+                    "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created DESC, id DESC) AS rn "
+                    "FROM recovery WHERE document=? AND kind='version') WHERE rn > 20)",
+                    (document, document),
+                )
+                db.execute(
+                    "DELETE FROM receipts WHERE document=? AND id IN ("
+                    "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created DESC, id DESC) AS rn "
+                    "FROM receipts WHERE document=?) WHERE rn > 100)",
+                    (document, document),
+                )
             log_event(logger, "manuscript_save", changed=original != candidate, bytes=len(candidate))
             return response
 

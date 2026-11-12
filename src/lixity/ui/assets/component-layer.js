@@ -12,6 +12,16 @@
   "use strict";
   window.LixityComponents = {
     html: htm.bind(preact.h),
+    icon: function (name, options) {
+      var markup = window.LixityIcons && typeof window.LixityIcons.render === "function"
+        ? window.LixityIcons.render(name, options)
+        : "";
+      return preact.h("span", {
+        className: "lixity-icon-slot",
+        "aria-hidden": "true",
+        dangerouslySetInnerHTML: { __html: markup }
+      });
+    },
     // Dynamic editors share the same field markup as server-rendered forms.
     createField: function (parent, spec) {
       var type = spec.type || "text", checkbox = type === "checkbox";

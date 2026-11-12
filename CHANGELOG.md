@@ -23,10 +23,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   metrics, disclosures and panels. Document the interaction taxonomy, author/lector
   happy path and alternative click paths in `docs/WORKSPACE.md`.
 
-- Memoize per-token verb/descriptive classification in the analyzer: the
-  vocabulary of a manuscript is far smaller than its token count, so repeated
-  regex fullmatches are evaluated once per unique token. Analysis JSON output
-  is byte-identical; book-scale `analyze` runs about 20% faster.
+- Memoize per-token verb/descriptive and lexical cue classification (`filter`,
+  `sensory`, `nominal`, `adjective`) across `CorpusAnalyzer`, `ParagraphMatcher`
+  and `TenseMatcher`, fuse sentence-span and NFC-normalization passes in
+  paragraph evidence, and evaluate curated finite tense inventories over a
+  single tokenized word stream. Analysis, profile, evidence and fingerprint
+  outputs remain bit-identical while book-scale `analyze` and `profile` run
+  3x–4x faster (~150k–165k words/s).
+- Use `sqlite3.Row`, `PRAGMA busy_timeout`, `ON CONFLICT` upserts, window
+  functions (`ROW_NUMBER() OVER`) and batch `executemany` in the manuscript
+  recovery store and FTS5 research catalogue, and render command-palette results
+  and Markdown editor toolbars declaratively through the vendored Preact + `htm`
+  component layer (`LixityComponents`).
 
 - Keep project navigation stable across dossier and view changes, preserve the
   reading passage when toggling it, and reserve scrollbar width between views.

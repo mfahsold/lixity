@@ -93,25 +93,49 @@
       { id: "callout", label: "Callout", icon: "info", action: function () { prefixLines(textarea, "> [!NOTE]\n> "); } }
     ];
 
-    tools.forEach(function (tool) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "editor-tool-btn";
-      var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
-      tool.label = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
-      btn.title = tool.label;
-      btn.setAttribute("aria-label", tool.label);
-      if (window.LixityIcons) {
-        btn.innerHTML = window.LixityIcons.svg(tool.icon, { size: 14 });
-      } else {
-        btn.textContent = tool.label.slice(0, 1);
-      }
-      btn.addEventListener("click", function (e) {
-        e.preventDefault();
-        tool.action();
+    var components = window.LixityComponents;
+    if (components && typeof components.html === "function" && typeof components.mount === "function") {
+      var html = components.html;
+      components.mount(
+        toolbar,
+        tools.map(function (tool) {
+          var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
+          var localized = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
+          var iconMarkup = window.LixityIcons ? window.LixityIcons.svg(tool.icon, { size: 14 }) : localized.slice(0, 1);
+          return html`
+            <button
+              key=${tool.id}
+              type="button"
+              class="editor-tool-btn"
+              title=${localized}
+              aria-label=${localized}
+              onClick=${function (e) { e.preventDefault(); tool.action(); }}
+              dangerouslySetInnerHTML=${{ __html: iconMarkup }}
+            ></button>
+          `;
+        })
+      );
+    } else {
+      tools.forEach(function (tool) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "editor-tool-btn";
+        var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
+        tool.label = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
+        btn.title = tool.label;
+        btn.setAttribute("aria-label", tool.label);
+        if (window.LixityIcons) {
+          btn.innerHTML = window.LixityIcons.svg(tool.icon, { size: 14 });
+        } else {
+          btn.textContent = tool.label.slice(0, 1);
+        }
+        btn.addEventListener("click", function (e) {
+          e.preventDefault();
+          tool.action();
+        });
+        toolbar.appendChild(btn);
       });
-      toolbar.appendChild(btn);
-    });
+    }
 
     wrap.insertBefore(toolbar, textarea);
 

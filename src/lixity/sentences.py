@@ -117,6 +117,8 @@ _PAIR_MARK_RE = re.compile("[" + re.escape("".join(_QUOTE_PAIRS) + "”’)]") +
 
 
 def _protect(text: str, language_key: str) -> str:
+    if "." not in text:
+        return text
     abbreviations = _ABBREVIATIONS.get(language_key, _ABBREVIATIONS_UNIVERSAL)
     text = _DIGIT_PERIOD_RE.sub(_MASK, text)
     text = _INITIAL_RE.sub(lambda m: m.group(1) + _MASK, text)
