@@ -50,7 +50,11 @@ and investigate reported bugs before changing behavior.
   (maps modified git paths to suites). Browser checks need Node, Playwright
   with Chromium, and FFmpeg for synthetic media, per `tests/browser/README.md`;
   run `make browser-full` before a release affecting rendered output. Inspect
-  rendered desktop and mobile states, not just HTML strings.
+  rendered desktop and mobile states, not just HTML strings. Ensure multi-tier
+  sticky header geometries dynamically scale paragraph `scroll-margin-top` so
+  jump targets never clip under sticky chrome, and maintain single-row desktop
+  toolbar integrity across all container widths (1024px to 2560px) via progressive
+  container-query label collapsing.
 - Docs work: `make docs-check` stands alone; `make docs-sync` rewrites
   version pins. Regenerating `make examples` and `make screenshots` is
   required when UI assets or published guides change; bundled assets are

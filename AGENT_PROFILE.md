@@ -26,6 +26,18 @@ reapply the intended edit surgically. Prefer exact patches for large files.
 Read only the relevant symbols and search references before removing code.
 Do not repeat large file or tool output when a targeted query answers the question.
 
+## Prevent UI clipping and layout collisions
+
+When editing browser surfaces, verify live geometry across breakpoints (320px–1837px):
+1. **Multi-tier sticky headroom:** Dynamic sticky bars must propagate cumulative height
+   into paragraph and anchor `scroll-margin-top` so text targets never hide beneath chrome.
+2. **Desktop toolbar integrity:** Toolbars must remain single-row on desktop displays;
+   use progressive container-query label suppression rather than multi-row button wrapping.
+3. **Non-colliding panels:** Floating inspection or evidence cards must not spawn directly
+   over active sidebars or produce duplicate dismiss controls (`✕`) in the same column.
+4. **Automated truncation detection:** All localized selectors and labels must verify
+   `scrollWidth <= clientWidth` in Playwright suites before asserting a pass.
+
 ## Evolve one current product path
 
 Implement the agreed current behavior; do not add legacy UI modes or parallel
