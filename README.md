@@ -43,14 +43,12 @@ buffer intact. Research links remain reviewable across text revisions; saved
 evidence is never silently rewritten. The public demo remains read-only.
 See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).
 
-**Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
-
-**Product introductions:** [Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
+Lixity provides localized workspaces across seven languages ([Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
 [English](https://mfahsold.github.io/lixity/) · [Français](https://mfahsold.github.io/lixity/index-fr.html) ·
 [Español](https://mfahsold.github.io/lixity/index-es.html) · [Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
-[Português](https://mfahsold.github.io/lixity/index-pt.html) · [Nederlands](https://mfahsold.github.io/lixity/index-nl.html).
-Technical documentation is maintained in **English only**. German and English
-have the broadest analysis resources; see the [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
+[Português](https://mfahsold.github.io/lixity/index-pt.html) · [Nederlands](https://mfahsold.github.io/lixity/index-nl.html)),
+while technical developer contracts remain in English. German and English offer the deepest heuristic resources;
+see [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
 **Explore patterns. Return to the text. Make your own interpretation.**
 Measurements illuminate differences; they do not grade literary quality or tell

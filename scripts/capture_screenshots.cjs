@@ -85,10 +85,12 @@ async function main() {
           window.addEventListener('mouseup', () => { dot.style.transform = 'scale(1)'; }, {passive: true});
           const caption = document.createElement('div');
           caption.id = 'walkthrough-caption';
-          caption.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);max-width:78%;' +
-            'padding:10px 16px;border-radius:999px;background:rgba(17,24,39,.88);color:#fff;' +
-            'font:600 15px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;text-align:center;' +
-            'z-index:2147483647;pointer-events:none;opacity:0;';
+          caption.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);max-width:82%;' +
+            'padding:12px 24px;border-radius:12px;background:rgba(15,23,42,.92);color:#f8fafc;' +
+            'font:600 16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.015em;text-align:center;' +
+            'border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 32px rgba(0,0,0,.35);' +
+            'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
+            'z-index:2147483647;pointer-events:none;opacity:0;transition:opacity .25s ease,transform .25s ease;';
           document.body.appendChild(caption);
           window.setWalkthroughCaption = text => {
             caption.textContent = text || '';
@@ -608,7 +610,7 @@ async function main() {
         fs.writeFileSync(capture.videoTarget.replace('.webm', '.json'), JSON.stringify({scenes, duration: 48, trim: (started - recordingStarted) / 1000}));
       } else if (flow === 'editorial-loop') {
         await page.waitForTimeout(1000);
-        await say('Flagged passages become your review queue');
+        await say('Listen to the pulse: Spot where narrative cadence shifts');
         await page.locator('#flags').scrollIntoViewIfNeeded();
         await page.waitForTimeout(900);
         const flagRow = page.locator('#flags [data-marker-kind]').first();
@@ -616,7 +618,7 @@ async function main() {
           await flagRow.hover();
           await page.waitForTimeout(900);
         }
-        await say('Open a flagged passage: values and source lines');
+        await say('Touch the prose: Instant word counts, rhythm, and tense cues');
         await page.locator('#workbench-overview-back').click();
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
         await paragraph.locator('[data-reader-paragraph]').click();
@@ -625,46 +627,46 @@ async function main() {
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1200);
-        await say('Values, source lines, tense flags \u2014 per paragraph');
+        await say('Surgical precision: Inspect sentence melody without leaving context');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
         await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
         await page.waitForTimeout(1300);
-        await say('Draft a note, then review the marker list');
+        await say('Anchor editorial insights directly in your manuscript');
         await page.locator('#workbench-overview-open').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
         await page.waitForTimeout(1500);
       } else if (flow === 'analysis-review') {
         await page.waitForTimeout(1000);
-        await say('Start with Analysis off: plain reading view');
+        await say('Pure focus: Immerse in uninterrupted reading');
         const paragraph = page.locator('#chapters .ptext').first();
         await paragraph.scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
         await page.waitForTimeout(1200);
-        await say('Open any paragraph: values on demand');
+        await say('Reveal the rhythm: Pacing and dialogue balance on demand');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         assert.equal(await page.locator('#reader-inspector').isVisible(), true);
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1300);
-        await say('Open the overview to compare measured style dimensions');
+        await say('Macro perspective: Survey the emotional breathing of every chapter');
         await page.locator('#workbench-overview-open').click();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
-          await say('See the same data as style dimensions');
+          await say('Multi-dimensional style space: Explore narrative registers in 3D');
           await dimensions.scrollIntoViewIfNeeded();
           await page.waitForTimeout(700);
           await dimensions.click();
           await page.waitForTimeout(1300);
         }
-        await say('Pin a chapter to keep its scores in view');
+        await say('Contrast and compare: Track chapter voice against your baseline');
         await page.locator('#dim-chapter-select').selectOption('2');
         await page.locator('.dim-selection-panel').scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
         await page.waitForTimeout(1000);
-        await say('Flatten the view to compare chapter positions');
+        await say('Planar projections: Clear patterns without visual clutter');
         await page.locator('#dim-projection').selectOption('d1-d2');
         await page.locator('.dim-view-control').evaluate(element => {
           const toolbar = document.querySelector('.toolbar');
@@ -680,7 +682,7 @@ async function main() {
         await page.waitForTimeout(1000);
       } else {
         await page.waitForTimeout(900);
-        await say('The timeline places dated claims on one shared axis');
+        await say('Living memory: Historical facts and scene chronology unified');
         await page.locator('[data-view="research"]').click();
         await page.locator('[data-rtab="claims"]').click();
         await page.waitForTimeout(1200);
@@ -693,7 +695,7 @@ async function main() {
           await rows.nth(index).hover();
           await page.waitForTimeout(400);
         }
-        await say('Open a claim to read its card and evidence');
+        await say('Unbroken lineage: Every detail traces back to primary sources');
         await rows.first().click();
         await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
         await page.waitForTimeout(1200);
@@ -701,7 +703,7 @@ async function main() {
         await page.waitForTimeout(1300);
         await page.mouse.wheel(0, -700);
         await page.waitForTimeout(700);
-        await say('Each bar links to its claim and evidence');
+        await say('Immutable truth: Creative decisions grounded in verified evidence');
         await rows.nth(Math.min(1, count - 1)).hover();
         await page.waitForTimeout(1300);
       }
