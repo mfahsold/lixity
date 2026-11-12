@@ -540,12 +540,19 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
     margin-inline-start: auto;
   }
 }
-@container reader-tools (max-width: 80rem) {
+@container reader-tools (max-width: 95rem) {
   .manuscript-reader-controls select.reader-chapter { flex: 0 1 auto; min-width: 7.5rem; width: auto; }
-  #reader-focus, #reader-teleprompter { min-width: 2.5rem; }
+  #reader-focus, #reader-teleprompter, #reader-speech, #workspace-reader-toggle { min-width: 2.5rem; }
   #reader-focus .reader-control-label,
-  #reader-teleprompter .reader-control-label { display: none; }
+  #reader-teleprompter .reader-control-label,
+  #reader-speech .reader-control-label,
+  #workspace-reader-toggle .reader-control-label { display: none; }
   .analysis-state { display: none; }
+}
+@container reader-tools (max-width: 78rem) {
+  #workbench-overview-open, #manuscript-write { min-width: 2.5rem; }
+  #workbench-overview-open .reader-control-label,
+  #manuscript-write .reader-control-label { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
   .manuscript-reader-controls select.reader-chapter { flex: 0 1 auto; min-width: 7rem; width: auto; }

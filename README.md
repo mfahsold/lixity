@@ -15,25 +15,32 @@
 
 **Read closely. Trace the evidence. Understand your text.**
 
-Lixity is a local manuscript workspace for writers, editors and linguistic text
-analysis. Find where a chapter's rhythm changes, inspect the words behind a
-measurement, or follow a scene detail back to its retained source. Keep research,
-author decisions and prose connected, then choose what to include in a reading
-copy. The browser app, CLI and Python API share one analysis engine.
+Lixity is a private, local manuscript studio for novelists, dramatists, editors,
+and linguistic researchers. It brings the craft of writing and the discipline of
+text analysis into a single, beautifully restrained environment: sense where a
+chapter's rhythm accelerates or falters, inspect the exact counted words behind
+every metric, and trace scene details back to retained primary sources. Keep
+dossiers, author decisions, and prose organically connected, then choose
+precisely what to share in a standalone reading edition. The browser app, CLI,
+and Python API share one deterministic analysis engine.
 
-- **A finding leads somewhere:** chapter comparisons and measurement explanations
-  take you back to the passage you can judge in context.
-- **Research keeps its history:** sources, claims and author decisions have
-  distinct roles; evidence links retain the versions behind them.
-- **Your project stays local:** built-in analysis runs offline. Optional research
-  and speech services are configured separately; sharing is an explicit export.
+- **Every finding connects to prose:** chapter comparisons, outlier flags, and
+  cadence explanations never live in isolated charts—they bring you directly back
+  to the sentence in context, where you make the artistic call.
+- **Research retains living memory:** primary sources, historical claims, and
+  authorial decisions have distinct roles; evidence links preserve the exact
+  revisions behind them even as sources or interpretations evolve.
+- **Your work stays on your machine:** analysis runs 100% offline and deterministic.
+  Zero telemetry, no forced cloud accounts, and no AI rewriting your prose.
+  Sharing is always an intentional, explicitly curated export.
 
-**Writing joins the workspace (unreleased).** The development checkout now has
-an integrated manuscript editor with undo, local autosave, conflict detection
-and recovery, search/replace, manual conflict comparison, and a distraction-free
-single-row writing bar with smooth auto-hiding chrome. Read and refresh opens the ordinary workspace for the saved text revision
-while keeping editor undo and the writing buffer alive. Research links remain
-reviewable after text changes; saved evidence is never silently rewritten. The public demo remains read-only.
+**Writing joins the workspace (unreleased).** The development checkout adds an
+integrated, distraction-free manuscript editor with multi-level undo, local
+autosave, conflict detection and recovery, search/replace, and a fluid single-row
+writing bar with auto-hiding chrome. Switching between writing and reading
+re-analyzes the saved revision while preserving your undo stack and editing
+buffer intact. Research links remain reviewable across text revisions; saved
+evidence is never silently rewritten. The public demo remains read-only.
 See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).
 
 **Seven interface languages:** Deutsch · English · Français · Español · Italiano · Português · Nederlands.
@@ -46,10 +53,10 @@ Technical documentation is maintained in **English only**. German and English
 have the broadest analysis resources; see the [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
 
 **Explore patterns. Return to the text. Make your own interpretation.**
-Measurements help locate and explain differences; they do not grade literary
-quality or rewrite prose. Built-in analysis works offline. The engine reads
-Markdown or plain text. The app can also preview and convert a Word/DOCX file
-when importing a copy; export Scrivener projects to a supported format first.
+Measurements illuminate differences; they do not grade literary quality or tell
+you how to write. Built-in analysis works offline. The engine accepts Markdown
+or plain text. The app can also preview and convert a Word/DOCX file when
+importing a copy; export Scrivener projects to a supported format first.
 
 [Explore the demo workspace](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Read the example novel](https://mfahsold.github.io/lixity/demo/reader/index.html) ·
@@ -72,15 +79,21 @@ then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [inte
 
 ## What can you do with Lixity?
 
-The project is the common context: manuscript, research and settings stay
-together while you move between writing, close reading, investigation and
-sharing. These are connected activities, not steps you must follow in order.
-Analysis remains optional; you decide what to change.
+The project is your creative anchor: manuscript prose, historical research, and
+authorial settings stay together while you move naturally between composing,
+close reading, investigation, and sharing. These are interwoven creative modes,
+not rigid steps:
 
-The combination is the point: inspect a difference, read the scene, consult its
-evidence and prepare a reader-facing copy in the same project. Focus reading,
-chapter comparisons, versioned research, audio tools and curated exports already
-work together; integrated manuscript writing extends that workflow in development.
+- **Compose & Refine**: Write in a clean typography canvas with local autosave,
+  tactile review markers, and an auto-scrolling teleprompter for spoken auditions.
+- **Listen to Cadence & Melody**: Compare sentence lengths, dialogue balance,
+  sensory perception (showing vs. telling), and tense consistency across chapters.
+  Every metric is grounded in transparent counts against chapter medians.
+- **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
+  Connect facts, character motives, and scene geography directly to paragraphs.
+- **Curate Standalone Editions**: Generate beautiful print PDFs or self-contained,
+  offline companion websites for beta readers and editors without exposing
+  private working notes.
 
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |
