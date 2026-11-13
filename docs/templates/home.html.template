@@ -48,7 +48,7 @@ $alternates
 <aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
-<div class="hero-cta"><a class="ctl primary" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div><p class="home-note">$demo_note</p></div>
+<div class="hero-cta"><a class="ctl primary" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a> <a class="ctl" href="sandbox/index.html" id="sandbox-cta">$sandbox_cta <span aria-hidden="true">→</span></a></div><p class="home-note">$demo_note</p></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">

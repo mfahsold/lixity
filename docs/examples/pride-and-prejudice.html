@@ -4306,63 +4306,6 @@ body.lixity-workspace.reader-focus {
   .manuscript-reading.reader-direct-speech .ptext.direct-speech-narrative { transition: none; }
 }
 
-/* Inline evidence layer filter chips and CSS Custom Highlight styles. */
-.reader-inline-evidence-layers {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .35rem;
-  min-width: 0;
-}
-.reader-evidence-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  min-height: 32px;
-  padding: .2rem .6rem;
-  border-radius: var(--radius-full, 9999px);
-  font-size: var(--text-note);
-  color: var(--fg-secondary);
-}
-.reader-evidence-chip[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  color: var(--fg);
-  font-weight: 500;
-}
-.evidence-chip-swatch {
-  width: .55rem;
-  height: .55rem;
-  border-radius: var(--radius-pill, 9999px);
-  flex-shrink: 0;
-}
-.evidence-chip-swatch-sticky { background: var(--warn, #d97706); }
-.evidence-chip-swatch-dialogue_tag { background: var(--info, #0284c7); }
-.evidence-chip-swatch-echo { background: var(--accent); }
-
-::highlight(lixity-evidence-sticky) {
-  background-color: color-mix(in srgb, var(--warn, #d97706) 16%, transparent);
-  text-decoration: underline dotted var(--warn, #d97706);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-dialogue-tag) {
-  background-color: color-mix(in srgb, var(--info, #0284c7) 16%, transparent);
-  text-decoration: underline dashed var(--info, #0284c7);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-echo) {
-  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
-  text-decoration: underline wavy color-mix(in srgb, var(--accent) 75%, transparent);
-  text-underline-offset: .18em;
-}
-@media (max-width: 600px) {
-  .reader-inline-evidence-layers { width: 100%; }
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-@media (pointer: coarse) {
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-
 /* Exact saved decision and dossier records in the existing Review surface. */
 .research-decision-review { margin-block: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-2); }
 .research-decision-review > summary,
@@ -4791,8 +4734,8 @@ body.lixity-workspace.reader-focus {
 <span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>
 </span>
 <label class="form-checkbox js-analysis-control"><input type="checkbox" id="filter-flags"/> Flagged only</label>
-<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">Show all paragraphs</button>
-<label class="metric-layer-control"><span><span class="help" data-help="Paragraph values relative to the chapter median: blue = lower, orange = higher. Ring = deviation |z| ≥ 1.5; not a quality rating." tabindex="0">Deviations</span></span> <select class="ctl" id="style-layer" aria-label="Measure" data-help="Choose the measure for text marks and paragraph comparison."><option value="">None</option><optgroup label="Sentence &amp; Rhythm"><option value="asl" data-hint="Blue: shorter sentences; orange: longer, relative to this chapter’s median. Length alone does not establish pace." data-unit="words per sentence" data-comparable="82">Sentence length</option><option value="function" data-hint="Blue: lower function-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="82">Function words</option></optgroup><optgroup label="Voice &amp; Dialogue"><option value="dialogue" data-hint="Blue: lower quoted-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="48">Quoted words</option><option value="filter" data-hint="Orange = more perception/filter-verb markers, blue = fewer. Read the passage before interpreting narrative distance." data-unit="per 1,000 words" data-comparable="0">Perception filters</option><option value="sensory" data-hint="Orange = more sensory perception cues (auditory, visual, haptic, olfactory/gustatory), blue = fewer. Immediate sensory showing." data-unit="per 1,000 words" data-comparable="0">Sensory cues</option></optgroup><optgroup label="Grammar &amp; Style"><option value="passive" data-hint="Blue: fewer passive-pattern cues per 1,000 words; orange: more. These are heuristic matches, not a grammatical parse or measure of directness." data-unit="per 1,000 words" data-comparable="21">Passive patterns</option><option value="modal" data-hint="Blue: fewer modal-verb cues per 1,000 words; orange: more. Lexical patterns do not establish hedging or narrative distance." data-unit="per 1,000 words" data-comparable="21">Modals</option><option value="nominal" data-hint="&#x27;We examine the request&#x27; → &#x27;The examination of the request takes place&#x27;: an example of nominal style. Only noun endings such as -tion/-ment/-ness are counted. Orange = more matches, blue = fewer. Judge the wording in context." data-unit="per 1,000 words" data-comparable="21">Noun endings</option></optgroup></select></label>
+<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset" hidden>Show all paragraphs</button>
+<label class="metric-layer-control"><span><span class="help" data-help="Paragraph values relative to the chapter median: blue = lower, orange = higher. Ring = deviation |z| ≥ 1.5; not a quality rating." tabindex="0">Deviations</span></span> <select class="ctl" id="style-layer" aria-label="Measure" data-help="Choose the measure for text marks and paragraph comparison."><option value="">None</option><optgroup label="Sentence &amp; Rhythm"><option value="asl" data-hint="Blue: shorter sentences; orange: longer, relative to this chapter’s median. Length alone does not establish pace." data-unit="words per sentence" data-comparable="82">Sentence length</option><option value="function" data-hint="Blue: lower function-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="82">Function words</option><option value="sticky" data-hint="Highlight sentences with high glue-word density" data-unit="" data-comparable="0" data-inline-evidence="1">Sticky sentences</option></optgroup><optgroup label="Voice &amp; Dialogue"><option value="dialogue" data-hint="Blue: lower quoted-word share; orange: higher, relative to this chapter’s median." data-unit="% of words" data-comparable="48">Quoted words</option><option value="dialogue_tag" data-hint="Highlight speech-attribution tags beside dialogue" data-unit="" data-comparable="0" data-inline-evidence="1">Dialogue tags</option><option value="filter" data-hint="Orange = more perception/filter-verb markers, blue = fewer. Read the passage before interpreting narrative distance." data-unit="per 1,000 words" data-comparable="0">Perception filters</option><option value="sensory" data-hint="Orange = more sensory perception cues (auditory, visual, haptic, olfactory/gustatory), blue = fewer. Immediate sensory showing." data-unit="per 1,000 words" data-comparable="0">Sensory cues</option><option value="echo" data-hint="Highlight content words repeated within the same paragraph" data-unit="" data-comparable="0" data-inline-evidence="1">Word echoes</option></optgroup><optgroup label="Grammar &amp; Style"><option value="passive" data-hint="Blue: fewer passive-pattern cues per 1,000 words; orange: more. These are heuristic matches, not a grammatical parse or measure of directness." data-unit="per 1,000 words" data-comparable="21">Passive patterns</option><option value="modal" data-hint="Blue: fewer modal-verb cues per 1,000 words; orange: more. Lexical patterns do not establish hedging or narrative distance." data-unit="per 1,000 words" data-comparable="21">Modals</option><option value="nominal" data-hint="&#x27;We examine the request&#x27; → &#x27;The examination of the request takes place&#x27;: an example of nominal style. Only noun endings such as -tion/-ment/-ness are counted. Orange = more matches, blue = fewer. Judge the wording in context." data-unit="per 1,000 words" data-comparable="21">Noun endings</option></optgroup></select></label>
 <span class="legend">
 <span><span class="swatch" style="background:var(--present)"></span>Present</span>
 <span><span class="swatch" style="background:var(--past)"></span>Past</span>
@@ -7849,10 +7792,19 @@ document.addEventListener("keydown", function(event) {
   };
 })();
 
+function syncParagraphReset() {
+  if (!paragraphReset) return;
+  var active = document.body.classList.contains("only-flags") ||
+    document.body.classList.contains("layer-only") ||
+    Boolean(layer && layer.value);
+  paragraphReset.hidden = !active;
+}
+
 function setFilter(input, bodyClass, on) {
   if (!input) return;
   input.checked = on;
   document.body.classList.toggle(bodyClass, on);
+  syncParagraphReset();
 }
 
 function selectAnalysisMetric(key) {
@@ -7985,6 +7937,7 @@ var filter = document.getElementById("filter-flags");
 if (filter) {
   filter.addEventListener("change", function () {
     document.body.classList.toggle("only-flags", filter.checked);
+    syncParagraphReset();
   });
 }
 // --- Manuscript search -------------------------------------------------
@@ -8290,6 +8243,7 @@ function applyLayer() {
   var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
+  syncParagraphReset();
   if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
   var nextOutliers = [];
   allChips.forEach(function (chip) {
@@ -8342,6 +8296,10 @@ function applyLayer() {
         if (comparisonHint) comparisonHint.textContent = hint;
         var evidenceHint = document.getElementById("layer-evidence-hint");
         if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
+        if (option.dataset.inlineEvidence === "1" && evidenceLegendToggle && !evidenceLegendToggle.checked) {
+          evidenceLegendToggle.checked = true;
+          evidenceLegendToggle.dispatchEvent(new Event("change"));
+        }
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
@@ -8366,6 +8324,7 @@ if (comparisonToggle) comparisonToggle.addEventListener("change", applyLayer);
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {
     document.body.classList.toggle("layer-only", layerOnly.checked);
+    syncParagraphReset();
   });
 }
 if (layerPrevious) layerPrevious.addEventListener("click", function() { stepOutlier(-1); });

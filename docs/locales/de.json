@@ -25,7 +25,7 @@
   "start_title": "Bring deinen eigenen Text mit.",
   "start_text": "Installiere Lixity lokal unter Windows, macOS oder Linux. Beginne mit Markdown oder einfachem Text und folge der Installationsanleitung.",
   "install_link": "Installationsanleitung (Englisch)",
-  "scope": "Diese Website zeigt den Entwicklungsstand. Prüfe die veröffentlichte Version auf verfügbare Funktionen; optionale Dienste haben eigene Datengrenzen.",
+  "scope": "Installiere v0.8.0 lokal in Sekunden; optionale Sprach- und Recherchedienste bleiben datenschutzrechtlich strikt getrennt.",
   "languages_title": "Sieben Sprachen. Ein Arbeitsraum.",
   "languages_text": "Diese Website gibt es in sieben Sprachen. Die App folgt dem gewählten Analyseprofil; die Sprache der CLI-Berichte lässt sich gesondert einstellen. Die technische Dokumentation bleibt Englisch.",
   "limits": "Analyseressourcen und Validierung unterscheiden sich je nach Sprache. Deutsch und Englisch sind am breitesten abgedeckt. Eine übersetzte Oberfläche übersetzt nicht dein Manuskript.",
@@ -37,7 +37,7 @@
   "legal": "Impressum (Englisch)",
   "top": "Nach oben",
   "linguistics_title": "Dem Puls und der Melodie der Sprache lauschen.",
-  "linguistics_text": "Mache Tempowechsel, Satzlängenmuster, Dialogdichte und Sinneswahrnehmungen transparent sichtbar. Jeder Messwert führt dich mit einem Klick zur konkreten Passage im Manuskript. So erkennst du erzählerische Brüche und harmonische Bögen – objektiv fundiert, ganz ohne generative KI-Vormundschaft.",
+  "linguistics_text": "Finde klebrige Sätze, Inquit-Dichte, Szenen-Hooks, POV-Kapitelabstände und den Stimmenkontrast zwischen Erzählprosa und Dialog – plus Nur-Dialog-Modus und optionale, unverbindliche Genre-Korridore. Jeder Messwert führt direkt zur Textstelle, 100 % offline und ohne generative KI.",
   "linguistics_link": "Ablauf einer Textanalyse (Englisch)",
   "language_action": "Auf Deutsch weiterlesen",
   "language_suggestion": "Lieber in einer anderen Sprache? Nutze deine gespeicherte Wahl oder eine passende Browsersprache.",
@@ -55,7 +55,8 @@
   "tour_return": "Zurück zum Lesen, mit der Stelle im Blick.",
   "tour_error": "Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo.",
   "discover": "Lixity kennenlernen",
-  "editor_status": "Schreiben in Lixity: Der integrierte Editor ist im Entwicklungsstand umgesetzt, aber noch nicht veröffentlicht. Tour und öffentliche Demo zeigen den schreibgeschützten Ablauf.",
+  "editor_status": "In v0.8.0 sofort nutzbar: vollständige Offline-Analyse, Nur-Dialog-Modus, Manuskript-Reader, Recherche-Dossiers und eigenständige Lesefassungen; der integrierte Schreibmodus ist im aktuellen Stand bereits enthalten.",
   "editor_link": "Editor: Umfang und Verfügbarkeit (Englisch)",
-  "workflow": "Genaues Lesen, Belege und Kapitelvergleiche bleiben mit dem Text verbunden. Die integrierte Analyse läuft offline; optionale Sprach- und Recherchedienste werden gesondert eingerichtet. CLI und Python-API nutzen dieselbe Analyse-Engine."
+  "workflow": "Genaues Lesen, Belege und Kapitelvergleiche bleiben mit dem Text verbunden. Die integrierte Analyse läuft offline; optionale Sprach- und Recherchedienste werden gesondert eingerichtet. CLI und Python-API nutzen dieselbe Analyse-Engine.",
+  "sandbox_cta": "Absatz im Browser testen"
 }

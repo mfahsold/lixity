@@ -57,5 +57,6 @@
   "discover": "Scopri Lixity",
   "editor_status": "Scrivere in Lixity: l’editor integrato è implementato nella versione di sviluppo, ma non è ancora pubblicato. Il tour e la demo pubblica mostrano il percorso in sola lettura.",
   "editor_link": "Ambito e disponibilità dell’editor (inglese)",
-  "workflow": "Lettura attenta, fonti e confronti tra capitoli restano collegati al testo. L’analisi integrata funziona offline; i servizi vocali e di ricerca opzionali si configurano separatamente. CLI e API Python condividono lo stesso motore di analisi."
+  "workflow": "Lettura attenta, fonti e confronti tra capitoli restano collegati al testo. L’analisi integrata funziona offline; i servizi vocali e di ricerca opzionali si configurano separatamente. CLI e API Python condividono lo stesso motore di analisi.",
+  "sandbox_cta": "Prova un brano nel browser"
 }

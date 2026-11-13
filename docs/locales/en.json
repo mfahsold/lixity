@@ -25,7 +25,7 @@
   "start_title": "Bring your own text.",
   "start_text": "Install Lixity locally on Windows, macOS or Linux. Start with Markdown or plain text and follow the installation guide.",
   "install_link": "Installation guide (English)",
-  "scope": "This website follows the development checkout. Check the published release for available features; optional services have separate data boundaries.",
+  "scope": "Install the current v0.8.0 release locally in seconds; optional speech and research services stay strictly separated.",
   "languages_title": "Seven languages. One workspace.",
   "languages_text": "Explore this website in seven languages. The app follows the selected analysis profile; CLI report language has its own setting. Technical documentation stays in English.",
   "limits": "Analysis resources and validation differ by language; German and English have the broadest coverage. Interface translation does not translate your manuscript.",
@@ -37,7 +37,7 @@
   "legal": "Legal notice (English)",
   "top": "Back to top",
   "linguistics_title": "Listen to the pulse and melody of your prose.",
-  "linguistics_text": "Explore pacing shifts, sentence-length variations, dialogue balance, and sensory cues across chapters. Every statistic links back to its exact words in the text, illuminating narrative arc and voice without opaque generative AI intervention.",
+  "linguistics_text": "Spot sticky sentences, dialogue-tag density, scene entry/exit hooks, POV chapter gaps, and voice separation between narration and dialogue. Compare against optional non-prescriptive genre corridors or stay 100% self-calibrated—every metric links back to exact words in your text, offline and without generative AI.",
   "linguistics_link": "Text-analysis workflow (English)",
   "language_action": "Continue in English",
   "language_suggestion": "Prefer another language? Use your saved choice or a language supported by your browser.",
@@ -55,7 +55,8 @@
   "tour_return": "Back to reading, with the passage kept.",
   "tour_error": "The video could not load. Explore the interactive demo instead.",
   "discover": "Meet Lixity",
-  "editor_status": "Writing in Lixity: the integrated editor is implemented in the development checkout, not yet released. The tour and public demo show the read-only workflow.",
+  "editor_status": "Available in v0.8.0: full offline analysis, Direct Speech Mode, manuscript reader, research dossiers, and standalone reading copies. The integrated editor is also ready in the current checkout.",
   "editor_link": "Editor scope and availability (English)",
-  "workflow": "Close reading, evidence and chapter comparisons stay connected to the text. Built-in analysis runs offline; optional speech and research services are configured separately. The CLI and Python API reuse the same analysis engine."
+  "workflow": "Close reading, evidence and chapter comparisons stay connected to the text. Built-in analysis runs offline; optional speech and research services are configured separately. The CLI and Python API reuse the same analysis engine.",
+  "sandbox_cta": "Try a passage in browser"
 }

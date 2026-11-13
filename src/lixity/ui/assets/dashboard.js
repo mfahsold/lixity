@@ -1,7 +1,16 @@
+function syncParagraphReset() {
+  if (!paragraphReset) return;
+  var active = document.body.classList.contains("only-flags") ||
+    document.body.classList.contains("layer-only") ||
+    Boolean(layer && layer.value);
+  paragraphReset.hidden = !active;
+}
+
 function setFilter(input, bodyClass, on) {
   if (!input) return;
   input.checked = on;
   document.body.classList.toggle(bodyClass, on);
+  syncParagraphReset();
 }
 
 function selectAnalysisMetric(key) {
@@ -134,6 +143,7 @@ var filter = document.getElementById("filter-flags");
 if (filter) {
   filter.addEventListener("change", function () {
     document.body.classList.toggle("only-flags", filter.checked);
+    syncParagraphReset();
   });
 }
 // --- Manuscript search -------------------------------------------------
@@ -439,6 +449,7 @@ function applyLayer() {
   var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
+  syncParagraphReset();
   if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
   var nextOutliers = [];
   allChips.forEach(function (chip) {
@@ -491,6 +502,10 @@ function applyLayer() {
         if (comparisonHint) comparisonHint.textContent = hint;
         var evidenceHint = document.getElementById("layer-evidence-hint");
         if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
+        if (option.dataset.inlineEvidence === "1" && evidenceLegendToggle && !evidenceLegendToggle.checked) {
+          evidenceLegendToggle.checked = true;
+          evidenceLegendToggle.dispatchEvent(new Event("change"));
+        }
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
@@ -515,6 +530,7 @@ if (comparisonToggle) comparisonToggle.addEventListener("change", applyLayer);
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {
     document.body.classList.toggle("layer-only", layerOnly.checked);
+    syncParagraphReset();
   });
 }
 if (layerPrevious) layerPrevious.addEventListener("click", function() { stepOutlier(-1); });

@@ -52,7 +52,7 @@ def test_chapter_picker_keeps_empty_chapters_in_source_order():
     assert controls.index('One</option>') < controls.index('Empty</option>') < controls.index('Three</option>')
 
 
-def test_reader_dashboard_renders_inline_evidence_filter_chips():
+def test_reader_dashboard_unifies_inline_evidence_in_measure_dropdown():
     from lixity.pipeline import analyze_document, resolve_document_config
     from lixity.style_fingerprint import FingerprintThresholds
     from lixity.ui.dashboard import render_analysis
@@ -63,8 +63,7 @@ def test_reader_dashboard_renders_inline_evidence_filter_chips():
     analysis = analyze_document(source, config, FingerprintThresholds())
     page = render_analysis(analysis, resolved, title='Title', flag_min_severity=2,
                            controls=True, reader_document=reader_blocks(source, config, analysis.paragraphs))
+    assert 'id="reader-inline-evidence-layers"' not in page
     for layer_key in ("sticky", "dialogue_tag", "echo"):
-        assert f'data-evidence-layer="{layer_key}"' in page
-    assert "::highlight(lixity-evidence-sticky)" in page
-    assert "::highlight(lixity-evidence-dialogue-tag)" in page
-    assert "::highlight(lixity-evidence-echo)" in page
+        assert f'value="{layer_key}"' in page
+    assert "::highlight(lixity-analysis-evidence)" in page

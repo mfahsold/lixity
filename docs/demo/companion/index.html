@@ -4305,63 +4305,6 @@ body.lixity-workspace.reader-focus {
   .manuscript-reading.reader-direct-speech .ptext.direct-speech-narrative { transition: none; }
 }
 
-/* Inline evidence layer filter chips and CSS Custom Highlight styles. */
-.reader-inline-evidence-layers {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .35rem;
-  min-width: 0;
-}
-.reader-evidence-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  min-height: 32px;
-  padding: .2rem .6rem;
-  border-radius: var(--radius-full, 9999px);
-  font-size: var(--text-note);
-  color: var(--fg-secondary);
-}
-.reader-evidence-chip[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  color: var(--fg);
-  font-weight: 500;
-}
-.evidence-chip-swatch {
-  width: .55rem;
-  height: .55rem;
-  border-radius: var(--radius-pill, 9999px);
-  flex-shrink: 0;
-}
-.evidence-chip-swatch-sticky { background: var(--warn, #d97706); }
-.evidence-chip-swatch-dialogue_tag { background: var(--info, #0284c7); }
-.evidence-chip-swatch-echo { background: var(--accent); }
-
-::highlight(lixity-evidence-sticky) {
-  background-color: color-mix(in srgb, var(--warn, #d97706) 16%, transparent);
-  text-decoration: underline dotted var(--warn, #d97706);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-dialogue-tag) {
-  background-color: color-mix(in srgb, var(--info, #0284c7) 16%, transparent);
-  text-decoration: underline dashed var(--info, #0284c7);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-echo) {
-  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
-  text-decoration: underline wavy color-mix(in srgb, var(--accent) 75%, transparent);
-  text-underline-offset: .18em;
-}
-@media (max-width: 600px) {
-  .reader-inline-evidence-layers { width: 100%; }
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-@media (pointer: coarse) {
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-
 /* Exact saved decision and dossier records in the existing Review surface. */
 .research-decision-review { margin-block: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-2); }
 .research-decision-review > summary,
@@ -4785,7 +4728,7 @@ body.lixity-workspace.reader-focus {
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.8.0</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A13762da9-103f-4b4d-b5b9-f2fc2f3003f2\u0026version_id=urn%3Auuid%3A9299063b-89a9-4f12-b0cf-2eb795b0ddab":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Aef51ba6a-7af5-44ad-b93e-902c836295c7\u0026source_id=urn%3Auuid%3A13762da9-103f-4b4d-b5b9-f2fc2f3003f2\u0026version_id=urn%3Auuid%3A9299063b-89a9-4f12-b0cf-2eb795b0ddab":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A885852bc-3ab3-4815-a104-43795a034cce\u0026version_id=urn%3Auuid%3A1a4d01c9-610d-4b13-ad75-56c40eceda27":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Aef51ba6a-7af5-44ad-b93e-902c836295c7\u0026source_id=urn%3Auuid%3A885852bc-3ab3-4815-a104-43795a034cce\u0026version_id=urn%3Auuid%3A1a4d01c9-610d-4b13-ad75-56c40eceda27":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:ef51ba6a-7af5-44ad-b93e-902c836295c7","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:b843fbc0-29da-4c8f-8cb5-29a6d17ec7cc","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:41aa7b22-3645-48cc-abe3-3bda6d278805","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:13762da9-103f-4b4d-b5b9-f2fc2f3003f2/urn:uuid:9299063b-89a9-4f12-b0cf-2eb795b0ddab)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:ef51ba6a-7af5-44ad-b93e-902c836295c7","source_id":"urn:uuid:13762da9-103f-4b4d-b5b9-f2fc2f3003f2","source_version_id":"urn:uuid:9299063b-89a9-4f12-b0cf-2eb795b0ddab","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Aef51ba6a-7af5-44ad-b93e-902c836295c7\u0026source_id=urn%3Auuid%3A13762da9-103f-4b4d-b5b9-f2fc2f3003f2\u0026version_id=urn%3Auuid%3A9299063b-89a9-4f12-b0cf-2eb795b0ddab","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:41aa7b22-3645-48cc-abe3-3bda6d278805","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:885852bc-3ab3-4815-a104-43795a034cce/urn:uuid:1a4d01c9-610d-4b13-ad75-56c40eceda27)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:ef51ba6a-7af5-44ad-b93e-902c836295c7","source_id":"urn:uuid:885852bc-3ab3-4815-a104-43795a034cce","source_version_id":"urn:uuid:1a4d01c9-610d-4b13-ad75-56c40eceda27","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Aef51ba6a-7af5-44ad-b93e-902c836295c7\u0026source_id=urn%3Auuid%3A885852bc-3ab3-4815-a104-43795a034cce\u0026version_id=urn%3Auuid%3A1a4d01c9-610d-4b13-ad75-56c40eceda27","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:b843fbc0-29da-4c8f-8cb5-29a6d17ec7cc","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:b843fbc0-29da-4c8f-8cb5-29a6d17ec7cc","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"45ae559509e0b61bcff63ccfdff0a4c7e0ddf70095e8d86e51ec3be86e45525d"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A56af7068-a307-43fb-9943-304a65e54712\u0026version_id=urn%3Auuid%3A4d1e6f8c-495c-4872-83a2-88f43167b401":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396\u0026source_id=urn%3Auuid%3A56af7068-a307-43fb-9943-304a65e54712\u0026version_id=urn%3Auuid%3A4d1e6f8c-495c-4872-83a2-88f43167b401":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A64ff8ad2-c34c-4c19-b30b-f052a752ddc6\u0026version_id=urn%3Auuid%3Aeb815ceb-7da1-44c3-82f4-6d8f04b670f3":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396\u0026source_id=urn%3Auuid%3A64ff8ad2-c34c-4c19-b30b-f052a752ddc6\u0026version_id=urn%3Auuid%3Aeb815ceb-7da1-44c3-82f4-6d8f04b670f3":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:5355e0de-1061-4f0d-9548-ef8cd1245762","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:cf0dd54c-338a-403d-a257-38f612cc82c2","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:56af7068-a307-43fb-9943-304a65e54712/urn:uuid:4d1e6f8c-495c-4872-83a2-88f43167b401)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396","source_id":"urn:uuid:56af7068-a307-43fb-9943-304a65e54712","source_version_id":"urn:uuid:4d1e6f8c-495c-4872-83a2-88f43167b401","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396\u0026source_id=urn%3Auuid%3A56af7068-a307-43fb-9943-304a65e54712\u0026version_id=urn%3Auuid%3A4d1e6f8c-495c-4872-83a2-88f43167b401","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:cf0dd54c-338a-403d-a257-38f612cc82c2","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:64ff8ad2-c34c-4c19-b30b-f052a752ddc6/urn:uuid:eb815ceb-7da1-44c3-82f4-6d8f04b670f3)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396","source_id":"urn:uuid:64ff8ad2-c34c-4c19-b30b-f052a752ddc6","source_version_id":"urn:uuid:eb815ceb-7da1-44c3-82f4-6d8f04b670f3","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A5fbf9f8a-5b62-46b6-b93e-a8cfa31cc396\u0026source_id=urn%3Auuid%3A64ff8ad2-c34c-4c19-b30b-f052a752ddc6\u0026version_id=urn%3Auuid%3Aeb815ceb-7da1-44c3-82f4-6d8f04b670f3","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:5355e0de-1061-4f0d-9548-ef8cd1245762","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:5355e0de-1061-4f0d-9548-ef8cd1245762","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"69d0bd6073e41fb2e99665336b76691df228ca55af34f09afa817a5c16dafa34"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -7400,10 +7343,19 @@ document.addEventListener("keydown", function(event) {
   window.LixitySectionNavigation = {mount: mount};
 })();
 
+function syncParagraphReset() {
+  if (!paragraphReset) return;
+  var active = document.body.classList.contains("only-flags") ||
+    document.body.classList.contains("layer-only") ||
+    Boolean(layer && layer.value);
+  paragraphReset.hidden = !active;
+}
+
 function setFilter(input, bodyClass, on) {
   if (!input) return;
   input.checked = on;
   document.body.classList.toggle(bodyClass, on);
+  syncParagraphReset();
 }
 
 function selectAnalysisMetric(key) {
@@ -7536,6 +7488,7 @@ var filter = document.getElementById("filter-flags");
 if (filter) {
   filter.addEventListener("change", function () {
     document.body.classList.toggle("only-flags", filter.checked);
+    syncParagraphReset();
   });
 }
 // --- Manuscript search -------------------------------------------------
@@ -7841,6 +7794,7 @@ function applyLayer() {
   var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
+  syncParagraphReset();
   if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
   var nextOutliers = [];
   allChips.forEach(function (chip) {
@@ -7893,6 +7847,10 @@ function applyLayer() {
         if (comparisonHint) comparisonHint.textContent = hint;
         var evidenceHint = document.getElementById("layer-evidence-hint");
         if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
+        if (option.dataset.inlineEvidence === "1" && evidenceLegendToggle && !evidenceLegendToggle.checked) {
+          evidenceLegendToggle.checked = true;
+          evidenceLegendToggle.dispatchEvent(new Event("change"));
+        }
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
@@ -7917,6 +7875,7 @@ if (comparisonToggle) comparisonToggle.addEventListener("change", applyLayer);
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {
     document.body.classList.toggle("layer-only", layerOnly.checked);
+    syncParagraphReset();
   });
 }
 if (layerPrevious) layerPrevious.addEventListener("click", function() { stepOutlier(-1); });

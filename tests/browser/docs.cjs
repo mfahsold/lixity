@@ -157,11 +157,11 @@ async function checkReturnNavigation(page, route, exercise) {
     await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
   } else if (route === 'demo/report.html') {
     await expect(navigation.getByRole('link', {name: 'About Lixity', exact: true})).toHaveAttribute('href', '../');
-    await expect(navigation.locator('a')).toHaveCount(1);
+    await expect(navigation.locator('a')).toHaveCount(2);
     await expect(navigation).toContainText('Read-only demo');
     await expect(breadcrumbs).toHaveCount(0);
   } else if (publicationRoutes.has(route)) {
-    await expect(navigation.locator('a')).toHaveCount(4);
+    await expect(navigation.locator('a')).toHaveCount(5);
     await expect(navigation.getByRole('link', {name:'Author workspace', exact:true})).toHaveAttribute('href', '../report.html');
     await expect(navigation.getByRole('link', {name:'Short tour', exact:true})).toHaveAttribute('href', '../../guides/first-look.html');
     await expect(breadcrumbs).toHaveCount(0);
@@ -1162,7 +1162,11 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
           const publication = publicationRoutes.has(route) || publicationAnalysisRoutes.has(route);
-          if (!dashboard && !publication) {
+          if (route === 'sandbox/index.html' && javaScriptEnabled) {
+            await expect(page.locator('#direct-speech-btn')).toBeVisible();
+            await expect(page.locator('#k-sticky')).toBeVisible();
+          }
+          if (!dashboard && !publication && route !== 'sandbox/index.html') {
             const themeControl = page.locator('#themeToggle');
             if (javaScriptEnabled) await expect(themeControl).toBeVisible();
             else await expect(themeControl).toBeHidden();
@@ -1197,8 +1201,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           const overflowingCells = await page.locator('.guide table td, .guide table th').evaluateAll(cells =>
             cells.filter(cell => cell.scrollWidth > cell.clientWidth + 1).map(cell => cell.textContent));
           assert.deepEqual(overflowingCells, [], `${route}: guide table text must stay inside its own column at ${width}px`);
-          await checkReturnNavigation(page, route,
-            colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
+          if (route !== 'sandbox/index.html') {
+            await checkReturnNavigation(page, route,
+              colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
+          }
           if (javaScriptEnabled && colorScheme === 'light' && width !== 390 &&
               (route === '' || route === 'guides/first-look.html' || route === 'guides/first-look-de.html' || (route === 'demo/report.html' && width === 320))) {
             await page.screenshot({path: path.join(artifacts, `navigation-${route ? path.basename(route, '.html') : 'home'}-${width}-light.png`)});
@@ -1240,7 +1246,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await expect(picker.locator('nav')).toBeVisible();
             await picker.locator('a[hreflang=de]').click();
             await expect(page).toHaveURL(origin + '/lixity/index-de.html');
-            await expect(page.locator('h1')).toHaveText('Ein Arbeitsraum.Deine Perspektive.');
+            await expect(page.locator('h1')).toHaveText('Ein eigener Raum für dein Manuskript.Klarheit im Rhythmus, Tiefe im Beleg.');
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
             await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');
@@ -1264,7 +1270,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await page.locator('#installation a[href="guides/installation.html"]').click();
         assert.ok(page.url().endsWith('/guides/installation.html'), 'An eager visitor can reach installation through the header and its dedicated section');
         await page.goto(origin + '/lixity/');
-        await page.locator('.hero-cta a').click();
+        await page.locator('.hero-cta a.primary').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await expect(page.locator('#product-tour-preview')).toBeInViewport();
         await page.locator('#guides a[href="guides/first-look.html"]').click();
@@ -1280,7 +1286,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         await returnToTop(page, 'Guides parent');
         await page.locator('.site-header .brand[href="./"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
-        await page.locator('.hero-cta a').click();
+        await page.locator('.hero-cta a.primary').click();
         await page.locator('.tour-explore[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The single discovery path leads from the tour to the demo');
         await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();

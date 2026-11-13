@@ -65,7 +65,7 @@ from .heatmap import (
     render_style_passport_panel,
 )
 from .manuscript_document import ReaderBlock, reader_block_html
-from .manuscript_reader import inline_evidence_controls, reading_controls
+from .manuscript_reader import INLINE_EVIDENCE_LAYERS, reading_controls
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -917,22 +917,31 @@ def render_dashboard(
     )
     if paragraphs:
         layer_groups = (
-            ("layer_group_rhythm", ("asl", "function")),
-            ("layer_group_voice", ("dialogue", "filter", "sensory")),
+            ("layer_group_rhythm", ("asl", "function", "sticky")),
+            ("layer_group_voice", ("dialogue", "dialogue_tag", "filter", "sensory", "echo")),
             ("layer_group_grammar", ("passive", "modal", "nominal")),
         )
         grouped_members = {m for _, members in layer_groups for m in members}
         grouped_layer_options = []
         for group_label_key, members in layer_groups:
-            options_html = "".join(
-                f'<option value="{layer_key}" '
-                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-                f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
-                f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
-                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-                for layer_key in members
-                if layer_key in LAYER_FEATURES
-            )
+            options_parts = []
+            for layer_key in members:
+                if layer_key in LAYER_FEATURES:
+                    options_parts.append(
+                        f'<option value="{layer_key}" '
+                        f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                        f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
+                        f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
+                        f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+                    )
+                elif layer_key in INLINE_EVIDENCE_LAYERS:
+                    options_parts.append(
+                        f'<option value="{layer_key}" '
+                        f'data-hint="{esc(label(labels, "reading_help_evidence_" + layer_key), quote=True)}" '
+                        f'data-unit="" data-comparable="0" data-inline-evidence="1">'
+                        f"{esc(label(labels, 'evidence_layer_' + layer_key))}</option>"
+                    )
+            options_html = "".join(options_parts)
             if options_html:
                 grouped_layer_options.append(f'<optgroup label="{L(group_label_key)}">{options_html}</optgroup>')
 
@@ -1001,8 +1010,7 @@ def render_dashboard(
             f'{layer_navigation}'
             '</div>'
             f'{flag_checkbox}'
-            f'{inline_evidence_controls(labels)}'
-            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
             '</div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
@@ -1124,7 +1132,7 @@ def render_dashboard(
                                     extra_class="js-analysis-control"))
         if paragraphs:
             parts.append(
-                f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+                f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
             )
             parts.append(metric_control)
     parts.append('<span class="legend">')

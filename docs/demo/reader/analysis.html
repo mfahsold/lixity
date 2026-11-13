@@ -4305,63 +4305,6 @@ body.lixity-workspace.reader-focus {
   .manuscript-reading.reader-direct-speech .ptext.direct-speech-narrative { transition: none; }
 }
 
-/* Inline evidence layer filter chips and CSS Custom Highlight styles. */
-.reader-inline-evidence-layers {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .35rem;
-  min-width: 0;
-}
-.reader-evidence-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  min-height: 32px;
-  padding: .2rem .6rem;
-  border-radius: var(--radius-full, 9999px);
-  font-size: var(--text-note);
-  color: var(--fg-secondary);
-}
-.reader-evidence-chip[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  color: var(--fg);
-  font-weight: 500;
-}
-.evidence-chip-swatch {
-  width: .55rem;
-  height: .55rem;
-  border-radius: var(--radius-pill, 9999px);
-  flex-shrink: 0;
-}
-.evidence-chip-swatch-sticky { background: var(--warn, #d97706); }
-.evidence-chip-swatch-dialogue_tag { background: var(--info, #0284c7); }
-.evidence-chip-swatch-echo { background: var(--accent); }
-
-::highlight(lixity-evidence-sticky) {
-  background-color: color-mix(in srgb, var(--warn, #d97706) 16%, transparent);
-  text-decoration: underline dotted var(--warn, #d97706);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-dialogue-tag) {
-  background-color: color-mix(in srgb, var(--info, #0284c7) 16%, transparent);
-  text-decoration: underline dashed var(--info, #0284c7);
-  text-underline-offset: .18em;
-}
-::highlight(lixity-evidence-echo) {
-  background-color: color-mix(in srgb, var(--accent) 16%, transparent);
-  text-decoration: underline wavy color-mix(in srgb, var(--accent) 75%, transparent);
-  text-underline-offset: .18em;
-}
-@media (max-width: 600px) {
-  .reader-inline-evidence-layers { width: 100%; }
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-@media (pointer: coarse) {
-  .reader-evidence-chip { min-height: 2.75rem; }
-}
-
 /* Exact saved decision and dossier records in the existing Review surface. */
 .research-decision-review { margin-block: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-2); }
 .research-decision-review > summary,

@@ -9,11 +9,17 @@
 <meta property="og:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
 <meta property="og:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos ohne Server-Upload."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/sandbox/index.html"/>
-<meta name="twitter:card" content="summary"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta property="og:image:width" content="2960"/>
+<meta property="og:image:height" content="2062"/>
+<meta property="og:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
+<meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
-<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos ohne Server-Upload."/>
+<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil, klebrige Sätze und Nur-Dialog-Modus ohne Server-Upload."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"TechArticle","headline":"Lixity — Browser-Sandbox: Absatz lokal prüfen","url":"https://mfahsold.github.io/lixity/sandbox/index.html","mainEntityOfPage":"https://mfahsold.github.io/lixity/sandbox/index.html","inLanguage":["de","en"],"author":{"@type":"Person","name":"Matthias Fahsold","url":"https://github.com/mfahsold"}}
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Lixity — Browser-Sandbox: Absatz lokal prüfen","url":"https://mfahsold.github.io/lixity/sandbox/index.html","mainEntityOfPage":"https://mfahsold.github.io/lixity/sandbox/index.html","image":{"@type":"ImageObject","url":"https://mfahsold.github.io/lixity/screenshots/dashboard-light.png","width":2960,"height":2062},"inLanguage":["de","en"],"author":{"@type":"Person","name":"Matthias Fahsold","url":"https://github.com/mfahsold"}}
 </script>
 <style>
   :root {
@@ -86,6 +92,10 @@
     font-size: .95rem; max-height: 220px; overflow: auto; white-space: pre-wrap;
   }
   mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: 4px; }
+  .sticky-sent { text-decoration: underline dotted #d97706; text-underline-offset: 3px; }
+  .preview.direct-speech .prose-seg { opacity: .24; transition: opacity .15s ease; }
+  .preview.direct-speech .dlg-seg { opacity: 1; font-weight: 500; }
+  .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
   footer { margin-top: 24px; font-size: .875rem; color: var(--muted); }
 </style>
 </head>
@@ -100,9 +110,11 @@
     </nav>
   </header>
 
+  <main>
   <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
   <h1 id="title">Eigenen Absatz direkt im Browser prüfen</h1>
   <p class="lead" id="lead">Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.</p>
+  <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
   <div class="grid">
     <div class="card">
@@ -111,6 +123,7 @@
         <button type="button" class="btn" id="preset-de">Effi Briest (DE)</button>
         <button type="button" class="btn" id="preset-en">Pride &amp; Prejudice (EN)</button>
         <button type="button" class="btn" id="preset-clear">Leeren</button>
+        <button type="button" class="btn" id="direct-speech-btn" aria-pressed="false">Nur Dialoge</button>
       </div>
       <textarea id="input" aria-label="Manuskript-Absatz"></textarea>
     </div>
@@ -121,6 +134,7 @@
         <div class="kpi"><span class="kpi-val" id="k-sents">0</span><span class="kpi-lbl" id="l-sents">Sätze</span></div>
         <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Ø Satzlänge (ASL)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Dialoganteil</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze</span></div>
       </div>
 
       <div class="bar-wrap">
@@ -146,6 +160,17 @@
     </div>
   </div>
 
+  <section class="card" style="margin-top:18px;" aria-label="Hinweise zur Analyse">
+    <h2 style="font-size:1.05rem;margin:0 0 8px;">Was diese Browser-Sandbox direkt prüft</h2>
+    <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;">
+      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Dialoganteil</strong> an der Gesamtwortzahl, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.
+    </p>
+    <p style="margin:0;color:var(--muted);font-size:.92rem;">
+      Für ganze Romane mit Kapitelmatrix, Inquit-Dichte, Stimmenkontrast zwischen Dialog und Erzählprosa, Szenen-Hooks, POV-Kapitelabständen, optionalen nicht-präskriptiven Genre-Korridoren und lokaler SQLite-Revisionshistorie nutze die lokale Lixity-App oder CLI auf Windows, macOS und Linux.
+    </p>
+  </section>
+  </main>
+
   <footer id="footer-note">
     Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- &amp; Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.
   </footer>
@@ -168,8 +193,8 @@
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Eigenen Absatz direkt im Browser prüfen',
       lead: 'Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.',
-      preset: 'Beispiele:', clear: 'Leeren',
-      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
+      preset: 'Beispiele:', clear: 'Leeren', directSpeech: 'Nur Dialoge',
+      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil', sticky: 'Klebrige Sätze (≥45 %)',
       rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
       echoTitle: 'Lokale Wortechos (≥ 3×)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
       footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.'
@@ -179,8 +204,8 @@
       pill: '100% local in your browser · Zero server upload',
       title: 'Test your own passage right in the browser',
       lead: 'Paste a scene or paragraph to inspect sentence-length rhythm, dialogue share, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
-      preset: 'Presets:', clear: 'Clear',
-      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
+      preset: 'Presets:', clear: 'Clear', directSpeech: 'Dialogue only',
+      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share', sticky: 'Sticky sentences (≥45%)',
       rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
       echoTitle: 'Nearby word echoes (≥ 3×)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
       footer: 'Note: This browser sandbox analyzes single passages client-side. For full novels with chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.'
@@ -197,16 +222,23 @@
     const words = raw.match(/[\p{L}\p{N}_]+/gu) || [];
     const sents = raw.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
     const dlg = (raw.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
-    let shortC = 0, medC = 0, longC = 0;
+    let shortC = 0, medC = 0, longC = 0, stickyC = 0;
+    const stickySet = new Set();
     sents.forEach(s => {
-      const n = (s.match(/[\p{L}\p{N}_]+/gu) || []).length;
+      const sw = s.match(/[\p{L}\p{N}_]+/gu) || [];
+      const n = sw.length;
       if (n <= 7) shortC++; else if (n >= 25) longC++; else medC++;
+      if (n >= 8) {
+        const glue = sw.filter(w => STOP.has(w.toLowerCase())).length;
+        if ((glue / n) >= 0.45) { stickyC++; stickySet.add(s); }
+      }
     });
     const totalS = sents.length || 1;
     el('k-words').textContent = words.length.toLocaleString(lang);
     el('k-sents').textContent = sents.length.toLocaleString(lang);
     el('k-asl').textContent = sents.length ? (words.length / sents.length).toFixed(1) : '–';
     el('k-dlg').textContent = words.length ? Math.round((dlg.length / words.length) * 100) + ' %' : '–';
+    el('k-sticky').textContent = stickyC.toLocaleString(lang);
     el('bar-s').style.width = ((shortC / totalS) * 100).toFixed(1) + '%';
     el('bar-m').style.width = ((medC / totalS) * 100).toFixed(1) + '%';
     el('bar-c').style.width = ((longC / totalS) * 100).toFixed(1) + '%';
@@ -238,11 +270,25 @@
       });
     }
     const preview = el('preview');
-    if (!echoSet.size) {
-      preview.textContent = raw;
-    } else {
-      preview.innerHTML = esc(raw).replace(/[\p{L}\p{N}_]+/gu, m => echoSet.has(m.toLowerCase()) ? '<mark class="echo">' + m + '</mark>' : m);
+    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
+    function renderHighlighted(text) {
+      let html = esc(text);
+      if (echoSet.size) {
+        html = html.replace(/[\p{L}\p{N}_]+/gu, m => echoSet.has(m.toLowerCase()) ? '<mark class="echo">' + m + '</mark>' : m);
+      }
+      return html;
     }
+    const parts = raw.split(dlgRegex);
+    preview.innerHTML = parts.map((part, idx) => {
+      if (!part) return '';
+      const cls = idx % 2 === 1 ? 'dlg-seg' : 'prose-seg';
+      let rendered = renderHighlighted(part);
+      stickySet.forEach(s => {
+        const es = renderHighlighted(s);
+        if (es && rendered.includes(es)) rendered = rendered.replace(es, '<span class="sticky-sent">' + es + '</span>');
+      });
+      return '<span class="' + cls + '">' + rendered + '</span>';
+    }).join('');
   }
 
   function applyLang() {
@@ -257,10 +303,12 @@
     el('lead').textContent = t.lead;
     el('preset-lbl').textContent = t.preset;
     el('preset-clear').textContent = t.clear;
+    el('direct-speech-btn').textContent = t.directSpeech;
     el('l-words').textContent = t.words;
     el('l-sents').textContent = t.sents;
     el('l-asl').textContent = t.asl;
     el('l-dlg').textContent = t.dlg;
+    el('l-sticky').textContent = t.sticky;
     el('rhythm-title').textContent = t.rhythm;
     el('echo-title').textContent = t.echoTitle;
     el('footer-note').textContent = t.footer;
@@ -270,6 +318,12 @@
   el('preset-de').addEventListener('click', () => { input.value = SAMPLES.de; analyze(); });
   el('preset-en').addEventListener('click', () => { input.value = SAMPLES.en; analyze(); });
   el('preset-clear').addEventListener('click', () => { input.value = ''; analyze(); });
+  el('direct-speech-btn').addEventListener('click', () => {
+    const btn = el('direct-speech-btn');
+    const next = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+    el('preview').classList.toggle('direct-speech', next);
+  });
   el('lang-toggle').addEventListener('click', () => { lang = lang === 'de' ? 'en' : 'de'; applyLang(); });
   input.addEventListener('input', analyze);
   input.value = SAMPLES[lang];
