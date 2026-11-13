@@ -51,7 +51,8 @@ class EditingRoutesMixin(ResponseMixin):
     def _editor_store(self) -> ManuscriptStore:
         if not self.source_input:
             raise ValueError("No manuscript selected")
-        return ManuscriptStore(Path(self.workspace_root), Path(self.source_input))
+        language = getattr(self, "language", "en") or "en"
+        return ManuscriptStore(Path(self.workspace_root), Path(self.source_input), language=language)
 
     def _handle_editor_open(self) -> None:
         if not self._same_origin():
@@ -90,6 +91,40 @@ class EditingRoutesMixin(ResponseMixin):
                 raise ValueError("Selected manuscript changed")
             store.discard(payload["id"])
             self._json({"ok": True})
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_editor_timeline(self) -> None:
+        if not self._same_origin():
+            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+            return
+        try:
+            with self._workspace_lock:
+                store = self._editor_store()
+                query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                if set(query) - {"limit"} or any(len(value) != 1 or not value[0] for value in query.values()):
+                    raise ValueError("Expected at most one non-empty limit parameter")
+                limit = int(query["limit"][0]) if "limit" in query else 30
+                revisions = store.timeline(limit=limit)
+                self._json({"ok": True, "schema_version": "lixity-timeline/1", "document": store.document, "revisions": revisions})
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_editor_delta(self) -> None:
+        if not self._same_origin():
+            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+            return
+        try:
+            with self._workspace_lock:
+                store = self._editor_store()
+                query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+                if set(query) - {"base", "target"} or any(len(value) != 1 or not value[0] for value in query.values()):
+                    raise ValueError("Expected optional base and target revision parameters")
+                result = store.delta(
+                    base_revision=query["base"][0] if "base" in query else None,
+                    target_revision=query["target"][0] if "target" in query else None,
+                )
+                self._json({"ok": True, **result})
         except (ValueError, OSError, sqlite3.Error) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 

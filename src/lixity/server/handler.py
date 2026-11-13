@@ -57,6 +57,8 @@ class LixityServerHandler(
     #: GET routes: exact path -> handler method name.
     GET_ROUTES: ClassVar[dict[str, str]] = {
         "/api/manuscript-edit": "_handle_editor_open",
+        "/api/manuscript-timeline": "_handle_editor_timeline",
+        "/api/manuscript-delta": "_handle_editor_delta",
         "/api/manuscript-view": "_handle_editor_view",
         "/api/editor-bootstrap.js": "_handle_editor_asset",
         "/api/editor-bundle.js": "_handle_editor_asset",

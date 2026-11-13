@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lixity — Browser-Sandbox: Absatz lokal prüfen</title>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/sandbox/index.html"/>
+<meta name="description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos ohne Server-Upload."/>
+<meta property="og:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
+<meta property="og:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos ohne Server-Upload."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/sandbox/index.html"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
+<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos ohne Server-Upload."/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Lixity — Browser-Sandbox: Absatz lokal prüfen","url":"https://mfahsold.github.io/lixity/sandbox/index.html","mainEntityOfPage":"https://mfahsold.github.io/lixity/sandbox/index.html","inLanguage":["de","en"],"author":{"@type":"Person","name":"Matthias Fahsold","url":"https://github.com/mfahsold"}}
+</script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f6f2; --surface: #ffffff; --fg: #1b1e24; --muted: #5b6370;
+    --line: #e2dfd7; --accent: #2f5aa8; --accent-soft: rgba(47,90,168,.12);
+    --echo-bg: rgba(217,119,6,.18); --echo-fg: #92400e;
+    --staccato: #0f766e; --medium: #2f5aa8; --cascade: #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11141a; --surface: #181c24; --fg: #eceae4; --muted: #9aa3b2;
+      --line: #2a303c; --accent: #7aa2f7; --accent-soft: rgba(122,162,247,.16);
+      --echo-bg: rgba(245,158,11,.22); --echo-fg: #fcd34d;
+      --staccato: #2dd4bf; --medium: #7aa2f7; --cascade: #fbbf24;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 56px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--fg); }
+  nav { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  nav a, .btn {
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--fg); text-decoration: none;
+    font-size: .875rem; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 8px; line-height: 1.25; }
+  .lead { color: var(--muted); margin: 0 0 20px; max-width: 72ch; }
+  .privacy-pill {
+    display: inline-block; padding: 4px 10px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-size: .8125rem; font-weight: 600; margin-bottom: 12px;
+  }
+  .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px;
+  }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  textarea {
+    width: 100%; min-height: 270px; padding: 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+    font-family: Georgia, "Times New Roman", serif; font-size: 1.03rem; line-height: 1.65; resize: vertical;
+  }
+  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .kpi-val { font-size: 1.35rem; font-weight: 700; display: block; }
+  .kpi-lbl { font-size: .8rem; color: var(--muted); }
+  .bar-wrap { margin: 12px 0 16px; }
+  .bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); }
+  .seg-s { background: var(--staccato); }
+  .seg-m { background: var(--medium); }
+  .seg-c { background: var(--cascade); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .echo-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .echo-chip {
+    padding: 2px 9px; border-radius: 999px; font-size: .8125rem;
+    background: var(--echo-bg); color: var(--echo-fg); font-weight: 600;
+  }
+  .preview {
+    margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--bg);
+    border: 1px solid var(--line); font-family: Georgia, "Times New Roman", serif;
+    font-size: .95rem; max-height: 220px; overflow: auto; white-space: pre-wrap;
+  }
+  mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: 4px; }
+  footer { margin-top: 24px; font-size: .875rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="../index-de.html" id="home-link">Lixity</a>
+    <nav>
+      <a href="../demo/report.html" id="nav-demo">Vollständiger Demo-Bericht</a>
+      <a href="../guides/installation.html" id="nav-install">Lokal installieren</a>
+      <button type="button" class="btn" id="lang-toggle">EN</button>
+    </nav>
+  </header>
+
+  <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
+  <h1 id="title">Eigenen Absatz direkt im Browser prüfen</h1>
+  <p class="lead" id="lead">Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="presets">
+        <span id="preset-lbl" style="font-size:.85rem;color:var(--muted);">Beispiele:</span>
+        <button type="button" class="btn" id="preset-de">Effi Briest (DE)</button>
+        <button type="button" class="btn" id="preset-en">Pride &amp; Prejudice (EN)</button>
+        <button type="button" class="btn" id="preset-clear">Leeren</button>
+      </div>
+      <textarea id="input" aria-label="Manuskript-Absatz"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="kpis">
+        <div class="kpi"><span class="kpi-val" id="k-words">0</span><span class="kpi-lbl" id="l-words">Wörter</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-sents">0</span><span class="kpi-lbl" id="l-sents">Sätze</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Ø Satzlänge (ASL)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Dialoganteil</span></div>
+      </div>
+
+      <div class="bar-wrap">
+        <strong style="font-size:.875rem;" id="rhythm-title">Satzlängen-Rhythmus</strong>
+        <div class="bar" aria-hidden="true">
+          <div class="seg-s" id="bar-s" style="width:0%"></div>
+          <div class="seg-m" id="bar-m" style="width:0%"></div>
+          <div class="seg-c" id="bar-c" style="width:0%"></div>
+        </div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--staccato)"></span><span id="leg-s">Kurz (≤ 7 W): 0</span></span>
+          <span><span class="dot" style="background:var(--medium)"></span><span id="leg-m">Mittel (8–24 W): 0</span></span>
+          <span><span class="dot" style="background:var(--cascade)"></span><span id="leg-c">Lang (≥ 25 W): 0</span></span>
+        </div>
+      </div>
+
+      <div>
+        <strong style="font-size:.875rem;" id="echo-title">Lokale Wortechos (≥ 3×)</strong>
+        <div class="echo-list" id="echo-list"></div>
+      </div>
+
+      <div class="preview" id="preview"></div>
+    </div>
+  </div>
+
+  <footer id="footer-note">
+    Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- &amp; Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const SAMPLES = {
+    de: 'Sie trat ans offene Fenster. Draußen lag der Garten still im grauen Morgenlicht. Effi atmete tief ein, doch das Zimmer blieb eng, und die Uhr auf dem Kaminsims tickte leise weiter, als zähle sie jeden einzelnen Gedanken.\n\n„Kommst du heute noch mit in den Wald?“ fragte Instetten aus dem Nebenzimmer.\n\n„Vielleicht später“, antwortete sie leise. „Gerade ist mir der Wald zu still.“',
+    en: 'She stepped toward the window. Outside, the garden lay quiet under a pale morning sky. Elizabeth paused for a moment, watching the light shift across the lawn while the clock on the mantelpiece ticked steadily on.\n\n"Are you walking into town this morning?" asked Jane from the doorway.\n\n"Perhaps later," Elizabeth replied. "Just now the quiet feels too rare to leave."'
+  };
+  const STOP = new Set([
+    'aber','alle','als','also','am','an','auch','auf','aus','bei','bin','bis','bist','da','dadurch','daher','damit','dann','darum','das','dass','dein','deine','dem','den','denn','der','des','dessen','dich','die','dies','diese','dieser','dieses','dir','doch','dort','du','durch','ein','eine','einem','einen','einer','eines','er','es','euch','euer','für','gegen','habe','haben','hat','hatte','hier','hin','ich','ihm','ihn','ihr','ihre','im','in','ist','ja','jede','jeder','jedes','jetzt','kann','kein','keine','man','mein','meine','mich','mir','mit','nach','nicht','noch','nun','nur','ob','oder','ohne','sehr','sein','seine','sich','sie','sind','so','soll','sondern','sonst','über','um','und','uns','unser','unter','viel','vom','von','vor','war','waren','was','weg','weil','weiter','welche','wenn','wer','werden','wie','wieder','will','wir','wird','wo','zu','zum','zur','zwar',
+    'about','above','after','again','against','all','am','an','and','any','are','as','at','be','because','been','before','being','below','between','both','but','by','can','could','did','do','does','doing','down','during','each','few','for','from','further','had','has','have','having','he','her','here','hers','herself','him','himself','his','how','i','if','in','into','is','it','its','itself','just','me','more','most','my','myself','no','nor','not','now','of','off','on','once','only','or','other','our','ours','ourselves','out','over','own','same','she','should','so','some','such','than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to','too','under','until','up','very','was','we','were','what','when','where','which','while','who','whom','why','will','with','would','you','your','yours','yourself'
+  ]);
+  const I18N = {
+    de: {
+      home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN',
+      pill: '100 % lokal im Browser · Kein Server-Upload',
+      title: 'Eigenen Absatz direkt im Browser prüfen',
+      lead: 'Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.',
+      preset: 'Beispiele:', clear: 'Leeren',
+      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
+      rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
+      echoTitle: 'Lokale Wortechos (≥ 3×)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
+      footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.'
+    },
+    en: {
+      home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE',
+      pill: '100% local in your browser · Zero server upload',
+      title: 'Test your own passage right in the browser',
+      lead: 'Paste a scene or paragraph to inspect sentence-length rhythm, dialogue share, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
+      preset: 'Presets:', clear: 'Clear',
+      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
+      rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
+      echoTitle: 'Nearby word echoes (≥ 3×)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
+      footer: 'Note: This browser sandbox analyzes single passages client-side. For full novels with chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.'
+    }
+  };
+  let lang = (navigator.language || 'de').toLowerCase().startsWith('de') ? 'de' : 'en';
+  const el = id => document.getElementById(id);
+  const input = el('input');
+
+  function esc(s) { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function analyze() {
+    const raw = input.value;
+    const words = raw.match(/[\p{L}\p{N}_]+/gu) || [];
+    const sents = raw.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
+    const dlg = (raw.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
+    let shortC = 0, medC = 0, longC = 0;
+    sents.forEach(s => {
+      const n = (s.match(/[\p{L}\p{N}_]+/gu) || []).length;
+      if (n <= 7) shortC++; else if (n >= 25) longC++; else medC++;
+    });
+    const totalS = sents.length || 1;
+    el('k-words').textContent = words.length.toLocaleString(lang);
+    el('k-sents').textContent = sents.length.toLocaleString(lang);
+    el('k-asl').textContent = sents.length ? (words.length / sents.length).toFixed(1) : '–';
+    el('k-dlg').textContent = words.length ? Math.round((dlg.length / words.length) * 100) + ' %' : '–';
+    el('bar-s').style.width = ((shortC / totalS) * 100).toFixed(1) + '%';
+    el('bar-m').style.width = ((medC / totalS) * 100).toFixed(1) + '%';
+    el('bar-c').style.width = ((longC / totalS) * 100).toFixed(1) + '%';
+    const t = I18N[lang];
+    el('leg-s').textContent = t.s + ': ' + shortC;
+    el('leg-m').textContent = t.m + ': ' + medC;
+    el('leg-c').textContent = t.c + ': ' + longC;
+
+    const counts = new Map();
+    words.forEach(w => {
+      const lw = w.toLowerCase();
+      if (lw.length >= 4 && !STOP.has(lw)) counts.set(lw, (counts.get(lw) || 0) + 1);
+    });
+    const echoes = Array.from(counts.entries()).filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    const echoSet = new Set(echoes.map(([w]) => w));
+    const list = el('echo-list');
+    list.replaceChildren();
+    if (!echoes.length) {
+      const span = document.createElement('span');
+      span.style.cssText = 'font-size:.8125rem;color:var(--muted);';
+      span.textContent = t.noneEcho;
+      list.append(span);
+    } else {
+      echoes.forEach(([w, c]) => {
+        const chip = document.createElement('span');
+        chip.className = 'echo-chip';
+        chip.textContent = w + ' ×' + c;
+        list.append(chip);
+      });
+    }
+    const preview = el('preview');
+    if (!echoSet.size) {
+      preview.textContent = raw;
+    } else {
+      preview.innerHTML = esc(raw).replace(/[\p{L}\p{N}_]+/gu, m => echoSet.has(m.toLowerCase()) ? '<mark class="echo">' + m + '</mark>' : m);
+    }
+  }
+
+  function applyLang() {
+    const t = I18N[lang];
+    document.documentElement.lang = lang;
+    el('home-link').href = t.home;
+    el('nav-demo').textContent = t.demo;
+    el('nav-install').textContent = t.install;
+    el('lang-toggle').textContent = t.toggle;
+    el('privacy-pill').textContent = t.pill;
+    el('title').textContent = t.title;
+    el('lead').textContent = t.lead;
+    el('preset-lbl').textContent = t.preset;
+    el('preset-clear').textContent = t.clear;
+    el('l-words').textContent = t.words;
+    el('l-sents').textContent = t.sents;
+    el('l-asl').textContent = t.asl;
+    el('l-dlg').textContent = t.dlg;
+    el('rhythm-title').textContent = t.rhythm;
+    el('echo-title').textContent = t.echoTitle;
+    el('footer-note').textContent = t.footer;
+    analyze();
+  }
+
+  el('preset-de').addEventListener('click', () => { input.value = SAMPLES.de; analyze(); });
+  el('preset-en').addEventListener('click', () => { input.value = SAMPLES.en; analyze(); });
+  el('preset-clear').addEventListener('click', () => { input.value = ''; analyze(); });
+  el('lang-toggle').addEventListener('click', () => { lang = lang === 'de' ? 'en' : 'de'; applyLang(); });
+  input.addEventListener('input', analyze);
+  input.value = SAMPLES[lang];
+  applyLang();
+})();
+</script>
+</body>
+</html>

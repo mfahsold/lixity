@@ -55,6 +55,7 @@ DOCS_ROOT_FILES = {
     "USAGE.md",
     # One project demo and its reviewed outputs; sibling build files stay unpublished.
     "demo/report.html",
+    "sandbox/index.html",
     # The former research page is a compatibility entry, not a second project.
     "demo/research.html",
     "demo/warehouse-4-editor.pdf",

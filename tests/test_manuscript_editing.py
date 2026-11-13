@@ -171,3 +171,63 @@ def test_missing_recovery_read_does_not_create_storage(tmp_path):
     with pytest.raises(ValueError, match="unavailable"):
         editor.recover("a" * 32)
     assert not editor.directory.exists()
+
+
+def test_timeline_and_delta_record_revisions_on_save(tmp_path):
+    initial = "## Chapter 1\n\nShe walked slowly down the quiet street. It was raining.\n"
+    editor, _source = store(tmp_path, initial.encode("utf-8"))
+    assert editor.timeline() == []
+    pre_delta = editor.delta()
+    assert pre_delta["has_baseline"] is False
+    assert pre_delta["deltas"] is None
+    assert pre_delta["current"]["words"] > 0
+
+    opened = editor.open()
+    updated = (
+        "## Chapter 1\n\n"
+        "She walked fast. \"Wait!\" he called.\n\n"
+        "## Chapter 2\n\nNew scene begins here.\n"
+    )
+    saved = save(editor, opened, updated, "1" * 32)
+    history = editor.timeline()
+    assert len(history) == 2
+    assert history[0]["revision"] == opened["revision"]
+    assert history[1]["revision"] == saved["revision"]
+    assert history[1]["parent_revision"] == opened["revision"]
+    assert len(history[1]["chapter_metrics"]) == 2
+
+    delta = editor.delta()
+    assert delta["schema_version"] == "lixity-timeline/1"
+    assert delta["has_baseline"] is True
+    assert delta["revisions_count"] == 2
+    assert delta["deltas"]["words"] == history[1]["words"] - history[0]["words"]
+    assert delta["deltas"]["dialogue_ratio"] > 0
+    assert len(delta["chapter_deltas"]) == 2
+
+
+def test_timeline_sparse_empty_text_reports_null_metrics(tmp_path):
+    editor, _source = store(tmp_path, b"Hello world.\n")
+    opened = editor.open()
+    save(editor, opened, "", "2" * 32)
+    delta = editor.delta()
+    assert delta["has_baseline"] is True
+    assert delta["current"]["words"] == 0
+    assert delta["current"]["asl"] is None
+    assert delta["current"]["dialogue_ratio"] is None
+    assert delta["deltas"]["asl"] is None
+    assert delta["deltas"]["dialogue_ratio"] is None
+
+
+def test_delta_rejects_invalid_revision_identifiers(tmp_path):
+    editor, _source = store(tmp_path, b"Hello world.\n")
+    with pytest.raises(ValueError, match="Invalid base"):
+        editor.delta(base_revision="not-hex")
+    with pytest.raises(ValueError, match="Invalid target"):
+        editor.delta(target_revision="not-hex")
+
+
+def test_editing_timeline_routes_registered():
+    from lixity.server.handler import LixityServerHandler
+
+    assert LixityServerHandler.GET_ROUTES["/api/manuscript-timeline"] == "_handle_editor_timeline"
+    assert LixityServerHandler.GET_ROUTES["/api/manuscript-delta"] == "_handle_editor_delta"

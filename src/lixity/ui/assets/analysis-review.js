@@ -13,7 +13,7 @@
   var reload = document.getElementById("triage-reload");
   var native = panel.dataset.reviewCapable === "true" && !window.LixitySite.readOnly;
   if (!rows.length && !native) return;
-  var accepted = null, pending = false, cursor = null;
+  var accepted = null, pending = false, cursor = null, revisionDelta = null;
   function token() { return document.body.dataset.manuscriptProjectToken; }
   function label(key) { return uiLabel("triage_" + key); }
   function visible() { return rows.filter(function(row) {return !row.hidden;}); }
@@ -24,9 +24,18 @@
         filter && filter.value && row.dataset.reviewState !== filter.value);
     });
     var count = visible().length;
+    var deltaSuffix = "";
+    if (revisionDelta && revisionDelta.has_baseline && revisionDelta.deltas) {
+      var d = revisionDelta.deltas;
+      var parts = [];
+      if (typeof d.words === "number" && d.words !== 0) parts.push((d.words > 0 ? "+" : "") + d.words + " W");
+      if (typeof d.asl === "number" && Math.abs(d.asl) >= 0.05) parts.push("Δ " + (d.asl > 0 ? "+" : "") + d.asl.toFixed(1) + " ASL");
+      if (parts.length) deltaSuffix = " · " + parts.join(" · ");
+    }
     progress.textContent = uiFormat("triage_progress", {shown:count, total:rows.length}) +
       (accepted ? " · " + uiFormat("triage_completed", {completed:accepted.completed, total:accepted.total}) : "") +
-      (accepted && accepted.unmatched_decisions ? " · " + uiCountFormat("triage_unmatched", accepted.unmatched_decisions) : "");
+      (accepted && accepted.unmatched_decisions ? " · " + uiCountFormat("triage_unmatched", accepted.unmatched_decisions) : "") +
+      deltaSuffix;
     if (next) next.disabled = !count;
   }
   function controls(disabled) {
@@ -80,8 +89,12 @@
     pending = true; controls(true);
     status.textContent = label("loading"); status.className = "ctl-status";
     var selected = token();
-    var data = await jsonApi(API + "/analysis-review?project_token=" + encodeURIComponent(selected));
+    var [data, deltaRes] = await Promise.all([
+      jsonApi(API + "/analysis-review?project_token=" + encodeURIComponent(selected)),
+      jsonApi(API + "/manuscript-delta").catch(function() { return null; }),
+    ]);
     pending = false;
+    if (deltaRes && deltaRes.ok) revisionDelta = deltaRes;
     if (selected !== token() || !accept(data)) {failed(); return;}
     status.textContent = "";
   }

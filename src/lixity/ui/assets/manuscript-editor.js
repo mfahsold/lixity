@@ -82,6 +82,26 @@
   document.body.prepend(freshness);
   const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
+  const pulseLabels = {
+    en: ['words', 'today', 'ASL', 'Dialogue', 'revisions', 'Session evolution', 'Baseline recorded — save an edit to see deltas.'],
+    de: ['Wörter', 'heute', 'ASL', 'Dialog', 'Fassungen', 'Sitzungsverlauf', 'Basis erfasst — nach der nächsten Speicherung erscheinen Deltas.'],
+    fr: ['mots', 'aujourd’hui', 'LMP', 'Dialogue', 'révisions', 'Évolution de session', 'Base enregistrée — enregistrez une modification pour voir les écarts.'],
+    es: ['palabras', 'hoy', 'LMO', 'Diálogo', 'revisiones', 'Evolución de sesión', 'Base registrada — guarda un cambio para ver las diferencias.'],
+    it: ['parole', 'oggi', 'LMF', 'Dialogo', 'revisioni', 'Andamento sessione', 'Base registrata — salva una modifica per vedere i delta.'],
+    pt: ['palavras', 'hoje', 'CMF', 'Diálogo', 'revisões', 'Evolução da sessão', 'Base registada — guarde uma edição para ver os deltas.'],
+    nl: ['woorden', 'vandaag', 'GZL', 'Dialoog', 'revisies', 'Sessie-evolutie', 'Basis vastgelegd — sla een wijziging op om delta’s te zien.'],
+  };
+  const pulseWords = pulseLabels[language] || pulseLabels.en;
+  const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
+  const pulseBtn = document.createElement('button'); pulseBtn.type = 'button'; pulseBtn.id = 'manuscript-session-pulse'; pulseBtn.className = 'ctl manuscript-pulse-btn';
+  pulseBtn.setAttribute('aria-expanded', 'false');
+  const pulsePopover = document.createElement('div'); pulsePopover.id = 'manuscript-pulse-popover'; pulsePopover.hidden = true;
+  pulseBtn.addEventListener('click', () => {
+    const openState = pulsePopover.hidden;
+    pulsePopover.hidden = !openState;
+    pulseBtn.setAttribute('aria-expanded', String(openState));
+  });
+  pulseWrap.append(pulseBtn, pulsePopover);
   const recovery = document.createElement('select'); recovery.className = 'ctl'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
   const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl primary'});
   const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
@@ -273,8 +293,9 @@
   const comparisonFields = ['base','current','draft'].map((name, index) => {
     const label = document.createElement('label'); label.textContent = comparisonWords[index+2];
     const identity = document.createElement('small'); identity.style.display = 'block';
+    const summary = document.createElement('small'); summary.className = 'manuscript-compare-metrics'; summary.style.display = 'block';
     const field = document.createElement('textarea'); field.id = 'manuscript-comparison-' + name; field.readOnly = index !== 2;
-    label.append(identity,field); comparisonGrid.append(label); return {field,identity};
+    label.append(identity,summary,field); comparisonGrid.append(label); return {field,identity,summary};
   });
   let comparisonSnapshot = null, comparisonLoading = false, comparisonOriginal = '';
   const discardComparison = {en:'Discard changes to this comparison draft?',de:'Änderungen an diesem Vergleichsentwurf verwerfen?',fr:'Abandonner les modifications de ce brouillon ?',es:'¿Descartar los cambios de este borrador?',it:'Scartare le modifiche a questa bozza?',pt:'Descartar as alterações deste rascunho?',nl:'Wijzigingen aan dit concept verwerpen?'};
@@ -306,6 +327,7 @@
       comparisonFields[1].field.value = current.text; comparisonFields[1].identity.textContent = current.revision.slice(0,12);
       comparisonFields[2].field.value = recovered ? recovered.text : editor.text(); comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : text(6);
       comparisonOriginal = comparisonFields[2].field.value;
+      updateComparisonSummaries(baseRevision, current.revision);
       comparison.showModal();
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(comparisonGrid);
       comparisonCancel.focus();
@@ -319,7 +341,7 @@
     if (intoEditor) contextGroup.prepend(companionControls);
     else openButton.after(companionControls);
   }
-  section.append(host);
+  section.append(host, pulseWrap);
   const css = document.createElement('style'); css.textContent = `
     #manuscript-comparison {width:min(1200px,95vw);max-height:92dvh;box-sizing:border-box;overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-lg,16px);box-shadow:var(--shadow-modal);padding:24px;}
     .manuscript-comparison-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:16px 0;}
@@ -354,6 +376,12 @@
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
     #manuscript-recovery {max-width:11rem;min-width:6.5rem;flex:0 1 11rem;min-height:2.25rem;padding-block:.25rem;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
+    #manuscript-session-pulse-wrap {max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:8px auto 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+    .manuscript-pulse-btn {font-size:var(--text-micro,.8125rem);color:var(--muted);background:transparent;border:1px solid transparent;border-radius:var(--radius-pill,999px);padding:3px 10px;cursor:pointer;}
+    .manuscript-pulse-btn:hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
+    #manuscript-pulse-popover {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);padding:10px 14px;box-shadow:var(--shadow);font-size:var(--text-micro,.8125rem);color:var(--muted);max-width:100%;}
+    #manuscript-pulse-popover svg {display:block;margin-top:6px;color:var(--accent,currentColor);}
+    .manuscript-compare-metrics {font-weight:400;color:var(--muted);margin-top:2px;}
     @container editor-tools (max-width: 76rem) {
       #manuscript-search .editor-tool-label,
       .manuscript-editor-toolbar #workspace-reader-toggle .reader-control-label {display:none;}
@@ -394,6 +422,106 @@
     readBtn.hidden = paused;
     reload.hidden = !paused;
   }
+  let latestTimeline = [];
+  function fmtNum(v, digits) {
+    if (v === null || v === undefined || Number.isNaN(v)) return '–';
+    return Number(v).toLocaleString(language, {minimumFractionDigits: digits, maximumFractionDigits: digits});
+  }
+  function fmtSigned(v, digits) {
+    if (v === null || v === undefined || Number.isNaN(v)) return '';
+    const sign = v > 0 ? '+' : '';
+    return sign + fmtNum(v, digits);
+  }
+  function quickTextStats(raw) {
+    const clean = (raw || '').replace(/<!--[\s\S]*?-->/g, '').replace(/^#+.*$/gm, '');
+    const tokens = clean.match(/[\p{L}\p{N}_]+/gu) || [];
+    const sents = clean.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
+    const dlg = (clean.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
+    return {
+      words: tokens.length,
+      asl: sents.length ? tokens.length / sents.length : null,
+      dialogue_ratio: tokens.length ? (dlg.length / tokens.length) * 100 : null,
+    };
+  }
+  function formatMetricsLine(snap, deltas) {
+    if (!snap) return '';
+    const parts = [fmtNum(snap.words, 0) + ' ' + pulseWords[0]];
+    if (deltas && deltas.words !== null && deltas.words !== undefined && deltas.words !== 0) {
+      parts[0] += ' (' + fmtSigned(deltas.words, 0) + ' ' + pulseWords[1] + ')';
+    }
+    if (snap.asl !== null && snap.asl !== undefined) {
+      let aslPart = pulseWords[2] + ' ' + fmtNum(snap.asl, 1);
+      if (deltas && deltas.asl !== null && deltas.asl !== undefined && Math.abs(deltas.asl) >= 0.05) {
+        aslPart += ' (Δ ' + fmtSigned(deltas.asl, 1) + ')';
+      }
+      parts.push(aslPart);
+    }
+    if (snap.dialogue_ratio !== null && snap.dialogue_ratio !== undefined) {
+      parts.push(pulseWords[3] + ' ' + fmtNum(snap.dialogue_ratio, 0) + ' %');
+    }
+    return parts.join(' · ');
+  }
+  function updateComparisonSummaries(baseRev, currentRev) {
+    const byRev = new Map(latestTimeline.map(r => [r.revision, r]));
+    const baseSnap = byRev.get(baseRev) || quickTextStats(comparisonFields[0].field.value);
+    const curSnap = byRev.get(currentRev) || quickTextStats(comparisonFields[1].field.value);
+    const draftSnap = quickTextStats(comparisonFields[2].field.value);
+    comparisonFields[0].summary.textContent = formatMetricsLine(baseSnap, null);
+    comparisonFields[1].summary.textContent = formatMetricsLine(curSnap, {
+      words: curSnap.words - baseSnap.words,
+      asl: curSnap.asl !== null && baseSnap.asl !== null ? curSnap.asl - baseSnap.asl : null,
+    });
+    comparisonFields[2].summary.textContent = formatMetricsLine(draftSnap, {
+      words: draftSnap.words - curSnap.words,
+      asl: draftSnap.asl !== null && curSnap.asl !== null ? draftSnap.asl - curSnap.asl : null,
+    });
+  }
+  comparisonFields[2].field.addEventListener('input', () => {
+    if (comparison.open && snapshot && comparisonSnapshot) {
+      updateComparisonSummaries(snapshot.revision, comparisonSnapshot.revision);
+    }
+  });
+  function renderSparklineSvg(revisions) {
+    if (!revisions || revisions.length < 2) return '';
+    const w = 220, h = 40, pad = 4;
+    const vals = revisions.map(r => Number(r.words || 0));
+    const min = Math.min(...vals), max = Math.max(...vals);
+    const span = max - min || 1;
+    const pts = vals.map((v, i) => {
+      const x = pad + (i / (vals.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((v - min) / span) * (h - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    return '<svg width="220" height="40" viewBox="0 0 220 40" aria-hidden="true">' +
+      '<polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="' + pts + '"/>' +
+      '</svg>';
+  }
+  async function refreshPulse() {
+    try {
+      const [deltaRes, tlRes] = await Promise.all([
+        request('/manuscript-delta'),
+        request('/manuscript-timeline?limit=14'),
+      ]);
+      latestTimeline = tlRes.revisions || [];
+      if (!deltaRes.current) {pulseWrap.hidden = true; return;}
+      pulseBtn.textContent = formatMetricsLine(deltaRes.current, deltaRes.has_baseline ? deltaRes.deltas : null);
+      pulseWrap.hidden = false;
+      const head = document.createElement('div');
+      head.textContent = pulseWords[5] + ' (' + String(latestTimeline.length) + ' ' + pulseWords[4] + ')';
+      pulsePopover.replaceChildren(head);
+      if (latestTimeline.length >= 2) {
+        const chart = document.createElement('div');
+        chart.innerHTML = renderSparklineSvg(latestTimeline);
+        pulsePopover.append(chart);
+      } else {
+        const noteEl = document.createElement('div');
+        noteEl.textContent = pulseWords[6];
+        pulsePopover.append(noteEl);
+      }
+    } catch (_) {
+      pulseWrap.hidden = true;
+    }
+  }
   async function request(path, payload) {
     const response = await fetch(api + path, payload ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)} : {});
     const data = await response.json(); if (!response.ok || !data.ok) {const error = new Error(data.message || text(6)); error.conflict = response.status === 409; throw error;} return data;
@@ -416,6 +544,7 @@
       const result = await request('/manuscript-edit', sent);
       snapshot.revision = result.revision; snapshot.text = sent.text; pending = null; dirty = editor.text() !== sent.text;
       show(dirty ? 'unsaved' : 'saved', text(dirty ? 6 : 5));
+      refreshPulse().catch(() => {});
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
     finally {inflight = false; document.getElementById('manuscript-read').disabled = paused || closingRead;
       if (dirty && !paused) timer = setTimeout(flush, 800);}
@@ -460,7 +589,7 @@
         cmContent.setAttribute('autocapitalize', 'off');
       }
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
-      editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
+      editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); refreshPulse().catch(() => {}); editor.focus();
     } catch (error) {section.hidden = false; show('error', error.message);}
     finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0));}
   }
