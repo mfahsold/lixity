@@ -32,7 +32,13 @@ from typing import Any
 from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
 from .markdown_parser import prose_paragraphs, prose_text, split_chapters, split_scenes
-from .models import DEFAULT_HOOK_SHORT_SENTENCE, DEFAULT_MONOTONY_MIN_RUN, CorpusConfig
+from .models import (
+    DEFAULT_HOOK_SHORT_SENTENCE,
+    DEFAULT_MONOTONY_MIN_RUN,
+    DEFAULT_STICKY_GLUE_PCT,
+    DEFAULT_STICKY_MIN_WORDS,
+    CorpusConfig,
+)
 from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
@@ -47,6 +53,39 @@ MONOTONY_MIN_RUN = DEFAULT_MONOTONY_MIN_RUN
 COHESION_FALLBACK_MIN_LEN = 4
 
 SPARKLINE_BARS = (" ", "▂", "▃", "▄", "▅", "▆", "▇", "█")
+HOOK_TYPES: tuple[str, ...] = ("dialogue", "action", "reflection", "question", "unknown")
+MAX_STICKY_ITEMS = 50
+
+_REFLECTION_CUE_RE = re.compile(
+    r"\b(?:wonder(?:ed|s|ing)?|realized?|remember(?:ed|s)?|knew|know|believe[ds]?|"
+    r"seemed?|recalled?|thought|think|felt|feel|dachte|fühlte|wusste|schien|"
+    r"erinnerte|ahnte|glaubte|pensait|savait|sentait|pensaba|sabía|sentía|"
+    r"pensava|sapeva|sentiva|dacht|voelde|wist)\b",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def classify_scene_hook(
+    sentence: str,
+    *,
+    dialogue_re: re.Pattern[str],
+    filter_verbs_re: re.Pattern[str],
+) -> str:
+    """Classify a scene entry or exit sentence into a heuristic hook category.
+
+    Categories: ``dialogue``, ``question``, ``reflection``, ``action``, or
+    ``unknown`` when empty. Deliberately deterministic and offline.
+    """
+    stripped = sentence.strip()
+    if not stripped:
+        return "unknown"
+    if dialogue_re.search(stripped) or stripped.startswith(('"', "»", "«", "„", "“", "—", "–")):
+        return "dialogue"
+    if stripped.rstrip("\"'»«“”\u2018\u2019)] \t").endswith("?"):
+        return "question"
+    if filter_verbs_re.search(stripped) or _REFLECTION_CUE_RE.search(stripped):
+        return "reflection"
+    return "action"
 
 
 def compute_rolling_asl(sentence_lengths: list[int], window: int = 15) -> list[float]:
@@ -107,6 +146,11 @@ class SceneStats:
     asl: float
     dialogue_pct: float
     staccato_pct: float
+    sticky_sentences: int = 0
+    sticky_sentence_pct: float = 0.0
+    entry_hook_type: str = "unknown"
+    exit_hook_type: str = "unknown"
+    exit_hook_score: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -116,6 +160,11 @@ class SceneStats:
             "asl": round(self.asl, 2),
             "dialogue_pct": round(self.dialogue_pct, 2),
             "staccato_pct": round(self.staccato_pct, 2),
+            "sticky_sentences": self.sticky_sentences,
+            "sticky_sentence_pct": round(self.sticky_sentence_pct, 2),
+            "entry_hook_type": self.entry_hook_type,
+            "exit_hook_type": self.exit_hook_type,
+            "exit_hook_score": self.exit_hook_score,
         }
 
 
@@ -142,6 +191,9 @@ class ChapterPacing:
     sentence_cv: float = 0.0
     pacing_sparkline: str = ""
     pacing_curve: list[float] = field(default_factory=list)
+    sticky_sentences: int = 0
+    sticky_sentence_pct: float = 0.0
+    mean_glue_pct: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -163,6 +215,9 @@ class ChapterPacing:
             "sentence_cv": round(self.sentence_cv, 2),
             "pacing_sparkline": self.pacing_sparkline,
             "pacing_curve": self.pacing_curve,
+            "sticky_sentences": self.sticky_sentences,
+            "sticky_sentence_pct": round(self.sticky_sentence_pct, 2),
+            "mean_glue_pct": round(self.mean_glue_pct, 2),
             "scene_list": [scene.to_dict() for scene in self.scene_list],
         }
 
@@ -184,6 +239,11 @@ class PacingReport:
     repeated_start_runs: int = 0
     adjacent_sentence_pairs: int = 0
     sentence_overlap_pct: float = 0.0
+    sticky_sentences: int = 0
+    sticky_sentence_pct: float = 0.0
+    mean_glue_pct: float = 0.0
+    sticky_available: bool = True
+    sticky_items: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def scenes_are_chapters(self) -> bool:
@@ -203,6 +263,11 @@ class PacingReport:
             "repeated_start_runs": self.repeated_start_runs,
             "adjacent_sentence_pairs": self.adjacent_sentence_pairs,
             "sentence_overlap_pct": round(self.sentence_overlap_pct, 2),
+            "sticky_sentences": self.sticky_sentences,
+            "sticky_sentence_pct": round(self.sticky_sentence_pct, 2),
+            "mean_glue_pct": round(self.mean_glue_pct, 2),
+            "sticky_available": self.sticky_available,
+            "sticky_items": self.sticky_items,
             "fastest_chapter": self.fastest_chapter,
             "slowest_chapter": self.slowest_chapter,
             "chapter_list": [chapter.to_dict() for chapter in self.chapter_list],
@@ -212,28 +277,80 @@ class PacingReport:
 def _scene_stats(
     scene_text: str,
     index: int,
+    chapter_num: int,
     word_re: re.Pattern[str],
     dialogue_re: re.Pattern[str],
+    filter_verbs_re: re.Pattern[str],
     language_key: str,
+    function_words: frozenset[str],
     *,
     short_sentence_max: int = SHORT_SENTENCE_MAX,
-) -> SceneStats | None:
+    hook_short_sentence: int = HOOK_SHORT_SENTENCE,
+    sticky_glue_pct: float = DEFAULT_STICKY_GLUE_PCT,
+    sticky_min_words: int = DEFAULT_STICKY_MIN_WORDS,
+) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
     scene_text = prose_text(scene_text, _front_matter=False)
     words = len(word_re.findall(scene_text))
     if not words:
         return None
     sentences = [s for s in split_prose_sentences(scene_text, language_key) if word_re.findall(s)]
-    sentence_lengths = [len(word_re.findall(s)) for s in sentences]
+    sentence_tokens = [[w.lower() for w in word_re.findall(s)] for s in sentences]
+    sentence_lengths = [len(tokens) for tokens in sentence_tokens]
     dialogue_words = sum(len(word_re.findall(m)) for m in quotation_texts(dialogue_re, scene_text))
     short = sum(1 for length in sentence_lengths if length <= short_sentence_max)
-    return SceneStats(
+
+    glue_pcts: list[float] = []
+    sticky_count = 0
+    sticky_items: list[dict[str, Any]] = []
+    if function_words:
+        for sentence, tokens in zip(sentences, sentence_tokens, strict=True):
+            n_words = len(tokens)
+            if not n_words:
+                continue
+            glue_words = sum(1 for tok in tokens if tok in function_words)
+            glue_pct = glue_words / n_words * 100.0
+            glue_pcts.append(glue_pct)
+            if n_words >= sticky_min_words and glue_pct >= sticky_glue_pct:
+                sticky_count += 1
+                sticky_items.append({
+                    "chapter_num": chapter_num,
+                    "scene_index": index,
+                    "words": n_words,
+                    "glue_words": glue_words,
+                    "glue_pct": round(glue_pct, 2),
+                    "preview": sentence.strip()[:80],
+                })
+
+    entry_sentence = sentences[0] if sentences else ""
+    exit_sentence = sentences[-1] if sentences else ""
+    entry_hook_type = classify_scene_hook(
+        entry_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
+    )
+    exit_hook_type = classify_scene_hook(
+        exit_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
+    )
+    exit_is_dialogue = bool(dialogue_re.search(exit_sentence)) if exit_sentence else False
+    exit_hook_score, _, _ = _hook_score(
+        exit_sentence,
+        exit_is_dialogue,
+        word_re,
+        hook_short_sentence=hook_short_sentence,
+    )
+
+    stats = SceneStats(
         index=index,
         words=words,
         sentences=len(sentences),
         asl=(sum(sentence_lengths) / len(sentence_lengths)) if sentence_lengths else 0.0,
         dialogue_pct=(dialogue_words / words * 100.0) if words else 0.0,
         staccato_pct=(short / len(sentence_lengths) * 100.0) if sentence_lengths else 0.0,
+        sticky_sentences=sticky_count,
+        sticky_sentence_pct=(sticky_count / len(sentences) * 100.0) if (sentences and function_words) else 0.0,
+        entry_hook_type=entry_hook_type,
+        exit_hook_type=exit_hook_type,
+        exit_hook_score=exit_hook_score,
     )
+    return stats, glue_pcts, sticky_items
 
 
 def _closing_sentence(body: str, language_key: str) -> str:
@@ -325,6 +442,8 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)
+    filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
+    sticky_available = bool(resolved.function_words)
 
     chapter_list: list[ChapterPacing] = []
     total_scenes = 0
@@ -335,6 +454,10 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     total_repeated_runs = 0
     total_adjacent_pairs = 0
     total_linked_pairs = 0
+    total_sticky_sentences = 0
+    total_sentences = 0
+    all_glue_pcts: list[float] = []
+    all_sticky_items: list[dict[str, Any]] = []
 
     for number, title, body in split_chapters(text, config):
         clean = prose_text(body, _front_matter=False)
@@ -344,19 +467,40 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         raw_scenes, scene_breaks = split_scenes(body)
         explicit_breaks += scene_breaks
         scenes: list[SceneStats] = []
+        chapter_glue_pcts: list[float] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
-            stats = _scene_stats(
+            scene_result = _scene_stats(
                 scene_text,
                 index,
+                number,
                 word_re,
                 dialogue_re,
+                filter_verbs_re,
                 resolved.key,
+                resolved.function_words,
                 short_sentence_max=config.short_sentence_max,
+                hook_short_sentence=config.hook_short_sentence,
+                sticky_glue_pct=config.sticky_glue_pct,
+                sticky_min_words=config.sticky_min_words,
             )
-            if stats is not None:
+            if scene_result is not None:
+                stats, scene_glue_pcts, scene_sticky_items = scene_result
                 scenes.append(stats)
+                chapter_glue_pcts.extend(scene_glue_pcts)
+                all_sticky_items.extend(scene_sticky_items)
         scene_words = sum(scene.words for scene in scenes)
         scene_sentences = sum(scene.sentences for scene in scenes)
+        chapter_sticky = sum(scene.sticky_sentences for scene in scenes)
+        chapter_sticky_pct = (
+            (chapter_sticky / scene_sentences * 100.0)
+            if (scene_sentences and sticky_available)
+            else 0.0
+        )
+        chapter_mean_glue = (
+            (sum(chapter_glue_pcts) / len(chapter_glue_pcts))
+            if chapter_glue_pcts
+            else 0.0
+        )
         asl = (
             sum(scene.asl * scene.sentences for scene in scenes) / scene_sentences
             if scene_sentences
@@ -425,6 +569,9 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
                 sentence_cv=cv,
                 pacing_sparkline=sparkline,
                 pacing_curve=pacing_curve,
+                sticky_sentences=chapter_sticky,
+                sticky_sentence_pct=chapter_sticky_pct,
+                mean_glue_pct=chapter_mean_glue,
             )
         )
         total_scenes += len(scenes)
@@ -434,9 +581,15 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         total_repeated_runs += repeated_runs
         total_adjacent_pairs += adjacent_pairs
         total_linked_pairs += linked_pairs
+        total_sticky_sentences += chapter_sticky
+        total_sentences += scene_sentences
+        all_glue_pcts.extend(chapter_glue_pcts)
 
     fastest = min(pace, key=lambda key: pace[key]) if pace else None
     slowest = max(pace, key=lambda key: pace[key]) if pace else None
+    all_sticky_items.sort(
+        key=lambda item: (-item["glue_pct"], -item["words"], item["chapter_num"], item["scene_index"])
+    )
     return PacingReport(
         language=resolved.key,
         chapters=len(chapter_list),
@@ -455,4 +608,13 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
             if total_adjacent_pairs
             else 0.0
         ),
+        sticky_sentences=total_sticky_sentences,
+        sticky_sentence_pct=(
+            (total_sticky_sentences / total_sentences * 100.0)
+            if (total_sentences and sticky_available)
+            else 0.0
+        ),
+        mean_glue_pct=(sum(all_glue_pcts) / len(all_glue_pcts)) if all_glue_pcts else 0.0,
+        sticky_available=sticky_available,
+        sticky_items=all_sticky_items[:MAX_STICKY_ITEMS],
     )

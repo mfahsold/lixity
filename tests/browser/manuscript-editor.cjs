@@ -85,7 +85,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.screenshot({path: path.join(root, 'desktop.png')});
     await page.evaluate(() => document.documentElement.style.colorScheme = 'dark');
     assert.equal(await page.locator('.cm-editor').evaluate(el => getComputedStyle(el).color), 'rgb(238, 242, 248)');
-    await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(17, 22, 37)');
+    await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(12, 16, 23)');
     await page.screenshot({path: path.join(root, 'desktop-dark.png')});
     await page.setViewportSize({width: 390, height: 844});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

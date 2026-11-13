@@ -1024,3 +1024,96 @@ they do not estimate literary quality or a reader's experienced immersion.
   own minimum and maximum to eight display levels. A constant curve uses one
   middle level. Empty sentence input has an empty curve and sparkline; its
   current numeric CV sentinel is zero and must not be read as measured regularity.
+
+## Revision time-series and session deltas (unreleased)
+
+- On every saved edit in `ManuscriptStore.save()` (`manuscript_editing.py`), both
+  the pre-edit baseline revision (if not yet recorded) and the resulting
+  revision are stored in `manuscript_revisions` inside `recovery.sqlite3`.
+- Each revision records deterministic `CorpusAnalyzer` measurements: `words`
+  (`clean_words`), `sentences` (`total_sentences`), `asl` (when `sentences > 0`,
+  else `null`), `asl_cv` (when `sentences > 0`, else `null`), `dialogue_ratio`
+  (when `tokens > 0`, else `null`), `mattr` (when window-eligible, else `null`),
+  and per-chapter `{num, title, words, asl, dialog_pct}` snapshots.
+- `ManuscriptStore.delta(base_revision, target_revision)` computes exact
+  arithmetic differences `target[m] - base[m]` without interpolation. When
+  either endpoint is `null` or no baseline revision exists, the delta is `null`.
+  By default, `base` resolves to the earliest revision on `target`'s UTC
+  calendar day (session start), falling back to the immediate predecessor
+  revision when no earlier same-day revision exists.
+
+## Dramaturgical & structural heuristics (unreleased)
+
+- **Sticky sentences & glue-word density (`pacing.py`):** for each prose
+  sentence with `N >= sticky_min_words` (default `8`) tokens, glue-word density
+  is `glue_pct = 100 * glue_words / N`, where `glue_words` counts lowercased
+  tokens present in the active language's `function_words` lexicon. A sentence
+  is flagged sticky when `N >= sticky_min_words` and `glue_pct >= sticky_glue_pct`
+  (default `45.0`, configurable in `CorpusConfig` on `(0, 100]`). Corpus and
+  chapter reports expose `sticky_sentences`, `sticky_sentence_pct`,
+  `mean_glue_pct`, `sticky_available` (`false` when the language has no
+  `function_words` lexicon, e.g. `generic`), and `sticky_items` (top 50 by
+  descending `glue_pct`: `{chapter_num, scene_index, words, glue_words,
+  glue_pct, preview}`).
+- **Dialogue tag density (`dialogue.py`):** counts speech-attribution verbs
+  matching curated per-language inventories (`en`, `de`, `fr`, `es`, `it`,
+  `pt`, `nl`; `dialogue_tag_available = false` for `generic`). Per-chapter and
+  corpus reports expose `dialogue_tags`,
+  `dialogue_tag_pct = min(100.0, 100 * dialogue_tags / turns)` (when `turns > 0`),
+  and `dialogue_tags_per_1000 = 1000 * dialogue_tags / words` (when `words > 0`).
+- **Scene entry/exit hooks (`pacing.py`, `scenes.py`):** `classify_scene_hook`
+  classifies the first (`entry_hook_type`) and last (`exit_hook_type`) non-empty
+  prose sentence of each scene as `"dialogue"` (matches `dialogue_re` or begins
+  with an opening quote/dash), `"question"` (ends with `?` ignoring trailing
+  quotes/brackets), `"reflection"` (matches `filter_verbs_re` or curated
+  cognitive/perception cue verbs), `"action"` (fallback for non-empty prose),
+  or `"unknown"` (empty). Scenes also expose `exit_hook_score` (`0–3`) and
+  `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`).
+- **POV chapter-absence gaps (`characters.py`, `scenes.py`):** when character
+  profiles define `declared_pov_chapters`, `pov_chapters_map` attaches
+  `pov_characters` to `scenes.items[]`, and `presence_report` computes per-figure
+  `pov_gaps` (`{from_chapter, to_chapter, gap_chapters, missing_chapters}` for
+  each contiguous gap between consecutive declared POV chapters),
+  `pov_longest_gap`, `pov_leading_gap` (`first_pov - 1`), `pov_trailing_gap`
+  (`total_chapters - last_pov`), and `pov_share` (`len(pov_chapters) / total_chapters`,
+  rounded to 4 decimals), plus corpus-level `pov_summary`
+  (`{declared_figures, pov_coverage_chapters, chapters_without_declared_pov}`).
+- **Optional genre reference corridors (`corridors.py`):** `GENRE_CORRIDORS`
+  defines descriptive orientation bands for `crime_thriller`, `literary`,
+  `romance`, and `speculative` over `asl`, `dialogue_pct`, `staccato_pct`, and
+  `avg_scene_words`. `evaluate_genre_corridor` sets `non_prescriptive: true` and
+  reports each metric's `{observed, low, high, position}` where `position` is
+  `"below"`, `"within"`, `"above"`, or `"unavailable"`.
+- **Paragraph inline evidence layers (`paragraph_evidence.py`):** each
+  paragraph's `evidence[idx]["layers"]` exposes three additional deterministic
+  annotation layers:
+  - `sticky` (`kind: "sentence"`): character spans (`{start, end, count: 1, words}`)
+    for sentences with `words >= config.sticky_min_words` and
+    `glue_pct >= config.sticky_glue_pct`; returns `status: "unavailable"`,
+    `reason: "language_unavailable"` when the language lacks `function_words`.
+  - `dialogue_tag` (`kind: "pattern"`): character spans (`{start, end, count: 1}`)
+    for speech-attribution verbs adjacent to dialogue quotes; returns
+    `status: "unavailable"`, `reason: "language_unavailable"` when the language
+    has no dialogue tag verb list.
+  - `echo` (`kind: "word"`): character spans (`{start, end, count: 1}`) for
+    non-function content words of length `>= 4` repeated `>= 2` times within
+    the same paragraph.
+- **Deep dialogue analytics (`dialogue.py`):** `dialogue_report().to_dict()`
+  adds:
+  - `voice_separation`: compares Spoken Dialogue against Narrative Prose via
+    `{available, dialogue_words, narrative_words, dialogue_asl, narrative_asl,
+    asl_delta, dialogue_question_excl_pct, narrative_question_excl_pct,
+    cosine_similarity, separation_label}` where `separation_label` is
+    `"distinct"`, `"moderate"`, `"blended"`, or `"unavailable"`.
+  - `adverbial_tags` (int), `adverbial_tag_pct` (float), and
+    `adverbial_tag_available` (bool) at corpus level and per `chapters[]` entry,
+    counting speech-attribution tags accompanied by manner adverbs.
+- **Deep scene dynamics (`scenes.py`):** `scene_report()` extends each
+  `items[]` entry with `asl_shift` (`float | null`), `dialogue_shift`
+  (`float | null`), `scene_dynamic` (`"accelerating"`, `"decelerating"`,
+  `"dialogue_surge"`, `"steady"`, or `"insufficient_length"` when `< 120`
+  words), `filter_per_1000`, and `sensory_per_1000`. Corpus-level
+  `pacing_plateaus` lists `[{start_id, end_id, scene_count, mean_asl, reason}]`
+  where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
+  `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
+  `>= 120` words with ASL spread `<= 1.5`).

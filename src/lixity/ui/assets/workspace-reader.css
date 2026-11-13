@@ -122,6 +122,9 @@
   .workspace-context-panel { grid-column: 1; grid-row: 1; position: static; max-height: 55dvh; border-block: 1px solid var(--line); }
   .workspace-reader-divider { display: none; }
 }
+@media (max-width: 600px) {
+  .workspace-reader-panel, .passage-research { padding: var(--space-3); }
+}
 @media print {
   .reader-controls, .toolbar-note, .workspace-reader-panel { display: none !important; }
   .workspace-reader-layout.is-open { display: block; }

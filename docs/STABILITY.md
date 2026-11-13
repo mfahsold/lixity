@@ -648,3 +648,55 @@ boundaries. Short chapters offer little evidence, and smoothing hides local
 variation. Each sparkline has its own scale: equal bar heights across chapters
 do not imply equal sentence lengths or narrative speed. No sentences means
 no measured rhythm, even though the current CV field uses a zero sentinel.
+
+## Revision time-series and sparse history (unreleased)
+
+Revision snapshots depend on explicit editor saves (`ManuscriptStore.save()`).
+External edits outside the native editor are not recorded until the next editor
+save, and missing intermediate intervals are never interpolated. When a draft
+contains zero sentences or zero tokens, `asl` and `dialogue_ratio` are stored
+and returned as `null` rather than `0.0`. Single-revision manuscripts report
+`has_baseline: false` with `deltas: null` until a second revision is saved.
+
+## Dramaturgical heuristics & genre corridors (unreleased)
+
+- **Sticky sentences:** glue-word density depends on curated `function_words`
+  lexicons and sentence splitting; `generic` sets `sticky_available: false`.
+  A high glue-word share often reflects explanatory clauses, dialogue cadence,
+  or complex syntax rather than a writing defect.
+- **Dialogue tag density:** relies on curated per-language speech-attribution
+  verb lists (`generic` sets `dialogue_tag_available: false`). Action-beat
+  attributions and unlisted verbs are missed, while narrative uses of listed
+  verbs can match. `dialogue_tag_pct` is capped at `100.0` and is a surface
+  density proxy, not speaker-attribution parsing.
+- **Scene entry/exit hooks:** `classify_scene_hook` inspects only the first and
+  last sentence of a scene using surface cues. `"action"` is the fallback for
+  any non-empty sentence that is neither dialogue, question, nor reflection; it
+  does not verify semantic plot action.
+- **POV chapter-absence gaps:** computed strictly from explicit author-declared
+  `declared_pov_chapters` in character profiles, never inferred via NER or
+  narrative focalization.
+- **Genre reference corridors:** `crime_thriller`, `literary`, `romance`, and
+  `speculative` bands are broad editorial orientation ranges (`non_prescriptive: true`),
+  never quality scores, grades, or prescriptions. Sitting `"below"` or `"above"`
+  a band indicates a descriptive difference, not an error.
+- **Paragraph inline evidence layers (`sticky`, `dialogue_tag`, `echo`):**
+  `sticky` and `dialogue_tag` return `status: "unavailable"`
+  (`reason: "language_unavailable"`) for `generic` or languages without
+  curated `function_words` / dialogue-tag verb lists. `echo` highlights
+  same-paragraph repetitions (`>= 2` occurrences, length `>= 4` excluding
+  function/stop words) regardless of whether repetition is intentional
+  rhetorical cadence (anaphora/epizeuxis) or accidental echo.
+- **Voice separation & adverbial dialogue tags:** `voice_separation` compares
+  surface lexical cosine similarity, ASL, and `?!` density between quoted
+  spans and narrative prose; it reports `"unavailable"` when either partition
+  lacks sufficient words and does not model character-specific voices or
+  unquoted/free indirect speech. `adverbial_tags` relies on curated per-language
+  manner-adverb and attribution-verb patterns; non-adverbial modifiers or
+  adverbs separated from the attribution verb are not counted.
+- **Intra-scene dynamics & pacing plateaus:** scenes under `120` words report
+  `scene_dynamic: "insufficient_length"` with `null` shifts so short scenes
+  are not over-interpreted. `pacing_plateaus` (`"low_exit_hooks"` or
+  `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
+  descriptive review prompts, not structural defects (deliberate meditative
+  passages or epistolary sequences can legitimately exhibit steady pacing).

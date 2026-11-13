@@ -189,6 +189,10 @@
   var inspector = document.getElementById("reader-inspector");
   var inspectorBody = document.getElementById("reader-inspector-body");
   var focus = document.getElementById("reader-focus");
+  var directSpeechBtn = document.getElementById("reader-direct-speech");
+  var directSpeechActive = false;
+  var directSpeechObserver = null;
+  var directSpeechFrame = 0;
   var settings = document.getElementById("reader-settings");
   var settingsPanels = [settings, document.getElementById("reader-analysis-guide")].filter(Boolean);
   var analysisGuide = document.getElementById("reader-analysis-guide");
@@ -1018,6 +1022,200 @@
   document.getElementById("reader-text-larger").addEventListener("click", function() { retain(function() { preferences.size = Math.min(28, preferences.size + 2); appearance(); }); });
   [width, spacing].forEach(function(select) { select.addEventListener("change", function() { retain(function() { preferences[select === width ? "width" : "spacing"] = select.value; appearance(); }); }); });
   focus.addEventListener("click", function() { setFocus(!document.body.classList.contains("reader-focus")); });
+  function codepointSpansToRanges(prose, text, spans) {
+    if (!prose || !spans || !spans.length || prose.textContent !== text) return [];
+    var offsets = [0], offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
+    for (var ch of text) { offset += ch.length; offsets.push(offset); }
+    offset = 0;
+    while (walker.nextNode()) {
+      nodes.push({node: walker.currentNode, start: offset, end: offset + walker.currentNode.length});
+      offset += walker.currentNode.length;
+    }
+    if (!nodes.length) return [];
+    function point(at) {
+      var low = 0, high = nodes.length - 1;
+      while (low < high) {
+        var mid = Math.floor((low + high) / 2);
+        if (nodes[mid].end < at) low = mid + 1; else high = mid;
+      }
+      var target = nodes[low];
+      return {node: target.node, offset: Math.max(0, Math.min(target.node.length, at - target.start))};
+    }
+    var ranges = [];
+    spans.forEach(function(span) {
+      var s = offsets[span.start], e = offsets[span.end];
+      if (!Number.isInteger(s) || !Number.isInteger(e) || e <= s) return;
+      var a = point(s), b = point(e);
+      var range = document.createRange();
+      range.setStart(a.node, a.offset);
+      range.setEnd(b.node, b.offset);
+      ranges.push(range);
+    });
+    return ranges;
+  }
+  function fallbackDialogueSpans(text) {
+    if (typeof text !== "string" || !text) return [];
+    var spans = [], re = /[„"«»“”][^„"«»“”\n]{1,1200}[“"»«”]/g, m;
+    while ((m = re.exec(text)) !== null) {
+      var cpStart = Array.from(text.slice(0, m.index)).length;
+      var cpEnd = cpStart + Array.from(m[0]).length;
+      spans.push({start: cpStart, end: cpEnd});
+    }
+    return spans;
+  }
+  function applyDirectSpeech() {
+    directSpeechFrame = 0;
+    var hasHighlight = Boolean(window.CSS && CSS.highlights && window.Highlight);
+    if (!directSpeechActive) {
+      panels.forEach(function(panel) {
+        panel.classList.remove("direct-speech-narrative", "direct-speech-mixed", "direct-speech-only");
+      });
+      if (hasHighlight) CSS.highlights.delete("lixity-direct-speech");
+      return;
+    }
+    var ranges = [];
+    panels.forEach(function(panel) {
+      panel.classList.remove("direct-speech-narrative", "direct-speech-mixed", "direct-speech-only");
+      var content = typeof paragraphContent !== "undefined" ? paragraphContent[panel.id] : null;
+      var text = content && typeof content[0] === "string" ? content[0] : "";
+      var evidence = content && content[3];
+      var summaries = content && content[4];
+      var spans = evidence && evidence.layers && evidence.layers.dialogue && Array.isArray(evidence.layers.dialogue.spans)
+        ? evidence.layers.dialogue.spans
+        : null;
+      var hasSummaryDlg = summaries && typeof summaries.dialogue === "string" && parseFloat(summaries.dialogue) > 0;
+      if (!spans) spans = fallbackDialogueSpans(text);
+      if (spans.length > 0 || hasSummaryDlg) {
+        var totalCp = Array.from(text.trim()).length;
+        var dlgCp = spans.reduce(function(acc, s) { return acc + Math.max(0, (s.end || 0) - (s.start || 0)); }, 0);
+        if (spans.length > 0 && totalCp > 0 && dlgCp >= totalCp - 4) {
+          panel.classList.add("direct-speech-only");
+        } else {
+          panel.classList.add("direct-speech-mixed");
+        }
+        if (hasHighlight && spans.length > 0) {
+          var prose = panel.querySelector(".ptext-inner > p");
+          if (prose) {
+            ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
+          }
+        }
+      } else {
+        panel.classList.add("direct-speech-narrative");
+      }
+    });
+    if (hasHighlight) {
+      if (ranges.length) CSS.highlights.set("lixity-direct-speech", new Highlight(...ranges));
+      else CSS.highlights.delete("lixity-direct-speech");
+    }
+  }
+  function scheduleDirectSpeech() {
+    if (directSpeechActive && !directSpeechFrame) {
+      directSpeechFrame = requestAnimationFrame(applyDirectSpeech);
+    }
+  }
+  function setDirectSpeech(enabled) {
+    directSpeechActive = Boolean(enabled);
+    document.body.classList.toggle("reader-direct-speech", directSpeechActive);
+    if (directSpeechBtn) directSpeechBtn.setAttribute("aria-pressed", directSpeechActive ? "true" : "false");
+    if (directSpeechActive) {
+      if (!directSpeechObserver && typeof MutationObserver === "function") {
+        directSpeechObserver = new MutationObserver(scheduleDirectSpeech);
+        directSpeechObserver.observe(chapters, {childList: true, subtree: true});
+      }
+      applyDirectSpeech();
+    } else {
+      if (directSpeechObserver) { directSpeechObserver.disconnect(); directSpeechObserver = null; }
+      applyDirectSpeech();
+    }
+  }
+  if (directSpeechBtn) {
+    directSpeechBtn.addEventListener("click", function() {
+      retain(function() { setDirectSpeech(!directSpeechActive); });
+    });
+  }
+
+  var inlineEvidenceLayers = ["sticky", "dialogue_tag", "echo"];
+  var activeInlineEvidence = new Set();
+  var inlineEvidenceObserver = null, inlineEvidenceFrame = 0;
+  function inlineHighlightName(layerKey) {
+    return "lixity-evidence-" + layerKey.replace(/_/g, "-");
+  }
+  function applyInlineEvidence() {
+    inlineEvidenceFrame = 0;
+    var hasHighlight = Boolean(window.CSS && CSS.highlights && window.Highlight);
+    if (!hasHighlight) return;
+    var currentPanels = Array.from(chapters.querySelectorAll(".ptext"));
+    inlineEvidenceLayers.forEach(function(layerKey) {
+      var hlName = inlineHighlightName(layerKey);
+      if (!activeInlineEvidence.has(layerKey)) {
+        CSS.highlights.delete(hlName);
+        return;
+      }
+      var ranges = [];
+      currentPanels.forEach(function(panel) {
+        var content = typeof paragraphContent !== "undefined" ? paragraphContent[panel.id] : null;
+        var text = content && typeof content[0] === "string" ? content[0] : "";
+        var evidence = content && content[3];
+        var layer = evidence && evidence.layers ? evidence.layers[layerKey] : null;
+        var spans = layer && Array.isArray(layer.spans) ? layer.spans : null;
+        if (!spans || !spans.length || !text) return;
+        var prose = panel.querySelector(".ptext-inner > p");
+        if (prose) {
+          ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
+        }
+      });
+      if (ranges.length) CSS.highlights.set(hlName, new Highlight(...ranges));
+      else CSS.highlights.delete(hlName);
+    });
+  }
+  function scheduleInlineEvidence() {
+    if (activeInlineEvidence.size > 0 && !inlineEvidenceFrame) {
+      inlineEvidenceFrame = requestAnimationFrame(applyInlineEvidence);
+    }
+  }
+  function syncInlineEvidenceObserver() {
+    if (activeInlineEvidence.size > 0) {
+      if (!inlineEvidenceObserver && typeof MutationObserver === "function") {
+        inlineEvidenceObserver = new MutationObserver(scheduleInlineEvidence);
+        inlineEvidenceObserver.observe(chapters, {childList: true, subtree: true});
+      }
+    } else if (inlineEvidenceObserver) {
+      inlineEvidenceObserver.disconnect();
+      inlineEvidenceObserver = null;
+    }
+  }
+  var inlineEvidenceHost = document.getElementById("reader-inline-evidence-layers");
+  if (inlineEvidenceHost) {
+    inlineEvidenceHost.addEventListener("click", function(event) {
+      var chip = event.target.closest("[data-evidence-layer]");
+      if (!chip) return;
+      var layerKey = chip.dataset.evidenceLayer;
+      if (!inlineEvidenceLayers.includes(layerKey)) return;
+      retain(function() {
+        if (activeInlineEvidence.has(layerKey)) {
+          activeInlineEvidence.delete(layerKey);
+          chip.setAttribute("aria-pressed", "false");
+        } else {
+          activeInlineEvidence.add(layerKey);
+          chip.setAttribute("aria-pressed", "true");
+        }
+        syncInlineEvidenceObserver();
+        applyInlineEvidence();
+      });
+    });
+  }
+  var filterResetBtn = document.getElementById("paragraph-filter-reset");
+  if (filterResetBtn && inlineEvidenceHost) {
+    filterResetBtn.addEventListener("click", function() {
+      if (activeInlineEvidence.size === 0) return;
+      activeInlineEvidence.clear();
+      inlineEvidenceHost.querySelectorAll("[data-evidence-layer]").forEach(function(chip) {
+        chip.setAttribute("aria-pressed", "false");
+      });
+      syncInlineEvidenceObserver();
+      applyInlineEvidence();
+    });
+  }
   document.getElementById("reader-chapter").addEventListener("change", function(event) {
     var chapter = document.getElementById(event.target.value);
     if (chapter) {
@@ -1110,6 +1308,16 @@
       var panel = event.target.closest(".ptext");
       if (panel) { event.preventDefault(); event.stopImmediatePropagation(); var rect = panel.getBoundingClientRect(); openMenu(panel, rect.left + 12, rect.top + 12, event.target); }
       return;
+    }
+    if ((event.key === "d" || event.key === "D") && !event.ctrlKey && !event.metaKey && !event.altKey &&
+        !event.defaultPrevented && !event.isComposing &&
+        !event.target.closest("dialog, [role=dialog], select, input, textarea, [contenteditable]")) {
+      if (directSpeechBtn && document.body.classList.contains("manuscript-reading") &&
+          !document.body.classList.contains("workbench-overview")) {
+        event.preventDefault();
+        retain(function() { setDirectSpeech(!directSpeechActive); });
+        return;
+      }
     }
     if (event.key === "Escape" && !event.defaultPrevented && !event.isComposing && !event.target.closest("dialog, [role=dialog], select")) {
       var opened = settingsPanels.find(function(panel) {return panel.open;});

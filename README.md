@@ -11,7 +11,7 @@
 > **A private, local workspace for novelists, editors, and scholars.**
 > Inspect chapter rhythms, verify scene research, and share standalone reading copies — 100% offline, privacy-first, and deterministic.
 >
-> 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
+> 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · ✍️ **[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
 
 **Read closely. Trace the evidence. Understand your text.**
 
@@ -84,14 +84,22 @@ not rigid steps:
 
 - **Compose & Refine**: Write in a clean typography canvas with local autosave,
   tactile review markers, and an auto-scrolling teleprompter for spoken auditions.
-- **Listen to Cadence & Melody**: Compare sentence lengths, dialogue balance,
-  sensory perception (showing vs. telling), and tense consistency across chapters.
-  Every metric is grounded in transparent counts against chapter medians.
+- **Listen to Cadence & Melody**: Compare sentence lengths, sticky-sentence
+  glue-word density, dialogue balance, tag/adverbial-tag density, and voice
+  separation (spoken dialogue vs. narrative prose), scene entry/exit hooks,
+  intra-scene pacing dynamics and plateaus, declared POV chapter gaps, sensory
+  perception (showing vs. telling), tense consistency, and optional
+  non-prescriptive genre reference corridors across chapters. Every metric is
+  grounded in transparent counts against chapter medians. In the reader,
+  **Direct Speech Mode** (`D`) dims narrative prose to audition spoken dialogue
+  alone, and inline evidence filter chips highlight **sticky sentences**,
+  **dialogue tags**, and **same-paragraph word echoes** directly in the prose.
 - **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
   Connect facts, character motives, and scene geography directly to paragraphs.
 - **Collaborate with AI on Your Terms (MCP)**: Run `lixity mcp` to connect Claude Desktop,
-  Cursor, Antigravity, or local coding agents directly to 10 read-only analytical tools
-  and 3 structured editorial prompts. Keep your manuscript strictly local with zero telemetry.
+  Cursor, Antigravity, or local coding agents directly to 12 read-only analytical tools
+  (including `lixity_scenes` and `lixity_corridors`) and 3 structured editorial prompts.
+  Keep your manuscript strictly local with zero telemetry.
 - **Curate Standalone Editions**: Generate beautiful print PDFs or self-contained,
   offline companion websites for beta readers and editors without exposing
   private working notes.

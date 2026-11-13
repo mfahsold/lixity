@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html as html_mod
 import re
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 from urllib.parse import urlsplit
@@ -614,6 +615,27 @@ def parse_markdown_blocks(
     return blocks
 
 
+def _extract_prose_paragraphs(
+    content: str, config: CorpusConfig | None, front_matter: bool, counting: bool
+) -> list[str]:
+    paragraphs: list[str] = []
+    for block in parse_markdown_blocks(content, config, _front_matter=front_matter):
+        values = (block["paras"] if block["type"] == "quote_block" else
+                  [block["text"]] if block["type"] in ("p", "list_item") else [])
+        for value in values:
+            clean = counting_inline_text(value) if counting else strip_inline_markup(value)
+            if clean:
+                paragraphs.append(clean)
+    return paragraphs
+
+
+@lru_cache(maxsize=128)
+def _prose_paragraphs_cached(
+    content: str, front_matter: bool, counting: bool
+) -> tuple[str, ...]:
+    return tuple(_extract_prose_paragraphs(content, None, front_matter, counting))
+
+
 def prose_paragraphs(
     content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True,
     _counting: bool = True,
@@ -629,15 +651,9 @@ def prose_paragraphs(
     their documented narrower body/list scope and original block line anchors.
     Chapter/scene callers disable document-only front matter handling.
     """
-    paragraphs: list[str] = []
-    for block in parse_markdown_blocks(content, config, _front_matter=_front_matter):
-        values = (block["paras"] if block["type"] == "quote_block" else
-                  [block["text"]] if block["type"] in ("p", "list_item") else [])
-        for value in values:
-            clean = counting_inline_text(value) if _counting else strip_inline_markup(value)
-            if clean:
-                paragraphs.append(clean)
-    return paragraphs
+    if config is None:
+        return list(_prose_paragraphs_cached(content, _front_matter, _counting))
+    return _extract_prose_paragraphs(content, config, _front_matter, _counting)
 
 
 def prose_text(

@@ -137,14 +137,16 @@ def _matched_closer_positions(text: str) -> set[int]:
     stack: list[str] = []
     closers: set[int] = set()
     previous = 0
+    has_newline = "\n" in text
+    n = len(text)
     for match in _PAIR_MARK_RE.finditer(text):
         index, mark = match.start(), match.group()
-        if _BLOCK_BOUNDARY_RE.search(text, previous, index):
+        if has_newline and _BLOCK_BOUNDARY_RE.search(text, previous, index):
             stack.clear()
         previous = index + 1
         # An apostrophe within a word is not a quotation delimiter. Combining
         # marks count as word continuations for callers supplying raw NFD.
-        if mark in "'’" and 0 < index < len(text) - 1 and all(
+        if mark in "'’" and 0 < index < n - 1 and all(
             char.isalnum() or category(char).startswith("M")
             for char in (text[index - 1], text[index + 1])
         ):

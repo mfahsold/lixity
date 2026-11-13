@@ -33,10 +33,21 @@ _PROFILE_DESCRIPTION = (
     "flag_min_severity floors the paragraph flag cut (1|2|3)."
 )
 _PACING_DESCRIPTION = (
-    "Scene structure, pacing metrics, sentence rhythm, and chapter opening/closing hooks."
+    "Scene structure, pacing metrics, sticky sentences, scene entry/exit hooks, "
+    "and optional non-prescriptive genre reference corridor orientation."
+)
+_SCENES_DESCRIPTION = (
+    "Scene-level measurements, entry/exit hook classification (dialogue/action/reflection/question), "
+    "hook distribution, intra-scene dynamics (asl_shift, dialogue_shift, scene_dynamic), "
+    "scene showing-vs-telling (filter_per_1000, sensory_per_1000), and corpus pacing_plateaus."
+)
+_CORRIDORS_DESCRIPTION = (
+    "List optional non-prescriptive genre reference corridors (crime_thriller, literary, romance, speculative) "
+    "and optionally orient a manuscript against one."
 )
 _DIALOGUE_DESCRIPTION = (
-    "Quoted speech detection, speaker shares, and dialogue-to-narrative distribution."
+    "Quoted speech detection, speaker shares, dialogue-to-narrative distribution, "
+    "dialogue_tags, adverbial_tags, and voice_separation (dialogue vs. narrative prose)."
 )
 _SHOWING_DESCRIPTION = (
     "Sensory showing-vs-telling signals: sensory detail density vs perception filter verbs."
@@ -110,8 +121,49 @@ _TOOLS = (
                     "description": "Analysis language code (default en).",
                     "default": "en",
                 },
+                "genre": {
+                    "type": ["string", "null"],
+                    "description": "Optional non-prescriptive genre reference corridor (crime_thriller, literary, romance, speculative).",
+                },
             },
             "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_scenes",
+        "description": _SCENES_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_corridors",
+        "description": _CORRIDORS_DESCRIPTION,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": ["string", "null"], "description": "Optional Markdown manuscript text."},
+                "genre": {
+                    "type": ["string", "null"],
+                    "description": "Optional non-prescriptive genre corridor key.",
+                },
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
             "additionalProperties": False,
         },
     },
@@ -365,7 +417,31 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "content": [{"type": "text", "text": "lixity_pacing requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.pacing(arguments["text"], str(arguments.get("language") or "en"))
+            genre = arguments.get("genre")
+            payload = _api.pacing(
+                arguments["text"],
+                str(arguments.get("language") or "en"),
+                genre=str(genre) if genre is not None else None,
+            )
+        elif name == "lixity_scenes":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_scenes requires a text string."}],
+                    "isError": True,
+                }
+            payload = _api.scenes(
+                arguments["text"],
+                language=str(arguments.get("language") or "en"),
+            )
+        elif name == "lixity_corridors":
+            args_dict = arguments if isinstance(arguments, dict) else {}
+            text_arg = args_dict.get("text")
+            genre_arg = args_dict.get("genre")
+            payload = _api.corridors(
+                text=str(text_arg) if text_arg is not None else None,
+                genre=str(genre_arg) if genre_arg is not None else None,
+                language=str(args_dict.get("language") or "en"),
+            )
         elif name == "lixity_dialogue":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {

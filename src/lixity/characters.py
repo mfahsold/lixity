@@ -198,6 +198,36 @@ def character_presence(
     return results
 
 
+def _pov_gap_metrics(pov_chapters: list[int], total_chapters: int) -> dict[str, Any]:
+    """Compute chapter-absence gaps for one character's declared POV chapters."""
+    gaps: list[dict[str, Any]] = []
+    for left, right in pairwise(pov_chapters):
+        span = right - left - 1
+        if span > 0:
+            gaps.append({
+                "from_chapter": left,
+                "to_chapter": right,
+                "gap_chapters": span,
+                "missing_chapters": list(range(left + 1, right)),
+            })
+    return {
+        "pov_gaps": gaps,
+        "pov_longest_gap": max((g["gap_chapters"] for g in gaps), default=0),
+        "pov_leading_gap": (pov_chapters[0] - 1) if pov_chapters else 0,
+        "pov_trailing_gap": (total_chapters - pov_chapters[-1]) if (pov_chapters and total_chapters) else 0,
+        "pov_share": round(len(pov_chapters) / total_chapters, 4) if total_chapters else 0.0,
+    }
+
+
+def pov_chapters_map(declared_pov: Mapping[str, Sequence[int]]) -> dict[int, list[str]]:
+    """Invert character -> declared POV chapters into chapter -> sorted character names."""
+    by_chapter: dict[int, list[str]] = {}
+    for name in sorted(declared_pov):
+        for chapter_num in declared_pov[name]:
+            by_chapter.setdefault(chapter_num, []).append(name)
+    return by_chapter
+
+
 def presence_report(
     text: str,
     names: Mapping[str, str] | Sequence[str],
@@ -215,18 +245,32 @@ def presence_report(
     if set(declared) - {figure.name for figure in figures}:
         raise ValueError("Declared POV must identify a selected character")
     numbers = {number for number, _title, _body in chapters}
+    total_chapters = len(chapters)
     result = []
+    covered_pov_chapters: set[int] = set()
+    declared_figures = 0
     for figure in figures:
-        item = figure.to_dict(len(chapters))
+        item = figure.to_dict(total_chapters)
         if figure.name in declared:
             values = list(declared[figure.name])
             if any(type(number) is not int or number not in numbers for number in values):
                 raise ValueError(f"Declared POV chapters no longer match this manuscript: {figure.name}")
             if len(values) != len(set(values)):
                 raise ValueError("Declared POV chapter numbers must not repeat")
-            item["declared_pov_chapters"] = sorted(values)
+            sorted_pov = sorted(values)
+            item["declared_pov_chapters"] = sorted_pov
+            item.update(_pov_gap_metrics(sorted_pov, total_chapters))
+            covered_pov_chapters.update(sorted_pov)
+            declared_figures += 1
         result.append(item)
     return {
-        "chapters": len(chapters),
+        "chapters": total_chapters,
         "figures": result,
+        "pov_summary": {
+            "declared_figures": declared_figures,
+            "pov_coverage_chapters": sorted(covered_pov_chapters),
+            "chapters_without_declared_pov": (
+                sorted(numbers - covered_pov_chapters) if declared_figures > 0 else []
+            ),
+        },
     }

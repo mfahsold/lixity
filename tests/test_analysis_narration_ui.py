@@ -116,3 +116,87 @@ def test_showing_panel_renders_immersion_pills_in_all_locales(locale):
     assert any(labels["show_sensory"] in "".join(p.itertext()) for p in pills)
     assert any(labels["show_immersion"] in "".join(p.itertext()) for p in pills)
 
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_dialogue_panel_surfaces_voice_separation_and_adverbial_tags(locale):
+    labels = get_language_profile(locale).labels
+    report = {
+        "turns": 4,
+        "dialogue_pct": 35.0,
+        "avg_turn_words": 8.5,
+        "turns_per_1000": 40.0,
+        "dialogue_tag_available": True,
+        "dialogue_tags": 3,
+        "dialogue_tag_pct": 75.0,
+        "dialogue_tags_per_1000": 30.0,
+        "adverbial_tag_available": True,
+        "adverbial_tags": 2,
+        "adverbial_tag_pct": 66.7,
+        "voice_separation": {
+            "available": True,
+            "dialogue_words": 40,
+            "narrative_words": 80,
+            "dialogue_asl": 6.5,
+            "narrative_asl": 14.2,
+            "asl_delta": -7.7,
+            "cosine_similarity": 0.42,
+            "separation_label": "distinct",
+        },
+        "chapters": [],
+    }
+    html = render_dialogue_panel(report, labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["dlg_adverbial_tags"] in text
+    assert labels["dlg_voice_separation"] in text
+    assert labels["dlg_voice_sep_distinct"] in text
+    assert "6" in text and "14" in text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_scenes_panel_surfaces_dynamics_showing_rates_and_plateaus(locale):
+    from lixity.ui.narration import FEATURES
+
+    labels = get_language_profile(locale).labels
+    features = {field: 0.0 for field, _, _ in FEATURES}
+    features.update({"asl": 12.5, "dialog_pct": 20.0})
+    scenes = {
+        "items": [
+            {
+                "id": "1:1",
+                "chapter": 1,
+                "scene": 1,
+                "chapter_title": "Chapter 1",
+                "group": "",
+                "words": 150,
+                "sentences": 12,
+                "features": features,
+                "standard_errors": {},
+                "targets": {},
+                "scene_dynamic": "accelerating",
+                "filter_per_1000": 6.67,
+                "sensory_per_1000": 13.33,
+            }
+        ],
+        "baselines": {},
+        "pacing_plateaus": [
+            {
+                "start_id": "1:1",
+                "end_id": "1:3",
+                "scene_count": 3,
+                "mean_asl": 12.5,
+                "reason": "low_exit_hooks",
+            }
+        ],
+    }
+    html = render_scenes_panel(scenes, labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["scene_dynamic"] in text
+    assert labels["scene_dynamic_accelerating"] in text
+    assert labels["scene_filter_per_1000"] in text
+    assert labels["scene_sensory_per_1000"] in text
+    assert labels["scene_pacing_plateaus"] in text
+    assert labels["scene_plateau_low_exit_hooks"] in text
+
+

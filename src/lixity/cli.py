@@ -1235,8 +1235,37 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             "dlg_voice_contrast",
             f"{report.asl_contrast:+.1f}" if report.asl_contrast is not None else "–",
         ),
+        (
+            "Dialogue tags",
+            (
+                f"{report.dialogue_tags} ({report.dialogue_tag_pct:.1f} %, {report.dialogue_tags_per_1000:.1f}/1k)"
+                if report.dialogue_tag_available
+                else "–"
+            ),
+        ),
+        (
+            "Adverbial tags",
+            (
+                f"{report.adverbial_tags} ({report.adverbial_tag_pct:.1f} %)"
+                if report.adverbial_tag_available
+                else "–"
+            ),
+        ),
+        (
+            "Voice separation",
+            (
+                f"{report.voice_separation.separation_label} "
+                f"(cos {report.voice_separation.cosine_similarity:.2f}, "
+                f"ΔASL {report.voice_separation.asl_delta:+.1f})"
+                if report.voice_separation.available
+                and report.voice_separation.cosine_similarity is not None
+                and report.voice_separation.asl_delta is not None
+                else "–"
+            ),
+        ),
     ):
-        summary.add_row(_m(key), value)
+        label = _m(key) if key.startswith("dlg_") else key
+        summary.add_row(label, value)
     con.print(summary)
 
     if report.chapters:
@@ -1298,6 +1327,7 @@ def _cmd_characters(args: argparse.Namespace) -> int:
     table.add_column(_m("chr_share"), justify="right")
     if selection.declared_pov:
         table.add_column(_m("chr_pov"))
+        table.add_column("POV gap", justify="right")
     for figure in report["figures"]:
         span = (
             f"{figure['first_chapter']}–{figure['last_chapter']}"
@@ -1314,6 +1344,7 @@ def _cmd_characters(args: argparse.Namespace) -> int:
         ]
         if selection.declared_pov:
             row.append(", ".join(str(number) for number in figure.get("declared_pov_chapters", [])) or "–")
+            row.append(str(figure.get("pov_longest_gap", "–")))
         table.add_row(*row)
     con.print(table)
     return EXIT_OK
@@ -1327,15 +1358,25 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
+    from .corridors import evaluate_genre_corridor, pacing_corridor_observation
     from .pacing import pacing_report
 
     config, resolved = resolve_document_config(
         text, args.language, project_config=args._project_config
     )
     report = pacing_report(text, config)
+    effective_genre = getattr(args, "genre", None) or config.genre_corridor
+    corridor_data: dict[str, Any] | None = None
+    if effective_genre:
+        corridor_data = evaluate_genre_corridor(
+            effective_genre, pacing_corridor_observation(report)
+        )
 
     if args.json:
-        print(_json(_meta_payload(resolved.key, pacing=report.to_dict()), indent=True))
+        extra: dict[str, Any] = {"pacing": report.to_dict()}
+        if corridor_data is not None:
+            extra["genre_corridor"] = corridor_data
+        print(_json(_meta_payload(resolved.key, **extra), indent=True))
         return EXIT_OK
 
     con = Console()
@@ -1349,11 +1390,39 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
         ("pac_hook_mean", f"{report.hook_score_mean:.2f}"),
         ("pac_cohesion", f"{report.sentence_overlap_pct:.1f} %"),
         ("pac_monotony", str(report.repeated_start_runs)),
+        (
+            "Sticky sentences",
+            (
+                f"{report.sticky_sentences} ({report.sticky_sentence_pct:.1f} %, mean glue {report.mean_glue_pct:.1f} %)"
+                if report.sticky_available
+                else "–"
+            ),
+        ),
         ("pac_fastest", str(report.fastest_chapter or "–")),
         ("pac_slowest", str(report.slowest_chapter or "–")),
     ):
-        summary.add_row(_m(key), value)
+        label = _m(key) if key.startswith("pac_") else key
+        summary.add_row(label, value)
     con.print(summary)
+    if corridor_data is not None:
+        corridor_table = Table(
+            title=f"Genre Reference Corridor ({corridor_data['label']}, non-prescriptive)",
+            box=box.SIMPLE,
+            header_style="bold magenta",
+        )
+        corridor_table.add_column("Metric")
+        corridor_table.add_column("Observed", justify="right")
+        corridor_table.add_column("Reference Band", justify="right")
+        corridor_table.add_column("Position", justify="right")
+        for metric_name, entry in corridor_data["metrics"].items():
+            obs_str = f"{entry['observed']:.1f}" if entry["observed"] is not None else "–"
+            corridor_table.add_row(
+                metric_name,
+                obs_str,
+                f"{entry['low']:.1f}–{entry['high']:.1f}",
+                entry["position"],
+            )
+        con.print(corridor_table)
     if report.scenes_are_chapters and report.chapters:
         con.print(f"[yellow]{_m('pac_no_breaks')}[/yellow]")
 
@@ -2077,7 +2146,12 @@ def _cmd_analysis_report(
                 print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
                 print(
                     f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
-                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}"
+                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']} · "
+                    f"{item.get('scene_dynamic', 'insufficient_length')}"
+                )
+                print(
+                    f"  filter/1k: {num(item.get('filter_per_1000', 0.0), resolved.key, 2)} · "
+                    f"sensory/1k: {num(item.get('sensory_per_1000', 0.0), resolved.key, 2)}"
                 )
                 for field, label_key, unit in FEATURES:
                     value = item["features"][field]
@@ -2099,6 +2173,13 @@ def _cmd_analysis_report(
                     print(
                         f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
                     )
+            plateaus = report["scenes"].get("pacing_plateaus", [])
+            if plateaus:
+                for p in plateaus:
+                    print(safe_text(
+                        f"  plateau: {p['start_id']}–{p['end_id']} ({p['scene_count']} scenes, "
+                        f"mean ASL {num(p['mean_asl'], resolved.key, 2)}, {p['reason']})"
+                    ))
             planned_items = report["scenes"].get("planned_items", [])
             if planned_items:
                 print(labels["scene_planned"])
@@ -2393,6 +2474,15 @@ def _build_parser() -> argparse.ArgumentParser:
             scene_selector.add_argument("--latest", action="store_true",
                                         help="Last measured scene in document order, optionally within --chapter (not modification time)")
             continue
+        if name == "pacing":
+            from .corridors import GENRE_CORRIDOR_KEYS
+
+            p.add_argument(
+                "--genre",
+                choices=GENRE_CORRIDOR_KEYS,
+                default=None,
+                help="Optional non-prescriptive genre reference corridor for descriptive orientation",
+            )
         if name == "canvas":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: selected workspace manuscript)")
             p.add_argument(

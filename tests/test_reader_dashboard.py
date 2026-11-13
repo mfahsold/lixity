@@ -50,3 +50,21 @@ def test_chapter_picker_keeps_empty_chapters_in_source_order():
     analysis = analyze_document(source, config, FingerprintThresholds())
     controls = reading_controls(analysis.chapters, None, reader_blocks(source, config, analysis.paragraphs))
     assert controls.index('One</option>') < controls.index('Empty</option>') < controls.index('Three</option>')
+
+
+def test_reader_dashboard_renders_inline_evidence_filter_chips():
+    from lixity.pipeline import analyze_document, resolve_document_config
+    from lixity.style_fingerprint import FingerprintThresholds
+    from lixity.ui.dashboard import render_analysis
+    from lixity.ui.manuscript_document import reader_blocks
+
+    source = '## Chapter 1\n\n"Hello," she said softly, and walked across the quiet room.\n'
+    config, resolved = resolve_document_config(source, 'en', project_config={})
+    analysis = analyze_document(source, config, FingerprintThresholds())
+    page = render_analysis(analysis, resolved, title='Title', flag_min_severity=2,
+                           controls=True, reader_document=reader_blocks(source, config, analysis.paragraphs))
+    for layer_key in ("sticky", "dialogue_tag", "echo"):
+        assert f'data-evidence-layer="{layer_key}"' in page
+    assert "::highlight(lixity-evidence-sticky)" in page
+    assert "::highlight(lixity-evidence-dialogue-tag)" in page
+    assert "::highlight(lixity-evidence-echo)" in page

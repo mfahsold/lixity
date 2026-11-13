@@ -8141,6 +8141,99 @@ they do not estimate literary quality or a reader's experienced immersion.
   middle level. Empty sentence input has an empty curve and sparkline; its
   current numeric CV sentinel is zero and must not be read as measured regularity.
 
+## Revision time-series and session deltas (unreleased)
+
+- On every saved edit in `ManuscriptStore.save()` (`manuscript_editing.py`), both
+  the pre-edit baseline revision (if not yet recorded) and the resulting
+  revision are stored in `manuscript_revisions` inside `recovery.sqlite3`.
+- Each revision records deterministic `CorpusAnalyzer` measurements: `words`
+  (`clean_words`), `sentences` (`total_sentences`), `asl` (when `sentences > 0`,
+  else `null`), `asl_cv` (when `sentences > 0`, else `null`), `dialogue_ratio`
+  (when `tokens > 0`, else `null`), `mattr` (when window-eligible, else `null`),
+  and per-chapter `{num, title, words, asl, dialog_pct}` snapshots.
+- `ManuscriptStore.delta(base_revision, target_revision)` computes exact
+  arithmetic differences `target[m] - base[m]` without interpolation. When
+  either endpoint is `null` or no baseline revision exists, the delta is `null`.
+  By default, `base` resolves to the earliest revision on `target`'s UTC
+  calendar day (session start), falling back to the immediate predecessor
+  revision when no earlier same-day revision exists.
+
+## Dramaturgical & structural heuristics (unreleased)
+
+- **Sticky sentences & glue-word density (`pacing.py`):** for each prose
+  sentence with `N >= sticky_min_words` (default `8`) tokens, glue-word density
+  is `glue_pct = 100 * glue_words / N`, where `glue_words` counts lowercased
+  tokens present in the active language's `function_words` lexicon. A sentence
+  is flagged sticky when `N >= sticky_min_words` and `glue_pct >= sticky_glue_pct`
+  (default `45.0`, configurable in `CorpusConfig` on `(0, 100]`). Corpus and
+  chapter reports expose `sticky_sentences`, `sticky_sentence_pct`,
+  `mean_glue_pct`, `sticky_available` (`false` when the language has no
+  `function_words` lexicon, e.g. `generic`), and `sticky_items` (top 50 by
+  descending `glue_pct`: `{chapter_num, scene_index, words, glue_words,
+  glue_pct, preview}`).
+- **Dialogue tag density (`dialogue.py`):** counts speech-attribution verbs
+  matching curated per-language inventories (`en`, `de`, `fr`, `es`, `it`,
+  `pt`, `nl`; `dialogue_tag_available = false` for `generic`). Per-chapter and
+  corpus reports expose `dialogue_tags`,
+  `dialogue_tag_pct = min(100.0, 100 * dialogue_tags / turns)` (when `turns > 0`),
+  and `dialogue_tags_per_1000 = 1000 * dialogue_tags / words` (when `words > 0`).
+- **Scene entry/exit hooks (`pacing.py`, `scenes.py`):** `classify_scene_hook`
+  classifies the first (`entry_hook_type`) and last (`exit_hook_type`) non-empty
+  prose sentence of each scene as `"dialogue"` (matches `dialogue_re` or begins
+  with an opening quote/dash), `"question"` (ends with `?` ignoring trailing
+  quotes/brackets), `"reflection"` (matches `filter_verbs_re` or curated
+  cognitive/perception cue verbs), `"action"` (fallback for non-empty prose),
+  or `"unknown"` (empty). Scenes also expose `exit_hook_score` (`0–3`) and
+  `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`).
+- **POV chapter-absence gaps (`characters.py`, `scenes.py`):** when character
+  profiles define `declared_pov_chapters`, `pov_chapters_map` attaches
+  `pov_characters` to `scenes.items[]`, and `presence_report` computes per-figure
+  `pov_gaps` (`{from_chapter, to_chapter, gap_chapters, missing_chapters}` for
+  each contiguous gap between consecutive declared POV chapters),
+  `pov_longest_gap`, `pov_leading_gap` (`first_pov - 1`), `pov_trailing_gap`
+  (`total_chapters - last_pov`), and `pov_share` (`len(pov_chapters) / total_chapters`,
+  rounded to 4 decimals), plus corpus-level `pov_summary`
+  (`{declared_figures, pov_coverage_chapters, chapters_without_declared_pov}`).
+- **Optional genre reference corridors (`corridors.py`):** `GENRE_CORRIDORS`
+  defines descriptive orientation bands for `crime_thriller`, `literary`,
+  `romance`, and `speculative` over `asl`, `dialogue_pct`, `staccato_pct`, and
+  `avg_scene_words`. `evaluate_genre_corridor` sets `non_prescriptive: true` and
+  reports each metric's `{observed, low, high, position}` where `position` is
+  `"below"`, `"within"`, `"above"`, or `"unavailable"`.
+- **Paragraph inline evidence layers (`paragraph_evidence.py`):** each
+  paragraph's `evidence[idx]["layers"]` exposes three additional deterministic
+  annotation layers:
+  - `sticky` (`kind: "sentence"`): character spans (`{start, end, count: 1, words}`)
+    for sentences with `words >= config.sticky_min_words` and
+    `glue_pct >= config.sticky_glue_pct`; returns `status: "unavailable"`,
+    `reason: "language_unavailable"` when the language lacks `function_words`.
+  - `dialogue_tag` (`kind: "pattern"`): character spans (`{start, end, count: 1}`)
+    for speech-attribution verbs adjacent to dialogue quotes; returns
+    `status: "unavailable"`, `reason: "language_unavailable"` when the language
+    has no dialogue tag verb list.
+  - `echo` (`kind: "word"`): character spans (`{start, end, count: 1}`) for
+    non-function content words of length `>= 4` repeated `>= 2` times within
+    the same paragraph.
+- **Deep dialogue analytics (`dialogue.py`):** `dialogue_report().to_dict()`
+  adds:
+  - `voice_separation`: compares Spoken Dialogue against Narrative Prose via
+    `{available, dialogue_words, narrative_words, dialogue_asl, narrative_asl,
+    asl_delta, dialogue_question_excl_pct, narrative_question_excl_pct,
+    cosine_similarity, separation_label}` where `separation_label` is
+    `"distinct"`, `"moderate"`, `"blended"`, or `"unavailable"`.
+  - `adverbial_tags` (int), `adverbial_tag_pct` (float), and
+    `adverbial_tag_available` (bool) at corpus level and per `chapters[]` entry,
+    counting speech-attribution tags accompanied by manner adverbs.
+- **Deep scene dynamics (`scenes.py`):** `scene_report()` extends each
+  `items[]` entry with `asl_shift` (`float | null`), `dialogue_shift`
+  (`float | null`), `scene_dynamic` (`"accelerating"`, `"decelerating"`,
+  `"dialogue_surge"`, `"steady"`, or `"insufficient_length"` when `< 120`
+  words), `filter_per_1000`, and `sensory_per_1000`. Corpus-level
+  `pacing_plateaus` lists `[{start_id, end_id, scene_count, mean_asl, reason}]`
+  where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
+  `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
+  `>= 120` words with ASL spread `<= 1.5`).
+
 ===============================================================================
 ## docs/STABILITY.md
 
@@ -8797,6 +8890,58 @@ variation. Each sparkline has its own scale: equal bar heights across chapters
 do not imply equal sentence lengths or narrative speed. No sentences means
 no measured rhythm, even though the current CV field uses a zero sentinel.
 
+## Revision time-series and sparse history (unreleased)
+
+Revision snapshots depend on explicit editor saves (`ManuscriptStore.save()`).
+External edits outside the native editor are not recorded until the next editor
+save, and missing intermediate intervals are never interpolated. When a draft
+contains zero sentences or zero tokens, `asl` and `dialogue_ratio` are stored
+and returned as `null` rather than `0.0`. Single-revision manuscripts report
+`has_baseline: false` with `deltas: null` until a second revision is saved.
+
+## Dramaturgical heuristics & genre corridors (unreleased)
+
+- **Sticky sentences:** glue-word density depends on curated `function_words`
+  lexicons and sentence splitting; `generic` sets `sticky_available: false`.
+  A high glue-word share often reflects explanatory clauses, dialogue cadence,
+  or complex syntax rather than a writing defect.
+- **Dialogue tag density:** relies on curated per-language speech-attribution
+  verb lists (`generic` sets `dialogue_tag_available: false`). Action-beat
+  attributions and unlisted verbs are missed, while narrative uses of listed
+  verbs can match. `dialogue_tag_pct` is capped at `100.0` and is a surface
+  density proxy, not speaker-attribution parsing.
+- **Scene entry/exit hooks:** `classify_scene_hook` inspects only the first and
+  last sentence of a scene using surface cues. `"action"` is the fallback for
+  any non-empty sentence that is neither dialogue, question, nor reflection; it
+  does not verify semantic plot action.
+- **POV chapter-absence gaps:** computed strictly from explicit author-declared
+  `declared_pov_chapters` in character profiles, never inferred via NER or
+  narrative focalization.
+- **Genre reference corridors:** `crime_thriller`, `literary`, `romance`, and
+  `speculative` bands are broad editorial orientation ranges (`non_prescriptive: true`),
+  never quality scores, grades, or prescriptions. Sitting `"below"` or `"above"`
+  a band indicates a descriptive difference, not an error.
+- **Paragraph inline evidence layers (`sticky`, `dialogue_tag`, `echo`):**
+  `sticky` and `dialogue_tag` return `status: "unavailable"`
+  (`reason: "language_unavailable"`) for `generic` or languages without
+  curated `function_words` / dialogue-tag verb lists. `echo` highlights
+  same-paragraph repetitions (`>= 2` occurrences, length `>= 4` excluding
+  function/stop words) regardless of whether repetition is intentional
+  rhetorical cadence (anaphora/epizeuxis) or accidental echo.
+- **Voice separation & adverbial dialogue tags:** `voice_separation` compares
+  surface lexical cosine similarity, ASL, and `?!` density between quoted
+  spans and narrative prose; it reports `"unavailable"` when either partition
+  lacks sufficient words and does not model character-specific voices or
+  unquoted/free indirect speech. `adverbial_tags` relies on curated per-language
+  manner-adverb and attribution-verb patterns; non-adverbial modifiers or
+  adverbs separated from the attribution verb are not counted.
+- **Intra-scene dynamics & pacing plateaus:** scenes under `120` words report
+  `scene_dynamic: "insufficient_length"` with `null` shifts so short scenes
+  are not over-interpreted. `pacing_plateaus` (`"low_exit_hooks"` or
+  `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
+  descriptive review prompts, not structural defects (deliberate meditative
+  passages or epistolary sequences can legitimately exhibit steady pacing).
+
 ===============================================================================
 ## docs/LOCALIZATION.md
 
@@ -9122,15 +9267,17 @@ Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the
 }
 ```
 
-The server exposes 10 deterministic read-only analysis tools:
+The server exposes 12 deterministic read-only analysis tools:
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Word, sentence, and vocabulary profile summary.
-- `lixity_pacing`: Sentence-length rhythm, variation, and narrative pacing.
-- `lixity_dialogue`: Dialogue share, speaker cadence, and balance.
+- `lixity_pacing`: Sentence-length rhythm, variation, sticky sentences, and narrative pacing (accepts optional `genre` corridor).
+- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), and corpus-level `pacing_plateaus`.
+- `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
+- `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), and `voice_separation` (dialogue vs. narrative prose).
 - `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
 - `lixity_motifs`: Recurring motif and keyword distribution across chapters.
-- `lixity_characters`: Character mentions and co-occurrence matrix.
+- `lixity_characters`: Character mentions, co-occurrence matrix, and declared POV chapter-absence gaps.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
 
@@ -9566,8 +9713,16 @@ deterministic proxies, with the following scope and availability rules.
   `longest_turn_words`, `turns_per_1000`, `dialogue_paragraph_pct` (a
   paragraph counts as dialogue paragraph when ≥ 50 % of its words sit inside
   recognized chapter-wide quotation spans, including spans crossing paragraph
-  boundaries), `chapters[]` with the same per chapter. Unclosed or unrecognized
-  quotations remain uncounted.
+  boundaries), `dialogue_tags`, `dialogue_tag_pct`, `dialogue_tags_per_1000`,
+  `dialogue_tag_available` (curated per-language speech-attribution verbs;
+  `false` for `generic`), `adverbial_tags`, `adverbial_tag_pct`,
+  `adverbial_tag_available`, and `chapters[]` with the same per chapter, plus
+  corpus-level `voice_separation` (`{available, dialogue_words,
+  narrative_words, dialogue_asl, narrative_asl, asl_delta,
+  dialogue_question_excl_pct, narrative_question_excl_pct, cosine_similarity,
+  separation_label}` where `separation_label` is `"distinct" | "moderate" |
+  "blended" | "unavailable"`). Unclosed or unrecognized quotations remain
+  uncounted.
 - `characters`: whole-word, case-insensitive matching of curated names or
   alias patterns (`{"Matthias|Matze": "Matthias"}`); `mentions`,
   `chapters_present`, `first_chapter`/`last_chapter`, `longest_gap` (chapters
@@ -9575,15 +9730,33 @@ deterministic proxies, with the following scope and availability rules.
   are excluded, so chapter numbers match the metrics. **No NER** — the caller
   supplies the names; an empty name list is an error (not a silent empty
   report). Project profiles escape literal aliases and add
-  `declared_pov_chapters` separately when configured. These author declarations
-  never alter lexical counts or imply inferred perspective. See
+  `declared_pov_chapters` separately when configured, exposing per-figure
+  `pov_gaps` (`{from_chapter, to_chapter, gap_chapters, missing_chapters}`),
+  `pov_longest_gap`, `pov_leading_gap`, `pov_trailing_gap`, `pov_share`, and
+  corpus-level `pov_summary` (`{declared_figures, pov_coverage_chapters,
+  chapters_without_declared_pov}`). These author declarations never alter
+  lexical counts or imply inferred perspective. See
   [configuration and precedence](USAGE.md#character-profiles).
 - `pacing`: scene breaks are explicit dividers (`---`, `- - -`, `***`, `* * *`,
   `___`, `_ _ _`, `•••`, `• • •`, `———`, `⁂`); `scenes` per chapter = breaks + 1. When no dividers exist,
   `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
   chapters) — do not read scene counts as pacing evidence then. `hook_score`
   (0–3, heuristic): +1 closing sentence ≤ 8 words, +1 terminal `?`/`!`/`…`,
-  +1 closing in dialogue. `fastest_chapter`/`slowest_chapter` use the
+  +1 closing in dialogue. Scenes also expose `entry_hook_type`, `exit_hook_type`
+  (`"dialogue"|"question"|"reflection"|"action"|"unknown"`), `exit_hook_score`,
+  `asl_shift` (`float | null`), `dialogue_shift` (`float | null`),
+  `scene_dynamic` (`"accelerating"|"decelerating"|"dialogue_surge"|"steady"|"insufficient_length"`
+  for `< 120` words), `filter_per_1000`, `sensory_per_1000`, and
+  `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`),
+  `scenes.pacing_plateaus` (`[{start_id, end_id, scene_count, mean_asl, reason}]`
+  with `reason` `"low_exit_hooks"` or `"flat_pacing"`), plus optional
+  `pov_characters`. Sticky-sentence diagnostics expose
+  `sticky_sentences`, `sticky_sentence_pct`, `mean_glue_pct`, `sticky_available`,
+  and `sticky_items` (top 50 by `glue_pct`, controlled by `CorpusConfig.sticky_glue_pct=45.0`
+  and `sticky_min_words=8`). Optional `genre_corridor` (via `--genre` / `genre=`
+  or `CorpusConfig.genre_corridor`) reports `{genre, label, non_prescriptive: true,
+  scope, metrics: {asl, dialogue_pct, staccato_pct, avg_scene_words} -> {observed,
+  low, high, position}}`. `fastest_chapter`/`slowest_chapter` use the
   lowest/highest ASL.
 - `motifs`: motif presence (regex patterns; `mentions`, `density_per_1000`,
   chapter span, `longest_gap`) plus generic repetition — `top_words` (content
@@ -9613,6 +9786,15 @@ deterministic proxies, with the following scope and availability rules.
   `about().heuristics` reports `min_comparable_words` and
   `min_comparable_sentences`; the style fingerprint applies the same floors to
   its feature values, baselines and FDR sets (see METHODS.md).
+- `paragraph_evidence`: when `include_evidence=True`, `evidence[idx]["layers"]`
+  includes `sticky` (`kind: "sentence"`, `{start, end, count: 1, words}` for
+  `words >= sticky_min_words` and `glue_pct >= sticky_glue_pct`),
+  `dialogue_tag` (`kind: "pattern"`, `{start, end, count: 1}` for
+  speech-attribution verbs adjacent to dialogue quotes), and `echo`
+  (`kind: "word"`, `{start, end, count: 1}` for non-function words `len >= 4`
+  repeated `>= 2` times in the same paragraph). `sticky` and `dialogue_tag`
+  report `status: "unavailable", reason: "language_unavailable"` when the
+  language lacks the required lexicon.
 
 `passport.register_profiles` contains
 normalized author ranges; `passport.register_targets` maps chapter numbers to
@@ -9718,7 +9900,8 @@ profiles = api.profile(text, language="de", project_config={})  # -> {"meta", "c
 reference = api.fingerprint(text, language="de", project_config={})  # -> style reference
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
-pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
+pace = api.pacing(text, language="de", genre="literary")  # -> {"meta", "pacing"}
+corridors = api.corridors(text, genre="crime_thriller", language="en")  # -> non-prescriptive orientation bands
 motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")  # -> {"meta", "motifs", …}
 distance = api.showing(text, language="de")           # -> {"meta", "showing"}
 html = api.dashboard(text, language="de", title="…", project_config={})  # -> HTML string

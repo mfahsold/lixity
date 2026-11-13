@@ -84,6 +84,34 @@
     apply();
     return true;
   }
+  function renderChapterDeltas(deltaRes) {
+    if (!deltaRes || !deltaRes.has_baseline || !Array.isArray(deltaRes.chapter_deltas)) return;
+    deltaRes.chapter_deltas.forEach(function(ch) {
+      var row = document.getElementById("heatmap-ch-" + ch.num);
+      var cell = row && row.querySelector("td.ch");
+      if (!cell) return;
+      var parts = [];
+      if (typeof ch.words_delta === "number" && ch.words_delta !== 0) {
+        parts.push((ch.words_delta > 0 ? "↑ +" : "↓ ") + ch.words_delta + " W");
+      }
+      if (typeof ch.asl_delta === "number" && Math.abs(ch.asl_delta) >= 0.1) {
+        parts.push("Δ " + (ch.asl_delta > 0 ? "+" : "") + ch.asl_delta.toFixed(1) + " ASL");
+      }
+      var existing = cell.querySelector(".chapter-delta-badge");
+      if (!parts.length) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (!existing) {
+        existing = document.createElement("span");
+        existing.className = "badge chapter-delta-badge";
+        existing.style.marginInlineStart = "6px";
+        existing.style.opacity = "0.85";
+        cell.append(" ", existing);
+      }
+      existing.textContent = parts.join(" · ");
+    });
+  }
   async function load() {
     if (!native || pending) return;
     pending = true; controls(true);
@@ -94,7 +122,10 @@
       jsonApi(API + "/manuscript-delta").catch(function() { return null; }),
     ]);
     pending = false;
-    if (deltaRes && deltaRes.ok) revisionDelta = deltaRes;
+    if (deltaRes && deltaRes.ok) {
+      revisionDelta = deltaRes;
+      renderChapterDeltas(deltaRes);
+    }
     if (selected !== token() || !accept(data)) {failed(); return;}
     status.textContent = "";
   }

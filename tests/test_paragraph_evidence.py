@@ -34,7 +34,10 @@ def test_tense_evidence_reuses_counts_and_keeps_metric_contract():
     assert analysis.evidence is not None
     evidence = analysis.evidence[0]
     assert evidence["tense"]["trigger"] == paragraph.tense_trigger
-    assert set(evidence["layers"]) == {"asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive"}
+    assert set(evidence["layers"]) == {
+        "asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive",
+        "sticky", "dialogue_tag", "echo",
+    }
     assert evidence["tense"]["present"]["count"] == paragraph.present_hits == 2
     assert evidence["tense"]["past"]["count"] == paragraph.past_hits == 1
     assert slices(paragraph, evidence["tense"]["present"]) == [("halte", 1), ("halte", 1)]
@@ -64,7 +67,10 @@ def test_repeated_unicode_tokens_and_sentences_keep_their_exact_occurrences():
     assert result["offset_unit"] == "unicode_codepoint"
     assert result["paragraph_sha256"] == sha256(paragraph.text.encode()).hexdigest()
     layers = result["layers"]
-    assert set(layers) == {"asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive"}
+    assert set(layers) == {
+        "asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive",
+        "sticky", "dialogue_tag", "echo",
+    }
     assert slices(paragraph, layers["asl"]) == [("🧭 I think I can.", 1), ("I think I can.", 1)]
     assert [span["words"] for span in layers["asl"]["spans"]] == [4, 4]
     assert slices(paragraph, layers["filter"]) == [("think", 1), ("think", 1)]
@@ -197,8 +203,54 @@ def test_all_resolved_languages_keep_count_coverage_invariants(language):
     paragraphs, _ = profile_document(text, config, FingerprintThresholds())
     module = importlib.import_module("lixity.paragraph_evidence")
     evidence = module.paragraph_evidence(text, config, paragraphs)[0]
-    for layer in evidence["layers"].values():
+    for name, layer in evidence["layers"].items():
+        if language == "generic" and name in {"sticky", "dialogue_tag"}:
+            assert layer["status"] == "unavailable" and layer["reason"] == "language_unavailable"
+            assert layer["count"] is None and layer["mapped_count"] == 0 and layer["spans"] == []
+            continue
         assert layer["mapped_count"] == sum(span["count"] for span in layer["spans"])
         assert layer["status"] == "available" and layer["mapped_count"] == layer["count"]
         assert all(0 <= span["start"] < span["end"] <= len(paragraphs[0].text)
                    for span in layer["spans"])
+
+
+def test_sticky_dialogue_tag_and_echo_evidence_layers():
+    text = (
+        '## Example\n\n'
+        'It was in the back of the house where we had to go. '
+        '"Wait here," she whispered softly. '
+        'The lantern glowed beside the lantern.\n'
+    )
+    paragraphs, evidence = build(text)
+    paragraph, layers = paragraphs[0], evidence[0]["layers"]
+
+    assert layers["sticky"]["status"] == "available"
+    assert layers["sticky"]["count"] == 1
+    assert slices(paragraph, layers["sticky"]) == [
+        ("It was in the back of the house where we had to go.", 1),
+    ]
+
+    assert layers["dialogue_tag"]["status"] == "available"
+    assert layers["dialogue_tag"]["count"] == 1
+    assert slices(paragraph, layers["dialogue_tag"]) == [("whispered", 1)]
+
+    assert layers["echo"]["status"] == "available"
+    assert slices(paragraph, layers["echo"]) == [("lantern", 1), ("lantern", 1)]
+    # Stop words ("the") and short words (< 4 chars) are excluded from echo.
+    echo_words = {paragraph.text[s["start"]:s["end"]].lower() for s in layers["echo"]["spans"]}
+    assert "the" not in echo_words
+    assert all(len(w) >= 4 for w in echo_words)
+
+
+def test_sticky_and_dialogue_tag_unavailable_for_generic_language():
+    text = '## Example\n\nIt was in the back of the house. "Wait," she whispered. Lantern and lantern.\n'
+    config = CorpusConfig(language="generic")
+    paragraphs, _ = profile_document(text, config, FingerprintThresholds())
+    module = importlib.import_module("lixity.paragraph_evidence")
+    layers = module.paragraph_evidence(text, config, paragraphs)[0]["layers"]
+    assert layers["sticky"]["status"] == "unavailable"
+    assert layers["sticky"]["count"] is None
+    assert layers["dialogue_tag"]["status"] == "unavailable"
+    assert layers["dialogue_tag"]["count"] is None
+    assert layers["echo"]["status"] == "available"
+    assert layers["echo"]["count"] == 2

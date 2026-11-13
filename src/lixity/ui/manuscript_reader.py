@@ -7,6 +7,27 @@ from ..style_profile import ChapterProfile
 from .components import label
 from .manuscript_document import ReaderBlock
 
+INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo")
+
+
+def inline_evidence_controls(labels: Mapping[str, str] | None) -> str:
+    """Render inline evidence layer toggle chips for the reader analysis bar."""
+    def text(key: str) -> str:
+        return escape(label(labels, key), quote=True)
+
+    chips = "".join(
+        f'<button type="button" class="ctl reader-evidence-chip" '
+        f'data-evidence-layer="{layer_key}" aria-pressed="false" '
+        f'data-help="{text("reading_help_evidence_" + layer_key)}">'
+        f'<span class="evidence-chip-swatch evidence-chip-swatch-{layer_key}" aria-hidden="true"></span>'
+        f'<span>{text("evidence_layer_" + layer_key)}</span></button>'
+        for layer_key in INLINE_EVIDENCE_LAYERS
+    )
+    return (
+        f'<div class="reader-inline-evidence-layers" id="reader-inline-evidence-layers" '
+        f'role="group" aria-label="{text("reading_inline_evidence")}">{chips}</div>'
+    )
+
 
 def reading_controls(
     chapters: Sequence[ChapterProfile], labels: Mapping[str, str] | None,
@@ -55,6 +76,11 @@ def reading_controls(
         '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/>'
         '<rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>'
     )
+    direct_speech_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+    )
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
@@ -77,6 +103,7 @@ def reading_controls(
         f'<option value="relaxed">{text("reading_relaxed")}</option></select>'
         f'<div class="reader-shortcuts"><strong>{text("reading_shortcuts")}</strong><dl>'
         f'<dt><kbd>P</kbd></dt><dd>{text("reading_teleprompter")}</dd>'
+        f'<dt><kbd>D</kbd></dt><dd>{text("reading_direct_speech")}</dd>'
         f'<dt><kbd>Shift+F10</kbd></dt><dd>{text("reading_shortcut_actions")}</dd>'
         f'<dt><kbd>Enter</kbd></dt><dd>{text("reading_shortcut_search")}</dd>'
         f'<dt><kbd>Esc</kbd></dt><dd>{text("reading_shortcut_close")}</dd>'
@@ -89,6 +116,10 @@ def reading_controls(
         f'aria-label="{text("reading_teleprompter")}" title="{text("reading_teleprompter")}" aria-keyshortcuts="P" '
         f'data-help="{text("reading_help_teleprompter")}"><span class="reader-control-icon" aria-hidden="true">{teleprompter_icon}</span>'
         f'<span class="reader-control-label">{text("reading_teleprompter")}</span></button>'
+        f'<button class="ctl reader-compact-control" type="button" id="reader-direct-speech" aria-pressed="false" '
+        f'aria-label="{text("reading_direct_speech")}" title="{text("reading_direct_speech")}" aria-keyshortcuts="D" '
+        f'data-help="{text("reading_help_direct_speech")}"><span class="reader-control-icon" aria-hidden="true">{direct_speech_icon}</span>'
+        f'<span class="reader-control-label">{text("reading_direct_speech")}</span></button>'
         '<div class="reader-analysis-toggle-controls">'
         f'<button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" '
         f'aria-label="{text("reading_analysis")}" aria-pressed="false" data-help="{text("reading_help_analysis")}">'

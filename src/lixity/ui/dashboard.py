@@ -65,7 +65,7 @@ from .heatmap import (
     render_style_passport_panel,
 )
 from .manuscript_document import ReaderBlock, reader_block_html
-from .manuscript_reader import reading_controls
+from .manuscript_reader import inline_evidence_controls, reading_controls
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -328,6 +328,8 @@ def render_dashboard(
                     "marker_note",
                     "words",
                     "words_one",
+                    "reading_direct_speech",
+                    "reading_help_direct_speech",
                     "layer_below",
                     "layer_above",
                     "ctx_genre",
@@ -999,6 +1001,7 @@ def render_dashboard(
             f'{layer_navigation}'
             '</div>'
             f'{flag_checkbox}'
+            f'{inline_evidence_controls(labels)}'
             f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
             '</div></div>'
         ) if paragraphs else ""

@@ -1390,6 +1390,10 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 .voice-ref-info { flex: 1; min-width: 0; }
 .voice-ref-text { font-size: var(--text-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .voice-ref-meta { font-size: var(--text-micro); color: var(--muted); }
+@media (max-width: 540px) {
+  .voice-active-card, .voice-ref-item { flex-wrap: wrap; }
+  dialog, .modal-card { max-width: calc(100vw - 1rem); }
+}
 
 
 /* Nested record actions share the card action row, not a second top offset. */

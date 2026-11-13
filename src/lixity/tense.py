@@ -207,7 +207,8 @@ class TenseMatcher:
         if not self._protect_finite_forms:
             return ([match.span() for match in self._present.finditer(text)],
                     [match.span() for match in self._past.finditer(text)])
-        word_tokens = [(m.start(), m.end(), m.group(), m.group().lower()) for m in _WORD.finditer(text)]
+        word_tokens = [(m.start(), m.end(), raw, raw.lower())
+                       for m in _WORD.finditer(text) for raw in (m.group(),)]
         constructions = self._german_perfect_spans(text, word_tokens) if self._german else []
         starts = [start for start, _, _ in constructions]
 

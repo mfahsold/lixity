@@ -162,19 +162,22 @@ def mattr(tokens: list[str], window: int = DEFAULT_MATTR_WINDOW) -> float | None
     n = len(tokens)
     if n < window:
         return None
-    counts: Counter[str] = Counter(tokens[:window])
+    counts: dict[str, int] = dict(Counter(tokens[:window]))
     distinct = len(counts)
     total = distinct
     for i in range(window, n):
         leaving = tokens[i - window]
-        counts[leaving] -= 1
-        if counts[leaving] == 0:
+        c = counts[leaving]
+        if c == 1:
             del counts[leaving]
             distinct -= 1
+        else:
+            counts[leaving] = c - 1
         entering = tokens[i]
-        if counts[entering] == 0:
+        c = counts.get(entering, 0)
+        if c == 0:
             distinct += 1
-        counts[entering] += 1
+        counts[entering] = c + 1
         total += distinct
     windows = n - window + 1
     return total / (window * windows)

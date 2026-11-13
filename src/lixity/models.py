@@ -24,6 +24,8 @@ DEFAULT_LONG_TURN_MIN_WORDS = 80
 DEFAULT_DIALOGUE_PARAGRAPH_SHARE = 0.5
 DEFAULT_HOOK_SHORT_SENTENCE = 8
 DEFAULT_MONOTONY_MIN_RUN = 3
+DEFAULT_STICKY_GLUE_PCT = 45.0
+DEFAULT_STICKY_MIN_WORDS = 8
 
 
 class CorpusConfig(BaseModel):
@@ -88,6 +90,21 @@ class CorpusConfig(BaseModel):
         default=DEFAULT_MONOTONY_MIN_RUN,
         description="Minimum consecutive sentences starting with the same word to count as a rhythm monotony run.",
     )
+    sticky_glue_pct: float = Field(
+        default=DEFAULT_STICKY_GLUE_PCT,
+        description="Function-word percentage threshold at or above which a sentence counts as sticky.",
+    )
+    sticky_min_words: int = Field(
+        default=DEFAULT_STICKY_MIN_WORDS,
+        description="Minimum word count for a sentence to be evaluated for stickiness.",
+    )
+    genre_corridor: str | None = Field(
+        default=None,
+        description=(
+            "Optional non-prescriptive genre orientation key "
+            "(crime_thriller, literary, romance, speculative) for descriptive comparison only."
+        ),
+    )
     motif_regexes: dict[str, str] = Field(
         default_factory=dict,
         description=(
@@ -143,6 +160,14 @@ class CorpusConfig(BaseModel):
             raise ValueError("hook_short_sentence must be at least 1")
         if self.monotony_min_run < 2:
             raise ValueError("monotony_min_run must be at least 2")
+        if not (0.0 < self.sticky_glue_pct <= 100.0):
+            raise ValueError("sticky_glue_pct must be in the interval (0, 100]")
+        if self.sticky_min_words < 1:
+            raise ValueError("sticky_min_words must be at least 1")
+        if self.genre_corridor is not None:
+            from .corridors import resolve_genre_corridor
+
+            self.genre_corridor = resolve_genre_corridor(self.genre_corridor).key
         return self
 
     # Optional language overrides (None = language profile default)

@@ -9,6 +9,53 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Add dramaturgical & structural analysis heuristics (`pacing.py`, `dialogue.py`,
+  `scenes.py`, `characters.py`, `corridors.py`):
+  - Sentence-level Sticky Sentences (`sticky_sentences`, `sticky_sentence_pct`,
+    `mean_glue_pct`, `sticky_items`, `CorpusConfig.sticky_glue_pct=45.0`,
+    `sticky_min_words=8`) and per-language Dialogue Tag density (`dialogue_tags`,
+    `dialogue_tag_pct`, `dialogue_tags_per_1000`, `dialogue_tag_available`).
+  - Scene Entry/Exit Hook classification (`classify_scene_hook`: `dialogue`,
+    `question`, `reflection`, `action`, `unknown`; `hook_distribution`,
+    `exit_hook_score`) and declared POV chapter-absence gaps (`pov_gaps`,
+    `pov_longest_gap`, `pov_leading_gap`, `pov_trailing_gap`, `pov_share`,
+    `pov_summary`, `pov_chapters_map`).
+  - Optional non-prescriptive Genre Reference Corridors (`crime_thriller`,
+    `literary`, `romance`, `speculative`) exposed via `lixity pacing --genre`,
+    `api.pacing(..., genre=...)`, `api.corridors(...)`, and read-only MCP
+    (`lixity_pacing` `genre` arg, plus `lixity_scenes` and `lixity_corridors`).
+  - Direct Speech Mode (`Nur Dialoge` / `Dialogue only`, shortcut `D`) in the
+    manuscript reader (`manuscript-reader.js`, `manuscript-reader.css`,
+    7-language labels in `language_data.py`), plus organic surfacing of Scene
+    Hooks, POV gaps, Sticky Sentences, Dialogue Tags, and Genre Corridors in
+    `narration.py`.
+- Add deep prose & inline evidence analytics (`paragraph_evidence.py`,
+  `dialogue.py`, `scenes.py`, `narration.py`, `manuscript_reader.py`):
+  - Paragraph inline evidence layers (`evidence[idx]["layers"]`) for `sticky`
+    (sentence spans with `words >= sticky_min_words` and `glue_pct >= sticky_glue_pct`),
+    `dialogue_tag` (speech-attribution verbs adjacent to dialogue quotes), and
+    `echo` (non-function content words `len >= 4` repeated `>= 2` times in the
+    same paragraph), wired into reader `CSS.highlights` filter chips
+    (`#reader-inline-evidence-layers`) with 7-language labels in `language_data.py`.
+  - Deep dialogue analytics in `dialogue.py`: `voice_separation` (spoken
+    dialogue vs. narrative prose ASL, `asl_delta`, `?!` density,
+    `cosine_similarity`, `separation_label`) and `adverbial_tags` /
+    `adverbial_tag_pct` / `adverbial_tag_available`, surfaced in CLI,
+    `lixity_dialogue` MCP, and `render_dialogue_panel`.
+  - Deep scene dynamics in `scenes.py`: intra-scene `asl_shift`,
+    `dialogue_shift`, `scene_dynamic` (`accelerating`, `decelerating`,
+    `dialogue_surge`, `steady`, `insufficient_length`), `filter_per_1000`,
+    `sensory_per_1000`, and corpus-level `pacing_plateaus` (`low_exit_hooks`,
+    `flat_pacing`), surfaced in CLI, `lixity_scenes` MCP, and
+    `render_scenes_panel`.
+- Add local SQLite manuscript revision time-series (`manuscript_revisions` in
+  `recovery.sqlite3`), deterministic `timeline()` / `delta()` APIs
+  (`/api/manuscript-timeline`, `/api/manuscript-delta`), Writing-mode Session
+  Pulse with sparkline popover, subtle edited-line gutter markers, comparison
+  column summaries, and live chapter-delta badges in the heatmap matrix.
+- Add a 100% client-side passage sandbox (`docs/sandbox/index.html`) for trying
+  sentence rhythm, dialogue share, and local word echoes without installation,
+  plus a per-user Linux XDG desktop launcher (`scripts/install-desktop-linux.sh`).
 - Add a minimal read-only MCP server (`python -m lixity.mcp`, stdlib-only
   stdio transport, no writes) exposing `about`, `analyze` and `profile`
   over `tools/list` / `tools/call`. Documented in `docs/AGENTS.md`.

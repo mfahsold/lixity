@@ -2,12 +2,13 @@
 
 import logging
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
+from .corridors import evaluate_genre_corridor, pacing_corridor_observation
 from .dialogue import dialogue_report
 from .language import ResolvedLanguage, resolve_language
 from .log import get_logger, log_event
@@ -120,6 +121,8 @@ def analyze_document(
 def supplementary_reports(
     text: str, config: CorpusConfig, analysis: DocumentAnalysis, *,
     scene_settings: Any = None,
+    genre_corridor: str | None = None,
+    pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Prepare the full workspace's optional reports from the same manuscript.
 
@@ -127,11 +130,22 @@ def supplementary_reports(
     still require their own measurements. Character error policies and reader
     document construction remain with the caller. No project settings are read.
     """
-    return {
+    pacing_obj = pacing_report(text, config)
+    pacing_dict = pacing_obj.to_dict()
+    reports: dict[str, Any] = {
         "dialogue": dialogue_report(text, config).to_dict(),
-        "pacing": pacing_report(text, config).to_dict(),
+        "pacing": pacing_dict,
         "motifs": motif_report(text, config=config).to_dict(),
         "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),
         "scenes": scene_report_for_display(
-            text, config, scene_settings, premeasured_chapters=analysis.metrics.chapters),
+            text, config, scene_settings,
+            premeasured_chapters=analysis.metrics.chapters,
+            pov_by_chapter=pov_by_chapter,
+        ),
     }
+    effective_genre = genre_corridor or config.genre_corridor
+    if effective_genre:
+        reports["genre_corridor"] = evaluate_genre_corridor(
+            effective_genre, pacing_corridor_observation(pacing_obj)
+        )
+    return reports

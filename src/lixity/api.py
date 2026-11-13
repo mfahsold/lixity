@@ -198,21 +198,64 @@ def characters(
     return {"meta": _meta(resolved.key), **report}
 
 
-def pacing(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
+def pacing(
+    text: str,
+    language: str = "en",
+    genre: str | None = None,
+    **config_overrides: Any,
+) -> dict[str, Any]:
     """
     Scene structure, pacing signals and chapter hooks: explicit scene breaks
-    (``---``, ``* * *``), per-scene tempo proxies (ASL, staccato, dialogue),
-    the closing sentence of each chapter and its documented 0–3 hook score.
+    (``---``, ``* * *``), per-scene tempo proxies (ASL, staccato, dialogue,
+    sticky sentences, entry/exit hook types), the closing sentence of each
+    chapter and its documented 0–3 hook score, plus optional non-prescriptive
+    genre reference corridor orientation when ``genre`` is supplied.
 
     When the text has no explicit dividers, ``explicit_scene_breaks`` is 0 and
     ``scenes_are_chapters`` is true (each chapter is one scene).
 
-    Returns ``{"meta": {...}, "pacing": {...}}``.
+    Returns ``{"meta": {...}, "pacing": {...}}`` (and ``"genre_corridor"`` when requested).
     """
     config, resolved = resolve_document_config(text, language, **config_overrides)
+    from .corridors import evaluate_genre_corridor, pacing_corridor_observation
     from .pacing import pacing_report
 
-    return {"meta": _meta(resolved.key), "pacing": pacing_report(text, config).to_dict()}
+    report = pacing_report(text, config)
+    payload: dict[str, Any] = {"meta": _meta(resolved.key), "pacing": report.to_dict()}
+    effective_genre = genre or config.genre_corridor
+    if effective_genre:
+        payload["genre_corridor"] = evaluate_genre_corridor(
+            effective_genre, pacing_corridor_observation(report)
+        )
+    return payload
+
+
+def corridors(
+    text: str | None = None,
+    genre: str | None = None,
+    language: str = "en",
+    **config_overrides: Any,
+) -> dict[str, Any]:
+    """List optional non-prescriptive genre reference corridors and optionally evaluate text."""
+    from .corridors import (
+        evaluate_genre_corridor,
+        list_genre_corridors,
+        pacing_corridor_observation,
+    )
+    from .pacing import pacing_report
+
+    result: dict[str, Any] = {
+        "meta": _meta(language),
+        "corridors": list_genre_corridors(),
+    }
+    if text is not None and genre is not None:
+        config, resolved = resolve_document_config(text, language, **config_overrides)
+        result["meta"] = _meta(resolved.key)
+        report = pacing_report(text, config)
+        result["genre_corridor"] = evaluate_genre_corridor(
+            genre, pacing_corridor_observation(report)
+        )
+    return result
 
 
 def scenes(

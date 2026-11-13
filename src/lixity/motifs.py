@@ -177,7 +177,11 @@ def motif_report(
         number: prose_text(body, _front_matter=False)
         for number, _title, body in chapters
     }
-    total_words = sum(len(word_re.findall(body)) for body in chapter_bodies.values())
+    chapter_tokens = {
+        number: [token.lower() for token in word_re.findall(body)]
+        for number, body in chapter_bodies.items()
+    }
+    total_words = sum(len(tokens) for tokens in chapter_tokens.values())
 
     motif_items: list[MotifPresence] = []
     for name, pattern in patterns.items():
@@ -203,44 +207,30 @@ def motif_report(
         )
     motif_items.sort(key=lambda item: (-item.mentions, item.name))
 
-    # Generic repetition: content words and n-grams across the whole manuscript.
+    # Generic repetition: content words and n-grams across the whole manuscript,
+    # plus bounded local echo clusters per chapter (computed in one token pass).
     word_counts: Counter[str] = Counter()
     phrase_chapters: dict[str, set[int]] = {}
     phrase_counts: Counter[str] = Counter()
-    for number, body in chapter_bodies.items():
-        tokens = [token.lower() for token in word_re.findall(body)]
-        word_counts.update(token for token in tokens if token not in content_blacklist)
-        for index in range(len(tokens) - phrase_size + 1):
-            gram = tokens[index : index + phrase_size]
-            if all(token in content_blacklist for token in gram):
-                continue  # pure function-word phrase: not a repetition signal
-            phrase = " ".join(gram)
-            phrase_counts[phrase] += 1
-            phrase_chapters.setdefault(phrase, set()).add(number)
-
-    repeated = [
-        RepeatedPhrase(phrase=phrase, count=count, chapters=sorted(phrase_chapters[phrase]))
-        for phrase, count in phrase_counts.most_common(top_phrases)
-        if count >= MIN_PHRASE_COUNT
-    ]
-
-    # Echo counts and locations refer to one bounded local cluster, not to
-    # unrelated occurrences elsewhere in the chapter. Equal counts use the
-    # earliest cluster; the complete final n-gram must fit inside the window.
     echo_items: list[Echo] = []
     local_positions: dict[tuple[str, int], list[int]] = {}
-    for number, body in chapter_bodies.items():
-        tokens = [token.lower() for token in word_re.findall(body)]
-        if len(tokens) < phrase_size:
+    min_echo_cluster = max(2, echo_min_count)
+
+    for number, tokens in chapter_tokens.items():
+        word_counts.update(token for token in tokens if token not in content_blacklist)
+        n_tokens = len(tokens)
+        if n_tokens < phrase_size:
             continue
-        # Collect all n-gram occurrences.
+        is_blacklisted = [token in content_blacklist for token in tokens]
         occurrences: dict[str, list[int]] = {}
-        for index in range(len(tokens) - phrase_size + 1):
-            gram = tokens[index : index + phrase_size]
-            if all(token in content_blacklist for token in gram):
-                continue
-            phrase = " ".join(gram)
+        for index in range(n_tokens - phrase_size + 1):
+            if all(is_blacklisted[index : index + phrase_size]):
+                continue  # pure function-word phrase: not a repetition signal
+            phrase = " ".join(tokens[index : index + phrase_size])
+            phrase_counts[phrase] += 1
+            phrase_chapters.setdefault(phrase, set()).add(number)
             occurrences.setdefault(phrase, []).append(index)
+
         for phrase, positions in occurrences.items():
             if len(positions) < echo_min_count:
                 continue
@@ -253,7 +243,7 @@ def motif_report(
                 if right - left + 1 > best_end - best_start:
                     best_start, best_end = left, right + 1
             cluster = positions[best_start:best_end]
-            if len(cluster) < max(2, echo_min_count):
+            if len(cluster) < min_echo_cluster:
                 continue
             local_positions[(phrase, number)] = cluster
             echo_items.append(
@@ -265,6 +255,12 @@ def motif_report(
                     last_word=cluster[-1] + phrase_size,
                 )
             )
+
+    repeated = [
+        RepeatedPhrase(phrase=phrase, count=count, chapters=sorted(phrase_chapters[phrase]))
+        for phrase, count in phrase_counts.most_common(top_phrases)
+        if count >= MIN_PHRASE_COUNT
+    ]
 
     # Deduplicate shifted n-grams only when their actual occurrences overlap
     # in the same repeated passage. Shared vocabulary alone is insufficient:

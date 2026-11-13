@@ -6,16 +6,110 @@ from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
-from .markdown_parser import split_chapters, split_scenes, strip_html_comments
+from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
+from .markdown_parser import prose_text, split_chapters, split_scenes, strip_html_comments
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
+from .pacing import HOOK_TYPES, _hook_score, classify_scene_hook
 from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
+from .sentences import split_prose_sentences
 from .style_fingerprint import FEATURES
+
+_INTRA_SCENE_MIN_WORDS = 120
+
+
+def _intra_scene_dynamics(
+    scene_sentences: Sequence[str],
+    words: int,
+    word_re: re.Pattern[str],
+    dialogue_re: re.Pattern[str],
+) -> tuple[float | None, float | None, str]:
+    """Measure first-half vs. second-half ASL and dialogue shifts within a scene."""
+    if words < _INTRA_SCENE_MIN_WORDS or len(scene_sentences) < 2:
+        return None, None, "insufficient_length"
+    mid = len(scene_sentences) // 2
+    first_half = scene_sentences[:mid]
+    second_half = scene_sentences[mid:]
+
+    def _half_stats(sents: Sequence[str]) -> tuple[float, float]:
+        total_w = sum(len(word_re.findall(s)) for s in sents)
+        asl = total_w / len(sents)
+        dlg_w = sum(len(word_re.findall(m)) for s in sents for m in quotation_texts(dialogue_re, s))
+        dlg_pct = (dlg_w / total_w * 100.0) if total_w else 0.0
+        return asl, dlg_pct
+
+    first_asl, first_dlg = _half_stats(first_half)
+    second_asl, second_dlg = _half_stats(second_half)
+    asl_shift = round(second_asl - first_asl, 2)
+    dialogue_shift = round(second_dlg - first_dlg, 2)
+
+    if dialogue_shift >= 15.0:
+        dynamic = "dialogue_surge"
+    elif asl_shift <= -2.5:
+        dynamic = "accelerating"
+    elif asl_shift >= 2.5:
+        dynamic = "decelerating"
+    else:
+        dynamic = "steady"
+    return asl_shift, dialogue_shift, dynamic
+
+
+def _detect_pacing_plateaus(items: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Find consecutive >=3 scene spans where exit hooks or pacing flatten."""
+    plateaus: list[dict[str, Any]] = []
+    covered: set[int] = set()
+
+    def _emit(run: Sequence[Mapping[str, Any]], reason: str) -> None:
+        asls = [float(item["features"]["asl"]) for item in run if item["features"].get("asl") is not None]
+        mean_asl = round(sum(asls) / len(asls), 2) if asls else 0.0
+        plateaus.append({
+            "start_id": run[0]["id"],
+            "end_id": run[-1]["id"],
+            "scene_count": len(run),
+            "mean_asl": mean_asl,
+            "reason": reason,
+        })
+
+    idx = 0
+    n = len(items)
+    while idx < n:
+        if items[idx]["exit_hook_score"] <= 1:
+            end = idx + 1
+            while end < n and items[end]["exit_hook_score"] <= 1:
+                end += 1
+            if end - idx >= 3:
+                _emit(items[idx:end], "low_exit_hooks")
+                covered.update(range(idx, end))
+            idx = end
+        else:
+            idx += 1
+
+    idx = 0
+    while idx < n:
+        if idx not in covered and items[idx]["scene_dynamic"] == "steady" and items[idx]["words"] >= _INTRA_SCENE_MIN_WORDS:
+            end = idx + 1
+            while (
+                end < n
+                and end not in covered
+                and items[end]["scene_dynamic"] == "steady"
+                and items[end]["words"] >= _INTRA_SCENE_MIN_WORDS
+            ):
+                end += 1
+            if end - idx >= 3:
+                asls = [float(item["features"]["asl"]) for item in items[idx:end] if item["features"].get("asl") is not None]
+                if asls and (max(asls) - min(asls)) <= 1.5:
+                    _emit(items[idx:end], "flat_pacing")
+            idx = end
+        else:
+            idx += 1
+
+    return plateaus
 
 
 def scene_report_for_display(
     text: str, config: CorpusConfig, settings: Any = None, *,
     premeasured_chapters: Sequence[ChapterMetrics] | None = None,
+    pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Keep the dashboard readable when project assignments need maintenance.
 
@@ -24,7 +118,11 @@ def scene_report_for_display(
     measurements; no result is retained across requests.
     """
     try:
-        return scene_report(text, config, settings, _premeasured_chapters=premeasured_chapters)
+        return scene_report(
+            text, config, settings,
+            _premeasured_chapters=premeasured_chapters,
+            pov_by_chapter=pov_by_chapter,
+        )
     except ValueError as exc:
         return {"error": str(exc)}
 
@@ -75,6 +173,7 @@ def _settings(
 def scene_report(
     text: str, config: CorpusConfig, settings: Any = None, *,
     _premeasured_chapters: Sequence[ChapterMetrics] | None = None,
+    pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Use existing analysis features per pacing unit; never analyze sources.
 
@@ -86,8 +185,14 @@ def scene_report(
     """
     assignments, targets, planned, titles = _settings({} if settings is None else settings)
     analyzer = CorpusAnalyzer(config, sample_text=text)
+    resolved = resolve_language(config, sample_text=text)
+    word_re = compile_word_pattern(resolved.word_regex)
+    dialogue_re = compile_pattern(resolved.dialogue_regex)
+    filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
+    entry_counts = dict.fromkeys(HOOK_TYPES, 0)
+    exit_counts = dict.fromkeys(HOOK_TYPES, 0)
     chapter_dividers: dict[int, int] = {}
     breaks = 0
     for chapter_num, title, body in split_chapters(text, config):
@@ -127,14 +232,50 @@ def scene_report(
                             "below" if bounds[0] is not None and value < bounds[0] else
                             "above" if bounds[1] is not None and value > bounds[1] else "within")
                 comparisons[field] = {"lower": bounds[0], "upper": bounds[1], "position": position}
-            items.append({
+            scene_prose = prose_text(part, _front_matter=False)
+            scene_sentences = [
+                s for s in split_prose_sentences(scene_prose, resolved.key)
+                if word_re.search(s)
+            ]
+            entry_sentence = scene_sentences[0] if scene_sentences else ""
+            exit_sentence = scene_sentences[-1] if scene_sentences else ""
+            entry_hook_type = classify_scene_hook(
+                entry_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
+            )
+            exit_hook_type = classify_scene_hook(
+                exit_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
+            )
+            exit_is_dialogue = bool(dialogue_re.search(exit_sentence)) if exit_sentence else False
+            exit_hook_score, _, _ = _hook_score(
+                exit_sentence,
+                exit_is_dialogue,
+                word_re,
+                hook_short_sentence=config.hook_short_sentence,
+            )
+            asl_shift, dialogue_shift, scene_dynamic = _intra_scene_dynamics(
+                scene_sentences, measured.words, word_re, dialogue_re
+            )
+            entry_counts[entry_hook_type] = entry_counts.get(entry_hook_type, 0) + 1
+            exit_counts[exit_hook_type] = exit_counts.get(exit_hook_type, 0) + 1
+            item_dict: dict[str, Any] = {
                 "id": identifier, "chapter": chapter_num, "chapter_title": title,
                 "scene": index, "scene_title": scene_heading, "group": group, "words": measured.words,
                 "sentences": measured.sentences, "features": features,
                 "standard_errors": errors, "targets": comparisons,
+                "entry_hook_type": entry_hook_type,
+                "exit_hook_type": exit_hook_type,
+                "exit_hook_score": exit_hook_score,
+                "asl_shift": asl_shift,
+                "dialogue_shift": dialogue_shift,
+                "scene_dynamic": scene_dynamic,
+                "filter_per_1000": round(float(measured.filter_density), 2),
+                "sensory_per_1000": round(float(measured.sensory_density), 2),
                 "data_support": {"diversity_min_tokens": MIN_TOKENS_LD,
                                  "diversity_available": measured.words >= MIN_TOKENS_LD},
-            })
+            }
+            if pov_by_chapter is not None:
+                item_dict["pov_characters"] = list(pov_by_chapter.get(chapter_num, ()))
+            items.append(item_dict)
     missing = assignments.keys() - {item["id"] for item in items}
     unplanned = missing - planned
     if unplanned:
@@ -171,6 +312,8 @@ def scene_report(
             }
     report: dict[str, Any] = {"items": items, "baselines": baselines, "explicit_scene_breaks": breaks,
               "scenes_are_chapters": breaks == 0,
+              "hook_distribution": {"entry": entry_counts, "exit": exit_counts},
+              "pacing_plateaus": _detect_pacing_plateaus(items),
               "baseline_scope": "explicit register assignments within this manuscript only",
               "uncertainty_scope": "approximate core standard errors; no validated reliability or quality score"}
     if planned:

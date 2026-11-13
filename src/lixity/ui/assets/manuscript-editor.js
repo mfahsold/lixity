@@ -377,11 +377,12 @@
     #manuscript-recovery {max-width:11rem;min-width:6.5rem;flex:0 1 11rem;min-height:2.25rem;padding-block:.25rem;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
     #manuscript-session-pulse-wrap {max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:8px auto 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-    .manuscript-pulse-btn {font-size:var(--text-micro,.8125rem);color:var(--muted);background:transparent;border:1px solid transparent;border-radius:var(--radius-pill,999px);padding:3px 10px;cursor:pointer;}
+    .manuscript-pulse-btn {max-width:100%;white-space:normal;text-align:right;line-height:1.35;font-size:var(--text-micro,.8125rem);color:var(--muted);background:transparent;border:1px solid transparent;border-radius:var(--radius-pill,999px);padding:3px 10px;cursor:pointer;}
     .manuscript-pulse-btn:hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
-    #manuscript-pulse-popover {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);padding:10px 14px;box-shadow:var(--shadow);font-size:var(--text-micro,.8125rem);color:var(--muted);max-width:100%;}
+    #manuscript-pulse-popover {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);padding:10px 14px;box-shadow:var(--shadow);font-size:var(--text-micro,.8125rem);color:var(--muted);max-width:100%;box-sizing:border-box;}
     #manuscript-pulse-popover svg {display:block;margin-top:6px;color:var(--accent,currentColor);}
     .manuscript-compare-metrics {font-weight:400;color:var(--muted);margin-top:2px;}
+    #manuscript-editor-host .cm-line.lixity-session-edited {box-shadow:inset 2px 0 0 var(--accent,#2f5aa8);}
     @container editor-tools (max-width: 76rem) {
       #manuscript-search .editor-tool-label,
       .manuscript-editor-toolbar #workspace-reader-toggle .reader-control-label {display:none;}
@@ -401,10 +402,19 @@
     }
     @media(max-width:760px) {
       .manuscript-editor-toolbar {flex-wrap:wrap;}
-      .editor-tool-group {flex-wrap:wrap;}
+      .editor-tool-group {flex-wrap:wrap;flex-shrink:1;max-width:100%;}
       .editor-group-versions,.editor-group-context {padding-inline-start:0;border-inline-start:0;}
       .editor-group-status {margin-inline-start:0;padding-inline-start:0;}
       #manuscript-compare .editor-tool-label {display:none;}
+    }
+    @media(max-width:600px) {
+      .manuscript-editor-toolbar button.ctl, #manuscript-recovery {min-height:2.75rem;}
+      #manuscript-recovery {min-width:0;flex:1 1 8rem;max-width:100%;}
+      #manuscript-session-pulse-wrap {align-items:stretch;}
+      .manuscript-pulse-btn {text-align:center;min-height:2.75rem;}
+      #manuscript-pulse-popover {width:100%;}
+      #manuscript-comparison {width:calc(100vw - 16px);padding:14px;}
+      .manuscript-comparison-actions {flex-wrap:wrap;gap:8px;}
     }
     body.manuscript-writing #chapters,body.manuscript-writing #text-search,body.manuscript-writing .toolbar {display:none!important;}
     body.manuscript-writing #manuscript-reader-controls {display:none!important;}
@@ -423,6 +433,23 @@
     reload.hidden = !paused;
   }
   let latestTimeline = [];
+  let sessionBaselineLines = [];
+  let gutterRaf = 0;
+  function markEditedLines() {
+    gutterRaf = 0;
+    if (!editor || !sessionBaselineLines.length) return;
+    const currentLines = editor.text().split('\n');
+    const domLines = host.querySelectorAll('.cm-content > .cm-line');
+    domLines.forEach((node, idx) => {
+      // Match rendered lines against session baseline to highlight modified paragraphs subtly.
+      const txt = node.textContent || '';
+      const changed = idx < currentLines.length && currentLines[idx] !== sessionBaselineLines[idx] && txt === currentLines[idx];
+      node.classList.toggle('lixity-session-edited', changed);
+    });
+  }
+  function scheduleGutterMark() {
+    if (!gutterRaf) gutterRaf = requestAnimationFrame(markEditedLines);
+  }
   function fmtNum(v, digits) {
     if (v === null || v === undefined || Number.isNaN(v)) return '–';
     return Number(v).toLocaleString(language, {minimumFractionDigits: digits, maximumFractionDigits: digits});
@@ -529,6 +556,7 @@
   function changes() {
     generation++;
     dirty = true; show('unsaved', text(6));
+    scheduleGutterMark();
     if (paused) return;
     clearTimeout(timer); timer = setTimeout(flush, 800);
     if (!maximum) maximum = setTimeout(flush, 4000);
@@ -582,6 +610,7 @@
       openButton.hidden = true; closeButton.hidden = false;
       if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
+      sessionBaselineLines = snapshot.text.split('\n');
       const cmContent = host.querySelector('.cm-content');
       if (cmContent) {
         cmContent.setAttribute('spellcheck', 'false');
