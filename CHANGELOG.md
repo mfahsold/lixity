@@ -136,7 +136,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   linear paragraph traversals with `O(log N)` binary-search geometry capture in
   `manuscript-reader.js` and throttle broad `document.body` mutation records.
 - Group manuscript reader controls into a left-to-right reading, review/companion
-  and authoring flow with a explicit `Close writing` return action, keep desktop
+  and authoring flow with an explicit `Close writing` return action, keep desktop
   search and paragraph filters on one shared toolbar row, offset the sticky
   overview outline below the reader toolbar, and align Command Palette (`Ctrl+K`
   / `Ctrl+P`) and inspector backlink routes with the active workspace views,

@@ -286,9 +286,13 @@
   const comparisonWords = comparisonLabels[language] || comparisonLabels.en;
   const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: 'Control+F'});
   historyGroup.append(searchBtn);
-  const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.setAttribute('aria-label', comparisonWords[1]);
+  const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.className = 'lixity-modal'; comparison.setAttribute('closedby', 'any'); comparison.setAttribute('aria-label', comparisonWords[1]);
+  const comparisonCard = document.createElement('div'); comparisonCard.className = 'modal-card';
+  const comparisonHeader = document.createElement('div'); comparisonHeader.className = 'modal-header';
   const comparisonTitle = document.createElement('h2'); comparisonTitle.textContent = comparisonWords[1];
-  const comparisonNote = document.createElement('p'); comparisonNote.textContent = comparisonWords[7];
+  const comparisonClose = document.createElement('button'); comparisonClose.type = 'button'; comparisonClose.className = 'modal-close'; comparisonClose.textContent = '✕'; comparisonClose.setAttribute('aria-label', comparisonWords[6]); comparisonClose.title = comparisonWords[6];
+  const comparisonBody = document.createElement('div'); comparisonBody.className = 'modal-body';
+  const comparisonNote = document.createElement('p'); comparisonNote.className = 'ctl-note'; comparisonNote.textContent = comparisonWords[7];
   const comparisonGrid = document.createElement('div'); comparisonGrid.className = 'manuscript-comparison-grid';
   const comparisonFields = ['base','current','draft'].map((name, index) => {
     const label = document.createElement('label'); label.textContent = comparisonWords[index+2];
@@ -303,6 +307,7 @@
   function closeComparison() {
     if (!comparisonDirty() || confirm(discardComparison[language] || discardComparison.en)) comparison.close();
   }
+  comparisonClose.addEventListener('click', closeComparison);
   comparison.addEventListener('cancel', event => {event.preventDefault(); closeComparison();});
   const comparisonUse = button(comparisonWords[5], 'manuscript-comparison-use', () => {
     if (!comparisonSnapshot || inflight) return;
@@ -311,8 +316,11 @@
     comparison.close(); show('unsaved', text(15)); editor.focus();
   }, null, {icon: 'check', className: 'ctl primary'});
   const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape'});
-  const comparisonActions = document.createElement('div'); comparisonActions.className = 'manuscript-edit-tools'; comparisonActions.append(comparisonCancel,comparisonUse);
-  comparison.append(comparisonTitle,comparisonNote,comparisonGrid,comparisonActions); document.body.append(comparison);
+  const comparisonActions = document.createElement('div'); comparisonActions.className = 'modal-footer'; comparisonActions.append(comparisonCancel,comparisonUse);
+  comparisonHeader.append(comparisonTitle, comparisonClose);
+  comparisonBody.append(comparisonNote, comparisonGrid);
+  comparisonCard.append(comparisonHeader, comparisonBody, comparisonActions);
+  comparison.append(comparisonCard); document.body.append(comparison);
   const compareBtn = button(comparisonWords[1], 'manuscript-compare', async () => {
     if (!editor || inflight || comparisonLoading) return;
     comparisonLoading = true;
@@ -343,12 +351,14 @@
   }
   section.append(host, pulseWrap);
   const css = document.createElement('style'); css.textContent = `
-    #manuscript-comparison {width:min(1200px,95vw);max-height:92dvh;box-sizing:border-box;overflow:auto;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-lg,16px);box-shadow:var(--shadow-modal);padding:24px;}
-    .manuscript-comparison-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:16px 0;}
-    .manuscript-comparison-grid label {font-weight:var(--weight-semibold,600);font-size:var(--text-small,.875rem);}
+    #manuscript-comparison {width:min(1200px,95vw);max-width:min(1200px,95vw);max-height:min(92dvh,56rem);}
+    #manuscript-comparison .modal-card {max-height:min(calc(92dvh - 2px),calc(56rem - 2px));}
+    #manuscript-comparison .modal-body > .ctl-note {margin:0;}
+    .manuscript-comparison-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4,16px);}
+    .manuscript-comparison-grid label {display:flex;flex-direction:column;min-width:0;font-weight:var(--weight-semibold,600);font-size:var(--text-small,.875rem);}
     .manuscript-comparison-grid small {color:var(--muted);font-family:var(--font-mono,monospace);margin-top:2px;}
-    .manuscript-comparison-grid textarea {display:block;box-sizing:border-box;width:100%;height:48vh;margin-top:8px;padding:12px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-sm,8px);font-family:var(--font-title,serif);font-size:1rem;line-height:1.6;resize:vertical;}
-    @media(max-width:700px) {.manuscript-comparison-grid {grid-template-columns:1fr;}.manuscript-comparison-grid textarea {height:24vh;}}
+    .manuscript-comparison-grid textarea {display:block;box-sizing:border-box;width:100%;flex:1 1 auto;min-height:clamp(14rem,42dvh,30rem);margin-top:8px;padding:12px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:var(--radius-sm,8px);font-family:var(--font-title,serif);font-size:1rem;line-height:1.6;resize:vertical;}
+    @media(max-width:760px) {.manuscript-comparison-grid {grid-template-columns:1fr;}.manuscript-comparison-grid textarea {min-height:clamp(9rem,22dvh,15rem);}}
     #manuscript-analysis-freshness {position:relative;z-index:20;margin:0;padding:.2rem .5rem;background:transparent;border:0;box-shadow:none;font-size:var(--text-note,.8125rem);color:var(--muted);}
     #manuscript-analysis-freshness[hidden] {display:none;}
     #manuscript-reading {width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:8px 12px;box-sizing:border-box;border:0;background:var(--bg);color:var(--fg);}
@@ -413,8 +423,7 @@
       #manuscript-session-pulse-wrap {align-items:stretch;}
       .manuscript-pulse-btn {text-align:center;min-height:2.75rem;}
       #manuscript-pulse-popover {width:100%;}
-      #manuscript-comparison {width:calc(100vw - 16px);padding:14px;}
-      .manuscript-comparison-actions {flex-wrap:wrap;gap:8px;}
+      #manuscript-comparison {width:calc(100vw - 16px);max-width:calc(100vw - 16px);}
     }
     body.manuscript-writing #chapters,body.manuscript-writing #text-search,body.manuscript-writing .toolbar {display:none!important;}
     body.manuscript-writing #manuscript-reader-controls {display:none!important;}

@@ -429,14 +429,18 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-close:hover { color: var(--fg); background: var(--neutral); }
 .modal-close:focus { outline: none; }
 .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.modal-intro { margin: 0; padding: var(--space-3) var(--space-4); flex: none; }
+.modal-intro { margin: 0; padding: var(--space-2) var(--space-4) var(--space-3); flex: none; border-bottom: 1px solid var(--line); }
 .wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
-.modal-tab-pane { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.modal-tab-pane { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.modal-tab-pane > .modal-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.modal-tab-pane > .modal-form > .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.modal-tab-pane > .modal-form > .modal-footer { flex: none; margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
 .modal-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; min-width: 0; overscroll-behavior: contain; scroll-padding-block: var(--space-3); overflow-y: auto; background: var(--surface); }
 .modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .75rem; margin-top: .4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
 /* A footer directly under a card needs its own inset and stays outside the scroll region. */
 .modal-card > .modal-footer { flex: none; margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
-#runtime-status { margin: 0; }
+#runtime-status { margin: 0; font-size: var(--text-small); color: var(--muted); }
+#runtime-status[data-state="error"] { color: var(--flag); font-weight: var(--weight-semibold); }
 #runtime-content { display: grid; gap: var(--space-4); }
 .runtime-section { display: grid; gap: var(--space-2); min-width: 0; }
 .runtime-section + .runtime-section { border-top: 1px solid var(--line); padding-top: var(--space-3); }
@@ -444,10 +448,17 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .runtime-targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--space-2); margin: 0; }
 .runtime-target { min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-subtle); }
 .runtime-target dt { font-weight: var(--weight-semibold); }
-.runtime-target dd { margin: .25rem 0 0; }
+.runtime-target dd { margin: .35rem 0 0; display: grid; gap: .3rem; }
 .runtime-target dd div { color: var(--fg-secondary); font-size: var(--text-small); overflow-wrap: anywhere; }
+.runtime-state-pill { display: inline-flex; align-items: center; width: fit-content; padding: .1rem .5rem; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface); font-size: var(--text-micro); font-weight: var(--weight-semibold); color: var(--fg); }
+.runtime-state-pill[data-state="ready"], .runtime-state-pill[data-state="running"] { color: var(--status-success-fg, var(--present-ink)); background: var(--status-success-bg, var(--present-light)); border-color: var(--status-success-border, var(--line)); }
+.runtime-state-pill[data-state="unavailable"], .runtime-state-pill[data-state="error"] { color: var(--flag); background: var(--flag-light); border-color: color-mix(in srgb, var(--flag) 30%, transparent); }
 .runtime-list { display: grid; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
 .runtime-list li { min-width: 0; overflow-wrap: anywhere; }
+.runtime-empty { padding: var(--space-2) var(--space-3); border: 1px dashed var(--line); border-radius: var(--radius-sm); color: var(--muted); font-size: var(--text-small); background: var(--bg-subtle); }
+.runtime-workspace-row { justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-subtle); }
+.runtime-workspace-row a { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
+.runtime-workspace-row a[aria-current="page"] { color: var(--accent); }
 .modal-tab-pane > .modal-body { overflow: visible; }
 .modal-scroll { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-block: var(--space-3); }
 .modal-scroll > .modal-body { overflow: visible; }
@@ -817,7 +828,13 @@ body { margin: 0; padding: 2.25rem 1.5rem 4rem; background: var(--bg); color: va
 /* Native controls otherwise use the browser's unrelated default font. */
 button, input, select, textarea { font: inherit; }
 code, pre { font-family: var(--font-mono); }
-#site-export-preflight pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; }
+#site-export-preflight { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-subtle); font-size: var(--text-small); }
+#site-export-preflight pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; margin: var(--space-2) 0 0; }
+.site-export-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.site-export-profile-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.site-export-profile-row select.ctl { flex: 1 1 12rem; min-width: 0; }
+.site-export-includes { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.wizard-options-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
 .page > * { min-width: 0; margin-block: 0; }
 .workspace-shell { display: grid; gap: var(--space-3); min-width: 0; }
@@ -2205,7 +2222,13 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
 @media (max-width: 540px) {
   .voice-active-card, .voice-ref-item { flex-wrap: wrap; }
   dialog, .modal-card { max-width: calc(100vw - 1rem); }
+  .template-grid { grid-template-columns: 1fr; }
+  .site-export-profile-row { flex-direction: column; align-items: stretch; }
 }
+
+/* Context dock & reader polish */
+.workspace-context-panel .context-tool-tabs { position: sticky; top: 0; z-index: 2; }
+#workspace-reader-status:empty { display: none; }
 
 
 /* Nested record actions share the card action row, not a second top offset. */
@@ -4504,8 +4527,8 @@ body.lixity-workspace.reader-focus {
 .analysis-evidence-heading strong { min-width: 0; }
 .analysis-evidence-card p { margin: var(--space-1) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }
-.analysis-evidence-has-quote { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
-.analysis-evidence-card blockquote { flex: 1 1 11rem; min-width: 0; margin: 0; padding: var(--space-1) var(--space-2); border-inline-start: 2px solid var(--analysis-evidence-color, var(--accent)); border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0; background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 8%, transparent); color: var(--fg); line-height: var(--line-body); }
+.analysis-evidence-has-quote { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
+.analysis-evidence-card blockquote { min-width: 0; margin: 0; padding: var(--space-1) var(--space-2); border-inline-start: 2px solid var(--analysis-evidence-color, var(--accent)); border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0; background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 8%, transparent); color: var(--fg); line-height: var(--line-body); }
 .analysis-evidence-card .ctl { min-height: 44px; white-space: normal; min-width: 0; }
 .analysis-evidence-card .analysis-evidence-close { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
 .analysis-evidence-card .analysis-evidence-close:hover { background: var(--surface); color: var(--fg); }
@@ -14986,7 +15009,9 @@ function switchModalTab(targetPaneId) {
     btn.setAttribute("aria-selected", isTarget ? "true" : "false");
   });
   dialog.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
-    pane.style.display = pane.id === targetPaneId ? "block" : "none";
+    var active = pane.id === targetPaneId;
+    pane.classList.toggle("active", active);
+    pane.style.display = active ? "flex" : "none";
   });
 }
 
@@ -15947,12 +15972,12 @@ window.LixityManuscriptLinks = {
     group.appendChild(title); content.appendChild(group); return group;
   }
   async function refresh() {
-    var serial = ++revision; status.textContent = "…";
+    var serial = ++revision; status.dataset.state = "loading"; status.textContent = "…";
     try {
       var response = await fetch(API + "/runtime"), data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || uiLabel("runtime_unavailable"));
       if (serial !== revision || !modal.open) return;
-      content.replaceChildren(); status.textContent = uiLabel("runtime_status_updated");
+      content.replaceChildren(); status.dataset.state = "ready"; status.textContent = uiLabel("runtime_status_updated");
       var workers = section("runtime_workers"), targets = document.createElement("dl");
       targets.className = "runtime-targets";
       var serviceScope = document.createElement("p");
@@ -15960,9 +15985,12 @@ window.LixityManuscriptLinks = {
       serviceScope.textContent = uiLabel("runtime_services_scope"); workers.appendChild(serviceScope);
       data.audio.targets.forEach(function(target) {
         var row = document.createElement("div"), title = document.createElement("dt"), value = document.createElement("dd");
+        var statePill = document.createElement("span");
         row.className = "runtime-target";
         title.textContent = (target.service_name ? target.service_name + " · " : "") + uiLabel("speech_target_" + target.target);
-        value.textContent = uiLabel("runtime_" + target.state);
+        statePill.className = "runtime-state-pill"; statePill.dataset.state = String(target.state || "");
+        statePill.textContent = uiLabel("runtime_" + target.state);
+        value.appendChild(statePill);
         var model = document.createElement("div");
         model.textContent = uiLabel("runtime_model") + ": " +
           (typeof target.model === "string" && target.model.trim() ? target.model : uiLabel("runtime_model_unknown"));
@@ -15981,7 +16009,7 @@ window.LixityManuscriptLinks = {
         item.append(jobState, location);
         jobs.appendChild(item);
       });
-      if (!jobs.children.length) {var empty = document.createElement("li"); empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
+      if (!jobs.children.length) {var empty = document.createElement("li"); empty.className = "runtime-empty"; empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
       queue.appendChild(jobs); var workspaces = section("runtime_workspaces");
       var projects = document.createElement("ul");
       projects.className = "runtime-list";
@@ -15990,7 +16018,7 @@ window.LixityManuscriptLinks = {
         var item = document.createElement("li"), link = document.createElement("a");
         link.href = project.url; link.textContent = project.title;
         if (location.pathname === project.url) link.setAttribute("aria-current", "page");
-        var controls = document.createElement("div"); controls.className = "row"; controls.appendChild(link); item.appendChild(controls);
+        var controls = document.createElement("div"); controls.className = "row runtime-workspace-row"; controls.appendChild(link); item.appendChild(controls);
         if (project.closable) {
           var close = document.createElement("button"); close.type = "button"; close.className = "ctl";
           close.textContent = uiLabel("modal_close"); close.setAttribute("aria-label", close.textContent + " · " + project.title);
@@ -16000,13 +16028,15 @@ window.LixityManuscriptLinks = {
               var result = await fetch(API + "/workspace-close", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:project.id})});
               var value = await result.json(); if (!result.ok || !value.ok) throw new Error(value.message);
               if (location.pathname === project.url) location.assign("/"); else refresh();
-            } catch (error) {status.textContent = error.message; close.disabled = false;}
+            } catch (error) {status.dataset.state = "error"; status.textContent = error.message; close.disabled = false;}
           }); controls.appendChild(close);
         }
         projects.appendChild(item);
-      }); workspaces.appendChild(projects);
+      });
+      if (!projects.children.length) {var emptyProjects = document.createElement("li"); emptyProjects.className = "runtime-empty"; emptyProjects.textContent = uiLabel("runtime_empty"); projects.appendChild(emptyProjects);}
+      workspaces.appendChild(projects);
     } catch (error) {
-      if (serial === revision && modal.open) { content.replaceChildren(); status.textContent = error.message; }
+      if (serial === revision && modal.open) { content.replaceChildren(); status.dataset.state = "error"; status.textContent = error.message; }
     }
   }
   open.addEventListener("click", function() {modal.showModal(); refresh();});
@@ -19800,7 +19830,7 @@ window.LixityManuscriptLinks = {
           }
         }
       }
-    } else if (card && card.record && card.record.panel && card.record.panel.isConnected) {
+    } else if ((!card || card.pointerX === undefined) && card && card.record && card.record.panel && card.record.panel.isConnected) {
       var proseBox = card.record.panel.getBoundingClientRect();
       if (proseBox.right + 14 <= maxRight) {
         left = proseBox.right + 14;

@@ -85,17 +85,19 @@ not rigid steps:
 - **Compose & Refine**: Write in a clean typography canvas with local autosave,
   tactile review markers, and an auto-scrolling teleprompter for spoken auditions.
 - **Listen to Cadence & Melody**: Compare sentence lengths, rhythm entropy
-  (`rhythm_profile` against narrative flattening), sticky-sentence glue-word
-  density, dialogue balance, tag/adverbial-tag density, indirect speech,
-  narrator-vs-dialogue and per-character voice separation, scene entry/exit
-  hooks, implicit scene breaks, intra-scene pacing dynamics and plateaus,
-  declared POV chapter gaps, sensory perception (showing vs. telling), tense
-  consistency, and optional non-prescriptive genre reference corridors across
-  chapters. Every metric is grounded in transparent counts against chapter
-  medians. In the reader, **Direct Speech Mode** (`D`) dims narrative prose to
-  audition spoken dialogue alone, and inline evidence filter chips highlight
-  **sticky sentences**, **dialogue tags**, **same-paragraph word echoes**, and
-  **indirect speech** directly in the prose.
+  (against narrative flattening), sticky-sentence glue-word density, dialogue
+  balance, tag/adverbial-tag density, indirect speech, narrator-vs-dialogue and
+  per-character voice separation, speaker turn exchanges and dominance, scene
+  entry/exit hooks, implicit scene breaks (including lexical cohesion drops),
+  intra-scene pacing dynamics and plateaus, declared POV chapter gaps, sensory
+  perception (showing vs. telling), tense consistency, and optional
+  non-prescriptive genre reference corridors across chapters—plus draft-to-draft
+  comparisons (`lixity diff`). Every metric is grounded in transparent counts
+  against chapter medians. In the reader, **Direct Speech Mode** (`D`) dims
+  narrative prose to audition spoken dialogue alone, and inline evidence filter
+  chips highlight **sticky sentences**, **dialogue tags**, **same-paragraph word
+  echoes**, and **indirect speech** directly in the prose. Try classic examples
+  immediately in the [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
 - **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
   Connect facts, character motives, and scene geography directly to paragraphs.
 - **Collaborate with AI on Your Terms (MCP)**: Run `lixity mcp` to connect Claude Desktop,

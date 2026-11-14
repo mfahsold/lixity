@@ -45,7 +45,9 @@ function switchModalTab(targetPaneId) {
     btn.setAttribute("aria-selected", isTarget ? "true" : "false");
   });
   dialog.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
-    pane.style.display = pane.id === targetPaneId ? "block" : "none";
+    var active = pane.id === targetPaneId;
+    pane.classList.toggle("active", active);
+    pane.style.display = active ? "flex" : "none";
   });
 }
 
@@ -1006,12 +1008,12 @@ window.LixityManuscriptLinks = {
     group.appendChild(title); content.appendChild(group); return group;
   }
   async function refresh() {
-    var serial = ++revision; status.textContent = "…";
+    var serial = ++revision; status.dataset.state = "loading"; status.textContent = "…";
     try {
       var response = await fetch(API + "/runtime"), data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || uiLabel("runtime_unavailable"));
       if (serial !== revision || !modal.open) return;
-      content.replaceChildren(); status.textContent = uiLabel("runtime_status_updated");
+      content.replaceChildren(); status.dataset.state = "ready"; status.textContent = uiLabel("runtime_status_updated");
       var workers = section("runtime_workers"), targets = document.createElement("dl");
       targets.className = "runtime-targets";
       var serviceScope = document.createElement("p");
@@ -1019,9 +1021,12 @@ window.LixityManuscriptLinks = {
       serviceScope.textContent = uiLabel("runtime_services_scope"); workers.appendChild(serviceScope);
       data.audio.targets.forEach(function(target) {
         var row = document.createElement("div"), title = document.createElement("dt"), value = document.createElement("dd");
+        var statePill = document.createElement("span");
         row.className = "runtime-target";
         title.textContent = (target.service_name ? target.service_name + " · " : "") + uiLabel("speech_target_" + target.target);
-        value.textContent = uiLabel("runtime_" + target.state);
+        statePill.className = "runtime-state-pill"; statePill.dataset.state = String(target.state || "");
+        statePill.textContent = uiLabel("runtime_" + target.state);
+        value.appendChild(statePill);
         var model = document.createElement("div");
         model.textContent = uiLabel("runtime_model") + ": " +
           (typeof target.model === "string" && target.model.trim() ? target.model : uiLabel("runtime_model_unknown"));
@@ -1040,7 +1045,7 @@ window.LixityManuscriptLinks = {
         item.append(jobState, location);
         jobs.appendChild(item);
       });
-      if (!jobs.children.length) {var empty = document.createElement("li"); empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
+      if (!jobs.children.length) {var empty = document.createElement("li"); empty.className = "runtime-empty"; empty.textContent = uiLabel("runtime_empty"); jobs.appendChild(empty);}
       queue.appendChild(jobs); var workspaces = section("runtime_workspaces");
       var projects = document.createElement("ul");
       projects.className = "runtime-list";
@@ -1049,7 +1054,7 @@ window.LixityManuscriptLinks = {
         var item = document.createElement("li"), link = document.createElement("a");
         link.href = project.url; link.textContent = project.title;
         if (location.pathname === project.url) link.setAttribute("aria-current", "page");
-        var controls = document.createElement("div"); controls.className = "row"; controls.appendChild(link); item.appendChild(controls);
+        var controls = document.createElement("div"); controls.className = "row runtime-workspace-row"; controls.appendChild(link); item.appendChild(controls);
         if (project.closable) {
           var close = document.createElement("button"); close.type = "button"; close.className = "ctl";
           close.textContent = uiLabel("modal_close"); close.setAttribute("aria-label", close.textContent + " · " + project.title);
@@ -1059,13 +1064,15 @@ window.LixityManuscriptLinks = {
               var result = await fetch(API + "/workspace-close", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:project.id})});
               var value = await result.json(); if (!result.ok || !value.ok) throw new Error(value.message);
               if (location.pathname === project.url) location.assign("/"); else refresh();
-            } catch (error) {status.textContent = error.message; close.disabled = false;}
+            } catch (error) {status.dataset.state = "error"; status.textContent = error.message; close.disabled = false;}
           }); controls.appendChild(close);
         }
         projects.appendChild(item);
-      }); workspaces.appendChild(projects);
+      });
+      if (!projects.children.length) {var emptyProjects = document.createElement("li"); emptyProjects.className = "runtime-empty"; emptyProjects.textContent = uiLabel("runtime_empty"); projects.appendChild(emptyProjects);}
+      workspaces.appendChild(projects);
     } catch (error) {
-      if (serial === revision && modal.open) { content.replaceChildren(); status.textContent = error.message; }
+      if (serial === revision && modal.open) { content.replaceChildren(); status.dataset.state = "error"; status.textContent = error.message; }
     }
   }
   open.addEventListener("click", function() {modal.showModal(); refresh();});
