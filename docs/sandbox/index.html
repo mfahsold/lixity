@@ -27,6 +27,7 @@
     --bg: #f7f6f2; --surface: #ffffff; --fg: #1b1e24; --muted: #5b6370;
     --line: #e2dfd7; --accent: #2f5aa8; --accent-soft: rgba(47,90,168,.12);
     --echo-bg: rgba(217,119,6,.18); --echo-fg: #92400e;
+    --ind-bg: rgba(47,90,168,.14); --ind-fg: #1e40af;
     --staccato: #0f766e; --medium: #2f5aa8; --cascade: #b45309;
   }
   @media (prefers-color-scheme: dark) {
@@ -34,6 +35,7 @@
       --bg: #11141a; --surface: #181c24; --fg: #eceae4; --muted: #9aa3b2;
       --line: #2a303c; --accent: #7aa2f7; --accent-soft: rgba(122,162,247,.16);
       --echo-bg: rgba(245,158,11,.22); --echo-fg: #fcd34d;
+      --ind-bg: rgba(122,162,247,.22); --ind-fg: #bfdbfe;
       --staccato: #2dd4bf; --medium: #7aa2f7; --cascade: #fbbf24;
     }
   }
@@ -92,7 +94,9 @@
     font-size: .95rem; max-height: 220px; overflow: auto; white-space: pre-wrap;
   }
   mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: 4px; }
+  mark.indirect { background: var(--ind-bg); color: var(--ind-fg); padding: 0 3px; border-radius: 4px; }
   .sticky-sent { text-decoration: underline dotted #d97706; text-underline-offset: 3px; }
+  .preview-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: .78rem; color: var(--muted); margin-top: 10px; }
   .preview.direct-speech .prose-seg { opacity: .24; transition: opacity .15s ease; }
   .preview.direct-speech .dlg-seg { opacity: 1; font-weight: 500; }
   .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -120,8 +124,8 @@
     <div class="card">
       <div class="presets">
         <span id="preset-lbl" style="font-size:.85rem;color:var(--muted);">Beispiele:</span>
-        <button type="button" class="btn" id="preset-de">Effi Briest (DE)</button>
-        <button type="button" class="btn" id="preset-en">Pride &amp; Prejudice (EN)</button>
+        <button type="button" class="btn" id="preset-de" data-preset="effi-briest">Effi Briest · Kap. 7</button>
+        <button type="button" class="btn" id="preset-en" data-preset="pride-prejudice">Pride &amp; Prejudice · Dialog</button>
         <button type="button" class="btn" id="preset-clear">Leeren</button>
         <button type="button" class="btn" id="direct-speech-btn" aria-pressed="false">Nur Dialoge</button>
       </div>
@@ -134,7 +138,10 @@
         <div class="kpi"><span class="kpi-val" id="k-sents">0</span><span class="kpi-lbl" id="l-sents">Sätze</span></div>
         <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Ø Satzlänge (ASL)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Dialoganteil</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Satzlängen-VK (asl_cv)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze (≥45 %)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Indirekte Rede</span></div>
       </div>
 
       <div class="bar-wrap">
@@ -157,13 +164,18 @@
       </div>
 
       <div class="preview" id="preview"></div>
+      <div class="preview-legend" id="preview-legend">
+        <span><mark class="echo" id="leg-echo">Wortecho</mark></span>
+        <span><mark class="indirect" id="leg-indirect">Indirekte Rede</mark></span>
+        <span><span class="sticky-sent" id="leg-sticky">Klebriger Satz (≥45 %)</span></span>
+      </div>
     </div>
   </div>
 
   <section class="card" style="margin-top:18px;" aria-label="Hinweise zur Analyse">
-    <h2 style="font-size:1.05rem;margin:0 0 8px;">Was diese Browser-Sandbox direkt prüft</h2>
-    <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;">
-      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Dialoganteil</strong> an der Gesamtwortzahl, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.
+    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft</h2>
+    <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;" id="about-body">
+      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie (<code>length_entropy</code>)</strong> gegen Rhythmus-Monotonie, den <strong>Dialoganteil</strong>, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge, <strong>indirekte Rede</strong> (inkl. deutschem Konjunktiv I) sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.
     </p>
     <p style="margin:0;color:var(--muted);font-size:.92rem;">
       Für ganze Romane mit Kapitelmatrix, Inquit-Dichte, Stimmenkontrast zwischen Dialog und Erzählprosa, Szenen-Hooks, POV-Kapitelabständen, optionalen nicht-präskriptiven Genre-Korridoren und lokaler SQLite-Revisionshistorie nutze die lokale Lixity-App oder CLI auf Windows, macOS und Linux.
@@ -186,10 +198,16 @@
 <script>
 (function () {
   'use strict';
-  const SAMPLES = {
-    de: 'Sie trat ans offene Fenster. Draußen lag der Garten still im grauen Morgenlicht. Effi atmete tief ein, doch das Zimmer blieb eng, und die Uhr auf dem Kaminsims tickte leise weiter, als zähle sie jeden einzelnen Gedanken.\n\n„Kommst du heute noch mit in den Wald?“ fragte Instetten aus dem Nebenzimmer.\n\n„Vielleicht später“, antwortete sie leise. „Gerade ist mir der Wald zu still.“',
-    en: 'She stepped toward the window. Outside, the garden lay quiet under a pale morning sky. Elizabeth paused for a moment, watching the light shift across the lawn while the clock on the mantelpiece ticked steadily on.\n\n"Are you walking into town this morning?" asked Jane from the doorway.\n\n"Perhaps later," Elizabeth replied. "Just now the quiet feels too rare to leave."'
+  const PRESETS = {
+    'effi-briest': 'Nach diesem im Pfarr- und Kantorhause gemachten Besuche, der keine halbe Stunde gedauert hatte, war Effi wieder nach drüben zurückgekehrt, wo man auf der Gartenveranda eben den Kaffee nehmen wollte. Schwiegervater und Schwiegersohn gingen auf dem Kieswege zwischen den zwei Platanen auf und ab. Briest sprach von dem Schwierigen einer landrätlichen Stellung; sie sei ihm verschiedentlich angetragen worden, aber er habe jedesmal gedankt. »So nach meinem eigenen Willen schalten und walten zu können ist mir immer das liebste gewesen, jedenfalls lieber - Pardon, Innstetten -, als so die Blicke beständig nach oben richten zu müssen. Man hat dann bloß immer Sinn und Merk für hohe und höchste Vorgesetzte. Das ist nichts für mich. Hier leb ich so freiweg und freue mich über jedes grüne Blatt und über den wilden Wein, der da drüben in die Fenster wächst.«\n\nEr glaubte nicht an Zeichen und ähnliches, im Gegenteil, wies alles Abergläubische weit zurück. Aber er konnte trotzdem von den zwei Worten nicht los, und während Briest immer weiterperorierte, war es ihm beständig, als wäre der kleine Hergang doch mehr als ein bloßer Zufall gewesen.',
+    'pride-prejudice': 'It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.\n\nHowever little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.\n\n“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”\n\nMr. Bennet replied that he had not.\n\n“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”\n\nMr. Bennet made no answer.\n\n“Do not you want to know who has taken it?” cried his wife, impatiently.\n\n“You want to tell me, and I have no objection to hearing it.”\n\nThis was invitation enough.\n\n“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”\n\n“What is his name?”'
   };
+  const INDIRECT_RES = [
+    /\b(?:said|told\s+\w+|asked|replied|answered|explained|claimed|insisted|admitted|whispered|murmured|noted|added|thought|felt|knew|believed|realized|wondered|remembered|suspected|hoped|feared|imagined|assumed|supposed)\s+(?:that|whether|if)\b/gi,
+    /\b(?:asked|wondered)\s+(?:why|how|when|where|who|what)\b/gi,
+    /\b(?:sagte|sagten|erklärte|erklärten|behauptete|behaupteten|meinte|meinten|betonte|betonten|erwiderte|erwiderten|antwortete|antworteten|fragte|fragten|dachte|dachten|glaubte|glaubten|vermutete|vermuteten|hoffte|hofften|fürchtete|fürchteten|ahnte|ahnten|wusste|wussten|überlegte|überlegten|gestand|gestanden|versicherte|versicherten|berichtete|berichteten|erzählte|erzählten)\s*,\s*(?:dass|daß|ob)\b/gi,
+    /\b(?:er|sie|es|man)\s+(?:sei|habe|werde|könne|müsse|dürfe|wolle|solle|wäre|hätte|würde|könnte|müsste|dürfte|wollte|sollte)\b/gi
+  ];
   const STOP = new Set([
     'aber','alle','als','also','am','an','auch','auf','aus','bei','bin','bis','bist','da','dadurch','daher','damit','dann','darum','das','dass','dein','deine','dem','den','denn','der','des','dessen','dich','die','dies','diese','dieser','dieses','dir','doch','dort','du','durch','ein','eine','einem','einen','einer','eines','er','es','euch','euer','für','gegen','habe','haben','hat','hatte','hier','hin','ich','ihm','ihn','ihr','ihre','im','in','ist','ja','jede','jeder','jedes','jetzt','kann','kein','keine','man','mein','meine','mich','mir','mit','nach','nicht','noch','nun','nur','ob','oder','ohne','sehr','sein','seine','sich','sie','sind','so','soll','sondern','sonst','über','um','und','uns','unser','unter','viel','vom','von','vor','war','waren','was','weg','weil','weiter','welche','wenn','wer','werden','wie','wieder','will','wir','wird','wo','zu','zum','zur','zwar',
     'about','above','after','again','against','all','am','an','and','any','are','as','at','be','because','been','before','being','below','between','both','but','by','can','could','did','do','does','doing','down','during','each','few','for','from','further','had','has','have','having','he','her','here','hers','herself','him','himself','his','how','i','if','in','into','is','it','its','itself','just','me','more','most','my','myself','no','nor','not','now','of','off','on','once','only','or','other','our','ours','ourselves','out','over','own','same','she','should','so','some','such','than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to','too','under','until','up','very','was','we','were','what','when','where','which','while','who','whom','why','will','with','would','you','your','yours','yourself'
@@ -199,11 +217,16 @@
       home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN',
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Eigenen Absatz direkt im Browser prüfen',
-      lead: 'Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.',
-      preset: 'Beispiele:', clear: 'Leeren', directSpeech: 'Nur Dialoge',
-      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil', sticky: 'Klebrige Sätze (≥45 %)',
+      lead: 'Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.',
+      preset: 'Klassiker:', clear: 'Leeren', directSpeech: 'Nur Dialoge',
+      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
+      cv: 'Satzlängen-VK (asl_cv)', entropy: 'Längen-Entropie (Bit)',
+      sticky: 'Klebrige Sätze (≥45 %)', indirect: 'Indirekte Rede',
       rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
       echoTitle: 'Lokale Wortechos (≥ 3×)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
+      legEcho: 'Wortecho', legIndirect: 'Indirekte Rede', legSticky: 'Klebriger Satz (≥45 %)',
+      aboutTitle: 'Was diese Browser-Sandbox direkt prüft',
+      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie (<code>length_entropy</code>)</strong> gegen Rhythmus-Monotonie, den <strong>Dialoganteil</strong>, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge, <strong>indirekte Rede</strong> (inkl. deutschem Konjunktiv I) sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.',
       footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.',
       privacy: 'Website-Messung', privacyHref: '../index-de.html#website-measurement',
       legal: 'Impressum', legalHref: '../index-de.html#impressum'
@@ -212,11 +235,16 @@
       home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE',
       pill: '100% local in your browser · Zero server upload',
       title: 'Test your own passage right in the browser',
-      lead: 'Paste a scene or paragraph to inspect sentence-length rhythm, dialogue share, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
-      preset: 'Presets:', clear: 'Clear', directSpeech: 'Dialogue only',
-      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share', sticky: 'Sticky sentences (≥45%)',
+      lead: 'Paste a scene or paragraph to inspect sentence-length rhythm, length entropy, dialogue share, indirect speech, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
+      preset: 'Classics:', clear: 'Clear', directSpeech: 'Dialogue only',
+      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
+      cv: 'Length CV (asl_cv)', entropy: 'Length entropy (bit)',
+      sticky: 'Sticky sentences (≥45%)', indirect: 'Indirect speech',
       rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
       echoTitle: 'Nearby word echoes (≥ 3×)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
+      legEcho: 'Word echo', legIndirect: 'Indirect speech', legSticky: 'Sticky sentence (≥45%)',
+      aboutTitle: 'What this browser sandbox checks directly',
+      aboutHtml: 'All calculations run deterministically in your browser — no text leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short staccato ≤ 7 words vs. medium and long cascades ≥ 25 words), the <strong>coefficient of variation (<code>asl_cv</code>)</strong> and <strong>Shannon length entropy (<code>length_entropy</code>)</strong> to spot pacing flattening, <strong>dialogue share</strong>, <strong>sticky sentences</strong> (≥ 45% function words at ≥ 8 words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong> (content words repeated 3+ times). Use <strong>Dialogue only</strong> to dim narration and audition spoken cadence alone.',
       footer: 'Note: This browser sandbox analyzes single passages client-side. For full novels with chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.',
       privacy: 'Website measurement', privacyHref: '../index.html#website-measurement',
       legal: 'Legal notice (Impressum)', legalHref: '../index.html#impressum'
@@ -228,16 +256,35 @@
 
   function esc(s) { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+  function findIndirectSpans(text) {
+    const hits = [];
+    INDIRECT_RES.forEach(rx => {
+      const re = new RegExp(rx.source, rx.flags);
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        if (m[0].length) hits.push([m.index, m.index + m[0].length]);
+      }
+    });
+    hits.sort((a, b) => a[0] - b[0]);
+    const merged = [];
+    hits.forEach(([s, e]) => {
+      if (!merged.length || s >= merged[merged.length - 1][1]) merged.push([s, e]);
+    });
+    return merged;
+  }
+
   function analyze() {
     const raw = input.value;
     const words = raw.match(/[\p{L}\p{N}_]+/gu) || [];
     const sents = raw.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
     const dlg = (raw.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
     let shortC = 0, medC = 0, longC = 0, stickyC = 0;
+    const sentLens = [];
     const stickySet = new Set();
     sents.forEach(s => {
       const sw = s.match(/[\p{L}\p{N}_]+/gu) || [];
       const n = sw.length;
+      sentLens.push(n);
       if (n <= 7) shortC++; else if (n >= 25) longC++; else medC++;
       if (n >= 8) {
         const glue = sw.filter(w => STOP.has(w.toLowerCase())).length;
@@ -245,11 +292,40 @@
       }
     });
     const totalS = sents.length || 1;
+    let cvText = '–', entropyText = '–';
+    if (sentLens.length >= 2) {
+      const meanLen = sentLens.reduce((a, b) => a + b, 0) / sentLens.length;
+      const variance = sentLens.reduce((acc, sl) => acc + Math.pow(sl - meanLen, 2), 0) / sentLens.length;
+      const cv = meanLen > 0 ? Math.sqrt(variance) / meanLen : 0;
+      let entropy = 0;
+      [shortC, medC, longC].forEach(c => {
+        if (c > 0) {
+          const p = c / sentLens.length;
+          entropy -= p * Math.log2(p);
+        }
+      });
+      cvText = cv.toFixed(2);
+      entropyText = entropy.toFixed(2);
+    }
+
+    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
+    const parts = raw.split(dlgRegex);
+    let indirectC = 0;
+    const proseIndirect = parts.map((part, idx) => {
+      if (!part || idx % 2 === 1) return [];
+      const spans = findIndirectSpans(part);
+      indirectC += spans.length;
+      return spans;
+    });
+
     el('k-words').textContent = words.length.toLocaleString(lang);
     el('k-sents').textContent = sents.length.toLocaleString(lang);
     el('k-asl').textContent = sents.length ? (words.length / sents.length).toFixed(1) : '–';
     el('k-dlg').textContent = words.length ? Math.round((dlg.length / words.length) * 100) + ' %' : '–';
+    el('k-cv').textContent = cvText;
+    el('k-entropy').textContent = entropyText;
     el('k-sticky').textContent = stickyC.toLocaleString(lang);
+    el('k-indirect').textContent = indirectC.toLocaleString(lang);
     el('bar-s').style.width = ((shortC / totalS) * 100).toFixed(1) + '%';
     el('bar-m').style.width = ((medC / totalS) * 100).toFixed(1) + '%';
     el('bar-c').style.width = ((longC / totalS) * 100).toFixed(1) + '%';
@@ -281,21 +357,31 @@
       });
     }
     const preview = el('preview');
-    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
-    function renderHighlighted(text) {
+    function renderEchoes(text) {
       let html = esc(text);
       if (echoSet.size) {
         html = html.replace(/[\p{L}\p{N}_]+/gu, m => echoSet.has(m.toLowerCase()) ? '<mark class="echo">' + m + '</mark>' : m);
       }
       return html;
     }
-    const parts = raw.split(dlgRegex);
+    function renderProseWithIndirect(text, spans) {
+      if (!spans.length) return renderEchoes(text);
+      let out = '', pos = 0;
+      spans.forEach(([s, e]) => {
+        if (s > pos) out += renderEchoes(text.slice(pos, s));
+        out += '<mark class="indirect">' + renderEchoes(text.slice(s, e)) + '</mark>';
+        pos = e;
+      });
+      if (pos < text.length) out += renderEchoes(text.slice(pos));
+      return out;
+    }
     preview.innerHTML = parts.map((part, idx) => {
       if (!part) return '';
-      const cls = idx % 2 === 1 ? 'dlg-seg' : 'prose-seg';
-      let rendered = renderHighlighted(part);
+      const isDlg = idx % 2 === 1;
+      const cls = isDlg ? 'dlg-seg' : 'prose-seg';
+      let rendered = isDlg ? renderEchoes(part) : renderProseWithIndirect(part, proseIndirect[idx]);
       stickySet.forEach(s => {
-        const es = renderHighlighted(s);
+        const es = renderEchoes(s);
         if (es && rendered.includes(es)) rendered = rendered.replace(es, '<span class="sticky-sent">' + es + '</span>');
       });
       return '<span class="' + cls + '">' + rendered + '</span>';
@@ -319,9 +405,17 @@
     el('l-sents').textContent = t.sents;
     el('l-asl').textContent = t.asl;
     el('l-dlg').textContent = t.dlg;
+    el('l-cv').textContent = t.cv;
+    el('l-entropy').textContent = t.entropy;
     el('l-sticky').textContent = t.sticky;
+    el('l-indirect').textContent = t.indirect;
     el('rhythm-title').textContent = t.rhythm;
     el('echo-title').textContent = t.echoTitle;
+    el('leg-echo').textContent = t.legEcho;
+    el('leg-indirect').textContent = t.legIndirect;
+    el('leg-sticky').textContent = t.legSticky;
+    el('about-title').textContent = t.aboutTitle;
+    el('about-body').innerHTML = t.aboutHtml;
     el('footer-note').textContent = t.footer;
     el('footer-privacy').textContent = t.privacy;
     el('footer-privacy').href = t.privacyHref;
@@ -330,9 +424,28 @@
     analyze();
   }
 
-  el('preset-de').addEventListener('click', () => { input.value = SAMPLES.de; analyze(); });
-  el('preset-en').addEventListener('click', () => { input.value = SAMPLES.en; analyze(); });
-  el('preset-clear').addEventListener('click', () => { input.value = ''; analyze(); });
+  function setPreset(key, updateUrl) {
+    if (!PRESETS[key]) return;
+    input.value = PRESETS[key];
+    if (updateUrl && window.history && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('preset', key);
+      window.history.replaceState(null, '', url.toString());
+    }
+    analyze();
+  }
+
+  el('preset-de').addEventListener('click', () => setPreset('effi-briest', true));
+  el('preset-en').addEventListener('click', () => setPreset('pride-prejudice', true));
+  el('preset-clear').addEventListener('click', () => {
+    input.value = '';
+    if (window.history && window.history.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('preset');
+      window.history.replaceState(null, '', url.toString());
+    }
+    analyze();
+  });
   el('direct-speech-btn').addEventListener('click', () => {
     const btn = el('direct-speech-btn');
     const next = btn.getAttribute('aria-pressed') !== 'true';
@@ -341,7 +454,14 @@
   });
   el('lang-toggle').addEventListener('click', () => { lang = lang === 'de' ? 'en' : 'de'; applyLang(); });
   input.addEventListener('input', analyze);
-  input.value = SAMPLES[lang];
+
+  const initialPreset = new URLSearchParams(window.location.search).get('preset');
+  if (initialPreset && PRESETS[initialPreset]) {
+    lang = initialPreset === 'effi-briest' ? 'de' : 'en';
+    input.value = PRESETS[initialPreset];
+  } else {
+    input.value = PRESETS[lang === 'de' ? 'effi-briest' : 'pride-prejudice'];
+  }
   applyLang();
 })();
 </script>

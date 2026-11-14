@@ -30,16 +30,16 @@
   position: fixed;
   z-index: 220;
   box-sizing: border-box;
-  width: min(25rem, calc(100vw - 16px));
-  max-height: min(32rem, calc(100dvh - 16px));
+  width: min(23rem, calc(100vw - 16px));
+  max-height: min(30rem, calc(100dvh - 16px));
   overflow: auto;
   overscroll-behavior: contain;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md, 8px);
   background: var(--surface);
   color: var(--fg);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
   font: var(--text-control)/var(--line-compact) var(--font);
   overflow-wrap: anywhere;
   backdrop-filter: blur(8px);
@@ -47,21 +47,21 @@
 .analysis-evidence-card[hidden] { display: none; }
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-3)) calc(-1 * var(--space-3)) var(--space-1); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0; }
+.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-2); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0; }
 .analysis-evidence-heading strong { min-width: 0; }
-.analysis-evidence-card p { margin: var(--space-2) 0; font: inherit; }
+.analysis-evidence-card p { margin: var(--space-1) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }
-.analysis-evidence-has-quote { display: grid; grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 7rem); align-items: start; gap: var(--space-3); }
-.analysis-evidence-card blockquote { min-width: 0; margin: 0; padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--analysis-evidence-color, var(--accent)); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 6%, transparent); color: var(--fg); line-height: var(--line-body); }
+.analysis-evidence-has-quote { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
+.analysis-evidence-card blockquote { min-width: 0; margin: 0; padding: var(--space-1) var(--space-2); border-inline-start: 2px solid var(--analysis-evidence-color, var(--accent)); border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0; background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 8%, transparent); color: var(--fg); line-height: var(--line-body); }
 .analysis-evidence-card .ctl { min-height: 44px; white-space: normal; min-width: 0; }
 .analysis-evidence-card .analysis-evidence-close { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
 .analysis-evidence-card .analysis-evidence-close:hover { background: var(--surface); color: var(--fg); }
-.analysis-evidence-measure { min-width: 0; }
-.analysis-evidence-measure .analysis-evidence-scope { color: var(--analysis-evidence-color, var(--accent)); }
+.analysis-evidence-measure { flex: 0 0 auto; min-width: 0; text-align: end; }
+.analysis-evidence-measure .analysis-evidence-scope { color: var(--analysis-evidence-color, var(--accent)); white-space: nowrap; }
 .analysis-evidence-scope { display: block; color: var(--muted); font-size: var(--text-note); font-weight: var(--weight-semibold); }
-.analysis-evidence-count { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .3rem; margin-top: var(--space-1); color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; }
-.analysis-evidence-number { font-size: 2rem; font-weight: var(--weight-strong); letter-spacing: -.025em; }
-.analysis-evidence-unit { font-size: var(--text-control); }
+.analysis-evidence-count { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: .25rem; margin-top: 2px; color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.analysis-evidence-number { font-size: 1.45rem; font-weight: var(--weight-strong); letter-spacing: -.02em; }
+.analysis-evidence-unit { font-size: var(--text-note); }
 .analysis-evidence-paragraph { padding-block: var(--space-2); border-block: 1px solid var(--line); }
 .analysis-evidence-card .analysis-evidence-value { margin-block: var(--space-1) var(--space-2); font-weight: var(--weight-semibold); }
 .analysis-evidence-comparison { padding: var(--space-1) var(--space-2); margin-block-start: var(--space-2); border-radius: var(--radius-sm, var(--radius)); background: var(--bg-subtle); }

@@ -179,6 +179,15 @@
           }
         }
       }
+    } else if ((!card || card.pointerX === undefined) && card && card.record && card.record.panel && card.record.panel.isConnected) {
+      var proseBox = card.record.panel.getBoundingClientRect();
+      if (proseBox.right + 14 <= maxRight) {
+        left = proseBox.right + 14;
+        top = Math.max(12, Math.min(innerHeight - bounds.height - 12, rect.top - 12));
+      } else if (proseBox.left - bounds.width - 14 >= 8) {
+        left = proseBox.left - bounds.width - 14;
+        top = Math.max(12, Math.min(innerHeight - bounds.height - 12, rect.top - 12));
+      }
     }
     host.style.left = Math.max(8, Math.min(maxRight, left)) + "px";
     host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
@@ -232,7 +241,7 @@
           <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
           <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
           <div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}><span></span></div>
-        </div>` : html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>`}
+        </div>` : null}
       </section>
       ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
       ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
@@ -242,6 +251,7 @@
         <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
       </div>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
+        ${!comparison ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
         ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;

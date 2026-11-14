@@ -700,16 +700,24 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
   descriptive review prompts, not structural defects (deliberate meditative
   passages or epistolary sequences can legitimately exhibit steady pacing).
-- **Implicit scene breaks (`implicit_breaks`):** heuristic paragraph-boundary
-  cues (`time`, `place`, `character`) detect surface transition markers within
-  explicit scenes. They do not reconstruct semantic plot structure, can fire on
-  retrospective references or metaphors, and are purely descriptive.
-- **Character voice separation (`character_voices`):** deterministic
-  single-speaker adjacent-window attribution skips ambiguous multi-speaker or
-  unattributed turns and marks characters below `min_turns` (`3`) as
-  `"insufficient_turns"` with `null` metrics. Short turns or dialectal
-  contractions can skew `function_word_share` and `asl`; this is not coreference
-  resolution or stylometric authorship attribution.
+- **Implicit scene breaks & lexical cohesion drops (`implicit_breaks`):**
+  heuristic paragraph-boundary cues (`time`, `place`, `character`,
+  `cohesion_drop`) detect surface transition markers within explicit scenes.
+  `cohesion_similarity` (Jaccard overlap of lowercase content tokens `>= 3`
+  chars across adjacent 2-paragraph windows, requiring `>= 10` content words per
+  window and triggering `cohesion_drop` at `<= 0.05`) is a lexical surface
+  signal: rapid dialogue exchanges or figurative shifts can trigger low overlap
+  without a plot break, and short scenes can lack enough content words.
+- **Character voice separation & interaction matrix (`character_voices`,
+  `character_interactions`):** deterministic single-speaker adjacent-window
+  attribution skips ambiguous multi-speaker or unattributed turns and marks
+  characters below `min_turns` (`3`) as `"insufficient_turns"` with `null`
+  metrics. `character_interactions` counts `turn_exchanges` only across adjacent
+  attributed turns (reset on unattributed turns and chapter boundaries) and
+  `co_chapters` across chapters where both figures are mentioned or speak;
+  unattributed rapid banter or missing aliases reduce exchange counts. Short
+  turns or dialectal contractions can skew `function_word_share` and `asl`; this
+  is not coreference resolution or stylometric authorship attribution.
 - **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `length_entropy`,
   and `normalized_entropy` require `sentences >= 2` (`available: false`
   otherwise). Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
@@ -721,3 +729,8 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   (`language_unavailable` for `generic`). It misses unmarked free indirect
   discourse (*erlebte Rede*) and can match non-speech cognitive verbs or
   archaic subjunctive forms.
+- **Enriched revision diff (`length_entropy`, `sticky_pct`,
+  `indirect_speech_per_1000`):** revision snapshots report `null` when a
+  revision has too few sentences or words for a metric. Deltas in
+  `lixity-timeline/1` and `lixity-diff/1` are descriptive differences between
+  two snapshots, never an editorial quality verdict.

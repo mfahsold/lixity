@@ -227,7 +227,8 @@ def test_scenes_panel_surfaces_implicit_breaks(locale):
                 "chapter": 1,
                 "scene": 1,
                 "paragraph_index": 4,
-                "cue_type": "time+place",
+                "cue_type": "time+place+cohesion_drop",
+                "cohesion_similarity": 0.03,
                 "snippet": "Am nächsten Morgen am Bahnhof...",
             }
         ],
@@ -239,6 +240,8 @@ def test_scenes_panel_surfaces_implicit_breaks(locale):
     assert labels["scene_implicit_breaks_hint"] in text
     assert labels["scene_cue_time"] in text
     assert labels["scene_cue_place"] in text
+    assert labels["scene_cue_cohesion_drop"] in text
+    assert labels["scene_cohesion_similarity"] in text
     assert "Am nächsten Morgen am Bahnhof..." in text
 
 
@@ -385,6 +388,61 @@ def test_inline_evidence_layers_includes_indirect_speech(locale):
     html = inline_evidence_controls(labels)
     assert 'data-evidence-layer="indirect_speech"' in html
     assert labels["evidence_layer_indirect_speech"] in html
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_characters_panel_surfaces_character_interactions(locale):
+    from lixity.ui.narration import render_characters_panel
+
+    labels = get_language_profile(locale).labels
+    report = {
+        "chapters": 2,
+        "figures": [
+            {
+                "name": "Alice",
+                "mentions": 10,
+                "chapters_present": [1, 2],
+                "first_chapter": 1,
+                "last_chapter": 2,
+                "longest_gap": 0,
+                "presence_ratio": 1.0,
+            }
+        ],
+        "character_interactions": {
+            "pairs": [
+                {"a": "Alice", "b": "Bob", "turn_exchanges": 4, "co_chapters": 2}
+            ],
+            "turn_dominance": [
+                {"name": "Alice", "turns": 5, "words": 40, "word_share": 66.7, "turn_share": 62.5},
+                {"name": "Bob", "turns": 3, "words": 20, "word_share": 33.3, "turn_share": 37.5},
+            ],
+        },
+    }
+    html = render_characters_panel(report, [], labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["chr_interactions_title"] in text
+    assert labels["chr_interactions_hint"] in text
+    assert labels["chr_interaction_pair"] in text
+    assert labels["chr_turn_exchanges"] in text
+    assert labels["chr_co_chapters"] in text
+    assert labels["chr_turn_share"] in text
+    assert labels["chr_word_share"] in text
+    assert "Alice ↔ Bob" in text
+
+
+def test_manuscript_editor_js_has_phase2_enriched_diff_and_write_nudge():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    editor_js = (root / "src" / "lixity" / "ui" / "assets" / "manuscript-editor.js").read_text(encoding="utf-8")
+    reader_css = (root / "src" / "lixity" / "ui" / "assets" / "manuscript-reader.css").read_text(encoding="utf-8")
+    for field in ("length_entropy", "sticky_pct", "indirect_speech_per_1000"):
+        assert field in editor_js
+    assert "write-nudge" in editor_js
+    assert "write-nudge" in reader_css
+    assert "prefers-reduced-motion: reduce" in reader_css
+
 
 
 

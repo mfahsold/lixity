@@ -611,3 +611,27 @@ body.lixity-workspace.reader-focus {
 @media (prefers-reduced-motion: reduce) {
   .manuscript-reading.reader-direct-speech .ptext.direct-speech-narrative { transition: none; }
 }
+
+@keyframes lixity-write-nudge {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    border-color: var(--accent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+#manuscript-write.write-nudge {
+  animation: lixity-write-nudge 1.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  #manuscript-write.write-nudge {
+    animation: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}

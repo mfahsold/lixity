@@ -83,13 +83,13 @@
   const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
   const pulseLabels = {
-    en: ['words', 'today', 'ASL', 'Dialogue', 'revisions', 'Session evolution', 'Baseline recorded — save an edit to see deltas.'],
-    de: ['Wörter', 'heute', 'ASL', 'Dialog', 'Fassungen', 'Sitzungsverlauf', 'Basis erfasst — nach der nächsten Speicherung erscheinen Deltas.'],
-    fr: ['mots', 'aujourd’hui', 'LMP', 'Dialogue', 'révisions', 'Évolution de session', 'Base enregistrée — enregistrez une modification pour voir les écarts.'],
-    es: ['palabras', 'hoy', 'LMO', 'Diálogo', 'revisiones', 'Evolución de sesión', 'Base registrada — guarda un cambio para ver las diferencias.'],
-    it: ['parole', 'oggi', 'LMF', 'Dialogo', 'revisioni', 'Andamento sessione', 'Base registrata — salva una modifica per vedere i delta.'],
-    pt: ['palavras', 'hoje', 'CMF', 'Diálogo', 'revisões', 'Evolução da sessão', 'Base registada — guarde uma edição para ver os deltas.'],
-    nl: ['woorden', 'vandaag', 'GZL', 'Dialoog', 'revisies', 'Sessie-evolutie', 'Basis vastgelegd — sla een wijziging op om delta’s te zien.'],
+    en: ['words', 'today', 'ASL', 'Dialogue', 'revisions', 'Session evolution', 'Baseline recorded — save an edit to see deltas.', 'Entropy', 'Sticky', 'Indirect/1k'],
+    de: ['Wörter', 'heute', 'ASL', 'Dialog', 'Fassungen', 'Sitzungsverlauf', 'Basis erfasst — nach der nächsten Speicherung erscheinen Deltas.', 'Entropie', 'Klebend', 'Indirekt/1k'],
+    fr: ['mots', 'aujourd’hui', 'LMP', 'Dialogue', 'révisions', 'Évolution de session', 'Base enregistrée — enregistrez une modification pour voir les écarts.', 'Entropie', 'Collant', 'Indirect/1k'],
+    es: ['palabras', 'hoy', 'LMO', 'Diálogo', 'revisiones', 'Evolución de sesión', 'Base registrada — guarda un cambio para ver las diferencias.', 'Entropía', 'Pegajosa', 'Indirecto/1k'],
+    it: ['parole', 'oggi', 'LMF', 'Dialogo', 'revisioni', 'Andamento sessione', 'Base registrata — salva una modifica per vedere i delta.', 'Entropia', 'Appiccicosa', 'Indiretto/1k'],
+    pt: ['palavras', 'hoje', 'CMF', 'Diálogo', 'revisões', 'Evolução da sessão', 'Base registada — guarde uma edição para ver os deltas.', 'Entropia', 'Pegajosa', 'Indireto/1k'],
+    nl: ['woorden', 'vandaag', 'GZL', 'Dialoog', 'revisies', 'Sessie-evolutie', 'Basis vastgelegd — sla een wijziging op om delta’s te zien.', 'Entropie', 'Plakkerig', 'Indirect/1k'],
   };
   const pulseWords = pulseLabels[language] || pulseLabels.en;
   const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
@@ -464,10 +464,31 @@
     const tokens = clean.match(/[\p{L}\p{N}_]+/gu) || [];
     const sents = clean.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
     const dlg = (clean.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
+    let lengthEntropy = null;
+    if (sents.length > 0) {
+      const counts = [0, 0, 0];
+      sents.forEach(s => {
+        const len = (s.match(/[\p{L}\p{N}_]+/gu) || []).length;
+        if (len <= 8) counts[0] += 1;
+        else if (len <= 20) counts[1] += 1;
+        else counts[2] += 1;
+      });
+      let ent = 0;
+      counts.forEach(c => {
+        if (c > 0) {
+          const p = c / sents.length;
+          ent -= p * Math.log2(p);
+        }
+      });
+      lengthEntropy = ent / Math.log2(3);
+    }
     return {
       words: tokens.length,
       asl: sents.length ? tokens.length / sents.length : null,
       dialogue_ratio: tokens.length ? (dlg.length / tokens.length) * 100 : null,
+      length_entropy: lengthEntropy,
+      sticky_pct: null,
+      indirect_speech_per_1000: null,
     };
   }
   function formatMetricsLine(snap, deltas) {
@@ -486,7 +507,44 @@
     if (snap.dialogue_ratio !== null && snap.dialogue_ratio !== undefined) {
       parts.push(pulseWords[3] + ' ' + fmtNum(snap.dialogue_ratio, 0) + ' %');
     }
+    if (snap.length_entropy !== null && snap.length_entropy !== undefined) {
+      let entPart = pulseWords[7] + ' ' + fmtNum(snap.length_entropy, 2);
+      if (deltas && deltas.length_entropy !== null && deltas.length_entropy !== undefined && Math.abs(deltas.length_entropy) >= 0.005) {
+        entPart += ' (Δ ' + fmtSigned(deltas.length_entropy, 2) + ')';
+      }
+      parts.push(entPart);
+    }
+    if (snap.sticky_pct !== null && snap.sticky_pct !== undefined) {
+      let stickyPart = pulseWords[8] + ' ' + fmtNum(snap.sticky_pct, 1) + ' %';
+      if (deltas && deltas.sticky_pct !== null && deltas.sticky_pct !== undefined && Math.abs(deltas.sticky_pct) >= 0.05) {
+        stickyPart += ' (Δ ' + fmtSigned(deltas.sticky_pct, 1) + ' %)';
+      }
+      parts.push(stickyPart);
+    }
+    if (snap.indirect_speech_per_1000 !== null && snap.indirect_speech_per_1000 !== undefined) {
+      let indPart = pulseWords[9] + ' ' + fmtNum(snap.indirect_speech_per_1000, 1);
+      if (deltas && deltas.indirect_speech_per_1000 !== null && deltas.indirect_speech_per_1000 !== undefined && Math.abs(deltas.indirect_speech_per_1000) >= 0.05) {
+        indPart += ' (Δ ' + fmtSigned(deltas.indirect_speech_per_1000, 1) + ')';
+      }
+      parts.push(indPart);
+    }
     return parts.join(' · ');
+  }
+  function snapDeltas(nextSnap, prevSnap) {
+    if (!nextSnap || !prevSnap) return null;
+    const diffNum = (k) => (
+      nextSnap[k] !== null && nextSnap[k] !== undefined &&
+      prevSnap[k] !== null && prevSnap[k] !== undefined
+        ? nextSnap[k] - prevSnap[k]
+        : null
+    );
+    return {
+      words: nextSnap.words - prevSnap.words,
+      asl: diffNum('asl'),
+      length_entropy: diffNum('length_entropy'),
+      sticky_pct: diffNum('sticky_pct'),
+      indirect_speech_per_1000: diffNum('indirect_speech_per_1000'),
+    };
   }
   function updateComparisonSummaries(baseRev, currentRev) {
     const byRev = new Map(latestTimeline.map(r => [r.revision, r]));
@@ -494,14 +552,8 @@
     const curSnap = byRev.get(currentRev) || quickTextStats(comparisonFields[1].field.value);
     const draftSnap = quickTextStats(comparisonFields[2].field.value);
     comparisonFields[0].summary.textContent = formatMetricsLine(baseSnap, null);
-    comparisonFields[1].summary.textContent = formatMetricsLine(curSnap, {
-      words: curSnap.words - baseSnap.words,
-      asl: curSnap.asl !== null && baseSnap.asl !== null ? curSnap.asl - baseSnap.asl : null,
-    });
-    comparisonFields[2].summary.textContent = formatMetricsLine(draftSnap, {
-      words: draftSnap.words - curSnap.words,
-      asl: draftSnap.asl !== null && curSnap.asl !== null ? draftSnap.asl - curSnap.asl : null,
-    });
+    comparisonFields[1].summary.textContent = formatMetricsLine(curSnap, snapDeltas(curSnap, baseSnap));
+    comparisonFields[2].summary.textContent = formatMetricsLine(draftSnap, snapDeltas(draftSnap, curSnap));
   }
   comparisonFields[2].field.addEventListener('input', () => {
     if (comparison.open && snapshot && comparisonSnapshot) {
@@ -636,6 +688,31 @@
     if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
     openButton.focus();
   }
+  let nudgeTimer = 0;
+  function nudgeWriteButton() {
+    if (document.body.classList.contains('manuscript-writing')) return;
+    if (openButton.hidden || openButton.getClientRects().length === 0) return;
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return;
+    openButton.classList.remove('write-nudge');
+    void openButton.offsetWidth;
+    openButton.classList.add('write-nudge');
+    clearTimeout(nudgeTimer);
+    nudgeTimer = setTimeout(() => openButton.classList.remove('write-nudge'), 1250);
+  }
+  chapters.addEventListener('click', event => {
+    if (!event.target.closest('#chapters .ptext p')) return;
+    if (event.target.closest('a, button, input, select, textarea')) return;
+    nudgeWriteButton();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!event.key || event.key.length !== 1) return;
+    const t = event.target;
+    if (t && t.closest && t.closest('input, textarea, select, [contenteditable]')) return;
+    if (!t || !t.closest || (!t.closest('#chapters') && t !== document.body)) return;
+    nudgeWriteButton();
+  });
   window.addEventListener('beforeunload', event => {if (dirty || inflight || comparisonDirty()) {event.preventDefault(); event.returnValue = '';}});
   document.addEventListener('visibilitychange', () => {if (document.hidden) flush();});
   // Keep shortcuts from the read-only manuscript layer away from the editor.

@@ -264,10 +264,12 @@ def presence_report(
             covered_pov_chapters.update(sorted_pov)
             declared_figures += 1
         result.append(item)
+    voices = character_voice_profiles(text, names, config)
     return {
         "chapters": total_chapters,
         "figures": result,
-        "character_voices": character_voice_profiles(text, names, config),
+        "character_voices": voices,
+        "character_interactions": voices["character_interactions"],
         "pov_summary": {
             "declared_figures": declared_figures,
             "pov_coverage_chapters": sorted(covered_pov_chapters),

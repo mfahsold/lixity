@@ -39,6 +39,7 @@ def test_tools_list_names_readonly_tools():
         "lixity_characters",
         "lixity_markers",
         "lixity_fingerprint",
+        "revision_diff",
     ]
     assert names == expected
     for tool in response["result"]["tools"]:
@@ -135,6 +136,6 @@ def test_serve_roundtrip_over_stdio():
     lines = [json.loads(line) for line in out.getvalue().strip().splitlines()]
     by_id = {entry.get("id"): entry for entry in lines}
     assert by_id[1]["result"]["serverInfo"]["name"] == "lixity"
-    assert len(by_id[2]["result"]["tools"]) == 12
+    assert len(by_id[2]["result"]["tools"]) == 13
     assert "lixity" in by_id[3]["result"]["content"][0]["text"]
     assert lines[-1]["error"]["code"] == -32700

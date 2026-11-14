@@ -216,7 +216,7 @@ def render_scenes_panel(
         def _cue_label(cue_raw: Any) -> str:
             cues = [c.strip() for c in str(cue_raw or "").split("+") if c.strip()]
             translated = [
-                L(f"scene_cue_{c}") if c in {"time", "place", "character"} else esc(c)
+                L(f"scene_cue_{c}") if c in {"time", "place", "character", "cohesion_drop"} else esc(c)
                 for c in cues
             ]
             return " + ".join(translated) if translated else "–"
@@ -231,12 +231,19 @@ def render_scenes_panel(
             scene_num = int(brk.get("scene", 0))
             para_idx = int(brk.get("paragraph_index", 0))
             cue_text = _cue_label(brk.get("cue_type"))
+            sim = brk.get("cohesion_similarity")
+            sim_badge = (
+                f' <span class="badge badge-neutral">{L("scene_cohesion_similarity")} {N(float(sim))}</span>'
+                if sim is not None
+                else ""
+            )
             snippet = esc(str(brk.get("snippet", "")))
             ch_label = f'{L("chapter")} {ch_num} · {L("scene_unit")} {scene_num}'
             ch_html = chapter_link(ch_num, ch_label) if ch_num > 0 else esc(ch_label)
             parts.append(
                 f'<li>{ch_html} '
-                f'<span class="badge badge-neutral">{L("scene_paragraph")} {para_idx} · {cue_text}</span> '
+                f'<span class="badge badge-neutral">{L("scene_paragraph")} {para_idx} · {cue_text}</span>'
+                f'{sim_badge} '
                 f'<span class="text-muted">{snippet}</span></li>'
             )
         parts.append("</ul></details>")
@@ -630,6 +637,62 @@ def render_characters_panel(
                     f'<td class="num">{v_delta}</td>'
                     f'<td class="num">{v_q}</td>'
                     f'<td class="num">{v_fw}</td></tr>'
+                )
+            parts.append("</tbody></table></div>")
+        parts.append("</details>")
+    interactions = characters.get("character_interactions")
+    if not isinstance(interactions, Mapping) and isinstance(voices, Mapping):
+        interactions = voices.get("character_interactions")
+    if isinstance(interactions, Mapping) and (interactions.get("pairs") or interactions.get("turn_dominance")):
+        parts.append(
+            f'<details class="character-interactions" open=""><summary>{L("chr_interactions_title")}</summary>'
+            f'<p class="hint">{L("chr_interactions_hint")}</p>'
+        )
+        pairs = interactions.get("pairs") or []
+        if pairs:
+            parts.append(
+                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_interactions_title")}">'
+                "<table><thead><tr>"
+                f'<th scope="col">{L("chr_interaction_pair")}</th>'
+                f'<th scope="col" class="num">{L("chr_turn_exchanges")}</th>'
+                f'<th scope="col" class="num">{L("chr_co_chapters")}</th>'
+                "</tr></thead><tbody>"
+            )
+            for pair in pairs[:20]:
+                a_name = esc(str(pair.get("a", "")))
+                b_name = esc(str(pair.get("b", "")))
+                exchanges = N(int(pair.get("turn_exchanges", 0)), 0)
+                co_ch = N(int(pair.get("co_chapters", 0)), 0)
+                parts.append(
+                    f'<tr><th scope="row">{a_name} ↔ {b_name}</th>'
+                    f'<td class="num">{exchanges}</td>'
+                    f'<td class="num">{co_ch}</td></tr>'
+                )
+            parts.append("</tbody></table></div>")
+        dominance = interactions.get("turn_dominance") or []
+        if dominance:
+            parts.append(
+                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_turn_dominance")}">'
+                "<table><thead><tr>"
+                f'<th scope="col">{L("chr_name")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_turns")}</th>'
+                f'<th scope="col" class="num">{L("words")}</th>'
+                f'<th scope="col" class="num">{L("chr_turn_share")}</th>'
+                f'<th scope="col" class="num">{L("chr_word_share")}</th>'
+                "</tr></thead><tbody>"
+            )
+            for row in dominance[:20]:
+                d_name = esc(str(row.get("name", "")))
+                d_turns = N(int(row.get("turns", 0)), 0)
+                d_words = N(int(row.get("words", 0)), 0)
+                t_share = float(row.get("turn_share", 0.0))
+                w_share = float(row.get("word_share", 0.0))
+                parts.append(
+                    f'<tr><th scope="row">{d_name}</th>'
+                    f'<td class="num">{d_turns}</td>'
+                    f'<td class="num">{d_words}</td>'
+                    f'<td class="num bar-cell"><i style="--v:{min(100.0, t_share):.1f}%"></i>{N(t_share, 1)} %</td>'
+                    f'<td class="num bar-cell"><i style="--v:{min(100.0, w_share):.1f}%"></i>{N(w_share, 1)} %</td></tr>'
                 )
             parts.append("</tbody></table></div>")
         parts.append("</details>")

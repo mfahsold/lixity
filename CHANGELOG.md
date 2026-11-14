@@ -68,6 +68,28 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     `kind: "pattern"`) plus `indirect_speech`, `indirect_speech_per_1000`, and
     `indirect_speech_available` on `DialogueReport` / `DialogueChapter` (7
     languages + German *Konjunktiv I*).
+- Add Phase 2 structural & revision analytics (`scenes.py`, `dialogue.py`,
+  `characters.py`, `manuscript_editing.py`, `cli.py`, `mcp.py`,
+  `docs/sandbox/index.html`):
+  - **Lexical cohesion drops (`scenes.py`):** `implicit_breaks` now computes
+    `cohesion_similarity` (Jaccard overlap of lowercase content tokens `>= 3`
+    chars across adjacent 2-paragraph windows inside scenes) and emits
+    `cue_type: "cohesion_drop"` (or `+`-joined combinations such as
+    `"time+cohesion_drop"`) when both windows have `>= 10` content words and
+    `cohesion_similarity <= 0.05`.
+  - **Character interaction matrix (`dialogue.py`, `characters.py`):**
+    `character_voice_profiles()` and `presence_report()` now expose
+    `character_interactions` (`pairs: [{a, b, turn_exchanges, co_chapters}]`,
+    `turn_dominance: [{name, turns, words, word_share, turn_share}]`).
+  - **Enriched revision diff (`manuscript_editing.py`, `cli.py`, `mcp.py`):**
+    `analyze_snapshot()`, `timeline()`, `delta()` (`lixity-timeline/1`), and
+    `compare_texts()` (`lixity-diff/1`) include `length_entropy`, `sticky_pct`,
+    and `indirect_speech_per_1000`, exposed via `lixity diff` and the read-only
+    `revision_diff` MCP tool (13 tools total).
+  - **Browser Sandbox upgrade (`docs/sandbox/index.html`):** 1-click classic
+    presets (*Effi Briest* Kap. 7 & *Pride & Prejudice* Dialogue Contrast) with
+    `?preset=` deep-link support, live `asl_cv` / `length_entropy`, and
+    `indirect_speech` highlighting.
 - Add local SQLite manuscript revision time-series (`manuscript_revisions` in
   `recovery.sqlite3`), deterministic `timeline()` / `delta()` APIs
   (`/api/manuscript-timeline`, `/api/manuscript-delta`), Writing-mode Session

@@ -19,9 +19,11 @@ from threading import RLock
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
+from .dialogue import dialogue_report
 from .io import FileUtils
 from .log import get_logger, log_event
 from .models import CorpusConfig
+from .pacing import pacing_report
 
 logger = get_logger("manuscript")
 
@@ -100,36 +102,24 @@ class ManuscriptStore:
             "document TEXT NOT NULL, revision TEXT NOT NULL, parent_revision TEXT, "
             "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
             "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
+            "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
             "flags_count INTEGER NOT NULL DEFAULT 0, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
             "PRIMARY KEY(document, revision))"
         )
+        existing_cols = {
+            str(row[1])
+            for row in db.execute("PRAGMA table_info(manuscript_revisions)").fetchall()
+        }
+        for col_name in ("length_entropy", "sticky_pct", "indirect_speech_per_1000"):
+            if col_name not in existing_cols:
+                db.execute(f"ALTER TABLE manuscript_revisions ADD COLUMN {col_name} REAL")
         db.execute("CREATE INDEX IF NOT EXISTS idx_manuscript_revisions_doc_created ON manuscript_revisions (document, created_at DESC)")
         db.commit()
         return db
 
     def analyze_snapshot(self, text: str) -> dict[str, Any]:
         """Compute deterministic offline stylometric metrics for a manuscript snapshot."""
-        metrics = CorpusAnalyzer(CorpusConfig(language=self.language), sample_text=text).analyze_text(text)
-        chapters = [
-            {
-                "num": int(ch.num),
-                "title": str(ch.title),
-                "words": int(ch.words),
-                "asl": round(float(ch.asl), 2) if ch.sentences > 0 else None,
-                "dialog_pct": round(float(ch.dialog_pct), 2) if ch.words > 0 else None,
-            }
-            for ch in metrics.chapters
-        ]
-        return {
-            "words": int(metrics.clean_words),
-            "sentences": int(metrics.total_sentences),
-            "asl": round(float(metrics.asl), 3) if metrics.total_sentences > 0 else None,
-            "asl_cv": round(float(metrics.sentence_cv), 4) if metrics.total_sentences > 0 else None,
-            "dialogue_ratio": round(float(metrics.dialog_ratio), 3) if metrics.tokens > 0 else None,
-            "mattr": round(float(metrics.mattr), 4) if metrics.mattr is not None else None,
-            "flags_count": 0,
-            "chapter_metrics": chapters,
-        }
+        return analyze_manuscript_snapshot(text, language=self.language)
 
     def _record_revision(
         self,
@@ -152,8 +142,9 @@ class ManuscriptStore:
         db.execute(
             "INSERT INTO manuscript_revisions "
             "(document, revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
-            "dialogue_ratio, mattr, flags_count, chapter_metrics) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
+            "flags_count, chapter_metrics) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 self.document,
                 revision,
@@ -165,6 +156,9 @@ class ManuscriptStore:
                 snap["asl_cv"],
                 snap["dialogue_ratio"],
                 snap["mattr"],
+                snap["length_entropy"],
+                snap["sticky_pct"],
+                snap["indirect_speech_per_1000"],
                 int(flags_count),
                 json.dumps(snap["chapter_metrics"], ensure_ascii=False),
             ),
@@ -294,6 +288,13 @@ class ManuscriptStore:
             "asl_cv": float(row["asl_cv"]) if row["asl_cv"] is not None else None,
             "dialogue_ratio": float(row["dialogue_ratio"]) if row["dialogue_ratio"] is not None else None,
             "mattr": float(row["mattr"]) if row["mattr"] is not None else None,
+            "length_entropy": float(row["length_entropy"]) if row["length_entropy"] is not None else None,
+            "sticky_pct": float(row["sticky_pct"]) if row["sticky_pct"] is not None else None,
+            "indirect_speech_per_1000": (
+                float(row["indirect_speech_per_1000"])
+                if row["indirect_speech_per_1000"] is not None
+                else None
+            ),
             "flags_count": int(row["flags_count"]),
             "chapter_metrics": json.loads(str(row["chapter_metrics"])),
         }
@@ -306,7 +307,8 @@ class ManuscriptStore:
         with SOURCE_WRITE_LOCK, closing(self._database()) as db:
             rows = db.execute(
                 "SELECT revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
-                "dialogue_ratio, mattr, flags_count, chapter_metrics "
+                "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
+                "flags_count, chapter_metrics "
                 "FROM manuscript_revisions WHERE document=? "
                 "ORDER BY created_at DESC, revision DESC LIMIT ?",
                 (self.document, bounded),
@@ -372,47 +374,7 @@ class ManuscriptStore:
                 "chapter_deltas": [],
             }
 
-        def _diff(key: str, digits: int) -> float | int | None:
-            a, b = base.get(key), target.get(key)
-            if a is None or b is None:
-                return None
-            val = b - a
-            return int(val) if digits == 0 else round(float(val), digits)
-
-        deltas = {
-            "words": _diff("words", 0),
-            "sentences": _diff("sentences", 0),
-            "asl": _diff("asl", 2),
-            "asl_cv": _diff("asl_cv", 4),
-            "dialogue_ratio": _diff("dialogue_ratio", 2),
-            "mattr": _diff("mattr", 4),
-            "flags_count": _diff("flags_count", 0),
-        }
-        base_chapters = {int(c["num"]): c for c in base.get("chapter_metrics", [])}
-        chapter_deltas: list[dict[str, Any]] = []
-        for ch in target.get("chapter_metrics", []):
-            prev = base_chapters.get(int(ch["num"]))
-            asl_d = (
-                round(float(ch["asl"]) - float(prev["asl"]), 2)
-                if prev is not None and ch.get("asl") is not None and prev.get("asl") is not None
-                else None
-            )
-            dlg_d = (
-                round(float(ch["dialog_pct"]) - float(prev["dialog_pct"]), 2)
-                if prev is not None and ch.get("dialog_pct") is not None and prev.get("dialog_pct") is not None
-                else None
-            )
-            words_d = int(ch["words"]) - int(prev["words"]) if prev is not None else None
-            chapter_deltas.append({
-                "num": int(ch["num"]),
-                "title": str(ch["title"]),
-                "words": int(ch["words"]),
-                "words_delta": words_d,
-                "asl": ch.get("asl"),
-                "asl_delta": asl_d,
-                "dialog_pct": ch.get("dialog_pct"),
-                "dialog_pct_delta": dlg_d,
-            })
+        deltas, chapter_deltas = diff_snapshots(base, target)
         return {
             "schema_version": "lixity-timeline/1",
             "document": self.document,
@@ -423,3 +385,115 @@ class ManuscriptStore:
             "deltas": deltas,
             "chapter_deltas": chapter_deltas,
         }
+
+
+def analyze_manuscript_snapshot(text: str, *, language: str = "en") -> dict[str, Any]:
+    """Compute deterministic offline stylometric metrics for a manuscript snapshot."""
+    cfg = CorpusConfig(language=language or "en")
+    metrics = CorpusAnalyzer(cfg, sample_text=text).analyze_text(text)
+    pacing = pacing_report(text, cfg)
+    dialogue = dialogue_report(text, cfg)
+    chapters = [
+        {
+            "num": int(ch.num),
+            "title": str(ch.title),
+            "words": int(ch.words),
+            "asl": round(float(ch.asl), 2) if ch.sentences > 0 else None,
+            "dialog_pct": round(float(ch.dialog_pct), 2) if ch.words > 0 else None,
+        }
+        for ch in metrics.chapters
+    ]
+    raw_entropy = pacing.rhythm_profile.get("length_entropy")
+    return {
+        "words": int(metrics.clean_words),
+        "sentences": int(metrics.total_sentences),
+        "asl": round(float(metrics.asl), 3) if metrics.total_sentences > 0 else None,
+        "asl_cv": round(float(metrics.sentence_cv), 4) if metrics.total_sentences > 0 else None,
+        "dialogue_ratio": round(float(metrics.dialog_ratio), 3) if metrics.tokens > 0 else None,
+        "mattr": round(float(metrics.mattr), 4) if metrics.mattr is not None else None,
+        "length_entropy": round(float(raw_entropy), 4) if raw_entropy is not None else None,
+        "sticky_pct": (
+            round(float(pacing.sticky_sentence_pct), 2)
+            if (pacing.sticky_available and metrics.total_sentences > 0)
+            else None
+        ),
+        "indirect_speech_per_1000": (
+            round(float(dialogue.indirect_speech_per_1000), 2)
+            if metrics.clean_words > 0
+            else None
+        ),
+        "flags_count": 0,
+        "chapter_metrics": chapters,
+    }
+
+
+def diff_snapshots(
+    base: dict[str, Any],
+    target: dict[str, Any],
+) -> tuple[dict[str, float | int | None], list[dict[str, Any]]]:
+    """Compute exact global and per-chapter metric deltas between two snapshots."""
+    def _diff(key: str, digits: int) -> float | int | None:
+        a, b = base.get(key), target.get(key)
+        if a is None or b is None:
+            return None
+        val = b - a
+        return int(val) if digits == 0 else round(float(val), digits)
+
+    deltas: dict[str, float | int | None] = {
+        "words": _diff("words", 0),
+        "sentences": _diff("sentences", 0),
+        "asl": _diff("asl", 2),
+        "asl_cv": _diff("asl_cv", 4),
+        "dialogue_ratio": _diff("dialogue_ratio", 2),
+        "mattr": _diff("mattr", 4),
+        "length_entropy": _diff("length_entropy", 4),
+        "sticky_pct": _diff("sticky_pct", 2),
+        "indirect_speech_per_1000": _diff("indirect_speech_per_1000", 2),
+        "flags_count": _diff("flags_count", 0),
+    }
+    base_chapters = {int(c["num"]): c for c in base.get("chapter_metrics", [])}
+    chapter_deltas: list[dict[str, Any]] = []
+    for ch in target.get("chapter_metrics", []):
+        prev = base_chapters.get(int(ch["num"]))
+        asl_d = (
+            round(float(ch["asl"]) - float(prev["asl"]), 2)
+            if prev is not None and ch.get("asl") is not None and prev.get("asl") is not None
+            else None
+        )
+        dlg_d = (
+            round(float(ch["dialog_pct"]) - float(prev["dialog_pct"]), 2)
+            if prev is not None and ch.get("dialog_pct") is not None and prev.get("dialog_pct") is not None
+            else None
+        )
+        words_d = int(ch["words"]) - int(prev["words"]) if prev is not None else None
+        chapter_deltas.append({
+            "num": int(ch["num"]),
+            "title": str(ch["title"]),
+            "words": int(ch["words"]),
+            "words_delta": words_d,
+            "asl": ch.get("asl"),
+            "asl_delta": asl_d,
+            "dialog_pct": ch.get("dialog_pct"),
+            "dialog_pct_delta": dlg_d,
+        })
+    return deltas, chapter_deltas
+
+
+def compare_texts(
+    base_text: str,
+    target_text: str,
+    *,
+    language: str = "en",
+) -> dict[str, Any]:
+    """Compare two manuscript Markdown strings and return enriched stylometric deltas."""
+    base_snap = analyze_manuscript_snapshot(base_text, language=language)
+    target_snap = analyze_manuscript_snapshot(target_text, language=language)
+    deltas, chapter_deltas = diff_snapshots(base_snap, target_snap)
+    return {
+        "schema_version": "lixity-diff/1",
+        "has_baseline": True,
+        "base": base_snap,
+        "current": target_snap,
+        "deltas": deltas,
+        "chapter_deltas": chapter_deltas,
+    }

@@ -22,6 +22,8 @@ from .sentences import split_prose_sentences
 from .style_fingerprint import FEATURES
 
 _INTRA_SCENE_MIN_WORDS = 120
+_COHESION_MIN_WINDOW_WORDS = 10
+_COHESION_DROP_THRESHOLD = 0.05
 
 _IMPLICIT_TIME_RE = re.compile(
     r"^\s*(?:"
@@ -114,14 +116,31 @@ def _para_names(para: str, recurring: set[str]) -> set[str]:
     return {m.group(1) for m in _CAP_TOKEN_RE.finditer(para) if m.group(1) in recurring}
 
 
+def _window_content_words(
+    paragraphs: Sequence[str],
+    word_re: re.Pattern[str],
+    blacklist: frozenset[str],
+) -> set[str]:
+    """Collect lowercase non-function content tokens across a paragraph window."""
+    words: set[str] = set()
+    for para in paragraphs:
+        for tok in word_re.findall(para):
+            low = str(tok).lower()
+            if len(low) >= 3 and low not in blacklist:
+                words.add(low)
+    return words
+
+
 def _detect_implicit_breaks(
     chapter_num: int,
     scene_index: int,
     part: str,
     para_offset: int,
     recurring_names: set[str],
+    word_re: re.Pattern[str],
+    content_blacklist: frozenset[str],
 ) -> tuple[list[dict[str, Any]], int]:
-    """Detect strong time/place/character discontinuities between adjacent paragraphs."""
+    """Detect time, place, character, and lexical-cohesion discontinuities inside a scene."""
     paragraphs = prose_paragraphs(part, _front_matter=False)
     breaks: list[dict[str, Any]] = []
     for idx in range(1, len(paragraphs)):
@@ -138,12 +157,27 @@ def _detect_implicit_breaks(
             head_names = _para_names(curr_para[:60], recurring_names)
             if head_names:
                 cues.append("character")
+
+        prev_window = paragraphs[max(0, idx - 2):idx]
+        curr_window = paragraphs[idx:min(len(paragraphs), idx + 2)]
+        prev_words = _window_content_words(prev_window, word_re, content_blacklist)
+        curr_words = _window_content_words(curr_window, word_re, content_blacklist)
+        union_size = len(prev_words | curr_words)
+        cohesion_sim = round(len(prev_words & curr_words) / union_size, 4) if union_size else 0.0
+        if (
+            len(prev_words) >= _COHESION_MIN_WINDOW_WORDS
+            and len(curr_words) >= _COHESION_MIN_WINDOW_WORDS
+            and cohesion_sim <= _COHESION_DROP_THRESHOLD
+        ):
+            cues.append("cohesion_drop")
+
         if cues:
             breaks.append({
                 "chapter": chapter_num,
                 "scene": scene_index,
                 "paragraph_index": para_offset + idx + 1,
                 "cue_type": "+".join(cues),
+                "cohesion_similarity": cohesion_sim,
                 "snippet": curr_para.strip()[:100],
             })
     return breaks, para_offset + len(paragraphs)
@@ -318,6 +352,7 @@ def scene_report(
     analyzer = CorpusAnalyzer(config, sample_text=text)
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
+    content_blacklist = resolved.function_words | resolved.stopwords
     dialogue_re = compile_pattern(resolved.dialogue_regex)
     filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
@@ -336,7 +371,7 @@ def scene_report(
         para_offset = 0
         for index, part in enumerate(parts, 1):
             part_breaks, para_offset = _detect_implicit_breaks(
-                chapter_num, index, part, para_offset, recurring_names
+                chapter_num, index, part, para_offset, recurring_names, word_re, content_blacklist
             )
             implicit_breaks.extend(part_breaks)
             measured = measured_chapters.get(chapter_num) if not scene_breaks else None

@@ -11,6 +11,7 @@ speaker attribution – a "turn" is one quoted segment, not a named speaker.
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 from collections import Counter
@@ -907,12 +908,18 @@ def character_voice_profiles(
     narrator_sentences = 0
     narrator_q_excl = 0
     narrator_func_words = 0
+    pair_exchanges: Counter[tuple[str, str]] = Counter()
+    pair_co_chapters: Counter[tuple[str, str]] = Counter()
 
     for _number, _title, body in split_chapters(text, config):
         paragraphs = prose_paragraphs(body, _front_matter=False)
         clean = "\n\n".join(paragraphs)
         if not clean:
             continue
+        present_in_chapter = {
+            label for label, pats in patterns.items() if any(pat.search(clean) for pat in pats)
+        }
+        speakers_in_chapter: set[str] = set()
         raw_spans = sorted(
             match.span(capture)
             for match in dialogue_re.finditer(clean)
@@ -943,16 +950,24 @@ def character_voice_profiles(
             narrator_sentences += max(1, len(nar_sents))
             narrator_q_excl += sum(1 for s in nar_sents if _is_question_or_excl(s))
 
+        prev_speaker: str | None = None
         for idx, span in enumerate(quoted_spans):
             prev_end = quoted_spans[idx - 1][1] if idx > 0 else 0
             next_start = quoted_spans[idx + 1][0] if idx + 1 < len(quoted_spans) else len(clean)
             speaker = _attribute_turn_speaker(clean, span, prev_end, next_start, patterns)
             if speaker is None:
+                prev_speaker = None
                 continue
             turn_text = clean[span[0]:span[1]]
             tokens = [str(t).lower() for t in word_re.findall(turn_text)]
             if not tokens:
+                prev_speaker = None
                 continue
+            speakers_in_chapter.add(speaker)
+            if prev_speaker is not None and prev_speaker != speaker:
+                pair = (prev_speaker, speaker) if prev_speaker < speaker else (speaker, prev_speaker)
+                pair_exchanges[pair] += 1
+            prev_speaker = speaker
             sents = [
                 s for s in split_prose_sentences(turn_text, resolved.key) if word_re.search(s)
             ]
@@ -969,6 +984,9 @@ def character_voice_profiles(
             bucket["q_excl"] += n_q_excl
             if func_words:
                 bucket["func_words"] += sum(1 for tok in tokens if tok in func_words)
+
+        for a, b in itertools.combinations(sorted(present_in_chapter | speakers_in_chapter), 2):
+            pair_co_chapters[(a, b)] += 1
 
     nar_asl = (narrator_words / narrator_sentences) if narrator_sentences else None
     nar_q_rate = (
@@ -1027,6 +1045,32 @@ def character_voice_profiles(
             ),
         })
     characters.sort(key=lambda item: (-item["turns"], item["name"]))
+    interaction_pairs: list[dict[str, Any]] = [
+        {
+            "a": a,
+            "b": b,
+            "turn_exchanges": pair_exchanges.get((a, b), 0),
+            "co_chapters": pair_co_chapters.get((a, b), 0),
+        }
+        for a, b in sorted(set(pair_exchanges) | set(pair_co_chapters))
+        if pair_exchanges.get((a, b), 0) > 0 or pair_co_chapters.get((a, b), 0) > 0
+    ]
+    interaction_pairs.sort(
+        key=lambda item: (-int(item["turn_exchanges"]), -int(item["co_chapters"]), str(item["a"]), str(item["b"]))
+    )
+    total_char_turns = sum(stats["turns"] for stats in accum.values())
+    total_char_words = sum(stats["words"] for stats in accum.values())
+    turn_dominance: list[dict[str, Any]] = [
+        {
+            "name": label,
+            "turns": stats["turns"],
+            "words": stats["words"],
+            "word_share": round(stats["words"] / total_char_words * 100.0, 2) if total_char_words else 0.0,
+            "turn_share": round(stats["turns"] / total_char_turns * 100.0, 2) if total_char_turns else 0.0,
+        }
+        for label, stats in accum.items()
+    ]
+    turn_dominance.sort(key=lambda item: (-int(item["turns"]), -int(item["words"]), str(item["name"])))
     return {
         "min_turns": min_turns,
         "narrator": {
@@ -1038,4 +1082,8 @@ def character_voice_profiles(
             ),
         },
         "characters": characters,
+        "character_interactions": {
+            "pairs": interaction_pairs,
+            "turn_dominance": turn_dominance,
+        },
     }

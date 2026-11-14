@@ -492,6 +492,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
     ("showing", "Compare word-pattern and quotation/short-sentence signals (text/JSON)"),
     ("style", f"Self-calibrated style reference of the manuscript (text/JSON, schema v{SCHEMA_VERSION_STYLE})"),
+    ("diff", "Compare two manuscript files or recorded revisions (text/JSON)"),
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("export-site", "Export a static read-only project website"),
     ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
@@ -2508,6 +2509,14 @@ def _build_parser() -> argparse.ArgumentParser:
             )
             p.add_argument("-o", "--output", help="Write .canvas file to a path instead of stdout")
             continue
+        if name == "diff":
+            p.add_argument("base", help="Base manuscript file (or single manuscript for recorded revisions)")
+            p.add_argument("target", nargs="?", help="Target manuscript file (omit to diff recorded revisions)")
+            p.add_argument("--base-rev", default=None, help="Base revision SHA-256 when diffing recorded revisions")
+            p.add_argument("--target-rev", default=None, help="Target revision SHA-256 when diffing recorded revisions")
+            p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
+            p.add_argument("--json", action="store_true", help="JSON output")
+            continue
         if name in ("style", "dashboard", "serve", "build"):
             p.add_argument(
                 "--min-chapters",
@@ -2831,6 +2840,50 @@ def _main(argv: list[str] | None = None) -> int:
     if args.command == "mcp":
         from .mcp import main as mcp_main
         return mcp_main()
+    if args.command == "diff":
+        from pathlib import Path
+
+        from .manuscript_editing import ManuscriptStore, compare_texts
+
+        try:
+            base_path = Path(args.base)
+            lang = str(args.language or "en")
+            if args.target is not None:
+                base_text = FileUtils.read_file(str(base_path))
+                target_text = FileUtils.read_file(str(Path(args.target)))
+                payload = compare_texts(base_text, target_text, language=lang)
+            else:
+                resolved_source = base_path.resolve(strict=True)
+                store = ManuscriptStore(resolved_source.parent, resolved_source, language=lang)
+                payload = store.delta(base_revision=args.base_rev, target_revision=args.target_rev)
+        except (OSError, ValueError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        if args.json:
+            print(_json(payload, indent=True))
+        else:
+            deltas = payload.get("deltas")
+            if not deltas:
+                print(f"{payload.get('schema_version', 'lixity-diff/1')}: no baseline revision available")
+            else:
+                lines = [f"{payload.get('schema_version', 'lixity-diff/1')}"]
+                for key in (
+                    "words",
+                    "sentences",
+                    "asl",
+                    "asl_cv",
+                    "length_entropy",
+                    "sticky_pct",
+                    "indirect_speech_per_1000",
+                    "dialogue_ratio",
+                    "mattr",
+                ):
+                    val = deltas.get(key)
+                    if val is not None:
+                        sign = "+" if isinstance(val, (int, float)) and val > 0 else ""
+                        lines.append(f"  {key}: {sign}{val}")
+                print("\n".join(lines))
+        return EXIT_OK
     if args.command == "completion":
         shell = (args.shell or "bash").strip().lower()
         if shell in ("bash", "sh"):

@@ -8233,14 +8233,18 @@ they do not estimate literary quality or a reader's experienced immersion.
   where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
   `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
   `>= 120` words with ASL spread `<= 1.5`).
-- **Implicit scene breaks (`scenes.py`):** `scene_report()` exposes top-level
-  `implicit_breaks`: `[{chapter, scene, paragraph_index, cue_type, snippet}]`,
-  where `paragraph_index` is 1-based within the chapter's prose paragraphs
-  (scanning adjacent paragraphs inside the same explicit scene) and `cue_type`
-  is `"time"`, `"place"`, `"character"`, or `+`-joined combinations (e.g.
-  `"time+place"`). Purely descriptive shift markers inspired by computational
-  scene-segmentation work (Gurung & Lapata, Chiron).
-- **Character voice separation (`dialogue.py`, `characters.py`):**
+- **Implicit scene breaks & lexical cohesion drops (`scenes.py`):** `scene_report()`
+  exposes top-level `implicit_breaks`: `[{chapter, scene, paragraph_index,
+  cue_type, cohesion_similarity, snippet}]`, where `paragraph_index` is 1-based
+  within the chapter's prose paragraphs (scanning adjacent paragraphs inside the
+  same explicit scene), `cohesion_similarity` is the Jaccard similarity of
+  lowercase non-function/non-stopword tokens (`>= 3` characters) across adjacent
+  2-paragraph windows inside the scene, and `cue_type` is `"time"`, `"place"`,
+  `"character"`, `"cohesion_drop"` (when both windows have `>= 10` content words
+  and `cohesion_similarity <= 0.05`), or `+`-joined combinations (e.g.
+  `"time+cohesion_drop"`). Purely descriptive shift markers inspired by
+  computational scene-segmentation work (Gurung & Lapata, Chiron).
+- **Character voice separation & interaction matrix (`dialogue.py`, `characters.py`):**
   `character_voice_profiles()` (and `presence_report()["character_voices"]`)
   computes `{min_turns: 3, narrator: {words, asl, question_excl_rate,
   function_word_share}, characters: [{name, status, turns, min_turns, words,
@@ -8249,8 +8253,14 @@ they do not estimate literary quality or a reader's experienced immersion.
   shares are percentages in `[0, 100]`, and deltas are `character - narrator`.
   Attribution uses deterministic single-speaker adjacent-window matching
   (ambiguous turns are skipped; below `min_turns = 3`, `status` is
-  `"insufficient_turns"` with `null` metrics). Motivated by character voice
-  profiling in literary dialogue (Michel et al., EMNLP 2024).
+  `"insufficient_turns"` with `null` metrics). Both `character_voice_profiles()`
+  and `presence_report()` also expose `character_interactions`:
+  `{pairs: [{a, b, turn_exchanges, co_chapters}], turn_dominance: [{name, turns,
+  words, word_share, turn_share}]}`, where `turn_exchanges` counts adjacent
+  attributed turns with different speakers (reset on unattributed turns and
+  chapter boundaries) and `co_chapters` counts chapters where both characters
+  are mentioned or speak. Motivated by character voice profiling in literary
+  dialogue (Michel et al., EMNLP 2024).
 - **Rhythm profile & sentence-length entropy (`pacing.py`):** `PacingReport` and
   `ChapterPacing` expose `rhythm_profile`: `{available, sentences, asl_cv,
   asl_iqr, length_entropy, normalized_entropy, bucket_shares}` with
@@ -8270,6 +8280,14 @@ they do not estimate literary quality or a reader's experienced immersion.
   followed by complementizers across all seven supported languages (`en`, `de`,
   `fr`, `es`, `it`, `pt`, `nl`) plus German *Konjunktiv I* speech forms
   (GermAnProse, LaTeCH-CLfL 2026; CHR 2024/2025).
+- **Enriched revision diff (`manuscript_editing.py`, `cli.py`, `mcp.py`):**
+  `analyze_manuscript_snapshot()`, `ManuscriptStore.analyze_snapshot()`,
+  `timeline()`, `delta()` (`schema_version: "lixity-timeline/1"`), and
+  `compare_texts()` (`schema_version: "lixity-diff/1"`) include
+  `length_entropy` (4 decimals), `sticky_pct` (2 decimals), and
+  `indirect_speech_per_1000` (2 decimals) alongside `words`, `sentences`, `asl`,
+  `asl_cv`, `dialogue_ratio`, `mattr`, `flags_count`, and `chapter_deltas`.
+  Exposed via `lixity diff` and the read-only `revision_diff` MCP tool.
 
 Literature context for dramaturgical & computational narratology heuristics:
 - Li et al. (2026) — narrative flattening and sentence-length dispersion.
@@ -8985,16 +9003,24 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
   descriptive review prompts, not structural defects (deliberate meditative
   passages or epistolary sequences can legitimately exhibit steady pacing).
-- **Implicit scene breaks (`implicit_breaks`):** heuristic paragraph-boundary
-  cues (`time`, `place`, `character`) detect surface transition markers within
-  explicit scenes. They do not reconstruct semantic plot structure, can fire on
-  retrospective references or metaphors, and are purely descriptive.
-- **Character voice separation (`character_voices`):** deterministic
-  single-speaker adjacent-window attribution skips ambiguous multi-speaker or
-  unattributed turns and marks characters below `min_turns` (`3`) as
-  `"insufficient_turns"` with `null` metrics. Short turns or dialectal
-  contractions can skew `function_word_share` and `asl`; this is not coreference
-  resolution or stylometric authorship attribution.
+- **Implicit scene breaks & lexical cohesion drops (`implicit_breaks`):**
+  heuristic paragraph-boundary cues (`time`, `place`, `character`,
+  `cohesion_drop`) detect surface transition markers within explicit scenes.
+  `cohesion_similarity` (Jaccard overlap of lowercase content tokens `>= 3`
+  chars across adjacent 2-paragraph windows, requiring `>= 10` content words per
+  window and triggering `cohesion_drop` at `<= 0.05`) is a lexical surface
+  signal: rapid dialogue exchanges or figurative shifts can trigger low overlap
+  without a plot break, and short scenes can lack enough content words.
+- **Character voice separation & interaction matrix (`character_voices`,
+  `character_interactions`):** deterministic single-speaker adjacent-window
+  attribution skips ambiguous multi-speaker or unattributed turns and marks
+  characters below `min_turns` (`3`) as `"insufficient_turns"` with `null`
+  metrics. `character_interactions` counts `turn_exchanges` only across adjacent
+  attributed turns (reset on unattributed turns and chapter boundaries) and
+  `co_chapters` across chapters where both figures are mentioned or speak;
+  unattributed rapid banter or missing aliases reduce exchange counts. Short
+  turns or dialectal contractions can skew `function_word_share` and `asl`; this
+  is not coreference resolution or stylometric authorship attribution.
 - **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `length_entropy`,
   and `normalized_entropy` require `sentences >= 2` (`available: false`
   otherwise). Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
@@ -9006,6 +9032,11 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   (`language_unavailable` for `generic`). It misses unmarked free indirect
   discourse (*erlebte Rede*) and can match non-speech cognitive verbs or
   archaic subjunctive forms.
+- **Enriched revision diff (`length_entropy`, `sticky_pct`,
+  `indirect_speech_per_1000`):** revision snapshots report `null` when a
+  revision has too few sentences or words for a metric. Deltas in
+  `lixity-timeline/1` and `lixity-diff/1` are descriptive differences between
+  two snapshots, never an editorial quality verdict.
 
 ===============================================================================
 ## docs/LOCALIZATION.md
@@ -9332,19 +9363,20 @@ Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the
 }
 ```
 
-The server exposes 12 deterministic read-only analysis tools:
+The server exposes 13 deterministic read-only analysis tools:
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Word, sentence, and vocabulary profile summary.
 - `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
-- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks`, and corpus-level `pacing_plateaus`.
+- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks` (with `cohesion_drop` / `cohesion_similarity`), and corpus-level `pacing_plateaus`.
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
-- `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), `indirect_speech` (`indirect_speech`, `indirect_speech_per_1000`), and `voice_separation` (dialogue vs. narrative prose).
+- `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), `indirect_speech` (`indirect_speech`, `indirect_speech_per_1000`), `voice_separation` (dialogue vs. narrative prose), and `character_interactions` (`pairs`, `turn_dominance`).
 - `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
 - `lixity_motifs`: Recurring motif and keyword distribution across chapters.
-- `lixity_characters`: Character mentions, co-occurrence matrix, `character_voices`, and declared POV chapter-absence gaps.
+- `lixity_characters`: Character mentions, co-occurrence matrix, `character_voices`, `character_interactions` (`pairs`, `turn_dominance`), and declared POV chapter-absence gaps.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
+- `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
 
 And 3 structured editorial prompts: `manuscript_pacing_audit`, `manuscript_dialogue_review`, and `manuscript_showing_triage`.
 
@@ -9805,7 +9837,9 @@ deterministic proxies, with the following scope and availability rules.
   [{name, status, turns, min_turns, words, dialogue_asl, question_excl_rate,
   function_word_share, narrator_asl_delta, narrator_question_excl_delta,
   narrator_function_word_delta}]}`; characters below `min_turns` report
-  `status: "insufficient_turns"` with `null` rates/deltas). These author declarations never alter
+  `status: "insufficient_turns"` with `null` rates/deltas), and
+  `character_interactions` (`{pairs: [{a, b, turn_exchanges, co_chapters}],
+  turn_dominance: [{name, turns, words, word_share, turn_share}]}`). These author declarations never alter
   lexical counts or imply inferred perspective. See
   [configuration and precedence](USAGE.md#character-profiles).
 - `pacing`: scene breaks are explicit dividers (`---`, `- - -`, `***`, `* * *`,
@@ -9821,8 +9855,10 @@ deterministic proxies, with the following scope and availability rules.
   `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`),
   `scenes.pacing_plateaus` (`[{start_id, end_id, scene_count, mean_asl, reason}]`
   with `reason` `"low_exit_hooks"` or `"flat_pacing"`), `scenes.implicit_breaks`
-  (`[{chapter, scene, paragraph_index, cue_type, snippet}]` with `cue_type`
-  in `{"time", "place", "character"}` or `+`-joined combinations), plus optional
+  (`[{chapter, scene, paragraph_index, cue_type, cohesion_similarity, snippet}]`
+  with `cue_type` in `{"time", "place", "character", "cohesion_drop"}` or
+  `+`-joined combinations e.g. `"time+cohesion_drop"`, and `cohesion_similarity`
+  as a float across adjacent 2-paragraph windows), plus optional
   `pov_characters`. `PacingReport` and `chapters[]` also expose `rhythm_profile`
   (`{available, sentences, asl_cv, asl_iqr, length_entropy, normalized_entropy,
   bucket_shares: {short, medium, long}}`; `available: false` and `null` metrics
@@ -9834,6 +9870,12 @@ deterministic proxies, with the following scope and availability rules.
   scope, metrics: {asl, dialogue_pct, staccato_pct, avg_scene_words} -> {observed,
   low, high, position}}`. `fastest_chapter`/`slowest_chapter` use the
   lowest/highest ASL.
+- `lixity diff` (`lixity diff <base> [<target>] [--base-rev REV] [--target-rev REV] [--language en] [--json]`):
+  compares two manuscript files or stored revisions and emits `lixity-diff/1`
+  (file comparison) or `lixity-timeline/1` (stored revision delta) with
+  `deltas` covering `words`, `sentences`, `asl`, `asl_cv`, `dialogue_ratio`,
+  `mattr`, `length_entropy`, `sticky_pct`, `indirect_speech_per_1000`,
+  `flags_count`, and `chapter_deltas`.
 - `motifs`: motif presence (regex patterns; `mentions`, `density_per_1000`,
   chapter span, `longest_gap`) plus generic repetition — `top_words` (content
   words; curated stop words excluded), `repeated_phrases` (n-grams with

@@ -270,6 +270,28 @@ _TOOLS = (
             "additionalProperties": False,
         },
     },
+    {
+        "name": "revision_diff",
+        "description": (
+            "Compare two manuscript Markdown revisions and return exact stylometric deltas "
+            "(words, sentences, ASL, ASL CV, dialogue ratio, MATTR, length entropy, "
+            "sticky sentence %, indirect speech per 1,000 words, and per-chapter deltas)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "base_text": {"type": "string", "description": "Base manuscript Markdown text."},
+                "target_text": {"type": "string", "description": "Target/revised manuscript Markdown text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+            },
+            "required": ["base_text", "target_text"],
+            "additionalProperties": False,
+        },
+    },
 )
 
 _PROMPTS = (
@@ -493,6 +515,23 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "isError": True,
                 }
             payload = _api.fingerprint(arguments["text"], str(arguments.get("language") or "en"))
+        elif name == "revision_diff":
+            if (
+                not isinstance(arguments, dict)
+                or not isinstance(arguments.get("base_text"), str)
+                or not isinstance(arguments.get("target_text"), str)
+            ):
+                return {
+                    "content": [{"type": "text", "text": "revision_diff requires base_text and target_text strings."}],
+                    "isError": True,
+                }
+            from .manuscript_editing import compare_texts
+
+            payload = compare_texts(
+                arguments["base_text"],
+                arguments["target_text"],
+                language=str(arguments.get("language") or "en"),
+            )
         else:
             return {
                 "content": [{"type": "text", "text": f"unknown tool: {name}"}],
