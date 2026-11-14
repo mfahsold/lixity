@@ -62,7 +62,7 @@ async function textLines(locator) {
 }
 
 async function pinnedIdentity(page, panel, cellIndex) {
-  const region = page.locator(`#${panel} .table-wrap`);
+  const region = page.locator(`#${panel} .table-wrap`).first();
   await region.scrollIntoViewIfNeeded();
   await region.evaluate(element => { element.scrollLeft = element.scrollWidth; });
   const geometry = await region.evaluate((element, index) => {

@@ -8,7 +8,7 @@ MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= 4
-PYTEST_ARGS ?=
+PYTEST_ARGS ?= -n auto
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -85,7 +85,7 @@ docs-generated-check: ## Check generated version pins, documentation bundle and 
 	$(PYTHON) scripts/build_public_site.py --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
-	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
 
 docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/sync_docs.py

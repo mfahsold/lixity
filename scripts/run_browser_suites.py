@@ -362,14 +362,28 @@ def report_durations(timings: list[tuple[str, float]], limit: int) -> None:
         print(f"  {seconds:.1f}s {name}", flush=True)
 
 
+_SLOW_SUITES_ORDER = (
+    "scroll-regions.cjs",
+    "docs.cjs",
+    "project-controls.cjs",
+    "manuscript-reader.cjs",
+    "manuscript-links.cjs",
+    "analysis-evidence.cjs",
+    "analysis-navigation.cjs",
+    "analysis-overview.cjs",
+)
+
+
 def run_parallel(node: str, names: list[str], jobs: int, durations: int = 5) -> int:
-    """Run independent suites in parallel and report atomically per suite."""
-    print(f"Running {len(names)} suites with {jobs} parallel workers.", flush=True)
+    """Run independent suites in parallel (longest-first) and report atomically per suite."""
+    priority = {suite: idx for idx, suite in enumerate(_SLOW_SUITES_ORDER)}
+    ordered = sorted(names, key=lambda n: (priority.get(n, len(_SLOW_SUITES_ORDER)), n))
+    print(f"Running {len(ordered)} suites with {jobs} parallel workers.", flush=True)
     started = time.monotonic()
     failures: list[tuple[str, int]] = []
     timings: list[tuple[str, float]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = [pool.submit(run_suite, node, name, True) for name in names]
+        futures = [pool.submit(run_suite, node, name, True) for name in ordered]
         for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             name, seconds, code, output = future.result()
             timings.append((name, seconds))
