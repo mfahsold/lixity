@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check audit build release-check release-prepare screenshots videos examples clean docs-check docs-generated-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build release-check release-prepare screenshots videos examples clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -7,6 +7,8 @@ RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
+BROWSER_JOBS ?= 4
+PYTEST_ARGS ?=
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -25,16 +27,16 @@ install-dev: ## Create .venv and install with dev extras
 	"$(VPY)" -m lixity.cli --version
 
 test: ## Run the full test suite (warnings as errors, slowest cases reported)
-	PYTHONPATH=src $(VPY) -m pytest -W error -q --durations=15 -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+	PYTHONPATH=src $(VPY) -m pytest -W error -q --durations=15 -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
 
 browser: ## Run the everyday browser checks (needs Node and Playwright)
-	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs 3
+	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs $(BROWSER_JOBS)
 
 browser-changed: ## Run only the browser suites for modified paths (safe fallback to full)
-	$(PYTHON) scripts/run_browser_suites.py --changed --jobs 3
+	$(PYTHON) scripts/run_browser_suites.py --changed --jobs $(BROWSER_JOBS)
 
 browser-full: ## Run every browser suite before a release
-	$(PYTHON) scripts/run_browser_suites.py --jobs 3
+	$(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS)
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts
@@ -49,6 +51,8 @@ audit: ## Dependency audit baseline (needs the dev extra with pip-audit)
 	$(VPY) -m pip_audit . --progress-spinner off
 
 check: lint typecheck test ## Canonical local source checks: Ruff, strict mypy and the full test suite
+
+fast-check: lint typecheck docs-generated-check ## Quick pre-commit check without full pytest (~5s)
 
 build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 	$(VPY) scripts/check_release.py --build
@@ -65,11 +69,11 @@ release-prepare: ## Prepare a new release: bump version, draft notes, sync docs 
 	$(PYTHON) scripts/prepare_release.py "$(VERSION)"
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
-	$(PYTHON) scripts/make_screenshots.py
+	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
 
 videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
-	$(PYTHON) scripts/make_screenshots.py --video
-	$(VPY) scripts/make_videos.py
+	PYTHONPATH=src $(VPY) scripts/make_screenshots.py --video
+	PYTHONPATH=src $(VPY) scripts/make_videos.py
 
 examples: ## Regenerate the published example reports and their PDFs
 	PYTHONPATH=src $(VPY) scripts/build_examples.py
@@ -88,6 +92,9 @@ docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/build_llms_full.py
 	$(PYTHON) scripts/build_guide_markdown.py
 	$(PYTHON) scripts/build_public_site.py
+
+pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
+	gh workflow run pages.yml --ref main
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \
