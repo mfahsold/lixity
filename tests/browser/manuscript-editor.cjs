@@ -36,7 +36,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');
     await page.locator('#manuscript-undo').focus();
     assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
-    await page.locator('#manuscript-compare').focus();
+    await page.locator('#manuscript-read').focus();
     assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true', 'Buttons without distinct help or shortcuts do not open redundant echo tooltips');
     await page.locator('.cm-content').click();
     await page.keyboard.press('Control+End');

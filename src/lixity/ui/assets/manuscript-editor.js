@@ -73,10 +73,26 @@
   section.setAttribute('aria-label', text(13)); chapters.before(section);
   const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools manuscript-editor-toolbar'; section.append(tools);
   const historyGroup = document.createElement('div'); historyGroup.className = 'editor-tool-group editor-group-history';
+  const formatGroup = document.createElement('div'); formatGroup.className = 'editor-tool-group editor-group-format';
   const versionsGroup = document.createElement('div'); versionsGroup.className = 'editor-tool-group editor-group-versions manuscript-edit-secondary';
   const contextGroup = document.createElement('div'); contextGroup.className = 'editor-tool-group editor-group-context';
   const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
-  tools.append(historyGroup, versionsGroup, contextGroup, statusGroup);
+  tools.append(historyGroup, formatGroup, versionsGroup, contextGroup, statusGroup);
+  const fmtLabels = {
+    en: ['Chapter heading (## )', 'Bold (**text**, Ctrl+B)', 'Italic (*text*, Ctrl+I)', 'Scene break (---)'],
+    de: ['Kapitelüberschrift (## )', 'Fett (**Text**, Strg+B)', 'Kursiv (*Text*, Strg+I)', 'Szenentrenner (---)'],
+    fr: ['Titre de chapitre (## )', 'Gras (**texte**, Ctrl+B)', 'Italique (*texte*, Ctrl+I)', 'Saut de scène (---)'],
+    es: ['Título de capítulo (## )', 'Negrita (**texto**, Ctrl+B)', 'Cursiva (*texto*, Ctrl+I)', 'Salto de escena (---)'],
+    it: ['Titolo capitolo (## )', 'Grassetto (**testo**, Ctrl+B)', 'Corsivo (*testo*, Ctrl+I)', 'Stacco di scena (---)'],
+    pt: ['Título de capítulo (## )', 'Negrito (**texto**, Ctrl+B)', 'Itálico (*texto*, Ctrl+I)', 'Quebra de cena (---)'],
+    nl: ['Hoofdstukkop (## )', 'Vet (**tekst**, Ctrl+B)', 'Cursief (*tekst*, Ctrl+I)', 'Scène-overgang (---)'],
+  };
+  const fmtWords = fmtLabels[language] || fmtLabels.en;
+  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl editor-fmt-btn'});
+  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B'});
+  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I'});
+  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl editor-fmt-btn'});
+  formatGroup.append(fmtH2, fmtBold, fmtItalic, fmtBreak);
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
   document.body.prepend(freshness);
@@ -341,7 +357,7 @@
       comparisonCancel.focus();
     } catch (error) {show('error',error.message);}
     finally {comparisonLoading = false;}
-  }, null, {icon: 'git-compare'});
+  }, null, {icon: 'git-compare', iconOnly: true});
   versionsGroup.append(recovery, recoverBtn, discardBtn, compareBtn, downloadBtn);
   contextGroup.append(reload);
   function dockCompanionTools(intoEditor) {
@@ -385,6 +401,11 @@
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
     #manuscript-recovery {max-width:11rem;min-width:6.5rem;flex:0 1 11rem;min-height:2.25rem;padding-block:.25rem;}
+    .manuscript-editor-toolbar button.editor-fmt-btn {min-width:2.1rem;padding-inline:.45rem;font-size:.82rem;font-weight:650;}
+    .manuscript-editor-toolbar button.editor-fmt-italic {font-style:italic;font-family:var(--font-title,serif);}
+    .manuscript-editor-toolbar .editor-group-format {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
+    #manuscript-recovery {max-width:9.25rem;font-size:var(--text-note,.8125rem);}
+    #manuscript-save-status[data-state="saved"] {background:transparent!important;border-color:transparent!important;color:var(--muted)!important;font-weight:400!important;box-shadow:none!important;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
     #manuscript-session-pulse-wrap {max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:8px auto 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
     .manuscript-pulse-btn {max-width:100%;white-space:normal;text-align:right;line-height:1.35;font-size:var(--text-micro,.8125rem);color:var(--muted);background:transparent;border:1px solid transparent;border-radius:var(--radius-pill,999px);padding:3px 10px;cursor:pointer;}

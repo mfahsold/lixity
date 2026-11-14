@@ -14,9 +14,47 @@ const searchTranslations = {
   nl:['Zoeken','Vervangen','Volgende','Vorige','Alle','Hoofdlettergevoelig','Reguliere expressie','Heel woord','Vervangen','Alles vervangen','Sluiten','Huidige treffer','op regel','$ treffers vervangen','Treffer op regel $ vervangen','Ga naar regel','Ga'],
 };
 
+function wrapSelection(view, before, after, placeholder) {
+  const {from, to} = view.state.selection.main;
+  const selected = view.state.sliceDoc(from, to);
+  if (selected.startsWith(before) && selected.endsWith(after) && selected.length >= before.length + after.length) {
+    const inner = selected.slice(before.length, selected.length - after.length);
+    view.dispatch({changes: {from, to, insert: inner}, selection: {anchor: from, head: from + inner.length}});
+  } else if (selected.length > 0) {
+    view.dispatch({changes: {from, to, insert: before + selected + after}, selection: {anchor: from + before.length, head: from + before.length + selected.length}});
+  } else {
+    view.dispatch({changes: {from, to, insert: before + placeholder + after}, selection: {anchor: from + before.length, head: from + before.length + placeholder.length}});
+  }
+  view.focus();
+  return true;
+}
+
+function toggleLinePrefix(view, prefix) {
+  const line = view.state.doc.lineAt(view.state.selection.main.head);
+  if (line.text.startsWith(prefix)) {
+    view.dispatch({changes: {from: line.from, to: line.from + prefix.length, insert: ''}});
+  } else {
+    view.dispatch({changes: {from: line.from, to: line.from, insert: prefix}});
+  }
+  view.focus();
+  return true;
+}
+
+function insertSceneBreak(view) {
+  const {from, to} = view.state.selection.main;
+  const snippet = '\n\n---\n\n';
+  view.dispatch({changes: {from, to, insert: snippet}, selection: {anchor: from + snippet.length}});
+  view.focus();
+  return true;
+}
+
 export function mount(parent, text, onChange, language, label) {
   const view = new EditorView({parent, state: EditorState.create({doc: text, extensions: [
-    history(), search({top:true}), keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]), markdown(), EditorView.lineWrapping,
+    history(), search({top:true}), keymap.of([
+      {key: 'Mod-b', run: v => wrapSelection(v, '**', '**', 'text')},
+      {key: 'Mod-i', run: v => wrapSelection(v, '*', '*', 'text')},
+      ...searchKeymap, ...defaultKeymap, ...historyKeymap,
+    ]), markdown(), EditorView.lineWrapping,
     EditorState.phrases.of(Object.fromEntries(searchTerms.map((term,i) => [term, (searchTranslations[language] || searchTerms)[i]]))),
     EditorView.contentAttributes.of({spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', lang: language, 'aria-label': label}),
     EditorView.theme({
@@ -48,5 +86,8 @@ export function mount(parent, text, onChange, language, label) {
     line: line => {const pos = view.state.doc.line(Math.min(Math.max(1, line), view.state.doc.lines)).from;
       view.dispatch({selection: {anchor: pos}, effects: EditorView.scrollIntoView(pos, {y: 'center'})});},
     currentLine: () => view.state.doc.lineAt(view.state.selection.main.head).number,
+    wrap: (before, after, placeholder = 'text') => wrapSelection(view, before, after, placeholder),
+    togglePrefix: prefix => toggleLinePrefix(view, prefix),
+    insertBreak: () => insertSceneBreak(view),
   };
 }
