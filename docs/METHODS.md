@@ -1117,3 +1117,47 @@ they do not estimate literary quality or a reader's experienced immersion.
   where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
   `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
   `>= 120` words with ASL spread `<= 1.5`).
+- **Implicit scene breaks (`scenes.py`):** `scene_report()` exposes top-level
+  `implicit_breaks`: `[{chapter, scene, paragraph_index, cue_type, snippet}]`,
+  where `paragraph_index` is 1-based within the chapter's prose paragraphs
+  (scanning adjacent paragraphs inside the same explicit scene) and `cue_type`
+  is `"time"`, `"place"`, `"character"`, or `+`-joined combinations (e.g.
+  `"time+place"`). Purely descriptive shift markers inspired by computational
+  scene-segmentation work (Gurung & Lapata, Chiron).
+- **Character voice separation (`dialogue.py`, `characters.py`):**
+  `character_voice_profiles()` (and `presence_report()["character_voices"]`)
+  computes `{min_turns: 3, narrator: {words, asl, question_excl_rate,
+  function_word_share}, characters: [{name, status, turns, min_turns, words,
+  dialogue_asl, question_excl_rate, function_word_share, narrator_asl_delta,
+  narrator_question_excl_delta, narrator_function_word_delta}]}`. Rates and
+  shares are percentages in `[0, 100]`, and deltas are `character - narrator`.
+  Attribution uses deterministic single-speaker adjacent-window matching
+  (ambiguous turns are skipped; below `min_turns = 3`, `status` is
+  `"insufficient_turns"` with `null` metrics). Motivated by character voice
+  profiling in literary dialogue (Michel et al., EMNLP 2024).
+- **Rhythm profile & sentence-length entropy (`pacing.py`):** `PacingReport` and
+  `ChapterPacing` expose `rhythm_profile`: `{available, sentences, asl_cv,
+  asl_iqr, length_entropy, normalized_entropy, bucket_shares}` with
+  `bucket_shares: {short, medium, long}` (`short`: `<= short_sentence_max`,
+  default `7`; `medium`: `8..20`; `long`: `> 20`). `asl_cv = std / mean`,
+  `asl_iqr = Q75 - Q25`, `length_entropy = -sum(p_b * log2(p_b))` in bits over
+  non-empty buckets (max `log2(3) ≈ 1.585` bits), and
+  `normalized_entropy = length_entropy / log2(3)`. When `sentences < 2`,
+  `available: false` and all numeric metrics are `null`. Tracks sentence-length
+  dispersion against narrative flattening (Li et al., 2026; CHR 2024/2025).
+- **Indirect speech detection (`paragraph_evidence.py`, `dialogue.py`):**
+  `paragraph_evidence.py` adds `layers["indirect_speech"]` (`kind: "pattern"`,
+  `ParagraphCounts.indirect_speech`, `status: "available" | "unavailable"`,
+  `reason: "language_unavailable"` for `generic`), and `DialogueReport` /
+  `DialogueChapter` expose `indirect_speech`, `indirect_speech_per_1000`, and
+  `indirect_speech_available`. Matches non-quoted reporting/reflection verbs
+  followed by complementizers across all seven supported languages (`en`, `de`,
+  `fr`, `es`, `it`, `pt`, `nl`) plus German *Konjunktiv I* speech forms
+  (GermAnProse, LaTeCH-CLfL 2026; CHR 2024/2025).
+
+Literature context for dramaturgical & computational narratology heuristics:
+- Li et al. (2026) — narrative flattening and sentence-length dispersion.
+- Michel et al. (EMNLP 2024) — character voice separation in literary dialogue.
+- Gurung & Lapata — Chiron scene segmentation and implicit narrative shifts.
+- GermAnProse (LaTeCH-CLfL 2026) & CHR (2024/2025) — computational narratology,
+  speech representation, and indirect speech / *Konjunktiv I* cues.

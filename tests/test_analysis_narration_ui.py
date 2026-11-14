@@ -200,3 +200,191 @@ def test_scenes_panel_surfaces_dynamics_showing_rates_and_plateaus(locale):
     assert labels["scene_plateau_low_exit_hooks"] in text
 
 
+@pytest.mark.parametrize("locale", LOCALES)
+def test_scenes_panel_surfaces_implicit_breaks(locale):
+    from lixity.ui.narration import FEATURES
+
+    labels = get_language_profile(locale).labels
+    features = {field: 0.0 for field, _, _ in FEATURES}
+    scenes = {
+        "items": [
+            {
+                "id": "1:1",
+                "chapter": 1,
+                "scene": 1,
+                "chapter_title": "Chapter 1",
+                "group": "",
+                "words": 150,
+                "sentences": 12,
+                "features": features,
+                "standard_errors": {},
+                "targets": {},
+            }
+        ],
+        "baselines": {},
+        "implicit_breaks": [
+            {
+                "chapter": 1,
+                "scene": 1,
+                "paragraph_index": 4,
+                "cue_type": "time+place",
+                "snippet": "Am nächsten Morgen am Bahnhof...",
+            }
+        ],
+    }
+    html = render_scenes_panel(scenes, labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["scene_implicit_breaks"] in text
+    assert labels["scene_implicit_breaks_hint"] in text
+    assert labels["scene_cue_time"] in text
+    assert labels["scene_cue_place"] in text
+    assert "Am nächsten Morgen am Bahnhof..." in text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_pacing_panel_surfaces_rhythm_profile(locale):
+    labels = get_language_profile(locale).labels
+    report = {
+        "scenes": 2,
+        "avg_scene_words": 200.0,
+        "hook_score_mean": 1.5,
+        "rhythm_profile": {
+            "available": True,
+            "sentences": 24,
+            "asl_cv": 0.45,
+            "asl_iqr": 8.5,
+            "length_entropy": 1.42,
+            "normalized_entropy": 0.90,
+            "bucket_shares": {"short": 0.25, "medium": 0.50, "long": 0.25},
+        },
+        "chapter_list": [
+            {"chapter_num": 1, "title": "Kapitel 1", "asl": 12.0, "hook_score": 2}
+        ],
+    }
+    html = render_pacing_panel(report, labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["pac_asl_cv"] in text
+    assert labels["pac_asl_iqr"] in text
+    assert labels["pac_length_entropy"] in text
+    assert labels["pac_rhythm_profile"] in text
+    assert labels["pac_rhythm_hint"] in text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_dialogue_panel_surfaces_indirect_speech(locale):
+    labels = get_language_profile(locale).labels
+    report = {
+        "turns": 4,
+        "dialogue_pct": 15.0,
+        "avg_turn_words": 8.0,
+        "turns_per_1000": 10.0,
+        "indirect_speech_available": True,
+        "indirect_speech": 7,
+        "indirect_speech_per_1000": 17.5,
+        "chapters": [
+            {
+                "chapter_num": 1,
+                "title": "Kapitel 1",
+                "turns": 4,
+                "dialogue_pct": 15.0,
+                "short_turns": 2,
+                "short_turn_pct": 50.0,
+                "long_turns": 0,
+                "dialogue_asl": 8.0,
+                "narration_asl": 14.0,
+                "asl_contrast": -6.0,
+                "indirect_speech_per_1000": 17.5,
+            }
+        ],
+    }
+    html = render_dialogue_panel(report, labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["dlg_indirect_speech"] in text
+    assert labels["dlg_indirect_speech_per_1000"] in text
+    assert "7" in text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_characters_panel_surfaces_character_voices(locale):
+    from lixity.ui.narration import render_characters_panel
+
+    labels = get_language_profile(locale).labels
+    report = {
+        "chapters": 2,
+        "figures": [
+            {
+                "name": "Effi",
+                "mentions": 12,
+                "chapters_present": [1, 2],
+                "first_chapter": 1,
+                "last_chapter": 2,
+                "longest_gap": 0,
+                "presence_ratio": 1.0,
+            }
+        ],
+        "character_voices": {
+            "min_turns": 3,
+            "narrator": {
+                "words": 500,
+                "asl": 16.0,
+                "question_excl_rate": 4.0,
+                "function_word_share": 48.0,
+            },
+            "characters": [
+                {
+                    "name": "Effi",
+                    "status": "available",
+                    "turns": 5,
+                    "min_turns": 3,
+                    "words": 60,
+                    "dialogue_asl": 7.5,
+                    "question_excl_rate": 40.0,
+                    "function_word_share": 52.0,
+                    "narrator_asl_delta": -8.5,
+                    "narrator_question_excl_delta": 36.0,
+                    "narrator_function_word_delta": 4.0,
+                },
+                {
+                    "name": "Innstetten",
+                    "status": "insufficient_turns",
+                    "turns": 1,
+                    "min_turns": 3,
+                    "words": 10,
+                    "dialogue_asl": None,
+                    "question_excl_rate": None,
+                    "function_word_share": None,
+                    "narrator_asl_delta": None,
+                    "narrator_question_excl_delta": None,
+                    "narrator_function_word_delta": None,
+                },
+            ],
+        },
+    }
+    html = render_characters_panel(report, [], labels, locale)
+    panel = ElementTree.fromstring(html)  # noqa: S314
+    text = "".join(panel.itertext())
+    assert labels["chr_voices_title"] in text
+    assert labels["chr_voices_hint"] in text
+    assert labels["chr_voice_narrator"] in text
+    assert labels["chr_voice_insufficient"] in text
+    assert "Effi" in text
+    assert "Innstetten" in text
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_inline_evidence_layers_includes_indirect_speech(locale):
+    from lixity.ui.manuscript_reader import INLINE_EVIDENCE_LAYERS, inline_evidence_controls
+
+    assert "indirect_speech" in INLINE_EVIDENCE_LAYERS
+    labels = get_language_profile(locale).labels
+    assert labels["evidence_layer_indirect_speech"]
+    assert labels["reading_help_evidence_indirect_speech"]
+    html = inline_evidence_controls(labels)
+    assert 'data-evidence-layer="indirect_speech"' in html
+    assert labels["evidence_layer_indirect_speech"] in html
+
+
+

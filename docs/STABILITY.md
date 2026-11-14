@@ -700,3 +700,24 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
   descriptive review prompts, not structural defects (deliberate meditative
   passages or epistolary sequences can legitimately exhibit steady pacing).
+- **Implicit scene breaks (`implicit_breaks`):** heuristic paragraph-boundary
+  cues (`time`, `place`, `character`) detect surface transition markers within
+  explicit scenes. They do not reconstruct semantic plot structure, can fire on
+  retrospective references or metaphors, and are purely descriptive.
+- **Character voice separation (`character_voices`):** deterministic
+  single-speaker adjacent-window attribution skips ambiguous multi-speaker or
+  unattributed turns and marks characters below `min_turns` (`3`) as
+  `"insufficient_turns"` with `null` metrics. Short turns or dialectal
+  contractions can skew `function_word_share` and `asl`; this is not coreference
+  resolution or stylometric authorship attribution.
+- **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `length_entropy`,
+  and `normalized_entropy` require `sentences >= 2` (`available: false`
+  otherwise). Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
+  `long > 20`) depends on sentence splitting and bucket thresholds; high or low
+  entropy is a descriptive dispersion signal, not an aesthetic or "AI-ness"
+  verdict.
+- **Indirect speech (`indirect_speech`):** relies on curated reporting/reflection
+  verb + complementizer patterns and German *Konjunktiv I* surface cues
+  (`language_unavailable` for `generic`). It misses unmarked free indirect
+  discourse (*erlebte Rede*) and can match non-speech cognitive verbs or
+  archaic subjunctive forms.

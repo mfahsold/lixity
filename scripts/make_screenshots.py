@@ -81,6 +81,44 @@ WINDOW_CHROME = """<!DOCTYPE html>
 """
 
 
+def _build_tour_manuscript_html(manuscript_path: Path, out_name: str, *, max_chars: int = 60_000) -> Path:
+    """Render a classic-novel dashboard excerpt for fast product-tour sub-cuts."""
+    from lixity.scenes import scene_report_for_display
+
+    raw = manuscript_path.read_text(encoding="utf-8")
+    if len(raw) > max_chars:
+        cut = raw.rfind("\n## ", 0, max_chars)
+        if cut < 5000:
+            cut = raw.rfind("\n# ", 0, max_chars)
+        if cut > 5000:
+            raw = raw[:cut]
+    cfg, res = resolve_document_config(raw, "auto", project_config={})
+    thresh = resolve_thresholds(project_config={})
+    anal = analyze_document(raw, cfg, thresh, include_evidence=True)
+    html_text = render_dashboard(
+        anal.chapters,
+        anal.paragraphs,
+        metrics=anal.metrics,
+        reader_document=reader_blocks(raw, cfg, anal.paragraphs),
+        fingerprint=anal.fingerprint,
+        paragraph_evidence=anal.evidence,
+        dialogue=dialogue_report(raw, cfg).to_dict(),
+        pacing=pacing_report(raw, cfg).to_dict(),
+        scenes=scene_report_for_display(raw, cfg, None, premeasured_chapters=anal.metrics.chapters),
+        motifs=motif_report(raw, None, cfg).to_dict(),
+        showing=showing_report(raw, cfg, metrics=anal.metrics).to_dict(),
+        title=manuscript_title(raw, manuscript_path.stem),
+        labels=res.labels,
+        language_name=res.name,
+        language_key=res.key,
+        current_language=res.key,
+        manuscript_name=manuscript_path.name,
+        controls=True,
+        enabled_actions=NATIVE_UI_ACTIONS,
+    )
+    return _write_html(out_name, html_text)
+
+
 def _queue_capture(source: Path, target: Path, width: int, height: int,
                    max_height: int | None = None) -> None:
     # Full native widgets are the default. Explicit excerpts are bounded by
@@ -622,9 +660,23 @@ def main() -> int:
     if args.video:
         video_dir = WORK_DIR / "videos"
         video_dir.mkdir(parents=True, exist_ok=True)
+        tour_extra_sources: list[str] = []
+        if not args.only or "product-tour" in args.only:
+            effi_path = BASE_DIR / "samples" / "effi-briest.md"
+            pride_path = BASE_DIR / "samples" / "pride-and-prejudice.md"
+            sandbox_src = BASE_DIR / "docs" / "sandbox" / "index.html"
+            if effi_path.is_file():
+                tour_extra_sources.append(str(_build_tour_manuscript_html(effi_path, "tour-effi-briest.html")))
+            if pride_path.is_file():
+                tour_extra_sources.append(str(_build_tour_manuscript_html(pride_path, "tour-pride-prejudice.html")))
+            if sandbox_src.is_file():
+                sandbox_copy = WORK_DIR / "sandbox-index.html"
+                shutil.copyfile(sandbox_src, sandbox_copy)
+                tour_extra_sources.append(str(sandbox_copy))
         CAPTURES[:] = [
             {
                 "source": str(research_workspace),
+                "extraSources": tour_extra_sources,
                 "target": str(OUT_DIR / "dashboard-light.png"),
                 "width": 1440, "height": 900, "video": True,
                 "videoTarget": str(video_dir / "product-tour.webm"),

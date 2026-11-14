@@ -48,6 +48,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     `sensory_per_1000`, and corpus-level `pacing_plateaus` (`low_exit_hooks`,
     `flat_pacing`), surfaced in CLI, `lixity_scenes` MCP, and
     `render_scenes_panel`.
+- Add 4 computational-narratology heuristics (`scenes.py`, `dialogue.py`,
+  `characters.py`, `pacing.py`, `paragraph_evidence.py`, `narration.py`):
+  - **Implicit scene breaks (`scenes.py`):** `scene_report()["implicit_breaks"]`
+    lists `[{chapter, scene, paragraph_index, cue_type, snippet}]` for
+    adjacent-paragraph `time`, `place`, and `character` transition cues inside
+    explicit scenes.
+  - **Character voice separation (`dialogue.py`, `characters.py`):**
+    `character_voice_profiles()` / `presence_report()["character_voices"]`
+    compares per-character attributed dialogue (`min_turns: 3`, `asl`,
+    `question_excl_rate`, `function_word_share`, and `narrator_*_delta`) against
+    narrative prose.
+  - **Rhythm profile & sentence-length entropy (`pacing.py`):**
+    `rhythm_profile` on `PacingReport` and `ChapterPacing` exposes `asl_cv`,
+    `asl_iqr`, `length_entropy` (Shannon bits), `normalized_entropy`, and
+    `bucket_shares` (`short`, `medium`, `long`).
+  - **Indirect speech detection (`paragraph_evidence.py`, `dialogue.py`):**
+    new `indirect_speech` inline evidence layer (`layers["indirect_speech"]`,
+    `kind: "pattern"`) plus `indirect_speech`, `indirect_speech_per_1000`, and
+    `indirect_speech_available` on `DialogueReport` / `DialogueChapter` (7
+    languages + German *Konjunktiv I*).
 - Add local SQLite manuscript revision time-series (`manuscript_revisions` in
   `recovery.sqlite3`), deterministic `timeline()` / `delta()` APIs
   (`/api/manuscript-timeline`, `/api/manuscript-delta`), Writing-mode Session

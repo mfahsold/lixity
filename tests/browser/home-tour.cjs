@@ -33,8 +33,9 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       const page = await context.newPage();
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('https://tour.test/index-de.html');
-      await expect(page.locator('.hero-cta a')).toHaveCount(1);
-      await expect(page.locator('.hero-cta a')).toHaveAttribute('href', '#product-tour-preview');
+      await expect(page.locator('.hero-cta a')).toHaveCount(2);
+      await expect(page.locator('.hero-cta a').first()).toHaveAttribute('href', '#product-tour-preview');
+      await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', 'sandbox/index.html');
       assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
       const video = page.locator('#product-tour');
       await video.scrollIntoViewIfNeeded();
@@ -47,7 +48,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
       await video.evaluate(v => { v.currentTime = 26; });
-      await expect(page.locator('.tour-caption')).toHaveText('Notizen und Belege zusammenhalten.');
+      await expect(page.locator('.tour-caption')).toHaveText('Szenen-Hooks, implizite Wechsel & Anti-Glättungs-Rhythmus (CV, IQR, Entropie).');
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
       await page.locator('#tour-transcript summary').click();

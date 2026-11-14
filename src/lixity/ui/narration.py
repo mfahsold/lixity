@@ -211,6 +211,35 @@ def render_scenes_panel(
                      f'({len(scenes["planned_items"])})</summary><p>{L("scene_planned_note")}</p><ul>')
         parts.extend(f'<li>{esc(item["id"])} · {esc(item["group"])}</li>' for item in scenes["planned_items"])
         parts.append('</ul></details>')
+    implicit_breaks = scenes.get("implicit_breaks") or []
+    if implicit_breaks:
+        def _cue_label(cue_raw: Any) -> str:
+            cues = [c.strip() for c in str(cue_raw or "").split("+") if c.strip()]
+            translated = [
+                L(f"scene_cue_{c}") if c in {"time", "place", "character"} else esc(c)
+                for c in cues
+            ]
+            return " + ".join(translated) if translated else "–"
+
+        parts.append(
+            f'<details class="scene-implicit-breaks"><summary>{L("scene_implicit_breaks")} '
+            f'({len(implicit_breaks)})</summary>'
+            f'<p class="hint">{L("scene_implicit_breaks_hint")}</p><ul>'
+        )
+        for brk in implicit_breaks[:30]:
+            ch_num = int(brk.get("chapter", 0))
+            scene_num = int(brk.get("scene", 0))
+            para_idx = int(brk.get("paragraph_index", 0))
+            cue_text = _cue_label(brk.get("cue_type"))
+            snippet = esc(str(brk.get("snippet", "")))
+            ch_label = f'{L("chapter")} {ch_num} · {L("scene_unit")} {scene_num}'
+            ch_html = chapter_link(ch_num, ch_label) if ch_num > 0 else esc(ch_label)
+            parts.append(
+                f'<li>{ch_html} '
+                f'<span class="badge badge-neutral">{L("scene_paragraph")} {para_idx} · {cue_text}</span> '
+                f'<span class="text-muted">{snippet}</span></li>'
+            )
+        parts.append("</ul></details>")
     parts.append('</section>')
     return "".join(parts)
 
@@ -332,6 +361,19 @@ def render_dialogue_panel(
                 L("dlg_adverbial_tags"),
             )
         )
+    if dialogue.get("indirect_speech_available"):
+        parts.append(
+            kpi(
+                N(int(dialogue.get("indirect_speech", 0)), 0),
+                L("dlg_indirect_speech"),
+            )
+        )
+        parts.append(
+            kpi(
+                N(float(dialogue.get("indirect_speech_per_1000", 0.0)), 1),
+                L("dlg_indirect_speech_per_1000"),
+            )
+        )
     voice_sep = dialogue.get("voice_separation")
     if isinstance(voice_sep, Mapping) and voice_sep.get("available"):
         sep_raw = str(voice_sep.get("separation_label", "unavailable"))
@@ -365,6 +407,7 @@ def render_dialogue_panel(
         parts.append("</div>")
         if any("short_turn_pct" in ch or "dialogue_asl" in ch for ch in dialogue_chapters):
             has_ch_tags = any("dialogue_tags_per_1000" in ch for ch in dialogue_chapters)
+            has_ch_indirect = any("indirect_speech_per_1000" in ch for ch in dialogue_chapters)
             short_col = esc(
                 label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
             )
@@ -372,6 +415,7 @@ def render_dialogue_panel(
                 label(labels, "dlg_long_turns").replace("{min_words}", str(LONG_TURN_MIN_WORDS))
             )
             tags_th = f'<th scope="col" class="num">{L("dlg_tags_per_1000")}</th>' if has_ch_tags else ""
+            indirect_th = f'<th scope="col" class="num">{L("dlg_indirect_speech_per_1000")}</th>' if has_ch_indirect else ""
             parts.append(
                 f'<details class="dialogue-measurements"><summary>{L("dlg_chapter_details")} '
                 f"({len(dialogue_chapters)})</summary>"
@@ -384,7 +428,7 @@ def render_dialogue_panel(
                 f'<th scope="col" class="num">{L("dlg_dialogue_asl")}</th>'
                 f'<th scope="col" class="num">{L("dlg_narration_asl")}</th>'
                 f'<th scope="col" class="num">{L("dlg_voice_contrast")}</th>'
-                f"{tags_th}"
+                f"{tags_th}{indirect_th}"
                 "</tr></thead><tbody>"
             )
             for chapter in dialogue_chapters:
@@ -408,6 +452,11 @@ def render_dialogue_panel(
                     if has_ch_tags
                     else ""
                 )
+                indirect_cell = (
+                    f'<td class="num">{N(float(chapter["indirect_speech_per_1000"]), 1) if chapter.get("indirect_speech_per_1000") is not None else "–"}</td>'
+                    if has_ch_indirect
+                    else ""
+                )
                 parts.append(
                     f"<tr>"
                     f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
@@ -417,7 +466,7 @@ def render_dialogue_panel(
                     f'<td class="num">{N(dlg_asl, 1) if turns > 0 else "–"}</td>'
                     f'<td class="num">{N(nar_asl, 1) if nar_asl > 0 else "–"}</td>'
                     f'<td class="num">{contrast_cell}</td>'
-                    f"{tags_cell}"
+                    f"{tags_cell}{indirect_cell}"
                     f"</tr>"
                 )
             parts.append("</tbody></table></div></details>")
@@ -446,6 +495,7 @@ def render_characters_panel(
     characters: Mapping[str, Any] | None,
     chapters: Sequence[ChapterProfile],
     labels: Mapping[str, str] | None = None,
+    language_key: str = "generic",
 ) -> str:
     """Render measured name mentions separately from author-declared POV."""
     if characters and characters.get("error"):
@@ -454,7 +504,7 @@ def render_characters_panel(
     if not (characters and characters.get("figures")):
         return ""
 
-    L = panel_label(labels)
+    L, N, P = panel_formatters(labels, language_key)
 
     parts: list[str] = [panel_start("characters", labels, "panel_characters")]
     parts.append(f'<p class="hint">{L("chr_hint")}</p>')
@@ -462,7 +512,7 @@ def render_characters_panel(
     pov_summary = characters.get("pov_summary")
     if isinstance(pov_summary, Mapping) and int(pov_summary.get("declared_figures", 0)) > 0:
         cov_raw = pov_summary.get("pov_coverage_chapters", 0)
-        cov = len(cov_raw) if isinstance(cov_raw, (list, tuple, set, frozenset)) else int(cov_raw or 0)
+        cov = len(cov_raw) if isinstance(cov_raw, list | tuple | set | frozenset) else int(cov_raw or 0)
         missing = pov_summary.get("chapters_without_declared_pov") or []
         missing_txt = (
             f' · {L("chr_pov_missing")}: {", ".join(str(int(c)) for c in missing)}'
@@ -527,7 +577,63 @@ def render_characters_panel(
             gap_text = str(int(pov_gap)) if pov_gap is not None and figure.get("declared_pov_chapters") else "–"
             parts.append(f'<td class="num" title="{esc(gap_tip)}">{gap_text}</td>')
         parts.append("</tr>")
-    parts.append("</tbody></table></div></section>")
+    parts.append("</tbody></table></div>")
+    voices = characters.get("character_voices")
+    if isinstance(voices, Mapping) and (voices.get("characters") or voices.get("narrator")):
+        parts.append(
+            f'<details class="character-voices" open=""><summary>{L("chr_voices_title")}</summary>'
+            f'<p class="hint">{L("chr_voices_hint")}</p>'
+        )
+        narrator = voices.get("narrator")
+        if isinstance(narrator, Mapping) and narrator.get("words"):
+            nar_asl = N(float(narrator["asl"]), 1) if narrator.get("asl") is not None else "–"
+            nar_q = P(float(narrator["question_excl_rate"])) if narrator.get("question_excl_rate") is not None else "–"
+            nar_fw = P(float(narrator["function_word_share"])) if narrator.get("function_word_share") is not None else "–"
+            parts.append(
+                f'<p class="hint"><strong>{L("chr_voice_narrator")}:</strong> '
+                f'{L("chr_voice_asl")} {nar_asl} · {L("chr_voice_qexcl")} {nar_q} · {L("chr_voice_func")} {nar_fw}</p>'
+            )
+        char_rows = voices.get("characters") or []
+        if char_rows:
+            parts.append(
+                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_voices_title")}">'
+                "<table><thead><tr>"
+                f'<th scope="col">{L("chr_name")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_turns")}</th>'
+                f'<th scope="col" class="num">{L("words")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_asl")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_delta")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_qexcl")}</th>'
+                f'<th scope="col" class="num">{L("chr_voice_func")}</th>'
+                "</tr></thead><tbody>"
+            )
+            for ch_voice in char_rows:
+                v_name = esc(str(ch_voice.get("name", "")))
+                v_turns = N(int(ch_voice.get("turns", 0)), 0)
+                v_words = N(int(ch_voice.get("words", 0)), 0)
+                if ch_voice.get("status") != "available":
+                    parts.append(
+                        f'<tr><th scope="row">{v_name}</th>'
+                        f'<td class="num">{v_turns}</td><td class="num">{v_words}</td>'
+                        f'<td colspan="4" class="num"><span class="badge badge-neutral">{L("chr_voice_insufficient")}</span></td></tr>'
+                    )
+                    continue
+                v_asl = N(float(ch_voice["dialogue_asl"]), 1) if ch_voice.get("dialogue_asl") is not None else "–"
+                v_delta = N(float(ch_voice["narrator_asl_delta"]), 1, signed=True) if ch_voice.get("narrator_asl_delta") is not None else "–"
+                v_q = P(float(ch_voice["question_excl_rate"])) if ch_voice.get("question_excl_rate") is not None else "–"
+                v_fw = P(float(ch_voice["function_word_share"])) if ch_voice.get("function_word_share") is not None else "–"
+                parts.append(
+                    f'<tr><th scope="row">{v_name}</th>'
+                    f'<td class="num">{v_turns}</td>'
+                    f'<td class="num">{v_words}</td>'
+                    f'<td class="num">{v_asl}</td>'
+                    f'<td class="num">{v_delta}</td>'
+                    f'<td class="num">{v_q}</td>'
+                    f'<td class="num">{v_fw}</td></tr>'
+                )
+            parts.append("</tbody></table></div>")
+        parts.append("</details>")
+    parts.append("</section>")
     return "".join(parts)
 
 
@@ -558,7 +664,28 @@ def render_pacing_panel(
     if pacing.get("sticky_available"):
         parts.append(kpi(P(float(pacing.get("sticky_sentence_pct", 0.0))), L("pac_sticky_pct")))
         parts.append(kpi(P(float(pacing.get("mean_glue_pct", 0.0))), L("pac_glue_mean")))
+    rhythm = pacing.get("rhythm_profile")
+    if isinstance(rhythm, Mapping) and rhythm.get("available"):
+        if rhythm.get("asl_cv") is not None:
+            parts.append(kpi(N(float(rhythm["asl_cv"]), 2), L("pac_asl_cv")))
+        if rhythm.get("asl_iqr") is not None:
+            parts.append(kpi(N(float(rhythm["asl_iqr"]), 1), L("pac_asl_iqr")))
+        if rhythm.get("length_entropy") is not None:
+            parts.append(kpi(N(float(rhythm["length_entropy"]), 2), L("pac_length_entropy")))
     parts.append("</div>")
+    if isinstance(rhythm, Mapping) and rhythm.get("available"):
+        buckets = rhythm.get("bucket_shares")
+        bucket_txt = ""
+        if isinstance(buckets, Mapping):
+            s_val = float(buckets.get("short", 0.0))
+            m_val = float(buckets.get("medium", 0.0))
+            l_val = float(buckets.get("long", 0.0))
+            scale = 100.0 if (s_val + m_val + l_val) <= 1.5 else 1.0
+            bucket_txt = f' · {L("pac_rhythm_buckets")}: {P(s_val * scale)} / {P(m_val * scale)} / {P(l_val * scale)}'
+        parts.append(
+            f'<p class="hint pacing-rhythm-profile"><strong>{L("pac_rhythm_profile")}:</strong> '
+            f'{L("pac_rhythm_hint")}{bucket_txt}</p>'
+        )
     units = FEATURE_UNITS.get(language_key, {}).get("asl", "words per sentence")
     parts.append(f'<p class="panel-guide">{help_term(labels, "asl", L("feat_asl"))} '
                  f'· {esc(units)}. {L("pacing_scale")}</p>')

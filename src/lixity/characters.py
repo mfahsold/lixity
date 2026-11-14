@@ -17,6 +17,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .dialogue import character_voice_profiles
 from .markdown_parser import prose_text, split_chapters
 from .models import CorpusConfig
 from .publication import validate_metadata_text
@@ -266,6 +267,7 @@ def presence_report(
     return {
         "chapters": total_chapters,
         "figures": result,
+        "character_voices": character_voice_profiles(text, names, config),
         "pov_summary": {
             "declared_figures": declared_figures,
             "pov_coverage_chapters": sorted(covered_pov_chapters),

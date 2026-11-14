@@ -55,6 +55,72 @@ COHESION_FALLBACK_MIN_LEN = 4
 SPARKLINE_BARS = (" ", "▂", "▃", "▄", "▅", "▆", "▇", "█")
 HOOK_TYPES: tuple[str, ...] = ("dialogue", "action", "reflection", "question", "unknown")
 MAX_STICKY_ITEMS = 50
+MEDIUM_SENTENCE_MAX = 20
+
+
+def _percentile(sorted_vals: Sequence[int | float], q: float) -> float:
+    """Linear-interpolated percentile on a non-empty sorted sequence."""
+    if len(sorted_vals) == 1:
+        return float(sorted_vals[0])
+    pos = q * (len(sorted_vals) - 1)
+    lo = math.floor(pos)
+    hi = math.ceil(pos)
+    frac = pos - lo
+    return float(sorted_vals[lo]) * (1.0 - frac) + float(sorted_vals[hi]) * frac
+
+
+def compute_rhythm_profile(
+    sentence_lengths: Sequence[int],
+    *,
+    short_sentence_max: int = SHORT_SENTENCE_MAX,
+    medium_sentence_max: int = MEDIUM_SENTENCE_MAX,
+) -> dict[str, Any]:
+    """Compute sentence-length dispersion (CV, IQR) and Shannon bucket entropy.
+
+    Non-prescriptive anti-flattening signal inspired by Li et al. (2026).
+    Returns ``available: False`` with ``None`` metrics when fewer than 2 sentences
+    are present.
+    """
+    n = len(sentence_lengths)
+    if n < 2:
+        return {
+            "available": False,
+            "sentences": n,
+            "asl_cv": None,
+            "asl_iqr": None,
+            "length_entropy": None,
+            "normalized_entropy": None,
+            "bucket_shares": None,
+        }
+    mean_len = sum(sentence_lengths) / n
+    var = sum((sl - mean_len) ** 2 for sl in sentence_lengths) / n
+    cv = (math.sqrt(var) / mean_len) if mean_len > 0.0 else 0.0
+
+    ordered = sorted(sentence_lengths)
+    iqr = _percentile(ordered, 0.75) - _percentile(ordered, 0.25)
+
+    short_n = sum(1 for sl in sentence_lengths if sl <= short_sentence_max)
+    med_n = sum(1 for sl in sentence_lengths if short_sentence_max < sl <= medium_sentence_max)
+    long_n = n - short_n - med_n
+    entropy = 0.0
+    for count in (short_n, med_n, long_n):
+        if count > 0:
+            p = count / n
+            entropy -= p * math.log2(p)
+    max_entropy = math.log2(3.0)
+    return {
+        "available": True,
+        "sentences": n,
+        "asl_cv": round(cv, 4),
+        "asl_iqr": round(iqr, 2),
+        "length_entropy": round(entropy, 4),
+        "normalized_entropy": round(entropy / max_entropy, 4),
+        "bucket_shares": {
+            "short": round(short_n / n, 4),
+            "medium": round(med_n / n, 4),
+            "long": round(long_n / n, 4),
+        },
+    }
 
 _REFLECTION_CUE_RE = re.compile(
     r"\b(?:wonder(?:ed|s|ing)?|realized?|remember(?:ed|s)?|knew|know|believe[ds]?|"
@@ -194,6 +260,7 @@ class ChapterPacing:
     sticky_sentences: int = 0
     sticky_sentence_pct: float = 0.0
     mean_glue_pct: float = 0.0
+    rhythm_profile: dict[str, Any] = field(default_factory=lambda: compute_rhythm_profile([]))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -218,6 +285,7 @@ class ChapterPacing:
             "sticky_sentences": self.sticky_sentences,
             "sticky_sentence_pct": round(self.sticky_sentence_pct, 2),
             "mean_glue_pct": round(self.mean_glue_pct, 2),
+            "rhythm_profile": self.rhythm_profile,
             "scene_list": [scene.to_dict() for scene in self.scene_list],
         }
 
@@ -244,6 +312,7 @@ class PacingReport:
     mean_glue_pct: float = 0.0
     sticky_available: bool = True
     sticky_items: list[dict[str, Any]] = field(default_factory=list)
+    rhythm_profile: dict[str, Any] = field(default_factory=lambda: compute_rhythm_profile([]))
 
     @property
     def scenes_are_chapters(self) -> bool:
@@ -268,6 +337,7 @@ class PacingReport:
             "mean_glue_pct": round(self.mean_glue_pct, 2),
             "sticky_available": self.sticky_available,
             "sticky_items": self.sticky_items,
+            "rhythm_profile": self.rhythm_profile,
             "fastest_chapter": self.fastest_chapter,
             "slowest_chapter": self.slowest_chapter,
             "chapter_list": [chapter.to_dict() for chapter in self.chapter_list],
@@ -458,6 +528,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     total_sentences = 0
     all_glue_pcts: list[float] = []
     all_sticky_items: list[dict[str, Any]] = []
+    all_corpus_sentence_lengths: list[int] = []
 
     for number, title, body in split_chapters(text, config):
         clean = prose_text(body, _front_matter=False)
@@ -535,6 +606,10 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
             if word_re.search(s)
         ]
         sentence_lengths = [len(word_re.findall(s)) for s in all_sentences]
+        all_corpus_sentence_lengths.extend(sentence_lengths)
+        chapter_rhythm = compute_rhythm_profile(
+            sentence_lengths, short_sentence_max=config.short_sentence_max
+        )
         if sentence_lengths:
             m = sum(sentence_lengths) / len(sentence_lengths)
             var = sum((sl - m) ** 2 for sl in sentence_lengths) / len(sentence_lengths)
@@ -572,6 +647,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
                 sticky_sentences=chapter_sticky,
                 sticky_sentence_pct=chapter_sticky_pct,
                 mean_glue_pct=chapter_mean_glue,
+                rhythm_profile=chapter_rhythm,
             )
         )
         total_scenes += len(scenes)
@@ -617,4 +693,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         mean_glue_pct=(sum(all_glue_pcts) / len(all_glue_pcts)) if all_glue_pcts else 0.0,
         sticky_available=sticky_available,
         sticky_items=all_sticky_items[:MAX_STICKY_ITEMS],
+        rhythm_profile=compute_rhythm_profile(
+            all_corpus_sentence_lengths, short_sentence_max=config.short_sentence_max
+        ),
     )

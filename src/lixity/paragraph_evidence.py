@@ -12,7 +12,12 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 from unicodedata import is_normalized, normalize
 
-from .dialogue import dialogue_tag_pattern, find_dialogue_tag_spans
+from .dialogue import (
+    dialogue_tag_pattern,
+    find_dialogue_tag_spans,
+    find_indirect_speech_spans,
+    indirect_speech_available,
+)
 from .language import (
     ResolvedLanguage,
     compile_pattern,
@@ -89,6 +94,7 @@ _KINDS = {
     "sticky": "sentence",
     "dialogue_tag": "pattern",
     "echo": "word",
+    "indirect_speech": "pattern",
 }
 
 
@@ -106,6 +112,7 @@ class ParagraphCounts:
     sticky: int = 0
     dialogue_tag: int = 0
     echo: int = 0
+    indirect_speech: int = 0
 
     def layers(self) -> dict[str, int]:
         """Sentence units for ASL, quoted-word contributions for dialogue."""
@@ -121,6 +128,7 @@ class ParagraphCounts:
             "sticky": self.sticky,
             "dialogue_tag": self.dialogue_tag,
             "echo": self.echo,
+            "indirect_speech": self.indirect_speech,
         }
 
 
@@ -167,6 +175,7 @@ class ParagraphMatcher:
         self.sticky_available = bool(language.function_words)
         self.dialogue_tag = dialogue_tag_pattern(language.key)
         self.dialogue_tag_available = self.dialogue_tag is not None
+        self.indirect_speech_available = indirect_speech_available(language.key)
         self._fast_cues = (
             config.filter_verbs_regex is None
             and config.sensory_regex is None
@@ -244,6 +253,11 @@ class ParagraphMatcher:
             if self.dialogue_tag_available
             else 0
         )
+        indirect_speech_count = (
+            len(find_indirect_speech_spans(clean, quoted_spans, self.language.key))
+            if self.indirect_speech_available
+            else 0
+        )
 
         self._last_scan = (clean, asl_spans, sticky_spans)
         return ParagraphCounts(
@@ -258,6 +272,7 @@ class ParagraphMatcher:
             sticky=len(sticky_spans),
             dialogue_tag=dialogue_tag_count,
             echo=echo_count,
+            indirect_speech=indirect_speech_count,
         )
 
     def evidence(self, clean: str, display: str, counts: ParagraphCounts, *,
@@ -347,6 +362,11 @@ class ParagraphMatcher:
         if self.dialogue_tag_available:
             tag_spans = find_dialogue_tag_spans(clean, sorted(quoted_spans_for_tags), self.dialogue_tag)
             spans["dialogue_tag"] = [{"start": s, "end": e, "count": 1} for s, e in tag_spans]
+        if self.indirect_speech_available:
+            ind_spans = find_indirect_speech_spans(
+                clean, sorted(quoted_spans_for_tags), self.language.key
+            )
+            spans["indirect_speech"] = [{"start": s, "end": e, "count": 1} for s, e in ind_spans]
         unmapped: set[str] = set()
         if view.text != display:
             for key, matches in spans.items():
@@ -359,7 +379,11 @@ class ParagraphMatcher:
                     mapped.append({**span, "start": source[0], "end": source[1]})
                 spans[key] = mapped
         unavailable_by_lang = {
-            key for key, avail in (("sticky", self.sticky_available), ("dialogue_tag", self.dialogue_tag_available))
+            key for key, avail in (
+                ("sticky", self.sticky_available),
+                ("dialogue_tag", self.dialogue_tag_available),
+                ("indirect_speech", self.indirect_speech_available),
+            )
             if not avail
         }
         result_layers: dict[str, LayerEvidence] = {}

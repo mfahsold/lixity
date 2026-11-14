@@ -119,23 +119,46 @@ def convert_product_tour() -> None:
                                for index, scene in enumerate(scenes)):
         raise SystemExit("Tour scenes have drifted from their localized caption times")
 
-    def value(key: str) -> str:
-        expression = str(scenes[-1][key])
-        for index in range(4, -1, -1):
-            expression = f"if(lt(in_time,{(index + 1) * 8}),{scenes[index][key]},{expression})"
+    cuts = timing.get("cuts") or [
+        {
+            "start": index * 8.0,
+            "end": (index + 1) * 8.0,
+            "x": scene["x"],
+            "y": scene["y"],
+            "zoom": scene["zoom"],
+        }
+        for index, scene in enumerate(scenes)
+    ]
+
+    def cut_expr(key: str) -> str:
+        expression = str(cuts[-1][key])
+        for cut in reversed(cuts[:-1]):
+            expression = f"if(lt(in_time,{cut['end']}),{cut[key]},{expression})"
         return expression
 
-    # Ease into a bounded detail view, hold it, then restore the overview before
-    # the next dissolve. Captions remain outside the encoded camera transform.
-    # Upscale before zoompan: fractional zoom steps on a 2x canvas avoid the
-    # integer rounding that made slow pushes look jerky, then downscale.
-    phase = "mod(in_time,8)"
-    ease = (f"if(lt({phase},0.7),0,if(lt({phase},2.3),(1-cos(PI*({phase}-0.7)/1.6))/2,"
-            f"if(lt({phase},5.9),1,if(lt({phase},7.3),(1+cos(PI*({phase}-5.9)/1.4))/2,0))))")
+    def cut_ease() -> str:
+        # Snappy 0.45s ease-in, hold on the evidence, 0.30s ease-out before the next cut.
+        def seg_ease(start: float, end: float) -> str:
+            dur = max(0.8, end - start)
+            out_at = max(0.5, dur - 0.30)
+            local = f"(in_time-{start:.3f})"
+            return (
+                f"if(lt({local},0.45),(1-cos(PI*{local}/0.45))/2,"
+                f"if(lt({local},{out_at:.3f}),1,"
+                f"if(lt({local},{dur:.3f}),(1+cos(PI*({local}-{out_at:.3f})/0.30))/2,0)))"
+            )
+
+        expression = seg_ease(cuts[-1]["start"], cuts[-1]["end"])
+        for cut in reversed(cuts[:-1]):
+            expression = f"if(lt(in_time,{cut['end']}),{seg_ease(cut['start'], cut['end'])},{expression})"
+        return expression
+
+    # Upscale before zoompan: fractional zoom steps on a 2x canvas avoid
+    # integer rounding jitter, then downscale cleanly to 1440x900.
     filters = ("fps=20,scale=2880:1800:flags=lanczos,"
-               f"zoompan=z='1+({value('zoom')}-1)*({ease})':"
-               f"x='max(0,min(iw-iw/zoom,iw*({value('x')})-iw/zoom/2))':"
-               f"y='max(0,min(ih-ih/zoom,ih*({value('y')})-ih/zoom/2))':"
+               f"zoompan=z='1+({cut_expr('zoom')}-1)*({cut_ease()})':"
+               f"x='max(0,min(iw-iw/zoom,iw*({cut_expr('x')})-iw/zoom/2))':"
+               f"y='max(0,min(ih-ih/zoom,ih*({cut_expr('y')})-ih/zoom/2))':"
                "d=1:s=2880x1800:fps=20,"
                "scale=1440:900:flags=lanczos,fps=20")
     for suffix, codec in (
@@ -149,7 +172,7 @@ def convert_product_tour() -> None:
         if target.stat().st_size > 4_000_000:
             raise SystemExit(f"{target.name} exceeds its 4 MB budget")
         print(f"{target.relative_to(BASE_DIR)} {target.stat().st_size:,} bytes")
-    run([ffmpeg, "-y", "-loglevel", "error", "-ss", "0.5", "-i", str(OUT_DIR / "product-tour.mp4"),
+    run([ffmpeg, "-y", "-loglevel", "error", "-ss", "1.8", "-i", str(OUT_DIR / "product-tour.mp4"),
          "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(OUT_DIR / "product-tour.webp")])
 
 

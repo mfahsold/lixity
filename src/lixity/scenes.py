@@ -7,7 +7,13 @@ from typing import Any
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
 from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
-from .markdown_parser import prose_text, split_chapters, split_scenes, strip_html_comments
+from .markdown_parser import (
+    prose_paragraphs,
+    prose_text,
+    split_chapters,
+    split_scenes,
+    strip_html_comments,
+)
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
 from .pacing import HOOK_TYPES, _hook_score, classify_scene_hook
@@ -16,6 +22,131 @@ from .sentences import split_prose_sentences
 from .style_fingerprint import FEATURES
 
 _INTRA_SCENE_MIN_WORDS = 120
+
+_IMPLICIT_TIME_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:the\s+(?:next|following)\s+(?:morning|afternoon|evening|night|day|week|month|year)|"
+    r"next\s+(?:morning|afternoon|evening|night|day|week|month|year)|"
+    r"(?:later|earlier)\s+that\s+(?:morning|afternoon|evening|night|day)|"
+    r"(?:\d+|two|three|four|five|six|seven|eight|ten|several|a\s+few)\s+"
+    r"(?:minutes?|hours?|days?|weeks?|months?|years?)\s+(?:later|earlier)|"
+    r"(?:hours|days|weeks|months|years)\s+later|"
+    r"by\s+(?:dawn|morning|noon|nightfall|midnight)|"
+    r"at\s+(?:dawn|dusk|noon|midnight)|that\s+(?:evening|night|morning)|meanwhile)\b"
+    r"|"
+    r"(?:am\s+(?:nächsten|folgenden|selben|selbigen)\s+(?:morgen|tag|abend|nachmittag)|"
+    r"in\s+der\s+(?:nächsten|folgenden)\s+nacht|"
+    r"(?:tags|abends|morgens|wenig|etwas|jahre|monate|wochen|tage|stunden)\s+(?:darauf|später)|"
+    r"(?:\d+|zwei|drei|vier|fünf|sechs|sieben|acht|zehn|einige|mehrere)\s+"
+    r"(?:minuten|stunden|tage|wochen|monate|jahre)\s+(?:später|zuvor|vorher)|"
+    r"später\s+am\s+(?:abend|tag|morgen|nachmittag)|"
+    r"bei\s+(?:tagesanbruch|einbruch\s+der\s+dunkelheit|sonnenaufgang|sonnenuntergang)|"
+    r"unterdessen|währenddessen)\b"
+    r"|"
+    r"(?:le\s+lendemain|plus\s+tard|quelques\s+(?:heures|jours)\s+plus\s+tard|pendant\s+ce\s+temps|"
+    r"al\s+día\s+siguiente|más\s+tarde|mientras\s+tanto|"
+    r"il\s+giorno\s+dopo|più\s+tardi|nel\s+frattempo|"
+    r"no\s+dia\s+seguinte|mais\s+tarde|enquanto\s+isso|"
+    r"de\s+volgende\s+dag|uren\s+later|dagen\s+later|ondertussen)\b"
+    r")",
+    re.IGNORECASE | re.UNICODE,
+)
+
+_IMPLICIT_PLACE_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:back\s+(?:in|at|on|inside|outside)\s+|across\s+(?:town|the\s+(?:street|city|room|hall|valley|river))\b|"
+    r"miles\s+away\b|far\s+away\b|meanwhile,\s+(?:in|at)\s+)"
+    r"|"
+    r"(?:zurück\s+(?:in|im|am|auf|bei)\s+|draußen\s+(?:vor|auf|im)\s+|"
+    r"auf\s+der\s+anderen\s+seite\s+(?:der|des)\s+|"
+    r"unterdessen\s+(?:in|im|am|auf)\s+|meilenweit\s+entfernt\b)"
+    r"|"
+    r"(?:de\s+retour\s+(?:à|au|dans)\s+|de\s+vuelta\s+(?:en|a)\s+|"
+    r"di\s+ritorno\s+(?:a|in)\s+|de\s+volta\s+(?:a|ao|em)\s+|terug\s+(?:in|op|bij)\s+)"
+    r")",
+    re.IGNORECASE | re.UNICODE,
+)
+
+_NON_NAME_CAPS = frozenset({
+    "The", "A", "An", "He", "She", "It", "They", "We", "You", "I", "His", "Her", "Their",
+    "This", "That", "These", "Those", "There", "Here", "When", "While", "After", "Before",
+    "Then", "Later", "Meanwhile", "Suddenly", "Finally", "However", "Although", "Because",
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    "January", "February", "March", "April", "May", "June", "July", "August",
+    "September", "October", "November", "December",
+    "Der", "Die", "Das", "Ein", "Eine", "Er", "Sie", "Es", "Wir", "Ihr", "Sein", "Seine",
+    "Dies", "Diese", "Dieser", "Dort", "Hier", "Als", "Während", "Nachdem", "Bevor",
+    "Dann", "Später", "Unterdessen", "Plötzlich", "Schließlich", "Jedoch", "Obwohl", "Weil",
+    "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag",
+    "Januar", "Februar", "März", "Juni", "Juli", "Oktober", "Dezember",
+    "Le", "La", "Les", "Un", "Une", "Il", "Elle", "Ils", "Elles", "Nous", "Vous",
+    "El", "Los", "Las", "Ella", "Lo", "Noi", "Voi", "De", "Het", "Een", "Hij", "Zij",
+})
+
+_CAP_TOKEN_RE = re.compile(r"\b([A-ZÄÖÜ][a-zäöüßéèêàáíóúñç]{2,})\b")
+_DE_ARTICLE_BEFORE_RE = re.compile(
+    r"\b(?:der|die|das|den|dem|des|ein|eine|einen|einem|einer|eines|im|am|zum|zur|vom|beim)\s+$",
+    re.IGNORECASE,
+)
+
+
+def _chapter_recurring_names(paragraphs: Sequence[str]) -> set[str]:
+    """Identify recurring capitalized proper-name candidates within a chapter."""
+    counts: dict[str, int] = {}
+    for para in paragraphs:
+        seen_in_para: set[str] = set()
+        for match in _CAP_TOKEN_RE.finditer(para):
+            tok = match.group(1)
+            if tok in _NON_NAME_CAPS:
+                continue
+            prefix = para[max(0, match.start() - 12):match.start()]
+            if _DE_ARTICLE_BEFORE_RE.search(prefix):
+                continue
+            seen_in_para.add(tok)
+        for tok in seen_in_para:
+            counts[tok] = counts.get(tok, 0) + 1
+    return {tok for tok, cnt in counts.items() if cnt >= 2}
+
+
+def _para_names(para: str, recurring: set[str]) -> set[str]:
+    if not recurring:
+        return set()
+    return {m.group(1) for m in _CAP_TOKEN_RE.finditer(para) if m.group(1) in recurring}
+
+
+def _detect_implicit_breaks(
+    chapter_num: int,
+    scene_index: int,
+    part: str,
+    para_offset: int,
+    recurring_names: set[str],
+) -> tuple[list[dict[str, Any]], int]:
+    """Detect strong time/place/character discontinuities between adjacent paragraphs."""
+    paragraphs = prose_paragraphs(part, _front_matter=False)
+    breaks: list[dict[str, Any]] = []
+    for idx in range(1, len(paragraphs)):
+        prev_para = paragraphs[idx - 1]
+        curr_para = paragraphs[idx]
+        cues: list[str] = []
+        if _IMPLICIT_TIME_RE.search(curr_para):
+            cues.append("time")
+        if _IMPLICIT_PLACE_RE.search(curr_para):
+            cues.append("place")
+        prev_names = _para_names(prev_para, recurring_names)
+        curr_names = _para_names(curr_para, recurring_names)
+        if prev_names and curr_names and prev_names.isdisjoint(curr_names):
+            head_names = _para_names(curr_para[:60], recurring_names)
+            if head_names:
+                cues.append("character")
+        if cues:
+            breaks.append({
+                "chapter": chapter_num,
+                "scene": scene_index,
+                "paragraph_index": para_offset + idx + 1,
+                "cue_type": "+".join(cues),
+                "snippet": curr_para.strip()[:100],
+            })
+    return breaks, para_offset + len(paragraphs)
 
 
 def _intra_scene_dynamics(
@@ -195,12 +326,19 @@ def scene_report(
     exit_counts = dict.fromkeys(HOOK_TYPES, 0)
     chapter_dividers: dict[int, int] = {}
     breaks = 0
+    implicit_breaks: list[dict[str, Any]] = []
     for chapter_num, title, body in split_chapters(text, config):
         clean = strip_html_comments(body)
+        recurring_names = _chapter_recurring_names(prose_paragraphs(clean, _front_matter=False))
         parts, scene_breaks = split_scenes(clean)
         chapter_dividers[chapter_num] = scene_breaks
         breaks += scene_breaks
+        para_offset = 0
         for index, part in enumerate(parts, 1):
+            part_breaks, para_offset = _detect_implicit_breaks(
+                chapter_num, index, part, para_offset, recurring_names
+            )
+            implicit_breaks.extend(part_breaks)
             measured = measured_chapters.get(chapter_num) if not scene_breaks else None
             if measured is None or measured.title != title:
                 measured = analyzer.measure_unit(part)
@@ -314,6 +452,7 @@ def scene_report(
               "scenes_are_chapters": breaks == 0,
               "hook_distribution": {"entry": entry_counts, "exit": exit_counts},
               "pacing_plateaus": _detect_pacing_plateaus(items),
+              "implicit_breaks": implicit_breaks,
               "baseline_scope": "explicit register assignments within this manuscript only",
               "uncertainty_scope": "approximate core standard errors; no validated reliability or quality score"}
     if planned:

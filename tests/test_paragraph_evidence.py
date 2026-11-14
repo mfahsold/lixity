@@ -36,7 +36,7 @@ def test_tense_evidence_reuses_counts_and_keeps_metric_contract():
     assert evidence["tense"]["trigger"] == paragraph.tense_trigger
     assert set(evidence["layers"]) == {
         "asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive",
-        "sticky", "dialogue_tag", "echo",
+        "sticky", "dialogue_tag", "echo", "indirect_speech",
     }
     assert evidence["tense"]["present"]["count"] == paragraph.present_hits == 2
     assert evidence["tense"]["past"]["count"] == paragraph.past_hits == 1
@@ -69,7 +69,7 @@ def test_repeated_unicode_tokens_and_sentences_keep_their_exact_occurrences():
     layers = result["layers"]
     assert set(layers) == {
         "asl", "function", "dialogue", "filter", "sensory", "modal", "nominal", "passive",
-        "sticky", "dialogue_tag", "echo",
+        "sticky", "dialogue_tag", "echo", "indirect_speech",
     }
     assert slices(paragraph, layers["asl"]) == [("🧭 I think I can.", 1), ("I think I can.", 1)]
     assert [span["words"] for span in layers["asl"]["spans"]] == [4, 4]
@@ -204,7 +204,7 @@ def test_all_resolved_languages_keep_count_coverage_invariants(language):
     module = importlib.import_module("lixity.paragraph_evidence")
     evidence = module.paragraph_evidence(text, config, paragraphs)[0]
     for name, layer in evidence["layers"].items():
-        if language == "generic" and name in {"sticky", "dialogue_tag"}:
+        if language == "generic" and name in {"sticky", "dialogue_tag", "indirect_speech"}:
             assert layer["status"] == "unavailable" and layer["reason"] == "language_unavailable"
             assert layer["count"] is None and layer["mapped_count"] == 0 and layer["spans"] == []
             continue

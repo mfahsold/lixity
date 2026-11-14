@@ -14,7 +14,7 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from statistics import median
 from typing import Any
@@ -136,6 +136,83 @@ def dialogue_tag_pattern(language_key: str) -> re.Pattern[str] | None:
     return _DIALOGUE_TAG_PATTERNS.get(language_key)
 
 
+MIN_CHARACTER_VOICE_TURNS = 3
+
+_INDIRECT_SPEECH_REGEXES: dict[str, tuple[str, ...]] = {
+    "en": (
+        r"\b(?:said|told\s+\w+|asked|replied|answered|explained|claimed|insisted|"
+        r"admitted|whispered|murmured|noted|added|thought|felt|knew|believed|"
+        r"realized|wondered|remembered|suspected|hoped|feared|imagined|assumed|"
+        r"supposed)\s+(?:that|whether|if)\b",
+        r"\b(?:asked|wondered)\s+(?:why|how|when|where|who|what)\b",
+    ),
+    "de": (
+        r"\b(?:sagte|sagten|erklärte|erklärten|behauptete|behaupteten|meinte|meinten|"
+        r"betonte|betonten|erwiderte|erwiderten|antwortete|antworteten|fragte|fragten|"
+        r"dachte|dachten|glaubte|glaubten|vermutete|vermuteten|hoffte|hofften|"
+        r"fürchtete|fürchteten|ahnte|ahnten|wusste|wussten|überlegte|überlegten|"
+        r"gestand|gestanden|versicherte|versicherten|berichtete|berichteten|"
+        r"erzählte|erzählten)\s*,\s*(?:dass|daß|ob)\b",
+        r"\b(?:er|sie|es|man)\s+(?:sei|habe|werde|könne|müsse|dürfe|wolle|solle|"
+        r"wäre|hätte|würde|könnte|müsste|dürfte|wollte|sollte)\b",
+    ),
+    "fr": (
+        r"\b(?:dit|déclara|affirma|répondit|expliqua|ajouta|demanda|pensa|crut|"
+        r"sentit|sut|comprit|espéra|craignit)\s+(?:qu'|que|si)\b",
+    ),
+    "es": (
+        r"\b(?:dijo|declaró|afirmó|respondió|explicó|añadió|preguntó|pensó|creyó|"
+        r"sintió|supo|comprendió|esperó|temió)\s+(?:que|si)\b",
+    ),
+    "it": (
+        r"\b(?:disse|dichiarò|affermò|rispose|spiegò|aggiunse|chiese|pensò|credeva|"
+        r"sentì|seppe|capì|sperò|temette)\s+(?:che|se)\b",
+    ),
+    "pt": (
+        r"\b(?:disse|declarou|afirmou|respondeu|explicou|acrescentou|perguntou|"
+        r"pensou|acreditou|sentiu|soube|compreendeu|esperou|temeu)\s+(?:que|se)\b",
+    ),
+    "nl": (
+        r"\b(?:zei|verklaarde|beweerde|antwoordde|legde\s+uit|voegde\s+toe|vroeg|"
+        r"dacht|geloofde|voelde|wist|begreep|hoopte|vreesde)\s+(?:dat|of)\b",
+    ),
+}
+
+_INDIRECT_SPEECH_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    lang: tuple(re.compile(pat, re.IGNORECASE | re.UNICODE) for pat in pats)
+    for lang, pats in _INDIRECT_SPEECH_REGEXES.items()
+}
+
+
+def indirect_speech_available(language_key: str) -> bool:
+    """Return True when indirect speech / thought heuristics exist for the language."""
+    return language_key in _INDIRECT_SPEECH_PATTERNS
+
+
+def find_indirect_speech_spans(
+    clean: str,
+    quoted_spans: Sequence[tuple[int, int]],
+    language_key: str,
+) -> list[tuple[int, int]]:
+    """Return sorted non-overlapping spans of indirect speech or thought outside quotes."""
+    patterns = _INDIRECT_SPEECH_PATTERNS.get(language_key)
+    if not patterns or not clean:
+        return []
+    candidates: list[tuple[int, int]] = []
+    for pattern in patterns:
+        for match in pattern.finditer(clean):
+            start, end = match.span()
+            if end > start and not _overlaps_any(start, end, quoted_spans):
+                candidates.append((start, end))
+    candidates.sort()
+    deduped: list[tuple[int, int]] = []
+    for start, end in candidates:
+        if deduped and start < deduped[-1][1]:
+            continue
+        deduped.append((start, end))
+    return deduped
+
+
 @dataclass(frozen=True)
 class VoiceSeparation:
     """Comparison of spoken dialogue vs. narrative prose."""
@@ -211,6 +288,9 @@ class DialogueChapter:
     adverbial_tags: int = 0
     adverbial_tag_pct: float = 0.0
     adverbial_tag_available: bool = True
+    indirect_speech: int = 0
+    indirect_speech_per_1000: float = 0.0
+    indirect_speech_available: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -240,6 +320,9 @@ class DialogueChapter:
             "adverbial_tags": self.adverbial_tags,
             "adverbial_tag_pct": round(self.adverbial_tag_pct, 2),
             "adverbial_tag_available": self.adverbial_tag_available,
+            "indirect_speech": self.indirect_speech,
+            "indirect_speech_per_1000": round(self.indirect_speech_per_1000, 2),
+            "indirect_speech_available": self.indirect_speech_available,
         }
 
 
@@ -272,6 +355,9 @@ class DialogueReport:
     adverbial_tags: int = 0
     adverbial_tag_pct: float = 0.0
     adverbial_tag_available: bool = True
+    indirect_speech: int = 0
+    indirect_speech_per_1000: float = 0.0
+    indirect_speech_available: bool = True
     voice_separation: VoiceSeparation = field(default_factory=_empty_voice_separation)
 
     def to_dict(self) -> dict[str, Any]:
@@ -302,6 +388,9 @@ class DialogueReport:
             "adverbial_tags": self.adverbial_tags,
             "adverbial_tag_pct": round(self.adverbial_tag_pct, 2),
             "adverbial_tag_available": self.adverbial_tag_available,
+            "indirect_speech": self.indirect_speech,
+            "indirect_speech_per_1000": round(self.indirect_speech_per_1000, 2),
+            "indirect_speech_available": self.indirect_speech_available,
             "voice_separation": self.voice_separation.to_dict(),
             "chapters": [chapter.to_dict() for chapter in self.chapters],
         }
@@ -423,6 +512,7 @@ class _ChapterTurnStats:
     narration_sentences: int
     dialogue_tags: int
     adverbial_tags: int
+    indirect_speech: int
     dialogue_q_excl: int
     narration_q_excl: int
     dialogue_tokens: Counter[str]
@@ -521,6 +611,7 @@ def _turn_stats(
     )
     dialogue_tags = len(tag_spans)
     adverbial_tags = _count_adverbial_tags(clean, tag_spans, quoted_spans, language_key)
+    indirect_speech = len(find_indirect_speech_spans(clean, quoted_spans, language_key))
 
     return _ChapterTurnStats(
         turn_word_counts=turn_word_counts,
@@ -533,6 +624,7 @@ def _turn_stats(
         narration_sentences=narration_sentences,
         dialogue_tags=dialogue_tags,
         adverbial_tags=adverbial_tags,
+        indirect_speech=indirect_speech,
         dialogue_q_excl=dialogue_q_excl,
         narration_q_excl=narration_q_excl,
         dialogue_tokens=dialogue_tokens,
@@ -558,12 +650,14 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
     all_narration_sentences = 0
     all_dialogue_tags = 0
     all_adverbial_tags = 0
+    all_indirect_speech = 0
     all_dialogue_q_excl = 0
     all_narration_q_excl = 0
     all_dialogue_tokens: Counter[str] = Counter()
     all_narration_tokens: Counter[str] = Counter()
     tag_available = resolved.key in _DIALOGUE_TAG_PATTERNS
     adverbial_tag_available = tag_available and (resolved.key in _MANNER_ADVERB_PATTERNS)
+    ind_speech_available = indirect_speech_available(resolved.key)
 
     for number, title, body in split_chapters(text, config):
         stats = _turn_stats(
@@ -615,6 +709,13 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
                     else 0.0
                 ),
                 adverbial_tag_available=adverbial_tag_available,
+                indirect_speech=stats.indirect_speech,
+                indirect_speech_per_1000=(
+                    (stats.indirect_speech / stats.words * 1000.0)
+                    if (stats.words and ind_speech_available)
+                    else 0.0
+                ),
+                indirect_speech_available=ind_speech_available,
             )
         )
         all_turn_lengths.extend(stats.turn_word_counts)
@@ -627,6 +728,7 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
         all_narration_sentences += stats.narration_sentences
         all_dialogue_tags += stats.dialogue_tags
         all_adverbial_tags += stats.adverbial_tags
+        all_indirect_speech += stats.indirect_speech
         all_dialogue_q_excl += stats.dialogue_q_excl
         all_narration_q_excl += stats.narration_q_excl
         all_dialogue_tokens.update(stats.dialogue_tokens)
@@ -711,5 +813,229 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
             else 0.0
         ),
         adverbial_tag_available=adverbial_tag_available,
+        indirect_speech=all_indirect_speech,
+        indirect_speech_per_1000=(
+            (all_indirect_speech / all_words * 1000.0)
+            if (all_words and ind_speech_available)
+            else 0.0
+        ),
+        indirect_speech_available=ind_speech_available,
         voice_separation=voice_separation,
     )
+
+
+def _compile_character_patterns(
+    names: Mapping[str, str] | Sequence[str],
+) -> dict[str, list[re.Pattern[str]]]:
+    patterns: dict[str, list[re.Pattern[str]]] = {}
+    entries = names.items() if isinstance(names, Mapping) else ((name, name) for name in names)
+    for pattern, label in entries:
+        compiled = re.compile(rf"(?<!\w)(?:{pattern})(?!\w)", re.IGNORECASE | re.UNICODE)
+        patterns.setdefault(label, []).append(compiled)
+    return patterns
+
+
+def _attribute_turn_speaker(
+    clean: str,
+    span: tuple[int, int],
+    prev_end: int,
+    next_start: int,
+    patterns: Mapping[str, Sequence[re.Pattern[str]]],
+) -> str | None:
+    """Return the unique configured character in the adjacent attribution window, if any."""
+    start, end = span
+    para_start = clean.rfind("\n\n", 0, start)
+    para_start = 0 if para_start < 0 else para_start + 2
+    para_end = clean.find("\n\n", end)
+    if para_end < 0:
+        para_end = len(clean)
+
+    post_lo = end
+    post_hi = min(para_end, next_start, end + 60)
+    if post_lo < post_hi:
+        post_win = clean[post_lo:post_hi]
+        post_hits = [
+            label
+            for label, pats in patterns.items()
+            if any(pat.search(post_win) for pat in pats)
+        ]
+        if len(post_hits) == 1:
+            return post_hits[0]
+        if len(post_hits) > 1:
+            return None
+
+    pre_lo = max(para_start, prev_end, start - 60)
+    pre_hi = start
+    if pre_lo < pre_hi:
+        pre_win = clean[pre_lo:pre_hi]
+        pre_hits = [
+            label
+            for label, pats in patterns.items()
+            if any(pat.search(pre_win) for pat in pats)
+        ]
+        if len(pre_hits) == 1:
+            return pre_hits[0]
+    return None
+
+
+def character_voice_profiles(
+    text: str,
+    names: Mapping[str, str] | Sequence[str],
+    config: CorpusConfig | None = None,
+    *,
+    min_turns: int = MIN_CHARACTER_VOICE_TURNS,
+) -> dict[str, Any]:
+    """Per-character dialogue voice profiles compared against the narrator baseline.
+
+    Inspired by Michel et al. (EMNLP 2024) and Chiron: deterministic adjacent-window
+    speaker attribution with an explicit ambiguity guard and honest ``insufficient_turns``
+    reporting below ``min_turns``.
+    """
+    config = config or CorpusConfig()
+    resolved = resolve_language(config, sample_text=text)
+    word_re = compile_word_pattern(resolved.word_regex)
+    dialogue_re = compile_pattern(resolved.dialogue_regex)
+    capture = quotation_capture_group(dialogue_re)
+    patterns = _compile_character_patterns(names)
+    func_words = resolved.function_words
+
+    accum: dict[str, dict[str, int]] = {
+        label: {"turns": 0, "words": 0, "sentences": 0, "q_excl": 0, "func_words": 0}
+        for label in patterns
+    }
+    narrator_words = 0
+    narrator_sentences = 0
+    narrator_q_excl = 0
+    narrator_func_words = 0
+
+    for _number, _title, body in split_chapters(text, config):
+        paragraphs = prose_paragraphs(body, _front_matter=False)
+        clean = "\n\n".join(paragraphs)
+        if not clean:
+            continue
+        raw_spans = sorted(
+            match.span(capture)
+            for match in dialogue_re.finditer(clean)
+            if match.start(capture) >= 0 and match.end(capture) > match.start(capture)
+        )
+        quoted_spans: list[tuple[int, int]] = []
+        for s_pos, e_pos in raw_spans:
+            if quoted_spans and s_pos <= quoted_spans[-1][1]:
+                quoted_spans[-1] = (quoted_spans[-1][0], max(e_pos, quoted_spans[-1][1]))
+            else:
+                quoted_spans.append((s_pos, e_pos))
+
+        nar_parts: list[str] = []
+        cursor = 0
+        for s_pos, e_pos in quoted_spans:
+            nar_parts.append(clean[cursor:s_pos])
+            cursor = e_pos
+        nar_parts.append(clean[cursor:])
+        nar_text = " ".join(nar_parts)
+        nar_tokens = [str(t).lower() for t in word_re.findall(nar_text)]
+        if nar_tokens:
+            narrator_words += len(nar_tokens)
+            if func_words:
+                narrator_func_words += sum(1 for tok in nar_tokens if tok in func_words)
+            nar_sents = [
+                s for s in split_prose_sentences(nar_text, resolved.key) if word_re.search(s)
+            ]
+            narrator_sentences += max(1, len(nar_sents))
+            narrator_q_excl += sum(1 for s in nar_sents if _is_question_or_excl(s))
+
+        for idx, span in enumerate(quoted_spans):
+            prev_end = quoted_spans[idx - 1][1] if idx > 0 else 0
+            next_start = quoted_spans[idx + 1][0] if idx + 1 < len(quoted_spans) else len(clean)
+            speaker = _attribute_turn_speaker(clean, span, prev_end, next_start, patterns)
+            if speaker is None:
+                continue
+            turn_text = clean[span[0]:span[1]]
+            tokens = [str(t).lower() for t in word_re.findall(turn_text)]
+            if not tokens:
+                continue
+            sents = [
+                s for s in split_prose_sentences(turn_text, resolved.key) if word_re.search(s)
+            ]
+            n_sents = max(1, len(sents))
+            n_q_excl = (
+                sum(1 for s in sents if _is_question_or_excl(s))
+                if sents
+                else (1 if _is_question_or_excl(turn_text) else 0)
+            )
+            bucket = accum[speaker]
+            bucket["turns"] += 1
+            bucket["words"] += len(tokens)
+            bucket["sentences"] += n_sents
+            bucket["q_excl"] += n_q_excl
+            if func_words:
+                bucket["func_words"] += sum(1 for tok in tokens if tok in func_words)
+
+    nar_asl = (narrator_words / narrator_sentences) if narrator_sentences else None
+    nar_q_rate = (
+        (narrator_q_excl / narrator_sentences * 100.0) if narrator_sentences else None
+    )
+    nar_func_share = (
+        (narrator_func_words / narrator_words * 100.0)
+        if (func_words and narrator_words)
+        else None
+    )
+
+    characters: list[dict[str, Any]] = []
+    for label, stats in accum.items():
+        turns = stats["turns"]
+        words = stats["words"]
+        sentences = stats["sentences"]
+        if turns < min_turns or words == 0 or sentences == 0:
+            characters.append({
+                "name": label,
+                "status": "insufficient_turns",
+                "turns": turns,
+                "min_turns": min_turns,
+                "words": words,
+                "dialogue_asl": None,
+                "question_excl_rate": None,
+                "function_word_share": None,
+                "narrator_asl_delta": None,
+                "narrator_question_excl_delta": None,
+                "narrator_function_word_delta": None,
+            })
+            continue
+        char_asl = words / sentences
+        char_q_rate = stats["q_excl"] / sentences * 100.0
+        char_func_share = (stats["func_words"] / words * 100.0) if func_words else None
+        characters.append({
+            "name": label,
+            "status": "available",
+            "turns": turns,
+            "min_turns": min_turns,
+            "words": words,
+            "dialogue_asl": round(char_asl, 2),
+            "question_excl_rate": round(char_q_rate, 2),
+            "function_word_share": (
+                round(char_func_share, 2) if char_func_share is not None else None
+            ),
+            "narrator_asl_delta": (
+                round(char_asl - nar_asl, 2) if nar_asl is not None else None
+            ),
+            "narrator_question_excl_delta": (
+                round(char_q_rate - nar_q_rate, 2) if nar_q_rate is not None else None
+            ),
+            "narrator_function_word_delta": (
+                round(char_func_share - nar_func_share, 2)
+                if (char_func_share is not None and nar_func_share is not None)
+                else None
+            ),
+        })
+    characters.sort(key=lambda item: (-item["turns"], item["name"]))
+    return {
+        "min_turns": min_turns,
+        "narrator": {
+            "words": narrator_words,
+            "asl": round(nar_asl, 2) if nar_asl is not None else None,
+            "question_excl_rate": round(nar_q_rate, 2) if nar_q_rate is not None else None,
+            "function_word_share": (
+                round(nar_func_share, 2) if nar_func_share is not None else None
+            ),
+        },
+        "characters": characters,
+    }

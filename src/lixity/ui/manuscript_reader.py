@@ -7,7 +7,7 @@ from ..style_profile import ChapterProfile
 from .components import label
 from .manuscript_document import ReaderBlock
 
-INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo")
+INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
 
 
 def inline_evidence_controls(labels: Mapping[str, str] | None) -> str:

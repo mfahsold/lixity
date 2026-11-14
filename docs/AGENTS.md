@@ -103,13 +103,13 @@ The server exposes 12 deterministic read-only analysis tools:
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Word, sentence, and vocabulary profile summary.
-- `lixity_pacing`: Sentence-length rhythm, variation, sticky sentences, and narrative pacing (accepts optional `genre` corridor).
-- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), and corpus-level `pacing_plateaus`.
+- `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
+- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks`, and corpus-level `pacing_plateaus`.
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
-- `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), and `voice_separation` (dialogue vs. narrative prose).
+- `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), `indirect_speech` (`indirect_speech`, `indirect_speech_per_1000`), and `voice_separation` (dialogue vs. narrative prose).
 - `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
 - `lixity_motifs`: Recurring motif and keyword distribution across chapters.
-- `lixity_characters`: Character mentions, co-occurrence matrix, and declared POV chapter-absence gaps.
+- `lixity_characters`: Character mentions, co-occurrence matrix, `character_voices`, and declared POV chapter-absence gaps.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
 
@@ -548,7 +548,8 @@ deterministic proxies, with the following scope and availability rules.
   boundaries), `dialogue_tags`, `dialogue_tag_pct`, `dialogue_tags_per_1000`,
   `dialogue_tag_available` (curated per-language speech-attribution verbs;
   `false` for `generic`), `adverbial_tags`, `adverbial_tag_pct`,
-  `adverbial_tag_available`, and `chapters[]` with the same per chapter, plus
+  `adverbial_tag_available`, `indirect_speech`, `indirect_speech_per_1000`,
+  `indirect_speech_available`, and `chapters[]` with the same per chapter, plus
   corpus-level `voice_separation` (`{available, dialogue_words,
   narrative_words, dialogue_asl, narrative_asl, asl_delta,
   dialogue_question_excl_pct, narrative_question_excl_pct, cosine_similarity,
@@ -566,7 +567,12 @@ deterministic proxies, with the following scope and availability rules.
   `pov_gaps` (`{from_chapter, to_chapter, gap_chapters, missing_chapters}`),
   `pov_longest_gap`, `pov_leading_gap`, `pov_trailing_gap`, `pov_share`, and
   corpus-level `pov_summary` (`{declared_figures, pov_coverage_chapters,
-  chapters_without_declared_pov}`). These author declarations never alter
+  chapters_without_declared_pov}`), plus `character_voices` (`{min_turns: 3,
+  narrator: {words, asl, question_excl_rate, function_word_share}, characters:
+  [{name, status, turns, min_turns, words, dialogue_asl, question_excl_rate,
+  function_word_share, narrator_asl_delta, narrator_question_excl_delta,
+  narrator_function_word_delta}]}`; characters below `min_turns` report
+  `status: "insufficient_turns"` with `null` rates/deltas). These author declarations never alter
   lexical counts or imply inferred perspective. See
   [configuration and precedence](USAGE.md#character-profiles).
 - `pacing`: scene breaks are explicit dividers (`---`, `- - -`, `***`, `* * *`,
@@ -581,8 +587,13 @@ deterministic proxies, with the following scope and availability rules.
   for `< 120` words), `filter_per_1000`, `sensory_per_1000`, and
   `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`),
   `scenes.pacing_plateaus` (`[{start_id, end_id, scene_count, mean_asl, reason}]`
-  with `reason` `"low_exit_hooks"` or `"flat_pacing"`), plus optional
-  `pov_characters`. Sticky-sentence diagnostics expose
+  with `reason` `"low_exit_hooks"` or `"flat_pacing"`), `scenes.implicit_breaks`
+  (`[{chapter, scene, paragraph_index, cue_type, snippet}]` with `cue_type`
+  in `{"time", "place", "character"}` or `+`-joined combinations), plus optional
+  `pov_characters`. `PacingReport` and `chapters[]` also expose `rhythm_profile`
+  (`{available, sentences, asl_cv, asl_iqr, length_entropy, normalized_entropy,
+  bucket_shares: {short, medium, long}}`; `available: false` and `null` metrics
+  when `sentences < 2`). Sticky-sentence diagnostics expose
   `sticky_sentences`, `sticky_sentence_pct`, `mean_glue_pct`, `sticky_available`,
   and `sticky_items` (top 50 by `glue_pct`, controlled by `CorpusConfig.sticky_glue_pct=45.0`
   and `sticky_min_words=8`). Optional `genre_corridor` (via `--genre` / `genre=`
@@ -622,9 +633,11 @@ deterministic proxies, with the following scope and availability rules.
   includes `sticky` (`kind: "sentence"`, `{start, end, count: 1, words}` for
   `words >= sticky_min_words` and `glue_pct >= sticky_glue_pct`),
   `dialogue_tag` (`kind: "pattern"`, `{start, end, count: 1}` for
-  speech-attribution verbs adjacent to dialogue quotes), and `echo`
+  speech-attribution verbs adjacent to dialogue quotes), `echo`
   (`kind: "word"`, `{start, end, count: 1}` for non-function words `len >= 4`
-  repeated `>= 2` times in the same paragraph). `sticky` and `dialogue_tag`
+  repeated `>= 2` times in the same paragraph), and `indirect_speech`
+  (`kind: "pattern"`, reporting/reflection verbs + complementizers and German
+  *Konjunktiv I* speech forms). `sticky`, `dialogue_tag`, and `indirect_speech`
   report `status: "unavailable", reason: "language_unavailable"` when the
   language lacks the required lexicon.
 

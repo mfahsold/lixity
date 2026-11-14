@@ -918,7 +918,7 @@ def render_dashboard(
     if paragraphs:
         layer_groups = (
             ("layer_group_rhythm", ("asl", "function", "sticky")),
-            ("layer_group_voice", ("dialogue", "dialogue_tag", "filter", "sensory", "echo")),
+            ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
             ("layer_group_grammar", ("passive", "modal", "nominal")),
         )
         grouped_members = {m for _, members in layer_groups for m in members}
@@ -1675,7 +1675,7 @@ def render_dashboard(
     parts.append(render_dialogue_panel(dialogue, labels, language_key))
     parts.append(render_sentence_dist_panel(metrics, labels, language_key))
     parts.append(render_showing_panel(showing, labels, language_key))
-    parts.append(render_characters_panel(characters, chapters, labels))
+    parts.append(render_characters_panel(characters, chapters, labels, language_key))
     parts.append(render_motifs_panel(motifs, labels))
 
     # --- Style heatmap & passport (self-calibrated house style) -----------

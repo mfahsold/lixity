@@ -33,13 +33,14 @@ _PROFILE_DESCRIPTION = (
     "flag_min_severity floors the paragraph flag cut (1|2|3)."
 )
 _PACING_DESCRIPTION = (
-    "Scene structure, pacing metrics, sticky sentences, scene entry/exit hooks, "
-    "and optional non-prescriptive genre reference corridor orientation."
+    "Scene structure, pacing metrics, sticky sentences, rhythm_profile (asl_cv, asl_iqr, "
+    "length_entropy), scene entry/exit hooks, and optional non-prescriptive genre reference corridor orientation."
 )
 _SCENES_DESCRIPTION = (
     "Scene-level measurements, entry/exit hook classification (dialogue/action/reflection/question), "
     "hook distribution, intra-scene dynamics (asl_shift, dialogue_shift, scene_dynamic), "
-    "scene showing-vs-telling (filter_per_1000, sensory_per_1000), and corpus pacing_plateaus."
+    "scene showing-vs-telling (filter_per_1000, sensory_per_1000), corpus pacing_plateaus, "
+    "and heuristic implicit_breaks."
 )
 _CORRIDORS_DESCRIPTION = (
     "List optional non-prescriptive genre reference corridors (crime_thriller, literary, romance, speculative) "
@@ -47,7 +48,7 @@ _CORRIDORS_DESCRIPTION = (
 )
 _DIALOGUE_DESCRIPTION = (
     "Quoted speech detection, speaker shares, dialogue-to-narrative distribution, "
-    "dialogue_tags, adverbial_tags, and voice_separation (dialogue vs. narrative prose)."
+    "dialogue_tags, adverbial_tags, indirect_speech, and voice_separation (dialogue vs. narrative prose)."
 )
 _SHOWING_DESCRIPTION = (
     "Sensory showing-vs-telling signals: sensory detail density vs perception filter verbs."
@@ -56,7 +57,8 @@ _MOTIFS_DESCRIPTION = (
     "Thematic motifs, repetition tracking, and local phrase echoes across chapters."
 )
 _CHARACTERS_DESCRIPTION = (
-    "Cast presence, declared point-of-view (POV) and character name mentions across chapters."
+    "Cast presence, declared point-of-view (POV), character name mentions, "
+    "and per-character dialogue voice profiles (character_voices) across chapters."
 )
 _MARKERS_DESCRIPTION = (
     "Extract embedded editorial review markers (pruefen, sachcheck, todo, achtung) with line anchors."

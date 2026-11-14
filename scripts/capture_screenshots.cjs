@@ -37,10 +37,11 @@ async function main() {
           body: fs.readFileSync(path.join(__dirname, '..', resource.asset_path))});
         return;
       }
-      const capture = captures.find(item => '/' + path.basename(item.source) === url.pathname);
-      assert.ok(capture, 'Unknown screenshot resource: ' + url.pathname);
+      const allSources = captures.flatMap(item => [item.source, ...(item.extraSources || [])]);
+      const matchedSource = allSources.find(src => '/' + path.basename(src) === url.pathname);
+      assert.ok(matchedSource, 'Unknown screenshot resource: ' + url.pathname);
       await route.fulfill({status: 200, contentType: 'text/html; charset=utf-8',
-        body: fs.readFileSync(capture.source)});
+        body: fs.readFileSync(matchedSource)});
     });
     await target.addInitScript(({fixture}) => {
       window.captureRequests = [];
@@ -500,114 +501,229 @@ async function main() {
         if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();
       }
       if (flow === 'product-tour') {
-        // Fixed eight-second scenes keep localized website captions synchronized.
-        // Trim the load interval in the encoder; every view is the real app.
+        // Fixed eight-second scene buckets keep localized website captions synchronized,
+        // while dynamic sub-cuts inside each bucket create a fast-paced, kinetic tour.
+        await page.addInitScript(() => {
+          const setupTourChrome = () => {
+            if (document.getElementById('tour-chrome-style')) return;
+            const style = document.createElement('style');
+            style.id = 'tour-chrome-style';
+            style.textContent = `
+              #walkthrough-cursor { width:16px!important;height:16px!important;margin:-8px!important;
+                background:rgba(59,130,246,.42)!important;border-color:#93c5fd!important;
+                transition:opacity .25s,transform .08s; }
+              .tour-focus-ring { position:fixed;pointer-events:none;z-index:2147483645;
+                border:2px solid #60a5fa;border-radius:9px;box-shadow:0 0 0 5px rgba(59,130,246,.18);
+                animation:tour-ring 2.6s ease both; }
+              @keyframes tour-ring { 0% {opacity:0;transform:scale(.98)} 14%,78% {opacity:1;transform:scale(1)} 100% {opacity:0} }
+              #tour-hud { position:fixed;top:16px;right:20px;z-index:2147483646;pointer-events:none;
+                padding:7px 14px;border-radius:999px;background:rgba(13,19,34,.90);color:#f8fafc;
+                border:1px solid rgba(148,163,184,.32);box-shadow:0 8px 24px rgba(0,0,0,.28);
+                font:650 12.5px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.06em;
+                text-transform:uppercase;opacity:0;transform:translateY(-4px);
+                transition:opacity .18s ease,transform .18s ease; }
+              #tour-hud.visible { opacity:1;transform:translateY(0); }
+            `;
+            document.head.appendChild(style);
+            const hud = document.createElement('div');
+            hud.id = 'tour-hud';
+            document.body.appendChild(hud);
+          };
+          window.setTourHud = label => {
+            setupTourChrome();
+            const hud = document.getElementById('tour-hud');
+            if (!hud) return;
+            hud.textContent = label || '';
+            hud.classList.toggle('visible', Boolean(label));
+          };
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupTourChrome);
+          else setupTourChrome();
+        });
         await page.emulateMedia({colorScheme: 'light'});
         await page.evaluate(() => document.fonts.ready);
-        // Recording-only direction: real controls, a visible pointer and one
-        // bounded focus ring. These overlays never enter product exports.
-        await page.addStyleTag({content: `
-          #walkthrough-cursor { width:16px!important;height:16px!important;margin:-8px!important;
-            background:rgba(115,146,255,.4)!important;border-color:#a8baff!important;
-            transition:opacity .4s,transform .1s; }
-          .tour-focus-ring { position:fixed;pointer-events:none;z-index:2147483645;
-            border:2px solid #809aff;border-radius:9px;box-shadow:0 0 0 5px rgba(100,130,255,.14);
-            animation:tour-ring 3.6s ease both; }
-          @keyframes tour-ring { 0% {opacity:0;transform:scale(.99)} 15%,75% {opacity:1;transform:scale(1)} 100% {opacity:0} }
-        `});
         const started = Date.now();
         const scenes = [];
+        const cuts = [];
         const click = async locator => {
           await locator.scrollIntoViewIfNeeded();
           const box = await locator.boundingBox();
           assert.ok(box, 'A directed action must target a visible control');
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 16});
-          await page.waitForTimeout(180);
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 8});
+          await page.waitForTimeout(80);
           await locator.click();
         };
-        const scene = async (name, action, focus, marker = null) => {
-          const start = Date.now();
-          // Brief dissolves carry orientation across view and theme changes.
-          if (scenes.length) {
-            const previous = await page.screenshot();
-            await page.evaluate(data => {
-              const image = document.createElement('img'); image.id = 'tour-dissolve';
-              image.src = data; image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483646;pointer-events:none;transition:opacity .45s ease';
-              document.body.appendChild(image);
-            }, 'data:image/png;base64,' + previous.toString('base64'));
-          }
-          await action();
-          await page.evaluate(() => {
-            const image = document.getElementById('tour-dissolve');
-            if (image) { image.style.opacity = '0'; setTimeout(() => image.remove(), 500); }
-          });
+        const gotoTourPage = async (filename, colorScheme = 'light') => {
+          await page.emulateMedia({colorScheme});
+          await page.goto(CAPTURE_ORIGIN + '/' + filename);
+          await page.evaluate(() => document.fonts.ready);
+        };
+        const computeFrame = async (focus, marker) => {
           const box = await page.locator(focus).first().boundingBox();
-          assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region');
+          assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region: ' + focus);
           const top = Math.max(0, box.y), bottom = Math.min(900, box.y + box.height);
           const framed = {x: box.x, y: top, width: box.width, height: Math.max(1, bottom - top)};
-          scenes.push({name, start: (start - started) / 1000,
-            x: (framed.x + framed.width / 2) / 1440, y: (framed.y + framed.height / 2) / 900,
-            zoom: Math.max(1, Math.min(1.5, 1440 / (framed.width + 100), 900 / (framed.height + 130)))});
-          await page.waitForTimeout(600);
           const marked = marker ? await page.locator(marker).first().evaluate(node => {
-            // A summary's hit area spans the panel; emphasize its label instead.
             const range = document.createRange(); range.selectNodeContents(node);
             const rect = node.tagName === 'SUMMARY' ? range.getBoundingClientRect() : node.getBoundingClientRect();
             return {x: rect.x - 3, y: rect.y - 3, width: rect.width + 6, height: rect.height + 6};
           }) : null;
-          if (marker) assert.ok(marked && marked.x >= 0 && marked.y >= 0 &&
-            marked.x + marked.width <= 1440 && marked.y + marked.height <= 900 &&
-            marked.width <= 700 && marked.height <= 250, `Mark only a complete, compact visible target: ${name} ${JSON.stringify(marked)}`);
-          await page.evaluate(box => {
-            document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove());
-            if (box) {
-            const ring = document.createElement('div'); ring.className = 'tour-focus-ring';
-            Object.assign(ring.style, {left:box.x+'px',top:box.y+'px',width:box.width+'px',height:box.height+'px'});
-            document.body.appendChild(ring);
-            }
-            const cursor = document.getElementById('walkthrough-cursor'); if(cursor) cursor.style.opacity='0';
-          }, marked);
-          assert.ok(Date.now() - start < 6500, 'Directed actions must fit their eight-second scene');
-          await page.waitForTimeout(Math.max(0, 8000 - (Date.now() - start)));
-          await page.evaluate(() => document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove()));
+          if (marked && marked.x >= 0 && marked.y >= 0 &&
+              marked.x + marked.width <= 1440 && marked.y + marked.height <= 900 &&
+              marked.width <= 760 && marked.height <= 300) {
+            await page.evaluate(b => {
+              document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove());
+              const ring = document.createElement('div'); ring.className = 'tour-focus-ring';
+              Object.assign(ring.style, {left: b.x + 'px', top: b.y + 'px', width: b.width + 'px', height: b.height + 'px'});
+              document.body.appendChild(ring);
+              const cursor = document.getElementById('walkthrough-cursor'); if (cursor) cursor.style.opacity = '0';
+            }, marked);
+          }
+          return {
+            x: (framed.x + framed.width / 2) / 1440,
+            y: (framed.y + framed.height / 2) / 900,
+            zoom: Math.max(1, Math.min(1.55, 1440 / (framed.width + 110), 900 / (framed.height + 130))),
+          };
         };
-        await scene('read', async () => {
-          await click(page.locator('#tab-view-analysis'));
-          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-        }, '#chapters .ptext p');
-        await scene('passage', async () => {
-          const paragraph = page.locator('#chapters .ptext').first();
-          await click(paragraph.locator('[data-reader-paragraph]'));
-          await click(page.locator('[data-reader-action=values]'));
-          await page.locator('#reader-inspector').waitFor({state: 'visible'});
-          await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
-        }, '#reader-inspector details', '#reader-inspector details summary');
-        await scene('compare', async () => {
-          await click(page.locator('#workbench-overview-open'));
-          await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
-          await click(page.locator('#style-tab-heatmap'));
-          await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
-            node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
-        }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)');
-        await scene('research', async () => {
-          await page.emulateMedia({colorScheme: 'dark'});
-          await click(page.locator('#tab-view-research'));
-          await click(page.locator('[data-rtab=dossiers]'));
-          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-        }, '#research-dossiers-list .research-card', '#research-dossiers-list .research-card [data-research-detail=dossier]');
-        await scene('context', async () => {
-          const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
-          await click(dossier.locator('[data-research-detail=dossier]'));
-          await dossier.locator('.research-details-body').waitFor({state: 'visible'});
-          await dossier.locator('.dossier-image').first().scrollIntoViewIfNeeded();
-        }, '.research-details-body .dossier-image');
-        await scene('return', async () => {
-          await click(page.locator('#tab-view-analysis'));
-          if (await page.locator('#workbench-overview-back').isVisible()) await page.locator('#workbench-overview-back').click();
-          if (await page.locator('#reader-inspector-close').isVisible()) await page.locator('#reader-inspector-close').click();
-          await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-        }, '#chapters .ptext p');
-        fs.writeFileSync(capture.videoTarget.replace('.webm', '.json'), JSON.stringify({scenes, duration: 48, trim: (started - recordingStarted) / 1000}));
+        const cut = async (hudLabel, action, focus, marker, holdUntilMs) => {
+          const cutStart = Date.now();
+          let prevShot = null;
+          if (cuts.length) prevShot = await page.screenshot();
+          await action();
+          if (prevShot) {
+            await page.evaluate(data => {
+              const image = document.createElement('img'); image.id = 'tour-dissolve';
+              image.src = data;
+              image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;pointer-events:none;opacity:1;transition:opacity .20s ease';
+              document.body.appendChild(image);
+              requestAnimationFrame(() => { image.style.opacity = '0'; setTimeout(() => image.remove(), 220); });
+            }, 'data:image/png;base64,' + prevShot.toString('base64'));
+          }
+          await page.evaluate(label => { if (window.setTourHud) window.setTourHud(label); }, hudLabel);
+          const cam = await computeFrame(focus, marker);
+          await page.waitForTimeout(Math.max(0, holdUntilMs - (Date.now() - started)));
+          await page.evaluate(() => document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove()));
+          cuts.push({
+            start: Number(((cutStart - started) / 1000).toFixed(3)),
+            end: Number(((Date.now() - started) / 1000).toFixed(3)),
+            ...cam,
+          });
+        };
+        const runScene = async (index, name, body) => {
+          const targetStart = index * 8000;
+          const remainingPre = targetStart - (Date.now() - started);
+          if (remainingPre > 0) await page.waitForTimeout(remainingPre);
+          const sceneStart = (Date.now() - started) / 1000;
+          await body((index + 1) * 8000);
+          scenes.push({name, start: Number(sceneStart.toFixed(3)), x: 0.5, y: 0.5, zoom: 1.0});
+        };
+
+        // Scene 1 (0-8s): Classic-novel evidence — Effi Briest sticky sentences + Pride & Prejudice voice contrast
+        await runScene(0, 'read', async sceneEnd => {
+          await cut('01 · EFFI BRIEST · STICKY SENTENCES', async () => {
+            await gotoTourPage('tour-effi-briest.html', 'light');
+            await click(page.locator('#manuscript-analysis-toggle'));
+            await selectMetric(page, 'sticky');
+            await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
+          }, '#chapters .ptext', '#style-layer', sceneEnd - 4000);
+          await cut('01 · PRIDE & PREJUDICE · VOICE CONTRAST', async () => {
+            await gotoTourPage('tour-pride-prejudice.html', 'light');
+            await click(page.locator('#workbench-overview-open'));
+            await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
+            await page.locator('#dialogue').scrollIntoViewIfNeeded();
+          }, '#dialogue', '#dialogue h2', sceneEnd);
+        });
+
+        // Scene 2 (8-16s): Direct Speech Mode (D) + Passage Evidence Inspector
+        await runScene(1, 'passage', async sceneEnd => {
+          await cut('02 · DIRECT SPEECH MODE [D]', async () => {
+            await click(page.locator('#workbench-overview-back'));
+            await click(page.locator('#reader-direct-speech'));
+            await page.locator('#chapters .ptext.direct-speech-only, #chapters .ptext.direct-speech-mixed, #chapters .ptext').first().scrollIntoViewIfNeeded();
+          }, '#chapters .ptext', '#reader-direct-speech', sceneEnd - 4200);
+          await cut('02 · PASSAGE EVIDENCE', async () => {
+            const p = page.locator('#chapters .ptext').nth(1);
+            await click(p.locator('[data-reader-paragraph]'));
+            await click(page.locator('[data-reader-action=values]'));
+            await page.locator('#reader-inspector').waitFor({state: 'visible'});
+            await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
+          }, '#reader-inspector details', '#reader-inspector details summary', sceneEnd);
+        });
+
+        // Scene 3 (16-24s): Unified MESSGRÖSSE inline evidence + Chapter Matrix
+        await runScene(2, 'compare', async sceneEnd => {
+          await cut('03 · MESSGRÖSSE · STICKY / TAG / ECHO / INDIRECT', async () => {
+            await gotoTourPage('tour-effi-briest.html', 'light');
+            await click(page.locator('#manuscript-analysis-toggle'));
+            for (const layer of ['sticky', 'dialogue_tag', 'echo']) {
+              await selectMetric(page, layer);
+              await page.waitForTimeout(650);
+            }
+            if (await page.locator('#style-layer option[value="indirect_speech"]').count()) {
+              await selectMetric(page, 'indirect_speech');
+              await page.waitForTimeout(650);
+            }
+          }, '#chapters .ptext', '#style-layer', sceneEnd - 3600);
+          await cut('03 · CHAPTER MATRIX · z* & FDR', async () => {
+            await gotoTourPage('dashboard-research-workspace.html', 'light');
+            await click(page.locator('#tab-view-analysis'));
+            await click(page.locator('#workbench-overview-open'));
+            await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
+            await click(page.locator('#style-tab-heatmap'));
+            await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
+              node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
+          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd);
+        });
+
+        // Scene 4 (24-32s): Scene Hooks & Anti-Flattening Rhythm
+        await runScene(3, 'research', async sceneEnd => {
+          await cut('04 · SCENE HOOKS & DYNAMICS', async () => {
+            await page.locator('#scenes').scrollIntoViewIfNeeded();
+          }, '#scenes', '#scenes h2', sceneEnd - 4000);
+          await cut('04 · ANTI-FLATTENING RHYTHM', async () => {
+            await page.emulateMedia({colorScheme: 'dark'});
+            await page.locator('#pacing').scrollIntoViewIfNeeded();
+          }, '#pacing', '#pacing h2', sceneEnd);
+        });
+
+        // Scene 5 (32-40s): Research Beside the Text (Dossiers & Source-Verified Claims)
+        await runScene(4, 'context', async sceneEnd => {
+          await cut('05 · RESEARCH DOSSIERS', async () => {
+            await click(page.locator('#tab-view-research'));
+            await click(page.locator('[data-rtab=dossiers]'));
+            const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+            await click(dossier.locator('[data-research-detail=dossier]'));
+            await dossier.locator('.research-details-body').waitFor({state: 'visible'});
+            await dossier.locator('.dossier-image').first().scrollIntoViewIfNeeded();
+          }, '.research-details-body .dossier-image', '#research-dossiers-list .research-card [data-research-detail=dossier]', sceneEnd - 3600);
+          await cut('05 · SOURCE-VERIFIED CLAIMS', async () => {
+            await click(page.locator('[data-rtab=claims]'));
+            await click(page.locator('#r-open-timeline'));
+            await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
+            await page.locator('#research-claims-timeline').scrollIntoViewIfNeeded();
+          }, '#research-claims-timeline', '#research-claims-timeline .research-timeline-strip-row', sceneEnd);
+        });
+
+        // Scene 6 (40-48s): Back to Prose & Browser Sandbox CTA
+        await runScene(5, 'return', async sceneEnd => {
+          await cut('06 · BACK TO PROSE', async () => {
+            await page.emulateMedia({colorScheme: 'light'});
+            await click(page.locator('#tab-view-analysis'));
+            if (await page.locator('#workbench-overview-back').isVisible()) await page.locator('#workbench-overview-back').click();
+            if (await page.locator('#reader-inspector-close').isVisible()) await page.locator('#reader-inspector-close').click();
+            await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+          }, '#chapters .ptext p', null, sceneEnd - 4400);
+          await cut('06 · TRY IN BROWSER · 100% OFFLINE', async () => {
+            await gotoTourPage('sandbox-index.html', 'light');
+            await click(page.locator('#lang-toggle'));
+            await click(page.locator('#preset-en'));
+            await click(page.locator('#direct-speech-btn'));
+          }, 'main', '#direct-speech-btn', sceneEnd);
+        });
+
+        fs.writeFileSync(
+          capture.videoTarget.replace('.webm', '.json'),
+          JSON.stringify({scenes, cuts, duration: 48, trim: (started - recordingStarted) / 1000}),
+        );
       } else if (flow === 'editorial-loop') {
         await page.waitForTimeout(1000);
         await say('Listen to the pulse: Spot where narrative cadence shifts');

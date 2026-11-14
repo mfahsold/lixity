@@ -1252,6 +1252,14 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
         (
+            "Indirect speech",
+            (
+                f"{report.indirect_speech} ({report.indirect_speech_per_1000:.1f}/1k)"
+                if report.indirect_speech_available
+                else "–"
+            ),
+        ),
+        (
             "Voice separation",
             (
                 f"{report.voice_separation.separation_label} "
@@ -1395,6 +1403,16 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
             (
                 f"{report.sticky_sentences} ({report.sticky_sentence_pct:.1f} %, mean glue {report.mean_glue_pct:.1f} %)"
                 if report.sticky_available
+                else "–"
+            ),
+        ),
+        (
+            "Rhythm profile",
+            (
+                f"CV {report.rhythm_profile['asl_cv']:.2f}, "
+                f"IQR {report.rhythm_profile['asl_iqr']:.1f}, "
+                f"H {report.rhythm_profile['length_entropy']:.2f}"
+                if report.rhythm_profile.get("available")
                 else "–"
             ),
         ),
