@@ -247,14 +247,14 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Goal | Happy path | Other ways that work |
 | --- | --- | --- |
 | Chapter comparison | Review route `Kapitel erkunden` | `Analysis overview` → `Kapitelmatrix`, right-hand outline nav, heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
-| Sentence rhythm & dialogue | Review route `Satzrhythmus öffnen` or `Analysis On` → `Measure` | Command palette `Highlight Sentence Length & Rhythm` / `Highlight Dialogue & Direct Speech`, KPI tile drill-down, outlier stepper `◀` / `▶` |
+| Sentence rhythm & dialogue | Review route `Satzrhythmus öffnen`, `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
 | Tense review | `Analysis On` with `Measure: None` or review badge on paragraph | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
 | Style-space & scenes | Review route `3D-Stilraum öffnen` | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Dimensionen`), 3D canvas point click |
 | Passage values & evidence | Paragraph `…` button → `Explore passage` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
-| Writing (unreleased) | `Write`, then `Close writing` in reader toolbar | Single-row editor bar with docked companion and exit actions (`Undo` `Ctrl+Z`, `Redo` `Ctrl+Y`, `Find / replace` `Ctrl+F`, `Read and refresh`, `Compare versions`, recovery drafts); distraction-free auto-hide on reading/writing inactivity; selecting text in `Read and refresh` and clicking `Back to writing` jumps the editor cursor to that exact passage. |
+| Writing | `Write`, then `Read and refresh` / `Close writing` in reader toolbar | Single-row editor bar with live session pulse, docked companion and exit actions (`Undo` `Ctrl+Z`, `Redo` `Ctrl+Y`, `Find / replace` `Ctrl+F`, `Compare versions`, recovery drafts); selecting text in `Read and refresh` and clicking `Back to writing` jumps the editor cursor to that exact passage. |
 
 If a control opens a side panel, it stays beside your text. If it clicks a view tab,
 the whole workspace switches. If it opens a dialog, close it explicitly with `Escape`.

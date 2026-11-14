@@ -2,7 +2,9 @@
 
 The [first-session walkthrough](https://mfahsold.github.io/lixity/ONBOARDING.md)
 is the maintained guide. For a first look without installing anything, open the
-[read-only demo](https://mfahsold.github.io/lixity/demo/report.html).
+[read-only demo](https://mfahsold.github.io/lixity/demo/report.html) or test
+your own paragraph offline in the [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)
+(with classic presets for *Effi Briest* and *Pride & Prejudice*).
 
 ## 1. Installation
 
@@ -31,9 +33,12 @@ custom chapter pattern. The file importer in 0.8.0 also accepts one `.txt` or
 
 ## 4. The Three Main Workspaces
 
-Start in **Manuscript** and read a paragraph. Turn **Analysis** on when you want
-measurements; choose **… → Explore passage** for context. **Research** holds
-sources, claims and dossiers. **Project** holds project setup and settings.
+Start in **Manuscript** and read a paragraph. Press `D` for **Direct Speech Mode**
+to dim narration and hear your dialogue, or click **Write** to edit in place
+with live session deltas and revision comparison. Turn **Analysis** on to inspect
+layers (sentence length, sticky sentences, dialogue-tag density, word echoes,
+indirect speech); choose **… → Explore passage** for context. **Research**
+holds sources, claims and dossiers. **Project** holds project setup and settings.
 Opening a view does not save a decision or rewrite prose.
 
 Continue with the [workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)

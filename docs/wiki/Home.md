@@ -9,10 +9,10 @@ This wiki is a short guide to the maintained manuals. Start with the
 
 | Task | Start here |
 | --- | --- |
-| Install and review a first passage | [Quickstart](Quickstart.md) · [German product introduction](https://mfahsold.github.io/lixity/index-de.html) |
-| Use the browser workspace | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) |
+| Install and review a first passage | [Quickstart](Quickstart.md) · [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html) · [German introduction](https://mfahsold.github.io/lixity/index-de.html) |
+| Write, compare revisions and read | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) |
 | Run commands and configure a project | [CLI reference](https://mfahsold.github.io/lixity/USAGE.md) |
-| Explore a linguistic question | [Text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis) · [Methods](https://mfahsold.github.io/lixity/METHODS.md) |
+| Explore rhythm, dialogue and cohesion | [Text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis) · [Methods](https://mfahsold.github.io/lixity/METHODS.md) |
 | Interpret a measurement | [Editorial metrics](Editorial-Metrics.md) · [Lektorats-Metriken](Lektorats-Metriken-DE.md) |
 | Retain evidence and write dossiers | [Research and dossiers](Research-and-Dossiers.md) |
 | Navigate without a mouse | [Keyboard and navigation](Keyboard-Shortcuts-and-Navigation.md) |

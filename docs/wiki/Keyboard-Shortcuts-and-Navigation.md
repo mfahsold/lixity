@@ -9,11 +9,13 @@ owns the complete reading and navigation instructions.
 
 | Focus is on… | Key | Action |
 | --- | --- | --- |
+| Manuscript reader | `D` | Toggle **Direct Speech Mode** (dim narration, isolate spoken lines) |
 | A manuscript paragraph or its menu button | `Shift+F10` or the context-menu key | Open the passage menu |
 | An open passage menu | Arrow keys; `Home` / `End` | Move between actions |
 | The manuscript search field | `Enter` / `Shift+Enter` | Next / previous match |
 | The manuscript search field | `Escape` | Clear the query |
 | The companion divider | Left / right arrows; `Home` / `End` | Adjust the reading split |
+| Built-in editor | `Ctrl+Z` / `Ctrl+Y`, `Ctrl+F` | Undo / redo and in-editor search |
 
 `Escape` closes the active dismissible surface; its effect depends on focus and
 open dialogs. These are contextual controls, not global remappings of browser

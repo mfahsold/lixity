@@ -151,6 +151,7 @@ or equivalent validation across languages. See [Stability](STABILITY.md) and
 | Question | Command | Key numbers |
 | :--- | :--- | :--- |
 | How does the manuscript read overall? | [`lixity analyze`](#lixity-analyze) | ASL, CV, TTR, HD-D, MTLD, Flesch, LIX, dialogue, registers |
+| How did the manuscript change across snapshots? | `lixity diff` | word/sentence deltas, rhythm, sticky %, indirect speech, chapter changes |
 | Where do heuristic tense markers change or mix? | [`lixity profile`](#lixity-profile) | per paragraph: dominant tense, mix, switch, severity 0–3 |
 | How does each chapter differ from this manuscript's reference? | [`lixity style`](#lixity-style) | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | [`lixity dialogue`](#lixity-dialogue) | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |

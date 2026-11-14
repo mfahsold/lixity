@@ -44,9 +44,11 @@ async function main() {
         body: fs.readFileSync(matchedSource)});
     });
     await target.addInitScript(({fixture}) => {
+      const origFetch = window.fetch.bind(window);
       window.captureRequests = [];
       window.fetch = (input, options) => {
         const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('/api/manuscript')) return origFetch(input, options);
         const method = (options && options.method) || 'GET';
         window.captureRequests.push({url, method});
         if (!Object.prototype.hasOwnProperty.call(fixture, url)) {
@@ -548,10 +550,97 @@ async function main() {
           await locator.scrollIntoViewIfNeeded();
           const box = await locator.boundingBox();
           assert.ok(box, 'A directed action must target a visible control');
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 8});
-          await page.waitForTimeout(80);
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 4});
+          await page.waitForTimeout(40);
           await locator.click();
         };
+        let manuscriptDraft = '# 1. The Eastern Gate\n\nIt was in the back of the quiet harbour where the watchman waited. "Did you hear the bell?" she asked.\n\nHe shook his head. The fog lay thick over the pilings.\n';
+        const baselineDraft = '# 1. The Eastern Gate\n\nIt was in the back of the quiet harbour where the watchman waited.\n\nHe shook his head. The fog lay thick over the pilings.\n';
+        await page.route('**/api/manuscript**', async route => {
+          const req = route.request();
+          const url = req.url();
+          if (req.method() === 'GET' && url.includes('/editor-bootstrap.js')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/javascript; charset=utf-8',
+              body: fs.readFileSync(path.join(__dirname, '..', 'src/lixity/ui/assets/manuscript-editor.js'), 'utf8'),
+            });
+            return;
+          }
+          if (req.method() === 'GET' && url.includes('/editor-bundle.js')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/javascript; charset=utf-8',
+              body: fs.readFileSync(path.join(__dirname, '..', 'src/lixity/ui/assets/vendor/codemirror-editor.js'), 'utf8'),
+            });
+            return;
+          }
+          if (req.method() === 'GET' && url.includes('/manuscript-delta')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                ok: true, available: true, has_previous: true, baseline_label: 'Baseline · Chapter 1',
+                deltas: {words: 3, asl: -0.4, sticky_pct: 0.0, indirect_speech_per_1000: 0.0, asl_cv: 0.02},
+              }),
+            });
+            return;
+          }
+          if (req.method() === 'GET' && url.includes('/manuscript-timeline')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                ok: true,
+                points: [
+                  {label: 'Rev 1', words: 32, asl: 8.0, asl_cv: 0.42},
+                  {label: 'Now', words: 35, asl: 7.6, asl_cv: 0.44},
+                ],
+              }),
+            });
+            return;
+          }
+          if (req.method() === 'GET' && url.includes('/manuscript-edit') && url.includes('recovery=')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                ok: true, document: 'harbour-manuscript.md',
+                id: 'snap-1', kind: 'snapshot', created: 1794682800, text: baselineDraft,
+              }),
+            });
+            return;
+          }
+          if (req.method() === 'GET' && url.includes('/api/manuscript')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                ok: true,
+                document: 'harbour-manuscript.md',
+                text: manuscriptDraft,
+                revision: 'rev-1',
+                sha256: 'tour-sha256',
+                recovery: [{
+                  id: 'snap-1', kind: 'snapshot', label: 'Baseline · Chapter 1',
+                  created: 1794682800, text: baselineDraft,
+                  metrics: {words: 26, asl: 8.7, asl_cv: 0.40, length_entropy: 1.12, sticky_pct: 3.8, indirect_speech_per_1000: 0.0, dialogue_ratio: 0.0, mattr: 0.82, flags_count: 1},
+                }],
+              }),
+            });
+            return;
+          }
+          if (req.method() === 'POST' && url.includes('/api/manuscript')) {
+            try { const body = JSON.parse(req.postData() || '{}'); if (typeof body.text === 'string') manuscriptDraft = body.text; } catch {}
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ok: true, saved: true, revision: 'rev-2', sha256: 'tour-sha256-2'}),
+            });
+            return;
+          }
+          await route.fallback();
+        });
         const gotoTourPage = async (filename, colorScheme = 'light') => {
           await page.emulateMedia({colorScheme});
           await page.goto(CAPTURE_ORIGIN + '/' + filename);
@@ -609,61 +698,95 @@ async function main() {
           });
         };
         const runScene = async (index, name, body) => {
-          const targetStart = index * 8000;
+          const targetStart = index * 7000;
           const remainingPre = targetStart - (Date.now() - started);
           if (remainingPre > 0) await page.waitForTimeout(remainingPre);
           const sceneStart = (Date.now() - started) / 1000;
-          await body((index + 1) * 8000);
+          await body((index + 1) * 7000);
           scenes.push({name, start: Number(sceneStart.toFixed(3)), x: 0.5, y: 0.5, zoom: 1.0});
         };
 
-        // Scene 1 (0-8s): Classic-novel evidence — Effi Briest sticky sentences + Pride & Prejudice voice contrast
+        // Scene 1 (0-7s): Classic-novel hook — Effi Briest sticky sentences + Pride & Prejudice voice contrast + Sandbox
         await runScene(0, 'read', async sceneEnd => {
-          await cut('01 · EFFI BRIEST · STICKY SENTENCES', async () => {
+          await cut('01 · EFFI BRIEST · 33.5% STICKY', async () => {
             await gotoTourPage('tour-effi-briest.html', 'light');
             await click(page.locator('#manuscript-analysis-toggle'));
             await selectMetric(page, 'sticky');
             await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
-          }, '#chapters .ptext', '#style-layer', sceneEnd - 4000);
-          await cut('01 · PRIDE & PREJUDICE · VOICE CONTRAST', async () => {
+          }, '#chapters .ptext', '#style-layer', sceneEnd - 4600);
+          await cut('01 · PRIDE & PREJUDICE · -9.7W VOICE', async () => {
             await gotoTourPage('tour-pride-prejudice.html', 'light');
             await click(page.locator('#workbench-overview-open'));
             await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
             await page.locator('#dialogue').scrollIntoViewIfNeeded();
-          }, '#dialogue', '#dialogue h2', sceneEnd);
+          }, '#dialogue', '#dialogue h2', sceneEnd - 2200);
+          await cut('01 · BROWSER SANDBOX · 1-CLICK', async () => {
+            await gotoTourPage('sandbox-index.html?preset=effi-briest', 'light');
+            await page.locator('#k-sticky').scrollIntoViewIfNeeded();
+          }, 'main', '#preset-de', sceneEnd);
         });
 
-        // Scene 2 (8-16s): Direct Speech Mode (D) + Passage Evidence Inspector
+        // Scene 2 (7-14s): Direct Speech Mode (D) + Evidence Card + Manuscript Search
         await runScene(1, 'passage', async sceneEnd => {
           await cut('02 · DIRECT SPEECH MODE [D]', async () => {
-            await click(page.locator('#workbench-overview-back'));
+            await gotoTourPage('tour-pride-prejudice.html', 'light');
             await click(page.locator('#reader-direct-speech'));
             await page.locator('#chapters .ptext.direct-speech-only, #chapters .ptext.direct-speech-mixed, #chapters .ptext').first().scrollIntoViewIfNeeded();
-          }, '#chapters .ptext', '#reader-direct-speech', sceneEnd - 4200);
-          await cut('02 · PASSAGE EVIDENCE', async () => {
+          }, '#chapters .ptext', '#reader-direct-speech', sceneEnd - 4600);
+          await cut('02 · PASSAGE EVIDENCE POPOVER', async () => {
             const p = page.locator('#chapters .ptext').nth(1);
             await click(p.locator('[data-reader-paragraph]'));
             await click(page.locator('[data-reader-action=values]'));
             await page.locator('#reader-inspector').waitFor({state: 'visible'});
             await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
-          }, '#reader-inspector details', '#reader-inspector details summary', sceneEnd);
+          }, '#reader-inspector details', '#reader-inspector details summary', sceneEnd - 2200);
+          await cut('02 · INSTANT PASSAGE SEARCH', async () => {
+            await gotoTourPage('dashboard-research-workspace.html', 'light');
+            await click(page.locator('#tab-view-analysis'));
+            await page.locator('#text-search').fill('crate');
+            await page.locator('#text-search').press('Enter');
+          }, '#chapters .ptext', '#text-search', sceneEnd);
         });
 
-        // Scene 3 (16-24s): Unified MESSGRÖSSE inline evidence + Chapter Matrix
+        // Scene 3 (14-21s): Manuscript Editor (#manuscript-write) + Live Session Pulse + Revision Diff
         await runScene(2, 'compare', async sceneEnd => {
-          await cut('03 · MESSGRÖSSE · STICKY / TAG / ECHO / INDIRECT', async () => {
+          await cut('03 · MANUSCRIPT EDITOR · LIVE', async () => {
+            if (await page.locator('#text-search-clear').isVisible()) await click(page.locator('#text-search-clear'));
+            await page.evaluate(() => {
+              if (!document.getElementById('manuscript-write')) {
+                const s = document.createElement('script');
+                const existing = document.querySelector('script[nonce]');
+                if (existing) s.nonce = existing.nonce || existing.getAttribute('nonce') || '';
+                s.src = '/api/manuscript/editor-bootstrap.js';
+                document.body.appendChild(s);
+              }
+            });
+            await page.locator('#manuscript-write').waitFor({state: 'visible'});
+            await click(page.locator('#manuscript-write'));
+            await page.locator('.cm-content').waitFor({state: 'visible'});
+            await page.locator('.cm-content').click();
+            await page.keyboard.press('Control+End');
+            await page.keyboard.type(' Lanterns lit.', {delay: 10});
+          }, '.manuscript-editor-toolbar', '#manuscript-session-pulse', sceneEnd - 4400);
+          await cut('03 · REVISION DIFF · DELTAS', async () => {
+            await click(page.locator('#manuscript-compare'));
+            await page.locator('#manuscript-comparison').waitFor({state: 'visible'});
+          }, '#manuscript-comparison .modal-card', '#manuscript-comparison h2', sceneEnd - 2400);
+          await cut('03 · MESSGRÖSSE · ALL LAYERS', async () => {
             await gotoTourPage('tour-effi-briest.html', 'light');
             await click(page.locator('#manuscript-analysis-toggle'));
-            for (const layer of ['sticky', 'dialogue_tag', 'echo']) {
-              await selectMetric(page, layer);
-              await page.waitForTimeout(650);
+            for (const layer of ['sticky', 'echo', 'indirect_speech']) {
+              if (await page.locator('#style-layer option[value="' + layer + '"]').count()) {
+                await selectMetric(page, layer);
+                await page.waitForTimeout(180);
+              }
             }
-            if (await page.locator('#style-layer option[value="indirect_speech"]').count()) {
-              await selectMetric(page, 'indirect_speech');
-              await page.waitForTimeout(650);
-            }
-          }, '#chapters .ptext', '#style-layer', sceneEnd - 3600);
-          await cut('03 · CHAPTER MATRIX · z* & FDR', async () => {
+          }, '#chapters .ptext', '#style-layer', sceneEnd);
+        });
+
+        // Scene 4 (21-28s): Chapter Matrix (z* & FDR) + Character Voices & Interactions + Scene Hooks & Rhythm
+        await runScene(3, 'research', async sceneEnd => {
+          await cut('04 · CHAPTER MATRIX · z* & FDR', async () => {
             await gotoTourPage('dashboard-research-workspace.html', 'light');
             await click(page.locator('#tab-view-analysis'));
             await click(page.locator('#workbench-overview-open'));
@@ -671,21 +794,17 @@ async function main() {
             await click(page.locator('#style-tab-heatmap'));
             await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
               node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
-          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd);
-        });
-
-        // Scene 4 (24-32s): Scene Hooks & Anti-Flattening Rhythm
-        await runScene(3, 'research', async sceneEnd => {
-          await cut('04 · SCENE HOOKS & DYNAMICS', async () => {
+          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd - 4600);
+          await cut('04 · SCENES · COHESION DROPS', async () => {
             await page.locator('#scenes').scrollIntoViewIfNeeded();
-          }, '#scenes', '#scenes h2', sceneEnd - 4000);
+          }, '#scenes', '#scenes h2', sceneEnd - 2300);
           await cut('04 · ANTI-FLATTENING RHYTHM', async () => {
             await page.emulateMedia({colorScheme: 'dark'});
             await page.locator('#pacing').scrollIntoViewIfNeeded();
           }, '#pacing', '#pacing h2', sceneEnd);
         });
 
-        // Scene 5 (32-40s): Research Beside the Text (Dossiers & Source-Verified Claims)
+        // Scene 5 (28-35s): Research Dossiers & Source-Verified Claims Timeline
         await runScene(4, 'context', async sceneEnd => {
           await cut('05 · RESEARCH DOSSIERS', async () => {
             await click(page.locator('#tab-view-research'));
@@ -694,7 +813,7 @@ async function main() {
             await click(dossier.locator('[data-research-detail=dossier]'));
             await dossier.locator('.research-details-body').waitFor({state: 'visible'});
             await dossier.locator('.dossier-image').first().scrollIntoViewIfNeeded();
-          }, '.research-details-body .dossier-image', '#research-dossiers-list .research-card [data-research-detail=dossier]', sceneEnd - 3600);
+          }, '.research-details-body .dossier-image', '#research-dossiers-list .research-card [data-research-detail=dossier]', sceneEnd - 3500);
           await cut('05 · SOURCE-VERIFIED CLAIMS', async () => {
             await click(page.locator('[data-rtab=claims]'));
             await click(page.locator('#r-open-timeline'));
@@ -703,26 +822,43 @@ async function main() {
           }, '#research-claims-timeline', '#research-claims-timeline .research-timeline-strip-row', sceneEnd);
         });
 
-        // Scene 6 (40-48s): Back to Prose & Browser Sandbox CTA
+        // Scene 6 (35-42s): Standalone Export & Browser Sandbox CTA
         await runScene(5, 'return', async sceneEnd => {
-          await cut('06 · BACK TO PROSE', async () => {
+          await cut('06 · STANDALONE EXPORT', async () => {
             await page.emulateMedia({colorScheme: 'light'});
             await click(page.locator('#tab-view-analysis'));
             if (await page.locator('#workbench-overview-back').isVisible()) await page.locator('#workbench-overview-back').click();
-            if (await page.locator('#reader-inspector-close').isVisible()) await page.locator('#reader-inspector-close').click();
-            await page.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
-          }, '#chapters .ptext p', null, sceneEnd - 4400);
+            await click(page.locator('#project-actions > summary'));
+            await page.locator('#btn-site-export').evaluate(b => { b.disabled = false; });
+            await click(page.locator('#btn-site-export'));
+            if (!await page.locator('#modal-site-export').isVisible()) {
+              await page.evaluate(() => document.getElementById('modal-site-export')?.showModal());
+            }
+            await page.locator('#modal-site-export').waitFor({state: 'visible'});
+          }, '#modal-site-export .modal-card', '#modal-site-export h3', sceneEnd - 3500);
           await cut('06 · TRY IN BROWSER · 100% OFFLINE', async () => {
-            await gotoTourPage('sandbox-index.html', 'light');
-            await click(page.locator('#lang-toggle'));
-            await click(page.locator('#preset-en'));
+            await gotoTourPage('sandbox-index.html?preset=pride-prejudice', 'light');
             await click(page.locator('#direct-speech-btn'));
           }, 'main', '#direct-speech-btn', sceneEnd);
         });
 
         fs.writeFileSync(
           capture.videoTarget.replace('.webm', '.json'),
-          JSON.stringify({scenes, cuts, duration: 48, trim: (started - recordingStarted) / 1000}),
+          JSON.stringify({
+            scenes,
+            cuts,
+            duration: 42,
+            trim: (started - recordingStarted) / 1000,
+            socialHooks: [
+              {start: cuts[0].start, end: cuts[0].end, text: '33.5% Sticky Sentences in Effi Briest', x: cuts[0].x, zoom: cuts[0].zoom},
+              {start: cuts[1].start, end: cuts[1].end, text: 'Voice Contrast: -9.7 Words in Dialogue', x: cuts[1].x, zoom: cuts[1].zoom},
+              {start: cuts[3].start, end: cuts[3].end, text: 'Dialogue-Only Mode [D]', x: cuts[3].x, zoom: cuts[3].zoom},
+              {start: cuts[6].start, end: cuts[6].end, text: 'Live Manuscript Editor + Session Pulse', x: cuts[6].x, zoom: cuts[6].zoom},
+              {start: cuts[7].start, end: cuts[7].end, text: 'Revision Diff: Track Every Rewrite', x: cuts[7].x, zoom: cuts[7].zoom},
+              {start: cuts[11].start, end: cuts[11].end, text: 'Anti-Flattening Rhythm Entropy', x: cuts[11].x, zoom: cuts[11].zoom},
+              {start: cuts[15].start, end: cuts[15].end, text: 'Try Free in Browser - 100% Offline', x: cuts[15].x, zoom: cuts[15].zoom},
+            ],
+          }),
         );
       } else if (flow === 'editorial-loop') {
         await page.waitForTimeout(1000);

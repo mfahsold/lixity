@@ -28,6 +28,10 @@ $alternates
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="$image_width"/>
 <meta property="og:image:height" content="$image_height"/>
+<meta property="og:video" content="https://mfahsold.github.io/lixity/videos/product-tour.mp4"/>
+<meta property="og:video:type" content="video/mp4"/>
+<meta property="og:video:width" content="1440"/>
+<meta property="og:video:height" content="900"/>
 <meta property="og:image:alt" content="$preview"/>
 <meta name="twitter:image:alt" content="$preview"/>
 <meta name="twitter:card" content="summary_large_image"/>
@@ -62,7 +66,7 @@ $alternates
 <div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
 <p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html">$demo</a></p>
 <details id="tour-transcript"><summary>$tour_transcript</summary><ol>
-<li data-start="0">$tour_read</li><li data-start="8">$tour_passage</li><li data-start="16">$tour_compare</li><li data-start="24">$tour_research</li><li data-start="32">$tour_context</li><li data-start="40">$tour_return</li>
+<li data-start="0">$tour_read</li><li data-start="7">$tour_passage</li><li data-start="14">$tour_compare</li><li data-start="21">$tour_research</li><li data-start="28">$tour_context</li><li data-start="35">$tour_return</li>
 </ol></details>
 </figcaption>
 </figure>
@@ -74,6 +78,7 @@ $alternates
 <article id="reading-copies"><h3>$share_title</h3><p>$share_text</p><a href="demo/reader/index.html" lang="en">Reading copy (English)</a></article>
 </div></section>
 <section class="home-principle" id="measurement-context"><span class="principle-mark" aria-hidden="true">“</span><div><h2>$principle</h2><p>$principle_text</p></div></section>
+<section class="home-section home-compare" id="compare"><h2>$compare_title</h2><p class="compare-lead">$compare_lead</p><div class="compare-table-wrap"><table class="compare-table"><thead><tr><th scope="col">$compare_col_aspect</th><th scope="col" class="compare-lixity">$compare_col_lixity</th><th scope="col">$compare_col_cloud</th><th scope="col">$compare_col_planners</th></tr></thead><tbody><tr><th scope="row">$compare_row_privacy</th><td class="compare-lixity">$compare_lix_privacy</td><td>$compare_cld_privacy</td><td>$compare_pln_privacy</td></tr><tr><th scope="row">$compare_row_method</th><td class="compare-lixity">$compare_lix_method</td><td>$compare_cld_method</td><td>$compare_pln_method</td></tr><tr><th scope="row">$compare_row_research</th><td class="compare-lixity">$compare_lix_research</td><td>$compare_cld_research</td><td>$compare_pln_research</td></tr><tr><th scope="row">$compare_row_license</th><td class="compare-lixity">$compare_lix_license</td><td>$compare_cld_license</td><td>$compare_pln_license</td></tr></tbody></table></div></section>
 <section class="home-section home-start" id="installation"><div><h2>$start_title</h2><p>$start_text</p><a class="ctl primary" href="guides/installation.html">$install_link</a></div><div class="install-command"><pre><code>uv tool install --python 3.12 --managed-python lixity</code></pre><p>$scope</p><a href="https://github.com/mfahsold/lixity/releases/latest" lang="en">Published releases</a> · <a href="releases/v$version.md" id="current-release" lang="en">v$version release notes</a></div></section>
 <section class="home-section" id="languages"><h2>$languages_title</h2><p>$languages_text</p><nav class="language-list" aria-label="$language">$language_links</nav><p class="section-note">$limits</p></section>
 <section class="home-section home-resources" id="guides"><div><h2>$docs</h2><p lang="en">Technical guides, methods and automation contracts are maintained in English.</p><nav class="resource-links" lang="en" aria-label="English documentation"><a href="guides/first-look.html">First session</a><a href="guides/first-look-de.html" lang="de" hreflang="de">Einstieg auf Deutsch</a><a href="guides/interpretation.html">Understand the measurements</a><a href="guides/research-pdf.html">Sources and reading copies</a><a href="AUDIO.md">Audio and teleprompter</a><a href="README.md">All documentation</a><a href="blog/index.html">Articles</a><a href="AGENTS.md" id="cli-api">CLI and API</a><a href="METHODS.md" id="methods">Methods and limits</a></nav></div><div id="feedback"><h2>$feedback_title</h2><p>$feedback_text</p><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20feedback">$feedback_link</a></div></section>

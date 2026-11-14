@@ -47,7 +47,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await expect(button).toHaveText('Rundgang pausieren');
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
-      await video.evaluate(v => { v.currentTime = 26; });
+      await video.evaluate(v => { v.currentTime = 22; });
       await expect(page.locator('.tour-caption')).toHaveText('Szenen-Hooks, implizite Wechsel & Anti-Glättungs-Rhythmus (CV, IQR, Entropie).');
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
@@ -69,7 +69,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
-      await video.evaluate(v => { v.currentTime = 8.35; });
+      await video.evaluate(v => { v.currentTime = 7.35; });
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
         nodes.filter(node => getComputedStyle(node).visibility === 'visible').length)).toBeGreaterThan(0);

@@ -17,9 +17,11 @@ zero or a favorable result.
 | Measure | Use it to ask | It does not establish |
 | --- | --- | --- |
 | Average sentence length | Where does sentence rhythm change? | A universal ideal length, pacing or quality |
+| Sticky sentences | Where do function-word chains slow a sentence? | Whether a complex subordinate clause is deliberate |
+| Dialogue & dialogue tags | How much quoted speech appears, and how heavy are attribution tags? | Who speaks when attribution is omitted |
+| Word echoes & indirect speech | Where do content words repeat nearby, or reported speech dominate? | Whether repetition or indirectness is intentional |
 | Tense cues | Which counted forms explain this flag? | Full grammatical parsing or an accidental tense error |
-| Dialogue | How much recognized quoted speech appears here? | Who speaks when attribution is unavailable |
-| Repetition | Is a nearby recurrence purposeful? | Whether a repeated word should be removed |
+| Cohesion drop & scene breaks | Where does adjacent-sentence lexical overlap drop? | Whether a scene break is missing or stylistic |
 | Lexical diversity | How do comparable samples differ? | Text-length independence or vocabulary quality |
 
 FDR adjustments qualify statistical comparisons under their assumptions; they

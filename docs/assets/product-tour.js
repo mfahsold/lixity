@@ -34,7 +34,7 @@
     }
     const elapsed = index < 0 ? 0 : video.currentTime - Number(cues[index].dataset.start);
     const count = motion.matches || video.paused ? letters.length :
-      Math.min(letters.length, Math.max(0, Math.ceil((elapsed - .15) / 1.6 * letters.length)));
+      Math.min(letters.length, Math.max(0, Math.ceil((elapsed - .08) / .55 * letters.length)));
     if (count !== visibleLetters) {
       letters.forEach((letter, position) => { letter.style.visibility = position < count ? 'visible' : 'hidden'; });
       visibleLetters = count;
