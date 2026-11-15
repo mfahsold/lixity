@@ -5,7 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..site import docs_url
-from .components import checkbox_field, esc, help_term, label, loading_state, panel_label
+from .components import (
+    checkbox_field,
+    empty_aware_multiselect,
+    esc,
+    help_term,
+    label,
+    loading_state,
+    panel_label,
+    tag_input_with_suggestions,
+    template_preset_bar,
+)
 
 
 def render_research_panel(
@@ -134,8 +144,17 @@ def render_research_panel(
     parts.append(f'<summary>{L("optional_details")}</summary><div class="row">')
     parts.append(form_field("r-ingest-title", "research_source_title",
                             f'<input class="ctl field-narrow" id="r-ingest-title" placeholder="{L("research_source_title")}"/>'))
-    parts.append(form_field("r-ingest-tags", "research_tags",
-                            f'<input class="ctl field-narrow" id="r-ingest-tags" placeholder="{L("research_tags_example")}"/>'))
+    parts.append(
+        form_field(
+            "r-ingest-tags",
+            "research_tags",
+            tag_input_with_suggestions(
+                "r-ingest-tags",
+                L("research_tags_example"),
+                "r-ingest-tag-suggestions",
+            ),
+        )
+    )
     parts.append("</div>")
     parts.append(f'<label for="r-ingest-origin-url">{L("ctx_origin_url")}</label>')
     parts.append(
@@ -214,6 +233,20 @@ def render_research_panel(
     parts.append(
         f'<summary data-help="{L("help_research_dossier")}">{L("research_dossier_heading")}</summary><div class="ctl-group research-composer-body">'
     )
+    parts.append(
+        template_preset_bar(
+            "r-dos-templates",
+            L("research_dossier_templates"),
+            "r-dos-body",
+            [
+                (L("research_tpl_character"), "figur", "## Rolle & Motivation\n\n## Beziehungen & Konflikte\n\n## Wichtige Szenen\n"),
+                (L("research_tpl_place"), "ort", "## Ort & Atmosphäre\n\n## Historischer / realer Hintergrund\n\n## Relevante Szenen\n"),
+                (L("research_tpl_scene"), "szene", "## Ausgangslage & Ziel\n\n## Wendepunkt & Ergebnis\n\n## Offene Prüfpunkte\n"),
+                (L("research_tpl_fact"), "recherche", "## Kernaussage / Fakt\n\n## Quellen & Belege\n\n## Auswirkung auf das Manuskript\n"),
+            ],
+            tag_input_id="r-dos-tags",
+        )
+    )
     parts.append('<div class="row mb-2">')
     parts.append(
         form_field(
@@ -229,14 +262,23 @@ def render_research_panel(
         form_field(
             "r-dos-tags",
             "research_tags",
-            f'<input class="ctl" id="r-dos-tags" placeholder="{L("research_tags")}"/>',
+            tag_input_with_suggestions(
+                "r-dos-tags",
+                L("research_tags"),
+                "r-dos-tag-suggestions",
+            ),
         )
     )
     parts.append(
         form_field(
             "r-dos-eids",
             "research_passages",
-            f'<select class="ctl" id="r-dos-eids" multiple size="3" data-help="{L("help_research_passage")}"></select>',
+            empty_aware_multiselect(
+                "r-dos-eids",
+                "r-dos-eids-empty",
+                L("research_passages_empty_hint"),
+                help_text=L("help_research_passage"),
+            ),
         )
     )
     parts.append("</div></details>")
@@ -321,7 +363,11 @@ def render_research_panel(
         form_field(
             "r-dos-col-dossiers",
             "research_dossier_collection_order",
-            '<input class="ctl" id="r-dos-col-dossiers" placeholder="urn:uuid:..."/>',
+            tag_input_with_suggestions(
+                "r-dos-col-dossiers",
+                "urn:uuid:...",
+                "r-dos-col-dossier-suggestions",
+            ),
         )
     )
     parts.append("</div>")
@@ -397,7 +443,11 @@ def render_research_panel(
         form_field(
             "r-claim-tags",
             "research_tags",
-            f'<input class="ctl" id="r-claim-tags" placeholder="{L("research_tags")}"/>',
+            tag_input_with_suggestions(
+                "r-claim-tags",
+                L("research_tags"),
+                "r-claim-tag-suggestions",
+            ),
         )
     )
     parts.append(
@@ -534,6 +584,18 @@ def render_research_panel(
     parts.append('<details class="research-composer" id="r-decision-composer" data-requires-write>')
     parts.append(
         f'<summary data-help="{L("help_research_decision")}">{L("research_decision_heading")}</summary><div class="ctl-group research-composer-body">'
+    )
+    parts.append(
+        template_preset_bar(
+            "r-decision-templates",
+            L("research_dossier_templates"),
+            "r-decision-rationale",
+            [
+                (L("research_tpl_character"), "", "## Begründung (Figur)\n\n## Auswirkung auf Kapitel / Szenen\n"),
+                (L("research_tpl_scene"), "", "## Begründung (Handlung / Timing)\n\n## Betroffene Textstellen\n"),
+                (L("research_tpl_fact"), "", "## Begründung (Recherche / Fakt)\n\n## Quellenbezug\n"),
+            ],
+        )
     )
     parts.append('    <div class="row mb-2">')
     parts.append(

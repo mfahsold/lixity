@@ -479,3 +479,69 @@ def loading_state(text: str, element_id: str | None = None, role: str = "status"
         f'<span class="loading-text">{esc(text)}</span>'
         f"</div>"
     )
+
+
+def template_preset_bar(
+    bar_id: str,
+    label_text: str,
+    target_textarea_id: str,
+    presets: Sequence[tuple[str, str, str]],
+    *,
+    tag_input_id: str | None = None,
+) -> str:
+    """Render a reusable preset-button bar that populates a textarea and optional tag input.
+
+    Each entry in ``presets`` is ``(button_label, tag_value, markdown_body)``.
+    """
+    tag_attr = (
+        f' data-template-tag-target="{esc(tag_input_id, quote=True)}"'
+        if tag_input_id
+        else ""
+    )
+    buttons = "".join(
+        f'<button type="button" class="ctl ctl-sm" '
+        f'data-template-target="{esc(target_textarea_id, quote=True)}"'
+        f'{tag_attr} '
+        f'data-template-tag="{esc(tag_val, quote=True)}" '
+        f'data-template-body="{esc(body_text, quote=True)}">'
+        f"{esc(btn_label)}</button>"
+        for btn_label, tag_val, body_text in presets
+    )
+    return (
+        f'<div class="row mb-2 chip-row template-preset-bar" id="{esc(bar_id, quote=True)}">'
+        f'<span class="ctl-note">{esc(label_text)}:</span>{buttons}</div>'
+    )
+
+
+def tag_input_with_suggestions(
+    input_id: str,
+    placeholder: str,
+    suggestions_id: str,
+    *,
+    extra_input_attrs: str = "",
+) -> str:
+    """Render a comma-separated input paired with a clickable suggestion chip container."""
+    attrs = f" {extra_input_attrs.strip()}" if extra_input_attrs.strip() else ""
+    return (
+        f'<input class="ctl" id="{esc(input_id, quote=True)}" '
+        f'placeholder="{esc(placeholder, quote=True)}" data-tag-input="true"{attrs}/>'
+        f'<div class="chip-row mt-1 tag-suggestions" id="{esc(suggestions_id, quote=True)}" '
+        f'data-tag-suggestions-for="{esc(input_id, quote=True)}" hidden></div>'
+    )
+
+
+def empty_aware_multiselect(
+    select_id: str,
+    empty_hint_id: str,
+    empty_hint_text: str,
+    *,
+    help_text: str = "",
+    size: int = 3,
+) -> str:
+    """Render a multi-select paired with a declarative empty-state note."""
+    help_attr = f' data-help="{esc(help_text, quote=True)}"' if help_text else ""
+    return (
+        f'<select class="ctl" id="{esc(select_id, quote=True)}" multiple size="{int(size)}" '
+        f'data-empty-hint="{esc(empty_hint_id, quote=True)}"{help_attr}></select>'
+        f'<p class="ctl-note" id="{esc(empty_hint_id, quote=True)}" hidden>{esc(empty_hint_text)}</p>'
+    )

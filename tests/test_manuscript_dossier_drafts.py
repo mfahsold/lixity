@@ -140,3 +140,18 @@ def test_research_panel_has_direct_timeline_tab_and_draft_controls() -> None:
     assert 'id="rtab-timeline"' in html
     assert 'id="r-manuscript-dossier-btn"' in html
     assert 'id="r-manuscript-drafts"' in html
+
+
+def test_extract_drafts_accepts_full_project_config() -> None:
+    result = extract_manuscript_dossier_drafts(
+        SAMPLE_MANUSCRIPT,
+        language="de",
+        settings={
+            "language": "de",
+            "characters": {"Matteo": {"aliases": ["Teo"], "pov_in_chapters": [1, 3]}},
+            "scene_analysis": {"titles": {"1:1": "Eröffnung"}},
+        },
+        kind="all",
+    )
+    assert any(d["kind"] == "character" for d in result["drafts"])
+    assert any(d["kind"] == "scene" for d in result["drafts"])

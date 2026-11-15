@@ -256,7 +256,17 @@ def extract_manuscript_dossier_drafts(
                 )
 
     if want_scenes:
-        sc_report = scene_report(text, config, settings)
+        scene_settings: Mapping[str, Any] | None = None
+        if isinstance(settings, Mapping):
+            raw_scene = settings.get("scene_analysis")
+            if isinstance(raw_scene, Mapping):
+                scene_settings = raw_scene
+            else:
+                filtered = {
+                    k: v for k, v in settings.items() if k in {"assignments", "groups", "planned", "titles"}
+                }
+                scene_settings = filtered or None
+        sc_report = scene_report(text, config, scene_settings)
         sc_draft = _scenes_draft(report=sc_report, total_chapters=total_chapters, is_de=is_de)
         if sc_draft is not None:
             drafts.append(sc_draft)

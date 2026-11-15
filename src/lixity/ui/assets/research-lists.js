@@ -235,6 +235,19 @@ function renderResearchDossiersView(data) {
   filterResearchList("dossiers");
 }
 
+function topResearchTags(items) {
+  var counts = Object.create(null);
+  (items || []).forEach(function(item) {
+    (item.tags || []).forEach(function(raw) {
+      var tag = String(raw || "").trim();
+      if (tag) counts[tag] = (counts[tag] || 0) + 1;
+    });
+  });
+  return Object.keys(counts).sort(function(a, b) {
+    return counts[b] - counts[a] || a.localeCompare(b);
+  }).slice(0, 12);
+}
+
 async function refreshResearchDossiers(overview, changedId, freshRead) {
   var context = researchReadContext();
   var listHost = document.getElementById("research-dossiers-list");
@@ -261,6 +274,16 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     }).join("");
     if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
   });
+  if (window.LixityComponents) {
+    var dosTags = topResearchTags(dossiers);
+    window.LixityComponents.renderTagSuggestions("r-dos-tag-suggestions", dosTags, uiLabel("research_tag_suggestions"));
+    window.LixityComponents.renderTagSuggestions("r-ingest-tag-suggestions", dosTags, uiLabel("research_tag_suggestions"));
+    window.LixityComponents.renderTagSuggestions(
+      "r-dos-col-dossier-suggestions",
+      dossiers.slice(0, 16).map(function(d) { return { value: d.id, label: d.title }; })
+    );
+    window.LixityComponents.syncEmptySelect("r-dos-eids");
+  }
   renderResearchDossiersView(data);
 }
 
@@ -538,6 +561,9 @@ async function refreshResearchClaims(overview) {
     return;
   }
   var claims = data.claims || [];
+  if (window.LixityComponents) {
+    window.LixityComponents.renderTagSuggestions("r-claim-tag-suggestions", topResearchTags(claims), uiLabel("research_tag_suggestions"));
+  }
   researchClaimsSnapshot = typeof data.snapshot === "string" && data.snapshot || null;
   researchClaimChoices = Object.fromEntries(claims.map(function(claim) {return [claim.id, claim];}));
   refreshResearchClaimProjections();

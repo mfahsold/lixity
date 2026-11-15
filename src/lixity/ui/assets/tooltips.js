@@ -322,7 +322,9 @@
     var below = Math.max(0, visible.bottom - anchorBottom - 8);
     var above = Math.max(0, anchorTop - visible.top - 8);
     if (Math.max(below, above) < 16) { hide(); return; }
-    var useBelow = below >= Math.min(tipH, 160) || below >= above;
+    var useBelow = (el.matches("summary") && el.parentElement && el.parentElement.open && above >= Math.min(tipH, 120))
+      ? false
+      : (below >= Math.min(tipH, 160) || below >= above);
     var available = useBelow ? below : above;
     // Long explanations scroll on their chosen side rather than being clamped
     // across the trigger (which also made touch dismissal unreachable).
@@ -452,6 +454,9 @@
   document.addEventListener("close", function(e) {
     if (activeEl && e.target.contains(activeEl)) hide();
   }, true);
+  document.addEventListener("toggle", function(e) {
+    if (e.target && e.target.tagName === "DETAILS" && activeEl && e.target.contains(activeEl)) hide();
+  }, true);
   document.addEventListener("lixity:viewchange", hide);
   document.addEventListener("lixity:workbench-change", hide);
 
@@ -467,7 +472,13 @@
   }
 
   document.addEventListener("scroll", function(event) {
-    if (event.target !== tip && !tip.contains(event.target)) { cancelPending(); scheduleUpdatePos(); }
+    if (event.target !== tip && !tip.contains(event.target)) {
+      cancelPending();
+      if (activeEl) {
+        if (pointerHelp && !activeEl.matches(":hover") && !tip.matches(":hover")) { hide(); return; }
+        updatePos(activeEl);
+      }
+    }
   }, { passive: true, capture: true });
   window.addEventListener("resize", function() { cancelPending(); scheduleUpdatePos(); }, { passive: true });
   window.addEventListener("blur", hide);

@@ -478,6 +478,7 @@ document.addEventListener("click", async function (event) {
         selectedOption = new Option(researchPassageLabel(researchPassageContexts[passageId]), passageId);
         passageField.add(selectedOption);
       }
+      if (window.LixityComponents) window.LixityComponents.syncEmptySelect(passageField);
       selectedOption.selected = true;
     }
     switchActiveView("research");
@@ -661,7 +662,11 @@ document.addEventListener("click", async function (event) {
     draftsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_loading")) + "</p>";
     try {
       var data = await researchApiGet("research/manuscript-dossier-drafts");
-      var drafts = (data && Array.isArray(data.drafts)) ? data.drafts : [];
+      if (!data || data.ok === false) {
+        draftsHost.innerHTML = '<p class="ctl-note err">' + escapeHtml((data && data.message) || uiLabel("research_status_unavailable")) + "</p>";
+        return;
+      }
+      var drafts = Array.isArray(data.drafts) ? data.drafts : [];
       if (!drafts.length) {
         draftsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_draft_empty")) + "</p>";
       } else {

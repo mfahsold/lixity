@@ -72,7 +72,116 @@
       preact.render(null, host);
       host.__lixityMounted = false;
     },
+    renderTagSuggestions: function (hostOrId, entries, headingLabel) {
+      var host = typeof hostOrId === "string" ? document.getElementById(hostOrId) : hostOrId;
+      if (!host) return;
+      var inputId = host.getAttribute("data-tag-suggestions-for") || "";
+      var normalized = (entries || []).map(function (entry) {
+        if (typeof entry === "string") return { value: entry.trim(), label: entry.trim() };
+        return {
+          value: String((entry && entry.value) || "").trim(),
+          label: String((entry && (entry.label || entry.value)) || "").trim()
+        };
+      }).filter(function (item) { return Boolean(item.value); });
+      var seen = Object.create(null);
+      var unique = [];
+      normalized.forEach(function (item) {
+        if (!seen[item.value]) { seen[item.value] = true; unique.push(item); }
+      });
+      if (!unique.length) {
+        host.hidden = true;
+        host.replaceChildren();
+        return;
+      }
+      var frag = document.createDocumentFragment();
+      if (headingLabel) {
+        var note = document.createElement("span");
+        note.className = "ctl-note";
+        note.textContent = headingLabel;
+        frag.appendChild(note);
+      }
+      unique.forEach(function (item) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ctl ctl-sm";
+        btn.setAttribute("data-tag-pick", item.value);
+        if (inputId) btn.setAttribute("data-tag-target", inputId);
+        btn.setAttribute("aria-pressed", "false");
+        btn.textContent = item.label;
+        frag.appendChild(btn);
+      });
+      host.replaceChildren(frag);
+      host.hidden = false;
+      var targetInput = inputId ? document.getElementById(inputId) : null;
+      if (targetInput) this.syncTagChips(targetInput);
+    },
+    syncTagChips: function (inputEl) {
+      if (!inputEl || !inputEl.id) return;
+      var values = String(inputEl.value || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+      document.querySelectorAll('[data-tag-suggestions-for="' + inputEl.id + '"] [data-tag-pick]').forEach(function (btn) {
+        var active = values.indexOf(btn.getAttribute("data-tag-pick")) !== -1;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", String(active));
+      });
+    },
+    syncEmptySelect: function (selectOrId) {
+      var select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
+      if (!select) return;
+      var hintId = select.getAttribute("data-empty-hint");
+      var hint = hintId ? document.getElementById(hintId) : null;
+      if (!hint) return;
+      var empty = select.options.length === 0;
+      hint.hidden = !empty;
+      select.hidden = empty;
+    },
   };
+
+  (function initLixityFormHelpers() {
+    document.addEventListener("click", function (event) {
+      var tplBtn = event.target.closest("[data-template-target]");
+      if (tplBtn) {
+        var target = document.getElementById(tplBtn.getAttribute("data-template-target") || "");
+        var body = tplBtn.getAttribute("data-template-body") || "";
+        if (target && body) {
+          var existing = target.value.trim();
+          target.value = existing ? (existing + "\n\n" + body) : body;
+          target.focus();
+        }
+        var tagTargetId = tplBtn.getAttribute("data-template-tag-target");
+        var tagVal = tplBtn.getAttribute("data-template-tag");
+        if (tagTargetId && tagVal) {
+          var tagInput = document.getElementById(tagTargetId);
+          if (tagInput) {
+            var parts = tagInput.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+            if (parts.indexOf(tagVal) === -1) parts.push(tagVal);
+            tagInput.value = parts.join(", ");
+            window.LixityComponents.syncTagChips(tagInput);
+          }
+        }
+        return;
+      }
+
+      var pickBtn = event.target.closest("[data-tag-pick]");
+      if (pickBtn) {
+        var picked = pickBtn.getAttribute("data-tag-pick");
+        var input = document.getElementById(pickBtn.getAttribute("data-tag-target") || "");
+        if (picked && input) {
+          var current = input.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+          var idx = current.indexOf(picked);
+          if (idx === -1) current.push(picked);
+          else current.splice(idx, 1);
+          input.value = current.join(", ");
+          window.LixityComponents.syncTagChips(input);
+          input.focus();
+        }
+      }
+    });
+
+    document.addEventListener("input", function (event) {
+      var input = event.target.closest('[data-tag-input="true"]');
+      if (input) window.LixityComponents.syncTagChips(input);
+    });
+  })();
 
   // Central distraction-free chrome controller (Headroom scroll-direction + idle timeout).
   // Anchors auto-hide behavior across reader, editor, saved-revision reader, and teleprompter
