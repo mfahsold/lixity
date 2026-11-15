@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, browserLocales} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 const root = path.resolve(__dirname, '../..');
@@ -710,7 +710,7 @@ async function metricPreferences(browser) {
     console.log('worst-case range hit benchmark:', benchmark);
     await long.close();
     console.log('long paragraph next-match arrival: passed');
-    for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) for (const width of [1440, 320]) {
+    for (const locale of browserLocales) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950},
         hasTouch:width === 320, reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
       page.setDefaultTimeout(10000);
@@ -997,7 +997,7 @@ server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
 server.serve_forever()
 `;
-  for (const locale of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+  for (const locale of browserLocales) {
     const directory = fs.mkdtempSync(path.join(artifacts, 'legend-' + locale + '-'));
     const server = await startNativeServer(source.replace('LOCALE', JSON.stringify(locale)), directory);
     const bytes = fs.readFileSync(server.fixture.manuscript);

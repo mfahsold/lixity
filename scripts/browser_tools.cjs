@@ -55,4 +55,7 @@ function launchFirefox(options = {}) {
     firefoxUserPrefs: {...options.firefoxUserPrefs, 'media.volume_scale': '0.0'}});
 }
 
-module.exports = {launchChromium, launchFirefox, playwrightModule};
+const fullMatrix = process.env.LIXITY_BROWSER_FULL === '1';
+const browserLocales = fullMatrix ? ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'] : ['en', 'de'];
+
+module.exports = {launchChromium, launchFirefox, playwrightModule, fullMatrix, browserLocales};

@@ -2461,9 +2461,13 @@ Across the application, controls use six distinct interaction patterns:
   `Paragraph measurements`, `Read these marks`, `Project actions`, research composers):
   expand where they are and close with `Escape` without leaving the current view.
 - **Jumps and drill-downs** (review routes, section nav, `data-jump` KPI tiles,
-  heatmap cells, 3D style-space chapter links): scroll to the target passage or
-  panel, reveal any required surface or disclosure automatically, and flash the
-  arrival target while preserving active filters.
+  heatmap cells, 3D style-space chapter links, search hits, command palette,
+  research and publication links): route through one shared scroll-anchor owner
+  that switches to the target view or `document`/`overview` surface, reveals
+  collapsed disclosures, cancels stale reader-restore timers, applies dynamic
+  sticky-header clearance, preserves focus without unintended viewport jumps,
+  and highlights the arrival target (including the owning passage for search
+  hits) in a reduced-motion-safe style.
 - **Dialogs** (project create/open, `Listen and direct` audio studio, `Teleprompter`,
   command palette `Ctrl+K` / `Ctrl+P`, version comparison, saved-revision reading,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`

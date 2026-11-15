@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, browserLocales} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const {pythonFixture} = require('./support/python-fixture.cjs');
 
@@ -631,7 +631,7 @@ async function nativeControls(page, width, labels) {
   try {
     if (!settingsOnly && !touchOnly) await hoverTiming(browser);
     if (!settingsOnly) await touchAfterHoverDeparture(browser);
-    for (const [locale, fixture] of touchOnly ? [] : Object.entries(fixtures)) for (const width of [1440, 320]) {
+    for (const [locale, fixture] of touchOnly ? [] : Object.entries(fixtures).filter(([l]) => browserLocales.includes(l))) for (const width of [1440, 320]) {
       const state = await createPage(browser, fixture, width), {page} = state;
       try {
         if (settingsOnly) {

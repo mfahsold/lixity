@@ -617,6 +617,12 @@ mkdir -p .artifacts/browser-temp
 TMPDIR="$PWD/.artifacts/browser-temp" make browser-full
 ```
 
+Everyday runs (`make browser` and `make browser-changed`) use a fast
+representative matrix (`en`/`de` and core theme/pointer modes in
+`scripts/browser_tools.cjs`) so local feedback stays quick. Set
+`LIXITY_BROWSER_FULL=1` (used by `make browser-full`) before a release to run
+all seven interface languages and every theme/pointer combination.
+
 Keep `TMPDIR` short when using a deeply nested worktree. Chromium creates a
 Unix socket below it; an overlong path fails with `Socket path too long` before
 the app opens. In that case, use a short local directory such as

@@ -13,7 +13,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Manuscript Editor Formatting Bar (`manuscript-editor.js`, `scripts/editor/editor.js`)**: `H2`, `B`, `I`, and `—` formatting controls and `Ctrl+B`/`Ctrl+I` shortcuts.
 - **Expanded Browser Sandbox (`docs/sandbox/index.html`)**: Sentence-by-sentence SVG rhythm sparkline, narration vs. dialogue voice contrast, rough-draft preset, clickable word-echo chips, highlight layer toggles, local `.txt`/`.md` drag-and-drop import, and Markdown summary copy.
-- **Parallel Test Execution (`pyproject.toml`, `Makefile`, `scripts/run_browser_suites.py`)**: `pytest-xdist` (`-n auto`), `fast-check`, `pages-deploy`, and longest-first browser suite scheduling.
+- **Parallel Test Execution & Matrix Consolidation (`pyproject.toml`, `Makefile`, `scripts/run_browser_suites.py`, `scripts/browser_tools.cjs`)**: `pytest-xdist` (`-n auto`), `fast-check`, `pages-deploy`, longest-first browser suite scheduling, and fast representative browser matrix (`browserLocales` / `fullMatrix`, with `LIXITY_BROWSER_FULL=1` for `make browser-full`).
+- **Navigation & Scroll-Anchor Documentation (`docs/WORKSPACE.md`, `tests/browser/README.md`)**: Documented the unified cross-view jump/scroll-anchor contract and the fast vs. full browser matrix.
 
 ### Fixed
 

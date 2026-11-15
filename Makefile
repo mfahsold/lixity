@@ -35,8 +35,8 @@ browser: ## Run the everyday browser checks (needs Node and Playwright)
 browser-changed: ## Run only the browser suites for modified paths (safe fallback to full)
 	$(PYTHON) scripts/run_browser_suites.py --changed --jobs $(BROWSER_JOBS)
 
-browser-full: ## Run every browser suite before a release
-	$(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS)
+browser-full: ## Run every browser suite with the full locale/theme/pointer matrix before a release
+	LIXITY_BROWSER_FULL=1 $(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS)
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts

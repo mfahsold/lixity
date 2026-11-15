@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, browserLocales} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 
 const root = path.resolve(__dirname, '../..');
@@ -499,7 +499,7 @@ async function finish(page, errors, writes) {
         });
       }
     }
-    for (const locale of Object.keys(fixtures)) for (const width of [1440, 320]) {
+    for (const locale of Object.keys(fixtures).filter(l => browserLocales.includes(l))) for (const width of [1440, 320]) {
       await check('localized navigation spacing ' + locale + ' ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, locale, width);
         try {

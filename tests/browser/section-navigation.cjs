@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, browserLocales} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
@@ -292,7 +292,7 @@ async function companionOverviewReturn(browser, motion) {
   for(const motion of ['reduce','no-preference']) await companionOverviewReturn(browser,motion);
   const cases = process.env.SECTION_NAV_SMOKE==='touch' ? [['en',320,480,'no-preference',true]] :
     process.env.SECTION_NAV_SMOKE ? [[ 'en', process.env.SECTION_NAV_SMOKE==='mobile'?320:1440, process.env.SECTION_NAV_SMOKE==='mobile'?480:950, 'reduce']] :
-    Object.keys(fixtures).filter(locale=>!['report','continuity'].includes(locale)).flatMap(locale => [[1440,950],[1024,900],[390,900],[320,480]].map(([w,h]) => [locale,w,h,'reduce']))
+    Object.keys(fixtures).filter(locale => !['report','continuity'].includes(locale) && browserLocales.includes(locale)).flatMap(locale => [[1440,950],[1024,900],[390,900],[320,480]].map(([w,h]) => [locale,w,h,'reduce']))
       .concat([['en',1440,950,'no-preference'],['en',320,480,'no-preference',true]]);
   for (const [locale,width,height,motion,touch=false] of cases) {
    const page = await browser.newPage({viewport:{width,height},reducedMotion:motion,hasTouch:touch});

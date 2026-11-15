@@ -1,5 +1,5 @@
 const {selectMetric} = require('./support/analysis-controls.cjs');
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, fullMatrix} = require('../../scripts/browser_tools.cjs');
 // Validate the public static site without contacting production or loading private data.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -1096,7 +1096,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     origin = 'http://127.0.0.1:' + server.address().port;
     browser = await launchChromium();
-    for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
+    const modes = fullMatrix
+      ? [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]
+      : [[true, 'light'], [false, 'light'], [true, 'dark', true]];
+    for (const [javaScriptEnabled, colorScheme, hasTouch = false] of modes) {
       const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
       const page = await context.newPage();
       const errors = [];

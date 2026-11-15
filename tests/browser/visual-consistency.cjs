@@ -1,5 +1,5 @@
 const {openProjectActions} = require('./support/project-actions.cjs');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, fullMatrix} = require('../../scripts/browser_tools.cjs');
 // Shared visual roles and interaction states; synthetic data only.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -180,7 +180,10 @@ async function checkScale(page, label) {
   let browser;
   try {
     browser = await launchChromium();
-    for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
+    const matrix = fullMatrix
+      ? [['light', false], ['light', true], ['dark', false], ['dark', true]]
+      : [['light', false], ['dark', true]];
+    for (const [theme, hasTouch] of matrix) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
       context.setDefaultTimeout(30000);
       const errors = [];
