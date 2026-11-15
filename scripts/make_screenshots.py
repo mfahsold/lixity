@@ -35,6 +35,7 @@ sys.path.insert(0, str(BASE_DIR))
 from rich.console import Console  # noqa: E402
 
 from lixity import ReportFormatter, __version__  # noqa: E402
+from lixity.analysis_review import review_analysis  # noqa: E402
 from lixity.characters import presence_report  # noqa: E402
 from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.dialogue import dialogue_report  # noqa: E402
@@ -44,7 +45,9 @@ from lixity.pacing import pacing_report  # noqa: E402
 from lixity.pipeline import analyze_document, resolve_document_config  # noqa: E402
 from lixity.project_identity import manuscript_identity_check  # noqa: E402
 from lixity.server.constants import NATIVE_UI_ACTIONS  # noqa: E402
+from lixity.server.pdf_context import manuscript_pdf_token  # noqa: E402
 from lixity.showing import showing_report  # noqa: E402
+from lixity.style_fingerprint import FingerprintThresholds  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
@@ -152,6 +155,22 @@ def _terminal_shot(title: str, content_html: str, target: Path, width: int, heig
         content=content_html,
     )
     _queue_capture(_write_html(target.stem + ".html", document), target, width, height)
+
+
+def build_analysis_review_fixture(project_dir: Path, text: str, *, manuscript_name: str,
+                                  language: str, title: str, thresholds: FingerprintThresholds) -> dict:
+    """Read genuine review state for the exact bytes in a disposable capture project."""
+    if Path(manuscript_name).name != manuscript_name:
+        raise ValueError("Capture manuscript names must be plain filenames")
+    project_dir.mkdir(parents=True, exist_ok=True)
+    manuscript = project_dir / manuscript_name
+    manuscript.write_text(text, encoding="utf-8")
+    response = {"ok": True, **review_analysis(
+        project_dir, manuscript=manuscript, language=language, thresholds=thresholds,
+    )}
+    token = manuscript_pdf_token(str(manuscript), project_root=project_dir, language=language,
+                                 title=title, thresholds=thresholds)
+    return {"token": token, "response": response}
 
 
 def render_research_workspace(research_fixture: dict, **options) -> str:
@@ -262,6 +281,8 @@ def build_research_fixture(work_dir: Path, *, language: str = "en",
         "/api/research/claim-relations?include_retracted=true": {
             "ok": True, **research_api.list_claim_relations(research_proj, include_retracted=True)},
         "/api/research-search": {"ok": True, **workspace_search},
+        "/api/analysis-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT: {
+            "ok": True, **review_analysis(research_proj, manuscript=manuscript, language="en")},
     }
     for source in sources_data["sources"]:
         research_fixture["/api/research/sources?id=" + quote(source["id"], safe="")] = {
@@ -563,6 +584,10 @@ def main() -> int:
         "assignments": {item["id"]: "Sample register" for item in scenes["items"]},
         "groups": {"Sample register": {}},
     })
+    dashboard_review = build_analysis_review_fixture(
+        WORK_DIR / "review-projects" / "dashboard", text, manuscript_name=manuscript.name,
+        language=resolved.key, title=title, thresholds=thresholds,
+    )
     dashboard = render_dashboard(
         chapters,
         paragraphs,
@@ -589,6 +614,8 @@ def main() -> int:
         project_author="Example Author",
         author_setting_enabled=True,
         project_token="a" * 64,
+        manuscript_pdf_token=dashboard_review["token"],
+        manuscript_source_sha256=dashboard_review["response"]["source_sha256"],
         identity_check=manuscript_identity_check(text, title, "Example Author"),
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
@@ -621,6 +648,10 @@ def main() -> int:
     marked_paragraphs, marked_chapters = marked_analysis.paragraphs, marked_analysis.chapters
     from lixity.markers import list_markers
 
+    editorial_review = build_analysis_review_fixture(
+        WORK_DIR / "review-projects" / "editorial", marked, manuscript_name=manuscript.name,
+        language=resolved.key, title=title, thresholds=thresholds,
+    )
     editorial_dashboard = render_dashboard(
         marked_chapters,
         marked_paragraphs,
@@ -635,11 +666,15 @@ def main() -> int:
         markers=list_markers(marked),
         controls=True,
         enabled_actions=NATIVE_UI_ACTIONS,
+        manuscript_pdf_token=editorial_review["token"],
+        manuscript_source_sha256=editorial_review["response"]["source_sha256"],
     )
     editorial_path = _write_html("dashboard-editorial.html", editorial_dashboard)
     _queue_capture(editorial_path, OUT_DIR / "dashboard-editorial.png", 1480, 760)
 
     research_fixture = build_research_fixture(WORK_DIR, language=resolved.key, nda_project_name=title)
+    for review_fixture in (dashboard_review, editorial_review):
+        research_fixture["/api/analysis-review?project_token=" + review_fixture["token"]] = review_fixture["response"]
     research_proj = WORK_DIR / "research-demo"
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(

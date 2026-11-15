@@ -38,6 +38,9 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', 'sandbox/index.html');
       assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
       const video = page.locator('#product-tour');
+      assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
+        nodes.map(node => Number(node.dataset.start))), [0, 8, 16, 24, 32, 40],
+      'Caption boundaries must match the six eight-second scenes');
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
       assert.ok(await video.evaluate(v => v.paused && v.currentTime === 0), 'Reduced motion never autoplays');
@@ -48,7 +51,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       await video.evaluate(v => { v.currentTime = 22; });
-      await expect(page.locator('.tour-caption')).toHaveText('Szenen-Hooks, implizite Wechsel & Anti-Glättungs-Rhythmus (CV, IQR, Entropie).');
+      await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(2).textContent());
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
       await page.locator('#tour-transcript summary').click();
@@ -69,25 +72,25 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
-      await video.evaluate(v => { v.currentTime = 7.35; });
+      await video.evaluate(v => { v.currentTime = 8.1; });
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
-      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
-        nodes.filter(node => getComputedStyle(node).visibility === 'visible').length)).toBeGreaterThan(0);
-      assert.ok(await page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
-        nodes.some(node => getComputedStyle(node).visibility === 'hidden')), 'Caption types in progressively');
+      await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(1).textContent());
+      assert.ok(await page.locator('.tour-caption span').evaluateAll(nodes =>
+        nodes.every(node => getComputedStyle(node).visibility === 'visible')),
+      'The complete caption remains readable while the video moves');
       await page.emulateMedia({reducedMotion: 'reduce'});
       // Media-query changes are asynchronous; a fully visible caption alone can
       // precede the pause handler, letting Chromium coalesce the next preference.
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       await expect(button).toHaveText('Play tour');
-      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+      await expect.poll(() => page.locator('.tour-caption span').evaluateAll(nodes =>
         nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
       // Reduced motion stops automatic playback, but an explicit choice can play.
       const reducedStart = await video.evaluate(v => v.currentTime);
       await button.click();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(reducedStart + .1);
       await expect(button).toHaveText('Pause tour');
-      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+      await expect.poll(() => page.locator('.tour-caption span').evaluateAll(nodes =>
         nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
@@ -116,9 +119,34 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
       assert.ok((await video.evaluate(v => v.currentSrc)).endsWith('.mp4'), 'AV1 failure falls back to H.264');
       await expect(page.locator('.tour-error')).toBeHidden();
+      // Every localized caption uses the same decoded media timeline.
+      await page.emulateMedia({reducedMotion: 'reduce'});
+      for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+        await page.goto('https://tour.test/' + (language === 'en' ? 'index.html' : `index-${language}.html`));
+        await video.scrollIntoViewIfNeeded();
+        await button.click();
+        await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.1);
+        await button.click();
+        await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+        assert.ok(Math.abs(await video.evaluate(v => v.duration) - 48) <= .04,
+          'The complete six-scene tour must decode to 48 seconds');
+        const cues = await page.locator('#tour-transcript li').evaluateAll(nodes =>
+          nodes.map(node => ({start: Number(node.dataset.start), text: node.textContent})));
+        assert.deepEqual(cues.map(cue => cue.start), [0, 8, 16, 24, 32, 40]);
+        for (const cue of cues) {
+          await video.evaluate((v, start) => { v.currentTime = start + .12; }, cue.start);
+          await expect.poll(() => video.evaluate(v => v.seeking)).toBe(false);
+          await expect(page.locator('.tour-caption')).toHaveText(cue.text);
+          const captionBox = await page.locator('.tour-caption').boundingBox();
+          const videoBox = await video.boundingBox();
+          assert.ok(captionBox && captionBox.x >= videoBox.x - 1 &&
+            captionBox.x + captionBox.width <= videoBox.x + videoBox.width + 1,
+          `The ${language} caption must stay within the ${width}px frame`);
+        }
+      }
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log('Homepage tour: actual playback, reduced motion, pause/offscreen, seeking, DE/EN captions, mobile layout and failure fallback passed. Screenshots: ' + artifacts);
+    console.log('Homepage tour: 48-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);
   } finally { await browser.close(); fs.rmSync(root, {recursive:true, force:true}); }
 })().catch(e => { console.error(e); process.exitCode=1; });

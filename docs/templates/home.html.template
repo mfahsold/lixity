@@ -68,7 +68,7 @@ $alternates
 <div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
 <p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html">$demo</a></p>
 <details id="tour-transcript"><summary>$tour_transcript</summary><ol>
-<li data-start="0">$tour_read</li><li data-start="7">$tour_passage</li><li data-start="14">$tour_compare</li><li data-start="21">$tour_research</li><li data-start="28">$tour_context</li><li data-start="35">$tour_return</li>
+$tour_cues
 </ol></details>
 </figcaption>
 </figure>

@@ -26,6 +26,7 @@ def render_pages() -> dict[str, str]:
     """Require complete translations rather than silently shipping English fallback."""
     dictionaries = {lang: json.loads((ROOT / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
                     for lang in LANGUAGES}
+    tour = json.loads((ROOT / 'docs/videos/product-tour-timing.json').read_text(encoding='utf-8'))
     template = Template((ROOT / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
     footer = Template((ROOT / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
     version = re.search(r'__version__ = "([^"]+)"', (ROOT / 'src/lixity/_version.py').read_text(encoding="utf-8")).group(1)
@@ -46,7 +47,15 @@ def render_pages() -> dict[str, str]:
             raise ValueError(f'Incomplete public translation: {lang}')
         if any(not isinstance(value, str) or not value.strip() for value in content.values()):
             raise ValueError(f'Empty public translation: {lang}')
-        fields = {key: html.escape(value.replace('{version}', version), quote=True) for key, value in content.items()}
+        fields = {
+            key: html.escape(value.replace('{version}', version)
+                             .replace('{tour_duration}', str(tour['duration'])), quote=True)
+            for key, value in content.items()
+        }
+        fields['tour_cues'] = ''.join(
+            f'<li data-start="{scene["start"]}">{fields["tour_" + scene["id"]]}</li>'
+            for scene in tour['scenes']
+        )
         fields['headline'] = '<br/>'.join(html.escape(line) for line in content['headline'].splitlines())
         fields['lang'] = lang
         fields['language_name'] = LANGUAGES[lang]

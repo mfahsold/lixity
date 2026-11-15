@@ -1,0 +1,13 @@
+{
+  "schema_version": "lixity-product-tour-timing/1",
+  "fps": 25,
+  "duration": 48,
+  "scenes": [
+    {"id": "read", "start": 0, "end": 8},
+    {"id": "passage", "start": 8, "end": 16},
+    {"id": "compare", "start": 16, "end": 24},
+    {"id": "research", "start": 24, "end": 32},
+    {"id": "context", "start": 32, "end": 40},
+    {"id": "return", "start": 40, "end": 48}
+  ]
+}

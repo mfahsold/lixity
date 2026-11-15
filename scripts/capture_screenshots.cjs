@@ -1,5 +1,6 @@
 const {selectMetric} = require('../tests/browser/support/analysis-controls.cjs');
 const {launchChromium} = require('./browser_tools.cjs');
+const {recordProductTour} = require('./product_tour_capture.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -74,6 +75,13 @@ async function main() {
           }
         }
         const result = fixture[url];
+        if (new URL(url, location.href).pathname === '/api/analysis-review') {
+          const query = new URL(url, location.href).searchParams;
+          if ([...query.keys()].length !== 1 || query.get('project_token') !== document.body.dataset.manuscriptProjectToken ||
+              result.source_sha256 !== document.body.dataset.manuscriptSourceSha256) {
+            throw new Error('Capture review fixture must match the displayed manuscript context');
+          }
+        }
         return Promise.resolve(new Response(JSON.stringify(result), {
           status: 200,
           headers: {'Content-Type': 'application/json'},
@@ -472,25 +480,28 @@ async function main() {
       }
     }
     await Promise.all(captures.filter(item => item.video).map(async capture => {
+      const flow = path.basename(capture.videoTarget, '.webm');
+      if (flow === 'product-tour') {
+        results.push(...await recordProductTour({browser, capture, prepareWorkspacePage, origin: CAPTURE_ORIGIN}));
+        return;
+      }
       const context = await browser.newContext({
         viewport: {width: capture.width, height: capture.height},
         reducedMotion: 'reduce',
         recordVideo: {dir: path.dirname(capture.videoTarget), size: {width: capture.width, height: capture.height}},
         deviceScaleFactor: 2,
       });
-      const recordingStarted = Date.now();
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
       await prepareWorkspacePage(page, {cursor: true});
       page.setDefaultTimeout(15000);
-      const flow = path.basename(capture.videoTarget, '.webm');
       const say = async text => {
         await page.evaluate(value => {
           if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
         }, text);
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(2200);
         await page.evaluate(() => window.setWalkthroughCaption(''));
       };
       const assertCaptionClear = async selector => {
@@ -507,317 +518,26 @@ async function main() {
           });
         }), 'Walkthrough captions must not obscure task actions during interaction');
       };
+      const assertReviewConfirmed = async () => {
+        await page.waitForFunction(() => {
+          const reload = document.getElementById('triage-reload');
+          const status = document.getElementById('triage-save-status');
+          const progress = document.getElementById('triage-progress');
+          return reload && reload.hidden && status && status.textContent === '' && progress &&
+            progress.textContent.includes(uiFormat('triage_completed', {completed: 0, total: 0}));
+        });
+        assert.equal(await page.locator('#flags .flag-row').count(), 0,
+          'The canonical guide fixture must retain its true empty tense review');
+      };
       await page.goto(CAPTURE_ORIGIN + '/' + path.basename(capture.source));
       if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
         await page.locator('#tab-view-analysis').click();
         if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();
       }
-      if (flow === 'product-tour') {
-        // Fixed eight-second scene buckets keep localized website captions synchronized,
-        // while dynamic sub-cuts inside each bucket create a fast-paced, kinetic tour.
-        await page.addInitScript(() => {
-          const setupTourChrome = () => {
-            if (document.getElementById('tour-chrome-style')) return;
-            const style = document.createElement('style');
-            style.id = 'tour-chrome-style';
-            style.textContent = `
-              #walkthrough-cursor { width:16px!important;height:16px!important;margin:-8px!important;
-                background:rgba(59,130,246,.42)!important;border-color:#93c5fd!important;
-                transition:opacity .25s,transform .08s; }
-              .tour-focus-ring { position:fixed;pointer-events:none;z-index:2147483645;
-                border:2px solid #60a5fa;border-radius:9px;box-shadow:0 0 0 5px rgba(59,130,246,.18);
-                animation:tour-ring 2.6s ease both; }
-              @keyframes tour-ring { 0% {opacity:0;transform:scale(.98)} 14%,78% {opacity:1;transform:scale(1)} 100% {opacity:0} }
-              #tour-hud { position:fixed;top:16px;right:20px;z-index:2147483646;pointer-events:none;
-                padding:7px 14px;border-radius:999px;background:rgba(13,19,34,.90);color:#f8fafc;
-                border:1px solid rgba(148,163,184,.32);box-shadow:0 8px 24px rgba(0,0,0,.28);
-                font:650 12.5px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.06em;
-                text-transform:uppercase;opacity:0;transform:translateY(-4px);
-                transition:opacity .18s ease,transform .18s ease; }
-              #tour-hud.visible { opacity:1;transform:translateY(0); }
-            `;
-            document.head.appendChild(style);
-            const hud = document.createElement('div');
-            hud.id = 'tour-hud';
-            document.body.appendChild(hud);
-          };
-          window.setTourHud = label => {
-            setupTourChrome();
-            const hud = document.getElementById('tour-hud');
-            if (!hud) return;
-            hud.textContent = label || '';
-            hud.classList.toggle('visible', Boolean(label));
-          };
-          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupTourChrome);
-          else setupTourChrome();
-        });
-        await page.emulateMedia({colorScheme: 'light'});
-        await page.evaluate(() => document.fonts.ready);
-        const started = Date.now();
-        const scenes = [];
-        const cuts = [];
-        const click = async locator => {
-          await locator.scrollIntoViewIfNeeded();
-          const box = await locator.boundingBox();
-          assert.ok(box, 'A directed action must target a visible control');
-          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 4});
-          await page.waitForTimeout(40);
-          await locator.click();
-        };
-        let manuscriptDraft = '# 1. The Eastern Gate\n\nIt was in the back of the quiet harbour where the watchman waited. "Did you hear the bell?" she asked.\n\nHe shook his head. The fog lay thick over the pilings.\n';
-        const baselineDraft = '# 1. The Eastern Gate\n\nIt was in the back of the quiet harbour where the watchman waited.\n\nHe shook his head. The fog lay thick over the pilings.\n';
-        await page.route('**/api/manuscript**', async route => {
-          const req = route.request();
-          const url = req.url();
-          if (req.method() === 'GET' && url.includes('/editor-bootstrap.js')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/javascript; charset=utf-8',
-              body: fs.readFileSync(path.join(__dirname, '..', 'src/lixity/ui/assets/manuscript-editor.js'), 'utf8'),
-            });
-            return;
-          }
-          if (req.method() === 'GET' && url.includes('/editor-bundle.js')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/javascript; charset=utf-8',
-              body: fs.readFileSync(path.join(__dirname, '..', 'src/lixity/ui/assets/vendor/codemirror-editor.js'), 'utf8'),
-            });
-            return;
-          }
-          if (req.method() === 'GET' && url.includes('/manuscript-delta')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                ok: true, available: true, has_previous: true, baseline_label: 'Baseline · Chapter 1',
-                deltas: {words: 3, asl: -0.4, sticky_pct: 0.0, indirect_speech_per_1000: 0.0, asl_cv: 0.02},
-              }),
-            });
-            return;
-          }
-          if (req.method() === 'GET' && url.includes('/manuscript-timeline')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                ok: true,
-                points: [
-                  {label: 'Rev 1', words: 32, asl: 8.0, asl_cv: 0.42},
-                  {label: 'Now', words: 35, asl: 7.6, asl_cv: 0.44},
-                ],
-              }),
-            });
-            return;
-          }
-          if (req.method() === 'GET' && url.includes('/manuscript-edit') && url.includes('recovery=')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                ok: true, document: 'harbour-manuscript.md',
-                id: 'snap-1', kind: 'snapshot', created: 1794682800, text: baselineDraft,
-              }),
-            });
-            return;
-          }
-          if (req.method() === 'GET' && url.includes('/api/manuscript')) {
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                ok: true,
-                document: 'harbour-manuscript.md',
-                text: manuscriptDraft,
-                revision: 'rev-1',
-                sha256: 'tour-sha256',
-                recovery: [{
-                  id: 'snap-1', kind: 'snapshot', label: 'Baseline · Chapter 1',
-                  created: 1794682800, text: baselineDraft,
-                  metrics: {words: 26, asl: 8.7, asl_cv: 0.40, length_entropy: 1.12, sticky_pct: 3.8, indirect_speech_per_1000: 0.0, dialogue_ratio: 0.0, mattr: 0.82, flags_count: 1},
-                }],
-              }),
-            });
-            return;
-          }
-          if (req.method() === 'POST' && url.includes('/api/manuscript')) {
-            try { const body = JSON.parse(req.postData() || '{}'); if (typeof body.text === 'string') manuscriptDraft = body.text; } catch {}
-            await route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({ok: true, saved: true, revision: 'rev-2', sha256: 'tour-sha256-2'}),
-            });
-            return;
-          }
-          await route.fallback();
-        });
-        const gotoTourPage = async (filename, colorScheme = 'light') => {
-          await page.emulateMedia({colorScheme});
-          await page.goto(CAPTURE_ORIGIN + '/' + filename);
-          await page.evaluate(() => document.fonts.ready);
-        };
-        const computeFrame = async (focus, marker) => {
-          const box = await page.locator(focus).first().boundingBox();
-          assert.ok(box && box.width > 0 && box.height > 0, 'The camera needs a visible focus region: ' + focus);
-          const top = Math.max(0, box.y), bottom = Math.min(900, box.y + box.height);
-          const framed = {x: box.x, y: top, width: box.width, height: Math.max(1, bottom - top)};
-          const marked = marker ? await page.locator(marker).first().evaluate(node => {
-            const range = document.createRange(); range.selectNodeContents(node);
-            const rect = node.tagName === 'SUMMARY' ? range.getBoundingClientRect() : node.getBoundingClientRect();
-            return {x: rect.x - 3, y: rect.y - 3, width: rect.width + 6, height: rect.height + 6};
-          }) : null;
-          if (marked && marked.x >= 0 && marked.y >= 0 &&
-              marked.x + marked.width <= 1440 && marked.y + marked.height <= 900 &&
-              marked.width <= 760 && marked.height <= 300) {
-            await page.evaluate(b => {
-              document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove());
-              const ring = document.createElement('div'); ring.className = 'tour-focus-ring';
-              Object.assign(ring.style, {left: b.x + 'px', top: b.y + 'px', width: b.width + 'px', height: b.height + 'px'});
-              document.body.appendChild(ring);
-              const cursor = document.getElementById('walkthrough-cursor'); if (cursor) cursor.style.opacity = '0';
-            }, marked);
-          }
-          return {
-            x: (framed.x + framed.width / 2) / 1440,
-            y: (framed.y + framed.height / 2) / 900,
-            zoom: Math.max(1, Math.min(1.22, 1440 / (framed.width + 140), 900 / (framed.height + 160))),
-          };
-        };
-        const cut = async (hudLabel, action, focus, marker, holdUntilMs) => {
-          const cutStart = Date.now();
-          let prevShot = null;
-          if (cuts.length) prevShot = await page.screenshot();
-          await action();
-          if (prevShot) {
-            await page.evaluate(data => {
-              const image = document.createElement('img'); image.id = 'tour-dissolve';
-              image.src = data;
-              image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;pointer-events:none;opacity:1;transition:opacity .35s ease';
-              document.body.appendChild(image);
-              requestAnimationFrame(() => { image.style.opacity = '0'; setTimeout(() => image.remove(), 380); });
-            }, 'data:image/png;base64,' + prevShot.toString('base64'));
-          }
-          await page.evaluate(label => { if (window.setTourHud) window.setTourHud(label); }, hudLabel);
-          const cam = await computeFrame(focus, marker);
-          await page.waitForTimeout(Math.max(0, holdUntilMs - (Date.now() - started)));
-          await page.evaluate(() => document.querySelectorAll('.tour-focus-ring').forEach(node => node.remove()));
-          cuts.push({
-            start: Number(((cutStart - started) / 1000).toFixed(3)),
-            end: Number(((Date.now() - started) / 1000).toFixed(3)),
-            ...cam,
-          });
-        };
-        const runScene = async (index, name, body) => {
-          const targetStart = index * 8000;
-          const remainingPre = targetStart - (Date.now() - started);
-          if (remainingPre > 0) await page.waitForTimeout(remainingPre);
-          const sceneStart = (Date.now() - started) / 1000;
-          await body((index + 1) * 8000);
-          scenes.push({name, start: Number(sceneStart.toFixed(3)), x: 0.5, y: 0.5, zoom: 1.0});
-        };
-
-        // Scene 1 (0-8s): Calm prose reading — Effi Briest with sticky sentences highlighted.
-        await runScene(0, 'read', async sceneEnd => {
-          await cut('01 · EFFI BRIEST · STICKY SENTENCES', async () => {
-            await gotoTourPage('tour-effi-briest.html', 'light');
-            await click(page.locator('#manuscript-analysis-toggle'));
-            await selectMetric(page, 'sticky');
-            await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
-          }, '#chapters .ptext', '#style-layer', sceneEnd);
-        });
-
-        // Scene 2 (8-16s): Dialogue-Only Mode [D] + Passage Evidence Popover on Pride & Prejudice.
-        await runScene(1, 'passage', async sceneEnd => {
-          await cut('02 · DIALOGUE MODE [D] & EVIDENCE', async () => {
-            await gotoTourPage('tour-pride-prejudice.html', 'light');
-            await click(page.locator('#reader-direct-speech'));
-            const p = page.locator('#chapters .ptext').nth(1);
-            await p.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(1400);
-            await click(p.locator('[data-reader-paragraph]'));
-            await click(page.locator('[data-reader-action=values]'));
-            await page.locator('#reader-inspector').waitFor({state: 'visible'});
-          }, '#reader-inspector', '#reader-direct-speech', sceneEnd);
-        });
-
-        // Scene 3 (16-24s): Live Manuscript Editor + Session Pulse + Revision Diff.
-        await runScene(2, 'compare', async sceneEnd => {
-          await cut('03 · LIVE EDITOR & REVISION DIFF', async () => {
-            await gotoTourPage('dashboard-research-workspace.html', 'light');
-            await click(page.locator('#tab-view-analysis'));
-            await page.evaluate(() => {
-              if (!document.getElementById('manuscript-write')) {
-                const s = document.createElement('script');
-                const existing = document.querySelector('script[nonce]');
-                if (existing) s.nonce = existing.nonce || existing.getAttribute('nonce') || '';
-                s.src = '/api/manuscript/editor-bootstrap.js';
-                document.body.appendChild(s);
-              }
-            });
-            await page.locator('#manuscript-write').waitFor({state: 'visible'});
-            await click(page.locator('#manuscript-write'));
-            await page.locator('.cm-content').waitFor({state: 'visible'});
-            await page.locator('.cm-content').click();
-            await page.keyboard.press('Control+End');
-            await page.keyboard.type(' Lanterns lit.', {delay: 35});
-            await page.waitForTimeout(900);
-            await click(page.locator('#manuscript-compare'));
-            await page.locator('#manuscript-comparison').waitFor({state: 'visible'});
-          }, '#manuscript-comparison .modal-card', '#manuscript-comparison h2', sceneEnd);
-        });
-
-        // Scene 4 (24-32s): Chapter Matrix (z* & FDR) in Analysis Overview (calm Light theme).
-        await runScene(3, 'research', async sceneEnd => {
-          await cut('04 · CHAPTER MATRIX · z* & FDR', async () => {
-            await gotoTourPage('dashboard-research-workspace.html', 'light');
-            await click(page.locator('#tab-view-analysis'));
-            await click(page.locator('#workbench-overview-open'));
-            await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
-            await click(page.locator('#style-tab-heatmap'));
-            await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
-              node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
-          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd);
-        });
-
-        // Scene 5 (32-40s): Source-Verified Research Claims Timeline.
-        await runScene(4, 'context', async sceneEnd => {
-          await cut('05 · SOURCE-VERIFIED CLAIMS', async () => {
-            await click(page.locator('#tab-view-research'));
-            await click(page.locator('[data-rtab=claims]'));
-            await click(page.locator('#r-open-timeline'));
-            await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-            await page.locator('#research-claims-timeline').scrollIntoViewIfNeeded();
-          }, '#research-claims-timeline', '#research-claims-timeline .research-timeline-strip-row', sceneEnd);
-        });
-
-        // Scene 6 (40-48s): Browser Sandbox (100% offline, sentence pulse & dialogue mode).
-        await runScene(5, 'return', async sceneEnd => {
-          await cut('06 · BROWSER SANDBOX · 100% OFFLINE', async () => {
-            await gotoTourPage('sandbox-index.html?preset=effi-briest', 'light');
-            await page.waitForTimeout(1600);
-            await click(page.locator('#direct-speech-btn'));
-          }, 'main', '#direct-speech-btn', sceneEnd);
-        });
-
-        fs.writeFileSync(
-          capture.videoTarget.replace('.webm', '.json'),
-          JSON.stringify({
-            scenes,
-            cuts,
-            duration: 48,
-            trim: (started - recordingStarted) / 1000,
-            socialHooks: [
-              {start: cuts[0].start + 1.0, end: cuts[0].end - 1.5, text: '33.5% Sticky Sentences in Effi Briest', x: cuts[0].x, zoom: cuts[0].zoom},
-              {start: cuts[1].start + 1.5, end: cuts[1].end - 1.0, text: 'Dialogue Mode [D] & Passage Evidence', x: cuts[1].x, zoom: cuts[1].zoom},
-              {start: cuts[2].start + 2.0, end: cuts[2].end - 0.5, text: 'Live Manuscript Editor & Revision Diff', x: cuts[2].x, zoom: cuts[2].zoom},
-              {start: cuts[3].start + 1.0, end: cuts[3].end - 1.5, text: 'Chapter Matrix: Robust z* & FDR', x: cuts[3].x, zoom: cuts[3].zoom},
-              {start: cuts[5].start + 1.0, end: cuts[5].end - 0.5, text: 'Try Free in Browser - 100% Offline', x: cuts[5].x, zoom: cuts[5].zoom},
-            ],
-          }),
-        );
-      } else if (flow === 'editorial-loop') {
+      if (flow === 'editorial-loop') {
+        await assertReviewConfirmed();
         await page.waitForTimeout(1000);
-        await say('Listen to the pulse: Spot where narrative cadence shifts');
+        await say('Start with the manuscript review overview.');
         await page.locator('#flags').scrollIntoViewIfNeeded();
         await page.waitForTimeout(900);
         const flagRow = page.locator('#flags [data-marker-kind]').first();
@@ -825,7 +545,7 @@ async function main() {
           await flagRow.hover();
           await page.waitForTimeout(900);
         }
-        await say('Touch the prose: Instant word counts, rhythm, and tense cues');
+        await say('Open a passage for closer inspection.');
         await page.locator('#workbench-overview-back').click();
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
         await paragraph.locator('[data-reader-paragraph]').click();
@@ -834,46 +554,47 @@ async function main() {
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1200);
-        await say('Surgical precision: Inspect sentence melody without leaving context');
+        await say('Draft a review note beside the selected passage.');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=todo]').click();
         await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
         await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
         await page.waitForTimeout(1300);
-        await say('Anchor editorial insights directly in your manuscript');
+        await say('Return to the overview to find passage markers.');
         await page.locator('#workbench-overview-open').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
         await page.waitForTimeout(1500);
       } else if (flow === 'analysis-review') {
         await page.waitForTimeout(1000);
-        await say('Pure focus: Immerse in uninterrupted reading');
+        await say('Read with manuscript analysis switched off.');
         const paragraph = page.locator('#chapters .ptext').first();
         await paragraph.scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
         await page.waitForTimeout(1200);
-        await say('Reveal the rhythm: Pacing and dialogue balance on demand');
+        await say('Open a passage for closer inspection.');
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         assert.equal(await page.locator('#reader-inspector').isVisible(), true);
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Local paragraph Values leave global Analysis Off');
         await page.waitForTimeout(1300);
-        await say('Macro perspective: Survey the emotional breathing of every chapter');
+        await say('Open the analysis overview for chapter comparisons.');
         await page.locator('#workbench-overview-open').click();
+        await assertReviewConfirmed();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
-          await say('Multi-dimensional style space: Explore narrative registers in 3D');
+          await say('View chapters in the style dimensions chart.');
           await dimensions.scrollIntoViewIfNeeded();
           await page.waitForTimeout(700);
           await dimensions.click();
           await page.waitForTimeout(1300);
         }
-        await say('Contrast and compare: Track chapter voice against your baseline');
+        await say('Select a chapter to inspect its style coordinates.');
         await page.locator('#dim-chapter-select').selectOption('2');
         await page.locator('.dim-selection-panel').scrollIntoViewIfNeeded();
         assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
         await page.waitForTimeout(1000);
-        await say('Planar projections: Clear patterns without visual clutter');
+        await say('Switch to a two-dimensional chart projection.');
         await page.locator('#dim-projection').selectOption('d1-d2');
         await page.locator('.dim-view-control').evaluate(element => {
           const toolbar = document.querySelector('.toolbar');
@@ -889,7 +610,7 @@ async function main() {
         await page.waitForTimeout(1000);
       } else {
         await page.waitForTimeout(900);
-        await say('Living memory: Historical facts and scene chronology unified');
+        await say('Open the timeline to compare recorded claim dates.');
         await page.locator('[data-view="research"]').click();
         await page.locator('[data-rtab="claims"]').click();
         await page.waitForTimeout(1200);
@@ -902,7 +623,7 @@ async function main() {
           await rows.nth(index).hover();
           await page.waitForTimeout(400);
         }
-        await say('Unbroken lineage: Every detail traces back to primary sources');
+        await say('Follow a timeline row to its claim.');
         await rows.first().click();
         await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
         await page.waitForTimeout(1200);
@@ -910,7 +631,7 @@ async function main() {
         await page.waitForTimeout(1300);
         await page.mouse.wheel(0, -700);
         await page.waitForTimeout(700);
-        await say('Immutable truth: Creative decisions grounded in verified evidence');
+        await say('Dates organize claims; they do not verify them.');
         await rows.nth(Math.min(1, count - 1)).hover();
         await page.waitForTimeout(1300);
       }

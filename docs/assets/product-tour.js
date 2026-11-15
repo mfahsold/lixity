@@ -13,8 +13,6 @@
   let attempted = false;
   let failed = false;
   let current = -1;
-  let letters = [];
-  let visibleLetters = -1;
   let frame = 0;
   video.muted = true;
   toggle.hidden = false;
@@ -24,21 +22,8 @@
     const index = cues.findLastIndex(cue => video.currentTime >= Number(cue.dataset.start));
     if (index !== current && index >= 0) {
       current = index;
-      letters = Array.from(cues[index].textContent, character => {
-        const letter = document.createElement('span');
-        letter.dataset.letter = '';
-        letter.textContent = character;
-        return letter;
-      });
-      line.replaceChildren(...letters);
-      visibleLetters = -1;
-    }
-    const elapsed = index < 0 ? 0 : video.currentTime - Number(cues[index].dataset.start);
-    const count = reducedMotion || video.paused ? letters.length :
-      Math.min(letters.length, Math.max(0, Math.ceil((elapsed - .08) / .55 * letters.length)));
-    if (count !== visibleLetters) {
-      letters.forEach((letter, position) => { letter.style.visibility = position < count ? 'visible' : 'hidden'; });
-      visibleLetters = count;
+      // Read the whole sentence while the recording demonstrates one action.
+      line.textContent = cues[index].textContent;
     }
     caption.hidden = failed || video.readyState < 2;
   }

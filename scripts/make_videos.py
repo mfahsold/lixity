@@ -9,17 +9,20 @@ documentation that embeds them.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from fractions import Fraction
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
 OUT_DIR = BASE_DIR / "docs" / "videos"
+TOUR_TIMING_PATH = OUT_DIR / "product-tour-timing.json"
 
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
@@ -108,75 +111,114 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
     print(f"{poster.relative_to(BASE_DIR)} {poster.stat().st_size:,} bytes")
 
 
+def _tour_plan() -> dict:
+    """Load the timeline also consumed by the recorder and localized homepages."""
+    plan = json.loads(TOUR_TIMING_PATH.read_text(encoding="utf-8"))
+    if plan.get("schema_version") != "lixity-product-tour-timing/1":
+        raise SystemExit("Unknown product-tour timing schema")
+    ids = ["read", "passage", "compare", "research", "context", "return"]
+    scenes = plan["scenes"]
+    fps = plan["fps"]
+    if not isinstance(fps, int) or fps <= 0 or [scene["id"] for scene in scenes] != ids:
+        raise SystemExit("The product tour needs six ordered scenes and a positive integer fps")
+    previous_end = 0
+    for scene in scenes:
+        start, end = scene["start"], scene["end"]
+        if start != previous_end or end <= start or (end - start) * fps % 1:
+            raise SystemExit("Tour scenes must cover a contiguous, whole-frame timeline")
+        previous_end = end
+    if previous_end != plan["duration"]:
+        raise SystemExit("Tour scenes do not cover the declared duration")
+    return plan
+
+
+def _video_info(path: Path) -> tuple[dict, dict]:
+    """Count decoded frames; container duration alone cannot prove capture capacity."""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        raise SystemExit("ffprobe is required to validate published walkthrough videos.")
+    if not path.is_file():
+        raise SystemExit(f"Missing video: {path}")
+    result = subprocess.run(  # noqa: S603 - fixed ffprobe invocation
+        [ffprobe, "-v", "error", "-count_frames", "-show_streams", "-show_format",
+         "-of", "json", str(path)], check=True, capture_output=True, text=True,
+    )
+    media = json.loads(result.stdout)
+    videos = [stream for stream in media["streams"] if stream["codec_type"] == "video"]
+    if len(videos) != 1:
+        raise SystemExit(f"{path.name} needs exactly one video stream")
+    return videos[0], media
+
+
+def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int,
+                   max_bytes: int = 4_000_000) -> None:
+    video, media = _video_info(path)
+    if (int(video["nb_read_frames"]) != frames or
+            Fraction(video["avg_frame_rate"]) != fps or
+            (video["width"], video["height"]) != (width, height) or
+            video.get("sample_aspect_ratio") != "1:1" or
+            abs(float(media["format"]["duration"]) - frames / fps) > .002 or
+            len(media["streams"]) != 1):
+        raise SystemExit(f"{path.name} has incomplete timing, unexpected geometry or audio")
+    if path.stat().st_size > max_bytes:
+        raise SystemExit(f"{path.name} exceeds its {max_bytes:,} byte budget")
+    print(f"{path.relative_to(BASE_DIR)} {path.stat().st_size:,} bytes")
+
+
 def convert_product_tour() -> None:
-    """Encode the quiet homepage tour without baking a language into its frames."""
-    source = RAW_DIR / "product-tour.webm"
-    timing = json.loads(source.with_suffix(".json").read_text(encoding="utf-8"))
+    """Join six frame-anchored scenes without setup footage or camera effects."""
+    plan = _tour_plan()
+    recording = json.loads((RAW_DIR / "product-tour.json").read_text(encoding="utf-8"))
+    if (recording.get("schema_version") != "lixity-product-tour-recording/1" or
+            recording.get("fps") != plan["fps"] or recording.get("duration") != plan["duration"]):
+        raise SystemExit("Recording metadata does not match the product-tour timing plan")
+    segments = recording.get("segments", [])
+    if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["scenes"]]:
+        raise SystemExit("The recording needs one ordered segment per tour scene")
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish walkthrough videos.")
+    inputs: list[str] = []
+    filters: list[str] = []
+    for index, (scene, segment) in enumerate(zip(plan["scenes"], segments, strict=True)):
+        filename = segment["file"]
+        if Path(filename).name != filename:
+            raise SystemExit("Tour segment filenames must stay in the raw recordings directory")
+        source = RAW_DIR / filename
+        if not source.is_file():
+            raise SystemExit(f"Missing video: {source}")
+        if hashlib.sha256(source.read_bytes()).hexdigest() != segment.get("sha256"):
+            raise SystemExit(f"{filename}: source hash mismatch; record the complete tour again")
+        video, _ = _video_info(source)
+        start = segment["startFrame"]
+        frames = (scene["end"] - scene["start"]) * plan["fps"]
+        if (not isinstance(start, int) or start < 0 or segment["frames"] != frames or
+                Fraction(video["avg_frame_rate"]) != plan["fps"]):
+            raise SystemExit(f"{filename} has an invalid frame anchor, count or recording fps")
+        if int(video["nb_read_frames"]) < start + frames:
+            raise SystemExit(f"{filename} needs {start + frames} frames including its anchor; "
+                             f"only {video['nb_read_frames']} were recorded")
+        inputs.extend(["-i", str(source)])
+        filters.append(
+            f"[{index}:v]trim=start_frame={start}:end_frame={start + frames},"
+            f"setpts=PTS-STARTPTS,scale=1440:900:flags=lanczos,setsar=1,"
+            f"format=yuv420p[s{index}]"
+        )
+    filters.append("".join(f"[s{index}]" for index in range(len(segments))) +
+                   f"concat=n={len(segments)}:v=1:a=0[out]")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    scenes = timing["scenes"]
-    scene_span = 7.0 if float(timing.get("duration", 48)) <= 43 else 8.0
-    total_duration = round(float(timing.get("duration", len(scenes) * scene_span)))
-    if len(scenes) != 6 or any(abs(scene["start"] - index * scene_span) > .25
-                               for index, scene in enumerate(scenes)):
-        raise SystemExit("Tour scenes have drifted from their localized caption times")
-
-    cuts = timing.get("cuts") or [
-        {
-            "start": index * scene_span,
-            "end": (index + 1) * scene_span,
-            "x": scene["x"],
-            "y": scene["y"],
-            "zoom": scene["zoom"],
-        }
-        for index, scene in enumerate(scenes)
-    ]
-
-    def cut_expr(key: str) -> str:
-        expression = str(cuts[-1][key])
-        for cut in reversed(cuts[:-1]):
-            expression = f"if(lt(in_time,{cut['end']}),{cut[key]},{expression})"
-        return expression
-
-    def cut_ease() -> str:
-        # Gentle 0.75s ease-in, long readable hold on the prose, 0.55s ease-out.
-        def seg_ease(start: float, end: float) -> str:
-            dur = max(1.6, end - start)
-            out_at = max(0.9, dur - 0.55)
-            local = f"(in_time-{start:.3f})"
-            return (
-                f"if(lt({local},0.75),(1-cos(PI*{local}/0.75))/2,"
-                f"if(lt({local},{out_at:.3f}),1,"
-                f"if(lt({local},{dur:.3f}),(1+cos(PI*({local}-{out_at:.3f})/0.55))/2,0)))"
-            )
-
-        expression = seg_ease(cuts[-1]["start"], cuts[-1]["end"])
-        for cut in reversed(cuts[:-1]):
-            expression = f"if(lt(in_time,{cut['end']}),{seg_ease(cut['start'], cut['end'])},{expression})"
-        return expression
-
-    # Upscale before zoompan: fractional zoom steps on a 2x canvas avoid
-    # integer rounding jitter, then downscale cleanly to 1440x900 at 30 fps.
-    filters = ("fps=30,scale=2880:1800:flags=lanczos,"
-               f"zoompan=z='1+({cut_expr('zoom')}-1)*({cut_ease()})':"
-               f"x='max(0,min(iw-iw/zoom,iw*({cut_expr('x')})-iw/zoom/2))':"
-               f"y='max(0,min(ih-ih/zoom,ih*({cut_expr('y')})-ih/zoom/2))':"
-               "d=1:s=2880x1800:fps=30,"
-               "scale=1440:900:flags=lanczos,fps=30")
+    frames = plan["duration"] * plan["fps"]
     for suffix, codec in (
-        ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "28", "-threads", "0", "-movflags", "+faststart"]),
-        ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "40", "-b:v", "0", "-row-mt", "1", "-threads", "0"]),
+        ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "25", "-movflags", "+faststart"]),
+        ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "36", "-b:v", "0", "-row-mt", "1"]),
     ):
         target = OUT_DIR / f"product-tour.{suffix}"
-        run([ffmpeg, "-y", "-loglevel", "error", "-ss", str(timing["trim"]),
-             "-i", str(source), "-t", str(total_duration), "-an", "-map_metadata", "-1", "-vf", filters,
+        run([ffmpeg, "-y", "-loglevel", "error", *inputs,
+             "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
+             "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
              *codec, "-pix_fmt", "yuv420p", str(target)])
-        if target.stat().st_size > 4_000_000:
-            raise SystemExit(f"{target.name} exceeds its 4 MB budget")
-        print(f"{target.relative_to(BASE_DIR)} {target.stat().st_size:,} bytes")
-    run([ffmpeg, "-y", "-loglevel", "error", "-ss", "1.4", "-i", str(OUT_DIR / "product-tour.mp4"),
+        _verify_export(target, fps=plan["fps"], frames=frames, width=1440, height=900)
+    run([ffmpeg, "-y", "-loglevel", "error", "-ss", "3", "-i", str(OUT_DIR / "product-tour.mp4"),
          "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(OUT_DIR / "product-tour.webp")])
 
 
@@ -185,66 +227,55 @@ def _escape_drawtext(text: str) -> str:
 
 
 def convert_social_cuts() -> None:
-    """Render punchy 16:9 and 9:16 social-media highlight reels with burned-in kinetic hooks."""
-    source = RAW_DIR / "product-tour.webm"
-    timing = json.loads(source.with_suffix(".json").read_text(encoding="utf-8"))
-    hooks = timing.get("socialHooks") or []
-    if not hooks:
-        return
+    """Reframe readable excerpts of the validated final tour without cropping its UI."""
+    plan = _tour_plan()
+    source = OUT_DIR / "product-tour.mp4"
+    _verify_export(source, fps=plan["fps"], frames=plan["duration"] * plan["fps"],
+                   width=1440, height=900)
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish social clips.")
     font = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     font_opt = f":fontfile={font}" if Path(font).is_file() else ""
-    trim_offset = float(timing["trim"])
-
-    # 1) 16:9 Social Reel (1440x900, 30fps)
-    parts_16x9: list[str] = []
-    concat_16x9: list[str] = []
-    # 2) 9:16 Vertical Reel (1080x1920, 30fps)
-    parts_9x16: list[str] = []
-    concat_9x16: list[str] = []
-
-    for idx, hook in enumerate(hooks):
-        start = trim_offset + float(hook["start"])
-        end = trim_offset + float(hook["end"])
-        label = _escape_drawtext(str(hook["text"]))
-        focus_x = max(0.15, min(0.85, float(hook.get("x", 0.5))))
-        # 16:9 segment with bottom kinetic hook pill
-        parts_16x9.append(
-            f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,fps=30,scale=1440:900:flags=lanczos,"
-            f"drawtext=text='{label}'{font_opt}:expansion=none:fontsize=36:fontcolor=white:"
-            "box=1:boxcolor=0x0d1322@0.90:boxborderw=18:x=(w-text_w)/2:y=h-text_h-48[v" + str(idx) + "]"
-        )
-        concat_16x9.append(f"[v{idx}]")
-
-        # 9:16 segment: track horizontal focus, scale into centered studio frame on dark canvas, top brand + bottom hook
-        crop_x = f"max(0,min(iw-iw*0.5625,iw*{focus_x:.3f}-iw*0.28125))"
-        parts_9x16.append(
-            f"[0:v]trim=start={start:.3f}:end={end:.3f},setpts=PTS-STARTPTS,fps=30,"
-            f"crop=w=iw*0.5625:h=ih:x='{crop_x}':y=0,scale=1080:1200:flags=lanczos,"
-            "pad=1080:1920:0:360:color=0x0d1322,"
-            f"drawtext=text='LIXITY · OFFLINE MANUSCRIPT STUDIO'{font_opt}:fontsize=26:fontcolor=0x93c5fd:x=(w-text_w)/2:y=220,"
-            f"drawtext=text='{label}'{font_opt}:expansion=none:fontsize=44:fontcolor=white:"
-            "box=1:boxcolor=0x1e293b@0.92:boxborderw=22:x=(w-text_w)/2:y=1640[v" + str(idx) + "]"
-        )
-        concat_9x16.append(f"[v{idx}]")
-
-    for name, parts, concat_inputs, max_bytes in (
-        ("social-hook-16x9.mp4", parts_16x9, concat_16x9, 3_500_000),
-        ("social-hook-9x16.mp4", parts_9x16, concat_9x16, 4_000_000),
+    hooks = {
+        "read": "Notice sticky sentences",
+        "passage": "Focus on dialogue",
+        "compare": "Compare your revision",
+        "research": "Compare chapters",
+        "return": "Try your passage offline",
+    }
+    selected = [scene for scene in plan["scenes"] if scene["id"] in hooks]
+    frames = len(selected) * 6 * plan["fps"]
+    for name, width, height, geometry, label_y, label_size, max_bytes in (
+        ("social-hook-16x9.mp4", 1600, 900,
+         "pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0x0d1322", "h-text_h-32", 32, 3_500_000),
+        ("social-hook-9x16.mp4", 1080, 1920,
+         "scale=1080:674:flags=lanczos,setsar=1,"
+         "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x0d1322,"
+         f"drawtext=text='LIXITY · OFFLINE MANUSCRIPT STUDIO'{font_opt}:"
+         "fontsize=26:fontcolor=0x93c5fd:x=(w-text_w)/2:y=450", "1420", 44, 4_000_000),
     ):
-        fc = ";".join(parts) + ";" + "".join(concat_inputs) + f"concat=n={len(hooks)}:v=1:a=0[out]"
+        parts: list[str] = []
+        for index, scene in enumerate(selected):
+            start_frame = (scene["start"] + 1) * plan["fps"]
+            end_frame = start_frame + 6 * plan["fps"]
+            label = _escape_drawtext(hooks[scene["id"]])
+            parts.append(
+                f"[0:v]trim=start_frame={start_frame}:end_frame={end_frame},setpts=PTS-STARTPTS,"
+                f"{geometry},drawtext=text='{label}'{font_opt}:expansion=none:"
+                f"fontsize={label_size}:fontcolor=white:box=1:boxcolor=0x0d1322@0.94:"
+                f"boxborderw=16:x=(w-text_w)/2:y={label_y}[s{index}]"
+            )
+        parts.append("".join(f"[s{index}]" for index in range(len(selected))) +
+                     f"concat=n={len(selected)}:v=1:a=0[out]")
         target = OUT_DIR / name
-        run([
-            ffmpeg, "-y", "-loglevel", "error", "-i", str(source),
-            "-filter_complex", fc, "-map", "[out]", "-an", "-map_metadata", "-1",
-            "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-            str(target),
-        ])
-        if target.stat().st_size > max_bytes:
-            raise SystemExit(f"{target.name} exceeds its {max_bytes:,} byte budget")
-        print(f"{target.relative_to(BASE_DIR)} {target.stat().st_size:,} bytes")
+        run([ffmpeg, "-y", "-loglevel", "error", "-i", str(source),
+             "-filter_complex", ";".join(parts), "-map", "[out]", "-an", "-map_metadata", "-1",
+             "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
+             "-c:v", "libx264", "-preset", "slow", "-crf", "25", "-pix_fmt", "yuv420p",
+             "-movflags", "+faststart", str(target)])
+        _verify_export(target, fps=plan["fps"], frames=frames, width=width, height=height,
+                       max_bytes=max_bytes)
 
 
 def main() -> int:
@@ -254,8 +285,6 @@ def main() -> int:
     jobs = []
     if args.only in (None, "product-tour"):
         jobs.append((convert_product_tour, ()))
-    if args.only in (None, "product-tour", "social"):
-        jobs.append((convert_social_cuts, ()))
     for name, poster_at, max_mp4, max_gif in WALKTHROUGHS:
         if args.only in (None, name):
             jobs.append((convert, (name, poster_at, max_mp4, max_gif)))
@@ -263,11 +292,14 @@ def main() -> int:
     if workers <= 1:
         for fn, fn_args in jobs:
             fn(*fn_args)
-        return 0
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(fn, *fn_args) for fn, fn_args in jobs]
-        for future in futures:
-            future.result()
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(fn, *fn_args) for fn, fn_args in jobs]
+            for future in futures:
+                future.result()
+    # Social clips consume the final tour, so they must follow its successful export.
+    if args.only in (None, "product-tour", "social"):
+        convert_social_cuts()
     return 0
 
 

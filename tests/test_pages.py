@@ -466,6 +466,7 @@ class TestPublicLanguages(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for relative in ("docs/templates/home.html.template", "docs/templates/home-footer.html.template",
+                             "docs/videos/product-tour-timing.json",
                              *(f"docs/locales/{language}.json" for language in LANGUAGES)):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

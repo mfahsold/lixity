@@ -17,6 +17,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Synchronize the homepage tour, localized captions and duration labels with one
+  48-second timeline. Pace pointer movement, show one verifiable action per shot,
+  and keep captions readable without competing camera or typing effects.
 - Publish speech job terminal states after temporary source cleanup, including
   cancellation or shutdown while cleanup is in progress.
 - Bind manuscript revision deltas and the editor pulse to current source bytes
