@@ -39,6 +39,12 @@ function activate(el) {
   if (el.hasAttribute("data-layer")) selectAnalysisMetric(key);
   var jump = el.getAttribute("data-jump");
   var target = jump ? document.querySelector(jump) : null;
+  if (target && document.body.classList.contains("only-flags") && !el.getAttribute("data-flags")) {
+    var targetChapter = target.closest(".chapter");
+    if (targetChapter && !targetChapter.classList.contains("has-flags")) {
+      setFilter(document.getElementById("filter-flags"), "only-flags", false);
+    }
+  }
   if (target && key && target.closest("#chapters")) rememberPassageLocation(target);
   if (target) scrollAndFlash(target, {analysisVisible: el.hasAttribute("data-layer") ? true : undefined});
 }
@@ -366,6 +372,10 @@ function syncOutlierNavigation() {
       }
     }
   }
+  var option = layer && layer.selectedOptions && layer.selectedOptions[0];
+  var inlineOnly = Boolean(option && option.dataset.inlineEvidence === "1" && !chips.length);
+  var layerNav = layerPosition && layerPosition.closest(".layer-nav");
+  if (layerNav) layerNav.hidden = !layer || !layer.value || inlineOnly;
   var disabled = !chips.length || !layer || !layer.value || Boolean(comparisonToggle && !comparisonToggle.checked);
   if (layerPrevious) layerPrevious.disabled = disabled;
   if (layerNext) layerNext.disabled = disabled;

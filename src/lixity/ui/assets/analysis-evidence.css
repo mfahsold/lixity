@@ -59,7 +59,7 @@
 .analysis-evidence-measure { flex: 0 0 auto; min-width: 0; text-align: end; }
 .analysis-evidence-measure .analysis-evidence-scope { color: var(--analysis-evidence-color, var(--accent)); white-space: nowrap; }
 .analysis-evidence-scope { display: block; color: var(--muted); font-size: var(--text-note); font-weight: var(--weight-semibold); }
-.analysis-evidence-count { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: .25rem; margin-top: 2px; color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.analysis-evidence-count { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: .25rem; margin-top: 2px; color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 .analysis-evidence-number { font-size: 1.45rem; font-weight: var(--weight-strong); letter-spacing: -.02em; }
 .analysis-evidence-unit { font-size: var(--text-note); }
 .analysis-evidence-paragraph { padding-block: var(--space-2); border-block: 1px solid var(--line); }

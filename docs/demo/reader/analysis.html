@@ -3931,7 +3931,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-passage-tools .ctl { min-width: 0; min-height: 44px; text-align: start; white-space: normal; }
 .reader-passage-tools [data-reader-action="evidence"] { color: var(--accent); background: var(--accent-light); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
 .manuscript-reading .manuscript-reader-controls { position: sticky; }
-body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: block; }
+body.manuscript-reading:not(.workbench-analysis).only-flags:not(.text-search-active) .chapter { display: block; }
+body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .chapter:not(.has-flags):not(:has(.ptext.metric-notable)) { display: none; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
 .manuscript-reading:not(.workbench-overview) .analysis-outline-contents,
 .manuscript-reading #microhint,
@@ -4540,7 +4541,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .analysis-evidence-measure { flex: 0 0 auto; min-width: 0; text-align: end; }
 .analysis-evidence-measure .analysis-evidence-scope { color: var(--analysis-evidence-color, var(--accent)); white-space: nowrap; }
 .analysis-evidence-scope { display: block; color: var(--muted); font-size: var(--text-note); font-weight: var(--weight-semibold); }
-.analysis-evidence-count { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: .25rem; margin-top: 2px; color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.analysis-evidence-count { display: inline-flex; align-items: baseline; justify-content: flex-end; gap: .25rem; margin-top: 2px; color: var(--analysis-evidence-color, var(--accent)); font-variant-numeric: tabular-nums; line-height: 1.15; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 .analysis-evidence-number { font-size: 1.45rem; font-weight: var(--weight-strong); letter-spacing: -.02em; }
 .analysis-evidence-unit { font-size: var(--text-note); }
 .analysis-evidence-paragraph { padding-block: var(--space-2); border-block: 1px solid var(--line); }
