@@ -681,9 +681,16 @@ function renderManuscriptDraftsView(host) {
     manuscriptDraftsState.selectedId = activeList[0].id || "";
   }
 
+  var draftTagLabels = {
+    "manuscript-draft": uiLabel("research_draft_tag_manuscript"),
+    "character": uiLabel("research_tpl_character"),
+    "location": uiLabel("research_tpl_place"),
+    "scene": uiLabel("research_tpl_scene"),
+    "scenes": uiLabel("research_tpl_scene")
+  };
   function renderDraftCard(d) {
     var tags = Array.isArray(d.tags) && d.tags.length
-      ? '<div class="ctl-note">' + d.tags.map(function(t) { return '<span class="badge">' + escapeHtml(t) + "</span>"; }).join(" ") + "</div>"
+      ? '<div class="ctl-note">' + d.tags.map(function(t) { return '<span class="badge">' + escapeHtml(draftTagLabels[t] || t) + "</span>"; }).join(" ") + "</div>"
       : "";
     return '<div class="research-card">' +
       '<div class="research-card-title">' + escapeHtml(d.title || "") + "</div>" +

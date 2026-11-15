@@ -1146,7 +1146,7 @@ def render_dashboard(
         f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
         f'aria-controls="chapters" data-help="{L("reading_help_search")}" '
         'aria-keyshortcuts="Enter Shift+Enter Escape"/>'
-        '<kbd class="search-kbd-badge" title="Tastaturkürzel">Strg+F</kbd>'
+        f'<kbd class="search-kbd-badge" title="{L("kbd_shortcut")}">{L("search_shortcut")}</kbd>'
         '</span>'
     )
     parts.append(
