@@ -23,6 +23,8 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "matrix": (("md", "csv", "json"), "md"),
     "timeline": (("text", "md", "json"), "json"),
     "dossier": (("json", "table", "text"), "json"),
+    "dossier-drafts": (("json",), "json"),
+    "dossier-from-manuscript": (("json",), "json"),
     "dossier-images": (("json",), "json"),
     "media-context": (("json",), "json"),
     "migrate-storage": (("json",), "json"),
@@ -186,6 +188,18 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     (
         "dossier-images",
         "List retained and ordinary image references across active dossiers; read-only JSON",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "dossier-drafts",
+        "Preview deterministic character and scene dossier drafts from a manuscript; read-only JSON",
+        "Dossiers, claims and decisions",
+        (),
+    ),
+    (
+        "dossier-from-manuscript",
+        "Create a dossier explicitly from a deterministic manuscript draft",
         "Dossiers, claims and decisions",
         (),
     ),
@@ -465,6 +479,18 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
         "Read image references across active dossiers. Missing provenance is a metadata presence\n"
         "check, not a determination of image rights. This command does not capture images.",
         ("dossier-images --project ./novel --missing-provenance",),
+    ),
+    "dossier-drafts": (
+        "Extract read-only character and scene dossier drafts from a manuscript using\n"
+        "deterministic linguistic and structural metrics.",
+        ("dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all",),
+    ),
+    "dossier-from-manuscript": (
+        "Create a new dossier explicitly from one deterministic manuscript draft.",
+        (
+            "dossier-from-manuscript --project ./novel --manuscript ./manuscript.md "
+            "--draft-id character:matteo",
+        ),
     ),
     "claim": (
         "List by default; inspect with CLAIM_ID; create with --title and --statement.\n"
@@ -1534,6 +1560,30 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
             command.add_argument(
                 "--offset", type=int, default=0, help="Zero-based reference offset"
+            )
+        elif name == "dossier-drafts":
+            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            command.add_argument(
+                "--kind",
+                choices=("all", "character", "scene"),
+                default="all",
+                help="Draft kind filter (default: all)",
+            )
+            command.add_argument("--language", help="Analysis language override")
+        elif name == "dossier-from-manuscript":
+            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            command.add_argument("--draft-id", help="Specific draft ID from dossier-drafts")
+            command.add_argument(
+                "--kind",
+                choices=("all", "character", "scene"),
+                default="character",
+                help="Fallback draft kind if --draft-id is omitted (default: character)",
+            )
+            command.add_argument("--language", help="Analysis language override")
+            command.add_argument(
+                "--actor",
+                default="local-author",
+                help="Author attribution for saved changes (default: local-author)",
             )
         elif name in ("dossier-image", "dossier-media"):
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
@@ -2970,6 +3020,22 @@ def run(args: argparse.Namespace) -> int:
                 limit=args.limit,
                 offset=args.offset,
                 missing_provenance=args.missing_provenance,
+            )
+        elif command == "dossier-drafts":
+            result = api.manuscript_dossier_drafts(
+                args.project,
+                args.manuscript,
+                language=args.language,
+                kind=args.kind,
+            )
+        elif command == "dossier-from-manuscript":
+            result = api.create_dossier_from_manuscript(
+                args.project,
+                args.manuscript,
+                draft_id=args.draft_id,
+                kind=args.kind,
+                language=args.language,
+                actor=args.actor,
             )
         elif command in ("dossier-image", "dossier-media"):
             if not args.allow_retention:

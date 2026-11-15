@@ -416,7 +416,7 @@ def render_dashboard(
         f'<html lang="{html_lang}">',
         "<head>",
         '<meta charset="utf-8"/>',
-        '<link rel="icon" href="data:,"/>',
+        '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {esc(engine_name)}</title>",
@@ -1028,8 +1028,29 @@ def render_dashboard(
         else []
     )
     if has_chapters:
-        parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
-        parts.append(f'<p class="panel-guide">{L("review_intro")}</p><div class="review-routes">')
+        is_de = (current_language or language_key) == "de"
+        hide_lbl = "Ausblenden" if is_de else "Hide"
+        show_lbl = "Einblenden" if is_de else "Show"
+        if is_de:
+            manuscript_intro = (
+                f"{len(chapters)} Kapitel · {total_words:,} Wörter · "
+                f"{len(flagged)} auffällige Absätze im Manuskript."
+            ).replace(",", ".")
+        else:
+            manuscript_intro = (
+                f"{len(chapters)} chapters · {total_words:,} words · "
+                f"{len(flagged)} flagged paragraphs in this manuscript."
+            )
+        parts.append(
+            f'<section class="panel" id="analysis-review">'
+            f'<div class="analysis-review-head"><h2>{L("review_title")}</h2>'
+            f'<button type="button" class="ctl ctl-sm" id="analysis-review-toggle" '
+            f'aria-expanded="true" aria-controls="analysis-review-body" '
+            f'data-hide-label="{hide_lbl}" data-show-label="{show_lbl}">{hide_lbl}</button></div>'
+        )
+        parts.append(
+            f'<div id="analysis-review-body"><p class="panel-guide">{manuscript_intro}</p><div class="review-routes">'
+        )
         if paragraphs:
             candidates = flagged
             first = (
@@ -1038,13 +1059,20 @@ def render_dashboard(
                 else paragraphs[0]
             )
             first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
-            passage_hint = "review_passage_flagged" if candidates else "review_passage_unflagged"
+            if candidates:
+                reason_text = (
+                    f"Kap. {first.chapter_num}, Z. {first.start_line} (Stufe {first.severity}, {first.words} Wörter)"
+                    if is_de
+                    else f"Ch. {first.chapter_num}, line {first.start_line} (level {first.severity}, {first.words} words)"
+                )
+            else:
+                reason_text = L("review_passage_unflagged")
             parts.append(
                 f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
                 'aria-describedby="review-passage-reason" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
                 f"{L('review_passage_action')}</a>"
-                f'<p class="ctl-note" id="review-passage-reason">{L(passage_hint)}</p></article>'
+                f'<p class="ctl-note" id="review-passage-reason">{reason_text}</p></article>'
             )
         compare_target = (
             "heatmap"
@@ -1054,7 +1082,7 @@ def render_dashboard(
         compare_hint = (
             "review_compare_hint" if compare_target == "heatmap" else "review_compare_limited"
         )
-        review_routes = [
+        review_routes: list[tuple[str, str, str, str]] = [
             ("review_compare", compare_hint, "review_compare_action", compare_target),
         ]
         if metrics is not None:
@@ -1070,12 +1098,23 @@ def render_dashboard(
             review_routes.append(
                 ("review_style_space", "review_style_space_hint", "review_style_space_action", "dim-canvas")
             )
+        active_ids = {sec_id for sec_id, _ in active_sections}
         for _title_key, hint_key, action_key, target in review_routes:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#{target}" '
                 f'data-help="{L(hint_key)}" data-jump="#{target}">{L(action_key)}</a></article>'
             )
-        parts.append("</div></section>")
+        if "scenes" in active_ids:
+            parts.append(
+                f'<article class="review-route"><a class="ctl" href="#scenes" '
+                f'data-help="{L("analysis_nav_help_scenes")}" data-jump="#scenes">{L("sec_scenes")}</a></article>'
+            )
+        if "characters" in active_ids:
+            parts.append(
+                f'<article class="review-route"><a class="ctl" href="#characters" '
+                f'data-help="{L("analysis_nav_help_characters")}" data-jump="#characters">{L("sec_characters")}</a></article>'
+            )
+        parts.append("</div></div></section>")
 
     # --- Toolbar ----------------------------------------------------------
     search_icon = (

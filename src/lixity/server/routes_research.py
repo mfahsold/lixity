@@ -14,7 +14,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
@@ -54,6 +54,62 @@ class ResearchRoutesMixin(ResponseMixin):
             return
         try:
             self._json({"ok": True, **research_api.timeline(root, dossier_id=query.get("dossier_id", [None])[0])})
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_manuscript_dossier_drafts(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        manuscript = self.source_input
+        if not manuscript:
+            self._json({"ok": False, "message": "No manuscript loaded"}, 400)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        kind_raw = query.get("kind", ["all"])[0]
+        if kind_raw not in ("all", "character", "scene"):
+            self._json({"ok": False, "message": "kind must be all, character, or scene"}, 400)
+            return
+        kind = cast(Literal["all", "character", "scene"], kind_raw)
+        try:
+            data = research_api.manuscript_dossier_drafts(
+                root,
+                manuscript,
+                language=query.get("language", [None])[0] or self.language,
+                kind=kind,
+            )
+            self._json({"ok": True, **data})
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_dossier_from_manuscript(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        manuscript = payload.get("manuscript") or self.source_input
+        if not manuscript:
+            self._json({"ok": False, "message": "No manuscript loaded"}, 400)
+            return
+        draft_id = str(payload.get("draft_id") or "").strip() or None
+        kind_raw = str(payload.get("kind") or "character")
+        if kind_raw not in ("all", "character", "scene"):
+            self._json({"ok": False, "message": "kind must be all, character, or scene"}, 400)
+            return
+        kind = cast(Literal["all", "character", "scene"], kind_raw)
+        language = str(payload.get("language") or "").strip() or self.language
+        actor = str(payload.get("actor") or "local-author").strip() or "local-author"
+        try:
+            res = research_api.create_dossier_from_manuscript(
+                root,
+                manuscript,
+                draft_id=draft_id,
+                kind=kind,
+                language=language,
+                actor=actor,
+            )
+            self._json({"ok": True, **res})
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 

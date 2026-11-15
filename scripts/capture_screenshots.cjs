@@ -37,6 +37,16 @@ async function main() {
           body: fs.readFileSync(path.join(__dirname, '..', resource.asset_path))});
         return;
       }
+      if (url.pathname === '/api/manuscript-delta') {
+        await route.fulfill({status: 200, contentType: 'application/json',
+          body: JSON.stringify({ok: true, available: false, snapshot: null, delta: null})});
+        return;
+      }
+      if (url.pathname === '/api/manuscript-timeline') {
+        await route.fulfill({status: 200, contentType: 'application/json',
+          body: JSON.stringify({ok: true, snapshots: [], items: []})});
+        return;
+      }
       const allSources = captures.flatMap(item => [item.source, ...(item.extraSources || [])]);
       const matchedSource = allSources.find(src => '/' + path.basename(src) === url.pathname);
       assert.ok(matchedSource, 'Unknown screenshot resource: ' + url.pathname);

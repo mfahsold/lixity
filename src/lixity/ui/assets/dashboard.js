@@ -792,6 +792,29 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
   });
 }
+var reviewToggleBtn = document.getElementById("analysis-review-toggle");
+var reviewBody = document.getElementById("analysis-review-body");
+if (reviewToggleBtn && reviewBody) {
+  var reviewHideKey = "lixity:hide-review-guide";
+  var reviewHidden = false;
+  try { reviewHidden = localStorage.getItem(reviewHideKey) === "1"; } catch (_) { /* ignore */ }
+  function applyReviewVisibility(hidden) {
+    reviewBody.hidden = hidden;
+    reviewToggleBtn.setAttribute("aria-expanded", String(!hidden));
+    reviewToggleBtn.textContent = hidden
+      ? (reviewToggleBtn.getAttribute("data-show-label") || "Show")
+      : (reviewToggleBtn.getAttribute("data-hide-label") || "Hide");
+  }
+  applyReviewVisibility(reviewHidden);
+  reviewToggleBtn.addEventListener("click", function() {
+    reviewHidden = !reviewBody.hidden;
+    applyReviewVisibility(reviewHidden);
+    try {
+      if (reviewHidden) localStorage.setItem(reviewHideKey, "1");
+      else localStorage.removeItem(reviewHideKey);
+    } catch (_) { /* ignore */ }
+  });
+}
 if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
   [
     ["btn-modal-new-project", "file-text"],

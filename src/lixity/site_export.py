@@ -453,7 +453,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             return number(value) + "%" if available else "—"
         page_parts = ['<!DOCTYPE html>', f'<html lang="{esc(resolved.key)}"><head><meta charset="utf-8"/>',
             '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
-            '<link rel="icon" href="data:,"/>',
+            '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>',
             f'<title>{L("publication_analysis_title")} · {esc(title)}</title>',
             f'<style>{_bundle(_REPORT_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
             '<body class="lixity-report" data-read-only="true"><main class="page">',

@@ -33,7 +33,7 @@ def test_research_tabs_have_localized_tooltips(language):
     parsed = _Elements()
     parsed.feed(html)
     
-    research_keys = ("dossiers", "claims", "decisions", "review", "sources", "search", "grounding")
+    research_keys = ("dossiers", "claims", "timeline", "decisions", "review", "sources", "search", "grounding")
     for key in research_keys:
         matching = [tab for tab in parsed.tabs if tab.get("id") == f"research-tab-{key}"]
         assert len(matching) == 1, f"Missing tab research-tab-{key}"

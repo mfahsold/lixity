@@ -296,7 +296,7 @@ class TestJsDomContract(unittest.TestCase):
         html = render_dashboard(chapters, paragraphs)
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('data-target="p-0"', review)
-        self.assertIn(WORKSPACE_LABELS["en"]["review_passage_flagged"], review)
+        self.assertIn("Ch. 1, line 3", review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
         """Section links retain real panel anchors without becoming tabs."""

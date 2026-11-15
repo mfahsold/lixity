@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bg { fill: #2949cc; }
+    .fg { fill: #ffffff; }
+    .bars { fill: #c9d4ff; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #3b5ef5; }
+      .fg { fill: #f8faff; }
+      .bars { fill: #dbe4ff; }
+    }
+  </style>
+  <rect class="bg" width="32" height="32" rx="7"/>
+  <rect class="fg" x="7.8" y="6.5" width="4.6" height="19" rx="1.5"/>
+  <rect class="fg" x="7.8" y="21.2" width="13.2" height="4.3" rx="1.5"/>
+  <rect class="bars" x="15.3" y="8.2" width="8.6" height="2.3" rx="1.15"/>
+  <rect class="bars" x="15.3" y="12.5" width="6.3" height="2.3" rx="1.15"/>
+  <rect class="bars" x="15.3" y="16.8" width="4.2" height="2.3" rx="1.15"/>
+</svg>

@@ -292,6 +292,32 @@ _TOOLS = (
             "additionalProperties": False,
         },
     },
+    {
+        "name": "lixity_manuscript_dossier_drafts",
+        "description": (
+            "Read-only extraction of deterministic character and scene dossier drafts from "
+            "manuscript text (presence/POV gaps, character voice profiles, scene counts)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": ["all", "character", "scene"],
+                    "description": "Draft kind filter (all, character, or scene).",
+                    "default": "all",
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
 )
 
 _PROMPTS = (
@@ -531,6 +557,35 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                 arguments["base_text"],
                 arguments["target_text"],
                 language=str(arguments.get("language") or "en"),
+            )
+        elif name == "lixity_manuscript_dossier_drafts":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "lixity_manuscript_dossier_drafts requires a text string.",
+                        }
+                    ],
+                    "isError": True,
+                }
+            from .research.manuscript_drafts import extract_manuscript_dossier_drafts
+
+            kind_arg = str(arguments.get("kind") or "all")
+            if kind_arg not in {"all", "character", "scene"}:
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "lixity_manuscript_dossier_drafts kind must be all, character, or scene.",
+                        }
+                    ],
+                    "isError": True,
+                }
+            payload = extract_manuscript_dossier_drafts(
+                arguments["text"],
+                language=str(arguments.get("language") or "en"),
+                kind=kind_arg,
             )
         else:
             return {

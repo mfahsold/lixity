@@ -37,8 +37,8 @@ print(json.dumps({locale:render_dashboard([], [], controls=True, title='Syntheti
       await expect(page).toHaveTitle(/Synthetic research navigation/);
       await page.locator('[data-view=research]').click();
       const tabs = page.locator('#research-tabs [role=tab]');
-      await expect(tabs).toHaveCount(7);
-      for (const key of ['dossiers', 'claims', 'decisions', 'review', 'sources', 'search', 'grounding']) {
+      await expect(tabs).toHaveCount(8);
+      for (const key of ['dossiers', 'claims', 'timeline', 'decisions', 'review', 'sources', 'search', 'grounding']) {
         const tab = page.locator(`[data-rtab=${key}]`), panel = page.locator('#rtab-'+key);
         await expect(tab).toHaveAttribute('id', 'research-tab-'+key);
         await expect(tab).toHaveAttribute('aria-controls', 'rtab-'+key);

@@ -57,7 +57,7 @@ def render_research_panel(
     parts.append(
         '<div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title">'
     )
-    for key in ("dossiers", "claims", "decisions", "review", "sources", "search", "grounding"):
+    for key in ("dossiers", "claims", "timeline", "decisions", "review", "sources", "search", "grounding"):
         selected = key == "dossiers"
         parts.append(
             f'<button type="button" class="ctl{" active" if selected else ""}" '
@@ -258,6 +258,21 @@ def render_research_panel(
         f'<button type="button" class="ctl" data-close-disclosure="r-dos-composer">{L("disclosure_collapse")}</button>'
     )
     parts.append("</div>")
+    parts.append("</div>")
+    parts.append("</details>")
+    parts.append('<details class="research-composer" id="r-dos-drafts-box" data-requires-write data-requires-live>')
+    parts.append(
+        f'<summary data-help="{L("research_dossier_draft_help")}">{L("research_dossier_draft_heading")}</summary><div class="ctl-group research-composer-body">'
+    )
+    parts.append('<div class="row mb-2">')
+    parts.append(
+        f'<button type="button" class="ctl primary" id="r-manuscript-dossier-btn" data-help="{L("research_dossier_draft_help")}">{L("research_dossier_draft_load")}</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" data-close-disclosure="r-dos-drafts-box">{L("disclosure_collapse")}</button>'
+    )
+    parts.append("</div>")
+    parts.append('<div id="r-manuscript-drafts" aria-live="polite"></div>')
     parts.append("</div>")
     parts.append("</details>")
     parts.append('<div class="row mb-2" id="r-dos-collection-bar" hidden>')
@@ -502,12 +517,13 @@ def render_research_panel(
     )
     parts.append('<div id="research-claim-relations" aria-live="polite"></div></div>')
     parts.append("</div>")
-    # Timeline subview: the same claims, sorted by their recorded period.
-    parts.append('<div id="rtab-timeline" style="display:none;">')
+    parts.append("</div>")
+
+    # Tab Pane: Timeline (top-level direct access to recorded chronology).
+    parts.append(pane("timeline"))
     parts.append(
         f'<div id="research-claims-timeline" aria-live="polite">{loading_state(label(labels, "research_loading"))}</div>'
     )
-    parts.append("</div>")
     parts.append("</div>")
 
     # Tab Pane: Decisions

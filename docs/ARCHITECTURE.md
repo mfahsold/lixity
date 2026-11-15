@@ -1290,6 +1290,20 @@ catalogue before exposing evidence actions, since the overview omits its digest.
 These bindings remain ephemeral presentation state without changing the archive
 contract.
 
+### GitHub Pages & Brand Asset Pipeline
+
+Public documentation pages under `docs/` use a minimalist 5-file favicon and
+web-manifest stack: `favicon.ico` (`sizes="any"` multi-resolution fallback),
+`docs/assets/brand/mark-adaptive.svg` (adapting to `prefers-color-scheme: dark`),
+an opaque `docs/assets/brand/apple-touch-icon.png`, `docs/assets/brand/icon-192.png`,
+and `docs/assets/brand/icon-512.png`, wired via `docs/manifest.webmanifest`.
+`scripts/build_brand_assets.py` (`make brand-assets`) deterministically renders the
+raster PNG, ICO, and WebP derivatives from `docs/assets/mark.svg` using
+ImageMagick so no manual binary edits are needed. Before staging and deploying
+GitHub Pages, `.github/workflows/pages.yml` runs pre-deploy verification across
+`scripts/sync_docs.py --check`, `scripts/build_llms_full.py --check`,
+`scripts/build_guide_markdown.py --check`, and `scripts/build_public_site.py --check`.
+
 ## First-run journey (server contract)
 
 Empty workspaces offer create/open/import actions. After a successful workspace

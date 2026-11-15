@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Manuscript-Driven Dossier Drafts (`manuscript_drafts.py`, `research/api.py`, `research/cli.py`, `routes_research.py`, `mcp.py`, `research_panel.py`, `research-workspace.js`)**:
+  - `lixity research dossier-drafts` and `GET /api/research/manuscript-dossier-drafts` extract deterministic, read-only character and scene dossier drafts (`manuscript-dossier-drafts/1`) from manuscript presence/POV gaps, character voice profiles, and scene metrics.
+  - `lixity research dossier-from-manuscript` and `POST /api/research-dossier-from-manuscript` explicitly create a saved dossier from a selected draft (`--draft-id` / `draft_id`, or `--kind` fallback).
+  - Read-only MCP tool `lixity_manuscript_dossier_drafts` exposes the same deterministic draft extraction for `text` (`language`, `kind`: `all|character|scene`).
+  - Research -> Dossiers adds **Draft dossier from manuscript** (`#r-manuscript-dossier-btn`) to inspect and save manuscript-derived drafts.
+
+### Changed
+
+- **Direct Research Timeline Tab (`research_panel.py`, `research-workspace.js`, `command-palette.js`)**: Promoted Timeline to a top-level Research tab (`#research-tab-timeline`) alongside Dossiers, Claims, and Decisions.
+- **Brand Icon Suite & GitHub Pages Pipeline (`docs/assets/brand/`, `docs/favicon.ico`, `docs/manifest.webmanifest`, `docs/assets/home.css`, `scripts/build_brand_assets.py`, `.github/workflows/pages.yml`)**: Refined the multi-profile/multi-format brand icon suite (`make brand-assets`), tightened GitHub Pages vertical spacing (`docs/assets/home.css`), and added the `build_public_site.py --check` pre-deploy gate to `pages.yml`.
+
 ## [0.8.1] - 2026-11-14
 
 ### Added

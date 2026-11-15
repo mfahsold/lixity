@@ -1,0 +1,22 @@
+{
+  "name": "Lixity",
+  "short_name": "Lixity",
+  "description": "Offline manuscript analysis, research dossiers, and reading editions.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "theme_color": "#2949cc",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "assets/brand/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/brand/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

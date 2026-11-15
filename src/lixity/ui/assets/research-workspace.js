@@ -629,11 +629,10 @@ document.addEventListener("click", async function (event) {
       button.setAttribute("aria-pressed", String(selected));
     });
     var showTimeline = viewBtn.dataset.claimView === "timeline";
-    var claimsList = document.getElementById("rtab-claims-list");
-    var timelinePane = document.getElementById("rtab-timeline");
-    if (claimsList) claimsList.style.display = showTimeline ? "none" : "block";
-    if (timelinePane) timelinePane.style.display = showTimeline ? "block" : "none";
+    var targetTab = document.getElementById(showTimeline ? "research-tab-timeline" : "research-tab-claims");
+    if (targetTab) showResearchTab(targetTab);
     if (showTimeline) refreshResearchClaimProjections();
+    document.dispatchEvent(new CustomEvent("lixity:viewchange"));
     return;
   }
 
@@ -645,9 +644,65 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
     if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }
+    if (tabBtn.dataset.rtab === "timeline") refreshResearchClaimProjections();
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
+    document.dispatchEvent(new CustomEvent("lixity:viewchange"));
     if (window.LixityMotion) window.LixityMotion.view(document.getElementById(targetId));
+    return;
+  }
+
+  var loadDraftsBtn = event.target.closest("#r-manuscript-dossier-btn");
+  if (loadDraftsBtn) {
+    var draftsHost = document.getElementById("r-manuscript-drafts");
+    if (!draftsHost) return;
+    loadDraftsBtn.disabled = true;
+    draftsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_loading")) + "</p>";
+    try {
+      var data = await researchApiGet("research/manuscript-dossier-drafts");
+      var drafts = (data && Array.isArray(data.drafts)) ? data.drafts : [];
+      if (!drafts.length) {
+        draftsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_draft_empty")) + "</p>";
+      } else {
+        draftsHost.innerHTML = drafts.map(function(d) {
+          var tags = Array.isArray(d.tags) && d.tags.length
+            ? '<div class="ctl-note">' + d.tags.map(function(t) { return '<span class="badge">' + escapeHtml(t) + "</span>"; }).join(" ") + "</div>"
+            : "";
+          return '<div class="research-card">' +
+            '<div class="research-card-title">' + escapeHtml(d.title || "") + "</div>" +
+            '<p class="ctl-note">' + escapeHtml(d.summary || "") + "</p>" +
+            tags +
+            '<div class="row"><button type="button" class="ctl ctl-sm primary" data-create-manuscript-draft="' +
+            escapeHtml(d.id || "") + '">' + escapeHtml(uiLabel("research_dossier_draft_create")) + "</button></div>" +
+            "</div>";
+        }).join("");
+      }
+    } catch (error) {
+      draftsHost.innerHTML = '<p class="ctl-note err">' + escapeHtml((error && error.message) || uiLabel("research_status_unavailable")) + "</p>";
+    } finally {
+      loadDraftsBtn.disabled = false;
+    }
+    return;
+  }
+
+  var createDraftBtn = event.target.closest("[data-create-manuscript-draft]");
+  if (createDraftBtn) {
+    var draftId = createDraftBtn.getAttribute("data-create-manuscript-draft");
+    if (!draftId) return;
+    createDraftBtn.disabled = true;
+    try {
+      var created = await researchApiPost("research-dossier-from-manuscript", { draft_id: draftId });
+      if (created && created.ok) {
+        createDraftBtn.textContent = uiLabel("research_dossier_action");
+        await refreshResearchDossiers();
+      } else {
+        researchFormStatus(createDraftBtn, (created && created.message) || uiLabel("research_status_unavailable"), "err");
+        createDraftBtn.disabled = false;
+      }
+    } catch (error) {
+      researchFormStatus(createDraftBtn, (error && error.message) || uiLabel("research_status_unavailable"), "err");
+      createDraftBtn.disabled = false;
+    }
     return;
   }
 

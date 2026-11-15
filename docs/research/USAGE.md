@@ -79,6 +79,7 @@ maintained procedure for each task; UI and CLI use the same project archive.
 | Import several files or resume an interruption | [Batch ingestion](#batch-ingestion-and-non-interactive-progress), [checkpoints](#continue-an-interrupted-source-import) |
 | Search notes or choose a source quotation | [Current-record search](#search-current-authored-records), [citation selection](#choose-citations-by-keywords) |
 | Read dossiers beside the manuscript or inspect history | [Reading workflow](#reading-and-cli-workflows), [entries and earlier versions](#read-entries-and-earlier-versions-without-losing-context) |
+| Draft dossiers from manuscript metrics | [Manuscript-driven dossier drafts](#manuscript-driven-dossier-drafts) |
 | Record an assertion, its evidence and an author decision | [Create the linked records](#record-a-claim-evidence-and-an-author-decision) |
 | Associate a manuscript quotation with a claim | [Exact selection, retention and review](#associate-a-manuscript-quote-with-a-claim) |
 | Review claim dates or cause/effect links | [Claim chronology](#claim-chronology-and-causeeffect-links) |
@@ -595,6 +596,28 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 `show ID`, `inspect ID` and `--dossier-id ID` use the same section read. An explicit
 `--revision N` retains that version; opening text never re-pins or saves it.
 
+### Manuscript-driven dossier drafts
+
+`dossier-drafts` inspects a manuscript with deterministic presence/POV-gap,
+character-voice, and scene metrics and returns read-only candidate drafts
+(`manuscript-dossier-drafts/1`) without writing to the archive.
+`dossier-from-manuscript` explicitly creates one saved dossier from a chosen
+`--draft-id` (or the first draft matching `--kind` when `--draft-id` is
+omitted).
+
+```sh
+lixity research dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all
+lixity research dossier-from-manuscript --project ./novel --manuscript ./manuscript.md \
+  --draft-id DRAFT_ID --actor local-author
+```
+
+Both commands accept `--language` to override the project's configured analysis
+language, and `--kind` accepts `all`, `character`, or `scene` (`dossier-drafts`
+defaults to `all`; `dossier-from-manuscript` defaults to `character` when
+`--draft-id` is omitted). In the browser workspace, **Draft dossier from
+manuscript** under **Research -> Dossiers** loads these read-only drafts and lets
+you save a selected draft explicitly.
+
 <a id="configured-terms-and-boundary-policies"></a>
 
 ### Configured terms, props and boundary policies
@@ -674,8 +697,9 @@ the reader marks that version difference explicitly.
 <a id="claim-chronology-and-causeeffect-links-since-v300"></a>
 ### Claim chronology and cause/effect links
 
-In **Claims**, choose **Timeline** to organize the current claim revisions by
-their recorded `time_period`. **List** returns to the ordinary claim cards.
+In **Research** -> **Timeline** (a direct top-level tab alongside **Dossiers**,
+**Claims**, and **Decisions**), current claim revisions are organized by their
+recorded `time_period`. **Claims** returns to the ordinary claim cards.
 Each dated claim shows its placed calendar range, both sections carry a count,
 and the view names the recognized formats and how to place a claim. Every period
 label is preserved and the record's creation date is never substituted. Opening

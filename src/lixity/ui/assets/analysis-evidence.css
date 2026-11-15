@@ -81,7 +81,9 @@
 .analysis-evidence-card .analysis-evidence-unavailable { margin-block: var(--space-2) 0; color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-card .analysis-evidence-warning { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--line-strong); background: var(--bg-subtle); color: var(--fg-secondary); font-size: var(--text-note); }
 .analysis-evidence-actions { padding-block-start: var(--space-2); }
-.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 0; }
+.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 auto; white-space: nowrap; }
+.analysis-evidence-edit-row { display: flex; padding-block-start: var(--space-2); }
+.analysis-evidence-edit-row .ctl { width: 100%; justify-content: center; white-space: nowrap; }
 .analysis-evidence-progress { flex: 0 0 auto; color: var(--muted); font-size: var(--text-note); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .analysis-evidence-guide, .analysis-evidence-all-values { color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-guide summary, .analysis-evidence-all-values summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: var(--space-3); box-sizing: border-box; }

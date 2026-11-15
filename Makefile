@@ -78,6 +78,9 @@ videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
 examples: ## Regenerate the published example reports and their PDFs
 	PYTHONPATH=src $(VPY) scripts/build_examples.py
 
+brand-assets: ## Regenerate multi-size/multi-format brand icons and favicon from docs/assets/mark.svg
+	$(PYTHON) scripts/build_brand_assets.py
+
 docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
 	$(PYTHON) scripts/sync_docs.py --check
 	$(PYTHON) scripts/build_llms_full.py --check

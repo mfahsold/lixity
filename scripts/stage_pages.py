@@ -35,6 +35,8 @@ DOCS_ROOT_FILES = {
     "robots.txt",
     "sitemap.xml",
     "indexnow-key.txt",  # Public ownership proof, scoped to /lixity/ via keyLocation.
+    "favicon.ico",
+    "manifest.webmanifest",
     "llms.txt",
     "llms-full.txt",
     "README.md",
@@ -71,7 +73,7 @@ DOCS_ROOT_FILES = {
 
 #: Approved subtrees, keyed by their first path segment.
 PUBLIC_TREES = {
-    "assets": {".css", ".js", ".svg", ".png", ".woff2"},
+    "assets": {".css", ".js", ".svg", ".png", ".webp", ".woff2"},
     "blog": {".html"},
     "guides": {".html", ".md"},
     "screenshots": {".png", ".webp", ".md"},

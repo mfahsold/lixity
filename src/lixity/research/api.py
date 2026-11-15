@@ -90,6 +90,7 @@ from .manuscript import (
 from .manuscript import (
     review_manuscript_terms as review_manuscript_terms,
 )
+from .manuscript_drafts import extract_manuscript_dossier_drafts
 from .media import MEDIA_TYPES, VIDEO_TYPES, validate_media
 from .media_metadata import update_dossier_media_context as update_dossier_media_context
 from .models import (
@@ -3384,3 +3385,75 @@ def claim_matrix_format(
     """Data and rendering in one call, selected by `format`."""
     data = claim_matrix_data(project)
     return data if format == "json" else render_claim_matrix(data, format=format)
+
+
+def manuscript_dossier_drafts(
+    project: str | Path,
+    manuscript: str | Path,
+    *,
+    language: str | None = None,
+    kind: Literal["all", "character", "scene"] = "all",
+) -> dict[str, Any]:
+    """Extract read-only dossier drafts from a manuscript using deterministic metrics."""
+    from ..config import read_explicit_project_config
+
+    root = Path(project)
+    manuscript_path = Path(manuscript)
+    if not manuscript_path.is_file():
+        raise ResearchError(f"Manuscript file does not exist: {manuscript_path}")
+    settings = read_explicit_project_config(root, maximum_bytes=65536) if root.is_dir() else {}
+    resolved_lang = supported_language(
+        language or (str(settings.get("language")) if settings.get("language") else "en")
+    )
+    text = manuscript_path.read_text(encoding="utf-8", errors="replace")
+    payload = extract_manuscript_dossier_drafts(
+        text,
+        language=resolved_lang,
+        settings=settings,
+        kind=kind,
+    )
+    payload["manuscript"] = str(manuscript_path)
+    return payload
+
+
+def create_dossier_from_manuscript(
+    project: str | Path,
+    manuscript: str | Path,
+    *,
+    draft_id: str | None = None,
+    kind: Literal["all", "character", "scene"] = "character",
+    language: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Create a Dossier explicitly from a deterministic manuscript draft."""
+    payload = manuscript_dossier_drafts(
+        project,
+        manuscript,
+        language=language,
+        kind=kind if draft_id is None else "all",
+    )
+    drafts = payload.get("drafts", [])
+    if not drafts:
+        raise ResearchError("No manuscript dossier drafts could be extracted")
+    selected: dict[str, Any] | None = None
+    if draft_id is not None:
+        for item in drafts:
+            if item.get("id") == draft_id:
+                selected = item
+                break
+        if selected is None:
+            raise ResearchError(f"Unknown manuscript dossier draft ID: {draft_id}")
+    else:
+        selected = drafts[0]
+    created = create_dossier(
+        project,
+        str(selected["title"]),
+        str(selected["body"]),
+        language=payload["language"],
+        tags=list(selected.get("tags", [])),
+        actor=actor,
+    )
+    return {
+        **created,
+        "draft": selected,
+    }

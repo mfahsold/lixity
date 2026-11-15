@@ -268,7 +268,7 @@ async function checkBrowser(browser, caseData, form, width) {
         assert.equal(countVisible, true, `${language}/${form}/${width}/paragraph-${index}/sentence-${sentence}: selected sentence count remains readable after navigation inside a long mobile explanation`);
         assert.equal(await card.locator('.analysis-evidence-selection .analysis-evidence-scope').textContent(), fixture.labels.evidence_sentence_scope);
         const mean = new Intl.NumberFormat(language, {minimumFractionDigits:1, maximumFractionDigits:1}).format(wordCount(gold) / sentences.length);
-        assert.ok((await card.locator('.analysis-evidence-value').textContent()).endsWith(mean + ' ' + units[language][1]),
+        assert.ok((await card.locator('.analysis-evidence-value').first().textContent()).endsWith(mean + ' ' + units[language][1]),
           'rendered paragraph mean and localized unit match independent gold');
         await checkComparison(card, fixture);
         if (sentence + 1 < sentences.length) await card.getByRole('button', {name:fixture.labels.evidence_next, exact:true}).click();
@@ -297,7 +297,7 @@ async function checkBrowser(browser, caseData, form, width) {
       }
       const density = new Intl.NumberFormat(language, {minimumFractionDigits:1, maximumFractionDigits:1})
         .format(Math.round(nominal.length * 10000 / wordCount(gold)) / 10);
-      assert.ok((await card.locator('.analysis-evidence-value').textContent()).endsWith(density + ' ' + units[language][2]));
+      assert.ok((await card.locator('.analysis-evidence-value').first().textContent()).endsWith(density + ' ' + units[language][2]));
       await checkComparison(card, fixture);
       await page.keyboard.press('Escape');
       await selectMetric(page, 'asl');

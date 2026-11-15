@@ -265,15 +265,17 @@
       </section>` : null}
       ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
       ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
-      ${spans.length > 1 || canEditPassage ? html`<div class="analysis-evidence-actions">
-        ${spans.length > 1 ? html`<button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
+      ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
+        <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
         <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
-        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>` : null}
-        ${canEditPassage ? html`<button type="button" class="ctl" id="analysis-evidence-edit" onClick=${function() {
+        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
+      </div>` : null}
+      ${canEditPassage ? html`<div class="analysis-evidence-edit-row">
+        <button type="button" class="ctl" id="analysis-evidence-edit" onClick=${function() {
           var targetLine = Number(record.panel.dataset.start);
           close(false);
           window.LixityManuscriptEditor.openAtLine(targetLine);
-        }}>${message("evidence_edit_passage")}</button>` : null}
+        }}>${message("evidence_edit_passage")}</button>
       </div>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
         ${!comparison ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}

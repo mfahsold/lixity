@@ -67,9 +67,8 @@ server.serve_forever()
       await page.locator('[data-rtab=claims]').click();
       await page.locator('#r-open-timeline').click();
       assert.equal(await page.locator('#rtab-timeline').isVisible(), true, 'The claims entry opens the more prominent timeline tab');
-      await page.locator('[data-claim-view=timeline]').hover();
-      await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-claim-view=timeline]')).color === 'rgb(255, 255, 255)');
-      assert.equal(await page.locator('[data-claim-view=timeline]').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Selected timeline view stays readable on hover');
+      await page.locator('#research-tab-timeline').hover();
+      assert.equal(await page.locator('#research-tab-timeline').getAttribute('aria-selected'), 'true', 'Timeline tab is selected when opened from claims');
       await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline .research-timeline-dated > li, #research-claims-timeline .research-timeline-unplaced > li').length === 6);
       assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Loaded timeline entries are visible');
       const dated = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().getAttribute('data-claim-id');
@@ -90,7 +89,7 @@ server.serve_forever()
       assert.equal(writes.length, 0, 'Timeline navigation writes no authored records');
       const endpointLabels = await page.locator('#r-relation-from option').allTextContents();
       assert.equal(new Set(endpointLabels).size, endpointLabels.length, 'Duplicate titles and periods still have distinct selectable labels');
-      await page.locator('[data-claim-view=list]').click();
+      await page.locator('#research-tab-claims').click();
       const evidenceLabels = await page.locator('#r-link-claim-select option').allTextContents();
       assert.equal(new Set(evidenceLabels).size, evidenceLabels.length, 'Keyword evidence choices distinguish duplicate claim titles, periods and versions');
       const decisionLabels = await page.locator('#r-decision-claim-select option').allTextContents();

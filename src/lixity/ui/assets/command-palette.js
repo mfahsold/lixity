@@ -248,10 +248,14 @@
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("research");
           else if (workbench) workbench.dispatch({ type: "view", value: "research" });
-          var claimsTab = document.querySelector('#research-tab-claims, [data-rtab="claims"]');
-          if (claimsTab) claimsTab.click();
-          var timelineBtn = document.querySelector('#r-open-timeline, [data-claim-view="timeline"], [data-research-tab="timeline"]');
-          if (timelineBtn) timelineBtn.click();
+          var timelineTab = document.querySelector('#research-tab-timeline, [data-rtab="timeline"]');
+          if (timelineTab) timelineTab.click();
+          else {
+            var claimsTab = document.querySelector('#research-tab-claims, [data-rtab="claims"]');
+            if (claimsTab) claimsTab.click();
+            var timelineBtn = document.querySelector('#r-open-timeline, [data-claim-view="timeline"], [data-research-tab="timeline"]');
+            if (timelineBtn) timelineBtn.click();
+          }
         }
       },
       {

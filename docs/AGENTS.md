@@ -99,7 +99,7 @@ Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the
 }
 ```
 
-The server exposes 13 deterministic read-only analysis tools:
+The server exposes 14 deterministic read-only analysis tools:
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Word, sentence, and vocabulary profile summary.
@@ -113,6 +113,7 @@ The server exposes 13 deterministic read-only analysis tools:
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
+- `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
 
 And 3 structured editorial prompts: `manuscript_pacing_audit`, `manuscript_dialogue_review`, and `manuscript_showing_triage`.
 
@@ -1355,6 +1356,14 @@ an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.
+- `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene&language=...`:
+  read-only deterministic character and scene dossier drafts
+  (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.
+- `POST /api/research-dossier-from-manuscript`: explicitly create one saved
+  dossier from a manuscript draft (`{"draft_id": "...", "kind": "character",
+  "language": "...", "actor": "local-author", "manuscript": "..."}`; omitted
+  `manuscript` uses the loaded server input, and omitted `draft_id` selects the
+  first draft matching `kind`).
 - `GET /api/research/claim-relations?claim_id=...&include_retracted=true`:
   recorded causal relations; both filters are optional, with retracted entries
   omitted by default. `include_retracted` accepts `true|false`.
