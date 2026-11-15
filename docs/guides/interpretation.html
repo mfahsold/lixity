@@ -109,11 +109,21 @@
 </div>
 <p>A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; <strong>Read these marks</strong> opens the counting and method details. <strong>Focus reading</strong> temporarily hides both displays and restores your choices on exit. <a href="first-look.html#passage">Try the marks in the short tour</a>.</p>
 
+<figure class="frame">
+  <a href="../screenshots/dashboard-measurement-focus.png"><img src="../screenshots/dashboard-measurement-focus.png" width="800" height="812" alt="Counted-text underlines, paragraph comparison markers and the separate explanation card in the Lixity reader" loading="lazy" decoding="async"/></a>
+  <figcaption>Counted-text underlines and paragraph comparison markers inspect the same passage at two distinct scopes.</figcaption>
+</figure>
+
 <p><span class="analysis-key-research">Saved research</span> uses neutral dotted marks and a book-icon <strong>Research</strong> control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity">Visual roles and architecture</a>.</p>
 
 <h2 id="consistency">What does “Comparisons within the limit” measure?</h2>
 <p>This percentage counts measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. The JSON field is named <code>consistency</code>. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
 <p>The baseline uses the chapter median and median absolute deviation (MAD). The default mild threshold is <code>|z*| &lt; 2.5</code>; project and session settings can change it. A high percentage indicates fewer threshold crossings in this particular analysis. It does not certify narrative continuity, factual accuracy or literary merit. Constant features may remain within the band, so even a measured 100% needs contextual interpretation.</p>
+
+<figure class="frame">
+  <a href="../screenshots/dashboard-heatmap.png"><img src="../screenshots/dashboard-heatmap.png" width="2622" height="1040" alt="Chapter-by-feature deviation heatmap showing noise-adjusted z* cells and FDR-selected markers" loading="lazy" decoding="async"/></a>
+  <figcaption>The chapter–feature matrix compares each chapter against the manuscript's own median and MAD baseline.</figcaption>
+</figure>
 <p>Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (<code>source_internal</code>); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.</p>
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
@@ -148,6 +158,11 @@
 </ol>
 <p>An opened paragraph shows the passage first, followed by a compact <strong>Values</strong> disclosure (<strong>Werte</strong> in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.</p>
 <p>Open the 3D style space directly from the analysis overview when chapter scores are available. Each point is a chapter; nearby points have similar scores only on the displayed axes. A dashed ring marks an axis cutoff and a separate solid ring the selected chapter. Each dimension card reports the raw cutoff alongside its multiple of that axis's sample standard deviation so unequal axis spreads remain visible. The cutoff includes hidden axes and is not an FDR selection. The blue–orange scale elsewhere shows direction of comparison, not this cutoff. Use the 2D projections or chapter table when points overlap, then read the passage.</p>
+
+<figure class="frame">
+  <a href="../screenshots/dashboard-editorial.png"><img src="../screenshots/dashboard-editorial.png" width="1334" height="698" alt="Editorial review overview with chapter metrics, style bands and passage inspection" loading="lazy" decoding="async"/></a>
+  <figcaption>Chapter overview, style bands and passage inspection keep quantitative signals tied to the underlying prose.</figcaption>
+</figure>
 <p>Signs on the loading bars describe each feature’s direction within an axis, not quality. When fewer than three dimensions are available, coordinates set to zero solely for display are not measurements.</p>
 <p>For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.</p>
 <p>For a scene or narrative-voice comparison, choose passages with comparable language, scope and discourse mode, then read the source text alongside sentence rhythm, dialogue, vocabulary and register measures. A dialogue-heavy scene and an expository scene need not share a target distribution. Short sentences do not establish dramatic pace, and few perception-filter verbs do not establish immersion. The tools do not identify speakers or validate a narrator's artistic voice.</p>
