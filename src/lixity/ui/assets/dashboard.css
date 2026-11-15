@@ -94,6 +94,10 @@ min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--l
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-compact); margin: .35rem 0 .75rem; opacity: 0.88; }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }
+.style-coupled-patterns { margin-top: 1rem; padding-top: .85rem; border-top: 1px solid var(--line); }
+.style-coupled-patterns h3 { font-size: var(--text-control); margin: 0 0 .5rem; }
+.style-coupled-patterns ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .45rem; }
+.style-coupled-patterns li { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; font-size: var(--text-small); }
 .analysis-method { font-variant-numeric: tabular-nums; color: var(--muted); }
 .fdr-marker { display: inline-block; margin-left: .25rem; font-size: .55rem; vertical-align: super; }
 .band-summary { display: block; font-size: var(--text-micro); font-variant-numeric: tabular-nums; color: var(--muted); }

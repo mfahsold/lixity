@@ -35,7 +35,9 @@
   function setStatus(value) { if (status && status.textContent !== value) status.textContent = value; }
   function clearHighlight() {
     if (!supported) return;
-    CSS.highlights.delete("lixity-analysis-evidence"); CSS.highlights.delete("lixity-analysis-current");
+    CSS.highlights.delete("lixity-analysis-evidence");
+    CSS.highlights.delete("lixity-analysis-current");
+    CSS.highlights.delete("lixity-analysis-related");
   }
   function cancelTouchTap() {
     clearTimeout(touchFallback); touchFallback = 0; touchTap = null;
@@ -45,7 +47,10 @@
     request++; clearTimeout(dismissTimer); clearTimeout(hoverTimer); candidate = null;
     var previous = card || opening; card = null; host.hidden = true;
     if (!scrolling) opening = null;
-    if (supported) CSS.highlights.delete("lixity-analysis-current");
+    if (supported) {
+      CSS.highlights.delete("lixity-analysis-current");
+      CSS.highlights.delete("lixity-analysis-related");
+    }
     if (restore && previous && previous.pinned && previous.trigger && previous.trigger.isConnected) previous.trigger.focus({preventScroll:true});
   }
   function paragraph(panel) { return panel.querySelector(".ptext-inner > p"); }
@@ -205,7 +210,20 @@
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
     var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
     var content = paragraphContent[record.panel.id], summaries = content[4];
-    var summary = summaries && typeof summaries[select.value] === "string" ? summaries[select.value] : content[2];
+    var normalizedQuote = span && span.quote ? span.quote.trim().toLocaleLowerCase() : "";
+    var sameWordSpans = normalizedQuote && select.value === "word_echoes"
+      ? spans.filter(function(item) { return item.quote && item.quote.trim().toLocaleLowerCase() === normalizedQuote; })
+      : [];
+    var hasMetricSummary = Boolean(summaries && typeof summaries[select.value] === "string");
+    var summary = hasMetricSummary ? summaries[select.value] :
+      select.value === "word_echoes" && span
+        ? uiFormat(sameWordSpans.length > 1 ? "evidence_echo_summary" : "evidence_echo_single", {
+            word: span.quote, count: sameWordSpans.length, total: spans.length
+          })
+        : "";
+    var allParagraphValues = content[2] && content[2] !== summary ? content[2] : "";
+    var canEditPassage = Boolean(window.LixityManuscriptEditor && typeof window.LixityManuscriptEditor.openAtLine === "function" &&
+      record.panel.dataset.start && Number(record.panel.dataset.start) > 0);
     var warning = record.error || (!layer || layer.value.status === "unavailable" ? "evidence_unavailable" :
       layer.value.status === "partial" ? "evidence_partial" : null);
     host.setAttribute("role", "dialog"); host.setAttribute("aria-modal", "false");
@@ -234,29 +252,43 @@
           <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
         </div>` : null}
       </div>` : null}
-      <section class="analysis-evidence-paragraph">
-        <strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
-        <p class="analysis-evidence-value">${summary}</p>
+      ${summary || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
+        ${summary ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
+        <p class="analysis-evidence-value">${summary}</p>` : null}
         ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0], "--evidence-comparison-position":marker + "%"}}>
           <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
           <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
           <div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}><span></span></div>
         </div>` : null}
-      </section>
+        ${allParagraphValues ? html`<details class="analysis-evidence-all-values" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("evidence_all_values")}</summary>
+          <p class="analysis-evidence-value">${allParagraphValues}</p></details>` : null}
+      </section>` : null}
       ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
       ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
-      ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
-        <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
+      ${spans.length > 1 || canEditPassage ? html`<div class="analysis-evidence-actions">
+        ${spans.length > 1 ? html`<button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
         <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
-        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
+        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>` : null}
+        ${canEditPassage ? html`<button type="button" class="ctl" id="analysis-evidence-edit" onClick=${function() {
+          var targetLine = Number(record.panel.dataset.start);
+          close(false);
+          window.LixityManuscriptEditor.openAtLine(targetLine);
+        }}>${message("evidence_edit_passage")}</button>` : null}
       </div>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
         ${!comparison ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
         ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;
-    if (supported && span && enabled()) CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
-    else if (supported) CSS.highlights.delete("lixity-analysis-current");
+    if (supported && span && enabled()) {
+      CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
+      var relatedRanges = sameWordSpans.filter(function(item) { return item !== span && item.range; }).map(function(item) { return item.range; });
+      if (relatedRanges.length) CSS.highlights.set("lixity-analysis-related", new (Function.prototype.bind.apply(Highlight, [null].concat(relatedRanges)))());
+      else CSS.highlights.delete("lixity-analysis-related");
+    } else if (supported) {
+      CSS.highlights.delete("lixity-analysis-current");
+      CSS.highlights.delete("lixity-analysis-related");
+    }
     position(card.rect);
     host.scrollTop = 0;
   }

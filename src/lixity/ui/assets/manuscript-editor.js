@@ -673,10 +673,11 @@
     );
     return visible ? Number(visible.dataset.start) : 1;
   }
-  async function open() {
+  async function open(targetLine) {
     if (loading) return;
+    const requestedLine = Number.isInteger(targetLine) && targetLine > 0 ? targetLine : null;
     if (editor) {
-      openingLine = visibleReaderLine();
+      openingLine = requestedLine || visibleReaderLine();
       dockCompanionTools(true);
       section.hidden = false; document.body.classList.add('manuscript-writing');
       openButton.hidden = true; closeButton.hidden = false;
@@ -687,7 +688,7 @@
     loading = true; openButton.disabled = true; setButtonLabel(openButton, text(17));
     try {
       snapshot = await request('/manuscript-edit');
-      openingLine = visibleReaderLine();
+      openingLine = requestedLine || visibleReaderLine();
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
       loaded = true;
       dockCompanionTools(true);
@@ -754,4 +755,5 @@
   document.addEventListener('visibilitychange', () => {if (document.hidden) flush();});
   // Keep shortcuts from the read-only manuscript layer away from the editor.
   host.addEventListener('keydown', event => event.stopPropagation());
+  window.LixityManuscriptEditor = { openAtLine: line => open(line) };
 })();

@@ -919,6 +919,10 @@ min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--l
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-compact); margin: .35rem 0 .75rem; opacity: 0.88; }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }
+.style-coupled-patterns { margin-top: 1rem; padding-top: .85rem; border-top: 1px solid var(--line); }
+.style-coupled-patterns h3 { font-size: var(--text-control); margin: 0 0 .5rem; }
+.style-coupled-patterns ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .45rem; }
+.style-coupled-patterns li { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; font-size: var(--text-small); }
 .analysis-method { font-variant-numeric: tabular-nums; color: var(--muted); }
 .fdr-marker { display: inline-block; margin-left: .25rem; font-size: .55rem; vertical-align: super; }
 .band-summary { display: block; font-size: var(--text-micro); font-variant-numeric: tabular-nums; color: var(--muted); }
@@ -4502,6 +4506,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
   text-decoration-thickness: 2px;
   text-underline-offset: .2em;
 }
+::highlight(lixity-analysis-related) {
+  background-color: color-mix(in srgb, var(--analysis-evidence-color) 11%, transparent);
+  text-decoration: underline dashed;
+  text-decoration-color: var(--analysis-evidence-color);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: .2em;
+}
 ::highlight(lixity-tense-current) {
   background-color: var(--flag-light);
   text-decoration: underline;
@@ -4558,13 +4569,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .analysis-evidence-actions { padding-block-start: var(--space-2); }
 .analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 0; }
 .analysis-evidence-progress { flex: 0 0 auto; color: var(--muted); font-size: var(--text-note); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.analysis-evidence-guide { color: var(--muted); font-size: var(--text-note); }
-.analysis-evidence-guide summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: var(--space-3); box-sizing: border-box; }
+.analysis-evidence-guide, .analysis-evidence-all-values { color: var(--muted); font-size: var(--text-note); }
+.analysis-evidence-guide summary, .analysis-evidence-all-values summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: var(--space-3); box-sizing: border-box; }
 @media (max-width: 420px) {
   .analysis-evidence-actions .analysis-evidence-navigation-label { display: none; }
 }
 @media (forced-colors: active) {
-  ::highlight(lixity-analysis-evidence), ::highlight(lixity-analysis-current), .analysis-evidence-swatch { background-color: Highlight; color: HighlightText; text-decoration-color: HighlightText; }
+  ::highlight(lixity-analysis-evidence), ::highlight(lixity-analysis-current), ::highlight(lixity-analysis-related), .analysis-evidence-swatch { background-color: Highlight; color: HighlightText; text-decoration-color: HighlightText; }
   .analysis-evidence-card { border: 2px solid CanvasText; box-shadow: none; }
   .analysis-evidence-scale { border: 1px solid CanvasText; }
   .analysis-evidence-scale::before { background: CanvasText; }

@@ -349,8 +349,64 @@ def render_heatmap_panel(
         f"~{N(fingerprint.expected_false_positives, 1)} · "
         f"{help_term(labels, 'fdr', L('fdr_flagged'))}: {fdr_total}</p>"
     )
+    coupled = _render_coupled_style_patterns(
+        fingerprint, metrics.chapters, z_mild, labels, language_key
+    )
+    if coupled:
+        parts.append(coupled)
     parts.append("</section>")
     return "".join(parts)
+
+
+def _render_coupled_style_patterns(
+    fingerprint: StyleFingerprint,
+    chapters: Sequence[ChapterMetrics],
+    z_mild: float,
+    labels: Mapping[str, str] | None,
+    language_key: str,
+) -> str:
+    """Render combined multi-metric chapter style patterns when two or more linked z-scores align."""
+    L, _, _ = panel_formatters(labels, language_key)
+    patterns: tuple[tuple[str, Any], ...] = (
+        (
+            "style_pattern_distancing",
+            lambda z: (z.get("perception_verbs") or 0.0) >= z_mild
+            and ((z.get("nominalizations") or 0.0) >= z_mild or (z.get("passive_patterns") or 0.0) >= z_mild),
+        ),
+        (
+            "style_pattern_dense_narrative",
+            lambda z: (z.get("asl") or 0.0) >= z_mild and (z.get("dialogue_ratio") or 0.0) <= -z_mild,
+        ),
+        (
+            "style_pattern_fast_dialogue",
+            lambda z: (z.get("asl") or 0.0) <= -z_mild and (z.get("dialogue_ratio") or 0.0) >= z_mild,
+        ),
+        (
+            "style_pattern_expository",
+            lambda z: (z.get("function_words") or 0.0) >= z_mild and (z.get("modal_verbs") or 0.0) >= z_mild,
+        ),
+    )
+    items: list[str] = []
+    for label_key, predicate in patterns:
+        matched = [
+            ch.num
+            for ch in chapters
+            if ch.num in fingerprint.z_scores and predicate(fingerprint.z_scores[ch.num])
+        ]
+        if not matched:
+            continue
+        links = " ".join(
+            f'<a class="ctl ctl-sm" href="#ch-{num}" data-jump="#ch-{num}">{L("chapter")} {num}</a>'
+            for num in matched
+        )
+        items.append(f"<li><strong>{esc(L(label_key))}:</strong> {links}</li>")
+    if not items:
+        return ""
+    return (
+        f'<div class="style-coupled-patterns">'
+        f'<h3>{esc(L("style_coupled_patterns"))}</h3>'
+        f'<ul>{"".join(items)}</ul></div>'
+    )
 
 
 def render_style_passport_panel(
