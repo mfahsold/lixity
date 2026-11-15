@@ -7,6 +7,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -206,13 +207,18 @@ def test_live_owned_unready_process_is_still_stoppable(tmp_path):
         stderr=subprocess.DEVNULL,
     )
     try:
+        birth = process_birth(child.pid)
+        deadline = time.monotonic() + 2.0
+        while birth is None and time.monotonic() < deadline:
+            time.sleep(0.02)
+            birth = process_birth(child.pid)
         _write_json(
             app.runtime_file,
             {
                 "schema_version": "lixity-service-runtime/1",
                 "port": app.port,
                 "pid": child.pid,
-                "birth": process_birth(child.pid),
+                "birth": birth,
                 "token": token,
                 "backend": "process",
                 "unit": None,
@@ -221,6 +227,10 @@ def test_live_owned_unready_process_is_still_stoppable(tmp_path):
             },
         )
         status = app.control("status", {})
+        deadline = time.monotonic() + 2.0
+        while status.get("state") != "starting" and time.monotonic() < deadline:
+            time.sleep(0.02)
+            status = app.control("status", {})
         assert status["state"] == "starting" and not status["ok"], status
         stopped = app.control("stop", {})
         assert stopped["ok"] and stopped["state"] == "stopped", stopped

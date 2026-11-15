@@ -1,6 +1,8 @@
 # Full source checks run locally and are reusable by the tagged release.
 name: tests
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   workflow_call:
 permissions:
