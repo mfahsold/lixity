@@ -670,21 +670,28 @@
     current.recovery.forEach(row => {const option = new Option((row.kind === 'draft' ? text(6) : text(8)) + ' · ' + new Date(row.created * 1000).toLocaleString(), row.id); option.dataset.kind = row.kind; recovery.append(option);});
     syncRecoveryActions();
   }
+  function visibleReaderLine() {
+    const controlsBottom = controls ? controls.getBoundingClientRect().bottom : 0;
+    const visible = Array.from(chapters.querySelectorAll('[data-start]')).find(
+      node => node.getClientRects().length > 0 && node.getBoundingClientRect().bottom > controlsBottom
+    );
+    return visible ? Number(visible.dataset.start) : 1;
+  }
   async function open() {
     if (loading) return;
     if (editor) {
+      openingLine = visibleReaderLine();
       dockCompanionTools(true);
       section.hidden = false; document.body.classList.add('manuscript-writing');
       openButton.hidden = true; closeButton.hidden = false;
       if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
-      editor.focus(); return;
+      editor.line(openingLine); editor.focus(); return;
     }
     loading = true; openButton.disabled = true; setButtonLabel(openButton, text(17));
     try {
       snapshot = await request('/manuscript-edit');
-      const visible = Array.from(chapters.querySelectorAll('[data-start]')).find(node => node.getBoundingClientRect().bottom > controls.getBoundingClientRect().bottom);
-      openingLine = visible ? Number(visible.dataset.start) : 1;
+      openingLine = visibleReaderLine();
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
       loaded = true;
       dockCompanionTools(true);
@@ -716,7 +723,7 @@
     if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
     if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(chapters);
     if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
-    openButton.focus();
+    openButton.focus({preventScroll: true});
   }
   let nudgeTimer = 0;
   function nudgeWriteButton() {

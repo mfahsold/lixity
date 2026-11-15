@@ -270,7 +270,7 @@
     // Retain this explicit arrival across its queued scroll events only while
     // all actual positions still match. Any subsequent user scroll closes it.
     card.arrival = scrollPosition(containers, card.trigger);
-    card.rect = range.getClientRects()[0]; paint();
+    card.rect = range.getClientRects()[0] || panel.getBoundingClientRect(); paint();
   }
   function revealRange(panel, range) {
     var containers = passageScrollContainers(panel);
@@ -278,12 +278,13 @@
     var margin = parseFloat(getComputedStyle(panel).scrollMarginTop) || 12;
     containers.forEach(function(container, index) {
       var rect = range.getClientRects()[0], bounds = container.getBoundingClientRect();
+      if (!rect) return;
       var top = bounds.top + container.clientTop + (index === 0 ? margin : 12);
       var bottom = bounds.top + container.clientTop + container.clientHeight - 12;
       if (rect.top < top || rect.bottom > bottom) container.scrollBy({top:rect.top - top, behavior:"instant"});
     });
     var rect = range.getClientRects()[0], top = margin;
-    if (rect.top < top || rect.bottom > innerHeight - 12) window.scrollBy({top:rect.top - top, behavior:"instant"});
+    if (rect && (rect.top < top || rect.bottom > innerHeight - 12)) window.scrollBy({top:rect.top - top, behavior:"instant"});
     return containers;
   }
   function currentRecord(record) {

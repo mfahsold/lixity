@@ -31,7 +31,7 @@ server.serve_forever()
   try {
     for(const viewport of [{width:1440,height:900},{width:320,height:900},{width:1830,height:705}]) {
       const page=await browser.newPage({viewport}),consoleErrors=[],pageErrors=[];
-      page.on('console',message=>{if(message.type()==='error'&&message.text().includes('[Lixity:error]'))consoleErrors.push(message.text());});
+      page.on('console',message=>{if(message.type()==='error'&&message.text().includes('Lixity')&&message.text().includes('error'))consoleErrors.push(message.text());});
       page.on('pageerror',error=>pageErrors.push(error.message));
       try {
         await page.addInitScript(()=>localStorage.setItem('lixity_debug','0'));

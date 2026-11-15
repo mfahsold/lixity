@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Lixity — Browser-Sandbox: Absatz lokal prüfen</title>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/sandbox/index.html"/>
-<meta name="description" content="Teste einen eigenen Absatz oder Klassiker (Effi Briest, Pride & Prejudice) 100 % lokal im Browser: Satzlängen-Rhythmus, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
+<meta name="description" content="Teste einen eigenen Absatz, eine lokale .txt/.md-Szene oder Klassiker (Effi Briest, Pride & Prejudice, Rohentwurf) 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
 <meta property="og:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
-<meta property="og:description" content="Teste einen eigenen Absatz oder Klassiker (Effi Briest, Pride & Prejudice) 100 % lokal im Browser: Satzlängen-Rhythmus, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
+<meta property="og:description" content="Teste einen eigenen Absatz oder Klassiker 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/sandbox/index.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
@@ -15,7 +15,7 @@
 <meta property="og:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
-<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Dialoganteil, klebrige Sätze und Nur-Dialog-Modus ohne Server-Upload."/>
+<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, klebrige Sätze und Nur-Dialog-Modus ohne Server-Upload."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <script type="application/ld+json">
@@ -29,6 +29,7 @@
     --echo-bg: rgba(217,119,6,.18); --echo-fg: #92400e;
     --ind-bg: rgba(47,90,168,.14); --ind-fg: #1e40af;
     --staccato: #0f766e; --medium: #2f5aa8; --cascade: #b45309;
+    --ok: #15803d;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -37,6 +38,7 @@
       --echo-bg: rgba(245,158,11,.22); --echo-fg: #fcd34d;
       --ind-bg: rgba(122,162,247,.22); --ind-fg: #bfdbfe;
       --staccato: #2dd4bf; --medium: #7aa2f7; --cascade: #fbbf24;
+      --ok: #4ade80;
     }
   }
   * { box-sizing: border-box; }
@@ -44,62 +46,97 @@
     margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     background: var(--bg); color: var(--fg); line-height: 1.6;
   }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 56px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 56px; }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
   .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--fg); }
   nav { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   nav a, .btn {
     padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
     background: var(--surface); color: var(--fg); text-decoration: none;
-    font-size: .875rem; cursor: pointer;
+    font-size: .85rem; cursor: pointer; font-family: inherit;
+    transition: border-color .15s ease, background .15s ease;
   }
+  .btn:hover, nav a:hover { border-color: var(--accent); }
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-sm { padding: 4px 10px; font-size: .78rem; }
   h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 8px; line-height: 1.25; }
-  .lead { color: var(--muted); margin: 0 0 20px; max-width: 72ch; }
+  .lead { color: var(--muted); margin: 0 0 20px; max-width: 74ch; }
   .privacy-pill {
     display: inline-block; padding: 4px 10px; border-radius: 999px;
     background: var(--accent-soft); color: var(--accent); font-size: .8125rem; font-weight: 600; margin-bottom: 12px;
   }
-  .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
-  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+  .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   .card {
     background: var(--surface); border: 1px solid var(--line);
     border-radius: 14px; padding: 16px;
   }
   .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .editor-wrap { position: relative; }
+  .editor-wrap.drag-over textarea { border-color: var(--accent); background: var(--accent-soft); }
   textarea {
-    width: 100%; min-height: 270px; padding: 14px; border-radius: 10px;
+    width: 100%; min-height: 330px; padding: 14px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--bg); color: var(--fg);
     font-family: Georgia, "Times New Roman", serif; font-size: 1.03rem; line-height: 1.65; resize: vertical;
   }
+  .editor-foot {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 10px; margin-top: 10px; font-size: .8rem; color: var(--muted);
+  }
+  .editor-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
   .kpi { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
-  .kpi-val { font-size: 1.35rem; font-weight: 700; display: block; }
-  .kpi-lbl { font-size: .8rem; color: var(--muted); }
-  .bar-wrap { margin: 12px 0 16px; }
+  .kpi-val { font-size: 1.3rem; font-weight: 700; display: block; line-height: 1.2; }
+  .kpi-lbl { font-size: .78rem; color: var(--muted); }
+  .voice-box {
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+    margin-bottom: 14px; font-size: .84rem;
+  }
+  .voice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+  .voice-cell strong { display: block; font-size: 1.05rem; }
+  .voice-cell span { color: var(--muted); font-size: .76rem; }
+  .bar-wrap { margin: 12px 0 14px; }
   .bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); }
   .seg-s { background: var(--staccato); }
   .seg-m { background: var(--medium); }
   .seg-c { background: var(--cascade); }
-  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .78rem; color: var(--muted); margin-top: 6px; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+  .spark-wrap { margin: 12px 0 14px; }
+  .spark-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .spark-note { font-size: .78rem; color: var(--muted); }
+  .spark-svg { width: 100%; height: 64px; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+  .spark-bar { cursor: pointer; transition: opacity .12s ease; }
+  .spark-bar:hover { opacity: .8; }
   .echo-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .echo-chip {
-    padding: 2px 9px; border-radius: 999px; font-size: .8125rem;
-    background: var(--echo-bg); color: var(--echo-fg); font-weight: 600;
+    padding: 3px 10px; border-radius: 999px; font-size: .8rem; border: 1px solid transparent;
+    background: var(--echo-bg); color: var(--echo-fg); font-weight: 600; cursor: pointer; font-family: inherit;
   }
+  .echo-chip.active { border-color: var(--echo-fg); box-shadow: 0 0 0 2px var(--echo-bg); }
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 8px; align-items: center; }
   .preview {
-    margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--bg);
+    padding: 12px; border-radius: 10px; background: var(--bg);
     border: 1px solid var(--line); font-family: Georgia, "Times New Roman", serif;
-    font-size: .95rem; max-height: 220px; overflow: auto; white-space: pre-wrap;
+    font-size: .95rem; max-height: 250px; overflow: auto; white-space: pre-wrap;
   }
   mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: 4px; }
+  mark.echo.focus-echo { outline: 2px solid var(--echo-fg); }
   mark.indirect { background: var(--ind-bg); color: var(--ind-fg); padding: 0 3px; border-radius: 4px; }
   .sticky-sent { text-decoration: underline dotted #d97706; text-underline-offset: 3px; }
-  .preview-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: .78rem; color: var(--muted); margin-top: 10px; }
-  .preview.direct-speech .prose-seg { opacity: .24; transition: opacity .15s ease; }
+  .preview.hide-echo mark.echo { background: transparent; color: inherit; padding: 0; }
+  .preview.hide-indirect mark.indirect { background: transparent; color: inherit; padding: 0; }
+  .preview.hide-sticky .sticky-sent { text-decoration: none; }
+  .preview-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: .78rem; color: var(--muted); margin-top: 8px; }
+  .preview.direct-speech .prose-seg { opacity: .22; transition: opacity .15s ease; }
   .preview.direct-speech .dlg-seg { opacity: 1; font-weight: 500; }
-  .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
+  @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
+  .compare-col { padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: .88rem; }
+  .compare-col h3 { margin: 0 0 6px; font-size: .95rem; }
+  .compare-col ul { margin: 0; padding-left: 18px; color: var(--muted); }
+  .copy-ok { color: var(--ok); font-weight: 600; font-size: .8rem; }
   footer { margin-top: 24px; font-size: .875rem; color: var(--muted); }
 </style>
 </head>
@@ -117,7 +154,8 @@
   <main>
   <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
   <h1 id="title">Eigenen Absatz direkt im Browser prüfen</h1>
-  <p class="lead" id="lead">Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Dialoganteil und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.</p>
+  <p class="lead" id="lead">Füge eine Szene ein oder lade eine lokale <code>.txt</code>/<code>.md</code>-Datei, um Satzlängen-Rhythmus, Stimmenkontrast, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Keine „Qualitätsnote“ — jede stilistische Entscheidung bleibt bei dir.</p>
+
   <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
   <div class="grid">
@@ -126,10 +164,21 @@
         <span id="preset-lbl" style="font-size:.85rem;color:var(--muted);">Beispiele:</span>
         <button type="button" class="btn" id="preset-de" data-preset="effi-briest">Effi Briest · Kap. 7</button>
         <button type="button" class="btn" id="preset-en" data-preset="pride-prejudice">Pride &amp; Prejudice · Dialog</button>
+        <button type="button" class="btn" id="preset-draft" data-preset="rough-draft">Rohentwurf (Echos &amp; Klebesätze)</button>
         <button type="button" class="btn" id="preset-clear">Leeren</button>
-        <button type="button" class="btn" id="direct-speech-btn" aria-pressed="false">Nur Dialoge</button>
       </div>
-      <textarea id="input" aria-label="Manuskript-Absatz"></textarea>
+      <div class="editor-wrap" id="editor-wrap">
+        <textarea id="input" aria-label="Manuskript-Absatz"></textarea>
+      </div>
+      <div class="editor-foot">
+        <span id="drop-hint">Tipp: Du kannst auch eine lokale <code>.txt</code>- oder <code>.md</code>-Datei hier ablegen.</span>
+        <div class="editor-actions">
+          <input type="file" id="file-input" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden/>
+          <button type="button" class="btn btn-sm" id="file-btn">.txt / .md öffnen</button>
+          <button type="button" class="btn btn-sm" id="copy-md-btn">Bericht kopieren</button>
+          <span class="copy-ok" id="copy-status" role="status" aria-live="polite"></span>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -142,6 +191,15 @@
         <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze (≥45 %)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Indirekte Rede</span></div>
+      </div>
+
+      <div class="voice-box">
+        <strong id="voice-title" style="font-size:.85rem;">Stimmenkontrast: Erzählprosa vs. Dialog</strong>
+        <div class="voice-grid">
+          <div class="voice-cell"><strong id="v-narration">–</strong><span id="vl-narration">Ø Prosa-Satz</span></div>
+          <div class="voice-cell"><strong id="v-dialogue">–</strong><span id="vl-dialogue">Ø Dialog-Satz</span></div>
+          <div class="voice-cell"><strong id="v-contrast">–</strong><span id="vl-contrast">Kontrast (Δ)</span></div>
+        </div>
       </div>
 
       <div class="bar-wrap">
@@ -158,9 +216,24 @@
         </div>
       </div>
 
+      <div class="spark-wrap">
+        <div class="spark-head">
+          <strong style="font-size:.875rem;" id="spark-title">Satz-für-Satz-Puls</strong>
+          <span class="spark-note" id="spark-hover">Balken antippen/hover für Satzlänge</span>
+        </div>
+        <svg class="spark-svg" id="spark-svg" viewBox="0 0 400 56" preserveAspectRatio="none" role="img" aria-label="Satzlängen-Puls"></svg>
+      </div>
+
       <div>
-        <strong style="font-size:.875rem;" id="echo-title">Lokale Wortechos (≥ 3×)</strong>
+        <strong style="font-size:.875rem;" id="echo-title">Lokale Wortechos (≥ 3× · klickbar)</strong>
         <div class="echo-list" id="echo-list"></div>
+      </div>
+
+      <div class="filter-bar" role="group" aria-label="Markierungen filtern">
+        <button type="button" class="btn btn-sm" id="direct-speech-btn" aria-pressed="false">Nur Dialoge [D]</button>
+        <button type="button" class="btn btn-sm" id="flt-echo" aria-pressed="true">Wortechos</button>
+        <button type="button" class="btn btn-sm" id="flt-sticky" aria-pressed="true">Klebesätze</button>
+        <button type="button" class="btn btn-sm" id="flt-indirect" aria-pressed="true">Indirekte Rede</button>
       </div>
 
       <div class="preview" id="preview"></div>
@@ -173,13 +246,30 @@
   </div>
 
   <section class="card" style="margin-top:18px;" aria-label="Hinweise zur Analyse">
-    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft</h2>
+    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft — und was Lixity lokal ergänzt</h2>
     <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;" id="about-body">
-      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie (<code>length_entropy</code>)</strong> gegen Rhythmus-Monotonie, den <strong>Dialoganteil</strong>, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge, <strong>indirekte Rede</strong> (inkl. deutschem Konjunktiv I) sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.
+      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa, den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie</strong> gegen Rhythmus-Monotonie, <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) sowie <strong>lokale Wortechos</strong>.
     </p>
-    <p style="margin:0;color:var(--muted);font-size:.92rem;">
-      Für ganze Romane mit Kapitelmatrix, Inquit-Dichte, Stimmenkontrast zwischen Dialog und Erzählprosa, Szenen-Hooks, POV-Kapitelabständen, optionalen nicht-präskriptiven Genre-Korridoren und lokaler SQLite-Revisionshistorie nutze die lokale Lixity-App oder CLI auf Windows, macOS und Linux.
-    </p>
+    <div class="compare-grid">
+      <div class="compare-col">
+        <h3 id="cmp-sandbox-title">Browser-Sandbox (diese Seite)</h3>
+        <ul id="cmp-sandbox-list">
+          <li>Einzelne Szene oder lokale <code>.txt</code>/<code>.md</code>-Datei sofort prüfen</li>
+          <li>Satz-für-Satz-Puls, Stimmenkontrast &amp; Nur-Dialog-Modus <code>[D]</code></li>
+          <li>Klickbare Wortechos, Klebesätze &amp; indirekte Rede</li>
+          <li>Markdown-Kurzbericht für Notizen kopieren</li>
+        </ul>
+      </div>
+      <div class="compare-col">
+        <h3 id="cmp-local-title">Volle Lixity-App &amp; CLI (lokal installiert)</h3>
+        <ul id="cmp-local-list">
+          <li>Ganze Romane mit Kapitelmatrix (robustes <code>z*</code> &amp; Benjamini-Hochberg FDR)</li>
+          <li>Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion &amp; Inquit-Dichte</li>
+          <li>Manuskript-Editor mit Live-Sitzungspuls &amp; SQLite-Revisionsdiff</li>
+          <li>Vorlese-Teleprompter &amp; quellenverifizierte Recherche-Dossiers</li>
+        </ul>
+      </div>
+    </div>
   </section>
   </main>
 
@@ -200,7 +290,8 @@
   'use strict';
   const PRESETS = {
     'effi-briest': 'Nach diesem im Pfarr- und Kantorhause gemachten Besuche, der keine halbe Stunde gedauert hatte, war Effi wieder nach drüben zurückgekehrt, wo man auf der Gartenveranda eben den Kaffee nehmen wollte. Schwiegervater und Schwiegersohn gingen auf dem Kieswege zwischen den zwei Platanen auf und ab. Briest sprach von dem Schwierigen einer landrätlichen Stellung; sie sei ihm verschiedentlich angetragen worden, aber er habe jedesmal gedankt. »So nach meinem eigenen Willen schalten und walten zu können ist mir immer das liebste gewesen, jedenfalls lieber - Pardon, Innstetten -, als so die Blicke beständig nach oben richten zu müssen. Man hat dann bloß immer Sinn und Merk für hohe und höchste Vorgesetzte. Das ist nichts für mich. Hier leb ich so freiweg und freue mich über jedes grüne Blatt und über den wilden Wein, der da drüben in die Fenster wächst.«\n\nEr glaubte nicht an Zeichen und ähnliches, im Gegenteil, wies alles Abergläubische weit zurück. Aber er konnte trotzdem von den zwei Worten nicht los, und während Briest immer weiterperorierte, war es ihm beständig, als wäre der kleine Hergang doch mehr als ein bloßer Zufall gewesen.',
-    'pride-prejudice': 'It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.\n\nHowever little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.\n\n“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”\n\nMr. Bennet replied that he had not.\n\n“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”\n\nMr. Bennet made no answer.\n\n“Do not you want to know who has taken it?” cried his wife, impatiently.\n\n“You want to tell me, and I have no objection to hearing it.”\n\nThis was invitation enough.\n\n“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”\n\n“What is his name?”'
+    'pride-prejudice': 'It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.\n\nHowever little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.\n\n“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”\n\nMr. Bennet replied that he had not.\n\n“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”\n\nMr. Bennet made no answer.\n\n“Do not you want to know who has taken it?” cried his wife, impatiently.\n\n“You want to tell me, and I have no objection to hearing it.”\n\nThis was invitation enough.\n\n“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”\n\n“What is his name?”',
+    'rough-draft': 'Es war eigentlich schon ziemlich spät am Abend, als Mara wieder einmal durch den langen Flur ging und dabei überlegte, ob sie die Tür am Ende des Flurs überhaupt noch rechtzeitig erreichen würde. Sie dachte, dass der Flur heute noch viel länger wirkte als an allen anderen Tagen zuvor, und irgendwie hatte sie das Gefühl, dass jemand hinter der Tür auf sie wartete. Der Flur war dunkel. Die Tür blieb zu.\n\n„Bist du sicher, dass die Tür wirklich abgeschlossen ist?“, fragte Jonas leise am Ende des Flurs.\n\n„Ja, ganz sicher“, sagte Mara. „Ich habe den Schlüssel doch selbst herumgedreht.“\n\nEr meinte, sie solle trotzdem noch einmal nachsehen, weil man in diesem alten Haus schließlich nie wissen könne, wer sich gerade hinter der Tür oder im Flur aufhielt.'
   };
   const INDIRECT_RES = [
     /\b(?:said|told\s+\w+|asked|replied|answered|explained|claimed|insisted|admitted|whispered|murmured|noted|added|thought|felt|knew|believed|realized|wondered|remembered|suspected|hoped|feared|imagined|assumed|supposed)\s+(?:that|whether|if)\b/gi,
@@ -217,16 +308,36 @@
       home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN',
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Eigenen Absatz direkt im Browser prüfen',
-      lead: 'Füge eine Szene oder einen Absatz ein, um Satzlängen-Rhythmus, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Es gibt keine „Qualitätsnote“ — die stilistische Entscheidung bleibt immer bei dir.',
-      preset: 'Klassiker:', clear: 'Leeren', directSpeech: 'Nur Dialoge',
+      lead: 'Füge eine Szene ein oder lade eine lokale .txt/.md-Datei, um Satzlängen-Rhythmus, Stimmenkontrast, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Keine „Qualitätsnote“ — jede stilistische Entscheidung bleibt bei dir.',
+      preset: 'Beispiele:', draftBtn: 'Rohentwurf (Echos & Klebesätze)', clear: 'Leeren',
+      dropHint: 'Tipp: Du kannst auch eine lokale .txt- oder .md-Datei hier ablegen.',
+      openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
+      directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wortechos', fltSticky: 'Klebesätze', fltIndirect: 'Indirekte Rede',
       words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
       cv: 'Satzlängen-VK (asl_cv)', entropy: 'Längen-Entropie (Bit)',
       sticky: 'Klebrige Sätze (≥45 %)', indirect: 'Indirekte Rede',
+      voiceTitle: 'Stimmenkontrast: Erzählprosa vs. Dialog', vNar: 'Ø Prosa-Satz', vDlg: 'Ø Dialog-Satz', vCon: 'Kontrast (Δ)',
       rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
-      echoTitle: 'Lokale Wortechos (≥ 3×)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
+      sparkTitle: 'Satz-für-Satz-Puls', sparkHover: 'Balken antippen/hover für Satzlänge',
+      sparkWords: 'Wörter',
+      echoTitle: 'Lokale Wortechos (≥ 3× · klickbar)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
       legEcho: 'Wortecho', legIndirect: 'Indirekte Rede', legSticky: 'Klebriger Satz (≥45 %)',
-      aboutTitle: 'Was diese Browser-Sandbox direkt prüft',
-      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie (<code>length_entropy</code>)</strong> gegen Rhythmus-Monotonie, den <strong>Dialoganteil</strong>, <strong>klebrige Sätze</strong> mit mindestens 45 % Funktionswörtern ab 8 Wörtern Satzlänge, <strong>indirekte Rede</strong> (inkl. deutschem Konjunktiv I) sowie <strong>lokale Wortechos</strong> (Inhaltswörter, die innerhalb einer Passage mindestens dreimal wiederkehren). Mit <strong>Nur Dialoge</strong> blendest du reine Erzählprosa ab, um Sprechrhythmus und Figurenstimme isoliert zu hören.',
+      aboutTitle: 'Was diese Browser-Sandbox direkt prüft — und was Lixity lokal ergänzt',
+      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa, den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie</strong> gegen Rhythmus-Monotonie, <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) sowie <strong>lokale Wortechos</strong>.',
+      cmpSandboxTitle: 'Browser-Sandbox (diese Seite)',
+      cmpSandbox: [
+        'Einzelne Szene oder lokale .txt/.md-Datei sofort prüfen',
+        'Satz-für-Satz-Puls, Stimmenkontrast & Nur-Dialog-Modus [D]',
+        'Klickbare Wortechos, Klebesätze & indirekte Rede',
+        'Markdown-Kurzbericht für Notizen kopieren'
+      ],
+      cmpLocalTitle: 'Volle Lixity-App & CLI (lokal installiert)',
+      cmpLocal: [
+        'Ganze Romane mit Kapitelmatrix (robustes z* & Benjamini-Hochberg FDR)',
+        'Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion & Inquit-Dichte',
+        'Manuskript-Editor mit Live-Sitzungspuls & SQLite-Revisionsdiff',
+        'Vorlese-Teleprompter & quellenverifizierte Recherche-Dossiers'
+      ],
       footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.',
       privacy: 'Website-Messung', privacyHref: '../index-de.html#website-measurement',
       legal: 'Impressum', legalHref: '../index-de.html#impressum'
@@ -235,22 +346,44 @@
       home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE',
       pill: '100% local in your browser · Zero server upload',
       title: 'Test your own passage right in the browser',
-      lead: 'Paste a scene or paragraph to inspect sentence-length rhythm, length entropy, dialogue share, indirect speech, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
-      preset: 'Classics:', clear: 'Clear', directSpeech: 'Dialogue only',
+      lead: 'Paste a scene or drop a local .txt/.md file to inspect sentence-length rhythm, voice contrast, length entropy, dialogue share, indirect speech, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
+      preset: 'Examples:', draftBtn: 'Rough draft (echoes & glue)', clear: 'Clear',
+      dropHint: 'Tip: You can also drop a local .txt or .md file here.',
+      openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
+      directSpeech: 'Dialogue only [D]', fltEcho: 'Word echoes', fltSticky: 'Sticky sentences', fltIndirect: 'Indirect speech',
       words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
       cv: 'Length CV (asl_cv)', entropy: 'Length entropy (bit)',
       sticky: 'Sticky sentences (≥45%)', indirect: 'Indirect speech',
+      voiceTitle: 'Voice contrast: narration vs. dialogue', vNar: 'Avg. narration', vDlg: 'Avg. dialogue', vCon: 'Contrast (Δ)',
       rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
-      echoTitle: 'Nearby word echoes (≥ 3×)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
+      sparkTitle: 'Sentence-by-sentence pulse', sparkHover: 'Hover/tap a bar for sentence length',
+      sparkWords: 'words',
+      echoTitle: 'Nearby word echoes (≥ 3× · clickable)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
       legEcho: 'Word echo', legIndirect: 'Indirect speech', legSticky: 'Sticky sentence (≥45%)',
-      aboutTitle: 'What this browser sandbox checks directly',
-      aboutHtml: 'All calculations run deterministically in your browser — no text leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short staccato ≤ 7 words vs. medium and long cascades ≥ 25 words), the <strong>coefficient of variation (<code>asl_cv</code>)</strong> and <strong>Shannon length entropy (<code>length_entropy</code>)</strong> to spot pacing flattening, <strong>dialogue share</strong>, <strong>sticky sentences</strong> (≥ 45% function words at ≥ 8 words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong> (content words repeated 3+ times). Use <strong>Dialogue only</strong> to dim narration and audition spoken cadence alone.',
+      aboutTitle: 'What this browser sandbox checks — and what local Lixity adds',
+      aboutHtml: 'All calculations run deterministically in your browser — no text leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short staccato ≤ 7 words vs. medium and long cascades ≥ 25 words), <strong>voice contrast</strong> between dialogue and narration, <strong>coefficient of variation (<code>asl_cv</code>)</strong> and <strong>Shannon length entropy</strong> to spot pacing flattening, <strong>sticky sentences</strong> (≥ 45% function words at ≥ 8 words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong>.',
+      cmpSandboxTitle: 'Browser sandbox (this page)',
+      cmpSandbox: [
+        'Inspect a single scene or local .txt/.md file immediately',
+        'Sentence-by-sentence pulse, voice contrast & Dialogue-only [D]',
+        'Clickable word echoes, sticky sentences & indirect speech',
+        'Copy a Markdown summary for your revision notes'
+      ],
+      cmpLocalTitle: 'Full Lixity App & CLI (installed locally)',
+      cmpLocal: [
+        'Full novels with chapter matrix (robust z* & Benjamini-Hochberg FDR)',
+        'Character network, POV spacing, scene cohesion & attribution tags',
+        'Manuscript editor with live session pulse & SQLite revision diff',
+        'Read-aloud teleprompter & source-verified research dossiers'
+      ],
       footer: 'Note: This browser sandbox analyzes single passages client-side. For full novels with chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.',
       privacy: 'Website measurement', privacyHref: '../index.html#website-measurement',
       legal: 'Legal notice (Impressum)', legalHref: '../index.html#impressum'
     }
   };
   let lang = (navigator.language || 'de').toLowerCase().startsWith('de') ? 'de' : 'en';
+  let focusedEcho = '';
+  let lastSnapshot = null;
   const el = id => document.getElementById(id);
   const input = el('input');
 
@@ -273,24 +406,66 @@
     return merged;
   }
 
+  function splitSentences(text) {
+    return text.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
+  }
+
+  function renderSparkline(sentDetails) {
+    const svg = el('spark-svg');
+    svg.replaceChildren();
+    if (!sentDetails.length) return;
+    const maxLen = Math.max(10, ...sentDetails.map(d => d.n));
+    const width = 400, height = 56, pad = 2;
+    const step = width / sentDetails.length;
+    const barW = Math.max(2, step - 1.5);
+    const ns = 'http://www.w3.org/2000/svg';
+    const t = I18N[lang];
+    sentDetails.forEach((d, i) => {
+      const h = Math.max(4, Math.round((d.n / maxLen) * (height - 8)));
+      const rect = document.createElementNS(ns, 'rect');
+      rect.setAttribute('x', (i * step + pad / 2).toFixed(1));
+      rect.setAttribute('y', String(height - h - 2));
+      rect.setAttribute('width', barW.toFixed(1));
+      rect.setAttribute('height', String(h));
+      rect.setAttribute('rx', '1.5');
+      rect.setAttribute('class', 'spark-bar');
+      rect.setAttribute('fill', d.n <= 7 ? 'var(--staccato)' : (d.n >= 25 ? 'var(--cascade)' : 'var(--medium)'));
+      const title = document.createElementNS(ns, 'title');
+      title.textContent = `S${i + 1}: ${d.n} ${t.sparkWords} — ${d.text.slice(0, 70)}${d.text.length > 70 ? '…' : ''}`;
+      rect.appendChild(title);
+      rect.addEventListener('mouseenter', () => {
+        el('spark-hover').textContent = `S${i + 1}: ${d.n} ${t.sparkWords}`;
+      });
+      svg.appendChild(rect);
+    });
+  }
+
   function analyze() {
     const raw = input.value;
     const words = raw.match(/[\p{L}\p{N}_]+/gu) || [];
-    const sents = raw.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
-    const dlg = (raw.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
+    const sents = splitSentences(raw);
+    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
+    const parts = raw.split(dlgRegex);
+    const dlgText = parts.filter((_, idx) => idx % 2 === 1).join(' ');
+    const narText = parts.filter((_, idx) => idx % 2 === 0).join(' ');
+    const dlgWords = dlgText.match(/[\p{L}\p{N}_]+/gu) || [];
+    const dlgSents = splitSentences(dlgText);
+    const narSents = splitSentences(narText);
+
     let shortC = 0, medC = 0, longC = 0, stickyC = 0;
-    const sentLens = [];
+    const sentDetails = [];
     const stickySet = new Set();
     sents.forEach(s => {
       const sw = s.match(/[\p{L}\p{N}_]+/gu) || [];
       const n = sw.length;
-      sentLens.push(n);
+      sentDetails.push({n, text: s});
       if (n <= 7) shortC++; else if (n >= 25) longC++; else medC++;
       if (n >= 8) {
         const glue = sw.filter(w => STOP.has(w.toLowerCase())).length;
         if ((glue / n) >= 0.45) { stickyC++; stickySet.add(s); }
       }
     });
+    const sentLens = sentDetails.map(d => d.n);
     const totalS = sents.length || 1;
     let cvText = '–', entropyText = '–';
     if (sentLens.length >= 2) {
@@ -308,8 +483,14 @@
       entropyText = entropy.toFixed(2);
     }
 
-    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
-    const parts = raw.split(dlgRegex);
+    const narAsl = narSents.length ? ((narText.match(/[\p{L}\p{N}_]+/gu) || []).length / narSents.length) : null;
+    const dlgAsl = dlgSents.length ? (dlgWords.length / dlgSents.length) : null;
+    el('v-narration').textContent = narAsl !== null ? narAsl.toFixed(1) : '–';
+    el('v-dialogue').textContent = dlgAsl !== null ? dlgAsl.toFixed(1) : '–';
+    el('v-contrast').textContent = (narAsl !== null && dlgAsl !== null)
+      ? ((dlgAsl - narAsl >= 0 ? '+' : '') + (dlgAsl - narAsl).toFixed(1) + ' W')
+      : '–';
+
     let indirectC = 0;
     const proseIndirect = parts.map((part, idx) => {
       if (!part || idx % 2 === 1) return [];
@@ -321,7 +502,7 @@
     el('k-words').textContent = words.length.toLocaleString(lang);
     el('k-sents').textContent = sents.length.toLocaleString(lang);
     el('k-asl').textContent = sents.length ? (words.length / sents.length).toFixed(1) : '–';
-    el('k-dlg').textContent = words.length ? Math.round((dlg.length / words.length) * 100) + ' %' : '–';
+    el('k-dlg').textContent = words.length ? Math.round((dlgWords.length / words.length) * 100) + ' %' : '–';
     el('k-cv').textContent = cvText;
     el('k-entropy').textContent = entropyText;
     el('k-sticky').textContent = stickyC.toLocaleString(lang);
@@ -333,6 +514,8 @@
     el('leg-s').textContent = t.s + ': ' + shortC;
     el('leg-m').textContent = t.m + ': ' + medC;
     el('leg-c').textContent = t.c + ': ' + longC;
+    el('spark-hover').textContent = t.sparkHover;
+    renderSparkline(sentDetails);
 
     const counts = new Map();
     words.forEach(w => {
@@ -341,6 +524,7 @@
     });
     const echoes = Array.from(counts.entries()).filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1]).slice(0, 12);
     const echoSet = new Set(echoes.map(([w]) => w));
+    if (focusedEcho && !echoSet.has(focusedEcho)) focusedEcho = '';
     const list = el('echo-list');
     list.replaceChildren();
     if (!echoes.length) {
@@ -350,17 +534,39 @@
       list.append(span);
     } else {
       echoes.forEach(([w, c]) => {
-        const chip = document.createElement('span');
-        chip.className = 'echo-chip';
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'echo-chip' + (focusedEcho === w ? ' active' : '');
         chip.textContent = w + ' ×' + c;
+        chip.addEventListener('click', () => {
+          focusedEcho = focusedEcho === w ? '' : w;
+          analyze();
+          const firstMark = el('preview').querySelector('mark.echo.focus-echo');
+          if (firstMark) firstMark.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        });
         list.append(chip);
       });
     }
+
+    lastSnapshot = {
+      words: words.length, sents: sents.length,
+      asl: el('k-asl').textContent, dlg: el('k-dlg').textContent,
+      cv: cvText, entropy: entropyText, sticky: stickyC, indirect: indirectC,
+      narAsl: el('v-narration').textContent, dlgAsl: el('v-dialogue').textContent,
+      contrast: el('v-contrast').textContent,
+      echoes: echoes.map(([w, c]) => `${w} (×${c})`).join(', ') || '–'
+    };
+
     const preview = el('preview');
     function renderEchoes(text) {
       let html = esc(text);
       if (echoSet.size) {
-        html = html.replace(/[\p{L}\p{N}_]+/gu, m => echoSet.has(m.toLowerCase()) ? '<mark class="echo">' + m + '</mark>' : m);
+        html = html.replace(/[\p{L}\p{N}_]+/gu, m => {
+          const lw = m.toLowerCase();
+          if (!echoSet.has(lw)) return m;
+          const cls = focusedEcho === lw ? 'echo focus-echo' : 'echo';
+          return `<mark class="${cls}">${m}</mark>`;
+        });
       }
       return html;
     }
@@ -399,8 +605,15 @@
     el('title').textContent = t.title;
     el('lead').textContent = t.lead;
     el('preset-lbl').textContent = t.preset;
+    el('preset-draft').textContent = t.draftBtn;
     el('preset-clear').textContent = t.clear;
+    el('drop-hint').textContent = t.dropHint;
+    el('file-btn').textContent = t.openFile;
+    el('copy-md-btn').textContent = t.copyMd;
     el('direct-speech-btn').textContent = t.directSpeech;
+    el('flt-echo').textContent = t.fltEcho;
+    el('flt-sticky').textContent = t.fltSticky;
+    el('flt-indirect').textContent = t.fltIndirect;
     el('l-words').textContent = t.words;
     el('l-sents').textContent = t.sents;
     el('l-asl').textContent = t.asl;
@@ -409,13 +622,22 @@
     el('l-entropy').textContent = t.entropy;
     el('l-sticky').textContent = t.sticky;
     el('l-indirect').textContent = t.indirect;
+    el('voice-title').textContent = t.voiceTitle;
+    el('vl-narration').textContent = t.vNar;
+    el('vl-dialogue').textContent = t.vDlg;
+    el('vl-contrast').textContent = t.vCon;
     el('rhythm-title').textContent = t.rhythm;
+    el('spark-title').textContent = t.sparkTitle;
     el('echo-title').textContent = t.echoTitle;
     el('leg-echo').textContent = t.legEcho;
     el('leg-indirect').textContent = t.legIndirect;
     el('leg-sticky').textContent = t.legSticky;
     el('about-title').textContent = t.aboutTitle;
     el('about-body').innerHTML = t.aboutHtml;
+    el('cmp-sandbox-title').textContent = t.cmpSandboxTitle;
+    el('cmp-local-title').textContent = t.cmpLocalTitle;
+    el('cmp-sandbox-list').innerHTML = t.cmpSandbox.map(item => `<li>${esc(item)}</li>`).join('');
+    el('cmp-local-list').innerHTML = t.cmpLocal.map(item => `<li>${esc(item)}</li>`).join('');
     el('footer-note').textContent = t.footer;
     el('footer-privacy').textContent = t.privacy;
     el('footer-privacy').href = t.privacyHref;
@@ -426,6 +648,7 @@
 
   function setPreset(key, updateUrl) {
     if (!PRESETS[key]) return;
+    focusedEcho = '';
     input.value = PRESETS[key];
     if (updateUrl && window.history && window.history.replaceState) {
       const url = new URL(window.location.href);
@@ -435,9 +658,38 @@
     analyze();
   }
 
+  function toggleDirectSpeech() {
+    const btn = el('direct-speech-btn');
+    const next = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+    el('preview').classList.toggle('direct-speech', next);
+  }
+
+  function bindFilter(btnId, cls) {
+    el(btnId).addEventListener('click', () => {
+      const btn = el(btnId);
+      const next = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+      el('preview').classList.toggle(cls, !next);
+    });
+  }
+
+  function loadLocalFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      focusedEcho = '';
+      input.value = String(reader.result || '').slice(0, 120000);
+      analyze();
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
   el('preset-de').addEventListener('click', () => setPreset('effi-briest', true));
   el('preset-en').addEventListener('click', () => setPreset('pride-prejudice', true));
+  el('preset-draft').addEventListener('click', () => setPreset('rough-draft', true));
   el('preset-clear').addEventListener('click', () => {
+    focusedEcho = '';
     input.value = '';
     if (window.history && window.history.replaceState) {
       const url = new URL(window.location.href);
@@ -446,18 +698,53 @@
     }
     analyze();
   });
-  el('direct-speech-btn').addEventListener('click', () => {
-    const btn = el('direct-speech-btn');
-    const next = btn.getAttribute('aria-pressed') !== 'true';
-    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-    el('preview').classList.toggle('direct-speech', next);
+  el('direct-speech-btn').addEventListener('click', toggleDirectSpeech);
+  bindFilter('flt-echo', 'hide-echo');
+  bindFilter('flt-sticky', 'hide-sticky');
+  bindFilter('flt-indirect', 'hide-indirect');
+
+  el('file-btn').addEventListener('click', () => el('file-input').click());
+  el('file-input').addEventListener('change', e => loadLocalFile(e.target.files[0]));
+  const wrap = el('editor-wrap');
+  wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('drag-over'); });
+  wrap.addEventListener('dragleave', () => wrap.classList.remove('drag-over'));
+  wrap.addEventListener('drop', e => {
+    e.preventDefault();
+    wrap.classList.remove('drag-over');
+    if (e.dataTransfer && e.dataTransfer.files.length) loadLocalFile(e.dataTransfer.files[0]);
   });
+
+  el('copy-md-btn').addEventListener('click', async () => {
+    if (!lastSnapshot) return;
+    const t = I18N[lang];
+    const md = [
+      `## Lixity Sandbox (${lang.toUpperCase()})`,
+      `- ${t.words}: ${lastSnapshot.words} | ${t.sents}: ${lastSnapshot.sents} | ${t.asl}: ${lastSnapshot.asl}`,
+      `- ${t.dlg}: ${lastSnapshot.dlg} | ${t.vNar}: ${lastSnapshot.narAsl} | ${t.vDlg}: ${lastSnapshot.dlgAsl} (${lastSnapshot.contrast})`,
+      `- ${t.cv}: ${lastSnapshot.cv} | ${t.entropy}: ${lastSnapshot.entropy}`,
+      `- ${t.sticky}: ${lastSnapshot.sticky} | ${t.indirect}: ${lastSnapshot.indirect}`,
+      `- ${t.echoTitle}: ${lastSnapshot.echoes}`
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(md);
+      el('copy-status').textContent = t.copied;
+      setTimeout(() => { el('copy-status').textContent = ''; }, 2400);
+    } catch (_) {}
+  });
+
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'd' || e.key === 'D') && document.activeElement !== input && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      toggleDirectSpeech();
+    }
+  });
+
   el('lang-toggle').addEventListener('click', () => { lang = lang === 'de' ? 'en' : 'de'; applyLang(); });
   input.addEventListener('input', analyze);
 
   const initialPreset = new URLSearchParams(window.location.search).get('preset');
   if (initialPreset && PRESETS[initialPreset]) {
-    lang = initialPreset === 'effi-briest' ? 'de' : 'en';
+    lang = initialPreset === 'pride-prejudice' ? 'en' : 'de';
     input.value = PRESETS[initialPreset];
   } else {
     input.value = PRESETS[lang === 'de' ? 'effi-briest' : 'pride-prejudice'];

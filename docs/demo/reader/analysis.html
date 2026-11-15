@@ -1011,8 +1011,6 @@ font-size: var(--text-small);
   width: 100%;
   padding-left: 2.15rem;
   padding-right: 3.5rem;
-  min-height: 2.25rem;
-  height: 2.25rem;
   font-size: var(--text-control);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1050,10 +1048,8 @@ font-size: var(--text-small);
   visibility: hidden;
 }
 .text-search-group button.ctl {
-  flex: 0 0 2.25rem;
-  width: 2.25rem;
-  height: 2.25rem;
-  min-height: 2.25rem;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -1133,7 +1129,7 @@ body:not(.has-js-dashboard-controls) :is(.chapter-toggle, .text-search-group, .j
 .toolbar > .metric-layer-control) { display: none; }
 .chapter.collapsed .chapter-toggle::before { transform: rotate(-90deg); }
 .chapter.collapsed > .strip, .chapter.collapsed > .ptext { display: none; }
-.strip { display: flex; gap: 2px; margin: .65rem 0 0; overflow-x: auto; padding: 3px 2px; }
+.strip { display: flex; gap: 2px; margin: .65rem 0 0; overflow-x: auto; padding: 5px 2px; }
 .chip {
 border: 0;
 padding: 0;
@@ -1157,7 +1153,8 @@ background .25s var(--ease);
 &.sev-2 { box-shadow: inset 0 -3px 0 var(--flag); }
 &.sev-3 { box-shadow: inset 0 0 0 2px var(--flag); }
 &.outlier { box-shadow: 0 0 0 2px var(--fg); }
-&.sev-2.outlier, &.sev-3.outlier { box-shadow: inset 0 -3px 0 var(--flag), 0 0 0 2px var(--fg); }
+&.sev-2.outlier { box-shadow: inset 0 -3px 0 var(--flag), 0 0 0 2px var(--fg); }
+&.sev-3.outlier { box-shadow: inset 0 0 0 2px var(--flag), 0 0 0 2px var(--fg); }
 }
 /* --- Style layer overlay ---------------------------------------------- */
 .layer-legend {
@@ -1200,13 +1197,15 @@ background: var(--layer-color);
 }
 .chapter.flash, .ptext.flash, .panel.flash, section.flash,
 .ctl.flash, .research-timeline li.flash > .research-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+mark.text-hit.flash { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .ptext.flash { background: color-mix(in srgb, var(--accent-light) 55%, transparent); }
 .ptext.no-anim { transition: none; }
 body.has-js-dashboard-controls .row-link { cursor: pointer; }
 .band[role="button"], .load[role="button"] { cursor: pointer; }
 body.has-js-dashboard-controls .row-link:hover td { background: var(--accent-light); }
 .chip.outlier { box-shadow: 0 0 0 2px var(--fg); }
-.chip.sev-2.outlier, .chip.sev-3.outlier { box-shadow: inset 0 -3px 0 var(--flag), 0 0 0 2px var(--fg); }
+.chip.sev-2.outlier { box-shadow: inset 0 -3px 0 var(--flag), 0 0 0 2px var(--fg); }
+.chip.sev-3.outlier { box-shadow: inset 0 0 0 2px var(--flag), 0 0 0 2px var(--fg); }
 body.layer-only .chip:not(.outlier) { opacity: .18; }
 body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 /* --- Expandable paragraph preview (animated, show-don't-tell) --------- */
@@ -4470,8 +4469,8 @@ body.lixity-workspace.reader-focus {
     overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
   }
 }
-#view-pane-analysis .analysis-outline-contents { display: none !important; }
-#view-pane-analysis .analysis-outline-layout { display: block !important; }
+body:not(.workbench-overview) #view-pane-analysis .analysis-outline-contents { display: none !important; }
+body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { display: block !important; }
 
 /* Native metric ranges coexist with neutral dotted research marks and selection. */
 ::highlight(lixity-analysis-evidence), .analysis-evidence-swatch {

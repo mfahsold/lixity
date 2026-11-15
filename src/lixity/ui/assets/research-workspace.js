@@ -820,14 +820,15 @@ document.addEventListener("click", async function (event) {
         var aTab = document.querySelector('[data-view="analysis"]');
         if (aTab) aTab.click();
       }
-      setTimeout(function() {
-        var searchInput = document.getElementById("text-search");
-        if (searchInput) {
-          searchInput.value = termToSearch;
-          searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-          searchInput.focus();
-        }
-      }, 120);
+      if (window.LixityWorkbench && window.LixityWorkbench.state().surface !== "document") {
+        window.LixityWorkbench.dispatch({ type: "surface", value: "document" });
+      }
+      var searchInput = document.getElementById("text-search");
+      if (searchInput) {
+        searchInput.value = termToSearch;
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        searchInput.focus({ preventScroll: true });
+      }
     }
     return;
   }
@@ -841,14 +842,12 @@ document.addEventListener("click", async function (event) {
         var aTab2 = document.querySelector('[data-view="analysis"]');
         if (aTab2) aTab2.click();
       }
-      setTimeout(function() {
-        var targetCh = document.getElementById("ch-" + chNumToJump);
-        if (targetCh) {
-          if (typeof revealChapter === "function") revealChapter(targetCh);
-          if (typeof scrollAndFlash === "function") scrollAndFlash(targetCh, { analysisVisible: true });
-          else targetCh.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 120);
+      var targetCh = document.getElementById("ch-" + chNumToJump);
+      if (targetCh) {
+        if (typeof revealChapter === "function") revealChapter(targetCh);
+        if (typeof scrollAndFlash === "function") scrollAndFlash(targetCh, { analysisVisible: true });
+        else targetCh.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }
     return;
   }

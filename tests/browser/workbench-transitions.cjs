@@ -238,7 +238,7 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
       await assertPassageReturn(page, valuesOrigin, width, 'Values Escape');
 
       const dossierOrigin = await openFromPassage(page, 'companion');
-      if (width <= 900) await assertToolDestination(page, page.locator('#workspace-reader-title'),
+      if (width <= 900) await assertToolDestination(page, page.locator('#workspace-reader-panel .workspace-reader-head'),
         page.locator('#workspace-reader-close'), width, 'Dossier');
       await page.waitForFunction(() => !document.getElementById('workspace-reader-dossier').disabled);
       await page.locator('#workspace-reader-dossier').selectOption(dossier.id);
@@ -375,7 +375,7 @@ async function assertToolbarDossierReturn(page, paragraph, width) {
         `${width}: Rapid tool reversals retain the final requested Dossier`);
       assert.match(await page.locator('#workspace-reader-body').textContent(), /A saved synthetic note/);
       if (width <= 900) {
-        const heading = await page.locator('#workspace-reader-title').boundingBox();
+        const heading = await page.locator('#workspace-reader-panel .workspace-reader-head').boundingBox();
         assert.ok(heading && heading.y >= 0 && heading.y + heading.height <= 900,
           'Rapid mobile tool reversals keep the final context heading in the viewport');
       }

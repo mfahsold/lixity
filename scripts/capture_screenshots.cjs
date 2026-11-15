@@ -670,7 +670,7 @@ async function main() {
           return {
             x: (framed.x + framed.width / 2) / 1440,
             y: (framed.y + framed.height / 2) / 900,
-            zoom: Math.max(1, Math.min(1.55, 1440 / (framed.width + 110), 900 / (framed.height + 130))),
+            zoom: Math.max(1, Math.min(1.22, 1440 / (framed.width + 140), 900 / (framed.height + 160))),
           };
         };
         const cut = async (hudLabel, action, focus, marker, holdUntilMs) => {
@@ -682,9 +682,9 @@ async function main() {
             await page.evaluate(data => {
               const image = document.createElement('img'); image.id = 'tour-dissolve';
               image.src = data;
-              image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;pointer-events:none;opacity:1;transition:opacity .20s ease';
+              image.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483647;pointer-events:none;opacity:1;transition:opacity .35s ease';
               document.body.appendChild(image);
-              requestAnimationFrame(() => { image.style.opacity = '0'; setTimeout(() => image.remove(), 220); });
+              requestAnimationFrame(() => { image.style.opacity = '0'; setTimeout(() => image.remove(), 380); });
             }, 'data:image/png;base64,' + prevShot.toString('base64'));
           }
           await page.evaluate(label => { if (window.setTourHud) window.setTourHud(label); }, hudLabel);
@@ -698,60 +698,43 @@ async function main() {
           });
         };
         const runScene = async (index, name, body) => {
-          const targetStart = index * 7000;
+          const targetStart = index * 8000;
           const remainingPre = targetStart - (Date.now() - started);
           if (remainingPre > 0) await page.waitForTimeout(remainingPre);
           const sceneStart = (Date.now() - started) / 1000;
-          await body((index + 1) * 7000);
+          await body((index + 1) * 8000);
           scenes.push({name, start: Number(sceneStart.toFixed(3)), x: 0.5, y: 0.5, zoom: 1.0});
         };
 
-        // Scene 1 (0-7s): Classic-novel hook — Effi Briest sticky sentences + Pride & Prejudice voice contrast + Sandbox
+        // Scene 1 (0-8s): Calm prose reading — Effi Briest with sticky sentences highlighted.
         await runScene(0, 'read', async sceneEnd => {
-          await cut('01 · EFFI BRIEST · 33.5% STICKY', async () => {
+          await cut('01 · EFFI BRIEST · STICKY SENTENCES', async () => {
             await gotoTourPage('tour-effi-briest.html', 'light');
             await click(page.locator('#manuscript-analysis-toggle'));
             await selectMetric(page, 'sticky');
             await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
-          }, '#chapters .ptext', '#style-layer', sceneEnd - 4600);
-          await cut('01 · PRIDE & PREJUDICE · -9.7W VOICE', async () => {
-            await gotoTourPage('tour-pride-prejudice.html', 'light');
-            await click(page.locator('#workbench-overview-open'));
-            await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
-            await page.locator('#dialogue').scrollIntoViewIfNeeded();
-          }, '#dialogue', '#dialogue h2', sceneEnd - 2200);
-          await cut('01 · BROWSER SANDBOX · 1-CLICK', async () => {
-            await gotoTourPage('sandbox-index.html?preset=effi-briest', 'light');
-            await page.locator('#k-sticky').scrollIntoViewIfNeeded();
-          }, 'main', '#preset-de', sceneEnd);
+          }, '#chapters .ptext', '#style-layer', sceneEnd);
         });
 
-        // Scene 2 (7-14s): Direct Speech Mode (D) + Evidence Card + Manuscript Search
+        // Scene 2 (8-16s): Dialogue-Only Mode [D] + Passage Evidence Popover on Pride & Prejudice.
         await runScene(1, 'passage', async sceneEnd => {
-          await cut('02 · DIRECT SPEECH MODE [D]', async () => {
+          await cut('02 · DIALOGUE MODE [D] & EVIDENCE', async () => {
             await gotoTourPage('tour-pride-prejudice.html', 'light');
             await click(page.locator('#reader-direct-speech'));
-            await page.locator('#chapters .ptext.direct-speech-only, #chapters .ptext.direct-speech-mixed, #chapters .ptext').first().scrollIntoViewIfNeeded();
-          }, '#chapters .ptext', '#reader-direct-speech', sceneEnd - 4600);
-          await cut('02 · PASSAGE EVIDENCE POPOVER', async () => {
             const p = page.locator('#chapters .ptext').nth(1);
+            await p.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(1400);
             await click(p.locator('[data-reader-paragraph]'));
             await click(page.locator('[data-reader-action=values]'));
             await page.locator('#reader-inspector').waitFor({state: 'visible'});
-            await page.locator('#reader-inspector details').first().evaluate(node => { node.open = true; });
-          }, '#reader-inspector details', '#reader-inspector details summary', sceneEnd - 2200);
-          await cut('02 · INSTANT PASSAGE SEARCH', async () => {
-            await gotoTourPage('dashboard-research-workspace.html', 'light');
-            await click(page.locator('#tab-view-analysis'));
-            await page.locator('#text-search').fill('crate');
-            await page.locator('#text-search').press('Enter');
-          }, '#chapters .ptext', '#text-search', sceneEnd);
+          }, '#reader-inspector', '#reader-direct-speech', sceneEnd);
         });
 
-        // Scene 3 (14-21s): Manuscript Editor (#manuscript-write) + Live Session Pulse + Revision Diff
+        // Scene 3 (16-24s): Live Manuscript Editor + Session Pulse + Revision Diff.
         await runScene(2, 'compare', async sceneEnd => {
-          await cut('03 · MANUSCRIPT EDITOR · LIVE', async () => {
-            if (await page.locator('#text-search-clear').isVisible()) await click(page.locator('#text-search-clear'));
+          await cut('03 · LIVE EDITOR & REVISION DIFF', async () => {
+            await gotoTourPage('dashboard-research-workspace.html', 'light');
+            await click(page.locator('#tab-view-analysis'));
             await page.evaluate(() => {
               if (!document.getElementById('manuscript-write')) {
                 const s = document.createElement('script');
@@ -766,25 +749,14 @@ async function main() {
             await page.locator('.cm-content').waitFor({state: 'visible'});
             await page.locator('.cm-content').click();
             await page.keyboard.press('Control+End');
-            await page.keyboard.type(' Lanterns lit.', {delay: 10});
-          }, '.manuscript-editor-toolbar', '#manuscript-session-pulse', sceneEnd - 4400);
-          await cut('03 · REVISION DIFF · DELTAS', async () => {
+            await page.keyboard.type(' Lanterns lit.', {delay: 35});
+            await page.waitForTimeout(900);
             await click(page.locator('#manuscript-compare'));
             await page.locator('#manuscript-comparison').waitFor({state: 'visible'});
-          }, '#manuscript-comparison .modal-card', '#manuscript-comparison h2', sceneEnd - 2400);
-          await cut('03 · MESSGRÖSSE · ALL LAYERS', async () => {
-            await gotoTourPage('tour-effi-briest.html', 'light');
-            await click(page.locator('#manuscript-analysis-toggle'));
-            for (const layer of ['sticky', 'echo', 'indirect_speech']) {
-              if (await page.locator('#style-layer option[value="' + layer + '"]').count()) {
-                await selectMetric(page, layer);
-                await page.waitForTimeout(180);
-              }
-            }
-          }, '#chapters .ptext', '#style-layer', sceneEnd);
+          }, '#manuscript-comparison .modal-card', '#manuscript-comparison h2', sceneEnd);
         });
 
-        // Scene 4 (21-28s): Chapter Matrix (z* & FDR) + Character Voices & Interactions + Scene Hooks & Rhythm
+        // Scene 4 (24-32s): Chapter Matrix (z* & FDR) in Analysis Overview (calm Light theme).
         await runScene(3, 'research', async sceneEnd => {
           await cut('04 · CHAPTER MATRIX · z* & FDR', async () => {
             await gotoTourPage('dashboard-research-workspace.html', 'light');
@@ -794,27 +766,13 @@ async function main() {
             await click(page.locator('#style-tab-heatmap'));
             await page.locator('#heatmap-ch-3 td:nth-child(6)').evaluate(node =>
               node.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'instant'}));
-          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd - 4600);
-          await cut('04 · SCENES · COHESION DROPS', async () => {
-            await page.locator('#scenes').scrollIntoViewIfNeeded();
-          }, '#scenes', '#scenes h2', sceneEnd - 2300);
-          await cut('04 · ANTI-FLATTENING RHYTHM', async () => {
-            await page.emulateMedia({colorScheme: 'dark'});
-            await page.locator('#pacing').scrollIntoViewIfNeeded();
-          }, '#pacing', '#pacing h2', sceneEnd);
+          }, '#heatmap tbody', '#heatmap-ch-3 td:nth-child(6)', sceneEnd);
         });
 
-        // Scene 5 (28-35s): Research Dossiers & Source-Verified Claims Timeline
+        // Scene 5 (32-40s): Source-Verified Research Claims Timeline.
         await runScene(4, 'context', async sceneEnd => {
-          await cut('05 · RESEARCH DOSSIERS', async () => {
-            await click(page.locator('#tab-view-research'));
-            await click(page.locator('[data-rtab=dossiers]'));
-            const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
-            await click(dossier.locator('[data-research-detail=dossier]'));
-            await dossier.locator('.research-details-body').waitFor({state: 'visible'});
-            await dossier.locator('.dossier-image').first().scrollIntoViewIfNeeded();
-          }, '.research-details-body .dossier-image', '#research-dossiers-list .research-card [data-research-detail=dossier]', sceneEnd - 3500);
           await cut('05 · SOURCE-VERIFIED CLAIMS', async () => {
+            await click(page.locator('#tab-view-research'));
             await click(page.locator('[data-rtab=claims]'));
             await click(page.locator('#r-open-timeline'));
             await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
@@ -822,22 +780,11 @@ async function main() {
           }, '#research-claims-timeline', '#research-claims-timeline .research-timeline-strip-row', sceneEnd);
         });
 
-        // Scene 6 (35-42s): Standalone Export & Browser Sandbox CTA
+        // Scene 6 (40-48s): Browser Sandbox (100% offline, sentence pulse & dialogue mode).
         await runScene(5, 'return', async sceneEnd => {
-          await cut('06 · STANDALONE EXPORT', async () => {
-            await page.emulateMedia({colorScheme: 'light'});
-            await click(page.locator('#tab-view-analysis'));
-            if (await page.locator('#workbench-overview-back').isVisible()) await page.locator('#workbench-overview-back').click();
-            await click(page.locator('#project-actions > summary'));
-            await page.locator('#btn-site-export').evaluate(b => { b.disabled = false; });
-            await click(page.locator('#btn-site-export'));
-            if (!await page.locator('#modal-site-export').isVisible()) {
-              await page.evaluate(() => document.getElementById('modal-site-export')?.showModal());
-            }
-            await page.locator('#modal-site-export').waitFor({state: 'visible'});
-          }, '#modal-site-export .modal-card', '#modal-site-export h3', sceneEnd - 3500);
-          await cut('06 · TRY IN BROWSER · 100% OFFLINE', async () => {
-            await gotoTourPage('sandbox-index.html?preset=pride-prejudice', 'light');
+          await cut('06 · BROWSER SANDBOX · 100% OFFLINE', async () => {
+            await gotoTourPage('sandbox-index.html?preset=effi-briest', 'light');
+            await page.waitForTimeout(1600);
             await click(page.locator('#direct-speech-btn'));
           }, 'main', '#direct-speech-btn', sceneEnd);
         });
@@ -847,16 +794,14 @@ async function main() {
           JSON.stringify({
             scenes,
             cuts,
-            duration: 42,
+            duration: 48,
             trim: (started - recordingStarted) / 1000,
             socialHooks: [
-              {start: cuts[0].start, end: cuts[0].end, text: '33.5% Sticky Sentences in Effi Briest', x: cuts[0].x, zoom: cuts[0].zoom},
-              {start: cuts[1].start, end: cuts[1].end, text: 'Voice Contrast: -9.7 Words in Dialogue', x: cuts[1].x, zoom: cuts[1].zoom},
-              {start: cuts[3].start, end: cuts[3].end, text: 'Dialogue-Only Mode [D]', x: cuts[3].x, zoom: cuts[3].zoom},
-              {start: cuts[6].start, end: cuts[6].end, text: 'Live Manuscript Editor + Session Pulse', x: cuts[6].x, zoom: cuts[6].zoom},
-              {start: cuts[7].start, end: cuts[7].end, text: 'Revision Diff: Track Every Rewrite', x: cuts[7].x, zoom: cuts[7].zoom},
-              {start: cuts[11].start, end: cuts[11].end, text: 'Anti-Flattening Rhythm Entropy', x: cuts[11].x, zoom: cuts[11].zoom},
-              {start: cuts[15].start, end: cuts[15].end, text: 'Try Free in Browser - 100% Offline', x: cuts[15].x, zoom: cuts[15].zoom},
+              {start: cuts[0].start + 1.0, end: cuts[0].end - 1.5, text: '33.5% Sticky Sentences in Effi Briest', x: cuts[0].x, zoom: cuts[0].zoom},
+              {start: cuts[1].start + 1.5, end: cuts[1].end - 1.0, text: 'Dialogue Mode [D] & Passage Evidence', x: cuts[1].x, zoom: cuts[1].zoom},
+              {start: cuts[2].start + 2.0, end: cuts[2].end - 0.5, text: 'Live Manuscript Editor & Revision Diff', x: cuts[2].x, zoom: cuts[2].zoom},
+              {start: cuts[3].start + 1.0, end: cuts[3].end - 1.5, text: 'Chapter Matrix: Robust z* & FDR', x: cuts[3].x, zoom: cuts[3].zoom},
+              {start: cuts[5].start + 1.0, end: cuts[5].end - 0.5, text: 'Try Free in Browser - 100% Offline', x: cuts[5].x, zoom: cuts[5].zoom},
             ],
           }),
         );

@@ -1603,7 +1603,10 @@
         activeKaraokeSha = sha;
         document.querySelectorAll('#chapters .ptext[data-paragraph-sha256="' + sha + '"]').forEach(function(el) {
           el.classList.add("reader-audio-active");
-          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          if (typeof revealChapter === "function") revealChapter(el);
+          if (typeof setPassageScrollMargin === "function") setPassageScrollMargin(el);
+          var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
         });
       }
     });

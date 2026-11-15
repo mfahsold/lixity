@@ -263,7 +263,7 @@
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
     var boundary = readingViewportTop();
-    var threshold = boundary + 8;
+    var threshold = boundary + 10;
     var panel = null;
     var unfiltered = !document.body.classList.contains("only-flags") &&
       !document.body.classList.contains("text-search-active") &&
@@ -408,10 +408,15 @@
     var scheduledScrollIntent = scrollIntentRevision;
     var scheduledContext = sourceContext(), scheduledHash = anchor.panel.dataset.paragraphSha256;
     requestAnimationFrame(function() {
-      if (stillCurrent && !stillCurrent()) return;
+      if (stillCurrent && !stillCurrent()) {
+        if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
+        return;
+      }
       if (didBegin) didBegin();
-      if (scheduledNavigationRevision !== passageNavigationRevision) return;
-      if (revision !== arrangementRevision) return;
+      if (scheduledNavigationRevision !== passageNavigationRevision || revision !== arrangementRevision) {
+        if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
+        return;
+      }
       if (!anchor.panel.isConnected || sourceContext() !== scheduledContext ||
           anchor.panel.dataset.paragraphSha256 !== scheduledHash) {
         clampedAnchor = null;
@@ -857,10 +862,11 @@
     } else if (state.surface === previous.surface && state.view === previous.view &&
         (state.contextTool !== previous.contextTool || state.analysisVisible !== previous.analysisVisible || state.focus !== previous.focus)) restore(anchor, toolChanged && !open);
     if (window.LixityMotion) {
+      if (state.surface !== previous.surface) window.LixityMotion.view(document.getElementById("view-pane-analysis"));
       if (toolChanged && open) window.LixityMotion.reveal(dock);
       if (state.analysisVisible && !previous.analysisVisible && state.surface === "document") window.LixityMotion.analysis(chapters);
-      if (state.surface !== previous.surface) window.LixityMotion.view(document.getElementById("view-pane-analysis"));
     }
+    fitSearchScrollMargin();
     window.dispatchEvent(new Event("resize"));
   });
   function rangeFor(panel) {
@@ -1266,8 +1272,8 @@
   }, {passive: true});
   var readingScroll = false;
   function readingInput(event) {
-    if (event.target.closest && event.target.closest("#chapters") &&
-        workbench.state().view === "analysis" && workbench.state().surface === "document") readingScroll = true;
+    if (event.target.closest && event.target.closest("#workspace-context-panel, #manuscript-context-menu, #manuscript-selection-tools")) return;
+    if (workbench.state().view === "analysis" && workbench.state().surface === "document") readingScroll = true;
   }
   window.addEventListener("wheel", readingInput, {passive: true});
   window.addEventListener("touchmove", readingInput, {passive: true});
@@ -1363,6 +1369,7 @@
     readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
   }
   window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, captureForRestore: captureForRestore, restore: restore, retain: retain,
+    cancelRestore: function() { ++passageNavigationRevision; pendingDockAnchor = null; clampedAnchor = null; },
     contextFocusReturnPending: function() { return pendingDockFocusRevision === arrangementRevision; },
     pendingComparisonPassage: pendingComparisonPassage,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },

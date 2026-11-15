@@ -49,22 +49,23 @@ server.serve_forever()
     const figure=page.locator('#characters tbody tr').first();
     await expect(figure.locator('td').nth(1)).toHaveText('1');
     await expect(figure.locator('td').nth(2)).toHaveText('1 / 2');
-    await expect(figure.locator('td').last()).toHaveText('2');
+    await expect(figure.locator('td').nth(6)).toHaveText('2 (50 %)');
+    await expect(figure.locator('td').last()).toHaveText('0');
     const overview=page.locator('#scenes .scene-overview');
     await expect(overview.locator('tbody tr')).toHaveCount(2);
     await overview.screenshot({path:path.join(artifacts,`scenes-${width}.png`)});
-    const numericCells=await overview.locator('tbody td').evaluateAll(cells=>cells.map(cell=>{
+    const numericCells=await overview.locator('tbody td.num').evaluateAll(cells=>cells.map(cell=>{
       const range=document.createRange();range.selectNodeContents(cell);
       return {text:cell.textContent,lines:new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size};
     }));
-    assert.equal(numericCells.length,8,'Both scenes expose all four measured values');
+    assert.equal(numericCells.length,4,'Both scenes expose their numeric values');
     assert.ok(numericCells.every(cell=>cell.lines===1),
       'Scene numbers and their units remain on one line: '+JSON.stringify(numericCells));
     if(width===320) {
       await overview.focus();await page.keyboard.press('ArrowRight');
       await expect.poll(()=>overview.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
       await overview.evaluate(element=>{element.scrollLeft=0;});
-      const table=page.locator('#characters .table-wrap');
+      const table=page.locator('#characters .table-wrap').first();
       assert.ok((await page.locator('#characters th').first().boundingBox()).width>=50,
         'Character headers must remain readable instead of wrapping into single letters');
       assert.ok(await page.locator('#characters th').first().evaluate(element=>{

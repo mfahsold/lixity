@@ -139,15 +139,15 @@ def convert_product_tour() -> None:
         return expression
 
     def cut_ease() -> str:
-        # Snappy 0.22s ease-in, hold on the evidence, 0.20s ease-out before the next cut.
+        # Gentle 0.75s ease-in, long readable hold on the prose, 0.55s ease-out.
         def seg_ease(start: float, end: float) -> str:
-            dur = max(0.6, end - start)
-            out_at = max(0.3, dur - 0.20)
+            dur = max(1.6, end - start)
+            out_at = max(0.9, dur - 0.55)
             local = f"(in_time-{start:.3f})"
             return (
-                f"if(lt({local},0.22),(1-cos(PI*{local}/0.22))/2,"
+                f"if(lt({local},0.75),(1-cos(PI*{local}/0.75))/2,"
                 f"if(lt({local},{out_at:.3f}),1,"
-                f"if(lt({local},{dur:.3f}),(1+cos(PI*({local}-{out_at:.3f})/0.20))/2,0)))"
+                f"if(lt({local},{dur:.3f}),(1+cos(PI*({local}-{out_at:.3f})/0.55))/2,0)))"
             )
 
         expression = seg_ease(cuts[-1]["start"], cuts[-1]["end"])

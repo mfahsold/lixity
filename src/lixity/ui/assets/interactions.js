@@ -123,8 +123,9 @@ function flashOnArrival(target) {
     var visible = rect.bottom > top && rect.top < bottom && rect.right > left && rect.left < right;
     if (visible && now - stableSince >= 100) {
       target.classList.add("flash");
-      arrival.prose = target.matches("#chapters .ptext") && document.body.classList.contains("manuscript-reading");
-      if (arrival.prose && window.LixityMotion) window.LixityMotion.passage(target);
+      var motionTarget = target.matches("#chapters .ptext") ? target : target.closest("#chapters .ptext");
+      arrival.prose = Boolean(motionTarget && document.body.classList.contains("manuscript-reading"));
+      if (arrival.prose && window.LixityMotion) window.LixityMotion.passage(motionTarget);
       arrival.timer = setTimeout(function() {
         target.classList.remove("flash");
         if (passageArrival === arrival) passageArrival = null;
@@ -163,7 +164,13 @@ function scrollAndFlash(target, options) {
     focused.getAttribute("data-jump") === "#" + target.id;
   var view = target.closest(".view-pane");
   if (view && !view.classList.contains("active")) switchActiveView(view.dataset.viewPane);
-  if (target.closest("#manuscript-analysis-panels") && window.LixityReader) window.LixityReader.inspect();
+  if (target.closest("#manuscript-analysis-panels, #analysis-review, #analysis-sections")) {
+    if (window.LixityWorkbench && window.LixityWorkbench.state().surface !== "overview") {
+      window.LixityWorkbench.dispatch({ type: "surface", value: "overview" });
+    } else if (window.LixityReader) {
+      window.LixityReader.inspect();
+    }
+  }
   if (target.closest("#chapters") && window.LixityWorkbench &&
       (window.LixityWorkbench.state().surface !== "document" || options.analysisVisible !== undefined || options.contextTool !== undefined)) {
     window.LixityWorkbench.dispatch({
@@ -173,6 +180,7 @@ function scrollAndFlash(target, options) {
       contextTool: options.contextTool
     });
   }
+  if (window.LixityReader && window.LixityReader.cancelRestore) window.LixityReader.cancelRestore();
   revealStyleTarget(target);
   revealDisclosures(target);
   revealChapter(target);
@@ -192,6 +200,7 @@ function scrollAndFlash(target, options) {
   if (block === "nearest" && target.closest("#chapters") &&
       target.getBoundingClientRect().height > innerHeight - parseFloat(target.style.scrollMarginTop)) block = "start";
   target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: block });
+  if (typeof scheduleOutlierNavigation === "function") scheduleOutlierNavigation();
   flashOnArrival(target);
 }
 
@@ -206,7 +215,7 @@ function readingViewportTop() {
 }
 
 function setPassageScrollMargin(target) {
-  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-dossier-location");
+  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-dossier-location, .publication-header, .publication-reader-header");
   var height = 0, rect = target.getBoundingClientRect();
   var container = passageScrollContainers(target)[0];
   bars.forEach(function(bar) {
@@ -215,10 +224,10 @@ function setPassageScrollMargin(target) {
     if (style.position === "sticky" && bounds.right > rect.left && bounds.left < rect.right) {
       var topVal = parseFloat(style.top);
       var barTop = Number.isFinite(topVal) ? topVal : Math.max(0, bounds.top);
-      height = Math.max(height, barTop + bounds.height, bounds.bottom);
+      height = Math.max(height, barTop + bounds.height, bounds.top <= barTop + 1 ? bounds.bottom : 0);
     }
   });
-  target.style.scrollMarginTop = (height + 20) + "px";
+  target.style.scrollMarginTop = (height + 12) + "px";
 }
 
 var paragraphContentNode = document.getElementById("paragraph-content");

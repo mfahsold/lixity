@@ -438,8 +438,10 @@ function syncEvidenceLegend() {
   var legend = document.getElementById("layer-evidence-legend");
   var toggle = document.getElementById("analysis-evidence-enabled");
   if (legend) legend.hidden = !toggle || !toggle.checked;
+  var selectedOption = layer && layer.selectedIndex >= 0 ? layer.options[layer.selectedIndex] : null;
+  var inlineOnly = Boolean(selectedOption && selectedOption.dataset.inlineEvidence === "1");
   var comparison = document.getElementById("layer-comparison-legend");
-  if (comparison) comparison.hidden = comparisonToggle && !comparisonToggle.checked;
+  if (comparison) comparison.hidden = inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
   if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
 }
 
@@ -480,7 +482,7 @@ function applyLayer() {
         panel.classList.remove("metric-notable");
         panel.style.removeProperty("--paragraph-layer-color");
       }
-      if (info || panel.querySelector(".paragraph-layer-marker")) {
+      if (info || panel._comparisonMarker || panel.querySelector(":scope > .reader-comparison-value")) {
         paintLayerAction(panel, info);
       }
     }
@@ -509,9 +511,13 @@ function applyLayer() {
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
-          layerCount.textContent = comparable ? uiFormat("layer_coverage", {
-            notable: count, comparable: comparable, total: layerLegend.dataset.profiled
-          }) : uiLabel("layer_unavailable");
+          if (option.dataset.inlineEvidence === "1") {
+            layerCount.textContent = "";
+          } else {
+            layerCount.textContent = comparable ? uiFormat("layer_coverage", {
+              notable: count, comparable: comparable, total: layerLegend.dataset.profiled
+            }) : uiLabel("layer_unavailable");
+          }
         }
         if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
         if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
@@ -1004,7 +1010,10 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
       editor.open = true;
       var target = Object.keys(savedProfiles()).length ? editor.querySelector("summary") :
         editor.querySelector("[data-site-publication-add-profile]");
-      target.focus(); target.scrollIntoView({block:"nearest"});
+      if (target) {
+        if (typeof scrollAndFlash === "function") scrollAndFlash(target, { block: "nearest" });
+        target.focus({ preventScroll: true });
+      }
     }
   });
   research.addEventListener("change", sync);

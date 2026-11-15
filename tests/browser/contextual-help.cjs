@@ -224,7 +224,8 @@ async function hoverTiming(browser) {
     await page.clock.runFor(90);
     await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_analysis);
     const analysisBox = await analysis.boundingBox(), nextHint = await tip.boundingBox();
-    assert.ok(Math.abs(nextHint.x - (analysisBox.x + analysisBox.width / 2 + 12)) <= 1,
+    const expectedNextLeft = Math.max(10, Math.min(analysisBox.x + analysisBox.width / 2 + 12, 1440 - 10 - nextHint.width));
+    assert.ok(Math.abs(nextHint.x - expectedNextLeft) <= 1,
       'A tool away from viewport edges keeps its hint beside the cursor');
     assert.ok(Math.min(Math.abs(nextHint.y - analysisBox.y - analysisBox.height / 2),
       Math.abs(analysisBox.y + analysisBox.height / 2 - nextHint.y - nextHint.height)) <= 28);
@@ -417,7 +418,7 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   for (const key of ['reading_teleprompter', 'reading_shortcut_actions', 'reading_shortcut_search', 'reading_shortcut_close']) {
     await expect(reference).toContainText(labels[key]);
   }
-  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['P', 'Shift+F10', 'Enter', 'Esc']);
+  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['P', 'D', 'Shift+F10', 'Enter', 'Esc']);
   const body = page.locator('#reader-settings .reader-settings-body');
   if (height === 480) {
     const openingBounds = await page.evaluate(async () => {

@@ -7,7 +7,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-14
+
 ### Added
+
+- **Manuscript Editor Formatting Bar (`manuscript-editor.js`, `scripts/editor/editor.js`)**: `H2`, `B`, `I`, and `—` formatting controls and `Ctrl+B`/`Ctrl+I` shortcuts.
+- **Expanded Browser Sandbox (`docs/sandbox/index.html`)**: Sentence-by-sentence SVG rhythm sparkline, narration vs. dialogue voice contrast, rough-draft preset, clickable word-echo chips, highlight layer toggles, local `.txt`/`.md` drag-and-drop import, and Markdown summary copy.
+- **Parallel Test Execution (`pyproject.toml`, `Makefile`, `scripts/run_browser_suites.py`)**: `pytest-xdist` (`-n auto`), `fast-check`, `pages-deploy`, and longest-first browser suite scheduling.
+
+### Fixed
+
+- **Analysis Layer Legend (`dashboard.js`)**: Hide the paragraph-comparison unavailable notice when an inline-evidence layer (`sticky`, `dialogue_tag`, `indirect_speech`, `echo`) is active.
+- **Sticky Scroll Margin & Capture (`interactions.js`, `manuscript-reader.js`)**: Count `bounds.bottom` in `setPassageScrollMargin` only when a sticky bar is already stuck (`bounds.top <= barTop + 1`), and align `capture()` threshold (`boundary + 10`) so jump targets are reliably captured.
+- **Product Tour Video Pacing (`scripts/capture_screenshots.cjs`, `scripts/make_videos.py`)**: Replaced rapid 2-second cuts with 6 calm, readable 8-second scenes (48s total) and gentle transitions.
+
+### Prior Unreleased Items (included in 0.8.1)
 
 - Add dramaturgical & structural analysis heuristics (`pacing.py`, `dialogue.py`,
   `scenes.py`, `characters.py`, `corridors.py`):
@@ -3888,7 +3902,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/mfahsold/lixity/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/mfahsold/lixity/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/mfahsold/lixity/compare/v0.7.7...v0.7.9
 [0.7.7]: https://github.com/mfahsold/lixity/compare/v0.7.6...v0.7.7

@@ -164,11 +164,9 @@
         subtitle: isDe ? "Szenenlängen, Staccato-Anteile und Hooks" : "Scene lengths, staccato and hook cues",
         icon: "layout",
         action: function () {
-          var target = document.getElementById("pacing") || document.querySelector('[data-jump="#pacing"]');
+          var target = document.getElementById("pacing");
           if (target && typeof scrollAndFlash === "function") {
             scrollAndFlash(target);
-          } else if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
           } else if (typeof selectAnalysisMetric === "function") {
             selectAnalysisMetric("pacing");
           }
@@ -181,12 +179,8 @@
         subtitle: isDe ? "Kapitel im multidimensionalen Stilraum vergleichen" : "Inspect chapter distances in style space",
         icon: "sliders",
         action: function () {
-          var target = document.getElementById("style") || document.querySelector('[data-jump="#style"]');
-          if (target && typeof scrollAndFlash === "function") {
-            scrollAndFlash(target);
-          } else if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
-          }
+          var target = document.getElementById("style");
+          if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
         }
       },
       {
@@ -196,12 +190,8 @@
         subtitle: isDe ? "Szenen-Register und Soll-Vorgaben vergleichen" : "Compare scene registers against project targets",
         icon: "table",
         action: function () {
-          var target = document.getElementById("scenes") || document.querySelector('[data-jump="#scenes"]');
-          if (target && typeof scrollAndFlash === "function") {
-            scrollAndFlash(target);
-          } else if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
-          }
+          var target = document.getElementById("scenes");
+          if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
         }
       },
 
@@ -220,7 +210,8 @@
           if (searchTab) searchTab.click();
           var searchField = document.querySelector("#r-search-query, #research-search, .research-search-input, input[name='q']");
           if (searchField) {
-            searchField.focus();
+            if (typeof scrollAndFlash === "function") scrollAndFlash(searchField, { block: "nearest" });
+            searchField.focus({ preventScroll: true });
             searchField.select();
           }
         }
@@ -240,7 +231,8 @@
           if (composer) composer.open = true;
           var titleField = document.getElementById("r-dos-title");
           if (titleField) {
-            titleField.focus();
+            if (typeof scrollAndFlash === "function") scrollAndFlash(titleField, { block: "nearest" });
+            titleField.focus({ preventScroll: true });
           } else {
             var newBtn = document.querySelector("#research-new-dossier, [data-research-action='new-dossier']");
             if (newBtn) newBtn.click();
