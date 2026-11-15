@@ -167,6 +167,7 @@ async function initResearchUI(freshRead) {
   refreshResearchDossiers(status, null, freshRead);
   refreshResearchClaims(status);
   refreshResearchDecisions(status);
+  if (activeTab && activeTab.dataset.rtab === "timeline") refreshResearchClaimProjections();
   if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
 }
 

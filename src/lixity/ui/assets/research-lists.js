@@ -407,7 +407,7 @@ function researchRelationEndpoint(endpoint) {
 async function refreshResearchClaimProjections() {
   var request = ++researchProjectionRead;
   var activeResearchTab = document.querySelector('.research-tabs [data-rtab].active');
-  if (!activeResearchTab || activeResearchTab.dataset.rtab !== "claims") return;
+  if (!activeResearchTab || (activeResearchTab.dataset.rtab !== "claims" && activeResearchTab.dataset.rtab !== "timeline")) return;
   var context = researchReadContext();
   var timelineHost = document.getElementById("research-claims-timeline");
   var relationsHost = document.getElementById("research-claim-relations");
