@@ -60,7 +60,7 @@
   "workflow": "Lettura attenta, note di ricerca e confronti tra capitoli restano ancorati alle tue parole. Tutto gira privatamente sul tuo computer; gli strumenti opzionali per voce e ricerca si configurano a parte.",
   "sandbox_cta": "Prova un brano nel browser",
   "compare_title": "Dove Lixity si distingue",
-  "compare_lead": "Lixity non sostituisce un editor umano e non riscrive le tue frasi. Affianca i correttori cloud e i planner di scene dove contano privacy locale, segnali deterministici e fonti verificate.",
+  "compare_lead": "Lixity non sostituisce un editor umano e non riscrive le tue frasi. Affianca suite desktop, strumenti open source, correttori cloud e planner di scene dove contano privacy locale, segnali deterministici e fonti verificate.",
   "compare_col_aspect": "Focus",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Correttori cloud (es. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Modello e licenza",
   "compare_lix_license": "Open source (AGPL-3.0), app locale gratuita, 7 lingue di interfaccia e analisi",
   "compare_cld_license": "Abbonamento ricorrente, piani a livelli",
-  "compare_pln_license": "Abbonamento ricorrente"
+  "compare_pln_license": "Abbonamento ricorrente",
+  "compare_col_desktop": "Suite desktop (es. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "Strumenti OSS (es. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Archiviazione locale e scrittura offline; verifiche periodiche della licenza secondo il produttore (Windows/macOS)",
+  "compare_oss_privacy": "100 % locale e offline; testo/Markdown o database locale, nessun vincolo cloud",
+  "compare_dsk_method": "Filtri stilistici/Duden (Papyrus) o raccoglitore e compilazione (Scrivener)",
+  "compare_oss_method": "Scalette, bacheche e schede personaggio; nessuna analisi statistica di prosa o contrasto dialoghi",
+  "compare_dsk_research": "Cartelle di ricerca e bacheca; nessuna tracciabilità dei byte originali o grafo delle tesi",
+  "compare_oss_research": "Note, tag e trame; nessuna provenienza OCR/Zotero/audio né collegamenti per revisione",
+  "compare_dsk_license": "Licenza perpetua proprietaria (~349 € Papyrus Autor; per OS su Scrivener), aggiornamenti a pagamento",
+  "compare_oss_license": "Open source (GPL-3.0); app base gratuita (bibisco offre edizioni aggiuntive a pagamento)"
 }

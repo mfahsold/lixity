@@ -60,7 +60,7 @@
   "workflow": "Leitura atenta, notas de pesquisa e comparações entre capítulos permanecem ligadas às suas palavras. Tudo corre localmente no seu computador; ferramentas opcionais de voz e pesquisa configuram-se à parte.",
   "sandbox_cta": "Testar um trecho no navegador",
   "compare_title": "Onde o Lixity se distingue",
-  "compare_lead": "O Lixity não substitui um revisor humano nem reescreve as suas frases. Complementa corretores na nuvem e planeadores de cenas onde a privacidade local, métricas deterministas e fontes verificadas importam.",
+  "compare_lead": "O Lixity não substitui um editor humano nem reescreve a sua prosa. Complementa suítes desktop, editores open source, revisores na nuvem e planejadores onde privacidade local, sinais determinísticos e proveniência de fontes importam.",
   "compare_col_aspect": "Foco",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Corretores na nuvem (ex. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Modelo e licença",
   "compare_lix_license": "Código aberto (AGPL-3.0), app local gratuita, 7 idiomas de interface e análise",
   "compare_cld_license": "Subscrição recorrente, planos por escalões",
-  "compare_pln_license": "Subscrição recorrente"
+  "compare_pln_license": "Subscrição recorrente",
+  "compare_col_desktop": "Suítes desktop (ex. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "Ferramentas OSS (ex. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Armazenamento local e escrita offline; verificação periódica de licença conforme fabricante (Windows/macOS)",
+  "compare_oss_privacy": "100 % local e offline; texto/Markdown ou banco local, sem dependência da nuvem",
+  "compare_dsk_method": "Filtros de estilo/Duden (Papyrus) ou fichário e compilação (Scrivener)",
+  "compare_oss_method": "Estruturação, quadros e entrevistas de personagens; sem sinais estatísticos de prosa ou contraste de diálogo",
+  "compare_dsk_research": "Pastas de pesquisa e quadro de cortiça; sem rastreabilidade de bytes de origem ou grafo de teses",
+  "compare_oss_research": "Notas, tags e linhas de enredo; sem proveniência OCR/Zotero/áudio nem vínculos por revisão",
+  "compare_dsk_license": "Licença perpétua proprietária (~€349 Papyrus Autor; por SO no Scrivener), upgrades pagos",
+  "compare_oss_license": "Código aberto (GPL-3.0); núcleo gratuito (bibisco possui edições pagas)"
 }

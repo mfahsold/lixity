@@ -60,7 +60,7 @@
   "workflow": "Close reading, research notes, and chapter comparisons stay anchored to your words. Everything runs privately on your computer; optional speech and research tools are set up separately.",
   "sandbox_cta": "Try a passage in browser",
   "compare_title": "How Lixity compares",
-  "compare_lead": "Lixity does not replace a human editor or rewrite your prose. It complements cloud style checkers and scene planners wherever local privacy, deterministic signals, and source provenance matter.",
+  "compare_lead": "Lixity does not replace a human editor or rewrite your prose. It complements desktop author suites, open-source novel editors, cloud style checkers, and scene planners wherever local privacy, deterministic signals, and source provenance matter.",
   "compare_col_aspect": "Focus",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Cloud style tools (e.g. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Model & license",
   "compare_lix_license": "Open source (AGPL-3.0), free local app, 7 UI & analysis languages",
   "compare_cld_license": "Recurring subscription, tiered features",
-  "compare_pln_license": "Recurring subscription"
+  "compare_pln_license": "Recurring subscription",
+  "compare_col_desktop": "Desktop suites (e.g. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "OSS novel tools (e.g. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Local desktop storage & offline writing; periodic license checks depending on vendor (Windows/macOS)",
+  "compare_oss_privacy": "100% local & offline; plain-text/Markdown or local project DB, zero cloud lock-in",
+  "compare_dsk_method": "Duden/rule style filters (fillers, repetitions, readability in Papyrus) or binder/compile focus (Scrivener)",
+  "compare_oss_method": "Outlining, corkboards & character interviews; no quantitative prose or dialogue-contrast signals",
+  "compare_dsk_research": "Character/research binders & corkboards; no cryptographic source-byte provenance or claim graph",
+  "compare_oss_research": "Project notes, tags & plot trees; no OCR/Zotero/audio provenance or revision-level claim links",
+  "compare_dsk_license": "Proprietary perpetual license (~€349 Papyrus Autor; per-OS Scrivener), paid major upgrades",
+  "compare_oss_license": "Open source (GPL-3.0); free core app (bibisco adds paid editions/cloud add-ons)"
 }

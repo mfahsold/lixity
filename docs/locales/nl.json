@@ -60,7 +60,7 @@
   "workflow": "Aandachtig lezen, onderzoeksnotities en hoofdstukvergelijkingen blijven verankerd in jouw woorden. Alles draait privé op je eigen computer; optionele spraak- en onderzoekshulpen stel je apart in.",
   "sandbox_cta": "Test een passage in de browser",
   "compare_title": "Waar Lixity verschilt",
-  "compare_lead": "Lixity vervangt geen redacteur en herschrijft geen zinnen. Het vult cloud-stijlcheckers en scèneplanners aan waar lokale privacy, deterministische metingen en verifieerbare bronnen tellen.",
+  "compare_lead": "Lixity vervangt geen redacteur en herschrijft geen zinnen. Het vult desktop-auteursuites, open-source romaneditors, cloud-stijlcheckers en scèneplanners aan waar lokale privacy, deterministische metingen en verifieerbare bronnen tellen.",
   "compare_col_aspect": "Focus",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Cloud-stijltools (bijv. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Model & licentie",
   "compare_lix_license": "Open source (AGPL-3.0), gratis lokale app, 7 interface- & analysetalen",
   "compare_cld_license": "Doorlopend abonnement, gelaagde pakketten",
-  "compare_pln_license": "Doorlopend abonnement"
+  "compare_pln_license": "Doorlopend abonnement",
+  "compare_col_desktop": "Desktopsuites (bijv. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "OSS-romantools (bijv. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Lokale opslag & offline schrijven; periodieke licentiecontrole per aanbieder (Windows/macOS)",
+  "compare_oss_privacy": "100 % lokaal & offline; platte tekst/Markdown of lokale database, geen cloud-lock-in",
+  "compare_dsk_method": "Stijlfilters/Duden (Papyrus) of binder- & compileerfuncties (Scrivener)",
+  "compare_oss_method": "Structuur, prikborden & personage-interviews; geen statistische proza- of dialoogcontrastmetingen",
+  "compare_dsk_research": "Onderzoeksmappen & prikborden; geen cryptografische bronherkomst of claim-graaf",
+  "compare_oss_research": "Notities, tags & verhaallijnen; geen OCR/Zotero/audio-herkomst of revisiegebonden bewijs",
+  "compare_dsk_license": "Propriëtaire eenmalige licentie (~€349 Papyrus Autor; per OS bij Scrivener), betaalde upgrades",
+  "compare_oss_license": "Open source (GPL-3.0); gratis kern-app (bibisco biedt betaalde uitbreidingen)"
 }

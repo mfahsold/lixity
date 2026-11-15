@@ -60,7 +60,7 @@
   "workflow": "Lecture attentive, notes de recherche et comparaisons de chapitres restent ancrées dans vos mots. Tout tourne en privé sur votre ordinateur ; les outils vocaux et de recherche optionnels se configurent séparément.",
   "sandbox_cta": "Tester un passage en ligne",
   "compare_title": "Comment Lixity se distingue",
-  "compare_lead": "Lixity ne remplace pas un éditeur humain et ne réécrit pas vos phrases. Il complète les correcteurs cloud et planificateurs de scènes là où confidentialité locale, mesures déterministes et sources vérifiées comptent.",
+  "compare_lead": "Lixity ne remplace pas un éditeur humain et ne réécrit pas vos phrases. Il complète les suites bureautiques d’auteur, outils open source, correcteurs cloud et planificateurs là où confidentialité locale, mesures déterministes et sources vérifiées comptent.",
   "compare_col_aspect": "Priorité",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Correcteurs cloud (ex. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Modèle & licence",
   "compare_lix_license": "Open source (AGPL-3.0), application locale gratuite, 7 langues d’interface et d’analyse",
   "compare_cld_license": "Abonnement récurrent, formules par paliers",
-  "compare_pln_license": "Abonnement récurrent"
+  "compare_pln_license": "Abonnement récurrent",
+  "compare_col_desktop": "Suites bureau (ex. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "Outils open source (ex. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Stockage local et écriture hors ligne ; vérifications périodiques de licence selon l’éditeur (Windows/macOS)",
+  "compare_oss_privacy": "100 % local et hors ligne ; texte brut/Markdown ou base locale, aucun verrouillage cloud",
+  "compare_dsk_method": "Filtres stylistiques/Duden (Papyrus) ou classeur/compilation avancée (Scrivener)",
+  "compare_oss_method": "Planification, fiches et entretiens de personnages ; sans signaux statistiques de prose ou de dialogue",
+  "compare_dsk_research": "Dossiers de recherche et tableaux de liège ; sans traçabilité cryptographique des sources",
+  "compare_oss_research": "Notes, étiquettes et arcs narratifs ; sans provenance OCR/Zotero/audio ni graphe d’affirmations",
+  "compare_dsk_license": "Licence perpétuelle propriétaire (~349 € Papyrus Autor ; par OS pour Scrivener), mises à niveau payantes",
+  "compare_oss_license": "Open source (GPL-3.0) ; cœur gratuit (éditions payantes en option pour bibisco)"
 }

@@ -60,7 +60,7 @@
   "workflow": "Genaues Lesen, Quellen und Kapitelvergleiche bleiben direkt am Text verankert. Alles läuft privat auf deinem Rechner; optionale Sprach- und Recherchedienste richtest du bei Bedarf getrennt ein.",
   "sandbox_cta": "Absatz im Browser testen",
   "compare_title": "Wo Lixity anders arbeitet",
-  "compare_lead": "Lixity ersetzt kein Lektorat und schreibt keine Sätze um. Es ergänzt Cloud-Stilprüfer und Szenen-Planer überall dort, wo lokale Vertraulichkeit, nachvollziehbare Messwerte und geprüfte Quellen zählen.",
+  "compare_lead": "Lixity ersetzt kein Lektorat und schreibt keine Sätze um. Es ergänzt Desktop-Autorensuiten, Open-Source-Romanwerkzeuge, Cloud-Stilprüfer und Szenen-Planer überall dort, wo lokale Vertraulichkeit, nachvollziehbare Messwerte und geprüfte Quellen zählen.",
   "compare_col_aspect": "Schwerpunkt",
   "compare_col_lixity": "Lixity",
   "compare_col_cloud": "Cloud-Stilprüfer (z. B. ProWritingAid, AutoCrit)",
@@ -80,5 +80,15 @@
   "compare_row_license": "Modell & Lizenz",
   "compare_lix_license": "Open Source (AGPL-3.0), kostenlose lokale App, 7 Oberflächen- & Analysesprachen",
   "compare_cld_license": "Laufendes Abo, gestaffelte Funktionspakete",
-  "compare_pln_license": "Laufendes Abo"
+  "compare_pln_license": "Laufendes Abo",
+  "compare_col_desktop": "Desktop-Suiten (z. B. Papyrus Autor, Scrivener)",
+  "compare_col_oss": "OSS-Romanwerkzeuge (z. B. novelWriter, Manuskript, bibisco)",
+  "compare_dsk_privacy": "Lokale Datenhaltung & Offline-Arbeit; je nach Anbieter periodische Lizenzprüfung (Windows/macOS)",
+  "compare_oss_privacy": "100 % lokal & offline; Klartext/Markdown oder lokale Projektdatenbank, kein Cloud-Zwang",
+  "compare_dsk_method": "Duden-/Regel-Stilanalyse (Füllwörter, Wiederholungen, Lesbarkeit bei Papyrus) bzw. Binder/Compile (Scrivener)",
+  "compare_oss_method": "Gliederung, Pinnwand & Figuren-Interviews; keine statistische Prosa- oder Dialogkontrast-Analyse",
+  "compare_dsk_research": "Figuren-/Recherche-Datenbanken & Pinnwände; keine Quellenbyte-Belege oder Thesen-Graphen",
+  "compare_oss_research": "Projektnotizen, Tags & Handlungsstränge; keine OCR/Zotero/Audio-Provenienz oder Revisions-Belege",
+  "compare_dsk_license": "Proprietäre Kauf-Lizenz (~349 € Papyrus Autor; je OS bei Scrivener), kostenpflichtige Upgrades",
+  "compare_oss_license": "Open Source (GPL-3.0); kostenlose Kern-App (bei bibisco kostenpflichtige Erweiterungen)"
 }
