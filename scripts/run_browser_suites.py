@@ -179,6 +179,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "decision-acknowledgement.cjs",
         "decision-review.cjs",
         "dossier-claims.cjs",
+        "dossier-collections.cjs",
         "dossier-geography.cjs",
         "dossier-images.cjs",
         "dossier-return.cjs",

@@ -17,6 +17,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Publish speech job terminal states after temporary source cleanup, including
+  cancellation or shutdown while cleanup is in progress.
 - Bind manuscript revision deltas and the editor pulse to current source bytes
   after reverts or external edits, preserving immutable historical measurements.
   Resolve explicitly selected retained revisions outside the timeline window;
@@ -28,6 +30,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Organize dossier collections by title: add dossiers from a chooser, reorder or
+  remove selected entries, and name new collections without typing technical
+  identifiers. Read-only references remain available in a collapsed section;
+  unavailable members remain in the saved order until explicitly removed.
+  Localize the controls and dossier metadata help in all seven interface languages.
 - **Direct Research Timeline Tab (`research_panel.py`, `research-workspace.js`, `command-palette.js`)**: Promoted Timeline to a top-level Research tab (`#research-tab-timeline`) alongside Dossiers, Claims, and Decisions.
 - **Brand Icon Suite & GitHub Pages Pipeline (`docs/assets/brand/`, `docs/favicon.ico`, `docs/manifest.webmanifest`, `docs/assets/home.css`, `scripts/build_brand_assets.py`, `.github/workflows/pages.yml`)**: Refined the multi-profile/multi-format brand icon suite (`make brand-assets`), tightened GitHub Pages vertical spacing (`docs/assets/home.css`), and added the `build_public_site.py --check` pre-deploy gate to `pages.yml`.
 

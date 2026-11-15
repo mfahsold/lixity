@@ -1,0 +1,20 @@
+/* Native collection editing, using the shared form and control styles. */
+.research-collection-editor { min-width: 0; }
+.research-collection-editor h3, .research-collection-editor h4, .research-collection-editor p { margin-block: 0; }
+.research-collection-editor .research-form-field { min-width: 0; }
+.research-collection-editor input, .research-collection-editor select, .research-collection-editor textarea { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+.research-collection-picker { align-items: end; }
+.research-collection-picker > .research-form-field { flex: 1 1 12rem; }
+.research-collection-members { list-style: none; padding: 0; margin: 0; max-height: 24rem; overflow-y: auto; scrollbar-gutter: stable; }
+.research-collection-members > li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); padding-block: var(--space-2); border-bottom: 1px solid var(--line); }
+.research-collection-position { color: var(--muted); font-variant-numeric: tabular-nums; }
+.research-collection-member-title { min-width: 0; overflow-wrap: anywhere; }
+.research-collection-member-title > small { display: block; }
+.research-collection-member-actions { display: flex; gap: var(--space-1); }
+.research-collection-member-actions > .ctl { min-width: 2.75rem; min-height: 2.75rem; padding: .35rem; }
+@media (max-width: 600px) {
+  .research-collection-picker { align-items: stretch; }
+  .research-collection-picker > .research-form-field { flex-basis: 100%; }
+  .research-collection-members > li { grid-template-columns: 1.6rem minmax(0, 1fr); }
+  .research-collection-member-actions { grid-column: 2; }
+}

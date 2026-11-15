@@ -341,43 +341,48 @@ def render_research_panel(
         '<details class="research-details mb-2" id="r-dos-collection-manage" data-requires-write>'
     )
     parts.append(
-        f'<summary>{L("research_dossier_collection_manage")}</summary><div class="ctl-group research-composer-body">'
+        f'<summary>{L("research_dossier_collection_manage")}</summary><div class="ctl-group research-composer-body research-collection-editor">'
     )
-    parts.append('<div class="row mb-2">')
+    parts.append('<div class="row row-between">')
     parts.append(
-        form_field(
-            "r-dos-col-id",
-            "research_dossier_collection_id",
-            '<input class="ctl" id="r-dos-col-id" placeholder="characters"/>',
-        )
+        f'<h3 id="r-dos-col-heading">{L("research_dossier_collection_new")}</h3>'
+        f'<button type="button" class="ctl" id="r-dos-col-new-btn">{L("research_dossier_collection_new")}</button>'
     )
+    parts.append('</div>')
+    parts.append(f'<p class="ctl-note">{L("research_dossier_collection_help")}</p>')
+    parts.append('<p class="ctl-status err" id="r-dos-col-context" role="status" hidden></p>')
     parts.append(
         form_field(
             "r-dos-col-name",
             "research_dossier_collection_name",
-            f'<input class="ctl" id="r-dos-col-name" placeholder="{L("research_dossier_collection_name")}"/>',
+            f'<input class="ctl" id="r-dos-col-name" maxlength="500" required readonly placeholder="{L("research_dossier_collection_name")}"/>',
         )
     )
-    parts.append("</div>")
-    parts.append('<div class="row mb-2">')
+    parts.append('<div class="row research-collection-picker">')
     parts.append(
         form_field(
-            "r-dos-col-dossiers",
-            "research_dossier_collection_order",
-            tag_input_with_suggestions(
-                "r-dos-col-dossiers",
-                "urn:uuid:...",
-                "r-dos-col-dossier-suggestions",
-            ),
+            "r-dos-col-picker",
+            "research_dossier_collection_choose",
+            f'<select class="ctl" id="r-dos-col-picker"><option value="">{L("research_dossier_collection_choose")}</option></select>',
         )
     )
-    parts.append("</div>")
+    parts.append(f'<button type="button" class="ctl" id="r-dos-col-add-btn" disabled>{L("research_dossier_collection_add")}</button></div>')
+    parts.append(f'<h4 id="r-dos-col-order-label">{L("research_dossier_collection_order")}</h4>')
+    parts.append(f'<p class="ctl-note" id="r-dos-col-count" aria-live="polite">{L("research_dossier_collection_selection_empty")}</p>')
+    parts.append('<ol class="research-collection-members" id="r-dos-col-members" aria-labelledby="r-dos-col-order-label"></ol>')
+    parts.append(
+        f'<details class="research-details" id="r-dos-col-advanced"><summary>{L("research_dossier_collection_details")}</summary>'
+        f'<p class="ctl-note">{L("research_dossier_collection_id_hint")}</p>'
+    )
+    parts.append(form_field("r-dos-col-id", "research_dossier_collection_id", '<input class="ctl" id="r-dos-col-id" readonly/>'))
+    parts.append(form_field("r-dos-col-dossiers", "research_internal_reference_label", '<textarea class="ctl" id="r-dos-col-dossiers" rows="2" readonly></textarea>'))
+    parts.append('</details>')
     parts.append('<div class="row">')
     parts.append(
-        f'<button type="button" class="ctl primary" id="r-dos-col-save-btn">{L("research_dossier_collection_save")}</button>'
+        f'<button type="button" class="ctl primary" id="r-dos-col-save-btn" disabled>{L("research_dossier_collection_save")}</button>'
     )
     parts.append(
-        f'<button type="button" class="ctl" id="r-dos-col-delete-btn">{L("research_dossier_collection_delete")}</button>'
+        f'<button type="button" class="ctl" id="r-dos-col-delete-btn" disabled>{L("research_dossier_collection_delete")}</button>'
     )
     parts.append("</div>")
     parts.append("</div></details>")

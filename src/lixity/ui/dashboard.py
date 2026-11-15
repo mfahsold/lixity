@@ -90,6 +90,7 @@ _CSS_FILES = (
     "vendor/photoswipe-5.4.4.css",
     "research-media.css",
     "research-navigation.css",
+    "research-collections.css",
     "dossier-images.css",
     "vendor/leaflet-1.9.4.css",
     "dossier-geography.css",
@@ -128,6 +129,7 @@ _JS_FILES = (
     "research-content.js",
     "research-evidence.js",
     "research-lists.js",
+    "research-collections.js",
     "research-review.js",
     "research-workspace.js",
     "markdown-editor.js",
@@ -151,13 +153,13 @@ _JS_FILES = (
     "teleprompter.js",
 )
 _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
-# The passage inspector and publication settings require workspace controls;
-# classic reports render neither and must not ship their dormant editors.
+# Passage inspection, publication settings and collection editing require
+# workspace controls; classic reports must not ship their dormant editors.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
-    "audio-take.js", "site-publication-settings.js",
+    "audio-take.js", "site-publication-settings.js", "research-collections.js",
 ))
-_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name != "teleprompter.css")
+_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css"})
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -166,6 +168,7 @@ _PUBLICATION_JS_FILES = tuple(
         "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
         "teleprompter.js", "speech-presentation.js", "audio-take.js",
+        "research-collections.js",
     }
 )
 

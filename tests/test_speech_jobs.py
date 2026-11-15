@@ -121,6 +121,56 @@ def test_failed_job_is_explicit_and_cleans_temporary_source():
         jobs.close()
 
 
+@pytest.mark.parametrize("outcome", ["error", "ready", "cancel", "close"])
+def test_terminal_state_waits_for_temporary_source_cleanup(monkeypatch, outcome):
+    entered, release, finished = threading.Event(), threading.Event(), threading.Event()
+    paths = []
+    unlink = Path.unlink
+    run = SpeechJobs._run
+
+    def blocked_unlink(path, *args, **kwargs):
+        if path.name == "source.md":
+            paths.append(path)
+            entered.set()
+            release.wait(5)
+        return unlink(path, *args, **kwargs)
+
+    def observed_run(self, *args, **kwargs):
+        try:
+            return run(self, *args, **kwargs)
+        finally:
+            finished.set()
+
+    def render(source, output, **kwargs):
+        if outcome == "error":
+            raise RuntimeError("Synthetic backend unavailable")
+        Path(output).write_bytes(generate_silence_wav(0.01))
+
+    monkeypatch.setattr(Path, "unlink", blocked_unlink)
+    monkeypatch.setattr(SpeechJobs, "_run", observed_run)
+    jobs = SpeechJobs(renderer=render)
+    try:
+        job = jobs.start("context", TEXT, AudioProfile(), {}, lambda: True)
+        assert entered.wait(2), "The synthetic job must reach its controlled cleanup boundary"
+        assert paths[0].exists()
+        assert jobs.status(job["id"], "context")["state"] in ("pending", "running")
+        if outcome == "cancel":
+            assert jobs.cancel(job["id"], "context")["state"] in ("pending", "running")
+        elif outcome == "close":
+            jobs.close()
+        release.set()
+        assert finished.wait(2), "The job must settle after source cleanup is released"
+        final = jobs.status(job["id"], "context")
+        assert final["state"] == ("cancelled" if outcome in ("cancel", "close") else outcome)
+        assert not paths[0].exists()
+        if outcome == "error":
+            assert "unavailable" in final["message"]
+    finally:
+        release.set()
+        finished.wait(2)
+        jobs.close()
+
+
 def test_only_successful_chapters_are_retained_before_becoming_ready(tmp_path):
     retained = []
 

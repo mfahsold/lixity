@@ -503,6 +503,23 @@ In the research revision dialog, the action row remains outside the scrolling
 fields. Saving still requires an explicit change type and reason. Formatting or
 switching tabs does not save a revision automatically.
 
+## Organizing dossier collections
+
+In **Research → Dossiers**, open **Collections and reading order**. Give the
+collection a name, choose dossiers by title, and use **Add dossier** to include
+them. Move entries up or down to set the reading order; removing an entry only
+removes its membership in this collection. Select an existing collection to edit
+it, or choose **New collection** to start another one. Changes take effect only
+after **Save collection**.
+
+Technical references are read-only and collapsed by default. New collections get
+an identifier when saved; existing identifiers remain unchanged. Missing or
+withdrawn dossiers stay in the reading order with an unavailable notice until
+explicitly removed. Saving a collection changes project configuration, without
+creating dossier revisions or changing retained sources or evidence links.
+Interface labels follow the selected language; authored dossier titles stay as
+written.
+
 ## Searching the manuscript
 
 Type a phrase in the manuscript search control to show matching text blocks and mark

@@ -192,6 +192,8 @@ class SpeechJobs:
     def _run_scoped(self, job: _Job, source: Path, profile: AudioProfile) -> None:
         output = Path(job.storage.name) / "reading.wav"
         category = "none"
+        terminal_state = "error"
+        terminal_message = ""
 
         def progress(done: int, total: int) -> None:
             with self._lock:
@@ -208,8 +210,7 @@ class SpeechJobs:
                 job.state = "running"
                 self._log.info("audio_job stage=running id=%s", job.diagnostic_id)
             if not job.valid():
-                with self._lock:
-                    job.state = "stale"
+                terminal_state = "stale"
                 return
             options: dict[str, Any] = {
                 "profile": profile, "progress": progress, "cancelled": job.cancel.is_set,
@@ -229,35 +230,35 @@ class SpeechJobs:
             if current and not job.cancel.is_set() and job.context.get("mode") == "chapter" and job.retain is not None:
                 job.retain(output, lambda: not job.cancel.is_set() and job.valid())
                 current = job.valid()
-            with self._lock:
-                job.state = "cancelled" if job.cancel.is_set() else "ready" if current else "stale"
+            terminal_state = "cancelled" if job.cancel.is_set() else "ready" if current else "stale"
         except SpeechCancelled:
             category = "cancelled"
-            with self._lock:
-                job.state = "cancelled"
+            terminal_state = "cancelled"
         except Exception as exc:  # noqa: BLE001 - asynchronous adapter failures must settle the job
             category = ("io" if isinstance(exc, OSError) else "validation" if isinstance(exc, ValueError)
                         else "runtime" if isinstance(exc, RuntimeError) else "unexpected")
-            with self._lock:
-                job.state = "cancelled" if job.cancel.is_set() else "error"
-                job.message = str(exc)[:500]
+            terminal_state = "cancelled" if job.cancel.is_set() else "error"
+            terminal_message = str(exc)[:500]
         finally:
             try:
                 source.unlink(missing_ok=True)
             except OSError:
                 category = "cleanup"
-                with self._lock:
-                    job.state = "error"
-                    job.message = "Could not remove the temporary speech source"
+                terminal_state = "error"
+                terminal_message = "Could not remove the temporary speech source"
             with self._lock:
+                # A terminal report also settles temporary source ownership.
+                # Cancellation may arrive while the source cleanup is in flight.
+                job.state = "cancelled" if terminal_state == "ready" and job.cancel.is_set() else terminal_state
+                job.message = terminal_message
                 if job.identifier in self._pending:
                     self._pending.remove(job.identifier)
                 if self._active == job.identifier:
                     self._active = None
                 self._condition.notify_all()
-                job.finished = time.monotonic()
                 if (job.state != "ready" or self._closed) and not self._cleanup(job):
                     category = "cleanup"
+                job.finished = time.monotonic()
                 self._log.info("audio_job stage=finished id=%s status=%s category=%s duration_ms=%d",
                                job.diagnostic_id, job.state, category, int((job.finished - job.created) * 1000))
 

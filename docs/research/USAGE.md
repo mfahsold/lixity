@@ -65,6 +65,10 @@ configured manuscript terms/props (`[terms]`) are stored in project configuratio
 (`lixity.toml` / `pyproject.toml`), keeping reading organization and lexical
 candidate review separate from revising authored records or accepted pins;
 see the [architecture boundary](../ARCHITECTURE.md#passage-research-presentation).
+The workspace's [collection editor](../WORKSPACE.md#organizing-dossier-collections)
+selects dossiers by title and orders them with move controls. Technical
+identifiers remain read-only; unavailable memberships are preserved unless
+explicitly removed. Collection edits do not revise authored dossier content.
 
 ## Find a task
 
