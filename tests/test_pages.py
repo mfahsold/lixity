@@ -442,6 +442,55 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
 
 
 class TestPublicLanguages(unittest.TestCase):
+    def test_home_image_dimensions_follow_regenerated_screenshots_in_every_language(self):
+        from unittest.mock import patch
+
+        from scripts.build_public_site import LANGUAGES, ROOT, render_pages
+
+        class Images(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.dimensions = {}
+
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if tag == "img" and values.get("src", "").startswith("screenshots/"):
+                    self.dimensions[values["src"]] = (int(values["width"]), int(values["height"]))
+
+        expected = {
+            "dashboard-reader-focus.png": (191, 109),
+            "dashboard-heatmap.png": (173, 83),
+            "dashboard-research-timeline.png": (157, 211),
+            "dashboard-editorial.png": (223, 71),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in ("docs/templates/home.html.template", "docs/templates/home-footer.html.template",
+                             *(f"docs/locales/{language}.json" for language in LANGUAGES)):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((ROOT / relative).read_bytes())
+            version = root / "src/lixity/_version.py"
+            version.parent.mkdir(parents=True)
+            version.write_text('__version__ = "0.0.0"\n', encoding="utf-8")
+            shots = root / "docs/screenshots"
+            shots.mkdir()
+            # This generator reads PNG headers; decoding is covered by browser checks.
+            for name, dimensions in {"dashboard-light.png": (311, 127), **expected}.items():
+                (shots / name).write_bytes(b"\x89PNG\r\n\x1a\n" + bytes(8) + struct.pack(">II", *dimensions))
+            with patch("scripts.build_public_site.ROOT", root):
+                pages = render_pages()
+        self.assertEqual(len(pages), 7)
+        for name, text in pages.items():
+            with self.subTest(page=name):
+                images = Images()
+                images.feed(text)
+                self.assertEqual(images.dimensions, {"screenshots/" + key: value for key, value in expected.items()})
+                head = PageHead()
+                head.feed(text)
+                self.assertEqual(head.meta["og:image:width"], ["311"])
+                self.assertEqual(head.meta["og:image:height"], ["127"])
+
     def test_home_tour_has_localized_transcript_and_explicit_playback(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 

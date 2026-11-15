@@ -29,7 +29,17 @@ def render_pages() -> dict[str, str]:
     template = Template((ROOT / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
     footer = Template((ROOT / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
     version = re.search(r'__version__ = "([^"]+)"', (ROOT / 'src/lixity/_version.py').read_text(encoding="utf-8")).group(1)
-    width, height = struct.unpack('>II', (ROOT / 'docs/screenshots/dashboard-light.png').read_bytes()[16:24])
+    image_dimensions = {}
+    for key, filename in {
+        'image': 'dashboard-light.png',
+        'reader_focus': 'dashboard-reader-focus.png',
+        'heatmap': 'dashboard-heatmap.png',
+        'research_timeline': 'dashboard-research-timeline.png',
+        'editorial': 'dashboard-editorial.png',
+    }.items():
+        width, height = struct.unpack('>II', (ROOT / 'docs/screenshots' / filename).read_bytes()[16:24])
+        image_dimensions[key + '_width'] = str(width)
+        image_dimensions[key + '_height'] = str(height)
     results = {}
     for lang, content in dictionaries.items():
         if set(content) != set(dictionaries['en']):
@@ -41,8 +51,7 @@ def render_pages() -> dict[str, str]:
         fields['lang'] = lang
         fields['language_name'] = LANGUAGES[lang]
         fields['version'] = version
-        fields['image_width'] = str(width)
-        fields['image_height'] = str(height)
+        fields.update(image_dimensions)
         fields['canonical'] = page_url(lang)
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
         fields['tour_url'] = 'guides/first-look-de.html' if lang == 'de' else 'guides/first-look.html'

@@ -86,7 +86,7 @@ lixity doctor --json
 
 ### Model Context Protocol (MCP) Server
 
-Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the Model Context Protocol (MCP) via `lixity mcp`. AI assistants (Claude Desktop, Cursor, Antigravity, OpenCode, Codex) can connect directly:
+Lixity exposes the shared Python analysis and research APIs through a JSON-RPC 2.0 stdio server via `lixity mcp`. Its MCP transport uses the standard library and requires no separate MCP package. AI assistants (Claude Desktop, Cursor, Antigravity, OpenCode, Codex) can connect directly:
 
 ```json
 {
@@ -99,7 +99,9 @@ Lixity implements a zero-dependency JSON-RPC 2.0 stdio server compliant with the
 }
 ```
 
-The server exposes 14 deterministic read-only analysis tools:
+The server exposes deterministic read-only analysis and research tools. Query
+`tools/list` on the installed server for its current inventory:
+
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Word, sentence, and vocabulary profile summary.
@@ -114,8 +116,15 @@ The server exposes 14 deterministic read-only analysis tools:
 - `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
 - `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
+- `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
+- `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews.
 
-And 3 structured editorial prompts: `manuscript_pacing_audit`, `manuscript_dialogue_review`, and `manuscript_showing_triage`.
+Structured editorial prompts are `manuscript_pacing_audit`,
+`manuscript_dialogue_review`, and `manuscript_showing_triage`; discover them with
+`prompts/list`. Lixity processes supplied text locally and returns results over
+stdio. The connected AI client controls whether prompts, manuscript text or
+results are sent to a remote model; local transport does not establish that
+client's privacy policy.
 
 `about` (also `schema --json`) reports installed command metadata, languages,
 feature identifiers/units and default heuristics; it is not a complete JSON
@@ -210,11 +219,12 @@ defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout l
 
 ### 2.1 MCP server (read-only)
 
-`python -m lixity.mcp` serves a minimal stdio MCP endpoint (stdlib only,
-no writes): `lixity_about`, `lixity_analyze` and `lixity_profile`. It wraps
-the same Python API as section 5, so contracts and operating boundaries are
-unchanged; manuscript text stays data, never instruction. Prefer the CLI or
-HTTP API where they fit; use MCP where the client only speaks tools.
+`python -m lixity.mcp` serves the same read-only endpoint as `lixity mcp`.
+See the [MCP tool inventory](#model-context-protocol-mcp-server) and query
+`tools/list` for the installed set. Tools wrap the shared Python APIs, so
+contracts and operating boundaries are unchanged; manuscript text stays data,
+never instruction. Prefer the CLI or HTTP API where they fit; use MCP where
+the client only speaks tools.
 
 ## 3. JSON contracts
 
@@ -613,6 +623,13 @@ deterministic proxies, with the following scope and availability rules.
   `deltas` covering `words`, `sentences`, `asl`, `asl_cv`, `dialogue_ratio`,
   `mattr`, `length_entropy`, `sticky_pct`, `indirect_speech_per_1000`,
   `flags_count`, and `chapter_deltas`.
+  Stored timelines contain unique content measurements ordered by first recording,
+  not every save event. When no target revision is selected, the delta uses one
+  capture of current source bytes and reuses its exact retained measurement,
+  including outside the latest 100-row window. Unrecorded source content is
+  measured without adding history (`created_at: null`). An older reused or
+  unrecorded current snapshot has no inferred baseline; an explicit retained
+  base still yields exact deltas. Unknown explicit revisions are rejected.
 - `motifs`: motif presence (regex patterns; `mentions`, `density_per_1000`,
   chapter span, `longest_gap`) plus generic repetition — `top_words` (content
   words; curated stop words excluded), `repeated_phrases` (n-grams with

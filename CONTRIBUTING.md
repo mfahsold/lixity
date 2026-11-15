@@ -102,7 +102,9 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
 GitHub's `tests`, `browser` and `research-platforms` workflows can be dispatched
-manually; ordinary branch pushes and pull requests do not repeat these suites.
+manually. Pull requests targeting `main` also run `tests` automatically;
+ordinary branch pushes do not run these suites, and browser/platform checks
+remain manual outside tagged releases.
 Tagged releases reuse `tests` and `browser` on the exact release commit before
 publication. The browser gate starts only after the source gate passes; a failed
 source gate therefore does not consume a browser runner, at the cost of a longer

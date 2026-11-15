@@ -9,6 +9,7 @@
   const error = figure.querySelector('.tour-error');
   const cues = [...figure.querySelectorAll('[data-start]')];
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  let reducedMotion = motion.matches;
   let attempted = false;
   let failed = false;
   let current = -1;
@@ -33,7 +34,7 @@
       visibleLetters = -1;
     }
     const elapsed = index < 0 ? 0 : video.currentTime - Number(cues[index].dataset.start);
-    const count = motion.matches || video.paused ? letters.length :
+    const count = reducedMotion || video.paused ? letters.length :
       Math.min(letters.length, Math.max(0, Math.ceil((elapsed - .08) / .55 * letters.length)));
     if (count !== visibleLetters) {
       letters.forEach((letter, position) => { letter.style.visibility = position < count ? 'visible' : 'hidden'; });
@@ -75,12 +76,16 @@
   });
   if (!sources.length) reportFailure();
   document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); });
-  motion.addEventListener('change', () => { if (motion.matches) video.pause(); update(); });
+  motion.addEventListener('change', event => {
+    reducedMotion = event.matches;
+    if (reducedMotion) video.pause();
+    update();
+  });
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (!entry.isIntersecting) video.pause();
-        else if (entry.intersectionRatio >= .5 && !attempted && !motion.matches &&
+        else if (entry.intersectionRatio >= .5 && !attempted && !reducedMotion &&
                  !navigator.connection?.saveData && !document.hidden) void play();
       }
     }, {threshold: [0, .5]});

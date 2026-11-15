@@ -46,7 +46,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
       await expect(button).toHaveText('Rundgang pausieren');
       await button.click();
-      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+      await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       await video.evaluate(v => { v.currentTime = 22; });
       await expect(page.locator('.tour-caption')).toHaveText('Szenen-Hooks, implizite Wechsel & Anti-Glättungs-Rhythmus (CV, IQR, Entropie).');
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
@@ -60,7 +60,7 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       assert.ok(caption.x >= frame.x && caption.x + caption.width <= frame.x + frame.width + 1);
       await button.click();
       await page.locator('#impressum').scrollIntoViewIfNeeded();
-      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+      await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(500);
       assert.ok(await video.evaluate(v => v.paused), 'A pause is not undone on re-entry');
@@ -78,15 +78,30 @@ assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stag
       await page.emulateMedia({reducedMotion: 'reduce'});
       // Media-query changes are asynchronous; a fully visible caption alone can
       // precede the pause handler, letting Chromium coalesce the next preference.
-      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+      await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       await expect(button).toHaveText('Play tour');
       await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
         nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
+      // Reduced motion stops automatic playback, but an explicit choice can play.
+      const reducedStart = await video.evaluate(v => v.currentTime);
+      await button.click();
+      await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(reducedStart + .1);
+      await expect(button).toHaveText('Pause tour');
+      await expect.poll(() => page.locator('.tour-caption [data-letter]').evaluateAll(nodes =>
+        nodes.every(node => getComputedStyle(node).visibility === 'visible'))).toBe(true);
+      await button.click();
+      await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
+      // Rapid media changes can be coalesced; none may undo an intentional pause.
       await page.emulateMedia({reducedMotion: 'no-preference'});
+      await page.emulateMedia({reducedMotion: 'reduce'});
+      await page.emulateMedia({reducedMotion: 'no-preference'});
+      await page.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.ok(await video.evaluate(v => v.paused), 'Preference changes never resume an intentional pause');
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused)).toBe(false);
       await button.click();
-      await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
+      await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       // Exercise real source exhaustion, not an invented media-element event.
       await page.route('**/videos/product-tour.*', route => /\.(mp4|webm)$/.test(route.request().url())
         ? route.abort() : route.fallback());

@@ -82,10 +82,13 @@ default-deny.
   debug lines keep timestamp, route and status while dropping the query string
   (where those tokens travel). Response bodies and manuscript text are never
   logged.
-- **No outbound traffic.** The dashboard is self-contained; a test asserts the
-  rendered page contains no external URLs. Analysis, export and server commands
-  make no network requests. Zotero access is explicit, opt-in and localhost-only
-  (see below); OCR runs local binaries.
+- **Local analysis and explicit network adapters.** Built-in analysis and
+  bundled interface assets work offline. Optional map basemaps contact their
+  configured tile provider; configured external speech providers can receive
+  selected text or audio. Zotero access is explicit, opt-in and localhost-only
+  (see below); OCR runs local binaries. MCP results use local stdio, while the
+  connected client controls any remote model processing. Public website analytics
+  are separate from the local app and private reading exports.
 - **Non-goals.** No user accounts, no multi-user authorization, no TLS, no
   protection against a hostile process or user that already has filesystem
   access to the project, and no cryptographic deletion. These are properties of
@@ -125,10 +128,12 @@ Runtime dependencies are deliberately few and pinned with lower bounds only:
 `pydantic>=2.0.0`, `rich>=13.0.0`, `orjson>=3.9.0` and `tomli>=2.0.1` on
 Python 3.10. A clean audit is a snapshot, not a guarantee.
 
-- **Baseline (13 October 2026, pip-audit 2.10.1).** `make audit` reports no known
-  vulnerabilities for the resolved runtime dependencies, the installed CLI
-  environment and the development tooling. Re-run it before a release; the
-  `release-check` target includes it.
+- **Audit scope.** `make audit` checks the resolved project runtime dependency
+  closure; `release-check` includes that check. Audit an installed environment
+  separately with `.venv/bin/python -m pip_audit --progress-spinner off`.
+  A clean runtime result does not establish that development, build or outreach
+  tools are free of known vulnerabilities. Audit each separate environment and
+  retain the observation date and affected versions.
 - **Updates.** Dependabot opens one grouped monthly pull request per
   ecosystem (Python packages and GitHub Actions). Security advisories appear
   through GitHub security alerts. Patch and minor updates are merged after CI

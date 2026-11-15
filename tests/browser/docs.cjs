@@ -505,7 +505,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(5);
   await expect(page.locator('#research-claims-timeline .research-timeline-unplaced > li')).toHaveCount(1);
   await expect(page.locator('#research-claims-timeline')).toContainText('present day');
-  await page.locator('[data-claim-view=list]').click();
+  await page.locator('#research-tab-claims').click();
   const causalLink = page.locator('#research-claim-relations .research-relation-card');
   await expect(causalLink).toHaveCount(1);
   await expect(causalLink).toContainText('The cracked lid delayed inspection');
@@ -789,9 +789,9 @@ async function checkDemoCapabilities(page, width) {
     await expect(page.locator('#style-panels > .panel:visible')).toHaveCount(1);
   }
   const reviewLinks = page.locator('#analysis-review [data-jump]');
-  await expect(reviewLinks).toHaveCount(3);
+  await expect(reviewLinks).toHaveCount(5);
   assert.deepEqual(await reviewLinks.evaluateAll(links => links.map(link => link.getAttribute('data-jump'))),
-    ['#heatmap', '#dist', '#dim-canvas'], 'The review entry includes the direct style-space route');
+    ['#heatmap', '#dist', '#dim-canvas', '#scenes', '#characters'], 'The review entry includes the direct style-space, scenes, and characters routes');
   for (const link of await reviewLinks.all()) {
     await link.click();
     const target = await link.getAttribute('data-jump');

@@ -62,14 +62,17 @@ and investigate reported bugs before changing behavior.
   documents must be linked by absolute GitHub URL (`../README.md` breaks).
 - Pages preview & rollout: `python3 scripts/stage_pages.py --output /tmp/NEW_DIR`
   for local preview (only explicitly staged paths publish). Because
-  `pages.yml` uses `workflow_dispatch`, run `make pages-deploy`
+  `pages.yml` uses `workflow_dispatch`, use `make pages-deploy`
   (`gh workflow run pages.yml --ref main`) after pushing `docs/` changes
-  to `main` so live GitHub Pages stay current.
+  to `main` for an authorized documentation rollout. A source edit alone does
+  not authorize deployment; tagged releases publish their verified Pages build.
 - Dashboard & rollout: `make run` (foreground) vs `make start`/`stop`/`restart`
   (managed service, default port 8765). Installing a package never updates a
-  running service; run `make restart` explicitly after `src/lixity/` changes.
-- CI is not an automatic gate: `tests`, `browser` and `research-platforms`
-  workflows are manual-dispatch; `release` runs on `v*` tags. Local checks
+  running service; an authorized source rollout needs an explicit `make restart`.
+  Matching version strings do not establish that a running process loaded a fix.
+- CI runs `tests` automatically for pull requests targeting `main`; `tests`,
+  `browser` and `research-platforms` also support manual dispatch. Tagged
+  releases reuse the source and browser gates; `release` runs on `v*` tags. Local checks
   (`make check`, `make fast-check`, `make docs-check`, `make browser-changed`)
   are the everyday gate. Change workflow YAML only with `make workflow-check`
   (needs `actionlint`).

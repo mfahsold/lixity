@@ -218,6 +218,113 @@ def test_timeline_sparse_empty_text_reports_null_metrics(tmp_path):
     assert delta["deltas"]["dialogue_ratio"] is None
 
 
+def test_delta_uses_current_source_after_reverting_to_recorded_content(tmp_path):
+    initial = "## Chapter\n\nThe river was quiet.\n"
+    editor, _source = store(tmp_path, initial.encode())
+    opened = editor.open()
+    changed = save(editor, opened, initial + "The bird sang.\n")
+    history = editor.timeline()
+    reverted = save(editor, changed, initial, "b" * 32)
+
+    delta = editor.delta()
+    assert delta["current"]["revision"] == reverted["revision"] == opened["revision"]
+    assert delta["current"] == history[0]
+    assert delta["has_baseline"] is False
+    assert delta["deltas"] is None
+    assert editor.timeline() == history
+    reviewed = editor.delta(base_revision=changed["revision"])
+    assert reviewed["deltas"]["words"] == -3
+    assert reviewed["current"] == history[0]
+    assert reviewed["base"] == history[1]
+
+
+@pytest.mark.parametrize("with_history", [False, True])
+def test_delta_observes_external_current_without_recording_it(tmp_path, with_history):
+    import hashlib
+
+    editor, source = store(tmp_path)
+    if with_history:
+        save(editor, editor.open(), "A saved synthetic paragraph.\n")
+    history = editor.timeline()
+    external = b"The river was quiet.\n"
+    source.write_bytes(external)
+
+    delta = editor.delta()
+    assert delta["current"]["revision"] == hashlib.sha256(external).hexdigest()
+    assert delta["current"]["words"] == 4
+    assert delta["current"]["created_at"] is None
+    assert delta["has_baseline"] is False
+    assert delta["deltas"] is None
+    assert editor.timeline() == history
+    assert editor.directory.exists() is with_history
+
+
+def test_delta_binds_current_metrics_and_digest_to_one_source_read(tmp_path, monkeypatch):
+    import hashlib
+
+    original = b"The river was quiet.\n"
+    editor, source = store(tmp_path, original)
+    read = editor._read
+
+    def changed_after_read():
+        captured = read()
+        source.write_bytes(b"External replacement after the captured snapshot.\n")
+        return captured
+
+    monkeypatch.setattr(editor, "_read", changed_after_read)
+    delta = editor.delta()
+    assert delta["current"]["words"] == 4
+    assert delta["current"]["revision"] == hashlib.sha256(original).hexdigest()
+
+
+def test_explicit_delta_uses_retained_target_without_reading_current_source(tmp_path):
+    editor, source = store(tmp_path, b"The river was quiet.\n")
+    opened = editor.open()
+    saved = save(editor, opened, "The bird sang.\n")
+    source.unlink()
+
+    historical = editor.delta(base_revision=opened["revision"], target_revision=saved["revision"])
+    assert historical["current"]["revision"] == saved["revision"]
+    assert historical["deltas"]["words"] == -1
+    with pytest.raises(FileNotFoundError):
+        editor.delta()
+
+
+def test_delta_resolves_retained_revisions_outside_the_timeline_window(tmp_path):
+    editor, _source = store(tmp_path)
+    opened = editor.open()
+    current = opened
+    first = None
+    for number in range(102):
+        current = save(editor, current, f"Version {number} has synthetic prose.\n", f"{number:032x}")
+        if number == 0:
+            first = editor.timeline()[1]
+    assert first is not None
+    reverted = save(editor, current, opened["text"], "f" * 32)
+    history = editor.timeline(limit=100)
+    assert len(history) == 100
+    assert opened["revision"] not in {row["revision"] for row in history}
+
+    delta = editor.delta()
+    assert delta["revisions_count"] == 100
+    assert delta["current"]["revision"] == reverted["revision"] == opened["revision"]
+    assert delta["has_baseline"] is False
+    reviewed = editor.delta(base_revision=first["revision"], target_revision=opened["revision"])
+    assert reviewed["base"] == first
+    assert reviewed["deltas"]["words"] == -3
+    assert editor.timeline(limit=100) == history
+
+
+@pytest.mark.parametrize("with_history", [False, True])
+@pytest.mark.parametrize("parameter, error", [("base_revision", "Base"), ("target_revision", "Target")])
+def test_delta_rejects_unrecorded_explicit_revisions(tmp_path, with_history, parameter, error):
+    editor, _source = store(tmp_path)
+    if with_history:
+        save(editor, editor.open(), "A saved synthetic paragraph.\n")
+    with pytest.raises(ValueError, match=error + " revision not found"):
+        editor.delta(**{parameter: "f" * 64})
+
+
 def test_delta_rejects_invalid_revision_identifiers(tmp_path):
     editor, _source = store(tmp_path, b"Hello world.\n")
     with pytest.raises(ValueError, match="Invalid base"):

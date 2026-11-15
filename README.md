@@ -9,7 +9,7 @@
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 > **A private, local workspace for novelists, editors, and scholars.**
-> Inspect chapter rhythms, verify scene research, and share standalone reading copies — 100% offline, privacy-first, and deterministic.
+> Inspect chapter rhythms, verify scene research, and share standalone reading copies with deterministic offline analysis.
 >
 > 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · ✍️ **[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
 
@@ -30,9 +30,11 @@ and Python API share one deterministic analysis engine.
 - **Research retains living memory:** primary sources, historical claims, and
   authorial decisions have distinct roles; evidence links preserve the exact
   revisions behind them even as sources or interpretations evolve.
-- **Your work stays on your machine:** analysis runs 100% offline and deterministic.
-  Zero telemetry, no forced cloud accounts, and no AI rewriting your prose.
-  Sharing is always an intentional, explicitly curated export.
+- **Local analysis without telemetry:** the built-in engine runs offline and
+  deterministically, with no required cloud account or automatic prose rewriting.
+  Optional map basemaps and configured speech providers use network connections;
+  a connected AI client's data handling is separate from Lixity's local engine.
+  Reading exports contain only the explicitly selected material.
 
 **Writing joins the workspace (unreleased).** The development checkout adds an
 integrated, distraction-free manuscript editor with multi-level undo, local
@@ -101,9 +103,9 @@ not rigid steps:
 - **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
   Connect facts, character motives, and scene geography directly to paragraphs.
 - **Collaborate with AI on Your Terms (MCP)**: Run `lixity mcp` to connect Claude Desktop,
-  Cursor, Antigravity, or local coding agents directly to 13 read-only analytical tools
-  (including `lixity_scenes`, `lixity_corridors`, and `revision_diff`) and 3 structured editorial prompts.
-  Keep your manuscript strictly local with zero telemetry.
+  Cursor, Antigravity, or local coding agents to read-only analysis and research tools
+  (including `lixity_scenes`, `lixity_corridors`, and `revision_diff`) and structured editorial prompts.
+  Lixity returns results over local stdio; the connected client controls where it processes them.
 - **Curate Standalone Editions**: Generate beautiful print PDFs or self-contained,
   offline companion websites for beta readers and editors without exposing
   private working notes.
@@ -113,7 +115,7 @@ not rigid steps:
 | Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
 | Back up a saved project (unreleased) | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
 | Edit manuscript prose (unreleased) | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
-| Audit pacing, dialogue, and showing with AI | `lixity mcp` stdio server with 13 tools and 3 structured prompts | Deterministic, read-only analysis; no manuscript bytes or telemetry ever leave your machine. |
+| Audit pacing, dialogue, and showing with AI | `lixity mcp` stdio server with read-only tools and structured prompts | Lixity's analysis runs offline; review the connected AI client's data handling before supplying manuscript text. |
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
 | Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
 | Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |

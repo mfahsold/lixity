@@ -15,12 +15,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Read-only MCP tool `lixity_manuscript_dossier_drafts` exposes the same deterministic draft extraction for `text` (`language`, `kind`: `all|character|scene`).
   - Research -> Dossiers adds **Draft dossier from manuscript** (`#r-manuscript-dossier-btn`) to inspect and save manuscript-derived drafts.
 
+### Fixed
+
+- Bind manuscript revision deltas and the editor pulse to current source bytes
+  after reverts or external edits, preserving immutable historical measurements.
+  Resolve explicitly selected retained revisions outside the timeline window;
+  do not infer a baseline for an older reused or unrecorded current snapshot.
+- Honor live reduced-motion changes in the homepage video tour without polling
+  its media query in animation frames; explicit playback remains available.
+- Derive homepage screenshot dimensions from the generated images so a later
+  documentation sync preserves their current aspect ratios.
+
 ### Changed
 
 - **Direct Research Timeline Tab (`research_panel.py`, `research-workspace.js`, `command-palette.js`)**: Promoted Timeline to a top-level Research tab (`#research-tab-timeline`) alongside Dossiers, Claims, and Decisions.
 - **Brand Icon Suite & GitHub Pages Pipeline (`docs/assets/brand/`, `docs/favicon.ico`, `docs/manifest.webmanifest`, `docs/assets/home.css`, `scripts/build_brand_assets.py`, `.github/workflows/pages.yml`)**: Refined the multi-profile/multi-format brand icon suite (`make brand-assets`), tightened GitHub Pages vertical spacing (`docs/assets/home.css`), and added the `build_public_site.py --check` pre-deploy gate to `pages.yml`.
 
 ## [0.8.1] - 2026-11-14
+
+Publication pending: this section describes the prepared development version.
+The latest GitHub and PyPI release verified on 2026-11-15 is 0.8.0.
 
 ### Added
 

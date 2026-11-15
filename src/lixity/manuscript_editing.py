@@ -300,7 +300,7 @@ class ManuscriptStore:
         }
 
     def timeline(self, limit: int = 30) -> list[dict[str, Any]]:
-        """Return chronological revision snapshots for this manuscript (oldest to newest)."""
+        """Return unique content snapshots by first recording time (oldest to newest)."""
         bounded = max(1, min(int(limit), 200))
         if not (self.directory / "recovery.sqlite3").exists():
             return []
@@ -315,38 +315,48 @@ class ManuscriptStore:
             ).fetchall()
         return [self._row_to_revision(row) for row in reversed(rows)]
 
+    def _recorded_revision(self, revision: str) -> dict[str, Any] | None:
+        """Resolve an immutable measurement independently of the timeline window."""
+        if not (self.directory / "recovery.sqlite3").exists():
+            return None
+        with closing(self._database()) as db:
+            row = db.execute(
+                "SELECT * FROM manuscript_revisions WHERE document=? AND revision=?",
+                (self.document, revision),
+            ).fetchone()
+        return self._row_to_revision(row) if row is not None else None
+
     def delta(self, base_revision: str | None = None, target_revision: str | None = None) -> dict[str, Any]:
-        """Compute exact stylometric deltas between two recorded revisions (never interpolated)."""
+        """Compare retained measurements or the captured current source, never interpolating."""
         if base_revision is not None and not _ID.fullmatch(base_revision):
             raise ValueError("Invalid base revision identifier")
         if target_revision is not None and not _ID.fullmatch(target_revision):
             raise ValueError("Invalid target revision identifier")
-        history = self.timeline(limit=100)
-        if not history:
-            text, _, _ = _decode(self._read())
-            current_snap = self.analyze_snapshot(text)
-            current_snap["revision"] = _digest(self._read())
-            current_snap["created_at"] = None
-            return {
-                "schema_version": "lixity-timeline/1",
-                "document": self.document,
-                "has_baseline": False,
-                "revisions_count": 0,
-                "base": None,
-                "current": current_snap,
-                "deltas": None,
-                "chapter_deltas": [],
-            }
-        by_rev = {item["revision"]: item for item in history}
-        target = by_rev.get(target_revision) if target_revision else history[-1]
-        if target is None:
-            raise ValueError("Target revision not found in manuscript history")
-        base: dict[str, Any] | None = None
-        if base_revision is not None:
-            base = by_rev.get(base_revision)
-            if base is None:
-                raise ValueError("Base revision not found in manuscript history")
-        elif len(history) >= 2:
+        with SOURCE_WRITE_LOCK:
+            history = self.timeline(limit=100)
+            by_rev = {item["revision"]: item for item in history}
+            if target_revision is not None:
+                target = by_rev.get(target_revision) or self._recorded_revision(target_revision)
+                if target is None:
+                    raise ValueError("Target revision not found in manuscript history")
+            else:
+                source = self._read()
+                text, _, _ = _decode(source)
+                revision = _digest(source)
+                target = by_rev.get(revision) or self._recorded_revision(revision)
+                if target is None:
+                    target = self.analyze_snapshot(text)
+                    target["revision"] = revision
+                    target["created_at"] = None
+            base: dict[str, Any] | None = None
+            if base_revision is not None:
+                base = by_rev.get(base_revision) or self._recorded_revision(base_revision)
+                if base is None:
+                    raise ValueError("Base revision not found in manuscript history")
+        if (base_revision is None and len(history) >= 2 and target in history
+                and (target_revision is not None or target["revision"] == history[-1]["revision"])):
+            # A content snapshot is not a save event. Reused or unrecorded current
+            # bytes do not identify a previous save from which to infer a baseline.
             # Prefer earliest revision from the same UTC day as target (session start);
             # otherwise fall back to the immediate predecessor revision.
             target_day = datetime.fromtimestamp(target["created_at"], tz=timezone.utc).date()
