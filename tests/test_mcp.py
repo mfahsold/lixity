@@ -41,6 +41,8 @@ def test_tools_list_names_readonly_tools():
         "lixity_fingerprint",
         "revision_diff",
         "lixity_manuscript_dossier_drafts",
+        "lixity_outlier_matrix",
+        "lixity_research_gaps",
     ]
     assert names == expected
     for tool in response["result"]["tools"]:
@@ -81,6 +83,36 @@ def test_call_extended_tools():
 
     markers_res = _request("tools/call", {"name": "lixity_markers", "arguments": {"text": SAMPLE}})
     assert markers_res["result"].get("isError", False) is False
+
+    outlier_res = _request(
+        "tools/call",
+        {"name": "lixity_outlier_matrix", "arguments": {"text": SAMPLE, "language": "en", "z_threshold": 1.0}},
+    )
+    assert outlier_res["result"].get("isError", False) is False
+    outlier_payload = json.loads(outlier_res["result"]["content"][0]["text"])
+    assert outlier_payload["schema_version"] == "lixity-outlier-matrix/1"
+    assert isinstance(outlier_payload["cells"], list)
+
+
+def test_call_research_gaps_audits_archive(tmp_path):
+    from lixity.research import api as research_api
+
+    research_api.init(tmp_path, title="Gap Audit", language="en")
+    research_api.create_claim(
+        tmp_path,
+        title="Unbacked claim",
+        statement="The bridge opened in 1924.",
+        confidence="hypothetical",
+    )
+    response = _request(
+        "tools/call",
+        {"name": "lixity_research_gaps", "arguments": {"project": str(tmp_path)}},
+    )
+    assert response["result"].get("isError", False) is False
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert payload["schema_version"] == "research-gaps-local/1"
+    assert payload["summary"]["unsupported_claims"] == 1
+    assert payload["summary"]["unanchored_claims"] == 1
 
 
 def test_prompts_list_and_get():
@@ -137,6 +169,6 @@ def test_serve_roundtrip_over_stdio():
     lines = [json.loads(line) for line in out.getvalue().strip().splitlines()]
     by_id = {entry.get("id"): entry for entry in lines}
     assert by_id[1]["result"]["serverInfo"]["name"] == "lixity"
-    assert len(by_id[2]["result"]["tools"]) == 14
+    assert len(by_id[2]["result"]["tools"]) == 16
     assert "lixity" in by_id[3]["result"]["content"][0]["text"]
     assert lines[-1]["error"]["code"] == -32700

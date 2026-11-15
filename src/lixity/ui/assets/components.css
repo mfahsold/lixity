@@ -16,7 +16,7 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
 .analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-block-end: var(--space-2); }
 .analysis-review-head h2 { margin: 0; }
-.review-routes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: start; gap: var(--space-3); }
+.review-routes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
@@ -708,6 +708,7 @@ body.chrome-autohidden :is(
 }
 
 /* Frequency-weighted character cloud for manuscript dossier drafts */
+.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block: var(--space-2); }
 .character-cloud { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); padding: var(--space-2) 0 var(--space-3); }
 .character-cloud-chip { font-size: calc(0.84rem * var(--cloud-scale, 1)); line-height: 1.25; gap: 0.35rem; }
 .character-cloud-chip.active { background: var(--accent); color: var(--on-accent, #fff); border-color: var(--accent); }

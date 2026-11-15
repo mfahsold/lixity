@@ -21,6 +21,7 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "review": (("text", "md", "json"), "text"),
     "compare": (("json", "md"), "json"),
     "matrix": (("md", "csv", "json"), "md"),
+    "gaps": (("json",), "json"),
     "timeline": (("text", "md", "json"), "json"),
     "dossier": (("json", "table", "text"), "json"),
     "dossier-drafts": (("json",), "json"),
@@ -292,6 +293,12 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     (
         "matrix",
         "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)",
+        "Search and review",
+        (),
+    ),
+    (
+        "gaps",
+        "Audit archive for unsupported, disputed, unanchored, or unplaced claims and pending decisions",
         "Search and review",
         (),
     ),
@@ -596,6 +603,11 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
         "Export current claims, evidence links and author decisions. --output writes a report file\n"
         "(overwriting an existing file) and prints a JSON receipt; otherwise the report is stdout.",
         ("matrix --project ./novel --format csv --output evidence.csv",),
+    ),
+    "gaps": (
+        "Read-only cross-cutting audit reporting unsupported, disputed, unanchored, or unplaced claims\n"
+        "and pending decision reviews in one JSON pass.",
+        ("gaps --project ./novel",),
     ),
     "review": (
         "Read structural review candidates. --prepare-batch previews explicit pin-review actions;\n"
@@ -4030,6 +4042,8 @@ def run(args: argparse.Namespace) -> int:
             result = api.ocr_status(
                 getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False)
             )
+        elif command == "gaps":
+            result = api.research_gaps(args.project)
         elif command == "matrix":
             matrix = api.claim_matrix_data(args.project)
             rendered_matrix: str | None = (

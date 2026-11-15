@@ -7,10 +7,11 @@ button, input, select, textarea { font: inherit; }
 code, pre { font-family: var(--font-mono); }
 #site-export-preflight { padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-subtle); font-size: var(--text-small); }
 #site-export-preflight pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; margin: var(--space-2) 0 0; }
-.site-export-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.site-export-card { background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); }
+.site-export-section { display: flex; flex-direction: column; gap: var(--space-3); }
 .site-export-profile-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .site-export-profile-row select.ctl { flex: 1 1 12rem; min-width: 0; }
-.site-export-includes { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.site-export-includes { display: flex; flex-direction: column; gap: var(--space-2); }
 .wizard-options-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
 .page > * { min-width: 0; margin-block: 0; }
@@ -1110,7 +1111,7 @@ while reading: let it scroll away instead of sticking there. */
 .research-dossier-document .research-prose > :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote) { max-inline-size: 72ch; }
 .research-dossier-document .research-prose > :first-child { margin-block-start: 0; }
 .research-dossier-body-source { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem; font-size: var(--text-small); max-height: 25rem; overflow-y: auto; }
-.research-dossier-sections { margin: 0.35rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.research-dossier-sections { margin: 0.45rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .research-zotero-link { display: inline-block; margin-block: .4rem; font-size: var(--text-control); color: var(--accent); text-decoration: underline; white-space: normal; }
 .research-zotero-link:hover, .research-zotero-link:focus-visible { color: var(--accent); text-decoration: underline; }
 button.research-tag {
@@ -1125,7 +1126,7 @@ line-height: inherit;
 .research-sections-disclosure > summary::-webkit-details-marker { display: none; }
 .research-tag-more { font-size: var(--text-micro); padding: 0.1rem 0.45rem; border-radius: var(--radius-pill); background: var(--bg-subtle, rgba(0, 0, 0, 0.05)); color: var(--accent); border: 1px dashed var(--accent); font-weight: var(--weight-medium, 500); cursor: pointer; }
 .research-tag-more:hover { background: var(--accent-light); border-style: solid; }
-.research-dossier-sections-expanded { width: 100%; display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.45rem; padding: 0.5rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px solid var(--line-subtle, var(--line)); border-radius: var(--radius-xs); max-height: 12rem; overflow-y: auto; }
+.research-dossier-sections-expanded { width: 100%; display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 0.45rem; padding: 0.5rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px solid var(--line-subtle, var(--line)); border-radius: var(--radius-xs); max-height: 12rem; overflow-y: auto; }
 /* Interactive controls and paragraph chips have a larger touch target. */
 @media (pointer: coarse) {
 .chip { min-width: 44px; height: 44px; }

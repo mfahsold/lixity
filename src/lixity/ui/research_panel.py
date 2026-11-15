@@ -67,11 +67,21 @@ def render_research_panel(
     parts.append(
         '<div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title">'
     )
+    tab_groups = {
+        "dossiers": "knowledge",
+        "claims": "knowledge",
+        "timeline": "knowledge",
+        "decisions": "knowledge",
+        "sources": "corpus",
+        "search": "corpus",
+        "review": "verify",
+        "grounding": "verify",
+    }
     for key in ("dossiers", "claims", "timeline", "decisions", "review", "sources", "search", "grounding"):
         selected = key == "dossiers"
         parts.append(
             f'<button type="button" class="ctl{" active" if selected else ""}" '
-            f'id="research-tab-{key}" data-rtab="{key}" role="tab" '
+            f'id="research-tab-{key}" data-rtab="{key}" data-tab-group="{tab_groups[key]}" role="tab" '
             f'{"data-requires-live " if key in ("search", "grounding") else ""}aria-controls="rtab-{key}" aria-selected="{str(selected).lower()}" '
             f'data-help="{L("research_tab_" + key + "_help")}" title="{L("research_tab_" + key)}" '
             f'tabindex="{0 if selected else -1}">{L("research_tab_" + key)}</button>'
@@ -328,15 +338,6 @@ def render_research_panel(
     parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
     parts.append("</div>")
     parts.append(
-        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" '
-        f'aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" '
-        f'data-help="{L("research_filter_dossiers_help")}" title="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
-    )
-    parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
-    parts.append(
-        f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
-    )
-    parts.append(
         '<details class="research-details mb-2" id="r-dos-collection-manage" data-requires-write>'
     )
     parts.append(
@@ -380,6 +381,15 @@ def render_research_panel(
     )
     parts.append("</div>")
     parts.append("</div></details>")
+    parts.append(
+        f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" '
+        f'aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" '
+        f'data-help="{L("research_filter_dossiers_help")}" title="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
+    )
+    parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
+    parts.append(
+        f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
+    )
     parts.append("</div>")
 
     # Tab Pane: Claims & Evidence Links
@@ -405,6 +415,7 @@ def render_research_panel(
     parts.append("</div>")
     parts.append('<p class="ctl-note" id="r-timeline-callout" hidden></p>')
     parts.append('<div id="rtab-claims-list">')
+    parts.append('<div class="research-section-card">')
     parts.append('<details class="research-composer" id="r-claim-composer" data-requires-write>')
     parts.append(
         f'<summary data-help="{L("help_research_claim")}">{L("research_claim_heading")}</summary><div class="ctl-group research-composer-body">'
@@ -530,10 +541,11 @@ def render_research_panel(
     parts.append("    </div>")
     parts.append("  </div>")
     parts.append("</details>")
+    parts.append("</div>")
     parts.append(
         f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
-    parts.append('<div class="ctl-group research-relation-section">')
+    parts.append('<div class="ctl-group research-relation-section research-section-card">')
     parts.append(
         f'<h3>{L("research_relation_heading")}</h3><p class="ctl-note">{L("research_relation_hint")}</p>'
     )

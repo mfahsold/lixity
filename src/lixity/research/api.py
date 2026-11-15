@@ -3387,6 +3387,90 @@ def claim_matrix_format(
     return data if format == "json" else render_claim_matrix(data, format=format)
 
 
+def research_gaps(project: str | Path) -> dict[str, Any]:
+    """Audit a research archive for unsupported, disputed, unanchored, or unplaced claims and pending decisions."""
+    from .models import ManuscriptClaimLink
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    matrix = _claim_matrix_data(repository, snapshot)
+    review = editorial_review(project)
+    chrono = timeline(project)
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+    anchored_claim_ids = {
+        record.claim_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, ManuscriptClaimLink) and record.id not in withdrawn_or_purged
+    }
+
+    unsupported_claims: list[dict[str, Any]] = []
+    disputed_claims: list[dict[str, Any]] = []
+    unanchored_claims: list[dict[str, Any]] = []
+    for claim in matrix.get("claims", []):
+        cid = str(claim.get("claim_id") or "")
+        counts = claim.get("evidence_counts") or {}
+        entry = {
+            "claim_id": cid,
+            "title": claim.get("title", ""),
+            "confidence": claim.get("confidence", ""),
+            "status": claim.get("status", ""),
+            "dossier_title": claim.get("dossier_title"),
+        }
+        if int(counts.get("supports", 0)) == 0:
+            unsupported_claims.append(entry)
+        if int(counts.get("contradicts", 0)) > 0 or claim.get("confidence") == "disputed":
+            disputed_claims.append({**entry, "contradicts": int(counts.get("contradicts", 0))})
+        if cid and cid not in anchored_claim_ids:
+            unanchored_claims.append(entry)
+
+    unplaced_timeline = [
+        {
+            "claim_id": item.get("claim_id", ""),
+            "title": item.get("title", ""),
+            "time_period": item.get("time_period", ""),
+            "reason": item.get("reason", ""),
+        }
+        for item in chrono.get("unplaced", [])
+    ]
+
+    pending_decisions = [
+        {
+            "decision_id": item.get("decision_id", ""),
+            "title": item.get("title", ""),
+            "reasons": list(item.get("reasons") or ()),
+        }
+        for item in review.get("candidates", [])
+        if item.get("kind") == "decision"
+    ]
+
+    summary = matrix.get("summary", {})
+    return {
+        "schema_version": "research-gaps-local/1",
+        "ok": True,
+        "project_id": matrix.get("project_id", ""),
+        "project_title": matrix.get("project_title", ""),
+        "summary": {
+            "total_claims": int(summary.get("total_claims", len(matrix.get("claims", [])))),
+            "total_decisions": int(summary.get("total_decisions", 0)),
+            "unsupported_claims": len(unsupported_claims),
+            "disputed_claims": len(disputed_claims),
+            "unanchored_claims": len(unanchored_claims),
+            "unplaced_timeline_claims": len(unplaced_timeline),
+            "pending_decisions": len(pending_decisions),
+        },
+        "unsupported_claims": unsupported_claims,
+        "disputed_claims": disputed_claims,
+        "unanchored_claims": unanchored_claims,
+        "unplaced_timeline_claims": unplaced_timeline,
+        "pending_decisions": pending_decisions,
+    }
+
+
 def _draft_matches_existing_dossier(draft: Mapping[str, Any], existing_titles: Sequence[str]) -> bool:
     title_cf = str(draft.get("title") or "").strip().casefold()
     if title_cf and any(t == title_cf for t in existing_titles):

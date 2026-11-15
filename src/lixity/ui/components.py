@@ -188,6 +188,7 @@ def manuscript_pdf_controls(
         f'{choices}</select></div>'
         '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
         f'{L("manuscript_pdf_download")}</button></div>'
+        '<p class="ctl-note" id="manuscript-pdf-layout-desc" aria-live="polite"></p>'
         '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'
         f'{"" if available else L("manuscript_pdf_unavailable")}</p></form>'
         f'<p class="ctl-note" id="manuscript-pdf-hint">{L("manuscript_pdf_hint")}</p>'

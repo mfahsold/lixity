@@ -689,7 +689,7 @@ function renderManuscriptDraftsView(host) {
       '<div class="research-card-title">' + escapeHtml(d.title || "") + "</div>" +
       '<p class="ctl-note">' + escapeHtml(d.summary || "") + "</p>" +
       tags +
-      '<div class="row"><button type="button" class="ctl ctl-sm primary" data-create-manuscript-draft="' +
+      '<div class="row mt-2"><button type="button" class="ctl ctl-sm primary" data-create-manuscript-draft="' +
       escapeHtml(d.id || "") + '">' + escapeHtml(uiLabel("research_dossier_draft_create")) + "</button></div>" +
       "</div>";
   }
@@ -1089,7 +1089,7 @@ function renderManuscriptDraftsView(host) {
       registerContrastHtml = '<details class="research-accordion mt-3" id="grounding-register-details">' +
         '<summary data-help="' + escapeHtml(uiLabel("research_register_contrast_help")) + '">' + escapeHtml(uiLabel("research_register_contrast")) + '</summary>' +
         '<div class="table-wrap mt-2"><table class="research-table">' +
-          '<thead><tr><th>Merkmal</th><th class="num-right">Quelle</th><th class="num-right">Manuskript</th><th class="num-right">Differenz (Δ)</th></tr></thead>' +
+          '<thead><tr><th>' + escapeHtml(uiLabel("research_ground_metric")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_source")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_manuscript")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_delta")) + '</th></tr></thead>' +
           '<tbody>' +
             (function() {
               function diffCell(obj, isPct) {
@@ -1099,10 +1099,10 @@ function renderManuscriptDraftsView(host) {
                 var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
                 return '<strong class="' + cls + '">' + formatted + '</strong>';
               }
-              return '<tr><td>Mittlere Satzlänge (ASL)</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
-                '<tr><td>Dialoganteil (%)</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
-                '<tr><td>Wortschatzreichtum (Guiraud R)</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
-                '<tr><td>Vokabularwiederholung (Yule’s K)</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
+              return '<tr><td>' + escapeHtml(uiLabel("research_ground_asl")) + '</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
+                '<tr><td>' + escapeHtml(uiLabel("research_ground_dialogue")) + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
+                '<tr><td>' + escapeHtml(uiLabel("research_ground_guiraud")) + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
+                '<tr><td>' + escapeHtml(uiLabel("research_ground_yules_k")) + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
             })() +
           '</tbody>' +
         '</table></div>' +
@@ -1169,7 +1169,7 @@ function renderManuscriptDraftsView(host) {
           '<div class="table-wrap"><table class="research-chapter-table" data-sortable="true">' +
             '<thead><tr>' +
               '<th class="sortable" data-sort="chapter" tabindex="0" role="columnheader" aria-sort="ascending" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_chapter")) + '</th>' +
-              '<th class="sortable num-right" data-sort="words" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">Wörter</th>' +
+              '<th class="sortable num-right" data-sort="words" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_ground_words")) + '</th>' +
               '<th class="sortable num-right" data-sort="tokens" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_tokens")) + '</th>' +
               '<th class="sortable num-right" data-sort="density" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_density")) + '</th>' +
               '<th>' + escapeHtml(uiLabel("research_top_terms_col")) + '</th>' +

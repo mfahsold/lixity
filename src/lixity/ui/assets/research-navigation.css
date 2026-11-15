@@ -6,6 +6,18 @@
   min-width: 0;
 }
 .research-navigation > .research-tabs { flex: 1 1 auto; }
+.research-tabs > button[data-rtab="review"],
+.research-tabs > button[data-rtab="sources"] {
+  margin-inline-start: var(--space-1);
+}
+.research-section-card {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.research-section-card > .research-composer:last-child { margin-bottom: 0; }
 .research-navigation-control { flex: 0 0 auto; min-width: 2.5rem; min-height: 2.5rem; }
 .research-navigation-control[hidden] { display: none; }
 .research-tab-pane:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

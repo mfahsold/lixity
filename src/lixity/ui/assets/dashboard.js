@@ -835,10 +835,18 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
   var form = document.getElementById("manuscript-pdf-form");
   if (!form) return;
   var layout = document.getElementById("manuscript-pdf-layout");
+  var layoutDesc = document.getElementById("manuscript-pdf-layout-desc");
   var button = document.getElementById("manuscript-pdf-download");
   var status = document.getElementById("manuscript-pdf-status");
   var available = form.dataset.available === "true" && !!form.dataset.projectToken;
   var busy = false;
+  function syncLayoutDescription() {
+    if (!layoutDesc || !layout) return;
+    var text = uiLabel("manuscript_pdf_desc_" + layout.value);
+    layoutDesc.textContent = text === "manuscript_pdf_desc_" + layout.value ? "" : text;
+  }
+  if (layout) layout.addEventListener("change", syncLayoutDescription);
+  syncLayoutDescription();
   function message(key, failed) {
     status.className = "ctl-status " + (failed ? "err" : "ok");
     status.textContent = uiLabel(key);

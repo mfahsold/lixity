@@ -318,6 +318,49 @@ _TOOLS = (
             "additionalProperties": False,
         },
     },
+    {
+        "name": "lixity_outlier_matrix",
+        "description": (
+            "Extract a flat, sorted chapter-by-feature matrix of all style-reference cells exceeding "
+            "a configurable z* threshold, plus per-chapter outlier counts and overall consistency."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Markdown manuscript text."},
+                "language": {
+                    "type": "string",
+                    "description": "Analysis language code (default en).",
+                    "default": "en",
+                },
+                "z_threshold": {
+                    "type": "number",
+                    "description": "Absolute z* threshold for filtering cells (default 2.5).",
+                    "default": 2.5,
+                },
+            },
+            "required": ["text"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "lixity_research_gaps",
+        "description": (
+            "Read-only cross-cutting audit of a local research archive: reports unsupported claims, "
+            "disputed claims, unanchored claims, unplaced timeline periods, and pending decision reviews."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {
+                    "type": "string",
+                    "description": "Filesystem path to an initialized Lixity research project directory.",
+                },
+            },
+            "required": ["project"],
+            "additionalProperties": False,
+        },
+    },
 )
 
 _PROMPTS = (
@@ -587,6 +630,64 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                 language=str(arguments.get("language") or "en"),
                 kind=kind_arg,
             )
+        elif name == "lixity_outlier_matrix":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_outlier_matrix requires a text string."}],
+                    "isError": True,
+                }
+            z_raw = arguments.get("z_threshold", 2.5)
+            try:
+                z_threshold = float(z_raw)
+            except (TypeError, ValueError):
+                return {
+                    "content": [{"type": "text", "text": "z_threshold must be a finite number."}],
+                    "isError": True,
+                }
+            fp = _api.fingerprint(
+                arguments["text"],
+                str(arguments.get("language") or "en"),
+                z_mild=z_threshold,
+            )
+            cells: list[dict[str, Any]] = []
+            by_chapter: dict[str, int] = {}
+            for dim in fp.get("dimensions", []):
+                z_scores = dim.get("z_scores") or {}
+                scores = dim.get("scores") or {}
+                for ch_key, z_val in z_scores.items():
+                    if z_val is None or abs(float(z_val)) < z_threshold:
+                        continue
+                    ch_str = str(ch_key)
+                    by_chapter[ch_str] = by_chapter.get(ch_str, 0) + 1
+                    cells.append(
+                        {
+                            "chapter": ch_key,
+                            "feature": dim.get("key", ""),
+                            "value": scores.get(ch_key),
+                            "median": dim.get("median"),
+                            "mad": dim.get("mad"),
+                            "z_star": round(float(z_val), 4),
+                        }
+                    )
+            cells.sort(key=lambda item: abs(float(item["z_star"])), reverse=True)
+            payload = {
+                "schema_version": "lixity-outlier-matrix/1",
+                "z_threshold": z_threshold,
+                "consistency": fp.get("consistency"),
+                "measured_cells": fp.get("measured_cells"),
+                "outlier_count": len(cells),
+                "outliers_by_chapter": by_chapter,
+                "cells": cells,
+            }
+        elif name == "lixity_research_gaps":
+            if not isinstance(arguments, dict) or not isinstance(arguments.get("project"), str):
+                return {
+                    "content": [{"type": "text", "text": "lixity_research_gaps requires a project path string."}],
+                    "isError": True,
+                }
+            from .research.api import research_gaps
+
+            payload = research_gaps(arguments["project"])
         else:
             return {
                 "content": [{"type": "text", "text": f"unknown tool: {name}"}],

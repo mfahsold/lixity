@@ -112,7 +112,7 @@
 <p class="updated">Updated <time datetime="2026-11-05">5 November 2026</time></p>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
-<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#import">Retain a local source</a></li><li><a href="#zotero">Capture from Zotero</a></li><li><a href="#places-and-routes">Visual references and places</a></li><li><a href="#search">Find a record</a></li><li><a href="#keyword-citation">Cite a source paragraph</a></li><li><a href="#manuscript-claims">Connect a manuscript quote</a></li><li><a href="#dossiers-and-decisions">Edit dossiers and review decisions</a></li><li><a href="#claim-chronology">Claim chronology</a></li><li><a href="#ocr">PDF and OCR setup</a></li><li><a href="#backup">Back up and restore</a></li><li><a href="#cli-workflow">CLI walkthrough</a></li><li><a href="#manuscript-export">PDF and sharing</a></li></ul></nav>
+<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#import">Retain a local source</a></li><li><a href="#zotero">Capture from Zotero</a></li><li><a href="#places-and-routes">Visual references and places</a></li><li><a href="#search">Find a record</a></li><li><a href="#keyword-citation">Cite a source paragraph</a></li><li><a href="#manuscript-claims">Connect a manuscript quote</a></li><li><a href="#dossiers-and-decisions">Edit dossiers and review decisions</a></li><li><a href="#claim-chronology">Claim chronology</a></li><li><a href="#grounding">Cross-corpus grounding &amp; exports</a></li><li><a href="#ocr">PDF and OCR setup</a></li><li><a href="#backup">Back up and restore</a></li><li><a href="#cli-workflow">CLI walkthrough</a></li><li><a href="#manuscript-export">Print-ready PDFs &amp; editorial copies</a></li><li><a href="#reading-website">Reading versions, dossiers &amp; analysis</a></li><li><a href="#publication">Print imprint &amp; ISBNs</a></li></ul></nav>
 <h2 id="import">Import a local source</h2>
 <p>Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as <code>source.txt</code>. Initialize only a new research archive:</p>
 <pre><code>lixity research init --project ./sample-project --title "Sample research" --language en
@@ -201,6 +201,15 @@ lixity research search --query "reading room"
 lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes</code></pre>
 <p>Use returned IDs, passage first and claim second. Complete bare UUIDv4 selectors and plural aliases in grouped help are also supported. The short command creates an evidence link; <code>link-evidence</code> retains inspection and revision operations. See <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#reading-and-cli-workflows-since-v240">scope and compatibility</a>.</p>
 
+<h2 id="grounding">Compare sources with your manuscript (Grounding)</h2>
+<p>Beyond individual citations, Lixity measures how retained sources relate to your draft. Source-internal analysis (<code>lixity research analyze</code> / <code>dashboard</code>) inspects a single source against its own chapters, while <strong>Research → Grounding</strong> (<code>lixity research compare</code>) compares one retained source against your manuscript:</p>
+<ul>
+  <li><strong>Lexical overlap &amp; keyness:</strong> Jaccard similarity, overlap coefficient, shared content-word types, Dunning <em>G²</em> source key terms, and terms exclusive to either text.</li>
+  <li><strong>Chapter grounding density:</strong> Per-chapter word counts, shared tokens, and density so you can see where historical vocabulary concentrates across the manuscript.</li>
+  <li><strong>Register &amp; style contrast:</strong> Side-by-side deltas for mean sentence length (ASL), dialogue share (%), vocabulary richness (Guiraud <em>R</em>), and vocabulary repetition (Yule's <em>K</em>).</li>
+</ul>
+<p>For structured external workflows, the research archive also supports <strong>dossier collections</strong> (ordered reading lists in <code>lixity.toml</code>), deterministic character/location/scene drafts (<code>dossier-drafts</code>), bounded MP4/WebM video attachments (<code>lixity:media/...</code>), offline HTML article extraction (<code>extract-article</code>), a Claim–Evidence–Decision matrix (<code>matrix</code> in Markdown, CSV, or JSON), and <strong>JSON Canvas 1.0</strong> graph export (<code>canvas</code>). Audio files remain outside the research source archive.</p>
+
 <h2 id="ocr">Can Lixity read scanned PDFs?</h2>
 <p>A PDF with selectable text can use local Poppler tools. An image-only scan needs locally installed Tesseract or a configured OCR worker to recognize text. Installing Lixity does not install either engine, download a model or start a worker service.</p>
 <pre><code>lixity research ocr-status
@@ -273,16 +282,91 @@ lixity research audit --project ./novel-research</code></pre>
 <p>For the managed app instead, use <code>lixity service start --open</code> and <strong>Open Project</strong> to select the archive. See the <a href="installation.html#restart">lifecycle guide</a>.</p>
 </details>
 
-<h2 id="manuscript-export">Export a manuscript as PDF</h2>
-<p>Open <strong>PDF export</strong>, choose a purpose and select <strong>Download PDF</strong>. Editorial, reading, submission, neutral-document and analysis-report outputs serve different tasks. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md">browser workspace manual</a> covers the UI; the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-pdf">PDF command reference</a> owns layouts, examples, options and rendering limits.</p>
-<pre><code>lixity pdf manuscript.md --layout editor -o editorial.pdf</code></pre>
+<h2 id="manuscript-export">Export print-ready PDFs and editorial copies</h2>
+<p>Open <strong>PDF export</strong> in the workspace bar (or run <code>lixity pdf</code>) to compose pure-Python PDFs with TrueType subsetting, Identity-H CID / ToUnicode glyph mapping, orphan/widow control, and PDF bookmarks. Each of the five layouts targets a distinct stage of drafting, editing, or printing:</p>
+<table>
+  <thead>
+    <tr><th>Layout (<code>--layout</code>)</th><th>Page &amp; Margins</th><th>Typography &amp; Grid</th><th>Editorial / Print Features</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>editor</code> (<em>Lektoratsfassung</em>)</td>
+      <td>DIN A4, single-sided; <code>62 pt</code> left (incl. <code>22 pt</code> gutter), <code>96 pt</code> (~34 mm) right correction margin</td>
+      <td><code>12 pt</code> serif, <code>1.5×</code> leading (<code>18 pt</code> grid), ragged right, no hyphenation</td>
+      <td>1-based per-page line numbers in the left gutter, running header (<code>title · author · draft_notice</code>), <code>{folio}/{pages}</code> footer, chapter page breaks</td>
+    </tr>
+    <tr>
+      <td><code>book</code> (Print reading copy)</td>
+      <td>A5 (<code>419.5 × 595.3 pt</code>), <strong>mirrored recto/verso margins</strong> for duplex printing &amp; binding</td>
+      <td>Serif, <code>BOOK_CPL = 64</code> target width, <code>1.45×</code> leading, Knuth–Plass-style DP justification, first-line indents</td>
+      <td>Title page, centred chapter headings, running header, omitted first-page folio, optional <strong>A5 imprint page</strong></td>
+    </tr>
+    <tr>
+      <td><code>sheet</code> (<em>Normseite</em>)</td>
+      <td>DIN A4, centred horizontal margins, <code>54 pt</code> top/bottom</td>
+      <td><code>12 pt</code> monospace, fixed <strong>30 lines × 60 columns</strong> submission grid</td>
+      <td>Running draft header and <code>{folio}/{pages}</code> footer in <code>8 pt</code> monospace</td>
+    </tr>
+    <tr>
+      <td><code>report</code> (Analysis report)</td>
+      <td>DIN A4, <code>62 pt</code> side / <code>56–78 pt</code> vertical margins</td>
+      <td>Sans-serif, <code>REPORT_CPL = 78</code>, <code>1.5×</code> leading</td>
+      <td>Cover page, PDF bookmarks, Markdown tables with auto-fitted widths, right-aligned metrics, and <strong>repeating headers</strong> across page breaks</td>
+    </tr>
+    <tr>
+      <td><code>document</code> (Neutral A4)</td>
+      <td>DIN A4, uniform <code>72 pt</code> margins</td>
+      <td><code>12 pt</code> / <code>16.2 pt</code> baseline, <code>8.1 pt</code> paragraph gap</td>
+      <td>Clean reading document without title page, running headers, or page numbers</td>
+    </tr>
+  </tbody>
+</table>
+<pre><code># Editorial copy with 34 mm correction margin and gutter line numbers
+lixity pdf manuscript.md --layout editor -o editorial.pdf
 
-<h2 id="reading-website">Share a reading website</h2>
-<p>Use <strong>Project actions → Reading website</strong> to prepare a review workspace, a novel with selected background material, or a companion without the manuscript. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website">complete reading-website workflow</a> for profiles, preview, chapter caps, source-file choices and optional chapter audio. Try the <a href="../demo/reader/">novel and companion</a> or the <a href="../demo/companion/">standalone companion</a>.</p>
-<p>Sharing creates a copy, not a restorable archive or revocable account. Research review copies can contain internal notes, earlier versions and cited excerpts. Source files require a separate choice. A progress gate only hides included content; an export chapter cap omits later material. Inspect the result before sharing.</p>
+# Print-ready A5 book spread with mirrored margins and imprint
+lixity pdf manuscript.md --layout book -o print-a5.pdf</code></pre>
+<p>Override system-discovered fonts via <code>LIXITY_PDF_FONT_SERIF</code>, <code>LIXITY_PDF_FONT_SANS</code>, or <code>LIXITY_PDF_FONT_MONO</code> when needed. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md">browser workspace manual</a> and <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-pdf">PDF command reference</a> for full options and limits.</p>
 
-<h2 id="publication">Enter publication details</h2>
-<p>Open <strong>Project → Settings → A5 book PDF details</strong> to enter optional author/publisher information and choose whether to include it in the reading PDF. Lixity checks bounded input and ISBN syntax, not publishing rights or legal completeness. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#publication-settings">publication-settings reference</a> owns the fields, persistence rules and publication guidance; other PDF layouts omit the A5 imprint.</p>
+<h2 id="reading-website">Export reading versions with curated dossiers &amp; selective analysis</h2>
+<p>Use <strong>Project actions → Reading website</strong> (or <code>POST /api/site-export</code>) to build a standalone, offline HTML/JS/CSS ZIP bundle. A preflight check (<strong>Check bundle</strong> / <code>/api/site-preflight</code>) validates sizes and budgets before download.</p>
+<table>
+  <thead>
+    <tr><th>Mode</th><th>Manuscript Scope</th><th>Dossiers &amp; Research</th><th>Analysis &amp; Audio</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>review</code> (Internal review)</td>
+      <td>Full manuscript</td>
+      <td>Optional full internal research archive (<code>include_research</code>) and raw retained source files (<code>include_source_files</code>)</td>
+      <td>Full workspace view; no curated profile or chapter cap</td>
+    </tr>
+    <tr>
+      <td><code>reader</code> (Curated reading copy)</td>
+      <td>Hard cutoff at <code>1..max_chapter</code> (omits later chapters from the ZIP)</td>
+      <td>Curated <strong>Publication Profile</strong> (<code>site_publications</code>): selected dossiers, pinned revisions, section filters, spoiler gates</td>
+      <td>Optional selective <code>analysis.html</code> (<code>chapters</code>, <code>language</code>, <code>full</code>) computed <strong>strictly on chapters <code>1..max_chapter</code></strong>; optional chapter WAV audio (<code>include_audio</code>)</td>
+    </tr>
+    <tr>
+      <td><code>companion</code> (Standalone companion)</td>
+      <td><strong>No manuscript text</strong> included</td>
+      <td>Curated <strong>Publication Profile</strong> with dossiers, citations, and offline map geometry</td>
+      <td>No manuscript analysis or chapter audio</td>
+    </tr>
+  </tbody>
+</table>
+<p><strong>Curating dossiers for different readers, editors, or analysts:</strong> Open <strong>Project → Settings → Publication profiles</strong> to define multiple named profiles (e.g., <em>Historical Consultant</em>, <em>Beta Readers Ch. 1–5</em>, <em>Copy Editor</em>). Each profile entry controls:</p>
+<ul>
+  <li><strong>Dossier &amp; pinned revision:</strong> Pick specific dossiers and optionally pin an immutable <code>revision</code> instead of tracking future edits.</li>
+  <li><strong>Section filter &amp; title override:</strong> Expose either the full dossier body or a single heading subtree (<code>section</code>), with an optional reader-facing title.</li>
+  <li><strong>Spoiler gate (<code>reveal_after_chapter</code>):</strong> Hide entries in the client UI until the reader reaches a chosen chapter (persisted in <code>localStorage</code>). Note that <code>reveal_after_chapter</code> is a UI convenience gate for bytes already inside the bundle—use <code>max_chapter</code> whenever later chapters must not leave your machine.</li>
+  <li><strong>Citations &amp; offline geography:</strong> Toggle <code>include_citations</code> and <code>include_geography</code> independently per entry. Exported maps embed their geometry offline and make zero external tile requests.</li>
+</ul>
+<p>You can also organize dossiers into named reading sequences via <code>[tool.lixity.dossier_collections]</code>. Try the live <a href="../demo/reader/">novel and companion demo</a> or the <a href="../demo/companion/">standalone companion demo</a>, and see the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website">complete reading-website workflow</a> for full configuration details.</p>
+
+<h2 id="publication">Configure print imprint and ISBNs</h2>
+<p>Open <strong>Project → Settings → A5 book PDF details</strong> (or configure <code>[tool.lixity.publication]</code> in <code>lixity.toml</code>) to add optional front-matter metadata for the <code>book</code> layout: <code>publisher_name</code>, <code>publisher_address</code>, <code>printer_name</code>, <code>printer_address</code>, <code>edition</code>, <code>year</code>, <code>isbn_print</code>, <code>isbn_digital</code>, <code>rights_notice</code>, <code>credits</code>, and <code>extra_info</code>.</p>
+<p>Lixity validates ISBN-10/13 checksums and ensures print and digital ISBNs are distinct when both are provided, without claiming legal completeness or publishing rights. Other PDF layouts (<code>editor</code>, <code>sheet</code>, <code>report</code>, <code>document</code>) omit the A5 imprint page. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#publication-settings">publication-settings reference</a>.</p>
 
 <h2 id="limits">Input and research limits</h2>
 <p>Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be up to 50 MiB. Imports allow at most 5,000 nonempty passages. Search matches words using SQLite FTS5/BM25; it does not translate text or search by meaning. Refreshing a source does not automatically update your claims or decisions.</p>

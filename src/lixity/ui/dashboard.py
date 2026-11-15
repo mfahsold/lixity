@@ -1107,12 +1107,12 @@ def render_dashboard(
         if "scenes" in active_ids:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#scenes" '
-                f'data-help="{L("analysis_nav_help_scenes")}" data-jump="#scenes">{L("sec_scenes")}</a></article>'
+                f'data-help="{L("analysis_nav_help_scenes")}" data-jump="#scenes">{L("panel_scenes")}</a></article>'
             )
         if "characters" in active_ids:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#characters" '
-                f'data-help="{L("analysis_nav_help_characters")}" data-jump="#characters">{L("sec_characters")}</a></article>'
+                f'data-help="{L("analysis_nav_help_characters")}" data-jump="#characters">{L("panel_characters")}</a></article>'
             )
         parts.append("</div></div></section>")
 
