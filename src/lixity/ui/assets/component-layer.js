@@ -260,6 +260,12 @@
       document.addEventListener("pointerdown", function (event) {
         if (event.target && event.target.closest && event.target.closest(CHROME_SELECTOR)) {
           show();
+        } else if (
+          hidden &&
+          event.target && event.target.closest &&
+          event.target.closest("#chapters, #manuscript-reading")
+        ) {
+          show();
         } else {
           scheduleIdle();
         }

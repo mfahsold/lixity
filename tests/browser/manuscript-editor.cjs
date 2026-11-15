@@ -48,6 +48,10 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.equal(await page.locator('#manuscript-write').isVisible(), true, 'Close writing restores the Write button');
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'manuscript-write', 'Close writing returns focus to #manuscript-write');
     assert.match(fs.readFileSync(source, 'utf8'), /New sentence/, 'Close writing flushes dirty text before returning');
+    await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); window.LixityChrome.hide(); });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('chrome-autohidden')), true, 'Auto-hidden chrome hides reader controls');
+    await page.locator('#chapters .ptext').first().click();
+    assert.equal(await page.evaluate(() => document.body.classList.contains('chrome-autohidden')), false, 'Clicking prose reveals auto-hidden reader navigation');
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').click();
     await page.keyboard.press('Control+z');
