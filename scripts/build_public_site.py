@@ -36,7 +36,7 @@ def render_pages() -> dict[str, str]:
             raise ValueError(f'Incomplete public translation: {lang}')
         if any(not isinstance(value, str) or not value.strip() for value in content.values()):
             raise ValueError(f'Empty public translation: {lang}')
-        fields = {key: html.escape(value, quote=True) for key, value in content.items()}
+        fields = {key: html.escape(value.replace('{version}', version), quote=True) for key, value in content.items()}
         fields['headline'] = '<br/>'.join(html.escape(line) for line in content['headline'].splitlines())
         fields['lang'] = lang
         fields['language_name'] = LANGUAGES[lang]
