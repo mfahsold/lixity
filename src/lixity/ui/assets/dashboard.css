@@ -1278,8 +1278,8 @@ line-height: var(--line-compact);
 .math-surd { font-size: 1.15em; margin-right: 0.05rem; }
 .math-radicand { border-top: 1.2px solid currentColor; padding-top: 0.08rem; }
 .math-root { font-size: 0.65em; margin-right: -0.2rem; vertical-align: 0.6em; }
-.math-func { font-style: normal; font-family: var(--font-sans, inherit); font-weight: 500; margin: 0 0.15rem; }
-.math-text { font-style: normal; font-family: var(--font-sans, inherit); }
+.math-func { font-style: normal; font-family: var(--font); font-weight: 500; margin: 0 0.15rem; }
+.math-text { font-style: normal; font-family: var(--font); }
 .math-matrix-wrap { display: inline-flex; align-items: center; vertical-align: middle; padding: 0 0.15rem; }
 .math-matrix { border-collapse: collapse; margin: 0 0.2rem; }
 .math-matrix td { padding: 0.2rem 0.4rem; text-align: center; border: none !important; }

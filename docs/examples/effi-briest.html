@@ -60,14 +60,17 @@
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  /* Three interface roles: readable metadata, controls, body/section titles.
-     Compatibility aliases keep existing components on the same role. */
+  /* Shared type scale: caption, metadata, controls, body, subhead, heading, display. */
+  --text-caption: .75rem;
   --text-note: .8125rem;
   --text-micro: var(--text-note);
   --text-small: var(--text-note);
   --text-control: .875rem;
   --text-section-title: var(--text-body);
   --text-body: 1rem;
+  --text-subhead: 1.125rem;
+  --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-display: clamp(2.1rem, 4vw, 3.35rem);
   --weight-semibold: 600;
   --weight-strong: 650;
   --line-body: 1.6;
@@ -83,6 +86,7 @@
   --section-gap: 1.5rem;
 
   --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-alt: light-dark(#f7f9fc, #161d29);
   --surface-raised: light-dark(#f2f4fa, #1a2230);
   --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
   --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
@@ -503,12 +507,12 @@ details.markdown-alert summary.markdown-alert-title { cursor: pointer; user-sele
 details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { display: none; }
 /* --- Markdown Editor -------------------------------------------------- */
 .markdown-editor-wrap { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
-.markdown-editor-toolbar { display: flex; flex-wrap: wrap; gap: .2rem; padding: .35rem .5rem; border-bottom: 1px solid var(--line); background: var(--surface-secondary, rgba(0,0,0,.02)); }
+.markdown-editor-toolbar { display: flex; flex-wrap: wrap; gap: .2rem; padding: .35rem .5rem; border-bottom: 1px solid var(--line); background: var(--surface-alt); }
 .editor-tool-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid transparent; border-radius: var(--radius-sm, 3px); background: transparent; color: var(--fg); cursor: pointer; transition: background .12s, border-color .12s; }
 .editor-tool-btn:hover { background: var(--surface-hover, rgba(0,0,0,.06)); border-color: var(--line); }
 .editor-tool-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .markdown-editor-wrap > .markdown-editor-area { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; resize: vertical; margin: 0 !important; padding: .8rem 1rem; min-height: clamp(10rem, 30dvh, 24rem); max-height: 60dvh; scrollbar-gutter: stable; font-family: var(--font); font-size: var(--text-body); line-height: 1.5; }
-.markdown-editor-footer { display: flex; justify-content: flex-end; padding: .25rem .65rem; border-top: 1px solid var(--line); font-size: var(--text-nano, .75rem); color: var(--muted); background: var(--surface-secondary, rgba(0,0,0,.02)); }
+.markdown-editor-footer { display: flex; justify-content: flex-end; padding: .25rem .65rem; border-top: 1px solid var(--line); font-size: var(--text-caption); color: var(--muted); background: var(--surface-alt); }
 
 /* --- Obsidian & Minimal Theme Patterns -------------------------------- */
 /* Command Palette (Ctrl/Cmd+P, Ctrl/Cmd+K) */
@@ -562,7 +566,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   color: var(--fg);
 }
 .command-palette-esc-hint {
-  font-size: var(--text-nano, 0.75rem);
+  font-size: var(--text-caption);
   padding: 0.15rem 0.45rem;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -579,7 +583,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 }
 .command-palette-category {
   padding: .5rem 1rem .25rem 1rem;
-  font-size: var(--text-nano, 0.75rem);
+  font-size: var(--text-caption);
   font-weight: var(--weight-semibold, 600);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -625,14 +629,14 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   text-overflow: ellipsis;
 }
 .command-palette-item-sub {
-  font-size: var(--text-nano, 0.78rem);
+  font-size: var(--text-caption);
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .command-palette-item-shortcut {
-  font-size: var(--text-nano, 0.75rem);
+  font-size: var(--text-caption);
   padding: 0.1rem 0.4rem;
   background: var(--surface-raised, rgba(0, 0, 0, 0.04));
   border: 1px solid var(--line);
@@ -653,7 +657,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   padding: .5rem 1rem;
   border-top: 1px solid var(--line);
   background: var(--surface-raised, var(--surface));
-  font-size: var(--text-nano, 0.75rem);
+  font-size: var(--text-caption);
   color: var(--muted);
 }
 .command-palette-hint {
@@ -712,7 +716,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   color: var(--accent);
 }
 .reader-backlink-snippet {
-  font-size: var(--text-nano, 0.78rem);
+  font-size: var(--text-caption);
   color: var(--muted);
   line-height: 1.4;
   overflow: hidden;
@@ -729,7 +733,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   gap: .45rem;
   padding: .25rem .65rem;
   border-radius: 9999px;
-  font-size: var(--text-nano, 0.78rem);
+  font-size: var(--text-caption);
   font-weight: var(--weight-medium, 500);
   background: var(--surface-raised);
   border: 1px solid var(--line);
@@ -760,7 +764,7 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   gap: var(--space-1);
 }
 .obsidian-field-label {
-  font-size: var(--text-nano, 0.8rem);
+  font-size: var(--text-caption);
   font-weight: var(--weight-medium, 500);
   color: var(--fg-secondary, var(--muted));
   letter-spacing: 0.01em;
@@ -2112,8 +2116,8 @@ line-height: var(--line-compact);
 .math-surd { font-size: 1.15em; margin-right: 0.05rem; }
 .math-radicand { border-top: 1.2px solid currentColor; padding-top: 0.08rem; }
 .math-root { font-size: 0.65em; margin-right: -0.2rem; vertical-align: 0.6em; }
-.math-func { font-style: normal; font-family: var(--font-sans, inherit); font-weight: 500; margin: 0 0.15rem; }
-.math-text { font-style: normal; font-family: var(--font-sans, inherit); }
+.math-func { font-style: normal; font-family: var(--font); font-weight: 500; margin: 0 0.15rem; }
+.math-text { font-style: normal; font-family: var(--font); }
 .math-matrix-wrap { display: inline-flex; align-items: center; vertical-align: middle; padding: 0 0.15rem; }
 .math-matrix { border-collapse: collapse; margin: 0 0.2rem; }
 .math-matrix td { padding: 0.2rem 0.4rem; text-align: center; border: none !important; }
@@ -4720,13 +4724,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .site-return, .site-breadcrumbs {
   max-width: 76rem;
   margin: 0 auto;
-  padding: .75rem 1.5rem;
+  padding: .45rem 1.5rem;
   color: var(--muted);
-  font: 400 .95rem/1.5 var(--font);
+  font: 400 var(--text-control)/1.5 var(--font);
 }
 .site-return { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
-.site-return .demo-context { align-self: center; font-size: .85rem; }
-.site-return a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--accent); text-underline-offset: .18em; }
+.site-return .demo-context { align-self: center; font-size: var(--text-small); }
+.site-return a { display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--accent); text-underline-offset: .18em; }
 .site-return a[aria-current] { color: var(--fg); font-weight: 700; text-decoration-thickness: 2px; }
 .site-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: .25rem .6rem; list-style: none; margin: 0; padding: 0; }
 .site-breadcrumbs li { display: inline; margin: 0; overflow-wrap: anywhere; }

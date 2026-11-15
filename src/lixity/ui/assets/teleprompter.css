@@ -1,4 +1,4 @@
-#teleprompter-modal { position: fixed; inset: 0; z-index: 10000; background: #0a0c10; color: #e6edf3; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+#teleprompter-modal { position: fixed; inset: 0; z-index: 10000; background: #0a0c10; color: #e6edf3; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font); }
 #teleprompter-modal[hidden] { display: none !important; }
 .teleprompter-toolbar { flex: 0 0 auto; height: 3.5rem; min-height: 3.5rem; display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; background: rgba(13, 17, 23, 0.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); gap: 1rem; z-index: 40; }
 .teleprompter-toolbar-group { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; white-space: nowrap; }
@@ -24,7 +24,7 @@
 .teleprompter-segment { display: block; }
 .teleprompter-text { overflow-wrap: anywhere; }
 .teleprompter-segment .teleprompter-cue { display: block; width: fit-content; max-width: 100%; margin-top: .4rem; }
-ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 500; & rt { font-size: .48em; color: #3fb950; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-weight: 600; } }
+ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 500; & rt { font-size: .48em; color: #3fb950; font-family: var(--font-mono); font-weight: 600; } }
 .teleprompter-sidebar { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; max-width: calc(100vw - 2rem); background: rgba(18, 22, 28, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; overflow: hidden; z-index: 50; box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6); transform: translateX(100%); transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1); &.is-open { transform: translateX(0); } }
 .teleprompter-sidebar-header { padding: .75rem 1rem; font-size: .875rem; font-weight: 600; color: #e6edf3; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .teleprompter-sidebar-content { flex: 1 1 auto; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1.25rem; }

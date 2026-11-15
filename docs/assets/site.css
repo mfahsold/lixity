@@ -10,13 +10,13 @@
 .site-return, .site-breadcrumbs {
   max-width: 76rem;
   margin: 0 auto;
-  padding: .75rem 1.5rem;
+  padding: .45rem 1.5rem;
   color: var(--muted);
-  font: 400 .95rem/1.5 var(--font);
+  font: 400 var(--text-control)/1.5 var(--font);
 }
 .site-return { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
-.site-return .demo-context { align-self: center; font-size: .85rem; }
-.site-return a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--accent); text-underline-offset: .18em; }
+.site-return .demo-context { align-self: center; font-size: var(--text-small); }
+.site-return a { display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--accent); text-underline-offset: .18em; }
 .site-return a[aria-current] { color: var(--fg); font-weight: 700; text-decoration-thickness: 2px; }
 .site-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: .25rem .6rem; list-style: none; margin: 0; padding: 0; }
 .site-breadcrumbs li { display: inline; margin: 0; overflow-wrap: anywhere; }
@@ -77,8 +77,8 @@ a:hover { text-decoration-thickness: 2px; }
 p, li, figcaption { overflow-wrap: anywhere; }
 h1, h2, h3 { color: var(--fg-heading); line-height: 1.2; hyphens: auto; }
 h1, h2 { font-family: var(--font-title); text-wrap: balance; font-weight: var(--weight-strong); }
-h2 { font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 1rem; }
-h3 { font-size: 1.08rem; }
+h2 { font-size: var(--text-heading); margin: 0 0 1rem; }
+h3 { font-size: var(--text-subhead); }
 p { margin: 0 0 1.15rem; }
 :where(a, button, summary, input, select, textarea):focus-visible {
   outline: 3px solid var(--accent);
@@ -93,7 +93,7 @@ section[id], article[id] { scroll-margin-top: 4rem; }
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 94%, transparent);
   backdrop-filter: blur(8px);
-  padding: .7rem 1.5rem;
+  padding: .45rem 1.5rem;
 }
 .header-inner { max-width: 76rem; margin: auto; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.4rem; }
 .brand { display: flex; align-items: center; gap: .6rem; color: var(--fg-heading); text-decoration: none; }
