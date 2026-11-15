@@ -3387,12 +3387,35 @@ def claim_matrix_format(
     return data if format == "json" else render_claim_matrix(data, format=format)
 
 
+def _draft_matches_existing_dossier(draft: Mapping[str, Any], existing_titles: Sequence[str]) -> bool:
+    title_cf = str(draft.get("title") or "").strip().casefold()
+    if title_cf and any(t == title_cf for t in existing_titles):
+        return True
+    kind = str(draft.get("kind") or "")
+    if kind == "scene":
+        return any(
+            t.startswith(("szenenregister", "scene register", "szene:", "scene:"))
+            for t in existing_titles
+        )
+    hints = draft.get("evidence_hints")
+    entity_name = str(
+        (hints.get("character") or hints.get("location") or hints.get("scene"))
+        if isinstance(hints, Mapping)
+        else ""
+    ).strip()
+    if not entity_name:
+        return False
+    pattern = re.compile(rf"\b{re.escape(entity_name.casefold())}\b")
+    return any(bool(pattern.search(t)) for t in existing_titles)
+
+
 def manuscript_dossier_drafts(
     project: str | Path,
     manuscript: str | Path,
     *,
     language: str | None = None,
-    kind: Literal["all", "character", "scene"] = "all",
+    kind: Literal["all", "character", "scene", "location"] = "all",
+    exclude_existing: bool = True,
 ) -> dict[str, Any]:
     """Extract read-only dossier drafts from a manuscript using deterministic metrics."""
     from ..config import read_explicit_project_config
@@ -3412,6 +3435,22 @@ def manuscript_dossier_drafts(
         settings=settings,
         kind=kind,
     )
+    skipped_existing = 0
+    if exclude_existing and (root / "research").is_dir():
+        existing_titles = [
+            str(d.get("title") or "").strip().casefold()
+            for d in list_dossiers(root).get("dossiers", [])
+            if str(d.get("title") or "").strip()
+        ]
+        if existing_titles:
+            kept: list[dict[str, Any]] = []
+            for item in payload.get("drafts", []):
+                if _draft_matches_existing_dossier(item, existing_titles):
+                    skipped_existing += 1
+                else:
+                    kept.append(item)
+            payload["drafts"] = kept
+    payload["skipped_existing"] = skipped_existing
     payload["manuscript"] = str(manuscript_path)
     return payload
 
@@ -3421,7 +3460,7 @@ def create_dossier_from_manuscript(
     manuscript: str | Path,
     *,
     draft_id: str | None = None,
-    kind: Literal["all", "character", "scene"] = "character",
+    kind: Literal["all", "character", "scene", "location"] = "character",
     language: str | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:

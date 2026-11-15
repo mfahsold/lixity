@@ -24,7 +24,7 @@ Open the chapter comparisons. Does this scene differ from its surroundings in se
 
 A high or low value initially tells you that something differs. A flashback, letter, change of viewpoint or dialogue scene may explain it. Making the distribution more uniform would not automatically improve the novel.
 
-The same applies to linguistic investigation. Studying sentence patterns or vocabulary requires understandable counts and known limits. Lixity documents its [methods](../METHODS.md) and identifies language-dependent heuristics. Measurements do not replace interpretation or establish literary quality.
+The same applies to linguistic investigation. Studying sentence patterns or vocabulary requires understandable counts and known limits. Lixity documents its [methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and identifies language-dependent heuristics. Measurements do not replace interpretation or establish literary quality.
 
 ## Read research where you need it
 
@@ -46,8 +46,8 @@ Lixity runs as a local browser application. Built-in analysis works offline; opt
 
 The public demo contains six invented English harbour chapters with linked case notes. It is read-only and requires neither an account nor your manuscript. Try one small task: open a chapter comparison, read an explanation and return to its passage. Is it clearer what you want to examine?
 
-[Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](../METHODS.md)
+[Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
 Development status: an integrated writing editor with undo, local autosave and conflict handling is implemented in development but remains unreleased. The public demo demonstrates reading and inspection, not saving a manuscript.
 
-[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

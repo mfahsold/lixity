@@ -60,7 +60,7 @@ Tempushinweise beruhen auf Wortmustern und sind keine grammatische Prüfung: Auc
 
 - [Eigenständiger Begleiter:](../demo/companion/index.html) ausgewählte Hintergründe zu einer andernorts gelesenen Geschichte ansehen.
 
-Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. **Noch unveröffentlicht:** Mit `--include-audio` können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. [Audio-Auswahl und Grenzen](../WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. **Noch unveröffentlicht:** Mit `--include-audio` können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. [Audio-Auswahl und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 Die Lesedemo enthält eine künstliche Aufnahme des ersten Kapitels aus eSpeak NG 1.51 (`en`, Tempo 165), die ausdrücklich importiert wurde. Unter **Chapter audio** lässt sie sich abspielen oder herunterladen. Sie zeigt den Ablauf, nicht die Stimmqualität von IMS-Toucan oder eine geklonte Autorenstimme. Die anderen Kapitel bleiben reine Lesetexte.
 
@@ -68,7 +68,7 @@ Die Lesedemo enthält eine künstliche Aufnahme des ersten Kapitels aus eSpeak N
 
 Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Der noch unveröffentlichte Dateiimport akzeptiert auch jeweils eine Word/DOCX-Datei. Exportiere Scrivener-Dokumente vorher in ein unterstütztes Dateiformat und prüfe die Importvorschau. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
 
-Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](../LICENSING.md).
+Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 
 Die lokale Anwendung läuft nach der Installation im Browser. Voraussetzung sind derzeit [uv](https://docs.astral.sh/uv/getting-started/installation/) und ein Terminal; Lixity wird als Python-Werkzeug installiert, nicht als klassischer Desktop-Installer. Die [Installationsanleitung für Windows, macOS und Linux](installation.html) ist auf Englisch.
 
@@ -83,7 +83,7 @@ Danach in einem neuen Terminal die lokale Anwendung starten:
 lixity service start --open
 ```
 
-Ein Projekt oder die Importvorschau für das Markdown-Manuskript öffnen und die Sprache **Deutsch** bestätigen. Englisch ist die Voreinstellung; automatische Erkennung ist eine ausdrückliche Wahl. Die eingebaute Analyse läuft lokal. Optionale Integrationen haben eigene [Datengrenzen](../research/USAGE.md).
+Ein Projekt oder die Importvorschau für das Markdown-Manuskript öffnen und die Sprache **Deutsch** bestätigen. Englisch ist die Voreinstellung; automatische Erkennung ist eine ausdrückliche Wahl. Die eingebaute Analyse läuft lokal. Optionale Integrationen haben eigene [Datengrenzen](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md).
 
 Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sein Funktionsumfang sind über `lixity --version` und die [Versionshinweise](https://github.com/mfahsold/lixity/releases/latest) prüfbar. Die Demo kann weder importieren noch Änderungen speichern.
 
@@ -99,10 +99,10 @@ Unter **Hörprobe & Regie → Regie exportieren** wählst du eine Textstelle, ei
 
 Im **Teleprompter** (`P`) liest du den geplanten Sprechtext mit Regiehinweisen und nimmst einen Take auf. Ergänze die tatsächlich gesprochenen Wörter und bestätige das Transkript. WAV und passende JSON-Datei bewahren Audio-Prüfsumme und Prüfstatus; die Übergabe ins Autorenstimmen-Studio speichert noch keine Referenz.
 
-**Optionales IMS-Toucan, noch unveröffentlicht:** Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. [Einrichtung und Modellgrenzen](../INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+**Optionales IMS-Toucan, noch unveröffentlicht:** Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. [Einrichtung und Modellgrenzen](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
 [English tour with more controls](first-look.html) · [Praxisbeispiel zu Wiederholungen (Englisch)](../blog/local-word-echoes.html)
 
-Weiter geht es im [UI-Handbuch](../WORKSPACE.md), in der [CLI-Referenz](../USAGE.md) oder über die [Dokumentationsübersicht](../README.md) (Englisch).
+Weiter geht es im [UI-Handbuch](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md), in der [CLI-Referenz](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) oder über die [Dokumentationsübersicht](https://github.com/mfahsold/lixity/blob/main/docs/README.md) (Englisch).
 
-[Über Lixity](../index-de.html)[Installation](installation.html)[Lizenz](../LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)
+[Über Lixity](../index-de.html)[Installation](installation.html)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

@@ -18,7 +18,7 @@ Blue/down and orange/up markers identify notable lower and higher paragraph valu
 
 A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; **Read these marks** opens the counting and method details. **Focus reading** temporarily hides both displays and restores your choices on exit. [Try the marks in the short tour](first-look.html#passage).
 
-Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](../ARCHITECTURE.md#annotation-semantics-and-visual-identity).
+Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
 ## What does “Comparisons within the limit” measure?
 
@@ -36,7 +36,7 @@ Style JSON retains the historical numeric `consistency` value for compatibility.
 
 ## Compare scenes within a register
 
-The Scenes & style registers view measures scenes separately. Assign scene registers and target ranges in `lixity.toml`; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](../USAGE.md#scene-registers-and-project-targets).
+The Scenes & style registers view measures scenes separately. Assign scene registers and target ranges in `lixity.toml`; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#scene-registers-and-project-targets).
 
 ## How much text is enough?
 
@@ -129,4 +129,4 @@ The interface and language profiles cover English, German, French, Spanish, Ital
 
 Read the [estimator definitions and scientific references](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md), [stability and limitations](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md), and [JSON contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md). For a first run, follow the [Warehouse 4 project walkthrough](first-look.html).
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

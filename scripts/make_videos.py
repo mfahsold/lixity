@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -164,8 +166,8 @@ def convert_product_tour() -> None:
                "d=1:s=2880x1800:fps=30,"
                "scale=1440:900:flags=lanczos,fps=30")
     for suffix, codec in (
-        ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "28", "-movflags", "+faststart"]),
-        ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "40", "-b:v", "0", "-row-mt", "1", "-threads", "4"]),
+        ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "28", "-threads", "0", "-movflags", "+faststart"]),
+        ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "40", "-b:v", "0", "-row-mt", "1", "-threads", "0"]),
     ):
         target = OUT_DIR / f"product-tour.{suffix}"
         run([ffmpeg, "-y", "-loglevel", "error", "-ss", str(timing["trim"]),
@@ -249,13 +251,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", choices=["product-tour", "social", *(item[0] for item in WALKTHROUGHS)])
     args = parser.parse_args()
+    jobs = []
     if args.only in (None, "product-tour"):
-        convert_product_tour()
+        jobs.append((convert_product_tour, ()))
     if args.only in (None, "product-tour", "social"):
-        convert_social_cuts()
+        jobs.append((convert_social_cuts, ()))
     for name, poster_at, max_mp4, max_gif in WALKTHROUGHS:
         if args.only in (None, name):
-            convert(name, poster_at, max_mp4, max_gif)
+            jobs.append((convert, (name, poster_at, max_mp4, max_gif)))
+    workers = min(len(jobs), max(1, min(4, os.cpu_count() or 2)))
+    if workers <= 1:
+        for fn, fn_args in jobs:
+            fn(*fn_args)
+        return 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(fn, *fn_args) for fn, fn_args in jobs]
+        for future in futures:
+            future.result()
     return 0
 
 

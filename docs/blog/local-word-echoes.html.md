@@ -81,4 +81,4 @@ The detector matches literal token sequences. It does not recognize every paraph
 
 Try the short Bell fixture first, then inspect one result in your own draft. The [local echo reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#local-repetition-echoes) explains the returned fields and lower-level parameters when you need more detail.
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

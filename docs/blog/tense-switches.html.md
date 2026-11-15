@@ -16,7 +16,7 @@ Out of that come two lists, and they answer different questions:
 
 - **The chapter line** summarizes the chapter's dominant tense markers. It supplies a comparison for the paragraph, rather than determining how a reader experiences the scene.
 
-The default heuristic readings come from verb forms and marker patterns. An explicitly configured [optional grammatical backend](../USAGE.md#grammatical-tense) can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.
+The default heuristic readings come from verb forms and marker patterns. An explicitly configured [optional grammatical backend](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense) can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.
 
 ## The review loop, step by step
 
@@ -56,4 +56,4 @@ Verb-form patterns miss irony, ellipsis and unusual syntax. Dialogue and reporte
 
 Start with the [Warehouse 4 demo project](../demo/report.html): one invented manuscript with analysis, research and PDF layouts. The separate literary case studies of [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) retain their opening-chapter dashboards and full-novel PDF reports. For your own manuscript, install, open the project and review one chapter.
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

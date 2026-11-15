@@ -68,16 +68,18 @@ class ResearchRoutesMixin(ResponseMixin):
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         kind_raw = query.get("kind", ["all"])[0]
-        if kind_raw not in ("all", "character", "scene"):
-            self._json({"ok": False, "message": "kind must be all, character, or scene"}, 400)
+        if kind_raw not in ("all", "character", "scene", "location"):
+            self._json({"ok": False, "message": "kind must be all, character, scene, or location"}, 400)
             return
-        kind = cast(Literal["all", "character", "scene"], kind_raw)
+        kind = cast(Literal["all", "character", "scene", "location"], kind_raw)
+        exclude_existing = query.get("include_existing", ["0"])[0] not in ("1", "true")
         try:
             data = research_api.manuscript_dossier_drafts(
                 root,
                 manuscript,
                 language=query.get("language", [None])[0] or self.language,
                 kind=kind,
+                exclude_existing=exclude_existing,
             )
             self._json({"ok": True, **data})
         except (ResearchError, OSError, ValueError, TypeError) as exc:
@@ -94,10 +96,10 @@ class ResearchRoutesMixin(ResponseMixin):
             return
         draft_id = str(payload.get("draft_id") or "").strip() or None
         kind_raw = str(payload.get("kind") or "character")
-        if kind_raw not in ("all", "character", "scene"):
-            self._json({"ok": False, "message": "kind must be all, character, or scene"}, 400)
+        if kind_raw not in ("all", "character", "scene", "location"):
+            self._json({"ok": False, "message": "kind must be all, character, scene, or location"}, 400)
             return
-        kind = cast(Literal["all", "character", "scene"], kind_raw)
+        kind = cast(Literal["all", "character", "scene", "location"], kind_raw)
         language = str(payload.get("language") or "").strip() or self.language
         actor = str(payload.get("actor") or "local-author").strip() or "local-author"
         try:

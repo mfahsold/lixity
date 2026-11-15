@@ -51,11 +51,11 @@ See the [audio export and provider guide](https://github.com/mfahsold/lixity/blo
 
 **Current main, unreleased:** IMS-Toucan adds a German/English author-reference path with real IPA overrides and structured passage-level duration, pitch-variation, energy-variation and pause controls. Spelling substitutions remain a separate field. Free acting prompts are preserved for export but rejected for Toucan synthesis; they are not silently translated into emotions or numeric controls.
 
-The reviewed audio-settings schema `/5` migration preserves existing profiles. Plans using the new controls use version `/2`; older-feature plans keep their existing contract. The Teleprompter and export preview consume the same canonical spoken text and control summaries. [Controls, examples and limits](../AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
+The reviewed audio-settings schema `/5` migration preserves existing profiles. Plans using the new controls use version `/2`; older-feature plans keep their existing contract. The Teleprompter and export preview consume the same canonical spoken text and control summaries. [Controls, examples and limits](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
 
-Microphone takes and paired WAV/JSON imports use one review path. A transcript must describe the actual recording and be explicitly confirmed; a reading script alone is not evidence. The [author-voice workflow](../AUDIO.md#author-voice-recording-and-listening) explains capture, playback, review and save.
+Microphone takes and paired WAV/JSON imports use one review path. A transcript must describe the actual recording and be explicitly confirmed; a reading script alone is not evidence. The [author-voice workflow](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening) explains capture, playback, review and save.
 
-**Reader audio, unreleased:** a static reading copy can opt into existing chapter recordings matching its manuscript and chapter cap. This distributes audio for listening; it does not export the author’s private voice reference or start synthesis on the reader’s device. [Choose recorded chapter audio](../WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+**Reader audio, unreleased:** a static reading copy can opt into existing chapter recordings matching its manuscript and chapter cap. This distributes audio for listening; it does not export the author’s private voice reference or start synthesis on the reader’s device. [Choose recorded chapter audio](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 ## Try the workflow in the updated demo
 
@@ -63,4 +63,4 @@ The read-only [Warehouse 4 demo workspace](../demo/report.html) has been regener
 
 For your own manuscript, install the published release or test the development branch locally via the [installation guide](../guides/installation.html#development-builds).
 
-[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

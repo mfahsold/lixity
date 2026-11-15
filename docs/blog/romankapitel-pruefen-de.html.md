@@ -24,7 +24,7 @@ Die kurzen Sätze könnten Spannung erzeugen. In einer anderen Szene könnten si
 
 Ein hoher oder niedriger Wert bedeutet zunächst nur, dass sich etwas unterscheidet. Eine Rückblende, ein Brief, ein Perspektivwechsel oder eine Dialogszene kann diese Abweichung gut erklären. Eine einheitlichere Verteilung wäre nicht automatisch die bessere Erzählung.
 
-Das gilt auch für sprachwissenschaftliche Fragen. Wer Satzmuster oder Wortschatz untersucht, braucht nachvollziehbare Zählungen und bekannte Grenzen. Lixitys [Methoden](../METHODS.md) sind dokumentiert; sprachabhängige Heuristiken bleiben als solche erkennbar. Sie ersetzen keine Interpretation und keinen Nachweis einer literarischen Qualität.
+Das gilt auch für sprachwissenschaftliche Fragen. Wer Satzmuster oder Wortschatz untersucht, braucht nachvollziehbare Zählungen und bekannte Grenzen. Lixitys [Methoden](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) sind dokumentiert; sprachabhängige Heuristiken bleiben als solche erkennbar. Sie ersetzen keine Interpretation und keinen Nachweis einer literarischen Qualität.
 
 ## Recherche dort lesen, wo sie gebraucht wird
 
@@ -46,8 +46,8 @@ Lixity läuft als lokale Browseranwendung; die eingebaute Analyse arbeitet offli
 
 Die öffentliche Demo enthält sechs erfundene englische Hafenkapitel und verknüpfte Notizen. Sie ist schreibgeschützt, benötigt kein Konto und keinen Upload deines Manuskripts. Eine gute erste Aufgabe: Öffne einen Kapitelvergleich, lies eine Erklärung und kehre zur Textstelle zurück. Ist danach klarer, was du prüfen möchtest?
 
-[Die Lixity-Demo öffnen](../demo/report.html) [Deutschsprachiger Einstieg](../guides/first-look-de.html) [Methoden und Grenzen](../METHODS.md)
+[Die Lixity-Demo öffnen](../demo/report.html) [Deutschsprachiger Einstieg](../guides/first-look-de.html) [Methoden und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
 Entwicklungsstand: Ein integrierter Schreibeditor mit Undo, lokalem Autosave und Konfliktbehandlung ist bereits im Entwicklungszweig umgesetzt, aber noch nicht veröffentlicht. Die öffentliche Demo zeigt das Lesen und Prüfen, nicht das Speichern eines Manuskripts.
 
-[Alle Leitfäden](../index-de.html#guides)[Artikel](index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](../LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)
+[Alle Leitfäden](../index-de.html#guides)[Artikel](index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

@@ -2,7 +2,7 @@
 
 By [Matthias Fahsold](https://github.com/mfahsold) · Published 26 October 2026 · Updated 2 November 2026 · 5 minutes
 
-This walkthrough follows Lixity’s manuscript and research review workflow: optional installed grammar models extend tense analysis, the optional Qwen3-TTS 1.7B worker shares listening profiles with the CLI, passage-anchored direction in `.lixity/audio-directions.json` exports deterministic JSON or SSML speech plans, cross-paragraph quotation spans attribute covered quoted words across paragraph boundaries, and Spanish compound-past auxiliaries are deduplicated against present-tense markers. See [3D style space and speech-plan export](speech-direction-and-style-space.html), [validation limits](../STABILITY.md#grammatical-tense) and the [installation guide](../guides/installation.html).
+This walkthrough follows Lixity’s manuscript and research review workflow: optional installed grammar models extend tense analysis, the optional Qwen3-TTS 1.7B worker shares listening profiles with the CLI, passage-anchored direction in `.lixity/audio-directions.json` exports deterministic JSON or SSML speech plans, cross-paragraph quotation spans attribute covered quoted words across paragraph boundaries, and Spanish compound-past auxiliaries are deduplicated against present-tense markers. See [3D style space and speech-plan export](speech-direction-and-style-space.html), [validation limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#grammatical-tense) and the [installation guide](../guides/installation.html).
 
 A paragraph is marked while the toolbar shows a different measurement. A research panel still refers to a scene that has already scrolled away. The reader has to work out what the software means before returning to the manuscript.
 
@@ -14,7 +14,7 @@ The useful loop is short: **read the passage, inspect the reason, make a context
 
 The default tense-pattern signal counts heuristic markers of present and past forms. It can indicate a mixture within a paragraph or a change from the previous paragraph. The selected measurement layer answers its own question, such as sentence length or literal perception-word matches. Those are separate observations.
 
-Optional installed syntax models instead compose contextual verb groups. Their evidence retains the model identity, quotation scope and unresolved forms. A controlled construction check is different from accuracy on a literary manuscript; the [configuration guide](../USAGE.md#grammatical-tense) and [measured limits](../STABILITY.md#grammatical-tense) explain the distinction.
+Optional installed syntax models instead compose contextual verb groups. Their evidence retains the model identity, quotation scope and unresolved forms. A controlled construction check is different from accuracy on a literary manuscript; the [configuration guide](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense) and [measured limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#grammatical-tense) explain the distinction.
 
 Consider this invented contrast:
 
@@ -44,7 +44,7 @@ The passage context shows a current dossier or claim once within its group. Dist
 
 This answers two different reading questions: what does the record say now, and what was linked to this sentence? A saved association records that connection. It does not automatically verify the claim, accept a new version or establish that a decision has been incorporated into the prose.
 
-The backend prepares these summaries from one archive snapshot for both the live reader and an offline review export. Opening the context no longer asks the browser to assemble several independently fetched record versions. Full records remain available through their explicit viewers. The [automation contracts](../AGENTS.md) document the versioned data model.
+The backend prepares these summaries from one archive snapshot for both the live reader and an offline review export. Opening the context no longer asks the browser to assemble several independently fetched record versions. Full records remain available through their explicit viewers. The [automation contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) document the versioned data model.
 
 ## 4. Turn the observation into an editorial conversation
 
@@ -58,7 +58,7 @@ The backend prepares these summaries from one archive snapshot for both the live
 
 5. **Prepare the right copy.** Use an editorial PDF or a fixed review website for a discussion. A curated companion shares selected background material. These are reading exports rather than live collaborative editing.
 
-Built-in manuscript analysis runs locally, and Lixity does not automatically rewrite prose. Markdown and plain-text manuscripts are supported; The unreleased importer also accepts one Word/DOCX file; export Scrivener documents to a supported format first. Optional integrations have their own [data boundaries](../research/USAGE.md).
+Built-in manuscript analysis runs locally, and Lixity does not automatically rewrite prose. Markdown and plain-text manuscripts are supported; The unreleased importer also accepts one Word/DOCX file; export Scrivener documents to a supported format first. Optional integrations have their own [data boundaries](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md).
 
 ## Try one question
 
@@ -68,4 +68,4 @@ The invented Warehouse 4 project follows a suspicious harbour delivery through s
 
 The public example needs no account or manuscript upload. It is a fixed, read-only snapshot, so the controls visible there depend on the deployed build. For another concrete reading question, explore [nearby repeated phrases](local-word-echoes.html) or read [why a chapter may sound different on purpose](intentional-registers.html).
 
-[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

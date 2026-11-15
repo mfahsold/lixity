@@ -80,4 +80,4 @@ No. Lixity computes deterministic statistics from your text and documents their 
 
 Tool names link to official project/vendor pages. This is a workflow comparison, not a complete or continuously verified feature inventory, ranking or endorsement. Check current versions, platform support and data handling before choosing.
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

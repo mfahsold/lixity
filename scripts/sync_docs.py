@@ -105,8 +105,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f'"softwareVersion": "{version}"'),
                 (r'<span class="brand-badge">v\d+\.\d+\.\d+</span>',
                  f'<span class="brand-badge">v{version}</span>'),
-                (r'<a href="releases/v\d+\.\d+\.\d+\.md" id="current-release"',
-                 f'<a href="releases/v{version}.md" id="current-release"'),
+                (r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/)?releases/v\d+\.\d+\.\d+\.md" id="current-release"',
+                 f'<a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v{version}.md" id="current-release"'),
                 (r'Current release: <a href="releases/v\d+\.\d+\.\d+\.md">v\d+\.\d+\.\d+</a>',
                  f'Current release: <a href="releases/v{version}.md">v{version}</a>'),
                 install_pin,
@@ -132,16 +132,16 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         if guide.name == "installation.html":
             pins.append((r'This source guide describes <strong>v\d+\.\d+\.\d+(?: development)?</strong>',
                          f'This source guide describes <strong>v{version}</strong>'))
-            pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ development notes</a>',
-                         f'<a href="../releases/v{version}.md">{version} development notes</a>'))
+            pins.append((r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/|\.\./)releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ development notes</a>',
+                         f'<a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v{version}.md">{version} development notes</a>'))
             pins.append((r'The current release is <strong>v\d+\.\d+\.\d+</strong>',
                          f'The current release is <strong>v{version}</strong>'))
             pins.append((r'This installs the current release, <strong>v\d+\.\d+\.\d+</strong>',
                          f'This installs the current release, <strong>v{version}</strong>'))
-            pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">release notes</a>',
-                         f'<a href="../releases/v{version}.md">release notes</a>'))
-            pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ release notes</a>',
-                         f'<a href="../releases/v{version}.md">{version} release notes</a>'))
+            pins.append((r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/|\.\./)releases/v\d+\.\d+\.\d+\.md">release notes</a>',
+                         f'<a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v{version}.md">release notes</a>'))
+            pins.append((r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/|\.\./)releases/v\d+\.\d+\.\d+\.md">\d+\.\d+\.\d+ release notes</a>',
+                         f'<a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v{version}.md">{version} release notes</a>'))
         rules.append((guide, pins))
 
     for file_path, replacements in rules:
@@ -230,7 +230,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("docs/index.html"): (
         ("current release-note target",
-         re.compile(r'<a href="releases/v(\d+\.\d+\.\d+)\.md" id="current-release"')),
+         re.compile(r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/)?releases/v(\d+\.\d+\.\d+)\.md" id="current-release"')),
         ("current release-note label",
          re.compile(r'Current release:\s*<a href="releases/v\d+\.\d+\.\d+\.md">v(\d+\.\d+\.\d+)</a>')),
         ("current release-note target",
@@ -246,7 +246,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("docs/guides/installation.html"): (
         ("current release-note target",
-         re.compile(r'<a href="\.\./releases/v(\d+\.\d+\.\d+)\.md">(?:release notes|\d+\.\d+\.\d+ (?:development|release) notes)</a>')),
+         re.compile(r'<a href="(?:https://github\.com/mfahsold/lixity/blob/main/docs/|\.\./)releases/v(\d+\.\d+\.\d+)\.md">(?:release notes|\d+\.\d+\.\d+ (?:development|release) notes)</a>')),
     ),
 }
 

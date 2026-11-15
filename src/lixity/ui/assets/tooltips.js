@@ -398,7 +398,7 @@
     var action = target.closest("button, a, [role=button], input[type=button], input[type=submit], input[type=checkbox], input[type=radio], select, label[for], label:has(input, select)");
     var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!action) return false;
-    if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a, label[for], label:has(input, select)")) return false;
+    if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return false;
     return true;
   }
 
@@ -455,7 +455,9 @@
     if (activeEl && e.target.contains(activeEl)) hide();
   }, true);
   document.addEventListener("toggle", function(e) {
-    if (e.target && e.target.tagName === "DETAILS" && activeEl && e.target.contains(activeEl)) hide();
+    if (e.target && e.target.tagName === "DETAILS" && activeEl && e.target.contains(activeEl)) {
+      if (!e.target.open || (activeEl.parentElement === e.target && activeEl.tagName === "SUMMARY")) hide();
+    }
   }, true);
   document.addEventListener("lixity:viewchange", hide);
   document.addEventListener("lixity:workbench-change", hide);

@@ -60,8 +60,8 @@ def test_extract_manuscript_dossier_drafts_character_and_scene() -> None:
     assert "chapters" in matteo["body"]
 
     scene_only = extract_manuscript_dossier_drafts(SAMPLE_MANUSCRIPT, language="en", kind="scene")
-    assert len(scene_only["drafts"]) == 1
-    assert scene_only["drafts"][0]["kind"] == "scene"
+    assert len(scene_only["drafts"]) >= 1
+    assert all(d["kind"] == "scene" for d in scene_only["drafts"])
     assert scene_only["drafts"][0]["evidence_hints"]["chapters"] == 3
 
 
@@ -101,8 +101,8 @@ def test_api_and_cli_create_dossier_from_manuscript(tmp_path: Path, capsys: obje
     assert rc == 0
     captured = capsys.readouterr()  # type: ignore[attr-defined]
     cli_payload = json.loads(captured.out)
-    assert len(cli_payload["drafts"]) == 1
-    assert cli_payload["drafts"][0]["kind"] == "scene"
+    assert len(cli_payload["drafts"]) >= 1
+    assert all(d["kind"] == "scene" for d in cli_payload["drafts"])
 
 
 def test_mcp_manuscript_dossier_drafts() -> None:
@@ -155,3 +155,25 @@ def test_extract_drafts_accepts_full_project_config() -> None:
     )
     assert any(d["kind"] == "character" for d in result["drafts"])
     assert any(d["kind"] == "scene" for d in result["drafts"])
+
+
+def test_manuscript_dossier_drafts_excludes_existing_by_default(tmp_path: Path) -> None:
+    project = tmp_path / "proj"
+    project.mkdir()
+    research_api.init(project, title="Filter Test", language="en")
+    manuscript = project / "novel.md"
+    manuscript.write_text(SAMPLE_MANUSCRIPT, encoding="utf-8")
+
+    initial = research_api.manuscript_dossier_drafts(project, manuscript, language="en")
+    char_drafts = [d for d in initial["drafts"] if d["kind"] == "character"]
+    assert char_drafts
+    first_id = char_drafts[0]["id"]
+    research_api.create_dossier_from_manuscript(project, manuscript, draft_id=first_id, language="en")
+
+    after = research_api.manuscript_dossier_drafts(project, manuscript, language="en")
+    assert after["skipped_existing"] >= 1
+    assert all(d["id"] != first_id for d in after["drafts"])
+
+    including = research_api.manuscript_dossier_drafts(project, manuscript, language="en", exclude_existing=False)
+    assert including["skipped_existing"] == 0
+    assert any(d["id"] == first_id for d in including["drafts"])

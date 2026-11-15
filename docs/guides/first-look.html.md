@@ -44,7 +44,7 @@ Neutral dotted marks and a book-icon **Research** count identify saved research 
 
 Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
 
-Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](../WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
+Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
 ## 3. Follow a quotation into research
 
@@ -62,7 +62,7 @@ Someone had tried the eastern gate of Warehouse 4.
 
 In [**Research → Dossiers**](../demo/report.html#research-manager), open **Warehouse 4 case notes**. Its **Sections** list follows the actual headings; close and reopen it as needed. Choose **Dossier alongside** to keep the dossier beside the manuscript.
 
-From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](../WORKSPACE.md#reading-paragraphs) covers controls and keyboard shortcuts.
+From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers controls and keyboard shortcuts.
 
 People, events and journeys are fictional. The historical images do not verify them. Maps in this website use local sketches and geographic shapes without requesting online map tiles. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
@@ -78,7 +78,7 @@ Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above th
 
 - [Standalone companion:](../demo/companion/index.html) explore those selected notes while reading the novel elsewhere.
 
-A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Unreleased:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](../WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Unreleased:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
 
@@ -100,16 +100,16 @@ On current main (unreleased), the local audio dialog separates four tasks: **Aut
 
 The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See [recording and troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
 
-In **Listen & direct → Export direction**, prepare JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. **Generate audio** uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](../AUDIO.md#audio-export-and-external-providers-unreleased) for setup and limits.
+In **Listen & direct → Export direction**, prepare JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. **Generate audio** uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased) for setup and limits.
 
 Read a passage in the **Teleprompter** (`P`), record a take and edit the words actually spoken. WAV plus JSON export preserves the audio hash and whether the transcript is missing, a draft or confirmed. Sending the take to **Author voice** opens a review; it does not save automatically.
 
-**Optional IMS-Toucan, unreleased:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](../INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+**Optional IMS-Toucan, unreleased:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
-In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](../WORKSPACE.md#inspect-project-structure).
+In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
 
-Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](../LICENSING.md).
+Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 
-Continue with the [workspace manual](../WORKSPACE.md), [CLI reference](../USAGE.md) or [complete documentation map](../README.md).
+Continue with the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md), [CLI reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) or [complete documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md).
 
-[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

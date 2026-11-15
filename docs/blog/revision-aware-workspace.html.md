@@ -52,6 +52,6 @@ For us, the next milestone is a recoverable revision session: an author can writ
 
 The released reading workflow can already be explored without an account or manuscript upload. The demo uses a fictional harbour manuscript with linked research notes.
 
-[Explore the read-only Lixity workspace](../demo/report.html) [Review the editor's development scope](../WORKSPACE.md#write-a-manuscript-unreleased) [Source code](https://github.com/mfahsold/lixity)
+[Explore the read-only Lixity workspace](../demo/report.html) [Review the editor's development scope](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased) [Source code](https://github.com/mfahsold/lixity)
 
-[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](../LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)
+[All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

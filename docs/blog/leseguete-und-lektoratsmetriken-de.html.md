@@ -97,4 +97,4 @@ oder den
 
 direkt im Browser.
 
-[Alle Leitfäden](../index-de.html#guides)[Artikel](../blog/index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](../LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)
+[Alle Leitfäden](../index-de.html#guides)[Artikel](../blog/index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

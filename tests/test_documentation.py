@@ -493,6 +493,25 @@ class TestDocumentation(unittest.TestCase):
                         broken.append(f"{where}#{anchor}")
             self.assertEqual(broken, [], f"Broken links in the published site: {broken}")
 
+            raw_md_hrefs: list[str] = []
+            for html_file in sorted(
+                [*output.glob("index*.html"), *(output / "guides").glob("*.html"), *(output / "blog").glob("*.html")]
+            ):
+                html_text = html_file.read_text(encoding="utf-8")
+                raw_md_hrefs.extend(
+                    f"{html_file.relative_to(output)} -> {m.group(1)}"
+                    for m in re.finditer(
+                        r'''<a\b[^>]*\bhref=["'](?!https?://|mailto:|#)([^"'#?]+\.md)(?:[#?][^"']*)?["']''',
+                        html_text,
+                        re.IGNORECASE,
+                    )
+                )
+            self.assertEqual(
+                raw_md_hrefs,
+                [],
+                f"GitHub Pages HTML pages must not link to raw .md files: {raw_md_hrefs}",
+            )
+
     def test_repository_root_documents_are_linked_by_absolute_url(self):
         """Nothing outside docs/ is published, so cross-references must be absolute."""
         root_docs = {"README.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "CHANGELOG.md"}
