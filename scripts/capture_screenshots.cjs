@@ -471,7 +471,7 @@ async function main() {
         await save(capture.target);
       }
     }
-    for (const capture of captures.filter(item => item.video)) {
+    await Promise.all(captures.filter(item => item.video).map(async capture => {
       const context = await browser.newContext({
         viewport: {width: capture.width, height: capture.height},
         reducedMotion: 'reduce',
@@ -919,7 +919,7 @@ async function main() {
       await context.close();
       fs.copyFileSync(await video.path(), capture.videoTarget);
       results.push({video: path.basename(capture.videoTarget), bytes: fs.statSync(capture.videoTarget).size});
-    }
+    }));
     const base = path.dirname(captures[0].source);
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(base, 'capture-results.json'), JSON.stringify(results, null, 2));

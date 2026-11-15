@@ -17,6 +17,7 @@ local and CI runs stay aligned.
 import argparse
 import concurrent.futures
 import fnmatch
+import os
 import shlex
 import shutil
 import subprocess
@@ -363,14 +364,19 @@ def report_durations(timings: list[tuple[str, float]], limit: int) -> None:
 
 
 _SLOW_SUITES_ORDER = (
+    "settings.cjs",
+    "visual-consistency.cjs",
     "scroll-regions.cjs",
-    "docs.cjs",
+    "research.cjs",
+    "analysis-overview.cjs",
+    "reader-toolbar.cjs",
+    "analysis-navigation.cjs",
     "project-controls.cjs",
+    "scenes.cjs",
+    "docs.cjs",
     "manuscript-reader.cjs",
     "manuscript-links.cjs",
     "analysis-evidence.cjs",
-    "analysis-navigation.cjs",
-    "analysis-overview.cjs",
 )
 
 
@@ -431,9 +437,9 @@ def main() -> int:
     parser.add_argument(
         "--jobs",
         type=int,
-        default=1,
+        default=min(8, max(2, (os.cpu_count() or 4) // 2)),
         metavar="N",
-        help="Run N independent suites in parallel (default: 1)",
+        help="Run N independent suites in parallel (default: cpu_count // 2, clamped to 2..8)",
     )
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
     parser.add_argument(

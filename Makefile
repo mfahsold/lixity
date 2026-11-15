@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build release-check release-prepare screenshots videos examples clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build release-check release-prepare screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -7,7 +7,7 @@ RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
-BROWSER_JOBS ?= 4
+BROWSER_JOBS ?= $(shell nproc 2>/dev/null | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}' || echo 4)
 PYTEST_ARGS ?= -n auto
 
 help: ## Show this help
@@ -80,6 +80,8 @@ examples: ## Regenerate the published example reports and their PDFs
 
 brand-assets: ## Regenerate multi-size/multi-format brand icons and favicon from docs/assets/mark.svg
 	$(PYTHON) scripts/build_brand_assets.py
+
+media: brand-assets screenshots videos examples ## Regenerate all brand assets, screenshots, videos and published examples
 
 docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
 	$(PYTHON) scripts/sync_docs.py --check

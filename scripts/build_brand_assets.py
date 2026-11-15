@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -24,40 +26,55 @@ def main() -> int:
     magick = _magick_bin()
     BRAND_DIR.mkdir(parents=True, exist_ok=True)
 
-    png_sizes = (16, 32, 48, 64, 192, 512, 1024)
-    for size in png_sizes:
-        out = BRAND_DIR / f"icon-{size}.png"
-        subprocess.run(  # noqa: S603 -- trusted magick binary and internal repo Paths
-            [
-                magick,
-                "-background",
-                "none",
-                "-density",
-                "384",
-                str(SRC_SVG),
-                "-resize",
-                f"{size}x{size}",
-                str(out),
-            ],
-            check=True,
-        )
-
-    # Apple Touch Icon requires an opaque background so iOS does not render black corners.
+    master_png = BRAND_DIR / "icon-1024.png"
+    # mark.svg uses viewBox="0 0 32 32"; 3072 DPI (= 96 * 1024 / 32) rasterizes it
+    # at exact native 1024x1024 vector resolution without upscaling blur.
     subprocess.run(  # noqa: S603 -- trusted magick binary and internal repo Paths
         [
             magick,
             "-background",
-            "#2949cc",
+            "none",
             "-density",
-            "384",
+            "3072",
             str(SRC_SVG),
-            "-flatten",
             "-resize",
-            "180x180",
-            str(BRAND_DIR / "apple-touch-icon.png"),
+            "1024x1024",
+            str(master_png),
         ],
         check=True,
     )
+
+    png_sizes = (16, 32, 48, 64, 192, 512)
+    commands: list[list[str]] = [
+        [
+            magick,
+            str(master_png),
+            "-filter",
+            "Lanczos",
+            "-resize",
+            f"{size}x{size}",
+            str(BRAND_DIR / f"icon-{size}.png"),
+        ]
+        for size in png_sizes
+    ]
+    # Apple Touch Icon requires an opaque background so iOS does not render black corners.
+    commands.append(
+        [
+            magick,
+            "-background",
+            "#2949cc",
+            str(master_png),
+            "-flatten",
+            "-filter",
+            "Lanczos",
+            "-resize",
+            "180x180",
+            str(BRAND_DIR / "apple-touch-icon.png"),
+        ]
+    )
+    with ThreadPoolExecutor(max_workers=min(len(commands), max(1, os.cpu_count() or 2))) as pool:
+        for future in [pool.submit(subprocess.run, cmd, check=True) for cmd in commands]:
+            future.result()
 
     # Multi-resolution ICO fallback (16, 32, 48).
     subprocess.run(  # noqa: S603 -- trusted magick binary and internal repo Paths

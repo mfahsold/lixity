@@ -21,8 +21,10 @@ example grows beyond a size the site should ship.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -189,32 +191,63 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
     return page, target
 
 
-def main() -> int:
-    demo = build_demo(ROOT)
-    outputs: list[tuple[Path, str]] = [
+def _task_build_demo(root: Path) -> list[tuple[Path, str]]:
+    demo = build_demo(root)
+    items: list[tuple[Path, str]] = [
         (demo, f"{demo.stat().st_size:,} bytes"),
-        (ROOT / "LICENSE", ""),
+        (root / "LICENSE", ""),
     ]
     for mode in ("reader", "companion"):
-        page = ROOT / f"docs/demo/{mode}/index.html"
-        outputs.append((page, f"{page.stat().st_size:,} bytes"))
-    for example in EXAMPLES:
-        page, pdf = build_classic(ROOT, example)
-        outputs.append((page, f"{page.stat().st_size:,} bytes"))
-        outputs.append((pdf, f"{pdf.stat().st_size:,} bytes"))
+        page = root / f"docs/demo/{mode}/index.html"
+        items.append((page, f"{page.stat().st_size:,} bytes"))
+    return items
+
+
+def _task_build_classic(root: Path, example: ClassicExample) -> list[tuple[Path, str]]:
+    page, pdf = build_classic(root, example)
+    return [
+        (page, f"{page.stat().st_size:,} bytes"),
+        (pdf, f"{pdf.stat().st_size:,} bytes"),
+    ]
+
+
+def _task_build_layout(
+    root: Path, text: str, example: ClassicExample, layout: str
+) -> list[tuple[Path, str]]:
+    target = root / f"docs/examples/{example.slug}-{layout}.pdf"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(
+        compose_pdf(
+            text,
+            manuscript=example.source,
+            layout=layout,
+            language=example.language,
+            title=example.title,
+            author=example.author,
+            project_config={},
+        )
+    )
+    return [(target, f"{target.stat().st_size:,} bytes")]
+
+
+def main() -> int:
     example = EXAMPLES[0]
     text = excerpt((ROOT / example.source).read_text(encoding="utf-8"), example.chapters)
     first_chapter = re.search(r"(?m)^##\s+", text)
     _require(first_chapter is not None, "the manuscript PDF example needs a chapter opening")
     # This curated excerpt starts at chapter one; entered title/author supply its cover.
     text = text[first_chapter.start():] if first_chapter is not None else text
-    for layout in ("editor", "book", "sheet"):
-        target = ROOT / f"docs/examples/{example.slug}-{layout}.pdf"
-        target.write_bytes(compose_pdf(
-            text, manuscript=example.source, layout=layout, language=example.language,
-            title=example.title, author=example.author, project_config={},
-        ))
-        outputs.append((target, f"{target.stat().st_size:,} bytes"))
+
+    workers = min(6, max(1, os.cpu_count() or 2))
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        futures = [
+            pool.submit(_task_build_demo, ROOT),
+            *(pool.submit(_task_build_classic, ROOT, item) for item in EXAMPLES),
+            *(pool.submit(_task_build_layout, ROOT, text, example, layout) for layout in ("editor", "book", "sheet")),
+        ]
+        outputs: list[tuple[Path, str]] = []
+        for future in futures:
+            outputs.extend(future.result())
     for path, size in outputs:
         if size:
             print(f"{path.relative_to(ROOT)}: {size}")
