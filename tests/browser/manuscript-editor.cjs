@@ -36,17 +36,23 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');
     await page.locator('#manuscript-undo').focus();
     assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
-    await page.locator('#manuscript-read').focus();
-    assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true', 'Buttons without distinct help or shortcuts do not open redundant echo tooltips');
-    await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
-    await page.keyboard.type('New sentence.');
+    assert.equal(await page.locator('#manuscript-read').count(), 0, 'Consolidated Read & Refresh button is removed');
+    // Closing without edits returns to reading immediately and restores focus.
     await page.locator('#manuscript-close').click();
     await page.waitForFunction(() => !document.body.classList.contains('manuscript-writing'));
     assert.equal(await page.locator('#manuscript-editor').isHidden(), true, 'Close writing hides the editor section');
     assert.equal(await page.locator('#manuscript-close').isHidden(), true, 'Close writing hides itself');
     assert.equal(await page.locator('#manuscript-write').isVisible(), true, 'Close writing restores the Write button');
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'manuscript-write', 'Close writing returns focus to #manuscript-write');
+    // Closing after edits flushes pending changes and reloads the reading view.
+    await page.locator('#manuscript-write').click();
+    await page.locator('.cm-content').waitFor();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type('New sentence.');
+    await Promise.all([page.waitForNavigation(), page.locator('#manuscript-close').click()]);
+    await page.locator('#chapters').waitFor();
+    assert.match(await page.locator('#chapters').innerText(), /New sentence\./);
     assert.match(fs.readFileSync(source, 'utf8'), /New sentence/, 'Close writing flushes dirty text before returning');
     await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); window.LixityChrome.hide(); });
     assert.equal(await page.evaluate(() => document.body.classList.contains('chrome-autohidden')), true, 'Auto-hidden chrome hides reader controls');
@@ -54,9 +60,9 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.equal(await page.evaluate(() => document.body.classList.contains('chrome-autohidden')), false, 'Clicking prose reveals auto-hidden reader navigation');
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').click();
+    await page.keyboard.type(' Temp.');
     await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-    assert.doesNotMatch(fs.readFileSync(source, 'utf8'), /New sentence/, 'Undo history survives closing and reopening Write mode');
+    assert.doesNotMatch(await page.locator('.cm-content').innerText(), /Temp\./, 'Undo reverts typed text in Write mode');
     fs.writeFileSync(source, '# External\n\nChanged elsewhere.\n');
     await page.keyboard.type('My retained draft.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'conflict');
@@ -101,77 +107,26 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.keyboard.press('Control+End');
     await page.keyboard.type(' Read cycle.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-    const cycleText = fs.readFileSync(source, 'utf8');
     assert.equal(await page.locator('#manuscript-analysis-freshness').isVisible(), true, 'The original workspace must label its stale analysis after editing');
-    await page.locator('#manuscript-read').click();
-    const reading = page.frameLocator('#manuscript-reading-frame');
-    await reading.locator('body[data-editor-revision]').waitFor();
-    assert.match(await reading.locator('#chapters').innerText(), /Read cycle/);
-    assert.equal(await reading.locator('html').evaluate(el => getComputedStyle(el).colorScheme), await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme));
-    assert.equal(await reading.locator('#project-actions').isVisible(), false);
-    assert.equal(await reading.locator('.workspace-shell-header').isVisible(), false, 'Disposable reading frame hides duplicate app brand header');
-    assert.equal(await reading.locator('.workspace-shell .project-header').isVisible(), false, 'Disposable reading frame hides duplicate project metadata');
-    assert.equal(await reading.locator('.workspace-product-details').isVisible(), false, 'Disposable reading frame hides duplicate version/license chrome');
-    assert.doesNotMatch(await page.locator('#manuscript-reading-status').textContent(), /[0-9a-f]{12}/i, 'Saved revision reader status does not expose raw SHA-256 hex');
-    await page.locator('#manuscript-review-links').click();
-    await reading.locator('.manuscript-link-review-item').first().waitFor();
-    assert.match(await reading.locator('.manuscript-link-review-item').first().innerText(), /A quiet morning beside the river/);
-    await reading.locator('[data-view=analysis]').click();
-    assert.equal(await reading.locator('[data-view=project]').isVisible(), false);
-    await page.locator('#manuscript-return-write').click();
-    await page.waitForFunction(() => document.activeElement.closest('.cm-content'));
+    await Promise.all([page.waitForNavigation(), page.locator('#manuscript-close').click()]);
+    await page.locator('#chapters').waitFor();
+    assert.match(await page.locator('#chapters').innerText(), /Read cycle/);
+    assert.equal(await page.locator('#manuscript-editor').isHidden(), true, 'Closing write mode after edits returns to the refreshed reading view');
+    assert.equal(await page.locator('#manuscript-write').isVisible(), true);
+    assert.equal(await page.locator('#manuscript-analysis-freshness').isHidden(), true, 'Reloaded analysis is fresh after closing write mode');
+    await page.locator('#manuscript-write').click();
+    await page.locator('.cm-content').waitFor();
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('Control+End');
     await page.keyboard.type(' Cursor kept.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-    assert.ok(fs.readFileSync(source, 'utf8').endsWith(' Read cycle. Cursor kept.'), 'Unscrolled reading preserves the exact insertion point');
-    await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-    await page.keyboard.press('Control+z');
-    await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-    assert.notEqual(fs.readFileSync(source, 'utf8'), cycleText, 'Undo survives reading/analysis without a new editor instance');
-    assert.doesNotMatch(fs.readFileSync(source, 'utf8'), /Read cycle/);
-    for (const failValidation of [false, true]) {
-      // An old validation response must not conflict with our own newer save.
-      await page.locator('#manuscript-read').click();
-      await reading.locator('body[data-editor-revision]').waitFor();
-      let releaseValidation, validationCaptured;
-      const held = new Promise(resolve => {releaseValidation = resolve;});
-      const captured = new Promise(resolve => {validationCaptured = resolve;});
-      await page.route('**/manuscript-edit', async route => {
-        if (route.request().method() !== 'GET') return route.continue();
-        const response = await route.fetch(); validationCaptured(); await held;
-        await route.fulfill(failValidation ? {status:500, contentType:'application/json', body:JSON.stringify({ok:false,message:'Synthetic delayed failure'})} : {response});
-      });
-      if (failValidation) {
-        await reading.locator('#chapters').click();
-        await page.keyboard.press('Escape');
-        assert.equal(await page.locator('#manuscript-reading').evaluate(el => el.open), true, 'Reader owns Escape inside prose');
-        for (let tabs = 0; tabs < 40 && await page.evaluate(() => document.activeElement.id !== 'manuscript-return-write'); tabs++) {
-          await page.keyboard.press('Shift+Tab');
-        }
-        assert.equal(await page.evaluate(() => document.activeElement.id), 'manuscript-return-write', 'Return action is reachable by keyboard from the reader');
-        await page.keyboard.press('Escape');
-        await page.waitForFunction(() => !document.querySelector('#manuscript-reading').open);
-      } else await page.locator('#manuscript-return-write').click();
-      await captured;
-      await page.locator('.cm-content').focus();
-      await page.keyboard.press('Control+End');
-      await page.keyboard.type(' Newer save.');
-      await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
-      const delayed = page.waitForResponse(response => response.url().endsWith('/manuscript-edit') && response.request().method() === 'GET');
-      releaseValidation(); await delayed;
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      assert.equal(await page.locator('#manuscript-save-status').getAttribute('data-state'), 'saved');
-      await page.unroute('**/manuscript-edit');
-    }
-    // A source edit while the reader is open must not replace the live buffer.
-    await page.locator('#manuscript-read').click();
-    await reading.locator('body[data-editor-revision]').waitFor();
     await page.screenshot({path: path.join(root, 'reading-desktop.png')});
     await page.setViewportSize({width:390, height:844});
     await page.screenshot({path: path.join(root, 'reading-mobile.png')});
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     fs.writeFileSync(source, '# Externally revised while reading\n');
-    await page.locator('#manuscript-return-write').click();
+    await page.locator('.cm-content').click();
+    await page.keyboard.type(' My retained draft.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'conflict');
     assert.match(await page.locator('.cm-content').innerText(), /My retained draft/);
     assert.equal(fs.readFileSync(source, 'utf8'), '# Externally revised while reading\n');

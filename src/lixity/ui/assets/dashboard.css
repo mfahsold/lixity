@@ -1175,11 +1175,14 @@ their document layout. The same native shell is used by the public demo. */
 /* Window and reading commands keep their targets while yielding emphasis to
 selected destinations, display state and explicit primary save actions. */
 .workspace-shell .workspace-bar button.ctl:not(.primary),
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]),
 .manuscript-reader-controls .reader-controls > button.ctl,
 .manuscript-reader-controls .reader-settings > summary { background: transparent; border-color: transparent; color: var(--fg-secondary); }
-.workspace-shell .workspace-bar button.ctl:not(.primary) { text-align: start; }
+.workspace-shell .workspace-bar button.ctl:not(.primary),
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl { justify-content: flex-start; text-align: start; padding-inline: .75rem; gap: .55rem; font-weight: 500; }
 .workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl:hover,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
 .manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
 .manuscript-reader-controls .reader-settings > summary:hover { background: var(--surface-hover); border-color: var(--line-strong); color: var(--fg); }
@@ -1193,10 +1196,11 @@ body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; min-height: 3rem; padding-inline: 1rem; }
 .lixity-workspace .view-nav-tab.active { box-shadow: 0 4px 12px color-mix(in srgb, var(--action-bg) 20%, transparent); }
 .lixity-workspace .workspace-actions { border-top: 1px solid var(--line); padding-top: .5rem; }
-.lixity-workspace .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr); padding: .5rem 0 0; border: 0; border-radius: 0; gap: 1rem; }
-.lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
+.lixity-workspace .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr); padding: .5rem 0 0; border: 0; border-radius: 0; gap: .65rem; }
+.lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+.lixity-workspace .workspace-bar > .row #btn-site-export { margin-top: .25rem; }
 .lixity-workspace .workspace-bar .ctl { max-width: 100%; white-space: normal; }
-.lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; }
+.lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; border-top: 1px solid var(--line); padding-top: .5rem; }
 .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
 .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
 .has-workspace-navigation .workspace-navigation-toggle { display: inline-flex; position: absolute; top: 0; left: 0; width: 2.75rem; height: 2.75rem; min-width: 2.75rem; padding: 0; align-items: center; justify-content: center; border-color: transparent; background: transparent; color: var(--fg-secondary); }

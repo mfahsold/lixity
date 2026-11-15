@@ -139,7 +139,10 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 .manuscript-pdf { min-width: 0; }
-.manuscript-pdf > summary { cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
+.manuscript-pdf > summary { display: flex; align-items: center; gap: .5rem; list-style: none; cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
+.manuscript-pdf > summary::-webkit-details-marker { display: none; }
+.manuscript-pdf > summary::before { content: ""; width: .45rem; height: .45rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--dur-fast) var(--ease-out); flex: 0 0 auto; opacity: .75; }
+.manuscript-pdf[open] > summary::before { transform: rotate(45deg); }
 .manuscript-pdf[open] > summary { margin-bottom: var(--space-3); }
 .manuscript-pdf > .ctl-note { margin-top: var(--space-2); }
 .manuscript-pdf-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
@@ -1998,11 +2001,14 @@ their document layout. The same native shell is used by the public demo. */
 /* Window and reading commands keep their targets while yielding emphasis to
 selected destinations, display state and explicit primary save actions. */
 .workspace-shell .workspace-bar button.ctl:not(.primary),
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]),
 .manuscript-reader-controls .reader-controls > button.ctl,
 .manuscript-reader-controls .reader-settings > summary { background: transparent; border-color: transparent; color: var(--fg-secondary); }
-.workspace-shell .workspace-bar button.ctl:not(.primary) { text-align: start; }
+.workspace-shell .workspace-bar button.ctl:not(.primary),
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl { justify-content: flex-start; text-align: start; padding-inline: .75rem; gap: .55rem; font-weight: 500; }
 .workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
+.workspace-shell .workspace-bar .manuscript-pdf > summary.ctl:hover,
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
 .manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
 .manuscript-reader-controls .reader-settings > summary:hover { background: var(--surface-hover); border-color: var(--line-strong); color: var(--fg); }
@@ -2016,10 +2022,11 @@ body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; min-height: 3rem; padding-inline: 1rem; }
 .lixity-workspace .view-nav-tab.active { box-shadow: 0 4px 12px color-mix(in srgb, var(--action-bg) 20%, transparent); }
 .lixity-workspace .workspace-actions { border-top: 1px solid var(--line); padding-top: .5rem; }
-.lixity-workspace .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr); padding: .5rem 0 0; border: 0; border-radius: 0; gap: 1rem; }
-.lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
+.lixity-workspace .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr); padding: .5rem 0 0; border: 0; border-radius: 0; gap: .65rem; }
+.lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+.lixity-workspace .workspace-bar > .row #btn-site-export { margin-top: .25rem; }
 .lixity-workspace .workspace-bar .ctl { max-width: 100%; white-space: normal; }
-.lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; }
+.lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; border-top: 1px solid var(--line); padding-top: .5rem; }
 .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
 .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
 .has-workspace-navigation .workspace-navigation-toggle { display: inline-flex; position: absolute; top: 0; left: 0; width: 2.75rem; height: 2.75rem; min-width: 2.75rem; padding: 0; align-items: center; justify-content: center; border-color: transparent; background: transparent; color: var(--fg-secondary); }
@@ -5608,6 +5615,12 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       document.addEventListener("pointerdown", function (event) {
         if (event.target && event.target.closest && event.target.closest(CHROME_SELECTOR)) {
           show();
+        } else if (
+          hidden &&
+          event.target && event.target.closest &&
+          event.target.closest("#chapters, #manuscript-reading")
+        ) {
+          show();
         } else {
           scheduleIdle();
         }
@@ -8621,6 +8634,22 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
   welcomeShow.addEventListener("click", function() {
     setWelcomeVisible(true, true);
     try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
+  });
+}
+if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
+  [
+    ["btn-modal-new-project", "file-text"],
+    ["btn-modal-open-project", "folder-open"],
+    ["btn-site-export", "share-2"],
+    ["welcome-show", "help-circle"]
+  ].forEach(function (entry) {
+    var el = document.getElementById(entry[0]);
+    if (!el || el.querySelector(".lixity-icon-slot")) return;
+    var slot = document.createElement("span");
+    slot.className = "lixity-icon-slot";
+    slot.setAttribute("aria-hidden", "true");
+    slot.innerHTML = window.LixityIcons.svg(entry[1], { size: 15 });
+    el.prepend(slot);
   });
 }
 (function initManuscriptPdf() {

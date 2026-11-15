@@ -782,6 +782,22 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
   });
 }
+if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
+  [
+    ["btn-modal-new-project", "file-text"],
+    ["btn-modal-open-project", "folder-open"],
+    ["btn-site-export", "share-2"],
+    ["welcome-show", "help-circle"]
+  ].forEach(function (entry) {
+    var el = document.getElementById(entry[0]);
+    if (!el || el.querySelector(".lixity-icon-slot")) return;
+    var slot = document.createElement("span");
+    slot.className = "lixity-icon-slot";
+    slot.setAttribute("aria-hidden", "true");
+    slot.innerHTML = window.LixityIcons.svg(entry[1], { size: 15 });
+    el.prepend(slot);
+  });
+}
 (function initManuscriptPdf() {
   var form = document.getElementById("manuscript-pdf-form");
   if (!form) return;

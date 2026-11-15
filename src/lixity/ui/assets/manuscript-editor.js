@@ -122,9 +122,7 @@
   const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl primary'});
   const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
   const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
-  const readBtn = button(text(1), 'manuscript-read', read, null, {icon: 'book-open'});
   historyGroup.append(undoBtn, redoBtn);
-  contextGroup.append(readBtn);
   statusGroup.append(status, retry, closeButton);
   const readingLabels = {
     en: ['Back to writing', 'Reading saved revision', 'Could not open this revision. Return to writing and retry.', 'Source changed while reading. Your editor text is preserved; review before saving.'],
@@ -237,7 +235,7 @@
     return {from, to: from + quote.length};
   }
   reading.addEventListener('close', async () => {
-    closingRead = true; document.getElementById('manuscript-read').disabled = true;
+    closingRead = true; const rBtn = document.getElementById('manuscript-read'); if (rBtn) rBtn.disabled = true;
     const validatingRevision = snapshot.revision, validatingGeneration = generation;
     // Retain the editor's selection/history. Only map the reader position when
     // it is still displaying the exact revision opened by this editor.
@@ -261,7 +259,7 @@
         if (selected.invalid || !editor.selectRange(selected.from, selected.to)) show('saved', exitWords[2]);
       } else if (visibleLine !== null) editor.line(visibleLine);
     } catch (error) {if (generation === validatingGeneration && snapshot.revision === validatingRevision) {paused = true; show('error', error.message);}}
-    finally {closingRead = false; document.getElementById('manuscript-read').disabled = paused || inflight; editor.focus();}
+    finally {closingRead = false; const rBtn2 = document.getElementById('manuscript-read'); if (rBtn2) rBtn2.disabled = paused || inflight; editor.focus();}
   });
   const reload = button(text(1), 'manuscript-reload', () => {if (dirty) download(); location.reload();}, null, {icon: 'rotate-cw'});
   reload.hidden = true;
@@ -458,8 +456,6 @@
     status.dataset.state = state; status.textContent = message;
     if (changed && window.LixityMotion && window.LixityMotion.status) window.LixityMotion.status(status);
     retry.hidden = state === 'saved' || state === 'saving';
-    readBtn.disabled = paused || inflight || closingRead;
-    readBtn.hidden = paused;
     reload.hidden = !paused;
   }
   let latestTimeline = [];
@@ -656,7 +652,7 @@
       show(dirty ? 'unsaved' : 'saved', text(dirty ? 6 : 5));
       refreshPulse().catch(() => {});
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
-    finally {inflight = false; document.getElementById('manuscript-read').disabled = paused || closingRead;
+    finally {inflight = false; const rBtn = document.getElementById('manuscript-read'); if (rBtn) rBtn.disabled = paused || closingRead;
       if (dirty && !paused) timer = setTimeout(flush, 800);}
   }
   function download() {
@@ -713,9 +709,13 @@
   }
   async function close() {
     if (reading.open || comparison.open) return;
-    if (inflight) return;
+    while (inflight) await new Promise(resolve => setTimeout(resolve, 25));
     if (dirty && !paused) await flush();
     if (paused) return;
+    if (snapshot && snapshot.revision !== document.body.dataset.manuscriptSourceSha256) {
+      location.reload();
+      return;
+    }
     // Keep the mounted editor and its undo history; only leave the writing surface.
     section.hidden = true; document.body.classList.remove('manuscript-writing');
     dockCompanionTools(false);

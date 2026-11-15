@@ -20,7 +20,10 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 .manuscript-pdf { min-width: 0; }
-.manuscript-pdf > summary { cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
+.manuscript-pdf > summary { display: flex; align-items: center; gap: .5rem; list-style: none; cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
+.manuscript-pdf > summary::-webkit-details-marker { display: none; }
+.manuscript-pdf > summary::before { content: ""; width: .45rem; height: .45rem; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform var(--dur-fast) var(--ease-out); flex: 0 0 auto; opacity: .75; }
+.manuscript-pdf[open] > summary::before { transform: rotate(45deg); }
 .manuscript-pdf[open] > summary { margin-bottom: var(--space-3); }
 .manuscript-pdf > .ctl-note { margin-top: var(--space-2); }
 .manuscript-pdf-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
