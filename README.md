@@ -36,8 +36,8 @@ the browser app, CLI, and Python API, which share one deterministic engine.
   client's data handling is separate from Lixity's local engine. Choose the
   material to include when exporting a reading copy.
 
-**Manuscript editing is unreleased.** The development checkout adds an editor
-with multi-level undo, local autosave, conflict detection and recovery, and
+**Manuscript editing is included in 0.8.1.** The native editor provides
+multi-level undo, local autosave, conflict detection and recovery, and
 search/replace. Switching between writing and reading re-analyzes the saved
 revision while preserving the undo stack and editing buffer. Research links
 remain reviewable across text revisions; saved evidence is never silently
@@ -69,8 +69,8 @@ return to the scene and decide whether you would keep it.
 The public demo follows six invented English harbour chapters and their linked
 case notes. It needs no account or manuscript upload. It is a fixed, read-only
 copy: importing, recording, changing settings and saving require the local app.
-The demo and these docs follow current development; features labelled
-**unreleased** may differ from your installed package.
+The demo is a fixed snapshot of the 0.8.1 workspace. Install the matching release
+for native writing, imports and saved project changes.
 
 For linguistic work, follow the [browser workflow](https://mfahsold.github.io/lixity/WORKSPACE.md#explore-language-in-the-browser)
 or the [reproducible CLI workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis),
@@ -82,8 +82,8 @@ Keep manuscript prose, research, and project settings together as you move
 between reading, comparison, research, and sharing:
 
 - **Read and review passages:** read continuous prose, search, and place work
-  markers. The development checkout also supports manuscript editing
-  (**unreleased**). Use the teleprompter to rehearse a passage aloud.
+  markers. The native manuscript editor supports writing, local autosave and
+  reviewed recovery. Use the teleprompter to rehearse a passage aloud.
 - **Compare prose patterns:** explore sentence lengths, dialogue balance,
   repeated words, and heuristic signals for scene pacing, sensory language,
   tense, and character voices. Compare chapters or drafts (`lixity diff`),
@@ -107,8 +107,8 @@ between reading, comparison, research, and sharing:
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |
 | Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
-| Back up a saved project (unreleased) | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
-| Edit manuscript prose (unreleased) | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
+| Back up a saved project | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
+| Edit manuscript prose | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
 | Audit pacing, dialogue, and showing with AI | `lixity mcp` stdio server with read-only tools and structured prompts | Lixity's analysis runs offline; review the connected AI client's data handling before supplying manuscript text. |
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
 | Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |

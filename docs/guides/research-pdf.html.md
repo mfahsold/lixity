@@ -32,7 +32,7 @@ lixity research search --project ./sample-project --query "reading room"
 
 `--allow-retention` confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.
 
-For an authorized file outside Zotero, open **Research → Sources → Add local source** in the current development workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. The local importer remains available alongside Zotero in current development; released versions may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
+For an authorized file outside Zotero, open **Research → Sources → Add local source** in the 0.8.1 workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. In 0.8.1, the local importer remains available alongside Zotero; earlier releases may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
@@ -46,7 +46,7 @@ Matching URLs do not merge sources. Refreshing a named source with a new URL cre
 
 Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
 
-Run Zotero on the same computer and download the attachments you need. Open **Research → Sources → Capture from Zotero** in the current development workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Run Zotero on the same computer and download the attachments you need. Open **Research → Sources → Capture from Zotero** in the 0.8.1 workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
@@ -66,7 +66,7 @@ Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboar
 
 ## Search sources and current notes
 
-In the development workspace, **Search research** opens a shared tool above the selected research content. It includes retained source passages and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
+In the 0.8.1 workspace, **Search research** opens a shared tool above the selected research content. It includes retained source passages and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
 
 For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search research → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
 

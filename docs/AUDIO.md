@@ -7,9 +7,9 @@ the audio workflow in both the local browser app and the CLI. The
 [CLI reference](USAGE.md) cover the surrounding project workflow; install models
 and workers through [Installation](INSTALLATION.md#optional-qwen-audio-worker).
 
-The workflows below are available in 0.8.0; optional workers and models still
-require their documented setup. Later source-only additions are marked
-**unreleased** and are not a promise about an installed package. Check
+The workflows below are available in 0.8.1; optional workers and models still
+require their documented setup. Experimental adapters retain their stated
+capabilities and limits. Check
 `lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
 numbers are independent of the application version.
 

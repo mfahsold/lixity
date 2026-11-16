@@ -382,7 +382,9 @@ reference and one converter, not a general result. Transcript accuracy, accent
 and speaker identity are not measured. The converter mainly changes timbre; the
 phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
 
-### Chapter audio comparison limits (unreleased)
+<a id="chapter-audio-comparison-limits-unreleased"></a>
+
+### Chapter audio comparison limits
 
 `audio-inspect` and `audio-verify` add local chapter-level observations and
 optional plan/transcript comparison; [METHODS](METHODS.md#13-chapter-audio-audit-unreleased)
@@ -649,7 +651,9 @@ variation. Each sparkline has its own scale: equal bar heights across chapters
 do not imply equal sentence lengths or narrative speed. No sentences means
 no measured rhythm, even though the current CV field uses a zero sentinel.
 
-## Revision time-series and sparse history (unreleased)
+<a id="revision-time-series-and-sparse-history-unreleased"></a>
+
+## Revision time-series and sparse history
 
 Revision snapshots depend on explicit editor saves (`ManuscriptStore.save()`).
 External edits outside the native editor are not recorded until the next editor
@@ -658,7 +662,9 @@ contains zero sentences or zero tokens, `asl` and `dialogue_ratio` are stored
 and returned as `null` rather than `0.0`. Single-revision manuscripts report
 `has_baseline: false` with `deltas: null` until a second revision is saved.
 
-## Dramaturgical heuristics & genre corridors (unreleased)
+<a id="dramaturgical-heuristics--genre-corridors-unreleased"></a>
+
+## Dramaturgical heuristics & genre corridors
 
 - **Sticky sentences:** glue-word density depends on curated `function_words`
   lexicons and sentence splitting; `generic` sets `sticky_available: false`.

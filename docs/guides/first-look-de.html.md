@@ -60,13 +60,13 @@ Tempushinweise beruhen auf Wortmustern und sind keine grammatische Prüfung: Auc
 
 - [Eigenständiger Begleiter:](../demo/companion/index.html) ausgewählte Hintergründe zu einer andernorts gelesenen Geschichte ansehen.
 
-Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. **Noch unveröffentlicht:** Mit `--include-audio` können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. [Audio-Auswahl und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. **Seit 0.8.1:** Mit `--include-audio` können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. [Audio-Auswahl und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 Die Lesedemo enthält eine künstliche Aufnahme des ersten Kapitels aus eSpeak NG 1.51 (`en`, Tempo 165), die ausdrücklich importiert wurde. Unter **Chapter audio** lässt sie sich abspielen oder herunterladen. Sie zeigt den Ablauf, nicht die Stimmqualität von IMS-Toucan oder eine geklonte Autorenstimme. Die anderen Kapitel bleiben reine Lesetexte.
 
 ## Mit einem eigenen Manuskript arbeiten
 
-Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Der noch unveröffentlichte Dateiimport akzeptiert auch jeweils eine Word/DOCX-Datei. Exportiere Scrivener-Dokumente vorher in ein unterstütztes Dateiformat und prüfe die Importvorschau. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
+Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Der Dateiimport akzeptiert auch jeweils eine Word/DOCX-Datei. Exportiere Scrivener-Dokumente vorher in ein unterstütztes Dateiformat und prüfe die Importvorschau. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
 
 Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 
@@ -91,7 +91,7 @@ Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sei
 
 In der lokalen Anwendung führt **Projekt → Einstellungen → Audio und Dienste** zu Aufnahmen, Stimmprofilen, Mikrofon und Dienststatus. **Anhören und Regie** öffnet sich auch aus der Manuskriptleiste. Die öffentliche Demo kann keine Stimmprobe speichern oder Sprachsynthese starten.
 
-Auf dem aktuellen Entwicklungsstand (noch unveröffentlicht) hat der lokale Audiodialog vier klar zugeordnete Reiter: **Autorenstimme** für Aufnahme, WAV-Upload und gespeicherte Stimmproben, **Stimmprofile** für Stimme und Sprachdienst, **Hörprobe & Regie** für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie **Mikrofon & Pegel** für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.
+In 0.8.1 hat der lokale Audiodialog vier klar zugeordnete Reiter: **Autorenstimme** für Aufnahme, WAV-Upload und gespeicherte Stimmproben, **Stimmprofile** für Stimme und Sprachdienst, **Hörprobe & Regie** für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie **Mikrofon & Pegel** für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.
 
 Der Zustand direkt neben dem Aufnahmebutton zeigt, ob die Freigabe aussteht, die Aufnahme läuft oder der Start fehlgeschlagen ist. Eine gespeicherte Mikrofon-Sperre entfernst du im Browser über das Symbol neben der Adresse; starte danach erneut und erlaube den Zugriff. Fehlgeschlagene Starts werden in der Browserkonsole protokolliert. Solange der Browser den Zugriff blockiert, gibt es dazu keinen Serveraufruf und keinen Eintrag im Dienstprotokoll. Mehr zur [Aufnahme und Fehlerdiagnose](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
 
@@ -99,7 +99,7 @@ Unter **Hörprobe & Regie → Regie exportieren** wählst du eine Textstelle, ei
 
 Im **Teleprompter** (`P`) liest du den geplanten Sprechtext mit Regiehinweisen und nimmst einen Take auf. Ergänze die tatsächlich gesprochenen Wörter und bestätige das Transkript. WAV und passende JSON-Datei bewahren Audio-Prüfsumme und Prüfstatus; die Übergabe ins Autorenstimmen-Studio speichert noch keine Referenz.
 
-**Optionales IMS-Toucan, noch unveröffentlicht:** Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. [Einrichtung und Modellgrenzen](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+**Optionales IMS-Toucan, verfügbar in 0.8.1:** Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. [Einrichtung und Modellgrenzen](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
 [English tour with more controls](first-look.html) · [Praxisbeispiel zu Wiederholungen (Englisch)](../blog/local-word-echoes.html)
 

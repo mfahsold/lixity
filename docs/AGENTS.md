@@ -4,7 +4,11 @@
 > This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
 > For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
-## Native manuscript editing (unreleased)
+<a id="native-manuscript-editing-unreleased"></a>
+
+## Native manuscript editing
+
+Available in 0.8.1.
 
 `GET /api/manuscript-edit` returns `lixity-editor/1`, selected `document`, original
 byte `revision`, normalized editable `text` and recovery metadata. Native
@@ -40,7 +44,11 @@ provides registered HTTP operations through `GET /api` (`lixity-api-index/1`).
 The [CLI workflow guide](USAGE.md) explains usage and output limits; the public
 [automation summary](llms.txt) links to the maintained entrypoints.
 
-## Project backups (unreleased)
+<a id="project-backups-unreleased"></a>
+
+## Project backups
+
+Available in 0.8.1.
 
 `project-backup` and `project-restore` return `lixity-project-backup/1` JSON.
 They copy an explicit saved-file inventory and retained research, not browser

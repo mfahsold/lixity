@@ -26,9 +26,8 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. Commands marked **unreleased** require the
-current development version; inspect `lixity --version` and installed `--help`
-before using them.
+require a running browser service. This reference describes 0.8.1; inspect
+`lixity --version` and installed `--help` before using the commands.
 
 ## Installation
 
@@ -1847,7 +1846,9 @@ for checkout setup, supported checks, browser suites and documentation generatio
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
-## Verified project backup (unreleased)
+<a id="verified-project-backup-unreleased"></a>
+
+## Verified project backup
 
 Use `lixity project-backup --project ./book --manuscript manuscript.md --output ./book-backup`
 and `lixity project-restore --from ./book-backup --to ./restored-book` for an

@@ -159,7 +159,7 @@ editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
 file; migrate literal text arguments to `--body`. Archives and citations are unchanged.
 Zotero is optional: retained evidence and authorized local imports work without it.
 
-**Unreleased workspace navigation:** Dossiers, Claims & evidence, Timeline,
+**Workspace navigation in 0.8.1:** Dossiers, Claims & evidence, Timeline,
 Decisions and Sources are the content tabs. **Search research** and **Review
 links** open shared tools while retaining the selected content and unfinished
 forms. Search includes retained passages and current authored records; exact
@@ -563,7 +563,7 @@ their exact pin. The **Versions** disclosure loads the version list only when
 opened; expanding it never changes the displayed record. Choosing a version is
 explicit. The context names the selected kind, version and current/earlier state
 once; change provenance remains available without repeated version headings.
-**Edit** keeps its separate draft. On current main (unreleased), the browser uses
+**Edit** keeps its separate draft. In 0.8.1, the browser uses
 record names and source excerpts instead of technical IDs or snapshot hashes.
 Reference selectors retain their exact stored IDs and version pins. When the
 name of a pinned historical record is unavailable, the UI says so explicitly;
@@ -1680,7 +1680,7 @@ registers that handler for the desktop account, and the running or newly started
 Zotero app selects the item. If a click has no effect, the protocol handler is
 missing — for example with a manually installed or portable copy; update or
 reinstall Zotero's desktop integration. This link is independent of the local API.
-**Unreleased:** the local-import form remains available alongside Zotero.
+**Since 0.8.1:** the local-import form remains available alongside Zotero.
 Earlier versions can hide it when every active source is Zotero-linked; direct
 CLI/API import remains available for standalone projects and recovery. Retained
 evidence history is not removed.
@@ -1784,7 +1784,7 @@ Python: `api.search("./novel", "inspector", scope="all")`.
 HTTP: `POST /api/research-search` with `{"query":"inspector","scope":"all"}`.
 The dashboard defaults to **All records** and offers the same type filters.
 Its details button opens the existing record history with the current revision.
-**Unreleased:** press Enter in the search field or use **Search** to submit the
+**Since 0.8.1:** press Enter in the search field or use **Search** to submit the
 same query. Highlighted excerpts preserve the source's literal text, including
 ampersands and angle brackets.
 
@@ -1872,7 +1872,7 @@ metadata; use archive search for retained text.
 
 ### Cross-corpus comparison and evidence grounding
 
-`compare` requires an explicit source and manuscript. In the current development
+`compare` requires an explicit source and manuscript. In the 0.8.1
 workspace, open **Research → Sources**, select a retained text source, then choose
 **Compare vocabulary with manuscript**. There is no separate comparison tab.
 Opening a source does not run the comparison. The browser action compares the
@@ -2101,7 +2101,7 @@ lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
 whitespace or control characters. It is stored as submitted, never requested or
 used to accept a claim. Prefer stable source addresses over signed links with
-private query tokens. The browser displays it as escaped text. **Unreleased:**
+private query tokens. The browser displays it as escaped text. In 0.8.1,
 choose either a local file or pasted text for each import; if both contain data,
 the form asks for a choice and retains both. Failed imports and edits made while
 an import is in progress remain in the form. On success, only an unchanged

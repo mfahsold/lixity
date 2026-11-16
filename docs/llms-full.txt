@@ -25,7 +25,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > A local manuscript workspace for close reading, traceable research and
 > linguistic analysis: compare chapters, inspect counted passages, follow retained
 > evidence and select the contents of reading exports. Integrated
-> writing with undo, autosave and recovery is implemented but unreleased.
+> writing with undo, autosave and recovery is included in 0.8.1.
 > The browser app, CLI and Python API share the analysis engine. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
@@ -67,7 +67,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 
 ## Choose a maintained reference
 
-- [Project backup and restore (unreleased)](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): explicit saved-file inventory, checksums and fresh-directory restoration.
+- [Project backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): explicit saved-file inventory, checksums and fresh-directory restoration.
 
 - [Documentation map](https://mfahsold.github.io/lixity/README.md): task-oriented routes into the maintained manuals, guides and references.
 - [Product direction](https://mfahsold.github.io/lixity/PRODUCT.md): capability evidence, honest product claims and proposed priorities, not release commitments.
@@ -82,7 +82,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 - [Stability](https://mfahsold.github.io/lixity/STABILITY.md): sample-size limits, uncertainty and interpretation of thresholds.
 - [Localization](https://mfahsold.github.io/lixity/LOCALIZATION.md): supported language profiles, coverage and shared product vocabulary.
 - [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md): component ownership, annotation semantics and integration boundaries.
-- [Manuscript editing RFC](https://mfahsold.github.io/lixity/MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source preservation and safe persistence; unreleased first implementation and remaining requirements.
+- [Manuscript editing RFC](https://mfahsold.github.io/lixity/MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source preservation and safe persistence; first implementation shipped in 0.8.1 and remaining requirements.
 - [Research data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): immutable revisions, evidence pins, stored entities and schema evolution.
 - [Research scope and design history](https://mfahsold.github.io/lixity/research/README.md): links to current references and explicitly unimplemented proposals.
 - [Release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): changes and compatibility notes; historical release numbers are not current capability claims.
@@ -112,7 +112,7 @@ inspection does not save a link or rewrite text. Current entries and explicitly
 linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
-Unreleased UI refinements group reading, analysis, research capture and audio
+The 0.8.1 UI refinements group reading, analysis, research capture and audio
 export actions by task, with localized tooltips across analysis navigation,
 the section outline, Back to passage and the reader speech control. Shorter help
 retains the same measurement boundaries; analysis algorithms and public
@@ -142,7 +142,7 @@ reader analysis (`--analysis chapters`, `language` or `all`) for capped
 chapters; v2 manifests identify the selection. It recomputes using standard
 settings and omits work markers and project-defined figures.
 
-Unreleased reader-only `--include-audio` copies existing generated or imported chapter
+The reader-only `--include-audio` in 0.8.1 copies existing generated or imported chapter
 WAVs that match the exact manuscript SHA-256 and export cap. It never invokes synthesis.
 Partial coverage is shown; no matching current recording is an error. Audio-inclusive
 site manifests use `/3`, publication data `/2`, and the playback inventory is
@@ -154,14 +154,14 @@ an existing PCM recording; this is not transcript verification or forced alignme
 
 Native audio shares profiles, passage direction, planning and worker contracts between
 CLI and browser. Qwen, Coqui/OpenVoice and optional IMS-Toucan differ in supported
-languages, references and delivery controls. IMS-Toucan's unreleased German/English path
+languages, references and delivery controls. IMS-Toucan's German/English path in 0.8.1
 supports separate IPA overrides and structured passage prosody, not free acting prompts.
 A reviewed schema `/5` migration enables the new controls without changing old profiles.
 Existing F5 profiles remain readable, but its bundled runtime is unavailable. External
 providers receive selected text only on explicit rendering. CPU synthesis can be slow;
 listen to a short preview before a chapter render. See the Audio manual for operation and Installation for runtime setup.
 
-Unreleased Project settings collect audio configuration, services and the audio
+Project settings in 0.8.1 collect audio configuration, services and the audio
 queue. Contextual listening remains in the manuscript toolbar. Saved recordings
 and research references use readable labels while preserving internal IDs and
 version pins. Native audio controls are grouped into four tabs: Author voice
@@ -219,7 +219,7 @@ metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-o
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
-Unreleased audio exchange adds `audio-export-plan` (timeline JSON by default,
+Audio exchange in 0.8.1 adds `audio-export-plan` (timeline JSON by default,
 `--ssml` for an SSML projection). `read-aloud --ssml`/`--timeline` never synthesize;
 `--plan-only` alone preserves the existing speech-plan contract. JSON retains
 source/substitution provenance, direction and pause values; actual speech timing
@@ -291,7 +291,7 @@ with the background you choose to share.
 The browser app, CLI and Python API provide different ways into the same platform;
 they do not promise identical commands or independently implemented analysis.
 
-Integrated manuscript writing is **unreleased**: the development checkout adds
+Integrated manuscript writing is included in **0.8.1**, with
 undo, local autosave and explicit conflict recovery. Read the
 [editing workflow and current limits](WORKSPACE.md#write-a-manuscript-unreleased)
 before using it. The public demo and exported websites remain read-only.
@@ -303,10 +303,10 @@ For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html).
 
-Choose a task below. The manuals describe the current source tree; sections
-marked **unreleased** can differ from an installed package even when the version
-number matches. Use `lixity --version` and `lixity COMMAND --help` to check your
-installation. The [installation guide](INSTALLATION.md#cli-current-release) links
+Choose a task below. These manuals describe the **0.8.1** release. Use
+`lixity --version` and `lixity COMMAND --help` to check your installation; a later
+development checkout can differ from a published package. The
+[installation guide](INSTALLATION.md#cli-current-release) links
 the release notes for its documented baseline;
 [the changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) records work in progress.
 
@@ -328,7 +328,7 @@ the release notes for its documented baseline;
 | I want to… | Browser workflow | CLI or detailed reference |
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
-| Write and recover manuscript prose (unreleased) | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
+| Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
 | Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
@@ -337,7 +337,7 @@ the release notes for its documented baseline;
 | Record an author's voice or use the teleprompter | [Audio manual](AUDIO.md) | [Audio worker installation](INSTALLATION.md#optional-qwen-audio-worker) |
 | Add chapter audio to a reading copy | [Audio generation and exchange](AUDIO.md) | [Reading website options](WORKSPACE.md#export-a-reading-website) |
 | Stop, restart or repair the app | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
-| Back up a saved project inventory (unreleased) | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
+| Back up a saved project inventory | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
 | Back up retained research and restore it | [Archive lifecycle](research/USAGE.md#storage-lifecycle-and-recovery) | [Export and restoration](research/USAGE.md#export-and-restoration) |
 
 For the product's capability boundaries and proposed next priorities, see
@@ -345,7 +345,7 @@ For the product's capability boundaries and proposed next priorities, see
 
 An analysis report, a curated reading website and a research backup are different
 outputs. A reading copy does not replace a project backup. Research backups do not
-include the manuscript or external linked attachments. The unreleased project
+include the manuscript or external linked attachments. The project
 backup combines explicitly selected files with retained research.
 The public demo is read-only. Recording, saving and generating new audio/PDFs
 require the local application and, where applicable, separately installed tools.
@@ -356,7 +356,7 @@ require the local application and, where applicable, separately installed tools.
 - [Methods](METHODS.md), [validation and limits](STABILITY.md) and [language support](LOCALIZATION.md): formulas, tested coverage and explicit unknowns. Measurements are not literary-quality scores.
 - [Automation contracts](AGENTS.md): discovery, CLI/JSON, Python and HTTP interfaces. Repository agent instructions live separately in [AGENTS.md](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 - [Architecture](ARCHITECTURE.md) and [research documentation map](research/README.md): implementation boundaries, storage and clearly marked proposals.
-- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the unreleased first implementation from future work.
+- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the first implementation shipped in 0.8.1 from future work.
 - [Rust evaluation RFC](RUST_EVALUATION_RFC.md): question, evidence and acceptance gates for a possible future native implementation; no rewrite authorized.
 - Agent skill (`skills/lixity/SKILL.md` in the checkout): entry point for AI-assisted workflows; `docs/AGENTS.md` remains normative on conflicts.
 - [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development, checks and release workflow.
@@ -412,9 +412,8 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. Commands marked **unreleased** require the
-current development version; inspect `lixity --version` and installed `--help`
-before using them.
+require a running browser service. This reference describes 0.8.1; inspect
+`lixity --version` and installed `--help` before using the commands.
 
 ## Installation
 
@@ -2233,7 +2232,9 @@ for checkout setup, supported checks, browser suites and documentation generatio
 GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
-## Verified project backup (unreleased)
+<a id="verified-project-backup-unreleased"></a>
+
+## Verified project backup
 
 Use `lixity project-backup --project ./book --manuscript manuscript.md --output ./book-backup`
 and `lixity project-restore --from ./book-backup --to ./restored-book` for an
@@ -2251,20 +2252,20 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md
 
 Use this manual to read a manuscript, inspect language patterns, keep research
 linked to passages and prepare copies for readers. These activities share one
-local project. Integrated writing is available in the development checkout and
-explicitly marked unreleased below.
+local project. The native writing, reading and research workflows below are
+included in 0.8.1.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 use [Installation](INSTALLATION.md) for application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below are available in 0.8.0.
-Later changes marked **unreleased** require a development checkout.
+German coverage prioritized. The workflows below describe 0.8.1; optional
+workers and integrations retain their documented setup requirements.
 
 | Your next task | Start here |
 | --- | --- |
-| Write, undo or recover a draft (unreleased) | [Write a manuscript](#write-a-manuscript-unreleased) |
+| Write, undo or recover a draft | [Write a manuscript](#write-a-manuscript-unreleased) |
 | Inspect one language pattern while reading | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
 | Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
@@ -2283,17 +2284,19 @@ Start the installed local app with `lixity service start --open`. It normally op
 `http://127.0.0.1:8765/`; use **Open Project** for an existing folder or follow
 the import preview to create a copy at an explicit destination. Import confirmation
 writes the new project; opening reconnects an existing one. The manuscript stays
-in its project folder. Use your text editor or the unreleased native
+in its project folder. Use your text editor or the native
 [Write workflow](#write-a-manuscript-unreleased).
 
-The development DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
+The DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
 entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
 Larger inputs fail explicitly before publication. Conversion preserves the
 original file, including when an output path aliases it; successful output is
 published atomically. These import ceilings do not increase the separate local
 manuscript editing limits.
 
-## Write a manuscript (unreleased)
+<a id="write-a-manuscript-unreleased"></a>
+
+## Write a manuscript
 
 In the local app, **Write** opens CodeMirror in the manuscript workspace and
 loads its bundled assets locally. It supports selected `.md`, `.markdown` and
@@ -2365,7 +2368,7 @@ Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous sou
 versions and eight unresolved drafts per document. Unresolved drafts are not
 silently evicted; remove a reviewed copy explicitly to free a slot. This directory
 contains manuscript text and must remain private and excluded from version control.
-It is not included in public reading exports. Use the unreleased [project backup and restore](PROJECT_BACKUP.md) for an explicit
+It is not included in public reading exports. Use [project backup and restore](PROJECT_BACKUP.md) for an explicit
 verified inventory of saved manuscript, selected settings, research and attachments.
 The editor recovery journal and unacknowledged drafts are excluded from that backup.
 Changes made before an autosave request reaches the server are not guaranteed
@@ -2480,7 +2483,7 @@ Across the application, controls use six distinct interaction patterns:
   command palette `Ctrl+K` / `Ctrl+P`, version comparison, saved-revision reading,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`
   or close button) and keep the underlying buffer, selection and undo history intact.
-- **Surface switches** (`Analysis overview` and unreleased `Write` mode):
+- **Surface switches** (`Analysis overview` and `Write` mode):
   replace continuous reading with the statistical overview panels or the
   manuscript editor. Leave the overview with `Back to passage` (restoring your
   exact paragraph and prior analysis layer) and leave writing with `Close writing`
@@ -2748,9 +2751,11 @@ The manuscript is a document reader: dragging selects text and resizing text
 changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
 and style-space retains its own rotation and zoom controls.
 
-## Research in context (unreleased)
+<a id="research-in-context-unreleased"></a>
 
-The development workspace uses five content tabs: **Dossiers**, **Claims &
+## Research in context
+
+The research workspace uses five content tabs: **Dossiers**, **Claims &
 evidence**, **Timeline**, **Decisions** and **Sources**. **Search research** and
 **Review links** open shared tools above the selected content. Closing a tool
 returns to the originating control; switching tools does not save a record or
@@ -3359,7 +3364,7 @@ A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
 its own access controls. For saved manuscripts, selected settings and attachments
 alongside retained research, use [project backup and restore](PROJECT_BACKUP.md)
-(unreleased). [Research archive export and restoration](research/USAGE.md#export-and-restoration)
+in 0.8.1. [Research archive export and restoration](research/USAGE.md#export-and-restoration)
 covers the research store, not the manuscript or editor drafts.
 Limits fail explicitly rather than silently dropping
 material: 64 MiB each for manuscript input, archived record input and prepared
@@ -3483,9 +3488,9 @@ the audio workflow in both the local browser app and the CLI. The
 [CLI reference](USAGE.md) cover the surrounding project workflow; install models
 and workers through [Installation](INSTALLATION.md#optional-qwen-audio-worker).
 
-The workflows below are available in 0.8.0; optional workers and models still
-require their documented setup. Later source-only additions are marked
-**unreleased** and are not a promise about an installed package. Check
+The workflows below are available in 0.8.1; optional workers and models still
+require their documented setup. Experimental adapters retain their stated
+capabilities and limits. Check
 `lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
 numbers are independent of the application version.
 
@@ -5004,7 +5009,7 @@ editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
 file; migrate literal text arguments to `--body`. Archives and citations are unchanged.
 Zotero is optional: retained evidence and authorized local imports work without it.
 
-**Unreleased workspace navigation:** Dossiers, Claims & evidence, Timeline,
+**Workspace navigation in 0.8.1:** Dossiers, Claims & evidence, Timeline,
 Decisions and Sources are the content tabs. **Search research** and **Review
 links** open shared tools while retaining the selected content and unfinished
 forms. Search includes retained passages and current authored records; exact
@@ -5408,7 +5413,7 @@ their exact pin. The **Versions** disclosure loads the version list only when
 opened; expanding it never changes the displayed record. Choosing a version is
 explicit. The context names the selected kind, version and current/earlier state
 once; change provenance remains available without repeated version headings.
-**Edit** keeps its separate draft. On current main (unreleased), the browser uses
+**Edit** keeps its separate draft. In 0.8.1, the browser uses
 record names and source excerpts instead of technical IDs or snapshot hashes.
 Reference selectors retain their exact stored IDs and version pins. When the
 name of a pinned historical record is unavailable, the UI says so explicitly;
@@ -6525,7 +6530,7 @@ registers that handler for the desktop account, and the running or newly started
 Zotero app selects the item. If a click has no effect, the protocol handler is
 missing — for example with a manually installed or portable copy; update or
 reinstall Zotero's desktop integration. This link is independent of the local API.
-**Unreleased:** the local-import form remains available alongside Zotero.
+**Since 0.8.1:** the local-import form remains available alongside Zotero.
 Earlier versions can hide it when every active source is Zotero-linked; direct
 CLI/API import remains available for standalone projects and recovery. Retained
 evidence history is not removed.
@@ -6629,7 +6634,7 @@ Python: `api.search("./novel", "inspector", scope="all")`.
 HTTP: `POST /api/research-search` with `{"query":"inspector","scope":"all"}`.
 The dashboard defaults to **All records** and offers the same type filters.
 Its details button opens the existing record history with the current revision.
-**Unreleased:** press Enter in the search field or use **Search** to submit the
+**Since 0.8.1:** press Enter in the search field or use **Search** to submit the
 same query. Highlighted excerpts preserve the source's literal text, including
 ampersands and angle brackets.
 
@@ -6717,7 +6722,7 @@ metadata; use archive search for retained text.
 
 ### Cross-corpus comparison and evidence grounding
 
-`compare` requires an explicit source and manuscript. In the current development
+`compare` requires an explicit source and manuscript. In the 0.8.1
 workspace, open **Research → Sources**, select a retained text source, then choose
 **Compare vocabulary with manuscript**. There is no separate comparison tab.
 Opening a source does not run the comparison. The browser action compares the
@@ -6946,7 +6951,7 @@ lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
 whitespace or control characters. It is stored as submitted, never requested or
 used to accept a claim. Prefer stable source addresses over signed links with
-private query tokens. The browser displays it as escaped text. **Unreleased:**
+private query tokens. The browser displays it as escaped text. In 0.8.1,
 choose either a local file or pasted text for each import; if both contain data,
 the form asks for a choice and retains both. Failed imports and edits made while
 an import is in progress remain in the form. On success, only an unchanged
@@ -8003,7 +8008,7 @@ independent pattern counting, including empty patterns. The review-policy identi
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
 
-**Unreleased:** With the default Spanish lexical patterns, an adjacent
+**Since 0.8.1:** With the default Spanish lexical patterns, an adjacent
 `he/has/ha/hemos/habéis/han` plus a detected regular `-ado/-ido` participle
 candidate counts as one past cue, without a separate present cue for the same
 auxiliary. A blank paragraph boundary prevents that suppression; the pre-existing
@@ -8063,7 +8068,9 @@ a quality score and say nothing about transcript accuracy or voice identity.
 - A value that cannot be determined (for example for pure silence) is `null`
   with a note.
 
-## 13. Chapter audio audit (unreleased)
+<a id="13-chapter-audio-audit-unreleased"></a>
+
+## 13. Chapter audio audit
 
 `audio-inspect` and `audio-verify` use `audio_audit.py` and emit
 `lixity-audio-audit/1`. These are descriptive signal measurements and an optional
@@ -8251,7 +8258,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   middle level. Empty sentence input has an empty curve and sparkline; its
   current numeric CV sentinel is zero and must not be read as measured regularity.
 
-## Revision time-series and session deltas (unreleased)
+<a id="revision-time-series-and-session-deltas-unreleased"></a>
+
+## Revision time-series and session deltas
 
 - On every saved edit in `ManuscriptStore.save()` (`manuscript_editing.py`), both
   the pre-edit baseline revision (if not yet recorded) and the resulting
@@ -8268,7 +8277,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   calendar day (session start), falling back to the immediate predecessor
   revision when no earlier same-day revision exists.
 
-## Dramaturgical & structural heuristics (unreleased)
+<a id="dramaturgical--structural-heuristics-unreleased"></a>
+
+## Dramaturgical & structural heuristics
 
 - **Sticky sentences & glue-word density (`pacing.py`):** for each prose
   sentence with `N >= sticky_min_words` (default `8`) tokens, glue-word density
@@ -8795,7 +8806,9 @@ reference and one converter, not a general result. Transcript accuracy, accent
 and speaker identity are not measured. The converter mainly changes timbre; the
 phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
 
-### Chapter audio comparison limits (unreleased)
+<a id="chapter-audio-comparison-limits-unreleased"></a>
+
+### Chapter audio comparison limits
 
 `audio-inspect` and `audio-verify` add local chapter-level observations and
 optional plan/transcript comparison; [METHODS](METHODS.md#13-chapter-audio-audit-unreleased)
@@ -9062,7 +9075,9 @@ variation. Each sparkline has its own scale: equal bar heights across chapters
 do not imply equal sentence lengths or narrative speed. No sentences means
 no measured rhythm, even though the current CV field uses a zero sentinel.
 
-## Revision time-series and sparse history (unreleased)
+<a id="revision-time-series-and-sparse-history-unreleased"></a>
+
+## Revision time-series and sparse history
 
 Revision snapshots depend on explicit editor saves (`ManuscriptStore.save()`).
 External edits outside the native editor are not recorded until the next editor
@@ -9071,7 +9086,9 @@ contains zero sentences or zero tokens, `asl` and `dialogue_ratio` are stored
 and returned as `null` rather than `0.0`. Single-revision manuscripts report
 `has_baseline: false` with `deltas: null` until a second revision is saved.
 
-## Dramaturgical heuristics & genre corridors (unreleased)
+<a id="dramaturgical-heuristics--genre-corridors-unreleased"></a>
+
+## Dramaturgical heuristics & genre corridors
 
 - **Sticky sentences:** glue-word density depends on curated `function_words`
   lexicons and sentence splitting; `generic` sets `sticky_available: false`.
@@ -9378,7 +9395,11 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md
 > This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
 > For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
-## Native manuscript editing (unreleased)
+<a id="native-manuscript-editing-unreleased"></a>
+
+## Native manuscript editing
+
+Available in 0.8.1.
 
 `GET /api/manuscript-edit` returns `lixity-editor/1`, selected `document`, original
 byte `revision`, normalized editable `text` and recovery metadata. Native
@@ -9414,7 +9435,11 @@ provides registered HTTP operations through `GET /api` (`lixity-api-index/1`).
 The [CLI workflow guide](USAGE.md) explains usage and output limits; the public
 [automation summary](llms.txt) links to the maintained entrypoints.
 
-## Project backups (unreleased)
+<a id="project-backups-unreleased"></a>
+
+## Project backups
+
+Available in 0.8.1.
 
 `project-backup` and `project-restore` return `lixity-project-backup/1` JSON.
 They copy an explicit saved-file inventory and retained research, not browser

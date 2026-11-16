@@ -7,7 +7,7 @@ with the background you choose to share.
 The browser app, CLI and Python API provide different ways into the same platform;
 they do not promise identical commands or independently implemented analysis.
 
-Integrated manuscript writing is **unreleased**: the development checkout adds
+Integrated manuscript writing is included in **0.8.1**, with
 undo, local autosave and explicit conflict recovery. Read the
 [editing workflow and current limits](WORKSPACE.md#write-a-manuscript-unreleased)
 before using it. The public demo and exported websites remain read-only.
@@ -19,10 +19,10 @@ For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html).
 
-Choose a task below. The manuals describe the current source tree; sections
-marked **unreleased** can differ from an installed package even when the version
-number matches. Use `lixity --version` and `lixity COMMAND --help` to check your
-installation. The [installation guide](INSTALLATION.md#cli-current-release) links
+Choose a task below. These manuals describe the **0.8.1** release. Use
+`lixity --version` and `lixity COMMAND --help` to check your installation; a later
+development checkout can differ from a published package. The
+[installation guide](INSTALLATION.md#cli-current-release) links
 the release notes for its documented baseline;
 [the changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) records work in progress.
 
@@ -44,7 +44,7 @@ the release notes for its documented baseline;
 | I want to… | Browser workflow | CLI or detailed reference |
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
-| Write and recover manuscript prose (unreleased) | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
+| Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
 | Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
@@ -53,7 +53,7 @@ the release notes for its documented baseline;
 | Record an author's voice or use the teleprompter | [Audio manual](AUDIO.md) | [Audio worker installation](INSTALLATION.md#optional-qwen-audio-worker) |
 | Add chapter audio to a reading copy | [Audio generation and exchange](AUDIO.md) | [Reading website options](WORKSPACE.md#export-a-reading-website) |
 | Stop, restart or repair the app | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
-| Back up a saved project inventory (unreleased) | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
+| Back up a saved project inventory | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
 | Back up retained research and restore it | [Archive lifecycle](research/USAGE.md#storage-lifecycle-and-recovery) | [Export and restoration](research/USAGE.md#export-and-restoration) |
 
 For the product's capability boundaries and proposed next priorities, see
@@ -61,7 +61,7 @@ For the product's capability boundaries and proposed next priorities, see
 
 An analysis report, a curated reading website and a research backup are different
 outputs. A reading copy does not replace a project backup. Research backups do not
-include the manuscript or external linked attachments. The unreleased project
+include the manuscript or external linked attachments. The project
 backup combines explicitly selected files with retained research.
 The public demo is read-only. Recording, saving and generating new audio/PDFs
 require the local application and, where applicable, separately installed tools.
@@ -72,7 +72,7 @@ require the local application and, where applicable, separately installed tools.
 - [Methods](METHODS.md), [validation and limits](STABILITY.md) and [language support](LOCALIZATION.md): formulas, tested coverage and explicit unknowns. Measurements are not literary-quality scores.
 - [Automation contracts](AGENTS.md): discovery, CLI/JSON, Python and HTTP interfaces. Repository agent instructions live separately in [AGENTS.md](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 - [Architecture](ARCHITECTURE.md) and [research documentation map](research/README.md): implementation boundaries, storage and clearly marked proposals.
-- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the unreleased first implementation from future work.
+- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the first implementation shipped in 0.8.1 from future work.
 - [Rust evaluation RFC](RUST_EVALUATION_RFC.md): question, evidence and acceptance gates for a possible future native implementation; no rewrite authorized.
 - Agent skill (`skills/lixity/SKILL.md` in the checkout): entry point for AI-assisted workflows; `docs/AGENTS.md` remains normative on conflicts.
 - [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development, checks and release workflow.

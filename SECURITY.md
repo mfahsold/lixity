@@ -89,7 +89,7 @@ default-deny.
   (see below); OCR runs local binaries. MCP results use local stdio, while the
   connected client controls any remote model processing. Public website analytics
   are separate from the local app and private reading exports.
-- **Untrusted document input (development).** Shared Markdown callout/link
+- **Untrusted document input (since 0.8.1).** Shared Markdown callout/link
   attributes encode quoted input instead of treating it as markup. DOCX import
   bounds source bytes (32 MiB), ZIP entries (4,096), streamed document XML
   (32 MiB) and converted UTF-8 output (16 MiB). It rejects non-regular source

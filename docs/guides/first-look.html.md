@@ -78,7 +78,7 @@ Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above th
 
 - [Standalone companion:](../demo/companion/index.html) explore those selected notes while reading the novel elsewhere.
 
-A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Unreleased:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Since 0.8.1:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
 
@@ -88,7 +88,7 @@ Use the direct PDF links below or in the demo page; the exported website does no
 
 ## Use your own project
 
-Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). The unreleased file importer also accepts one Word/DOCX file. Export Scrivener documents to a supported file format first; inspect the import preview before creating a project. PDFs can be retained separately as Research sources.
+Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). The file importer also accepts one Word/DOCX file. Export Scrivener documents to a supported file format first; inspect the import preview before creating a project. PDFs can be retained separately as Research sources.
 
 [Install the local app](installation.html), then open your project or preview a manuscript import. Analysis runs on your computer. JavaScript enables the demo's interactive controls; manuscript text, tables, credits and PDF links remain readable without it.
 
@@ -96,7 +96,7 @@ Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`).
 
 Open **Project → Settings → Audio and services**, or use **Listen & direct** in the manuscript toolbar. The public demo cannot request your microphone, save a reference or generate speech.
 
-On current main (unreleased), the local audio dialog separates four tasks: **Author voice** records, uploads and manages reference takes; **Voice profiles** configures the voice and speech service; **Listen & direct** contains passage direction, audio output, JSON/SSML export and external recording checks; **Microphone & levels** controls local hardware. Help accompanies the controls. The compact player offers time, seeking, volume and a live frequency spectrum. Browser recording requires microphone permission for the current local address; hardware gain does not grant that permission.
+In 0.8.1, the local audio dialog separates four tasks: **Author voice** records, uploads and manages reference takes; **Voice profiles** configures the voice and speech service; **Listen & direct** contains passage direction, audio output, JSON/SSML export and external recording checks; **Microphone & levels** controls local hardware. Help accompanies the controls. The compact player offers time, seeking, volume and a live frequency spectrum. Browser recording requires microphone permission for the current local address; hardware gain does not grant that permission.
 
 The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See [recording and troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
 
@@ -104,7 +104,7 @@ In **Listen & direct → Export direction**, prepare JSON and SSML for a passage
 
 Read a passage in the **Teleprompter** (`P`), record a take and edit the words actually spoken. WAV plus JSON export preserves the audio hash and whether the transcript is missing, a draft or confirmed. Sending the take to **Author voice** opens a review; it does not save automatically.
 
-**Optional IMS-Toucan, unreleased:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+**Optional IMS-Toucan, available in 0.8.1:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
 In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
 

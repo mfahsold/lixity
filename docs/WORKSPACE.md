@@ -2,20 +2,20 @@
 
 Use this manual to read a manuscript, inspect language patterns, keep research
 linked to passages and prepare copies for readers. These activities share one
-local project. Integrated writing is available in the development checkout and
-explicitly marked unreleased below.
+local project. The native writing, reading and research workflows below are
+included in 0.8.1.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 use [Installation](INSTALLATION.md) for application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below are available in 0.8.0.
-Later changes marked **unreleased** require a development checkout.
+German coverage prioritized. The workflows below describe 0.8.1; optional
+workers and integrations retain their documented setup requirements.
 
 | Your next task | Start here |
 | --- | --- |
-| Write, undo or recover a draft (unreleased) | [Write a manuscript](#write-a-manuscript-unreleased) |
+| Write, undo or recover a draft | [Write a manuscript](#write-a-manuscript-unreleased) |
 | Inspect one language pattern while reading | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
 | Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
@@ -34,17 +34,19 @@ Start the installed local app with `lixity service start --open`. It normally op
 `http://127.0.0.1:8765/`; use **Open Project** for an existing folder or follow
 the import preview to create a copy at an explicit destination. Import confirmation
 writes the new project; opening reconnects an existing one. The manuscript stays
-in its project folder. Use your text editor or the unreleased native
+in its project folder. Use your text editor or the native
 [Write workflow](#write-a-manuscript-unreleased).
 
-The development DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
+The DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
 entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
 Larger inputs fail explicitly before publication. Conversion preserves the
 original file, including when an output path aliases it; successful output is
 published atomically. These import ceilings do not increase the separate local
 manuscript editing limits.
 
-## Write a manuscript (unreleased)
+<a id="write-a-manuscript-unreleased"></a>
+
+## Write a manuscript
 
 In the local app, **Write** opens CodeMirror in the manuscript workspace and
 loads its bundled assets locally. It supports selected `.md`, `.markdown` and
@@ -116,7 +118,7 @@ Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous sou
 versions and eight unresolved drafts per document. Unresolved drafts are not
 silently evicted; remove a reviewed copy explicitly to free a slot. This directory
 contains manuscript text and must remain private and excluded from version control.
-It is not included in public reading exports. Use the unreleased [project backup and restore](PROJECT_BACKUP.md) for an explicit
+It is not included in public reading exports. Use [project backup and restore](PROJECT_BACKUP.md) for an explicit
 verified inventory of saved manuscript, selected settings, research and attachments.
 The editor recovery journal and unacknowledged drafts are excluded from that backup.
 Changes made before an autosave request reaches the server are not guaranteed
@@ -231,7 +233,7 @@ Across the application, controls use six distinct interaction patterns:
   command palette `Ctrl+K` / `Ctrl+P`, version comparison, saved-revision reading,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`
   or close button) and keep the underlying buffer, selection and undo history intact.
-- **Surface switches** (`Analysis overview` and unreleased `Write` mode):
+- **Surface switches** (`Analysis overview` and `Write` mode):
   replace continuous reading with the statistical overview panels or the
   manuscript editor. Leave the overview with `Back to passage` (restoring your
   exact paragraph and prior analysis layer) and leave writing with `Close writing`
@@ -499,9 +501,11 @@ The manuscript is a document reader: dragging selects text and resizing text
 changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
 and style-space retains its own rotation and zoom controls.
 
-## Research in context (unreleased)
+<a id="research-in-context-unreleased"></a>
 
-The development workspace uses five content tabs: **Dossiers**, **Claims &
+## Research in context
+
+The research workspace uses five content tabs: **Dossiers**, **Claims &
 evidence**, **Timeline**, **Decisions** and **Sources**. **Search research** and
 **Review links** open shared tools above the selected content. Closing a tool
 returns to the originating control; switching tools does not save a record or
@@ -1110,7 +1114,7 @@ A reading website is **not access control, encryption or a backup**. Anyone
 with its files can read or copy the included content. Confidential hosting needs
 its own access controls. For saved manuscripts, selected settings and attachments
 alongside retained research, use [project backup and restore](PROJECT_BACKUP.md)
-(unreleased). [Research archive export and restoration](research/USAGE.md#export-and-restoration)
+in 0.8.1. [Research archive export and restoration](research/USAGE.md#export-and-restoration)
 covers the research store, not the manuscript or editor drafts.
 Limits fail explicitly rather than silently dropping
 material: 64 MiB each for manuscript input, archived record input and prepared

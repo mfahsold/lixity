@@ -40,15 +40,15 @@ hides project-switching controls. Automatic anchor remapping and continuous
 analysis remain future work.
 
 Product copy should lead with the connected work and local ownership. Describe
-integrated writing as unreleased until it is published; describe the public demo
+integrated writing as available in 0.8.1; describe the public demo
 as a fixed reading/review snapshot. Interface languages, manuscript languages
 and analysis-resource coverage are separate capabilities. Technical documentation
 stays in English.
 
 The [manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md) records the proposed
 CodeMirror 6 integration, source-preservation requirements, conditional saves,
-recovery and revision-bound analysis. Its first native editing slice is
-unreleased; the RFC distinguishes implemented behavior from the broader target.
+recovery and revision-bound analysis. Its first native editing slice ships in
+0.8.1; the RFC distinguishes implemented behavior from the broader target.
 
 Today the shared engine, CLI and local HTTP server are Python; browser behavior
 uses JavaScript and CSS. Packaging the existing application for Linux comes
@@ -72,8 +72,8 @@ process in [Contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUT
 | Analysis core | Metrics, paragraph profiles, uncertainty and statistical diagnostics | HTTP sessions, exports or UI state |
 | `lixity.pipeline` | Resolve document language; assemble one analysis result | Implicit file reads or mutable global project state |
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
-| `manuscript_editing` (unreleased) | Selected-source conditional writes, local recovery and shared in-process write coordination | Silent conflict merging, automatic quotation remapping or current-analysis claims |
-| `project_backup` (unreleased) | Explicit file inventory, hashes and new-directory restoration using the research archive API | Live transactional snapshots, unselected files or editor recovery state |
+| `manuscript_editing` | Selected-source conditional writes, local recovery and shared in-process write coordination | Silent conflict merging, automatic quotation remapping or current-analysis claims |
+| `project_backup` | Explicit file inventory, hashes and new-directory restoration using the research archive API | Live transactional snapshots, unselected files or editor recovery state |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
 | `publication` / `pdf_export` | Validate entered publication data; compose shared PDF bytes | Infer legal identities, establish rights or write output files |
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
@@ -421,7 +421,7 @@ actions. Retained media uses explicit bundled-resource mappings; maps start
 with offline geometry, without external tiles or implicit analytics requests.
 Browser-local reading preferences remain available.
 
-**Unreleased chapter audio** is a separate reader-only export opt-in. Successful
+**Chapter audio, available in 0.8.1,** is a separate reader-only export opt-in. Successful
 native chapter rendering retains a bounded project-local artifact with exact source
 identity and WAV integrity metadata; explicit imports bind a recording to a selected
 chapter and source without claiming alignment. The export adapter selects only
@@ -1453,7 +1453,7 @@ flowchart LR
 ```
 
 Lixity's audio architecture separates manuscript dramaturgy, phonetic
-lexicons and passage-level direction from synthesis. **Unreleased:** the shared
+lexicons and passage-level direction from synthesis. In 0.8.1, the shared
 planner has an export mode that retains direction even when a synthesis adapter
 cannot honor it. `speech_export.py` produces `lixity-audio-timeline/1` and an SSML
 projection with explicit limitations. The existing `plan_json` contract remains
@@ -1488,7 +1488,7 @@ settings and engine capabilities. Existing root-only atomic settings updates
 persist `audio`; the CLI and native dialog share profile resolution and rendering
 controls. Version 0.7.7 supports Qwen3-TTS 1.7B CustomVoice, VoiceDesign and Base
 profiles. Existing Qwen synthesis requires a matching worker for the selected
-variant. Unreleased Coqui and explicit external-provider paths extend that set;
+variant. Coqui and explicit external-provider paths in 0.8.1 extend that set;
 the native inference implementations remain available and are not removed by
 the export/provider change.
 In 0.7.7, the `speed` field is a post-synthesis FFmpeg `atempo` factor
@@ -1590,7 +1590,7 @@ an explicit verified-online versus offline-replay policy before changing keys.
 This derived cache does not persist native job state.
 
 The October 2026 upstream review covered Qwen3-TTS 1.7B with CustomVoice,
-VoiceDesign and Base variants. The unreleased native adapters above extend that
+VoiceDesign and Base variants. The native adapters in 0.8.1 extend that
 set; their protocol support and actual model-runtime verification are separate. Model cards,
 code licenses, voice assets and measured hardware behavior are separate inputs
 to an integration decision. [Pocket TTS](https://github.com/kyutai-labs/pocket-tts)
@@ -1637,7 +1637,9 @@ Installed models are explicit machine resources, with no inference-time download
 See [methods](METHODS.md#optional-grammatical-analysis) and
 [configuration](USAGE.md#grammatical-tense).
 
-### Native engine registry and phonetic author voices (unreleased)
+<a id="native-engine-registry-and-phonetic-author-voices-unreleased"></a>
+
+### Native engine registry and phonetic author voices
 
 `speech_engines.py` owns immutable native model, fixed endpoint and reference
 requirements. `speech_worker.py` owns the bounded loopback HTTP protocol, exact

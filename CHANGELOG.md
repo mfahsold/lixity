@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-16
+
 ### Added
 
 - **Manuscript-Driven Dossier Drafts (`manuscript_drafts.py`, `research/api.py`, `research/cli.py`, `routes_research.py`, `mcp.py`, `research_panel.py`, `research-workspace.js`)**:
@@ -62,11 +64,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Direct Research Timeline Tab (`research_panel.py`, `research-workspace.js`, `command-palette.js`)**: Promoted Timeline to a top-level Research tab (`#research-tab-timeline`) alongside Dossiers, Claims, and Decisions.
 - **Brand Icon Suite & GitHub Pages Pipeline (`docs/assets/brand/`, `docs/favicon.ico`, `docs/manifest.webmanifest`, `docs/assets/home.css`, `scripts/build_brand_assets.py`, `.github/workflows/pages.yml`)**: Refined the multi-profile/multi-format brand icon suite (`make brand-assets`), tightened GitHub Pages vertical spacing (`docs/assets/home.css`), and added the `build_public_site.py --check` pre-deploy gate to `pages.yml`.
 
-## [0.8.1] - 2026-11-14
-
-Publication pending: this section describes the prepared development version.
-The latest GitHub and PyPI release verified on 2026-11-15 is 0.8.0.
-
 ### Added
 
 - **Manuscript Editor Formatting Bar (`manuscript-editor.js`, `scripts/editor/editor.js`)**: `H2`, `B`, `I`, and `—` formatting controls and `Ctrl+B`/`Ctrl+I` shortcuts.
@@ -80,7 +77,7 @@ The latest GitHub and PyPI release verified on 2026-11-15 is 0.8.0.
 - **Sticky Scroll Margin & Capture (`interactions.js`, `manuscript-reader.js`)**: Count `bounds.bottom` in `setPassageScrollMargin` only when a sticky bar is already stuck (`bounds.top <= barTop + 1`), and align `capture()` threshold (`boundary + 10`) so jump targets are reliably captured.
 - **Product Tour Video Pacing (`scripts/capture_screenshots.cjs`, `scripts/make_videos.py`)**: Replaced rapid 2-second cuts with 6 calm, readable 8-second scenes (48s total) and gentle transitions.
 
-### Prior Unreleased Items (included in 0.8.1)
+### Additional changes included in 0.8.1
 
 - Add dramaturgical & structural analysis heuristics (`pacing.py`, `dialogue.py`,
   `scenes.py`, `characters.py`, `corridors.py`):

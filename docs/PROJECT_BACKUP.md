@@ -1,6 +1,6 @@
 # Verified project backup and restore
 
-Implemented on current main; unreleased. A project backup is a local directory
+Available in 0.8.1. A project backup is a local directory
 bundle, separate from reading websites and research-only exports. Stop manuscript
 editing and other project writers before capture. Selected files are checked for
 changes during copying, but this is not a transactional snapshot of running apps.

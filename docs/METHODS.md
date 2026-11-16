@@ -777,7 +777,7 @@ independent pattern counting, including empty patterns. The review-policy identi
 changes with these semantics, so saved decisions require renewed review rather
 than silently carrying over to a changed measurement.
 
-**Unreleased:** With the default Spanish lexical patterns, an adjacent
+**Since 0.8.1:** With the default Spanish lexical patterns, an adjacent
 `he/has/ha/hemos/habéis/han` plus a detected regular `-ado/-ido` participle
 candidate counts as one past cue, without a separate present cue for the same
 auxiliary. A blank paragraph boundary prevents that suppression; the pre-existing
@@ -837,7 +837,9 @@ a quality score and say nothing about transcript accuracy or voice identity.
 - A value that cannot be determined (for example for pure silence) is `null`
   with a note.
 
-## 13. Chapter audio audit (unreleased)
+<a id="13-chapter-audio-audit-unreleased"></a>
+
+## 13. Chapter audio audit
 
 `audio-inspect` and `audio-verify` use `audio_audit.py` and emit
 `lixity-audio-audit/1`. These are descriptive signal measurements and an optional
@@ -1025,7 +1027,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   middle level. Empty sentence input has an empty curve and sparkline; its
   current numeric CV sentinel is zero and must not be read as measured regularity.
 
-## Revision time-series and session deltas (unreleased)
+<a id="revision-time-series-and-session-deltas-unreleased"></a>
+
+## Revision time-series and session deltas
 
 - On every saved edit in `ManuscriptStore.save()` (`manuscript_editing.py`), both
   the pre-edit baseline revision (if not yet recorded) and the resulting
@@ -1042,7 +1046,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   calendar day (session start), falling back to the immediate predecessor
   revision when no earlier same-day revision exists.
 
-## Dramaturgical & structural heuristics (unreleased)
+<a id="dramaturgical--structural-heuristics-unreleased"></a>
+
+## Dramaturgical & structural heuristics
 
 - **Sticky sentences & glue-word density (`pacing.py`):** for each prose
   sentence with `N >= sticky_min_words` (default `8`) tokens, glue-word density

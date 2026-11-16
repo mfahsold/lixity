@@ -39,4 +39,4 @@ jobs:
       - name: Run full research and packaged lifecycle suites on this platform
         if: inputs.scope == 'full'
         run: >-
-          python -c "from pathlib import Path; import pytest; patterns = ('test_research*.py', 'test_service*.py', 'test_server_startup.py', 'test_server_research*.py', 'test_launcher*.py'); tests = sorted({path for pattern in patterns for path in Path('tests').glob(pattern)}); assert tests, 'No platform tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"
+          python -c "from pathlib import Path; import pytest; patterns = ('test_research*.py', 'test_service*.py', 'test_server_startup.py', 'test_server_research*.py', 'test_launcher*.py', 'test_manuscript_import.py', 'test_export_source_guard.py'); tests = sorted({path for pattern in patterns for path in Path('tests').glob(pattern)}); assert tests, 'No platform tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"

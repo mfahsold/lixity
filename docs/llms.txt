@@ -3,7 +3,7 @@
 > A local manuscript workspace for close reading, traceable research and
 > linguistic analysis: compare chapters, inspect counted passages, follow retained
 > evidence and select the contents of reading exports. Integrated
-> writing with undo, autosave and recovery is implemented but unreleased.
+> writing with undo, autosave and recovery is included in 0.8.1.
 > The browser app, CLI and Python API share the analysis engine. Statistical
 > signals support human review; they are not literary-quality scores or
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
@@ -45,7 +45,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 
 ## Choose a maintained reference
 
-- [Project backup and restore (unreleased)](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): explicit saved-file inventory, checksums and fresh-directory restoration.
+- [Project backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): explicit saved-file inventory, checksums and fresh-directory restoration.
 
 - [Documentation map](https://mfahsold.github.io/lixity/README.md): task-oriented routes into the maintained manuals, guides and references.
 - [Product direction](https://mfahsold.github.io/lixity/PRODUCT.md): capability evidence, honest product claims and proposed priorities, not release commitments.
@@ -60,7 +60,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 - [Stability](https://mfahsold.github.io/lixity/STABILITY.md): sample-size limits, uncertainty and interpretation of thresholds.
 - [Localization](https://mfahsold.github.io/lixity/LOCALIZATION.md): supported language profiles, coverage and shared product vocabulary.
 - [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md): component ownership, annotation semantics and integration boundaries.
-- [Manuscript editing RFC](https://mfahsold.github.io/lixity/MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source preservation and safe persistence; unreleased first implementation and remaining requirements.
+- [Manuscript editing RFC](https://mfahsold.github.io/lixity/MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source preservation and safe persistence; first implementation shipped in 0.8.1 and remaining requirements.
 - [Research data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): immutable revisions, evidence pins, stored entities and schema evolution.
 - [Research scope and design history](https://mfahsold.github.io/lixity/research/README.md): links to current references and explicitly unimplemented proposals.
 - [Release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): changes and compatibility notes; historical release numbers are not current capability claims.
@@ -90,7 +90,7 @@ inspection does not save a link or rewrite text. Current entries and explicitly
 linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
-Unreleased UI refinements group reading, analysis, research capture and audio
+The 0.8.1 UI refinements group reading, analysis, research capture and audio
 export actions by task, with localized tooltips across analysis navigation,
 the section outline, Back to passage and the reader speech control. Shorter help
 retains the same measurement boundaries; analysis algorithms and public
@@ -120,7 +120,7 @@ reader analysis (`--analysis chapters`, `language` or `all`) for capped
 chapters; v2 manifests identify the selection. It recomputes using standard
 settings and omits work markers and project-defined figures.
 
-Unreleased reader-only `--include-audio` copies existing generated or imported chapter
+The reader-only `--include-audio` in 0.8.1 copies existing generated or imported chapter
 WAVs that match the exact manuscript SHA-256 and export cap. It never invokes synthesis.
 Partial coverage is shown; no matching current recording is an error. Audio-inclusive
 site manifests use `/3`, publication data `/2`, and the playback inventory is
@@ -132,14 +132,14 @@ an existing PCM recording; this is not transcript verification or forced alignme
 
 Native audio shares profiles, passage direction, planning and worker contracts between
 CLI and browser. Qwen, Coqui/OpenVoice and optional IMS-Toucan differ in supported
-languages, references and delivery controls. IMS-Toucan's unreleased German/English path
+languages, references and delivery controls. IMS-Toucan's German/English path in 0.8.1
 supports separate IPA overrides and structured passage prosody, not free acting prompts.
 A reviewed schema `/5` migration enables the new controls without changing old profiles.
 Existing F5 profiles remain readable, but its bundled runtime is unavailable. External
 providers receive selected text only on explicit rendering. CPU synthesis can be slow;
 listen to a short preview before a chapter render. See the Audio manual for operation and Installation for runtime setup.
 
-Unreleased Project settings collect audio configuration, services and the audio
+Project settings in 0.8.1 collect audio configuration, services and the audio
 queue. Contextual listening remains in the manuscript toolbar. Saved recordings
 and research references use readable labels while preserving internal IDs and
 version pins. Native audio controls are grouped into four tabs: Author voice
@@ -197,7 +197,7 @@ metadata in `.lixity/audio-directions.json`. `audio-direction inspect` is read-o
 save/remove require source/settings/ledger snapshots. `read-aloud --plan-only`
 and native preview inspection expose the shared effective speech plan without
 inference. CustomVoice and VoiceDesign interpret local direction; Lixity generates exact silence.
-Unreleased audio exchange adds `audio-export-plan` (timeline JSON by default,
+Audio exchange in 0.8.1 adds `audio-export-plan` (timeline JSON by default,
 `--ssml` for an SSML projection). `read-aloud --ssml`/`--timeline` never synthesize;
 `--plan-only` alone preserves the existing speech-plan contract. JSON retains
 source/substitution provenance, direction and pause values; actual speech timing
