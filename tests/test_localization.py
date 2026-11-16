@@ -111,11 +111,9 @@ class TestLocalization(unittest.TestCase):
                             "help_research_decision", "help_research_deviation"):
                     self.assertIn(labels[key], parser.help_texts, key)
                 comparison_help = labels["help_research_comparison"]
-                self.assertNotIn(comparison_help, parser.help_texts)
-                self.assertEqual(rendered.count(
-                    '<p class="ctl-note" id="research-comparison-help">'
-                    + escape(comparison_help) + '</p>'), 1)
-                self.assertEqual(parser.elements["r-ground-source-select"]["aria-describedby"],
+                self.assertIn(comparison_help, parser.help_texts)
+                self.assertIn(escape(labels["research_source_compare_limit"]), rendered)
+                self.assertEqual(parser.elements["r-ground-btn"]["aria-describedby"],
                                  "research-comparison-help")
                 self.assertEqual(parser.elements["r-claim-confidence"]["aria-label"],
                                  labels["research_confidence_field"])

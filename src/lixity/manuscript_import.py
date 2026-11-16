@@ -10,14 +10,25 @@ from __future__ import annotations
 
 import hashlib
 import io
+import os
 import re
+import stat
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .io import FileUtils
+
 SCHEMA_VERSION = "manuscript-import-preview-local/1"
+
+# Independent ceilings bound source reads, ZIP inventory, decompression and output.
+# Highly compressible prose remains valid; no compression-ratio heuristic is used.
+MAX_DOCX_SOURCE_BYTES = 32 * 1024 * 1024
+MAX_DOCX_MEMBERS = 4096
+MAX_DOCX_XML_BYTES = 32 * 1024 * 1024
+MAX_DOCX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 _W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _NS = {"w": _W_NS}
@@ -157,25 +168,57 @@ def preview_docx(
     Returns:
         An ImportPreview containing the generated Markdown, detected chapter headings,
         structural metrics, and any warnings for unsupported/omitted elements.
+
+    Raises:
+        ValueError: Input is not a regular file/valid DOCX, or exceeds the
+            32 MiB source, 4096 ZIP entries, 32 MiB document XML or 16 MiB
+            converted UTF-8 output safety ceilings.
     """
     if isinstance(source, (str, Path)):
         source_path = Path(source)
         filename = source_path.name
-        source_bytes = source_path.read_bytes()
+        expected = source_path.stat()
+        if not stat.S_ISREG(expected.st_mode):
+            raise ValueError("Word document source must be a regular file")
+        opened = os.open(
+            source_path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0),
+        )
+        descriptor: int | None = opened
+        try:
+            actual = os.fstat(opened)
+            if (not stat.S_ISREG(actual.st_mode)
+                    or (actual.st_dev, actual.st_ino) != (expected.st_dev, expected.st_ino)):
+                raise ValueError("Word document source changed or is not a regular file")
+            if actual.st_size > MAX_DOCX_SOURCE_BYTES:
+                raise ValueError("Word document source exceeds byte safety ceiling")
+            stream = os.fdopen(opened, "rb")
+            descriptor = None
+            with stream:
+                source_bytes = stream.read(MAX_DOCX_SOURCE_BYTES + 1)
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
     else:
         source_bytes = source
+
+    if len(source_bytes) > MAX_DOCX_SOURCE_BYTES:
+        raise ValueError("Word document source exceeds byte safety ceiling")
 
     source_hash = hashlib.sha256(source_bytes).hexdigest()
 
     try:
-        zf = zipfile.ZipFile(io.BytesIO(source_bytes))
+        with zipfile.ZipFile(io.BytesIO(source_bytes)) as zf:
+            if len(zf.infolist()) > MAX_DOCX_MEMBERS:
+                raise ValueError("Word document ZIP member count exceeds safety ceiling")
+            if "word/document.xml" not in zf.namelist():
+                raise ValueError("Document does not contain 'word/document.xml'; not a valid .docx file")
+            # Bound actual decompressed bytes, independently of ZIP size metadata.
+            with zf.open("word/document.xml") as xml_stream:
+                document_xml = xml_stream.read(MAX_DOCX_XML_BYTES + 1)
+            if len(document_xml) > MAX_DOCX_XML_BYTES:
+                raise ValueError("Word document XML exceeds byte safety ceiling")
     except (zipfile.BadZipFile, OSError) as exc:
         raise ValueError(f"Invalid or corrupted Word document (.docx): {exc}") from exc
-
-    if "word/document.xml" not in zf.namelist():
-        raise ValueError("Document does not contain 'word/document.xml'; not a valid .docx file")
-
-    document_xml = zf.read("word/document.xml")
     try:
         root = ET.fromstring(document_xml)  # noqa: S314
     except ET.ParseError as exc:
@@ -196,6 +239,7 @@ def preview_docx(
     line_number = 1
     total_words = 0
     p_index = 0
+    output_bytes = 0
 
     for child in body:
         tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
@@ -275,6 +319,10 @@ def preview_docx(
         else:
             md_line = paragraph_text
 
+        # Account for UTF-8 and paragraph separators before retaining output.
+        output_bytes += len(md_line.encode("utf-8")) + (2 if paragraphs_out else 1)
+        if output_bytes > MAX_DOCX_OUTPUT_BYTES:
+            raise ValueError("Word document converted output exceeds byte safety ceiling")
         paragraphs_out.append(md_line)
         # 1 line for content + 1 blank line
         line_number += 2
@@ -318,11 +366,15 @@ def convert_docx(
     else:
         out = Path(output_path).expanduser().resolve()
 
-    if out.exists() and not overwrite:
-        raise FileExistsError(
-            f"Destination file already exists: {out}. Use overwrite=True or choose a different name."
-        )
+    def check_output() -> None:
+        FileUtils.require_distinct_output(str(src), str(out))
+        if out.exists() and not overwrite:
+            raise FileExistsError(
+                f"Destination file already exists: {out}. Use overwrite=True or choose a different name."
+            )
 
+    check_output()
     preview = preview_docx(src)
-    out.write_text(preview.markdown, encoding="utf-8")
+    check_output()
+    FileUtils.atomic_write_if_changed(str(out), preview.markdown, before_replace=check_output)
     return preview

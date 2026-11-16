@@ -369,7 +369,7 @@ function renderAlertBox(type, content, inlineParser, folded, titleOverride) {
   var titleTag = isFoldable ? "summary" : "p";
   var openAttr = folded === false ? " open" : "";
 
-  return '<' + tag + ' class="markdown-alert markdown-alert-' + typeLower + '"' + openAttr + ' role="region" aria-label="' + alertTitle + '">' +
+  return '<' + tag + ' class="markdown-alert markdown-alert-' + typeLower + '"' + openAttr + ' role="region" aria-label="' + alertTitle.replace(/"/g, "&quot;") + '">' +
     '<' + titleTag + ' class="markdown-alert-title">' + icon + '<span>' + alertTitle + '</span></' + titleTag + '>' +
     '<div class="markdown-alert-content">' + (bodyHtml ? '<p>' + bodyHtml + '</p>' : '') + '</div>' +
     '</' + tag + '>';
@@ -448,7 +448,7 @@ function renderSafeMarkdown(rawText, dossierContext) {
       var displayLabel = (label || cleanTarget).trim();
       var slug = cleanTarget.replace(/\s+/g, "_");
       var title = (typeof uiLabel === "function" ? uiLabel("research_internal_reference_label") : "") || "Reference";
-      return protect('<a class="lixity-ref lixity-wikilink" href="#dossier-' + slug + '" data-dossier-link="' + cleanTarget.replace(/"/g, "&quot;") + '" title="' + title.replace(/"/g, "&quot;") + '">' + parseInline(displayLabel, true) + '</a>');
+      return protect('<a class="lixity-ref lixity-wikilink" href="#dossier-' + slug.replace(/"/g, "&quot;") + '" data-dossier-link="' + cleanTarget.replace(/"/g, "&quot;") + '" title="' + title.replace(/"/g, "&quot;") + '">' + parseInline(displayLabel, true) + '</a>');
     });
 
     str = str.replace(/`([^`]+)`|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\[([^\]]+)\]\(([^)]+)\)/g, function(m, code, displayMath, math, label, url) {
@@ -680,7 +680,7 @@ function researchDossierDetailHtml(detail, readOnly, options) {
             (flags.length ? researchEditorialFlags(flags) :
               '<p>' + escapeHtml(n.reason || uiLabel("research_review_needed_hint")) + '</p>') + '</div>';
         }).join("") +
-        '</div>';
+        (document.getElementById("research-manager") ? '<button type="button" class="ctl" data-research-review-dossier="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_tools_review")) + '</button>' : '') + '</div>';
     }
   }
   // The section map groups repeated titles for lookup. Reading always follows
@@ -696,6 +696,7 @@ function researchDossierDetailHtml(detail, readOnly, options) {
       escapeHtml(uiLabel("research_dossier_claims")) + '</h4><p class="ctl-note">' +
       escapeHtml(uiLabel("research_loading")) + '</p></section>' : '') +
     '<section class="research-folder-citations"><h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
+    (document.getElementById("research-manager") ? '<button type="button" class="ctl" data-research-global="sources">' + escapeHtml(uiLabel("research_tab_sources")) + '</button>' : '') +
     ((detail.citations || []).length ? detail.citations.map(function(citation) {
       return researchCitationHtml(citation, !readOnly);
     }).join("") : '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +

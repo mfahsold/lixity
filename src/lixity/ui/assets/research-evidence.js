@@ -30,7 +30,14 @@ function reviewedEvidenceClaim() {
 }
 
 document.addEventListener("change", function(event) {
-  if (event.target.id === "r-link-claim-select") researchEvidenceReview = reviewedEvidenceClaim();
+  if (event.target.id === "r-link-claim-select") {
+    if (researchEvidenceDraft && researchEvidenceReview && event.target.value !== researchEvidenceReview.claimId) {
+      event.target.value = researchEvidenceReview.claimId;
+      researchStatus(uiLabel("research_evidence_draft_preserved"), false);
+      return;
+    }
+    researchEvidenceReview = reviewedEvidenceClaim();
+  }
 });
 
 function selectionPlainText(text) {
@@ -129,7 +136,16 @@ function prepareResearchEvidenceDraft(passageId, quote, context) {
   var host = researchEvidenceDraftHost();
   if (!passage || !host || !context || context.availability === "withdrawn" || context.error) return;
   if (context.project_id && context.project_id !== researchSelectionProjectId) return;
-  researchEvidenceDraft = {passageId: passageId, projectId: researchSelectionProjectId, token: researchContextToken(),
+  if (researchEvidenceDraft && (researchEvidenceDraft.passageId !== passageId || researchEvidenceDraft.quote !== quote)) {
+    researchStatus(uiLabel("research_evidence_draft_preserved"), false);
+    switchActiveView("research");
+    showResearchTab(document.querySelector('[data-rtab="claims"]'));
+    revealDisclosures(host);
+    var clear = host.querySelector("button");
+    if (clear) clear.focus();
+    return;
+  }
+  researchEvidenceDraft = {passageId: passageId, quote: quote, projectId: researchSelectionProjectId, token: researchContextToken(),
     sourceSnapshot: context.snapshot || null};
   if (!researchEvidenceReview) researchEvidenceReview = reviewedEvidenceClaim();
   passage.value = passageId;

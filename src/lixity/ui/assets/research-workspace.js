@@ -42,6 +42,7 @@ async function refreshResearchProjectInfo(freshRead) {
     researchPassageContexts = Object.create(null);
     researchDossiersPayload = null;
     researchSelectionProjectId = status.project_id || null;
+    if (window.LixityResearchTools) window.LixityResearchTools.reset();
   }
   if (zoteroProjectId !== (status.project_id || null)) {
     clearZoteroSelection();
@@ -139,6 +140,9 @@ async function initResearchUI(freshRead) {
   if (status.superseded) return;
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");
+  var toolsEntry = document.getElementById("research-tools-entry");
+  if (toolsEntry) toolsEntry.hidden = !status || status.ok !== true || !status.initialized;
+  if (toolsEntry && toolsEntry.hidden && window.LixityResearchTools) window.LixityResearchTools.close(false);
   document.querySelectorAll(".research-tab-pane").forEach(function(p) { p.style.display = "none"; });
 
   if (!status || status.ok !== true) {
@@ -168,7 +172,7 @@ async function initResearchUI(freshRead) {
   refreshResearchClaims(status);
   refreshResearchDecisions(status);
   if (activeTab && activeTab.dataset.rtab === "timeline") refreshResearchClaimProjections();
-  if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
+  if (window.LixityResearchTools) window.LixityResearchTools.restore();
 }
 
 // Retain the shared manual keyboard tabs while making hidden destinations
@@ -203,6 +207,11 @@ async function initResearchUI(freshRead) {
 // Ordinary tab actions below still refresh their records explicitly.
 function showResearchTab(tabBtn) {
   if (!tabBtn) return;
+  if (window.LixityResearchTools && ["search", "review"].includes(tabBtn.dataset.rtab)) {
+    window.LixityResearchTools.open(tabBtn.dataset.rtab, document.activeElement);
+    return;
+  }
+  if (window.LixityResearchTools) window.LixityResearchTools.close(false);
   document.querySelectorAll(".research-tabs button").forEach(function(button) {
     var active = button === tabBtn;
     button.classList.toggle("active", active);
@@ -230,14 +239,17 @@ function highlightSearchTerms(text, query) {
 async function searchResearch() {
   var searchRead = ++researchSearchRead;
   var searchContext = researchReadContext();
+  var toolContext = window.LixityResearchTools && window.LixityResearchTools.context();
   var qEl = document.getElementById("r-search-query");
   var query = qEl ? qEl.value.trim() : "";
   if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
   var resultsHost = document.getElementById("research-search-results");
+  if (window.LixityResearchTools) window.LixityResearchTools.showResults();
   if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
   var scopeEl = document.getElementById("r-search-scope");
   var sres = await researchApiPost("research-search", { query: query, scope: scopeEl ? scopeEl.value : "sources" });
-  if (searchRead !== researchSearchRead || !acceptResearchContext(searchContext, sres)) return;
+  if (searchRead !== researchSearchRead || !acceptResearchContext(searchContext, sres) ||
+      (window.LixityResearchTools && toolContext !== window.LixityResearchTools.context())) return;
   if (!sres.ok) {
     if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
     researchStatus(sres.message || uiLabel("research_search_failed"), false);
@@ -276,8 +288,12 @@ async function searchResearch() {
         '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
         '<div class="research-passage-cite">' +
           escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
-          escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') +
+          escapeHtml(uiLabel("research_search_source_version")) +
         '</div>' +
+        '<details class="research-details"><summary>' + escapeHtml(uiLabel("research_tools_search_details")) + '</summary>' +
+          '<p>' + escapeHtml(h.source_version_id || "") + '</p>' +
+          escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : '–') + '</details>' +
+        '<button type="button" class="ctl" data-research-search-passage="' + escapeHtml(h.passage_id) + '">' + escapeHtml(uiLabel("research_search_read_passage")) + '</button>' +
         researchPassageActions(h.passage_id, h) +
       '</div>';
     }).join("");
@@ -494,6 +510,7 @@ document.addEventListener("click", async function (event) {
     if (detailsBtn.parentElement.open) return;
     detailHost.textContent = uiLabel("research_details_loading");
     var isSource = detailsBtn.dataset.researchDetail === "source";
+    if (isSource && window.LixityResearchTools) window.LixityResearchTools.sourceChanged(detailsBtn.dataset.recordId);
     var sourceSelectionProject = researchSelectionProjectId;
     var detailContext = researchReadContext();
     var detailRead = detailHost._detailRead = (detailHost._detailRead || 0) + 1;
@@ -514,12 +531,16 @@ document.addEventListener("click", async function (event) {
     }
     if (isSource) {
       clearResearchSourceSelections();
+      detailHost._researchSource = detail;
+      detailHost._researchSourceCurrent = detailCurrent;
+      if (window.LixityResearchTools) window.LixityResearchTools.sourceChanged(detail.id, detail.version_id);
+      var compareAction = window.LixityResearchTools ? window.LixityResearchTools.sourceAction(detail) : "";
       var context = detail.context || {};
       var external = context.external_reference;
       var sourceReturn = external ? zoteroOpenLink(external.library, external.item_key) : "";
       var original = window.LixitySite.readOnly && window.LixitySite.resourceUrl('/api/site-resource?' +
         new URLSearchParams({source_id: detail.id, version_id: detail.version_id}));
-      var captureContext = (!window.LixitySite.readOnly ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_captures_hint")) + '</p>' : '') +
+      var captureContext = compareAction + (!window.LixitySite.readOnly ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_captures_hint")) + '</p>' : '') +
         (original ? '<p><a data-site-original-source href="' + escapeHtml(original) + '" download>' +
           escapeHtml(uiLabel("site_source_original")) + '</a></p>' : '') +
         (sourceReturn ? '<p>' + sourceReturn + '</p>' : '');
@@ -640,6 +661,10 @@ document.addEventListener("click", async function (event) {
 
   var tabBtn = event.target.closest("[data-rtab]");
   if (tabBtn) {
+    if (["search", "review"].includes(tabBtn.dataset.rtab)) {
+      if (window.LixityResearchTools) window.LixityResearchTools.open(tabBtn.dataset.rtab, tabBtn);
+      return;
+    }
     clearResearchSourceSelections();
     showResearchTab(tabBtn);
     var targetId = "rtab-" + tabBtn.dataset.rtab;
@@ -1003,193 +1028,6 @@ function renderManuscriptDraftsView(host) {
         else targetCh.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }
-    return;
-  }
-
-  var groundBtn = event.target.closest("#r-ground-btn");
-  if (groundBtn) {
-    var srcSelect = document.getElementById("r-ground-source-select");
-    var sid = srcSelect ? srcSelect.value : "";
-    if (!sid) { researchStatus(uiLabel("research_select_source_required"), false); return; }
-    var gHost = document.getElementById("research-grounding-results");
-    if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_grounding")) + '</p>';
-    var gres = await researchApiPost("research-compare", { source_id: sid });
-    if (!gres.ok) {
-      if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(gres.message || uiLabel("research_ground_failed")) + '</p>';
-      researchStatus(gres.message || uiLabel("research_ground_failed"), false);
-      return;
-    }
-    var sum = gres.summary || {};
-    var comparisonMeta = gres.meta || {};
-    var crossLanguage = comparisonMeta.source_language && comparisonMeta.manuscript_language &&
-      comparisonMeta.source_language !== comparisonMeta.manuscript_language;
-
-    var jaccardVal = sum.jaccard_similarity !== undefined ? sum.jaccard_similarity : 0;
-    var jaccardPct = (jaccardVal * 100).toFixed(1);
-    var overlapVal = sum.overlap_coefficient !== undefined ? sum.overlap_coefficient : 0;
-    var overlapPct = (overlapVal * 100).toFixed(1);
-
-    var topShared = (gres.lexical_overlap && gres.lexical_overlap.top_shared_terms) || [];
-    var sharedChipsHtml = topShared.slice(0, 25).map(function(w) {
-      var sc = w.source_count !== undefined ? w.source_count : "?";
-      var mc = w.manuscript_count !== undefined ? w.manuscript_count : "?";
-      var tip = escapeHtml(w.word) + ': ' + w.total_count + 'x (' + escapeHtml(uiLabel("sources") || "Quelle") + ': ' + sc + 'x, ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ': ' + mc + 'x) · ' + escapeHtml(uiLabel("research_term_click_help"));
-      return '<button type="button" class="grounding-chip" data-term-search="' + escapeHtml(w.word) + '" data-help="' + tip + '" title="' + escapeHtml(w.word) + '">' +
-        '<span>' + escapeHtml(w.word) + '</span>' +
-        '<span class="grounding-badge-count">' + w.total_count + '</span>' +
-      '</button>';
-    }).join("");
-
-    var sourceKeyTerms = (gres.keyness && gres.keyness.source_key_terms) || [];
-    var keyTermsHtml = sourceKeyTerms.slice(0, 25).map(function(k) {
-      var sc = k.source_count !== undefined ? k.source_count : "?";
-      var mc = k.manuscript_count !== undefined ? k.manuscript_count : "?";
-      var tip = escapeHtml(k.word) + ' (Dunning-G² ' + k.g2 + '): ' + escapeHtml(uiLabel("sources") || "Quelle") + ' ' + sc + 'x vs ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ' ' + mc + 'x · ' + escapeHtml(uiLabel("research_term_click_help"));
-      return '<button type="button" class="grounding-chip keyness" data-term-search="' + escapeHtml(k.word) + '" data-help="' + tip + '" title="' + escapeHtml(k.word) + '">' +
-        '<span>' + escapeHtml(k.word) + '</span>' +
-        '<span class="grounding-badge-count">G² ' + k.g2 + '</span>' +
-      '</button>';
-    }).join("");
-
-    var topExclusive = (gres.lexical_overlap && gres.lexical_overlap.top_source_exclusive) || [];
-    var exclusiveTermsHtml = topExclusive.slice(0, 25).map(function(e) {
-      var tip = escapeHtml(e.word) + ': ' + e.count + 'x (' + escapeHtml(uiLabel("research_exclusive_terms")) + ')';
-      return '<button type="button" class="grounding-chip exclusive" data-term-search="' + escapeHtml(e.word) + '" data-help="' + tip + '" title="' + escapeHtml(e.word) + '">' +
-        '<span>' + escapeHtml(e.word) + '</span>' +
-        '<span class="grounding-badge-count">' + e.count + '</span>' +
-      '</button>';
-    }).join("");
-
-    var chapters = gres.chapter_grounding || [];
-    var maxDensity = 1;
-    chapters.forEach(function(c) {
-      if (c.grounding_density > maxDensity) maxDensity = c.grounding_density;
-    });
-
-    var chRows = chapters.map(function(c) {
-      var densityVal = c.grounding_density || 0;
-      var densityPercent = Math.min(100, Math.round((densityVal / (maxDensity || 1)) * 100));
-      var topTermsList = (c.top_terms || []).slice(0, 3).map(function(t) {
-        return '<span class="grounding-top-term-badge" data-term-search="' + escapeHtml(t.word) + '" title="' + escapeHtml(uiLabel("research_term_click_help")) + '">' + escapeHtml(t.word) + ' (' + t.count + ')</span>';
-      }).join(" ");
-
-      return '<tr class="clickable-row" data-jump-chapter="' + c.chapter + '">' +
-        '<td data-sort-value="' + c.chapter + '"><strong>' + escapeHtml(uiLabel("research_chapter_prefix")) + ' ' + c.chapter + '</strong> <span class="muted-note">(' + escapeHtml(c.title || "") + ')</span></td>' +
-        '<td class="num-right" data-sort-value="' + (c.words || 0) + '">' + (c.words || 0).toLocaleString() + '</td>' +
-        '<td class="num-right" data-sort-value="' + (c.overlap_tokens || 0) + '">' + (c.overlap_tokens || 0).toLocaleString() + '</td>' +
-        '<td class="num-right" data-sort-value="' + densityVal.toFixed(2) + '">' +
-          '<div class="table-bar-cell">' +
-            '<div class="table-bar-track"><div class="table-bar-fill" style="width:' + densityPercent + '%;"></div></div>' +
-            '<span class="table-bar-val">' + densityVal.toFixed(1) + '‰</span>' +
-          '</div>' +
-        '</td>' +
-        '<td>' + (topTermsList || '<span class="muted-note">–</span>') + '</td>' +
-        '<td class="num-right">' +
-          '<button type="button" class="ctl grounding-jump-btn" data-jump-chapter="' + c.chapter + '" title="' + escapeHtml(uiLabel("research_jump_chapter")) + '" data-help="' + escapeHtml(uiLabel("research_jump_chapter")) + '">↗ ' + escapeHtml(uiLabel("open") || "Öffnen") + '</button>' +
-        '</td>' +
-      '</tr>';
-    }).join("");
-
-    var reg = gres.register_contrast;
-    var registerContrastHtml = "";
-    if (reg) {
-      registerContrastHtml = '<details class="research-accordion mt-3" id="grounding-register-details">' +
-        '<summary data-help="' + escapeHtml(uiLabel("research_register_contrast_help")) + '">' + escapeHtml(uiLabel("research_register_contrast")) + '</summary>' +
-        '<div class="table-wrap mt-2"><table class="research-table">' +
-          '<thead><tr><th>' + escapeHtml(uiLabel("research_ground_metric")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_source")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_manuscript")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_ground_delta")) + '</th></tr></thead>' +
-          '<tbody>' +
-            (function() {
-              function diffCell(obj, isPct) {
-                if (!obj || obj.delta === undefined || obj.delta === null) return '–';
-                var d = obj.delta;
-                var cls = d > 0 ? 'delta-positive' : (d < 0 ? 'delta-negative' : '');
-                var formatted = isPct ? ((d > 0 ? '+' : '') + (d * 100).toFixed(1) + '%') : ((d > 0 ? '+' : '') + d);
-                return '<strong class="' + cls + '">' + formatted + '</strong>';
-              }
-              return '<tr><td>' + escapeHtml(uiLabel("research_ground_asl")) + '</td><td class="num-right">' + (reg.asl ? reg.asl.source : '–') + '</td><td class="num-right">' + (reg.asl ? reg.asl.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.asl, false) + '</td></tr>' +
-                '<tr><td>' + escapeHtml(uiLabel("research_ground_dialogue")) + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.source * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + (reg.dialogue_pct ? (reg.dialogue_pct.manuscript * 100).toFixed(1) + '%' : '–') + '</td><td class="num-right">' + diffCell(reg.dialogue_pct, true) + '</td></tr>' +
-                '<tr><td>' + escapeHtml(uiLabel("research_ground_guiraud")) + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.source : '–') + '</td><td class="num-right">' + (reg.guiraud_r ? reg.guiraud_r.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.guiraud_r, false) + '</td></tr>' +
-                '<tr><td>' + escapeHtml(uiLabel("research_ground_yules_k")) + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.source : '–') + '</td><td class="num-right">' + (reg.yules_k ? reg.yules_k.manuscript : '–') + '</td><td class="num-right">' + diffCell(reg.yules_k, false) + '</td></tr>';
-            })() +
-          '</tbody>' +
-        '</table></div>' +
-      '</details>';
-    }
-
-    if (gHost) {
-      var prov = gres.provenance || {};
-      var srcTitle = prov.source_title || "";
-      var langLabel = (comparisonMeta.source_language || "") + ' ↔ ' + (comparisonMeta.manuscript_language || "");
-
-      gHost.innerHTML = '<div class="research-card mt-3">' +
-        '<div class="grounding-header-bar">' +
-          '<div class="research-card-title">' + escapeHtml(uiLabel("research_results_for")) + ': <strong>' + escapeHtml(srcTitle) + '</strong></div>' +
-          '<div class="grounding-meta-chips">' +
-            '<span class="badge ' + (crossLanguage ? 'badge-warn' : 'badge-neutral') + '" title="' + escapeHtml(uiLabel("status_freshness") || "") + '">' + escapeHtml(langLabel) + '</span>' +
-          '</div>' +
-        '</div>' +
-        '<p class="ctl-note">' + escapeHtml(uiLabel("research_comparison_limit")) + '</p>' +
-        (crossLanguage ? '<p class="ctl-note research-comparison-warning" role="status">' + escapeHtml(uiLabel("research_cross_language_limit")) + '</p>' : '') +
-
-        '<div class="grounding-kpis">' +
-          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_jaccard_help")) + '" title="' + escapeHtml(uiLabel("research_similarity")) + '">' +
-            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_similarity")) + '</span><span>ℹ</span></div>' +
-            '<div class="grounding-kpi-val">' + jaccardPct + '%</div>' +
-            '<div class="grounding-mini-bar-track"><div class="grounding-mini-bar-fill" style="width:' + Math.min(100, Math.round(jaccardVal * 500)) + '%;"></div></div>' +
-          '</div>' +
-          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_overlap_help")) + '" title="' + escapeHtml(uiLabel("research_overlap_coefficient")) + '">' +
-            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_overlap_coefficient")) + '</span><span>ℹ</span></div>' +
-            '<div class="grounding-kpi-val">' + overlapPct + '%</div>' +
-            '<div class="grounding-mini-bar-track"><div class="grounding-mini-bar-fill" style="width:' + Math.min(100, Math.round(overlapVal * 100)) + '%;"></div></div>' +
-          '</div>' +
-          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_shared_types_help")) + '" title="' + escapeHtml(uiLabel("research_shared_types")) + '">' +
-            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><span>ℹ</span></div>' +
-            '<div class="grounding-kpi-val">' + (sum.shared_types || 0).toLocaleString() + '</div>' +
-          '</div>' +
-          '<div class="grounding-kpi-card" data-help="' + escapeHtml(uiLabel("research_word_counts_help")) + '" title="' + escapeHtml(uiLabel("research_word_counts")) + '">' +
-            '<div class="grounding-kpi-label"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>ℹ</span></div>' +
-            '<div class="grounding-kpi-val">' + (sum.source_content_words || 0).toLocaleString() + ' <span class="grounding-subval">/ ' + (sum.manuscript_content_words || 0).toLocaleString() + '</span></div>' +
-          '</div>' +
-        '</div>' +
-
-        '<div class="grounding-term-toolbar">' +
-          '<div class="ctl-label">' + escapeHtml(uiLabel("research_top_terms_col")) + '</div>' +
-          '<div class="grounding-term-tabs" role="tablist">' +
-            '<button type="button" class="grounding-tab-btn active" data-ground-tab="shared" role="tab" aria-selected="true">' + escapeHtml(uiLabel("research_shared_words")) + ' (' + topShared.length + ')</button>' +
-            '<button type="button" class="grounding-tab-btn" data-ground-tab="keyness" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_source_key_terms")) + ' (' + sourceKeyTerms.length + ')</button>' +
-            '<button type="button" class="grounding-tab-btn" data-ground-tab="exclusive" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_exclusive_terms")) + ' (' + topExclusive.length + ')</button>' +
-          '</div>' +
-        '</div>' +
-
-        '<div class="grounding-term-panel" id="ground-terms-shared">' +
-          '<div class="grounding-chips">' + (sharedChipsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
-        '<div class="grounding-term-panel" id="ground-terms-keyness" hidden>' +
-          '<div class="grounding-chips">' + (keyTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
-        '<div class="grounding-term-panel" id="ground-terms-exclusive" hidden>' +
-          '<div class="grounding-chips">' + (exclusiveTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
-
-        (chRows ? '<div class="mt-4">' +
-          '<div class="ctl-label mb-2">' + escapeHtml(uiLabel("research_chapter_density")) + '</div>' +
-          '<div class="table-wrap"><table class="research-chapter-table" data-sortable="true">' +
-            '<thead><tr>' +
-              '<th class="sortable" data-sort="chapter" tabindex="0" role="columnheader" aria-sort="ascending" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_chapter")) + '</th>' +
-              '<th class="sortable num-right" data-sort="words" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_ground_words")) + '</th>' +
-              '<th class="sortable num-right" data-sort="tokens" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_tokens")) + '</th>' +
-              '<th class="sortable num-right" data-sort="density" tabindex="0" role="columnheader" data-help="' + escapeHtml(uiLabel("table_sort_help")) + '" aria-keyshortcuts="Enter">' + escapeHtml(uiLabel("research_density")) + '</th>' +
-              '<th>' + escapeHtml(uiLabel("research_top_terms_col")) + '</th>' +
-              '<th class="num-right">' + escapeHtml(uiLabel("action")) + '</th>' +
-            '</tr></thead>' +
-            '<tbody>' + chRows + '</tbody>' +
-          '</table></div>' +
-        '</div>' : '') +
-
-        registerContrastHtml +
-      '</div>';
-    }
-    researchStatus(uiLabel("research_ground_complete"), true);
     return;
   }
 

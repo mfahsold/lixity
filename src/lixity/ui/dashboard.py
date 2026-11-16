@@ -90,6 +90,7 @@ _CSS_FILES = (
     "vendor/photoswipe-5.4.4.css",
     "research-media.css",
     "research-navigation.css",
+    "research-tools.css",
     "research-collections.css",
     "dossier-images.css",
     "vendor/leaflet-1.9.4.css",
@@ -132,6 +133,7 @@ _JS_FILES = (
     "research-collections.js",
     "research-review.js",
     "research-workspace.js",
+    "research-tools.js",
     "markdown-editor.js",
     "research-revisions.js",
     "workspace-state.js",
@@ -157,9 +159,9 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 # workspace controls; classic reports must not ship their dormant editors.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
-    "audio-take.js", "site-publication-settings.js", "research-collections.js",
+    "audio-take.js", "site-publication-settings.js", "research-collections.js", "research-tools.js",
 ))
-_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css"})
+_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css"})
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -168,7 +170,7 @@ _PUBLICATION_JS_FILES = tuple(
         "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
         "teleprompter.js", "speech-presentation.js", "audio-take.js",
-        "research-collections.js",
+        "research-collections.js", "research-tools.js",
     }
 )
 
@@ -429,6 +431,9 @@ def render_dashboard(
         f'data-read-only="{str(read_only).lower()}" '
         f'data-speech-capable="{str(speech_enabled).lower()}" '
         f'data-speech-render-capable="{str(speech_enabled and action_enabled("speech-render")).lower()}" '
+        f'data-manuscript-name="{esc(manuscript_name or title)}" '
+        f'data-has-manuscript="{str(has_reading).lower()}" '
+        f'data-research-compare-capable="{str(controls and not read_only and action_enabled("research-compare")).lower()}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
@@ -1169,6 +1174,10 @@ def render_dashboard(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
     )
     parts.append("</span>")
+    if controls and research_context_token:
+        parts.append(
+            f'<button type="button" class="ctl" id="research-reader-terms">{L("manuscript_terms_heading")}</button>'
+        )
     if not (has_reading and controls):
         parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
                                     extra_class="js-analysis-control"))

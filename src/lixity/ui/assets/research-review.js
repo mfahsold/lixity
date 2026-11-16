@@ -240,7 +240,7 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
   }
   var rendered = '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_editorial_count", report.candidate_count)) + '</p>' +
     report.candidates.map(function(candidate) {
-      return '<div class="research-card"><strong>' + escapeHtml(candidate.title) + '</strong>' +
+      return '<div class="research-card" data-review-candidate-decision="' + escapeHtml(candidate.decision_id) + '" data-review-candidate-dossier="' + escapeHtml(candidate.dossier_id || "") + '"><strong>' + escapeHtml(candidate.title) + '</strong>' +
         (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
         '<p class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", {revision: candidate.decision_revision})) + ' · ' +
         escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(candidate.decision_created_at) + '</p>' +

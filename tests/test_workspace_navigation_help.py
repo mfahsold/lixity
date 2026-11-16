@@ -33,7 +33,8 @@ def test_research_tabs_have_localized_tooltips(language):
     parsed = _Elements()
     parsed.feed(html)
     
-    research_keys = ("dossiers", "claims", "timeline", "decisions", "review", "sources", "search", "grounding")
+    research_keys = ("dossiers", "claims", "timeline", "decisions", "sources")
+    assert tuple(tab.get("data-rtab") for tab in parsed.tabs) == research_keys
     for key in research_keys:
         matching = [tab for tab in parsed.tabs if tab.get("id") == f"research-tab-{key}"]
         assert len(matching) == 1, f"Missing tab research-tab-{key}"
@@ -90,10 +91,8 @@ def test_research_controls_have_localized_tooltips_and_shortcuts(language):
     assert filter_sources.get("data-help") == labels["research_filter_sources_help"]
     assert filter_sources.get("aria-keyshortcuts") == "Escape"
 
-    # Check grounding controls
-    ground_select = next(inp for inp in parsed.inputs if inp.get("id") == "r-ground-source-select")
-    assert ground_select.get("data-help") == labels["research_ground_source_help"]
-    assert ground_select.get("title") == labels["research_select_source"]
+    # Comparison is contextual to the selected source, with one explicit action.
+    assert not any(inp.get("id") == "r-ground-source-select" for inp in parsed.inputs)
 
     ground_btn = next(btn for btn in parsed.buttons if btn.get("id") == "r-ground-btn")
     assert ground_btn.get("data-help") == labels["research_ground_action_help"]

@@ -72,14 +72,16 @@ server.serve_forever()
     const captions = JSON.parse(fs.readFileSync(path.join(artifacts, 'captions.json'), 'utf8'));
     // Neither the shared overview nor an initial catalogue read may erase early typing.
     const loading = await browser.newPage({viewport: {width: 1440, height: 1000}});
-    let releaseInitial;
+    let releaseInitialStatus, releaseInitialDossiers;
     let initialDossiersEntered;
-    const initialGate = new Promise(resolve => {releaseInitial = resolve;});
+    const initialStatusGate = new Promise(resolve => {releaseInitialStatus = resolve;});
+    const initialDossiersGate = new Promise(resolve => {releaseInitialDossiers = resolve;});
     const initialDossiers = new Promise(resolve => {initialDossiersEntered = resolve;});
     await loading.route(fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: fixtures.en}));
     await loading.route(url => /^\/api\/research\/(status|dossiers)$/.test(url.pathname), async route => {
-      if (new URL(route.request().url()).pathname.endsWith('/dossiers')) initialDossiersEntered();
-      await initialGate;
+      const isDossiers = new URL(route.request().url()).pathname.endsWith('/dossiers');
+      if (isDossiers) initialDossiersEntered();
+      await (isDossiers ? initialDossiersGate : initialStatusGate);
       await route.continue();
     });
     await loading.goto(fixture.url);
@@ -91,9 +93,18 @@ server.serve_forever()
     await expect(initialName).toHaveJSProperty('readOnly', true);
     await initialName.pressSequentially('Synthetic early draft');
     await expect(initialName).toHaveValue('');
-    releaseInitial();
+    // Establish the accepted project before delivering the catalogue requested in the unknown context.
+    releaseInitialStatus();
+    await expect(loading.locator('#r-active-root')).toContainText('synthetic-project');
     await expect(initialName).toBeEditable();
     await initialName.fill('Synthetic accepted-context draft');
+    const oldDossiersReply = loading.waitForResponse(response => new URL(response.url()).pathname === '/api/research/dossiers');
+    releaseInitialDossiers();
+    await (await oldDossiersReply).finished();
+    await loading.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(initialName).toBeEditable();
+    await expect(initialName).toHaveValue('Synthetic accepted-context draft');
+    await loading.evaluate(() => refreshResearchDossiers(null, null, true));
     await expect(initialName).toHaveValue('Synthetic accepted-context draft');
     await loading.close();
 

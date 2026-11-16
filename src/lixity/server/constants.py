@@ -21,6 +21,7 @@ NATIVE_UI_ACTIONS = (
     "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
     "research-media-ingest", "research-dossier-media",
     "analysis-review",
+    "research-compare",
     "research-manuscript-link",
     "research-manuscript-reanchor",
 )

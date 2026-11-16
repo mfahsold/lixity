@@ -394,9 +394,13 @@ async function selectText(page, text) {
       await page.locator('[data-passage-research] [data-manuscript-links-paragraph]').click();
       await waitUntil(() => editorialHeld === 3);
       await page.locator('body').evaluate(body => { body.dataset.manuscriptSourceSha256 = 'b'.repeat(64); });
+      await page.locator('#research-tool-host').waitFor({state:'hidden'});
       await page.evaluate(() => scrollTo(0, 0));
       releaseEditorial();
-      await page.locator('#research-editorial-review .research-card').nth(3).waitFor();
+      // The archive read may finish, but its contextual utility stays closed.
+      await page.locator('#research-editorial-review .research-card').nth(3).waitFor({state:'attached'});
+      assert.equal(await page.locator('#research-tool-host').isVisible(), false,
+        'Changing the manuscript source closes the utility instead of exposing the old destination');
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       assert.equal(await page.evaluate(() => scrollY), 0,
         'A source-context change cancels destination alignment before a held preceding read renders');
@@ -404,7 +408,10 @@ async function selectText(page, text) {
       await originReturn.evaluate(button => button.click());
       assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true',
         'A changed displayed source invalidates the saved origin instead of restoring an obsolete passage');
+      assert.deepEqual(writes, [], 'Retained stale controls cannot write after source invalidation');
       await page.locator('body').evaluate(body => { body.dataset.manuscriptSourceSha256 = 'a'.repeat(64); });
+      await page.locator('[data-rtab=review]').click();
+      await page.locator('#research-tool-host').waitFor({state:'visible'});
       await page.locator('#r-review-refresh').click();
       await page.locator('#research-manuscript-review [data-research-history=claim]').waitFor();
       holdHistorical = true;

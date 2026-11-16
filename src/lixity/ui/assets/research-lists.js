@@ -57,7 +57,11 @@ document.addEventListener("click", function(event) {
 // Coalesce ordinary in-flight reads only; post-write refreshes supersede older reads.
 var researchListRefreshes = {};
 function researchListRead(kind, overview, changedId, freshRead) {
-  var state = researchListRefreshes[kind] || (researchListRefreshes[kind] = {sequence: 0, pending: null});
+  var state = researchListRefreshes[kind];
+  // An earlier root/project observation cannot own this context's first read.
+  if (!state || !acceptResearchContext(state.context, {})) {
+    state = researchListRefreshes[kind] = {sequence: 0, pending: null, context: researchReadContext()};
+  }
   if (overview && Array.isArray(overview[kind])) {
     // Startup's shared overview must not replace a newer tab/post-write request.
     return Promise.resolve(state.sequence && !freshRead ? null : {state: state, sequence: ++state.sequence, data: overview});
@@ -83,7 +87,6 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var sourceListProject = researchSelectionProjectId;
   clearResearchSourceSelections();
   var listHost = document.getElementById("research-sources-list");
-  var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
   if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var reading = await researchListRead("sources", overview, changedId, freshRead);
@@ -107,18 +110,6 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var external = sources.find(function(s) { return s.context && s.context.external_reference; });
   var libraryInput = document.getElementById("r-zotero-library");
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
-  if (selectHost) {
-    var selectedSource = selectHost.value;
-    var textSources = sources.filter(function(source) {
-      return !["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(source.media_type) &&
-        (source.media_type !== "application/pdf" || source.passages > 0);
-    });
-    selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
-      textSources.map(function(s) {
-        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiCountFormat("research_passages_count", s.passages)) + ')</option>';
-      }).join("");
-    if (textSources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
-  }
   if (!sources.length) {
     LixityResearchCards.render(listHost, {message: uiLabel("research_no_sources")});
     filterResearchList("sources");
@@ -446,9 +437,10 @@ document.addEventListener("change", function(event) {
 });
 document.addEventListener("click", function(event) {
   if (event.target.id === "r-find-passage") {
-    researchEvidenceReview = reviewedEvidenceClaim();
+    if (!researchEvidenceDraft) researchEvidenceReview = reviewedEvidenceClaim();
     document.getElementById("r-search-scope").value = "sources";
-    document.querySelector('[data-rtab="search"]').click();
+    if (window.LixityResearchTools) window.LixityResearchTools.open("search", event.target);
+    else document.querySelector('[data-rtab="search"]').click();
     document.getElementById("r-search-query").focus();
   }
 });

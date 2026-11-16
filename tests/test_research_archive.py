@@ -707,6 +707,67 @@ else:
             restore_archive(malicious_archive, target_dir)
         self.assertIn("Dangerous archive entry", str(cm.exception))
 
+    def test_restore_rejects_undeclared_regular_files_before_publication(self) -> None:
+        valid = self.root / "inventory-source.tar.gz"
+        export_archive(self.project, valid)
+        for index, extra in enumerate(("research/unverified.txt", "unverified.txt")):
+            with self.subTest(extra=extra):
+                invalid = self.root / "extra-file.tar.gz"
+                with tarfile.open(valid, "r:gz") as source, tarfile.open(invalid, "w:gz") as target:
+                    for member in source.getmembers():
+                        stream = source.extractfile(member)
+                        with contextlib.closing(stream) if stream is not None else contextlib.nullcontext():
+                            target.addfile(member, stream)
+                    member = tarfile.TarInfo(extra)
+                    member.size = 10
+                    target.addfile(member, io.BytesIO(b"unverified"))
+                destination = self.root / f"extra-file-target-{index}"
+                with self.assertRaisesRegex(ResearchError, "inventory"):
+                    restore_archive(invalid, destination)
+                self.assertFalse((destination / "research").exists())
+
+    def test_restore_allows_safe_directory_entries_outside_file_inventory(self) -> None:
+        valid = self.root / "directory-source.tar.gz"
+        exported = export_archive(self.project, valid)
+        with_directories = self.root / "with-directories.tar.gz"
+        with tarfile.open(valid, "r:gz") as source, tarfile.open(with_directories, "w:gz") as target:
+            for member in source.getmembers():
+                stream = source.extractfile(member)
+                assert stream is not None
+                with stream:
+                    target.addfile(member, stream)
+            for name in ("research/empty", "empty-root"):
+                member = tarfile.TarInfo(name)
+                member.type = tarfile.DIRTYPE
+                target.addfile(member)
+        destination = self.root / "with-directories-target"
+        restored = restore_archive(with_directories, destination)
+        self.assertEqual(restored["project_id"], exported["project_id"])
+        self.assertEqual(restored["snapshot"], exported["snapshot"])
+        self.assertTrue((destination / "research/empty").is_dir())
+
+    def test_restore_rejects_noncanonical_inventory_path(self) -> None:
+        valid = self.root / "canonical-inventory.tar.gz"
+        export_archive(self.project, valid)
+        invalid = self.root / "noncanonical-inventory.tar.gz"
+        with tarfile.open(valid, "r:gz") as source, tarfile.open(invalid, "w:gz") as target:
+            for member in source.getmembers():
+                stream = source.extractfile(member)
+                assert stream is not None
+                with stream:
+                    content = stream.read()
+                if member.name == "EXPORT_MANIFEST.json":
+                    manifest = json.loads(content)
+                    metadata = manifest["files"].pop("research/HEAD.json")
+                    manifest["files"]["research/./HEAD.json"] = metadata
+                    content = json.dumps(manifest).encode("utf-8")
+                member.size = len(content)
+                target.addfile(member, io.BytesIO(content))
+        destination = self.root / "noncanonical-inventory-target"
+        with self.assertRaisesRegex(ResearchError, "inventory path"):
+            restore_archive(invalid, destination)
+        self.assertFalse((destination / "research").exists())
+
     def test_restore_rejects_parent_paths_in_inventory_before_reading_files(self) -> None:
         archive_path = self.root / "valid-inventory.tar.gz"
         export_archive(self.project, archive_path)

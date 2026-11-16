@@ -215,8 +215,10 @@ server.serve_forever()
     await expect(page.locator('[data-view=research]')).toHaveAttribute('tabindex','-1');
     await page.locator('[data-view=research]').click();
     await page.locator('[data-rtab=sources]').focus();await page.keyboard.press('ArrowRight');
-    await expect(page.locator('[data-rtab=search]')).toBeFocused();
-    await page.keyboard.press('Enter');await expect(page.locator('[data-rtab=search]')).toHaveAttribute('aria-selected','true');
+    await expect(page.locator('[data-rtab=dossiers]')).toBeFocused();
+    await page.keyboard.press('Enter');await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
+    await page.locator('[data-rtab=search]').click();
+    await expect(page.locator('[data-rtab=search]')).toHaveAttribute('aria-expanded','true');
     assert.deepEqual(errors,[]);
     await page.close();
     }

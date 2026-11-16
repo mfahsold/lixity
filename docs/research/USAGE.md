@@ -159,6 +159,15 @@ editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
 file; migrate literal text arguments to `--body`. Archives and citations are unchanged.
 Zotero is optional: retained evidence and authorized local imports work without it.
 
+**Unreleased workspace navigation:** Dossiers, Claims & evidence, Timeline,
+Decisions and Sources are the content tabs. **Search research** and **Review
+links** open shared tools while retaining the selected content and unfinished
+forms. Search includes retained passages and current authored records; exact
+quoted versions stay distinct from the current full source. Source-specific
+vocabulary comparison starts in that source's reader. See the
+[workspace workflow](../WORKSPACE.md#research-in-context-unreleased) for return
+controls and the whole-project review entry.
+
 ### Record a claim, evidence and an author decision
 
 In a dossier, open **Dossier actions** to prepare a claim or decision in its
@@ -1863,8 +1872,15 @@ metadata; use archive search for retained text.
 
 ### Cross-corpus comparison and evidence grounding
 
-`compare` requires an explicit source and manuscript, or the deliberate Grounding
-action for the loaded manuscript. It returns a separate report without modifying
+`compare` requires an explicit source and manuscript. In the current development
+workspace, open **Research → Sources**, select a retained text source, then choose
+**Compare vocabulary with manuscript**. There is no separate comparison tab.
+Opening a source does not run the comparison. The browser action compares the
+current source capture with the loaded manuscript; it does not select an older
+version from a pinned quotation. Read that exact quotation separately when needed.
+The CLI retains its explicit source/manuscript contract.
+
+It returns a separate report without modifying
 either text or recalibrating fingerprints. It measures lexical Jaccard/overlap,
 shared/exclusive terms, signed full $2\times2$ Dunning $G^2$ keyness, register
 contrasts and per-chapter occurrences per 1,000 words. Grounding means vocabulary
@@ -1900,6 +1916,11 @@ scores as comparable coverage. Guiraud/register contrasts depend on length,
 language and discourse mode. Matching a source is not a writing-quality objective.
 
 ## Storage, lifecycle and recovery
+
+Restoration verifies the complete regular-file inventory against the export
+manifest before publishing the archive. Undeclared files, noncanonical inventory
+paths, missing files and checksum mismatches are rejected. This checks archive
+integrity; an unsigned manifest does not establish who created an archive.
 
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.

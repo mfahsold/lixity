@@ -487,13 +487,15 @@
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
   });
-  function openRelated(filter) {
+  function openRelated(filter, control) {
     var tab = document.querySelector('[data-rtab="review"]');
     if (!reviewTabHost || !tab) return;
     reviewFilter = filter;
-    switchActiveView("research");
     openingRelated = true;
-    try { tab.click(); } finally { openingRelated = false; }
+    try {
+      if (window.LixityResearchTools) window.LixityResearchTools.open("review", control || document.activeElement, {focus: false, filter: filter});
+      else { switchActiveView("research"); tab.click(); }
+    } finally { openingRelated = false; }
     reviewSection.tabIndex = -1;
     reviewSection.focus({preventScroll: true});
     scrollAndFlash(reviewSection, {behavior: "instant"});
@@ -511,7 +513,7 @@
     function align() {
       if (relatedDestination !== destination) return;
       if (!live(destination.context) || document.activeElement !== reviewSection ||
-          !reviewSection.getClientRects().length || !document.querySelector('[data-rtab="review"].active')) {
+          !reviewSection.getClientRects().length || !(window.LixityResearchTools && window.LixityResearchTools.active() === "review")) {
         stopRelatedDestination(); return;
       }
       scrollAndFlash(reviewSection, {behavior: "instant"});
@@ -814,7 +816,7 @@
     openRelated(action.hasAttribute("data-manuscript-links-all") ? null : {
       claimId: action.dataset.manuscriptLinksClaim, dossierId: action.dataset.manuscriptLinksDossier,
       paragraphId: action.dataset.manuscriptLinksParagraph,
-      revision: Number.isInteger(pin) && pin > 0 ? pin : null});
+      revision: Number.isInteger(pin) && pin > 0 ? pin : null}, action);
   });
   document.addEventListener("click", async function(event) {
     var candidate = event.target.closest("[data-manuscript-link-candidate]");
@@ -1114,9 +1116,14 @@
       }
     }
   });
+  document.addEventListener("lixity:research-review", function(event) {
+    reviewFilter = event.detail.filter;
+    loadReview();
+    if (termsSection && termsSection.open) loadTerms();
+  });
   document.addEventListener("click", function(event) {
     if (!openingRelated && event.target.closest("[data-rtab]")) stopRelatedDestination();
-    if (event.target.closest('[data-rtab="review"]')) {
+    if (!window.LixityResearchTools && event.target.closest('[data-rtab="review"]')) {
       if (!openingRelated) reviewFilter = null;
       loadReview();
       if (termsSection && termsSection.open) loadTerms();

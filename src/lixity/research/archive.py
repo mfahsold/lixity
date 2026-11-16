@@ -352,7 +352,13 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
             raise ResearchError("EXPORT_MANIFEST.json contains no file entries")
 
         # Validate the whole inventory before reading any inventory-selected path.
-        for expected in files_manifest.values():
+        staged_repo = Repository(temp_stage)
+        for rel_path, expected in files_manifest.items():
+            staged_repo.safe(temp_stage / rel_path)
+            if ("\\" in rel_path or "\x00" in rel_path
+                    or Path(rel_path).as_posix() != rel_path
+                    or (rel_path != "lixity.toml" and not rel_path.startswith("research/"))):
+                raise ResearchError(f"Unsupported archive inventory path: {rel_path}")
             if not isinstance(expected, dict):
                 raise ResearchError("Invalid export manifest metadata")
             try:
@@ -364,12 +370,18 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
             ):
                 raise ResearchError("Invalid export file byte_length")
 
+        # Check the complete extracted envelope before publishing any part of it.
+        # Extra files must not enter the store without checksum verification.
+        actual_inventory = {
+            path.relative_to(temp_stage).as_posix()
+            for path in temp_stage.rglob("*") if path.is_file()
+        }
+        if actual_inventory != set(files_manifest) | {"EXPORT_MANIFEST.json"}:
+            raise ResearchError("Archive regular-file inventory does not match export manifest")
+
         # 3. Verify all file checksums
-        staged_repo = Repository(temp_stage)
         for rel_path, expected in files_manifest.items():
             extracted_file = staged_repo.safe(temp_stage / rel_path)
-            if rel_path != "lixity.toml" and not rel_path.startswith("research/"):
-                raise ResearchError(f"Unsupported archive inventory path: {rel_path}")
             if not extracted_file.is_file():
                 raise ResearchError(f"Archive missing expected file: {rel_path}")
             actual_sha, actual_size = _file_digest_and_size(extracted_file)

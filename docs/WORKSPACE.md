@@ -36,6 +36,13 @@ writes the new project; opening reconnects an existing one. The manuscript stays
 in its project folder. Use your text editor or the unreleased native
 [Write workflow](#write-a-manuscript-unreleased).
 
+The development DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
+entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
+Larger inputs fail explicitly before publication. Conversion preserves the
+original file, including when an output path aliases it; successful output is
+published atomically. These import ceilings do not increase the separate local
+manuscript editing limits.
+
 ## Write a manuscript (unreleased)
 
 In the local app, **Write** opens CodeMirror in the manuscript workspace and
@@ -490,6 +497,37 @@ interaction does not make the self-contained file smaller.
 The manuscript is a document reader: dragging selects text and resizing text
 changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom,
 and style-space retains its own rotation and zoom controls.
+
+## Research in context (unreleased)
+
+The development workspace uses five content tabs: **Dossiers**, **Claims &
+evidence**, **Timeline**, **Decisions** and **Sources**. **Search research** and
+**Review links** open shared tools above the selected content. Closing a tool
+returns to the originating control; switching tools does not save a record or
+replace an unfinished evidence draft.
+
+**Search research** searches retained source passages and current authored
+records. Choose all records or a source/dossier/claim/decision scope. From a
+claim, **Find evidence** uses the same search in the source scope and returns to
+that claim's evidence draft. Search-result details expose technical relevance
+information. An exact retained quotation and the latest full source are distinct
+reading destinations; opening the latest source does not update an existing pin.
+
+In **Sources**, select a retained text source and choose **Compare vocabulary
+with manuscript**. The explicit comparison uses the current captured source and
+the loaded manuscript; shared terms and chapter links precede optional numeric
+details. Word occurrences do not establish factual agreement, influence or evidence
+strength. Missing extracted text or manuscript makes comparison unavailable with
+an explanation. This does not replace reading exact cited passages. The
+[comparison reference](research/USAGE.md#cross-corpus-comparison-and-evidence-grounding)
+describes language, counting and chapter-parsing limits.
+
+**Review links** remains available for the whole project, including unassigned
+decisions and unresolved manuscript associations. Contextual dossier/decision
+entries open the same review component. Exact-version comparison, author
+assessments, manuscript-link repair and configured term variants retain their
+explicit review/save steps; they are not automatic corrections. **Terms &
+variants** is also reachable from manuscript inspection.
 
 ## Editing research text
 

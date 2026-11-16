@@ -113,8 +113,8 @@ server.serve_forever()
       await page.locator('#r-link-relation').selectOption('qualifies');
       await page.locator('#r-link-rationale').fill('Synthetic author review.');
       await page.locator('#r-find-passage').click();
-      assert.equal(await page.locator('#rtab-search[role=tabpanel]').isVisible(), true);
-      assert.equal(await page.locator('[data-rtab=search]').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('#rtab-search[role=region]').isVisible(), true);
+      assert.equal(await page.locator('[data-rtab=search]').getAttribute('aria-expanded'), 'true');
       assert.equal(await page.locator('#r-search-query').evaluate(input => input === document.activeElement), true,
         'Finding another passage focuses the native Search query');
       await page.locator('#r-search-query').fill('archive');
@@ -126,7 +126,10 @@ server.serve_forever()
       assert.ok((await searchCard.locator('.research-passage-quote').textContent()).includes('The archive opened in 1924.'),
         'Search reads the real retained source while the evidence draft remains unsaved');
       if (locale === 'en') await page.locator('#rtab-search').screenshot({path: path.join(artifacts, `claims-search-${width}.png`)});
-      await page.locator('[data-rtab=claims]').click();
+      await page.locator('#research-tool-close').click();
+      await page.waitForFunction(() => document.activeElement.id === 'r-find-passage');
+      assert.equal(await page.locator('#r-find-passage').evaluate(button => button === document.activeElement), true,
+        'Returning from evidence search restores its initiating control');
       assert.equal(await page.locator('#rtab-claims[role=tabpanel]').isVisible(), true);
       assert.equal(await page.locator('[data-rtab=claims]').getAttribute('aria-selected'), 'true');
       assert.equal(await page.locator('#research-evidence-draft .selection-quote').textContent(), 'The archive opened in 1924.',
@@ -138,6 +141,20 @@ server.serve_forever()
       assert.equal(await page.locator('#r-link-rationale').inputValue(), 'Synthetic author review.');
       assert.deepEqual(searches, [{path: '/api/research-search', payload: {query: 'archive', scope: 'sources'}}]);
       assert.equal(posts.length, 0, 'Searching and returning never submit the evidence draft');
+      await page.locator('#r-find-passage').click();
+      await page.locator('#r-search-query').fill('witness');
+      await page.locator('#r-search-btn').click();
+      const anotherPassage = page.locator(`#research-search-results [data-use-passage=claim][data-passage-id="${fixture.other_passage}"]`);
+      await anotherPassage.waitFor({state:'visible'});
+      await anotherPassage.click();
+      assert.equal(await page.locator('#r-link-passage-id').inputValue(), fixture.passage,
+        'Finding another passage cannot replace an existing evidence draft without explicit discard');
+      assert.equal(await page.locator('#research-evidence-draft .selection-quote').textContent(), 'The archive opened in 1924.');
+      assert.equal(await page.locator('#r-link-claim-select').inputValue(), fixture.claim);
+      assert.equal(await page.locator('#r-link-rationale').inputValue(), 'Synthetic author review.');
+      assert.equal(await page.locator('#research-evidence-draft button').evaluate(button => button === document.activeElement), true);
+      assert.equal(posts.length, 0, 'A blocked draft replacement writes nothing');
+
       if (locale === 'en') await page.locator('#r-link-composer').screenshot({path: path.join(artifacts, `claims-search-return-${width}.png`)});
       await page.locator('#r-link-evidence-btn').click();
       await page.waitForFunction(() => document.querySelector('#r-link-passage-id').value === '');

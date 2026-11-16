@@ -17,6 +17,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep initial Research list reads bound to the accepted project context so a
+  late startup response cannot strand collection editing or erase a new draft.
+
+- Encode custom Markdown callout titles and wikilink destinations for their HTML
+  attribute context so quoted input remains inert in native and exported readers.
+- Bound DOCX source bytes, ZIP entry count, streamed document XML and converted
+  output; reject original-file aliases and publish conversions atomically.
+- Reject undeclared files and noncanonical inventory paths when restoring a
+  research archive, before migration or publication.
+
 - Synchronize the homepage tour, localized captions and duration labels with one
   48-second timeline. Pace pointer movement, show one verifiable action per shot,
   and keep captions readable without competing camera or typing effects.
@@ -32,6 +42,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   documentation sync preserves their current aspect ratios.
 
 ### Changed
+
+- Keep five Research content tabs and move search/link review into shared tools
+  with explicit return controls. Compare vocabulary from the selected source,
+  with current-source provenance and terms/chapter links before optional numeric
+  details; retain exact quotations, draft evidence and whole-project link review.
+  Rename Source copies to Sources and clarify metadata-filter and lexical limits
+  in all seven interface languages.
 
 - Organize dossier collections by title: add dossiers from a chooser, reorder or
   remove selected entries, and name new collections without typing technical

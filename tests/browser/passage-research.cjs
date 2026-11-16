@@ -551,7 +551,7 @@ async function guardJourneys(browser, server) {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Context fits viewport');
       await page.screenshot({path: path.join(artifacts, `passage-en-${width}x${height}-${reducedMotion}.png`)});
       await context.locator('[data-manuscript-links-paragraph]').click();
-      await expect(page.locator('[data-rtab="review"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-rtab="review"]')).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator('#research-manuscript-review .manuscript-link-review-item')).toHaveCount(6);
       await page.locator('#workbench-return').click();
       await expect(paragraph).toBeFocused();

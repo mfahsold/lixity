@@ -32,7 +32,7 @@ lixity research search --project ./sample-project --query "reading room"
 
 `--allow-retention` confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.
 
-For an authorized file outside Zotero, open **Research → Source copies → Add local source** in the current development workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. The local importer remains available alongside Zotero in current development; released versions may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
+For an authorized file outside Zotero, open **Research → Sources → Add local source** in the current development workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. The local importer remains available alongside Zotero in current development; released versions may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
@@ -46,7 +46,7 @@ Matching URLs do not merge sources. Refreshing a named source with a new URL cre
 
 Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
 
-Run Zotero on the same computer and download the attachments you need. Open **Research → Source copies → Capture from Zotero** in the current development workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Run Zotero on the same computer and download the attachments you need. Open **Research → Sources → Capture from Zotero** in the current development workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
@@ -66,9 +66,9 @@ Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboar
 
 ## Search sources and current notes
 
-The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
+In the development workspace, **Search research** opens a shared tool above the selected research content. It includes retained source passages and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
 
-For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
+For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search research → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
 
 ```
 lixity research search --project ./sample-project --query "inspector" --scope all
@@ -168,9 +168,9 @@ lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relat
 
 Use returned IDs, passage first and claim second. Complete bare UUIDv4 selectors and plural aliases in grouped help are also supported. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#reading-and-cli-workflows-since-v240).
 
-## Compare sources with your manuscript (Grounding)
+## Compare vocabulary with your manuscript
 
-Beyond individual citations, Lixity measures how retained sources relate to your draft. Source-internal analysis (`lixity research analyze` / `dashboard`) inspects a single source against its own chapters, while **Research → Grounding** (`lixity research compare`) compares one retained source against your manuscript:
+Beyond individual citations, Lixity can compare word occurrences in a retained source and your draft. Matching words do not establish factual agreement or source influence. Source-internal analysis (`lixity research analyze` / `dashboard`) inspects a single source against its own chapters, while **Research → Sources → select a text source → Compare vocabulary with manuscript** (`lixity research compare`) compares one retained source against your manuscript:
 
 - **Lexical overlap & keyness:** Jaccard similarity, overlap coefficient, shared content-word types, Dunning *G²* source key terms, and terms exclusive to either text.
 

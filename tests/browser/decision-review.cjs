@@ -108,8 +108,25 @@ server.serve_forever()
       });
       await page.goto(server.fixture.url);
       await page.locator('#tab-view-research').click();
+      // Contextual follow-up uses the same report and retains a route to unlinked records.
+      await page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${server.fixture.dossier}"]`).click();
+      await page.locator(`[data-research-review-dossier="${server.fixture.dossier}"]`).click();
+      await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('#research-review-all')).toBeVisible();
+      await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.decision}"]`)).toBeVisible();
+      await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.other_decision}"]`)).toHaveCount(0);
+      await page.locator('#research-review-all').click();
+      await expect(page.locator('#research-editorial-review')).toContainText('Synthetic unlinked decision');
+      await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.other_decision}"]`)).toBeVisible();
       await page.locator('[data-rtab=decisions]').click();
+      const decisionReview = page.locator(`[data-research-review-decision="${server.fixture.decision}"]`);
+      await decisionReview.click();
+      await expect(page.locator('[data-rtab=decisions]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('#research-review-all')).toBeVisible();
+      await page.locator('#research-tool-close').click();
+      await expect(decisionReview).toBeFocused();
       await page.locator('#r-decision-composer > summary').click();
+
       await page.locator('#r-decision-title').fill('Unsubmitted synthetic decision draft');
       await page.locator('#r-decision-rationale').fill('Preserve this synthetic rationale draft.');
       await page.locator('[data-rtab=review]').click();
@@ -155,6 +172,7 @@ server.serve_forever()
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         await page.locator('html').evaluate(element => {element.dataset.theme = 'light';});
         const refresh = async () => {
+          if (!await page.locator('#research-tool-host').isVisible()) await page.locator('[data-rtab=review]').click();
           await page.locator('#r-review-refresh').click();
           await expect(comparison).not.toHaveAttribute('open', '');
         };
@@ -195,10 +213,12 @@ server.serve_forever()
         const oldToken = await page.locator('#research-manager').getAttribute('data-research-token');
         await page.locator('#research-manager').evaluate(element => {element.dataset.researchToken = 'synthetic-other-selected-root';});
         recordMode = 'native'; releases.splice(0).forEach(resolve => resolve());
-        await expect(comparison.locator('[data-decision-review-retry]')).toBeVisible();
+        await expect(page.locator('#research-tool-host')).toBeHidden();
+        await expect(comparison.locator('[data-decision-review-retry]')).toHaveCount(1);
         await expect(comparison.locator('[data-decision-review-latest]')).toHaveCount(0);
         const beforeStaleWrite = writes.length;
-        await card.locator('[data-decision-ack-status=applied]').click();
+        // The stale panel is hidden on root change; even a retained DOM event cannot save.
+        await card.locator('[data-decision-ack-status=applied]').evaluate(button => button.click());
         await expect(card.locator('[data-decision-ack-feedback]')).toContainText(labels.research_decision_ack_conflict);
         assert.equal(writes.length, beforeStaleWrite, 'A stale control cannot write into another selected root');
         await page.locator('#research-manager').evaluate((element, token) => {element.dataset.researchToken = token;}, oldToken);
@@ -206,10 +226,11 @@ server.serve_forever()
         await expect(comparison.locator('[data-decision-review-latest=dossier]')).toBeVisible();
         await comparison.locator('[data-decision-review-close]').click();
         await page.locator('#research-manager').evaluate(element => {element.dataset.researchToken = 'synthetic-other-selected-root';});
-        await openComparison();
-        await expect(comparison.locator('[data-decision-review-retry]')).toBeVisible();
+        await expect(page.locator('#research-tool-host')).toBeHidden();
+        await comparison.locator(':scope > summary').evaluate(button => button.click());
+        await expect(comparison.locator('[data-decision-review-retry]')).toHaveCount(1);
         await page.locator('#research-manager').evaluate((element, token) => {element.dataset.researchToken = token;}, oldToken);
-        await comparison.locator('[data-decision-review-retry]').click();
+        await comparison.locator('[data-decision-review-retry]').evaluate(button => button.click());
         await expect(comparison.locator('[data-decision-review-latest=dossier]')).toContainText('The revised synthetic garden gate is green.');
         await page.locator('[data-rtab=decisions]').click();
         const impactButton = page.locator('[data-decision-impact="' + server.fixture.decision + '"]');

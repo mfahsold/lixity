@@ -1,3 +1,4 @@
+const {openSourceComparison} = require('./support/research-tools.cjs');
 const {openProjectActions} = require('./support/project-actions.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 // Exercise project selection and research controls against a disposable local server.
@@ -29,6 +30,7 @@ base = Path(sys.argv[1])
 project = base / 'existing-novel'
 project.mkdir()
 (project / 'manuscript.md').write_text('', encoding='utf-8')
+(project / 'comparison.md').write_text('## Synthetic chapter\\n\\nThe archive keeper walks through the quiet garden.\\n', encoding='utf-8')
 (project / 'chapter "quoted" & <draft>.md').write_text('Synthetic filename fixture.', encoding='utf-8')
 api.init(project, title='Synthetic research')
 research_only = base / 'research-only'
@@ -318,10 +320,11 @@ server.serve_forever()
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 1);
     const sourceBeforeReopen = await (await page.request.get(fixture.url + '/api/research/sources')).json();
-    await page.locator('[data-rtab=grounding]').click();
-    await page.locator('#r-ground-source-select').selectOption(sourceBeforeReopen.sources[0].id);
+    await openSourceComparison(page, sourceBeforeReopen.sources[0].id);
+    await expect(page.locator('#r-ground-btn')).toBeDisabled();
+    await expect(page.locator('#research-comparison-unavailable')).toContainText('Load a manuscript');
     await page.locator('[data-rtab=sources]').click();
-    await expect(page.locator('#r-ground-source-select')).toHaveValue(sourceBeforeReopen.sources[0].id);
+    await expect(page.locator(`[data-research-source-compare="${sourceBeforeReopen.sources[0].id}"]`)).toBeVisible();
     // The folder route selects the same archive as the empty manuscript route.
     await openProjectActions(page);
     await page.locator('#btn-modal-open-project').click();
@@ -959,9 +962,15 @@ server.serve_forever()
     await expect(page.locator('#research-search-results')).toContainText('Synthetic search failure');
     await expect(page.locator('#research-status-bar.err')).toContainText('Synthetic search failure');
     await page.unroute('**/api/research-search');
+    // Keep empty-manuscript onboarding coverage above; comparison requires loaded prose.
+    await openProjectActions(page);
+    await page.locator('#btn-modal-open-project').click();
+    await page.locator('#open-proj-path').fill(path.join(fixture.project, 'comparison.md'));
+    await page.locator('#btn-submit-open-project').click();
+    await expect(page.locator('#modal-project-open')).toBeHidden();
+    await expect(page.locator('body')).toHaveAttribute('data-has-manuscript', 'true');
     await page.route('**/api/research-compare', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic comparison failure'}}));
-    await page.locator('[data-rtab=grounding]').click();
-    await page.locator('#r-ground-source-select').selectOption(sourceAfterReopen.sources[0].id);
+    await openSourceComparison(page, sourceAfterReopen.sources[0].id);
     await page.locator('#r-ground-btn').click();
     await expect(page.locator('#research-grounding-results')).toContainText('Synthetic comparison failure');
     await expect(page.locator('#research-status-bar.err')).toContainText('Synthetic comparison failure');
@@ -990,7 +999,7 @@ server.serve_forever()
       }
     }
     // Presentation language changes labels, not archive identity or stored text.
-    const sourceTabs = {en: 'Source copies', de: 'Quellenkopien', fr: 'Sources conservées', es: 'Fuentes conservadas', it: 'Fonti conservate', pt: 'Fontes preservadas', nl: 'Bewaarde bronnen'};
+    const sourceTabs = {en: 'Sources', de: 'Quellen', fr: 'Sources', es: 'Fuentes', it: 'Fonti', pt: 'Fontes', nl: 'Bronnen'};
     for (const [language, sourcesLabel] of Object.entries(sourceTabs)) {
       const response = await page.request.post(fixture.url + '/api/settings', {data: {language}});
       assert.equal((await response.json()).ok, true);
@@ -1051,8 +1060,7 @@ server.serve_forever()
           await page.unroute('**/api/research/status*');
         }
         await page.reload();
-        await page.locator('[data-rtab=grounding]').click();
-        await page.locator('#r-ground-source-select').selectOption(sourceAfterReopen.sources[0].id);
+        await openSourceComparison(page, sourceAfterReopen.sources[0].id);
         await page.locator('#r-ground-btn').click();
         await expect(page.locator('.research-comparison-warning')).toContainText('Unterschiedliche Sprachprofile');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

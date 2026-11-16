@@ -124,7 +124,9 @@ function projectBytes() {
       await dialog.locator('[data-research-revision="1"]').click();
       await expect(dialog.locator('#research-revision-history-detail')).toContainText('The earlier claim interpretation.');
       await page.keyboard.press('Escape');
+      await expect(page.locator('#research-tab-search')).toBeHidden();
       await page.locator('#research-tab-review').click();
+      await expect(page.locator('#research-tab-review')).toHaveAttribute('aria-expanded', 'true');
       await expect(page.locator('#research-editorial-review')).toContainText('Synthetic plot choice');
       assert.equal(await page.locator('[data-decision-ack-status]').count(), 0);
       await page.locator('#research-tab-sources').click();
@@ -133,6 +135,7 @@ function projectBytes() {
       await expect(source.locator('.research-source-doc-rendered')).toContainText('Uncited synthetic source paragraph.');
       await expect(source.locator('[data-site-original-source]')).toHaveAttribute('href', /^assets\/sources\//);
       assert.equal(await source.locator('.selection-toolbar').count(), 0);
+      assert.equal(await source.locator('[data-research-source-compare]').count(), 0, 'Static retained-source inspection exposes no unsupported live comparison action');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workspace-reader-toggle').click();
       await expect(page.locator('#workspace-reader-panel')).toBeVisible();

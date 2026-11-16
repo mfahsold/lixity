@@ -1036,7 +1036,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#' + passageId + ' p').first()).toHaveText(paragraphText);
   await expect(page.locator('#' + passageId + ' mark.manuscript-claim-hit')).toHaveText([demoQuote, demoSecondQuote]);
   await page.locator('#tab-view-research').click();
-  await expect(page.locator('[data-rtab=review]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-rtab=review]')).toHaveAttribute('aria-expanded', 'true');
   const originalReview = manuscriptReviewItem(page);
   await expect(originalReview.locator('blockquote')).toHaveText(demoQuote);
   await originalReview.locator('[data-manuscript-link-jump]').click();

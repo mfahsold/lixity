@@ -129,6 +129,7 @@
         <summary data-research-detail=${item.details} data-record-id=${item.id}>${uiLabel("research_view_details")}</summary>
         <div class="research-details-body"></div>
       </details>` : null}
+      ${item.decisionImpact ? html`<button type="button" class="ctl" data-research-review-decision=${item.id}>${uiLabel("research_tools_review")}</button>` : null}
       ${item.decisionImpact ? html`<details class="research-details">
         <summary data-decision-impact=${item.id}>${uiLabel("research_decision_affected")}</summary>
         <div class="research-details-body"></div>

@@ -1,3 +1,4 @@
+const {openSourceComparison} = require('./support/research-tools.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 // Local research list filters against a disposable synthetic archive.
 const fs = require('node:fs');
@@ -441,11 +442,17 @@ f.write_text('New gamma detail.', encoding='utf-8')
 api.ingest(p, f, title='Gamma source', allow_retention=True)
 api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
 `, fixture.project], {cwd: root, env: pythonEnv});
-    for (const [kind, selectId, selectedId] of [['sources', 'r-ground-source-select', fixture.sourceIds[0]], ['dossiers', 'r-claim-dossier-select', fixture.dossierIds[0]]]) {
-      await page.locator(`[data-rtab=${kind === 'sources' ? 'grounding' : 'claims'}]`).click();
+    for (const [kind, selectId, selectedId] of [['sources', null, fixture.sourceIds[0]], ['dossiers', 'r-claim-dossier-select', fixture.dossierIds[0]]]) {
+      if (kind === 'sources') {
+        await page.locator('[data-rtab=sources]').click();
+        await page.locator('#r-filter-sources').fill('');
+        await openSourceComparison(page, selectedId);
+      } else await page.locator('[data-rtab=claims]').click();
       if (kind === 'dossiers') await page.locator('#r-claim-composer > summary').click();
-      await page.locator('#' + selectId).evaluate(element => {const details = element.closest('details'); if (details) details.open = true;});
-      await page.locator('#' + selectId).selectOption(selectedId);
+      if (kind === 'dossiers') {
+        await page.locator('#' + selectId).evaluate(element => {const details = element.closest('details'); if (details) details.open = true;});
+        await page.locator('#' + selectId).selectOption(selectedId);
+      }
       let release, started;
       const gate = new Promise(resolve => { release = resolve; });
       const ready = new Promise(resolve => { started = resolve; });
@@ -464,8 +471,16 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         release();
         await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toHaveCount(1);
         await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toContainText('Gamma');
-        await expect(page.locator('#' + selectId)).toHaveValue(selectedId);
-        await expect(page.locator('#' + selectId + ' option')).toHaveCount(4);
+        if (kind === 'dossiers') {
+          await expect(page.locator('#' + selectId)).toHaveValue(selectedId);
+          await expect(page.locator('#' + selectId + ' option')).toHaveCount(4);
+        } else {
+          // Refreshing/filtering the collection keeps every retained source reachable.
+          await page.locator('#r-filter-sources').fill('');
+          await expect(page.locator('#research-sources-list .research-card:visible')).toHaveCount(3);
+          await openSourceComparison(page, selectedId);
+          await expect(page.locator('#r-ground-btn')).toBeVisible();
+        }
       } finally {
         release();
         await page.unroute(listMatch);
@@ -482,13 +497,13 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       nl: ['Bronnen filteren…', 'Dossiers filteren…', 'Geen resultaten'],
     };
     const captureLabels = {
-      en: ['Source copies', 'Capture from Zotero', 'Add local source'],
-      de: ['Quellenkopien', 'Aus Zotero übernehmen', 'Lokale Quelle hinzufügen'],
-      fr: ['Sources conservées', 'Conserver depuis Zotero', 'Ajouter une source locale'],
-      es: ['Fuentes conservadas', 'Conservar desde Zotero', 'Añadir fuente local'],
-      it: ['Fonti conservate', 'Acquisisci da Zotero', 'Aggiungi fonte locale'],
-      pt: ['Fontes preservadas', 'Preservar do Zotero', 'Adicionar fonte local'],
-      nl: ['Bewaarde bronnen', 'Uit Zotero bewaren', 'Lokale bron toevoegen'],
+      en: ['Sources', 'Capture from Zotero', 'Add local source'],
+      de: ['Quellen', 'Aus Zotero übernehmen', 'Lokale Quelle hinzufügen'],
+      fr: ['Sources', 'Conserver depuis Zotero', 'Ajouter une source locale'],
+      es: ['Fuentes', 'Conservar desde Zotero', 'Añadir fuente local'],
+      it: ['Fonti', 'Acquisisci da Zotero', 'Aggiungi fonte locale'],
+      pt: ['Fontes', 'Preservar do Zotero', 'Adicionar fonte local'],
+      nl: ['Bronnen', 'Uit Zotero bewaren', 'Lokale bron toevoegen'],
     };
     for (const [language, [sourcesName, dossiersName, noResults]] of Object.entries(languages)) {
       assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language}})).json()).ok, true);

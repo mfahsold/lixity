@@ -36,9 +36,12 @@ def render_research_panel(
 
     def pane(key: str) -> str:
         visibility = "" if key == "dossiers" else ' style="display:none;"'
+        utility = key in ("search", "review", "grounding")
         return (
-            f'<div class="research-tab-pane" id="rtab-{key}" role="tabpanel" '
-            f'{"data-requires-live " if key in ("search", "grounding") else ""}aria-labelledby="research-tab-{key}" tabindex="0"{visibility}>'
+            f'<div class="{"research-tool-pane" if utility else "research-tab-pane"}" id="rtab-{key}" '
+            f'role="{"region" if utility else "tabpanel"}" '
+            f'{"data-requires-live " if key in ("search", "grounding") else ""}'
+            f'aria-labelledby="{"research-tool-title" if utility else "research-tab-" + key}" tabindex="0"{visibility}>'
         )
 
     parts: list[str] = [
@@ -57,6 +60,21 @@ def render_research_panel(
     parts.append(
         f'<button type="button" class="ctl" id="research-revision-batch-review" data-requires-write hidden>{L("research_revision_batch_review")}</button>'
     )
+    parts.append('<div class="row research-tools-entry" id="research-tools-entry">')
+    for tool, key in (("search", "research_tools_search"), ("review", "research_tools_review")):
+        parts.append(
+            f'<button type="button" class="ctl" id="research-tab-{tool}" data-rtab="{tool}" '
+            f'{"data-requires-live " if tool == "search" else ""}'
+            f'aria-controls="rtab-{tool}" aria-expanded="false">{L(key)}</button>'
+        )
+    parts.append('</div>')
+    parts.append(
+        '<section id="research-tool-host" class="research-tool-host" aria-labelledby="research-tool-title" hidden>'
+        '<div class="row row-between research-tool-heading">'
+        '<h3 id="research-tool-title" class="section-heading" tabindex="-1"></h3>'
+        f'<button type="button" class="ctl" id="research-tool-close">{L("research_tools_close")}</button>'
+        '</div></section>'
+    )
     parts.append('<div class="research-navigation" id="research-navigation">')
     parts.append(
         f'<button type="button" class="ctl research-navigation-control" '
@@ -67,17 +85,9 @@ def render_research_panel(
     parts.append(
         '<div class="row research-tabs" id="research-tabs" role="tablist" aria-labelledby="research-panel-title">'
     )
-    tab_groups = {
-        "dossiers": "knowledge",
-        "claims": "knowledge",
-        "timeline": "knowledge",
-        "decisions": "knowledge",
-        "sources": "corpus",
-        "search": "corpus",
-        "review": "verify",
-        "grounding": "verify",
-    }
-    for key in ("dossiers", "claims", "timeline", "decisions", "review", "sources", "search", "grounding"):
+    primary_keys = ("dossiers", "claims", "timeline", "decisions", "sources")
+    tab_groups = {key: "corpus" if key == "sources" else "knowledge" for key in primary_keys}
+    for key in primary_keys:
         selected = key == "dossiers"
         parts.append(
             f'<button type="button" class="ctl{" active" if selected else ""}" '
@@ -111,7 +121,8 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(pane("sources"))
-    parts.append(f'<h3 class="section-heading">{L("zotero_retained")}</h3>')
+    parts.append(f'<h3 class="section-heading">{L("research_tab_sources")}</h3>')
+    parts.append(f'<button type="button" class="ctl mb-2" id="research-source-add" data-requires-write>{L("research_tools_source_add")}</button>')
     parts.append(
         f'<p class="ctl-note">{L("site_research_hint" if read_only else "research_captures_hint")}</p>'
     )
@@ -688,9 +699,10 @@ def render_research_panel(
         f'<button type="button" class="ctl" id="r-review-refresh" '
         f'title="{L("research_editorial_refresh")}" data-help="{L("research_review_refresh_help")}">{L("research_editorial_refresh")}</button>'
     )
+    parts.append(f'<button type="button" class="ctl mb-2" id="research-review-all" hidden>{L("research_review_all")}</button>')
     parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
     parts.append('<section id="research-manuscript-review-section" hidden>')
-    parts.append(f'<h3 class="section-heading">{L("manuscript_link_review")}</h3>')
+    parts.append(f'<h3 class="section-heading">{L("research_review_links_section")}</h3>')
     parts.append(f'<p class="ctl-note">{L("manuscript_link_review_help")}</p>')
     parts.append(
         '<div id="research-manuscript-review" class="manuscript-link-review-list" aria-live="polite"></div>'
@@ -772,21 +784,16 @@ def render_research_panel(
     parts.append('<div class="ctl-group">')
     parts.append(f'<span class="ctl-label">{L("research_ground_heading")}</span>')
     parts.append(
-        f'<p class="ctl-note" id="research-comparison-help">{L("help_research_comparison")}</p>'
+        f'<p class="ctl-note" id="research-comparison-help" data-help="{L("help_research_comparison")}">{L("research_source_compare_limit")}</p>'
     )
-    parts.append('<div class="row">')
+    parts.append('<p class="ctl-note" id="research-comparison-source"></p>')
+    parts.append('<p class="ctl-note" id="research-comparison-manuscript"></p>')
+    parts.append(f'<details class="research-details" id="research-comparison-context-details"><summary>{L("research_source_compare_details")}</summary><p class="ctl-note" id="research-comparison-version"></p></details>')
+    parts.append('<p class="ctl-note" id="research-comparison-unavailable" role="status"></p>')
     parts.append(
-        f'<select class="ctl field-wide" id="r-ground-source-select" '
-        f'aria-describedby="research-comparison-help" aria-label="{L("research_select_source")}" '
-        f'title="{L("research_select_source")}" data-help="{L("research_ground_source_help")}">'
-        f'<option value="">{L("research_select_source")}</option></select>'
+        f'<button type="button" class="ctl primary" id="r-ground-btn" aria-describedby="research-comparison-help" aria-keyshortcuts="Enter" '
+        f'title="{L("research_ground_action")}" data-help="{L("research_ground_action_help")}">{L("research_ground_action")}</button>'
     )
-    parts.append(
-        f'<button class="ctl primary" id="r-ground-btn" '
-        f'title="{L("research_ground_action")}" data-help="{L("research_ground_action_help")}" '
-        f'aria-keyshortcuts="Enter">{L("research_ground_action")}</button>'
-    )
-    parts.append("</div>")
     parts.append("</div>")
     parts.append('<div id="research-grounding-results"></div>')
     parts.append("</div>")

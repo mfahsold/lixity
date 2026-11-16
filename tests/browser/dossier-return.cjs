@@ -111,7 +111,8 @@ async function depart(page, control, tab) {
   assert.ok(captured && captured.count === 1 && captured.positions,
     'One native pointerdown captures a non-null departure origin');
   const before = captured.positions;
-  await expect(page.locator(`[data-rtab=${tab}]`)).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator(`[data-rtab=${tab}]`)).toHaveAttribute(
+    ['review', 'search'].includes(tab) ? 'aria-expanded' : 'aria-selected', 'true');
   await expect(page.locator('#workbench-return')).toBeVisible();
   await expect(page.locator('#workbench-return')).toHaveText('Back to dossier');
   await expect(page.locator('#workbench-thread')).toContainText('Origin synthetic dossier');
