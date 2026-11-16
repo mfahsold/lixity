@@ -93,7 +93,7 @@ def resolve_character_settings(explicit: Names | None, settings: Mapping[str, An
             declared[name] = tuple(profile.pov_in_chapters)
         return ResolvedCharacters(patterns, declared)
     names = explicit if explicit is not None else settings.get("names", [])
-    if not isinstance(names, (Mapping, Sequence)) or isinstance(names, (str, bytes)):
+    if not isinstance(names, Mapping | Sequence) or isinstance(names, str | bytes):
         raise ValueError("Character names must be a list or a pattern-to-label mapping")
     entries = names.items() if isinstance(names, Mapping) else ((name, name) for name in names)
     for pattern, label in entries:
@@ -133,15 +133,18 @@ class CharacterPresence:
         }
 
 
-def _name_pattern(name: str) -> re.Pattern[str]:
-    """Whole-word, case-insensitive pattern for one name or alias group."""
-    return re.compile(rf"(?<!\w)(?:{name})(?!\w)", re.IGNORECASE | re.UNICODE)
+def _name_pattern(name: str, *, case_sensitive: bool = False) -> re.Pattern[str]:
+    """Whole-word pattern for one name or alias group (case-insensitive by default)."""
+    flags = re.UNICODE if case_sensitive else re.IGNORECASE | re.UNICODE
+    return re.compile(rf"(?<!\w)(?:{name})(?!\w)", flags)
 
 
 def character_presence(
     text: str,
     names: Mapping[str, str] | Sequence[str],
     config: CorpusConfig | None = None,
+    *,
+    case_sensitive: bool = False,
 ) -> list[CharacterPresence]:
     """Name mentions per chapter, sorted by count (descending).
 
@@ -154,7 +157,7 @@ def character_presence(
     patterns: dict[str, list[re.Pattern[str]]] = {}
     entries = names.items() if isinstance(names, Mapping) else ((name, name) for name in names)
     for pattern, label in entries:
-        patterns.setdefault(label, []).append(_name_pattern(pattern))
+        patterns.setdefault(label, []).append(_name_pattern(pattern, case_sensitive=case_sensitive))
     if not patterns:
         raise ValueError(
             "characters requires at least one name or alias pattern "
@@ -234,6 +237,7 @@ def presence_report(
     names: Mapping[str, str] | Sequence[str],
     config: CorpusConfig | None = None, *,
     declared_pov: Mapping[str, Sequence[int]] | None = None,
+    case_sensitive: bool = False,
 ) -> dict[str, Any]:
     """Name-mention report preserving legacy presence keys and separate POV metadata.
 
@@ -241,7 +245,7 @@ def presence_report(
     """
     config = config or CorpusConfig()
     chapters = split_chapters(text, config)
-    figures = character_presence(text, names, config)
+    figures = character_presence(text, names, config, case_sensitive=case_sensitive)
     declared = declared_pov or {}
     if set(declared) - {figure.name for figure in figures}:
         raise ValueError("Declared POV must identify a selected character")
@@ -264,7 +268,7 @@ def presence_report(
             covered_pov_chapters.update(sorted_pov)
             declared_figures += 1
         result.append(item)
-    voices = character_voice_profiles(text, names, config)
+    voices = character_voice_profiles(text, names, config, case_sensitive=case_sensitive)
     return {
         "chapters": total_chapters,
         "figures": result,

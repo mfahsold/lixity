@@ -845,7 +845,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     "fr": {
         "name": "Français",
         "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
-        "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
+        "dialogue_regex": r"[«\"“][^»\"”]+[»\"”]|(?m:^[—–][^\S\n]+[^\n]+)",
         "praesens_regex": (
             r"\b("
             "suis|es|est|sommes|êtes|sont|ai|as|"
@@ -962,7 +962,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     "es": {
         "name": "Español",
         "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
-        "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
+        "dialogue_regex": r"[«\"“][^»\"”]+[»\"”]|(?m:^[—–][^\S\n]+[^\n]+)",
         "praesens_regex": (
             r"\b("
             "soy|eres|es|somos|sois|son|estoy|estás|"
@@ -1084,7 +1084,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     "it": {
         "name": "Italiano",
         "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
-        "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
+        "dialogue_regex": r"[«\"“][^»\"”]+[»\"”]|(?m:^[—–][^\S\n]+[^\n]+)",
         "praesens_regex": (
             r"\b("
             "sono|sei|è|siamo|siete|ho|hai|ha|"
@@ -1198,7 +1198,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     "pt": {
         "name": "Português",
         "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
-        "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
+        "dialogue_regex": r"[«\"“][^»\"”]+[»\"”]|(?m:^[—–][^\S\n]+[^\n]+)",
         "praesens_regex": (
             r"\b("
             "sou|és|é|somos|são|estou|estás|está|"
