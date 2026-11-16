@@ -10,6 +10,7 @@ The public showing command and tell_z/show_z JSON keys retain their identities.
 
 from __future__ import annotations
 
+import math
 import statistics
 from dataclasses import dataclass, field
 from typing import Any
@@ -119,10 +120,20 @@ def _z_map(values: dict[int, float]) -> dict[int, float]:
     spread = mad(data, centre)
     if spread > 0.0:
         return {num: robust_z(value, centre, spread) for num, value in values.items()}
-    deviation = statistics.pstdev(data)
-    if deviation == 0.0:
+    # Translation and common scaling preserve the median-centred score. Keep
+    # representable offsets before scaling, and bound the squared deviations
+    # used by Python 3.10's pstdev against both overflow and underflow.
+    offsets = {num: value - centre for num, value in values.items()}
+    if any(not math.isfinite(value) for value in offsets.values()):
+        # Opposite finite extremes can overflow their unscaled difference.
+        scale = max(abs(value) for value in data)
+        offsets = {num: value / scale - centre / scale for num, value in values.items()}
+    scale = max(abs(value) for value in offsets.values())
+    if scale == 0.0:
         return dict.fromkeys(values, 0.0)
-    return {num: significance_z(value, centre, deviation, 0.0) for num, value in values.items()}
+    normalized = {num: value / scale for num, value in offsets.items()}
+    deviation = statistics.pstdev(normalized.values())
+    return {num: significance_z(value, 0.0, deviation, 0.0) for num, value in normalized.items()}
 
 
 def showing_report(

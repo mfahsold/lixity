@@ -104,15 +104,28 @@ def test_showing_cli_reports_unavailable_instead_of_zero(tmp_path, capsys):
     assert "–" in output and "+0.00" not in output
 
 
-def test_zero_mad_fallback_keeps_finite_standardized_scores_at_large_scales():
+@pytest.mark.parametrize("scale", [1.0, 1e308, 1e-308, math.ulp(0.0)])
+def test_zero_mad_fallback_keeps_finite_standardized_scores_at_large_scales(scale):
     from lixity.showing import _z_map
 
-    scores = _z_map({1: 1e308, 2: 1e308, 3: -1e308})
+    scores = _z_map({1: scale, 2: scale, 3: -scale})
     assert all(math.isfinite(value) for value in scores.values())
     # Median = A, population deviation = sqrt(8) A / 3; the third
     # observation is -2 A from that median, hence -3 / sqrt(2).
     assert scores == pytest.approx({1: 0.0, 2: 0.0, 3: -2.1213203435596424})
     assert scores == pytest.approx(_z_map({1: 1.0, 2: 1.0, 3: -1.0}))
+
+
+def test_zero_mad_fallback_preserves_representable_variation_at_large_offsets():
+    from lixity.showing import _z_map
+
+    centre = 1e308
+    one_step_below = math.nextafter(centre, -math.inf)
+    two_steps_below = math.nextafter(one_step_below, -math.inf)
+    scores = _z_map({1: centre, 2: centre, 3: centre, 4: one_step_below, 5: two_steps_below})
+    # Relative observations are [0, 0, 0, -1, -2] ULPs. Their population
+    # deviation is 0.8 ULP; the reference remains their median, zero.
+    assert scores == pytest.approx({1: 0.0, 2: 0.0, 3: 0.0, 4: -1.25, 5: -2.5})
 
 
 class TestShowingReport(unittest.TestCase):

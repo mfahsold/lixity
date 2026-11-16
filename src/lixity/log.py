@@ -30,9 +30,15 @@ from contextvars import ContextVar
 from pathlib import Path
 from secrets import token_hex
 from threading import RLock
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
 import orjson
+
+if TYPE_CHECKING:
+    _StreamHandlerBase = logging.StreamHandler[Any]
+else:
+    # Python 3.10 logging classes cannot be parameterized at runtime.
+    _StreamHandlerBase = logging.StreamHandler
 
 NAME = "lixity"
 FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
@@ -165,7 +171,7 @@ class _UtcFormatter(logging.Formatter):
         return time.strftime(datefmt or DATEFMT, time.gmtime(record.created))
 
 
-class _StderrHandler(logging.StreamHandler[Any]):
+class _StderrHandler(_StreamHandlerBase):
     """Writes to whatever ``sys.stderr`` is at emit time.
 
     The service captures the process' stderr file descriptor and tests use

@@ -5,10 +5,36 @@ from __future__ import annotations
 import io
 import logging
 import os
+import runpy
+from contextlib import redirect_stderr
 from datetime import datetime, timezone
 from unittest import mock
 
 from lixity import log
+
+
+def test_stderr_handler_supports_non_generic_logging_stream_handler(monkeypatch):
+    def reject_type_parameters(cls, parameters):
+        raise TypeError("'type' object is not subscriptable")
+
+    # Python 3.10's logging classes have no runtime generic subscription.
+    monkeypatch.setattr(
+        logging.StreamHandler,
+        "__class_getitem__",
+        classmethod(reject_type_parameters),
+        raising=False,
+    )
+    isolated = runpy.run_path(log.__file__)
+    handler = isolated["_StderrHandler"]()
+    stream = io.StringIO()
+    try:
+        with redirect_stderr(stream):
+            handler.emit(
+                logging.LogRecord("lixity", logging.INFO, "", 0, "portable diagnostic", (), None)
+            )
+    finally:
+        handler.close()
+    assert stream.getvalue() == "portable diagnostic\n"
 
 
 def test_level_resolution_prefers_argument_then_env_then_debug_flag():

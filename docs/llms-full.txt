@@ -7855,7 +7855,10 @@ The **Signal-group comparison** (command `showing`) standardizes each raw signal
 against the manuscript's chapter median/MAD, then averages each group with equal
 feature weights: four word-pattern cues versus quoted-word and short-sentence
 shares. The displayed difference is second group minus first. Zero spread uses
-the population standard deviation when available. The `tell_z`/`show_z` names are
+the population standard deviation when available. This fallback translates and
+normalizes finite offsets before computing the deviation to avoid intermediate
+overflow or underflow; the median-centred population-deviation formula is unchanged.
+The `tell_z`/`show_z` names are
 machine identities, not evidence for a validated narrative-distance construct.
 Fewer than three sufficiently long chapters leave component scores and means
 unavailable. With sufficient chapters, a constant component has zero relative

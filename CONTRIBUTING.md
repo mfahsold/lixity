@@ -109,7 +109,11 @@ Tagged releases reuse `tests` and `browser` on the exact release commit before
 publication. The browser gate starts only after the source gate passes; a failed
 source gate therefore does not consume a browser runner, at the cost of a longer
 successful release. The `tests` workflow runs Ruff, strict `mypy` and the full Python
-suite with Poppler and FFmpeg on Linux/Python 3.12. The development extra includes
+suite with warnings treated as errors, Poppler and FFmpeg on Linux/Python 3.10
+(the minimum supported interpreter) and 3.12 in parallel. Both interpreter jobs
+must pass before the release browser gate starts; a failure does not cancel the
+other interpreter's checks. These are source checks, separate from the installed
+wheel smoke check used when building release artifacts. The development extra includes
 NumPy for the optional Base speech-worker tests; the analysis engine does not
 depend on it. Run relevant supported interpreters
 locally. Filesystem, process-lifecycle, packaging and native-tool changes also

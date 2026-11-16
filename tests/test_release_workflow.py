@@ -1,5 +1,6 @@
 """Release publication depends on checks for the actual tagged commit."""
 
+import ast
 import re
 from pathlib import Path
 
@@ -39,6 +40,19 @@ def test_release_reuses_source_and_browser_checks_for_tag_pushes():
     assert "if: github.event_name == 'push'" in published
     assert "always()" not in published and "continue-on-error" not in published
     assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", published)
+
+
+def test_source_gate_runs_full_suite_on_minimum_supported_python():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    minimum = re.fullmatch(r">=(\d+\.\d+)", project["project"]["requires-python"])
+    assert minimum, "Review the source gate when the supported Python range changes"
+    gate = job(workflow("tests.yml"), "check")
+    versions = re.search(r"(?m)^\s+python-version:\s*(\[[^\n]+\])\s*$", gate)
+    assert versions, "Source checks need an explicit supported-interpreter matrix"
+    assert {minimum.group(1), "3.12"} <= set(ast.literal_eval(versions.group(1)))
+    assert "python-version: ${{ matrix.python-version }}" in gate
+    assert "python -m pytest -W error -q -p no:asyncio" in gate
+    assert "continue-on-error" not in gate
 
 
 def test_existing_pypi_catchup_and_pages_release_ref_remain_available():

@@ -19,6 +19,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep logging importable on Python 3.10 by restricting generic handler types
+  to static type checking.
+- Preserve the zero-MAD population-deviation fallback at extreme finite scales
+  on Python 3.10 without changing its formula. Run the complete source CI gate
+  on Python 3.10 and 3.12; inject configuration metadata errors at the portable
+  `Path.stat` boundary.
+
 - Resolve platform-specific temporary directory aliases before building example
   projects, preserve the reviewed demo manuscript bytes across Git checkouts,
   and bind Windows loopback listeners exclusively to prevent a second server

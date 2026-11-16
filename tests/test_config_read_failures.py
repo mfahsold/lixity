@@ -3,8 +3,8 @@
 import errno
 import io
 import json
-import os
 from contextlib import redirect_stdout
+from pathlib import Path
 
 import pytest
 
@@ -64,18 +64,22 @@ def test_config_metadata_failure_warns_instead_of_looking_absent(
     target = user if scope == "user" else project / "lixity.toml"
     original = b'language = "de"\n'
     target.write_bytes(original)
-    real_stat = os.stat
+    real_stat = Path.stat
+    failed_paths = []
 
     def failed_stat(path, *args, **kwargs):
-        if os.fspath(path) == str(target):
+        if path == target:
+            failed_paths.append(path)
             raise OSError(error_number, "Synthetic metadata failure", str(target))
         return real_stat(path, *args, **kwargs)
 
     with monkeypatch.context() as failure:
-        failure.setattr(os, "stat", failed_stat)
+        # Older pathlib caches os.stat; inject at the operation the loader uses.
+        failure.setattr(Path, "stat", failed_stat)
         with pytest.warns(UserWarning) as warnings:
             settings = (read_project_config(project) if scope == "exact"
                         else load_project_config(source))
+    assert target in failed_paths
     assert settings == {}
     message = str(warnings[0].message)
     assert str(target) in message and "ignored" in message
