@@ -1,6 +1,91 @@
 // Research workspace: list filtering, sources, dossiers, timeline, claims, decisions.
 // Split of the former research.js; _JS_FILES concatenates the parts in
 // the original order, so load-time behaviour is unchanged.
+var RESEARCH_LIST_PAGE_SIZE = 40;
+var researchWindowState = {
+  sources: {items: [], limit: RESEARCH_LIST_PAGE_SIZE},
+  claims: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"},
+  decisions: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"}
+};
+
+function renderWindowedResearchList(kind, listHost, items, emptyMessage) {
+  var moreHost = document.getElementById("research-" + kind + "-more");
+  if (!items.length) {
+    if (emptyMessage) LixityResearchCards.render(listHost, {message: emptyMessage});
+    else LixityResearchCards.render(listHost, {items: []});
+    if (moreHost) {
+      moreHost.hidden = true;
+      moreHost.replaceChildren();
+    }
+    return;
+  }
+  var state = researchWindowState[kind] || {limit: RESEARCH_LIST_PAGE_SIZE};
+  var limit = state.limit || RESEARCH_LIST_PAGE_SIZE;
+  var visible = items.slice(0, limit);
+  var remaining = items.length - visible.length;
+  LixityResearchCards.render(listHost, {items: visible});
+  if (moreHost) {
+    if (remaining > 0) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ctl ctl-sm";
+      btn.dataset.researchShowMore = kind;
+      btn.textContent = (uiLabel("research_show_more") || "Show more") + " (+" + remaining + ")";
+      moreHost.replaceChildren(btn);
+      moreHost.hidden = false;
+    } else {
+      moreHost.hidden = true;
+      moreHost.replaceChildren();
+    }
+  }
+}
+
+function syncResearchTagCloud(kind, query) {
+  var host = document.getElementById("r-filter-" + kind + "-tags");
+  if (!host) return;
+  var active = String(query || "").trim().toLowerCase();
+  host.querySelectorAll("[data-cloud-tag]").forEach(function(btn) {
+    var match = Boolean(active) && btn.dataset.cloudTag.toLowerCase() === active;
+    btn.classList.toggle("active", match);
+    btn.setAttribute("aria-pressed", String(match));
+  });
+}
+
+function renderResearchTagCloud(kind, records) {
+  var host = document.getElementById("r-filter-" + kind + "-tags");
+  if (!host) return;
+  var counts = Object.create(null);
+  (records || []).forEach(function(item) {
+    (item.tags || []).forEach(function(raw) {
+      var tag = String(raw || "").trim();
+      if (tag) counts[tag] = (counts[tag] || 0) + 1;
+    });
+  });
+  var tags = Object.keys(counts).sort(function(a, b) {
+    return counts[b] - counts[a] || a.localeCompare(b);
+  }).slice(0, 20);
+  if (!tags.length) {
+    host.hidden = true;
+    host.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  tags.forEach(function(tag) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "research-tag";
+    btn.dataset.cloudKind = kind;
+    btn.dataset.cloudTag = tag;
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = tag + " (" + counts[tag] + ")";
+    frag.appendChild(btn);
+  });
+  host.replaceChildren(frag);
+  host.hidden = false;
+  var input = document.getElementById("r-filter-" + kind);
+  syncResearchTagCloud(kind, input ? input.value : "");
+}
+
 function filterResearchList(kind) {
   var input = document.getElementById("r-filter-" + kind);
   var list = document.getElementById("research-" + kind + "-list");
@@ -11,6 +96,37 @@ function filterResearchList(kind) {
   var state = researchListRefreshes[kind];
   // Keep a query and its focus available when the last record disappears.
   input.hidden = Boolean(state && state.count === 0 && !normalized && document.activeElement !== input);
+  syncResearchTagCloud(kind, query);
+  if (kind === "sources" && researchWindowState.sources.items.length) {
+    var allItems = researchWindowState.sources.items;
+    var limit = researchWindowState.sources.limit || RESEARCH_LIST_PAGE_SIZE;
+    if (allItems.length <= limit) {
+      // All items fit in the current window: ensure all are rendered once and
+      // filter in-place via `card.hidden` so open details/DOM state survive.
+      if (list.querySelectorAll(".research-card").length !== allItems.length) {
+        renderWindowedResearchList("sources", list, allItems, null);
+      }
+      var domCards = list.querySelectorAll(".research-card[data-filter-text]");
+      var domMatches = 0;
+      domCards.forEach(function(card) {
+        card.hidden = Boolean(normalized) && !card.dataset.filterText.includes(normalized);
+        if (!card.hidden) domMatches++;
+      });
+      status.hidden = !normalized || !domCards.length || domMatches > 0;
+      status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+      return;
+    }
+    var matched = normalized
+      ? allItems.filter(function(item) { return item.filterText && item.filterText.includes(normalized); })
+      : allItems;
+    renderWindowedResearchList("sources", list, matched, null);
+    list.querySelectorAll(".research-card[data-filter-text]").forEach(function(card) {
+      card.hidden = false;
+    });
+    status.hidden = !normalized || !allItems.length || matched.length > 0;
+    status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+    return;
+  }
   var cards = list.querySelectorAll(".research-card[data-filter-text]");
   var matches = 0;
   cards.forEach(function(card) {
@@ -22,7 +138,10 @@ function filterResearchList(kind) {
 }
 
 document.addEventListener("input", function(event) {
-  if (event.target.id === "r-filter-sources") filterResearchList("sources");
+  if (event.target.id === "r-filter-sources") {
+    researchWindowState.sources.limit = RESEARCH_LIST_PAGE_SIZE;
+    filterResearchList("sources");
+  }
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
 
@@ -32,6 +151,29 @@ document.addEventListener("focusout", function(event) {
 });
 
 document.addEventListener("click", function(event) {
+  var showMore = event.target.closest("[data-research-show-more]");
+  if (showMore) {
+    var moreKind = showMore.dataset.researchShowMore;
+    if (researchWindowState[moreKind]) {
+      researchWindowState[moreKind].limit += RESEARCH_LIST_PAGE_SIZE;
+      if (moreKind === "sources") filterResearchList("sources");
+      else if (moreKind === "claims") renderResearchClaimCards();
+      else if (moreKind === "decisions") renderResearchDecisionCards();
+    }
+    return;
+  }
+  var cloudTag = event.target.closest("[data-cloud-tag]");
+  if (cloudTag) {
+    var cloudKind = cloudTag.dataset.cloudKind;
+    var cloudInput = document.getElementById("r-filter-" + cloudKind);
+    if (cloudInput) {
+      var tagVal = cloudTag.dataset.cloudTag;
+      cloudInput.value = cloudInput.value.trim().toLowerCase() === tagVal.toLowerCase() ? "" : tagVal;
+      if (researchWindowState[cloudKind]) researchWindowState[cloudKind].limit = RESEARCH_LIST_PAGE_SIZE;
+      filterResearchList(cloudKind);
+    }
+    return;
+  }
   var filterTag = event.target.closest("[data-filter-tag]");
   if (filterTag) {
     var list = filterTag.closest("#research-sources-list, #research-dossiers-list");
@@ -39,6 +181,7 @@ document.addEventListener("click", function(event) {
     var input = document.getElementById("r-filter-" + kind);
     if (input) {
       input.value = filterTag.dataset.filterTag;
+      if (researchWindowState[kind]) researchWindowState[kind].limit = RESEARCH_LIST_PAGE_SIZE;
       filterResearchList(kind);
     }
     return;
@@ -101,7 +244,9 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     ++researchProjectStatusRead;
   }
   if (!data.ok || !Array.isArray(data.sources)) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_sources_failed")});
+    researchWindowState.sources.items = [];
+    renderResearchTagCloud("sources", []);
+    renderWindowedResearchList("sources", listHost, [], data.message || uiLabel("research_load_sources_failed"));
     filterResearchList("sources");
     return;
   }
@@ -111,11 +256,13 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var libraryInput = document.getElementById("r-zotero-library");
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
   if (!sources.length) {
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_sources")});
+    researchWindowState.sources.items = [];
+    renderResearchTagCloud("sources", []);
+    renderWindowedResearchList("sources", listHost, [], uiLabel("research_no_sources"));
     filterResearchList("sources");
     return;
   }
-  LixityResearchCards.render(listHost, {items: sources.map(function(s) {
+  researchWindowState.sources.items = sources.map(function(s) {
     var external = s.context && s.context.external_reference;
     var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
       ? s.media_type
@@ -135,7 +282,11 @@ async function refreshResearchSources(overview, changedId, freshRead) {
       details: "source",
       filterText: [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase(),
     };
-  })});
+  });
+  renderResearchTagCloud("sources", sources);
+  if (researchWindowState.sources.items.length <= (researchWindowState.sources.limit || RESEARCH_LIST_PAGE_SIZE)) {
+    renderWindowedResearchList("sources", listHost, researchWindowState.sources.items, null);
+  }
   filterResearchList("sources");
 }
 
@@ -178,10 +329,12 @@ function renderResearchDossiersView(data) {
     colNote.textContent = unavailableCount ? uiCountFormat("research_dossier_collection_unavailable", unavailableCount) : "";
   }
   if (!dossiers.length) {
+    renderResearchTagCloud("dossiers", []);
     LixityResearchCards.render(listHost, {message: uiLabel("research_no_dossiers")});
     filterResearchList("dossiers");
     return;
   }
+  renderResearchTagCloud("dossiers", visibleDossiers);
   if (!visibleDossiers.length) {
     LixityResearchCards.render(listHost, {message: uiLabel("research_dossier_collection_empty")});
     filterResearchList("dossiers");
@@ -271,6 +424,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     window.LixityComponents.renderTagSuggestions("r-ingest-tag-suggestions", dosTags, uiLabel("research_tag_suggestions"));
     window.LixityComponents.syncEmptySelect("r-dos-eids");
   }
+  syncAllSearchableSelects();
   if (typeof refreshResearchCollectionEditor === "function") refreshResearchCollectionEditor(data);
   renderResearchDossiersView(data);
   return data;
@@ -385,6 +539,7 @@ async function refreshResearchClaimProjections() {
       }).join("");
     if (researchClaimChoices[previous]) select.value = previous;
   });
+  syncAllSearchableSelects();
   updateResearchRelationControls();
   var include = document.getElementById("r-relation-retracted").checked;
   var responses = await Promise.all([researchApiGet("research/timeline"),
@@ -479,9 +634,67 @@ if (researchRelationForm) researchRelationForm.addEventListener("submit", async 
 var researchClaimCardItems = [];
 var researchDecisionsRender = 0;
 
+function renderResearchFilterPills(hostId, attrName, options, activeValue, onSelect) {
+  var host = document.getElementById(hostId);
+  if (!host) return;
+  if (!options || !options.length) {
+    host.hidden = true;
+    host.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  options.forEach(function(opt) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    var isActive = opt.value === activeValue;
+    btn.className = "ctl ctl-sm" + (isActive ? " active" : "");
+    btn.setAttribute(attrName, opt.value);
+    btn.setAttribute("aria-pressed", String(isActive));
+    btn.textContent = opt.label + " (" + opt.count + ")";
+    btn.addEventListener("click", function() { onSelect(opt.value); });
+    frag.appendChild(btn);
+  });
+  host.replaceChildren(frag);
+  host.hidden = false;
+}
+
+function renderResearchClaimFilterPills() {
+  var items = researchClaimCardItems;
+  if (!items.length) {
+    renderResearchFilterPills("r-claims-filter-pills", "data-claim-filter", [], "all", function() {});
+    return;
+  }
+  var counts = {evidenced: 0, disputed: 0, hypothetical: 0};
+  items.forEach(function(item) {
+    var conf = item.confidence === "evidenced" || item.confidence === "disputed" ? item.confidence : "hypothetical";
+    counts[conf] += 1;
+  });
+  var options = [
+    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "evidenced", label: uiLabel("research_confidence_evidenced"), count: counts.evidenced},
+    {value: "disputed", label: uiLabel("research_confidence_disputed"), count: counts.disputed},
+    {value: "hypothetical", label: uiLabel("research_confidence_hypothetical"), count: counts.hypothetical}
+  ];
+  renderResearchFilterPills("r-claims-filter-pills", "data-claim-filter", options, researchWindowState.claims.filter, function(val) {
+    researchWindowState.claims.filter = val;
+    researchWindowState.claims.limit = RESEARCH_LIST_PAGE_SIZE;
+    renderResearchClaimFilterPills();
+    renderResearchClaimCards();
+  });
+}
+
 function renderResearchClaimCards() {
   var host = document.getElementById("research-claims-list");
-  if (host) LixityResearchCards.render(host, {items: researchClaimCardItems});
+  if (!host) return;
+  if (!researchClaimCardItems.length) {
+    renderWindowedResearchList("claims", host, [], uiLabel("research_no_claims"));
+    return;
+  }
+  var activeFilter = researchWindowState.claims.filter || "all";
+  var filtered = activeFilter === "all"
+    ? researchClaimCardItems
+    : researchClaimCardItems.filter(function(item) { return item.confidence === activeFilter; });
+  renderWindowedResearchList("claims", host, filtered, filtered.length ? null : uiLabel("research_no_claims"));
 }
 
 async function refreshResearchClaims(overview) {
@@ -500,7 +713,8 @@ async function refreshResearchClaims(overview) {
   if (request !== researchClaimsRead || !acceptResearchContext(context, data)) return;
   if (!data.ok) {
     researchClaimCardItems = [];
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_claims_failed")});
+    renderResearchClaimFilterPills();
+    renderWindowedResearchList("claims", listHost, [], data.message || uiLabel("research_load_claims_failed"));
     return;
   }
   var claims = data.claims || [];
@@ -526,9 +740,11 @@ async function refreshResearchClaims(overview) {
       }).join("");
     if (claims.some(function(c) { return c.id === selectedEvidenceClaim; })) linkClaimSelect.value = selectedEvidenceClaim;
   }
+  syncAllSearchableSelects();
   if (!claims.length) {
     researchClaimCardItems = [];
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_claims")});
+    renderResearchClaimFilterPills();
+    renderWindowedResearchList("claims", listHost, [], uiLabel("research_no_claims"));
     return;
   }
   var catalogueContext = researchClaimsSnapshot ? JSON.stringify([context.projectId, context.token, researchClaimsSnapshot]) : null;
@@ -538,9 +754,10 @@ async function refreshResearchClaims(overview) {
     // Evidence/source changes can leave the claim bytes unchanged. Reuse its
     // pending or loaded panel only for the same accepted archive and context.
     if (catalogueContext && previous && previous.key === key && previous.catalogueContext === catalogueContext) return previous;
-    var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
-    var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced")
-      : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
+    var confKey = c.confidence === "evidenced" ? "evidenced" : (c.confidence === "disputed" ? "disputed" : "hypothetical");
+    var confClass = confKey === "evidenced" ? "badge-success" : (confKey === "disputed" ? "badge-warning" : "badge-neutral");
+    var confLabel = confKey === "evidenced" ? uiLabel("research_confidence_evidenced")
+      : (confKey === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
     var scopeParts = [];
     if (c.scope) {
       if (c.scope.time_period) scopeParts.push(uiLabel("research_scope_time") + " " + c.scope.time_period);
@@ -562,6 +779,7 @@ async function refreshResearchClaims(overview) {
       key: key,
       catalogueContext: catalogueContext,
       id: c.id,
+      confidence: confKey,
       title: c.title,
       badges: [{label: confLabel, cls: confClass}],
       metaRight: metaRight,
@@ -573,7 +791,47 @@ async function refreshResearchClaims(overview) {
       revision: "claim",
     };
   });
+  renderResearchClaimFilterPills();
   renderResearchClaimCards();
+}
+
+function renderResearchDecisionFilterPills() {
+  var items = researchWindowState.decisions.items;
+  if (!items.length) {
+    renderResearchFilterPills("r-decisions-filter-pills", "data-decision-filter", [], "all", function() {});
+    return;
+  }
+  var devCount = 0, noDevCount = 0;
+  items.forEach(function(item) {
+    if (item.deviation) devCount += 1;
+    else noDevCount += 1;
+  });
+  var options = [
+    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "deviation", label: uiLabel("research_deliberate_deviation"), count: devCount},
+    {value: "no_deviation", label: uiLabel("research_no_deviation_recorded"), count: noDevCount}
+  ];
+  renderResearchFilterPills("r-decisions-filter-pills", "data-decision-filter", options, researchWindowState.decisions.filter, function(val) {
+    researchWindowState.decisions.filter = val;
+    researchWindowState.decisions.limit = RESEARCH_LIST_PAGE_SIZE;
+    renderResearchDecisionFilterPills();
+    renderResearchDecisionCards();
+  });
+}
+
+function renderResearchDecisionCards() {
+  var host = document.getElementById("research-decisions-list");
+  if (!host) return;
+  var items = researchWindowState.decisions.items;
+  if (!items.length) {
+    renderWindowedResearchList("decisions", host, [], uiLabel("research_no_decisions"));
+    return;
+  }
+  var activeFilter = researchWindowState.decisions.filter || "all";
+  var filtered = activeFilter === "all"
+    ? items
+    : items.filter(function(item) { return activeFilter === "deviation" ? item.deviation : !item.deviation; });
+  renderWindowedResearchList("decisions", host, filtered, filtered.length ? null : uiLabel("research_no_decisions"));
 }
 
 async function refreshResearchDecisions(overview) {
@@ -582,12 +840,16 @@ async function refreshResearchDecisions(overview) {
   if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var data = overview && Array.isArray(overview.decisions) ? overview : await researchApiGet("research/decisions");
   if (!data.ok) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_decisions_failed")});
+    researchWindowState.decisions.items = [];
+    renderResearchDecisionFilterPills();
+    renderWindowedResearchList("decisions", listHost, [], data.message || uiLabel("research_load_decisions_failed"));
     return;
   }
   var decisions = data.decisions || [];
   if (!decisions.length) {
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_decisions")});
+    researchWindowState.decisions.items = [];
+    renderResearchDecisionFilterPills();
+    renderWindowedResearchList("decisions", listHost, [], uiLabel("research_no_decisions"));
     return;
   }
   // The previous string renderer replaced the whole list, so a refresh closed
@@ -595,7 +857,7 @@ async function refreshResearchDecisions(overview) {
   // the impact view can hold stale acknowledgement state. Sources and dossiers
   // keep their open details via identity keys.
   var decisionsRender = ++researchDecisionsRender;
-  LixityResearchCards.render(listHost, {items: decisions.map(function(d) {
+  researchWindowState.decisions.items = decisions.map(function(d) {
     var badges = [d.deviation_from_fact
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
@@ -613,6 +875,7 @@ async function refreshResearchDecisions(overview) {
     return {
       key: "decision:" + decisionsRender + ":" + d.id,
       id: d.id,
+      deviation: Boolean(d.deviation_from_fact),
       title: d.title,
       badges: badges,
       metaRight: metaRight,
@@ -623,5 +886,126 @@ async function refreshResearchDecisions(overview) {
       decisionImpact: true,
       revision: "decision",
     };
-  })});
+  });
+  renderResearchDecisionFilterPills();
+  renderResearchDecisionCards();
 }
+
+var SEARCHABLE_SELECT_IDS = [
+  "r-dos-eids",
+  "r-claim-dossier-select",
+  "r-decision-claim-select",
+  "r-decision-dossier-select",
+  "r-link-claim-select",
+  "r-relation-from",
+  "r-relation-to"
+];
+
+function filterSelectOptions(select, rawQuery) {
+  var query = String(rawQuery || "").trim().toLowerCase();
+  Array.from(select.options).forEach(function(opt) {
+    var keep = opt.value === "" || opt.selected || !query || opt.textContent.toLowerCase().includes(query);
+    opt.hidden = !keep;
+    opt.disabled = !keep;
+  });
+}
+
+function renderSelectChips(select) {
+  var chipsHost = document.getElementById(select.id + "-chips");
+  if (!chipsHost) return;
+  var selected = Array.from(select.options).filter(function(opt) { return opt.selected && opt.value !== ""; });
+  if (!selected.length) {
+    chipsHost.hidden = true;
+    chipsHost.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  selected.forEach(function(opt) {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "research-tag";
+    chip.dataset.selectChipSelect = select.id;
+    chip.dataset.selectChipValue = opt.value;
+    chip.textContent = opt.textContent + " ×";
+    frag.appendChild(chip);
+  });
+  chipsHost.replaceChildren(frag);
+  chipsHost.hidden = false;
+}
+
+function syncSearchableSelect(select) {
+  if (!select || !select.id) return;
+  var searchInput = document.getElementById(select.id + "-search");
+  if (!searchInput) return;
+  var isMultiEids = select.id === "r-dos-eids";
+  var shouldShowSearch = !select.hidden && (isMultiEids ? select.options.length > 0 : select.options.length > 10);
+  searchInput.hidden = !shouldShowSearch;
+  if (!shouldShowSearch && searchInput.value) searchInput.value = "";
+  filterSelectOptions(select, searchInput.value);
+  renderSelectChips(select);
+}
+
+function ensureSearchableSelect(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select || select.dataset.searchableMounted === "1") return select;
+  select.dataset.searchableMounted = "1";
+  var search = document.createElement("input");
+  search.type = "search";
+  search.className = "ctl ctl-sm mb-1";
+  search.id = select.id + "-search";
+  search.placeholder = uiLabel("research_filter_select") || "Filter options…";
+  search.setAttribute("aria-label", search.placeholder);
+  search.dataset.selectSearchFor = select.id;
+  search.hidden = true;
+  search.addEventListener("input", function() {
+    filterSelectOptions(select, search.value);
+  });
+  var chips = document.createElement("div");
+  chips.className = "research-tags mt-1";
+  chips.id = select.id + "-chips";
+  chips.dataset.selectChipsFor = select.id;
+  chips.hidden = true;
+  select.parentNode.insertBefore(search, select);
+  select.parentNode.insertBefore(chips, select.nextSibling);
+  select.addEventListener("change", function() {
+    filterSelectOptions(select, search.value);
+    renderSelectChips(select);
+  });
+  if (typeof MutationObserver === "function") {
+    var syncing = false;
+    new MutationObserver(function() {
+      if (syncing) return;
+      syncing = true;
+      try { syncSearchableSelect(select); }
+      finally { syncing = false; }
+    }).observe(select, {childList: true, attributes: true, attributeFilter: ["hidden"]});
+  }
+  syncSearchableSelect(select);
+  return select;
+}
+
+function syncAllSearchableSelects() {
+  SEARCHABLE_SELECT_IDS.forEach(function(id) {
+    var select = ensureSearchableSelect(id);
+    if (select) syncSearchableSelect(select);
+  });
+}
+
+document.addEventListener("click", function(event) {
+  var chip = event.target.closest("[data-select-chip-select]");
+  if (!chip) return;
+  var select = document.getElementById(chip.dataset.selectChipSelect);
+  if (!select) return;
+  var val = chip.dataset.selectChipValue;
+  if (select.multiple) {
+    Array.from(select.options).forEach(function(opt) {
+      if (opt.value === val) opt.selected = false;
+    });
+  } else {
+    select.value = "";
+  }
+  select.dispatchEvent(new Event("change", {bubbles: true}));
+  syncSearchableSelect(select);
+});
+
+syncAllSearchableSelects();
