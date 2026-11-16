@@ -2,6 +2,7 @@
 
 import io
 import json
+from pathlib import Path
 
 from lixity import mcp
 
@@ -172,3 +173,12 @@ def test_serve_roundtrip_over_stdio():
     assert len(by_id[2]["result"]["tools"]) == 16
     assert "lixity" in by_id[3]["result"]["content"][0]["text"]
     assert lines[-1]["error"]["code"] == -32700
+
+
+def test_skill_markdown_documents_all_registered_mcp_tools():
+    skill_path = Path(__file__).resolve().parent.parent / "skills" / "lixity" / "SKILL.md"
+    skill_text = skill_path.read_text(encoding="utf-8")
+    response = _request("tools/list")
+    registered = [tool["name"] for tool in response["result"]["tools"]]
+    missing = [name for name in registered if f"`{name}`" not in skill_text]
+    assert not missing, f"MCP tools missing from skills/lixity/SKILL.md: {missing}"
