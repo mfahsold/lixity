@@ -209,9 +209,11 @@ def render_research_panel(
         f'data-help="{L("research_filter_sources_help")}" title="{L("research_filter_sources")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
+    parts.append('<div class="research-tags mb-2" id="r-filter-sources-tags" hidden></div>')
     parts.append(
         f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
+    parts.append('<div class="row mt-2" id="research-sources-more" hidden></div>')
     parts.append("</div>")
 
     parts.append(pane("search"))
@@ -403,6 +405,7 @@ def render_research_panel(
         f'data-help="{L("research_filter_dossiers_help")}" title="{L("research_filter_dossiers")}" aria-keyshortcuts="Escape"/>'
     )
     parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
+    parts.append('<div class="research-tags mb-2" id="r-filter-dossiers-tags" hidden></div>')
     parts.append(
         f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
@@ -558,9 +561,11 @@ def render_research_panel(
     parts.append("  </div>")
     parts.append("</details>")
     parts.append("</div>")
+    parts.append('  <div class="row mb-2" id="r-claims-filter-pills" role="group" hidden></div>')
     parts.append(
         f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
+    parts.append('  <div class="row mt-2" id="research-claims-more" hidden></div>')
     parts.append('<div class="ctl-group research-relation-section research-section-card">')
     parts.append(
         f'<h3>{L("research_relation_heading")}</h3><p class="ctl-note">{L("research_relation_hint")}</p>'
@@ -687,9 +692,11 @@ def render_research_panel(
     parts.append("    </div>")
     parts.append("  </div>")
     parts.append("</details>")
+    parts.append('  <div class="row mb-2" id="r-decisions-filter-pills" role="group" hidden></div>')
     parts.append(
         f'  <div id="research-decisions-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
+    parts.append('  <div class="row mt-2" id="research-decisions-more" hidden></div>')
     parts.append("</div>")
 
     parts.append(pane("review"))

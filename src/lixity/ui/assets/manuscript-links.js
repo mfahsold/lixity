@@ -243,6 +243,47 @@
   if (termsSection && termsTabHost) {
     termsSection.hidden = false;
   }
+  var panelIndex = null;
+  function invalidatePanelIndex() { panelIndex = null; }
+  function getPanelIndex() {
+    if (panelIndex) return panelIndex;
+    var byHash = new Map();
+    var byLineRange = new Map();
+    var panels = chapters.querySelectorAll(".ptext");
+    for (var i = 0; i < panels.length; i++) {
+      var panel = panels[i];
+      var hash = panel.dataset.paragraphSha256;
+      if (hash) {
+        var byHashList = byHash.get(hash);
+        if (byHashList) byHashList.push(panel);
+        else byHash.set(hash, [panel]);
+      }
+      var rangeKey = Number(panel.dataset.start) + ":" + Number(panel.dataset.end);
+      var byRangeList = byLineRange.get(rangeKey);
+      if (byRangeList) byRangeList.push(panel);
+      else byLineRange.set(rangeKey, [panel]);
+    }
+    panelIndex = {byHash: byHash, byLineRange: byLineRange};
+    return panelIndex;
+  }
+  if (typeof MutationObserver === "function") {
+    new MutationObserver(function(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var m = mutations[i];
+        if (m.type === "attributes" || m.target === chapters ||
+            (m.target && m.target.nodeType === 1 && !m.target.closest(".ptext-inner"))) {
+          invalidatePanelIndex();
+          break;
+        }
+      }
+    }).observe(chapters, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-paragraph-sha256", "data-start", "data-end"]
+    });
+  }
+  document.addEventListener("lixity:reader-ready", invalidatePanelIndex);
   function matchesPanel(row, panel) {
     var a = row.anchor;
     if (row.anchor_state !== "resolved" || !a || row.resolved_start_line !== Number(panel.dataset.start) ||
@@ -255,7 +296,10 @@
     return (report.links || []).filter(function(row) { return matchesPanel(row, panel); });
   }
   function linkedPanel(row) {
-    return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesPanel(row, panel); });
+    if (!row || row.anchor_state !== "resolved" || !row.anchor || !row.anchor.paragraph_sha256) return null;
+    var list = getPanelIndex().byHash.get(row.anchor.paragraph_sha256);
+    if (!list) return null;
+    return list.find(function(panel) { return matchesPanel(row, panel); }) || null;
   }
   function candidatePanel(row) {
     if (!["moved", "adjusted"].includes(row.anchor_state) || !row.anchor ||
@@ -263,7 +307,9 @@
         !Number.isInteger(row.resolved_start) || !Number.isInteger(row.resolved_end)) return null;
     // Adjusted paragraphs retain the recorded quotation at new codepoint
     // offsets; their former paragraph hash and offsets intentionally differ.
-    var candidates = Array.from(chapters.querySelectorAll(".ptext")).filter(function(panel) {
+    var list = getPanelIndex().byLineRange.get(row.resolved_start_line + ":" + row.resolved_end_line);
+    if (!list) return null;
+    var candidates = list.filter(function(panel) {
       if (Number(panel.dataset.start) !== row.resolved_start_line ||
           Number(panel.dataset.end) !== row.resolved_end_line) return false;
       var points = Array.from(bridge.text(panel) || "");
@@ -899,7 +945,10 @@
       a.end <= points.length && points.slice(a.start, a.end).join("") === a.quote;
   }
   function termPanel(occ) {
-    return Array.from(chapters.querySelectorAll(".ptext")).find(function(panel) { return matchesTermAnchor(occ, panel); });
+    if (!occ || !occ.anchor || !occ.anchor.paragraph_sha256) return null;
+    var list = getPanelIndex().byHash.get(occ.anchor.paragraph_sha256);
+    if (!list) return null;
+    return list.find(function(panel) { return matchesTermAnchor(occ, panel); }) || null;
   }
   function renderTermsReport(report) {
     var fragment = document.createDocumentFragment();
@@ -914,33 +963,63 @@
       fragment.appendChild(element("p", label("manuscript_terms_no_matches"), "ctl-note"));
       return fragment;
     }
-    var currentChapter = null;
+    var chapterControl = document.getElementById("reader-chapter");
+    var currentChapterEl = chapterControl && chapterControl.dataset.currentChapter
+      ? document.getElementById(chapterControl.dataset.currentChapter) : null;
+    var currentChapterNum = currentChapterEl && currentChapterEl.dataset.chapterNumber
+      ? Number(currentChapterEl.dataset.chapterNumber) : null;
+    var groups = [];
+    var groupByNum = new Map();
     occurrences.forEach(function(occ, idx) {
       var number = Number.isInteger(occ.chapter_num) && occ.chapter_num > 0 ? occ.chapter_num : Infinity;
-      if (number !== currentChapter) {
-        currentChapter = number;
+      var group = groupByNum.get(number);
+      if (!group) {
         var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
           label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() { return occ.chapter_title || ""; });
-        var heading = element("h4", title);
-        heading.dataset.manuscriptTermsChapter = "";
-        fragment.appendChild(heading);
+        group = {
+          number: number,
+          title: title,
+          rows: [],
+          isCurrent: Number.isInteger(currentChapterNum) && number === currentChapterNum
+        };
+        groupByNum.set(number, group);
+        groups.push(group);
       }
-      var item = element("div", "", "manuscript-link-review-item manuscript-term-occurrence-item");
-      var summary = occ.term + (occ.matched_form && occ.matched_form !== occ.term ? " (" + occ.matched_form + ")" : "");
-      item.appendChild(element("p", summary));
-      var flags = [label("manuscript_terms_variant_" + (occ.variant_kind || "preferred"))];
-      (occ.flags || []).forEach(function(flag) {
-        if (flag === "overlapping_term" || flag === "unicode_ambiguity") flags.push(label("manuscript_terms_flag_" + flag));
+      group.rows.push({occ: occ, idx: idx});
+    });
+    var autoExpand = occurrences.length <= 12;
+    groups.forEach(function(group) {
+      var details = document.createElement("details");
+      details.className = "research-details mb-2";
+      details.dataset.manuscriptTermChapterGroup = "";
+      details.open = autoExpand || group.isCurrent;
+      var summary = document.createElement("summary");
+      var heading = element("h3", group.title);
+      heading.dataset.manuscriptTermsChapter = "";
+      heading.style.display = "inline";
+      summary.appendChild(heading);
+      summary.appendChild(element("span", " (" + group.rows.length + ")", "ctl-note"));
+      details.appendChild(summary);
+      group.rows.forEach(function(entry) {
+        var occ = entry.occ;
+        var item = element("div", "", "manuscript-link-review-item manuscript-term-occurrence-item");
+        var summaryText = occ.term + (occ.matched_form && occ.matched_form !== occ.term ? " (" + occ.matched_form + ")" : "");
+        item.appendChild(element("p", summaryText));
+        var flags = [label("manuscript_terms_variant_" + (occ.variant_kind || "preferred"))];
+        (occ.flags || []).forEach(function(flag) {
+          if (flag === "overlapping_term" || flag === "unicode_ambiguity") flags.push(label("manuscript_terms_flag_" + flag));
+        });
+        item.appendChild(element("p", flags.join(" · "), "ctl-note"));
+        if (occ.anchor && typeof occ.anchor.quote === "string") item.appendChild(element("blockquote", occ.anchor.quote));
+        if (termPanel(occ)) {
+          var jump = element("button", label("manuscript_link_open_passage"), "ctl");
+          jump.type = "button";
+          jump.dataset.manuscriptTermJump = String(entry.idx);
+          item.appendChild(jump);
+        }
+        details.appendChild(item);
       });
-      item.appendChild(element("p", flags.join(" · "), "ctl-note"));
-      if (occ.anchor && typeof occ.anchor.quote === "string") item.appendChild(element("blockquote", occ.anchor.quote));
-      if (termPanel(occ)) {
-        var jump = element("button", label("manuscript_link_open_passage"), "ctl");
-        jump.type = "button";
-        jump.dataset.manuscriptTermJump = String(idx);
-        item.appendChild(jump);
-      }
-      fragment.appendChild(item);
+      fragment.appendChild(details);
     });
     return fragment;
   }
