@@ -2599,11 +2599,18 @@ def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[s
     }
 
 
+def _timeline_data(
+    repository: Repository, snapshot: Snapshot, *, dossier_id: str | None = None
+) -> dict[str, Any]:
+    del repository
+    return timeline_data(snapshot, dossier_id=dossier_id)
+
+
 def timeline(project: str | Path, dossier_id: str | None = None) -> dict[str, Any]:
     """Read conservative chronology without modifying any authored period label."""
-    return timeline_data(
-        Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id
-    )
+    repository = Repository(project)
+    snapshot = repository.snapshot(kinds=frozenset({"claim"}))
+    return _timeline_data(repository, snapshot, dossier_id=dossier_id)
 
 
 def _reviewed_snapshot(
@@ -3003,9 +3010,18 @@ def decision_impact(project: str | Path, decision_id: str) -> dict[str, Any]:
     )
 
 
+def _editorial_review_data(repository: Repository, snapshot: Snapshot) -> dict[str, Any]:
+    del repository
+    return editorial.editorial_review_data(
+        snapshot, outline=lambda body: list(extract_sections(body))
+    )
+
+
 def editorial_review(project: str | Path) -> dict[str, Any]:
     """List structural review candidates, never semantic or quality verdicts."""
-    return editorial.editorial_review(project, outline=lambda body: list(extract_sections(body)))
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    return _editorial_review_data(repository, snapshot)
 
 
 def prepare_pin_review_batch(
@@ -3394,8 +3410,8 @@ def research_gaps(project: str | Path) -> dict[str, Any]:
     repository = Repository(project)
     snapshot = repository.snapshot()
     matrix = _claim_matrix_data(repository, snapshot)
-    review = editorial_review(project)
-    chrono = timeline(project)
+    review = _editorial_review_data(repository, snapshot)
+    chrono = _timeline_data(repository, snapshot)
 
     withdrawn_or_purged = {
         record.target_ref.id
