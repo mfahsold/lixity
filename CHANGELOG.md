@@ -19,6 +19,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolve platform-specific temporary directory aliases before building example
+  projects, and bind Windows loopback listeners exclusively to prevent a second
+  server from reusing an active app port.
+
 - Keep initial Research list reads bound to the accepted project context so a
   late startup response cannot strand collection editing or erase a new draft.
 

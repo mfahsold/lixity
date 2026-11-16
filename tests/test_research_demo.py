@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
@@ -68,6 +69,32 @@ def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
     image.unlink()
     with pytest.raises((OSError, ValueError)):
         example_project.reviewed_visual_sources(assets)
+
+
+@pytest.mark.portability
+def test_example_project_accepts_a_temporary_parent_alias(tmp_path, monkeypatch):
+    temporary_root = tmp_path / "physical-temporary-root"
+    temporary_root.mkdir()
+    alias = tmp_path / "temporary-root-alias"
+    try:
+        alias.symlink_to(temporary_root, target_is_directory=True)
+    except OSError:
+        pytest.skip("Directory symlinks are unavailable on this platform")
+
+    @contextmanager
+    def aliased_temporary_directory(**_options):
+        yield str(alias)
+
+    monkeypatch.setattr(example_project, "TemporaryDirectory", aliased_temporary_directory)
+    destination = tmp_path / "example-project"
+    result = example_project.create_example_project(destination)
+
+    assert result["project"] == destination
+    assert (destination / "harbour-manuscript.md").read_bytes() == example_project.DEMO_MANUSCRIPT.read_bytes()
+    links = api.list_manuscript_links(destination)["links"]
+    assert len(links) == 5
+    assert {link["anchor"]["source_path"] for link in links} == {"harbour-manuscript.md"}
+    assert api.audit(destination)["ok"]
 
 
 def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_boundaries(tmp_path, research_fixture):

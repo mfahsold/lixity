@@ -34,6 +34,10 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
 
     def server_bind(self) -> None:
         host = self.server_address[0]
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            # On Windows, REUSEADDR can share an active listener's port.
+            self.allow_reuse_address = False
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         TCPServer.server_bind(self)
         self.server_name = str(host)
         self.server_port = self.server_address[1]

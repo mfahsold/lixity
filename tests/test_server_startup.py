@@ -1,6 +1,7 @@
 """Neutral foreground startup does not discover or write into the caller's project."""
 
 import errno
+import socket
 from http.server import BaseHTTPRequestHandler
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,77 @@ def test_loopback_listener_rejects_a_second_server_on_its_live_port():
              _LoopbackHTTPServer(first.server_address, BaseHTTPRequestHandler):
             pass
         assert caught.value.errno == errno.EADDRINUSE
+
+
+@pytest.mark.parametrize("competitor", ["lixity", "reuse_socket"])
+def test_windows_listener_reserves_its_live_address(monkeypatch, competitor):
+    """Windows REUSEADDR must not permit another listener to share the port."""
+    # The platform boundary models documented Winsock bind semantics. Keep the
+    # real server constructor/bind policy; Linux cannot execute Winsock itself.
+    exclusive_option = 987654
+    bindings = {}
+
+    class WinsockSocket:
+        def __init__(self, *_args):
+            self.address = None
+            self.reuse = False
+            self.exclusive = False
+
+        def setsockopt(self, _level, option, value):
+            if option == socket.SO_REUSEADDR:
+                self.reuse = bool(value)
+            elif option == exclusive_option:
+                self.exclusive = bool(value)
+
+        def bind(self, address):
+            occupants = bindings.get(address, [])
+            if occupants and (self.exclusive or not self.reuse
+                              or any(item.exclusive for item in occupants)):
+                raise OSError(errno.EADDRINUSE, "Address already owned")
+            if self.exclusive and self.reuse:
+                raise OSError(errno.EINVAL, "Conflicting Winsock bind options")
+            self.address = address
+            bindings.setdefault(address, []).append(self)
+
+        def getsockname(self):
+            return self.address
+
+        def listen(self, _backlog):
+            pass
+
+        def close(self):
+            if self.address is not None:
+                bindings[self.address].remove(self)
+                self.address = None
+
+    monkeypatch.setattr(socket, "SO_EXCLUSIVEADDRUSE", exclusive_option, raising=False)
+    monkeypatch.setattr(socket, "socket", WinsockSocket)
+    address = ("127.0.0.1", 8765)
+    with _LoopbackHTTPServer(address, BaseHTTPRequestHandler):
+        if competitor == "lixity":
+            with pytest.raises(OSError) as caught, \
+                 _LoopbackHTTPServer(address, BaseHTTPRequestHandler):
+                pass
+        else:
+            other = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            other.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                with pytest.raises(OSError) as caught:
+                    other.bind(address)
+            finally:
+                other.close()
+        assert caught.value.errno == errno.EADDRINUSE
+
+
+def test_loopback_listener_rejects_a_reusing_socket_on_its_live_port():
+    """An unrelated socket cannot take over the bound address via REUSEADDR."""
+    with _LoopbackHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler) as first, \
+         socket.socket(socket.AF_INET, socket.SOCK_STREAM) as other:
+        other.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        with pytest.raises(OSError) as caught:
+            other.bind(first.server_address)
+        assert (caught.value.errno in (errno.EADDRINUSE, errno.EACCES)
+                or getattr(caught.value, "winerror", None) in (10048, 10013))
 
 
 def test_loopback_listener_can_rebind_after_close():

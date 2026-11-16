@@ -412,7 +412,8 @@ def create_example_project(destination: Path) -> dict:
     if destination.exists() or destination.is_symlink():
         raise FileExistsError(f"Example destination already exists: {destination}")
     with TemporaryDirectory(prefix="lixity-example-project-") as directory:
-        result = _populate(Path(directory))
+        # Temporary roots may use macOS /var aliases or Windows short names.
+        result = _populate(Path(directory).resolve())
         shutil.copytree(result["project"], destination)
     return {**result, "project": destination}
 
