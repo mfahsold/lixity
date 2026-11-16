@@ -4,6 +4,7 @@ import base64
 import hashlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -95,6 +96,36 @@ def test_example_project_accepts_a_temporary_parent_alias(tmp_path, monkeypatch)
     assert len(links) == 5
     assert {link["anchor"]["source_path"] for link in links} == {"harbour-manuscript.md"}
     assert api.audit(destination)["ok"]
+
+
+@pytest.mark.portability
+def test_reviewed_demo_source_survives_autocrlf_checkout(tmp_path):
+    repository = tmp_path / "checkout-repository"
+    repository.mkdir()
+    executable = shutil.which("git")
+    assert executable is not None, "Git is required to verify reviewed checkout bytes"
+
+    def git(*arguments):
+        # Fixed executable/options; every path belongs to this temporary fixture.
+        subprocess.run(  # noqa: S603
+            [executable, "-C", str(repository), "-c", f"core.attributesfile={os.devnull}",
+             "-c", "core.safecrlf=false", *arguments], check=True, capture_output=True,
+        )
+
+    git("init", "--quiet")
+    (repository / "samples").mkdir()
+    source = (ROOT / "samples/first-look.md").read_bytes()
+    (repository / "samples/first-look.md").write_bytes(source)
+    (repository / ".gitattributes").write_bytes((ROOT / ".gitattributes").read_bytes())
+    git("-c", "core.autocrlf=false", "add", ".gitattributes", "samples/first-look.md")
+    checkout = tmp_path / "autocrlf-checkout"
+    git("-c", "core.autocrlf=true", "checkout-index",
+        "--prefix=" + checkout.as_posix() + "/", "--", "samples/first-look.md")
+
+    checked_out = (checkout / "samples/first-look.md").read_bytes()
+    provenance = json.loads((ROOT / "docs/assets/audio/warehouse-4-chapter-1.json").read_text(encoding="utf-8"))
+    assert checked_out == source
+    assert hashlib.sha256(checked_out).hexdigest() == provenance["source_sha256"]
 
 
 def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_boundaries(tmp_path, research_fixture):

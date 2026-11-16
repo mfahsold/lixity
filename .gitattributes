@@ -1,3 +1,5 @@
+# The reviewed demo audio pins the manuscript's exact SHA-256 on every platform.
+samples/first-look.md -text
 # Preserve exact pinned upstream bytes, including whitespace in template literals.
 src/lixity/ui/assets/vendor/mermaid-tiny-12.2.0.min.js whitespace=-blank-at-eol
 # Distributed upstream files retain their CRLF line endings.
