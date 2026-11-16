@@ -9,6 +9,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Per-document write lock & compact dossier sections (`manuscript_editing.py`, `routes_editing.py`, `routes_markers.py`, `research-cards.js`)**: Replaced coarse global `SOURCE_WRITE_LOCK` contention with `document_lock(source)` keyed by resolved manuscript path (preserving `SOURCE_WRITE_LOCK` export for compatibility), and reduced inline `DossierSections` preview limit in dossier cards from 4 to 2.
 - **Normalized editorial review & UI disclosure (`research/editorial.py`, `research/presentation.py`, `research-review.js`, `manuscript-links.js`)**: `editorial_review_data()` now deduplicates affected dossier outlines into top-level `dossier_outlines` with `sections_count` per candidate; `research-review.js` collapses section outlines behind a disclosure toggle and `manuscript-links.js` groups large manuscript link lists (>12 links) by chapter `<details>` while keeping chapters needing attention open.
 - **Inverted 3-gram & hash quote lookup (`research/manuscript.py`)**: `derive_manuscript_review()` now indexes paragraph SHA-256 hashes in O(1) (`by_hash`) and uses a character 3-gram inverted index (`_ParagraphQuoteIndex`) for exact quote fallback resolution.
 

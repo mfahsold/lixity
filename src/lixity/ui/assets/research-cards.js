@@ -65,7 +65,7 @@
   function DossierSections(props) {
     var sections = props.sections || [];
     if (!sections.length) return null;
-    var limit = 4;
+    var limit = 2;
     var visible = sections.slice(0, limit);
     var remaining = sections.slice(limit);
     return html`<div class="research-dossier-sections">

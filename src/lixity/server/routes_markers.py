@@ -6,7 +6,7 @@ import os
 from typing import Any
 
 from ..io import FileUtils
-from ..manuscript_editing import SOURCE_WRITE_LOCK
+from ..manuscript_editing import SOURCE_WRITE_LOCK, document_lock
 from ..markers import add_marker, resolve_marker
 from ._base import ResponseMixin
 
@@ -15,7 +15,8 @@ class MarkerRoutesMixin(ResponseMixin):
     """Handlers for author work markers stored beside the manuscript."""
 
     def _handle_marker(self, action: str, payload: dict[str, Any]) -> None:
-        with SOURCE_WRITE_LOCK:
+        lock = document_lock(self.source_input) if self.source_input else SOURCE_WRITE_LOCK
+        with lock:
             self._handle_marker_locked(action, payload)
 
     def _handle_marker_locked(self, action: str, payload: dict[str, Any]) -> None:

@@ -45,6 +45,19 @@ from .sentences import split_prose_sentences
 logger = get_logger("manuscript")
 
 SOURCE_WRITE_LOCK = RLock()
+_DOC_LOCKS_GUARD = RLock()
+_DOC_LOCKS: dict[str, RLock] = {}
+
+
+def document_lock(source: str | Path) -> RLock:
+    """Return a re-entrant lock scoped to the resolved manuscript path."""
+    key = str(Path(source).resolve())
+    with _DOC_LOCKS_GUARD:
+        lock = _DOC_LOCKS.get(key)
+        if lock is None:
+            lock = RLock()
+            _DOC_LOCKS[key] = lock
+        return lock
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 _ID = re.compile(r"[a-f0-9]{32,64}\Z")
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
@@ -228,8 +241,11 @@ class ManuscriptStore:
             flags_count=flags_count,
         )
 
+    def _lock(self) -> RLock:
+        return document_lock(self.source)
+
     def open(self) -> dict[str, Any]:
-        with SOURCE_WRITE_LOCK:
+        with self._lock():
             data = self._read()
             text, _, _ = _decode(data)
             recovery: list[dict[str, Any]] = []
@@ -246,7 +262,7 @@ class ManuscriptStore:
             raise ValueError("Invalid recovery identifier")
         if not (self.directory / "recovery.sqlite3").exists():
             raise ValueError("Recovery entry is unavailable")
-        with SOURCE_WRITE_LOCK, closing(self._database()) as db:
+        with self._lock(), closing(self._database()) as db:
             row = db.execute("SELECT content,kind FROM recovery WHERE document=? AND id=?", (self.document, identifier)).fetchone()
             if row is None:
                 raise ValueError("Recovery entry is unavailable")
@@ -264,7 +280,7 @@ class ManuscriptStore:
         if len(encoded) > MAX_TEXT_BYTES:
             raise ValueError("Manuscript exceeds the 4 MiB editing limit")
         request = _digest(revision.encode() + b"\0" + encoded)
-        with SOURCE_WRITE_LOCK, closing(self._database()) as db:
+        with self._lock(), closing(self._database()) as db:
             receipt = db.execute("SELECT request,response FROM receipts WHERE document=? AND id=?", (document, operation)).fetchone()
             if receipt is not None:
                 if receipt["request"] != request:
@@ -347,7 +363,7 @@ class ManuscriptStore:
         orig_snap = self.analyze_snapshot(original_text) if need_orig else None
         target_snap = self.analyze_snapshot(text) if need_target else None
         if orig_snap is not None or target_snap is not None:
-            with SOURCE_WRITE_LOCK, closing(self._database()) as db, db:
+            with self._lock(), closing(self._database()) as db, db:
                 if orig_snap is not None:
                     self._insert_revision_snapshot(
                         db,
@@ -371,7 +387,7 @@ class ManuscriptStore:
         """Explicitly remove a selected recovery copy, never the manuscript."""
         if not _ID.fullmatch(identifier):
             raise ValueError("Invalid recovery identifier")
-        with SOURCE_WRITE_LOCK, closing(self._database()) as db, db:
+        with self._lock(), closing(self._database()) as db, db:
             db.execute("DELETE FROM recovery WHERE document=? AND id=?", (self.document, identifier))
         log_event(logger, "manuscript_discard", kind="recovery")
 
@@ -403,7 +419,7 @@ class ManuscriptStore:
         bounded = max(1, min(int(limit), 200))
         if not (self.directory / "recovery.sqlite3").exists():
             return []
-        with SOURCE_WRITE_LOCK, closing(self._database()) as db:
+        with self._lock(), closing(self._database()) as db:
             rows = db.execute(
                 "SELECT revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
                 "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
@@ -431,7 +447,7 @@ class ManuscriptStore:
             raise ValueError("Invalid base revision identifier")
         if target_revision is not None and not _ID.fullmatch(target_revision):
             raise ValueError("Invalid target revision identifier")
-        with SOURCE_WRITE_LOCK:
+        with self._lock():
             history = self.timeline(limit=100)
             by_rev = {item["revision"]: item for item in history}
             if target_revision is not None:

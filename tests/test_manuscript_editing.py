@@ -343,24 +343,25 @@ def test_editing_timeline_routes_registered():
 def test_save_analyzes_snapshots_outside_write_lock_and_skips_reanalysis_on_aba(tmp_path, monkeypatch):
     import threading
 
-    from lixity.manuscript_editing import SOURCE_WRITE_LOCK
+    from lixity.manuscript_editing import document_lock
 
     initial = "## Chapter 1\n\nThe river was quiet.\n"
     updated = "## Chapter 1\n\nThe river was loud and fast.\n"
-    editor, _source = store(tmp_path, initial.encode("utf-8"))
+    editor, source = store(tmp_path, initial.encode("utf-8"))
     opened = editor.open()
+    lock = document_lock(source)
 
     calls: list[tuple[str, bool]] = []
     orig_analyze = editor.analyze_snapshot
 
     def spy_analyze(text: str):
-        # Verify SOURCE_WRITE_LOCK is NOT held by this thread during analysis
+        # Verify the document lock is NOT held by this thread during analysis
         acquired_by_other = [False]
 
         def probe():
-            got = SOURCE_WRITE_LOCK.acquire(blocking=False)
+            got = lock.acquire(blocking=False)
             if got:
-                SOURCE_WRITE_LOCK.release()
+                lock.release()
             acquired_by_other[0] = got
 
         t = threading.Thread(target=probe)
@@ -380,6 +381,16 @@ def test_save_analyzes_snapshots_outside_write_lock_and_skips_reanalysis_on_aba(
     assert reverted_a["revision"] == opened["revision"]
     assert calls == []
     assert [row["revision"] for row in editor.timeline()] == [opened["revision"], saved_b["revision"]]
+
+
+def test_document_lock_isolates_distinct_manuscripts(tmp_path):
+    from lixity.manuscript_editing import document_lock
+
+    first = tmp_path / "book-a.md"
+    second = tmp_path / "book-b.md"
+    first_alias = tmp_path / "." / "book-a.md"
+    assert document_lock(first) is document_lock(first_alias)
+    assert document_lock(first) is not document_lock(second)
 
 
 def test_snapshot_matches_full_pipeline_and_unknown_semantics(tmp_path):

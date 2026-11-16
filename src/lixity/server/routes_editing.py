@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from ..manuscript_editing import SOURCE_WRITE_LOCK, EditConflict, ManuscriptStore
+from ..manuscript_editing import SOURCE_WRITE_LOCK, EditConflict, ManuscriptStore, document_lock
 from ._base import ResponseMixin
 
 
@@ -20,7 +20,8 @@ class EditingRoutesMixin(ResponseMixin):
             query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
             if set(query) != {"document", "revision"} or any(len(value) != 1 for value in query.values()):
                 raise ValueError("Expected one document and revision")
-            with self._workspace_lock, SOURCE_WRITE_LOCK:
+            doc_lock = document_lock(self.source_input) if self.source_input else SOURCE_WRITE_LOCK
+            with self._workspace_lock, doc_lock:
                 store = self._editor_store()
                 opened = store.open()
                 if any(query[key][0] != opened[key] for key in ("document", "revision")):
