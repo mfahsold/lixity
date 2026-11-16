@@ -1143,6 +1143,12 @@ class TestPELT(unittest.TestCase):
         series = [1.0, 2.0, 1.5, 10.0, 11.0, 9.5, 3.0, 2.5]
         self.assertEqual(pelt_changepoints(series), pelt_changepoints(series))
 
+    def test_constant_series_respects_negative_penalty(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        self.assertEqual(pelt_changepoints([5.0] * 5, penalty=0.0), [])
+        self.assertEqual(pelt_changepoints([5.0] * 5, penalty=-1.0), [1, 2, 3, 4])
+
 
 class TestMannKendall(unittest.TestCase):
     """Mann-Kendall monotonic trend test."""
@@ -1193,6 +1199,60 @@ class TestMannKendall(unittest.TestCase):
 
         data = [2.0, 3.0, 1.0, 5.0, 4.0]
         self.assertEqual(mann_kendall(data), mann_kendall(data))
+
+    def test_matches_naive_quadratic_formula_across_ties_and_random_series(self):
+        import random
+        from collections import Counter
+
+        from lixity.style_fingerprint import mann_kendall, normal_tail_probability
+
+        def naive_mann_kendall(values: list[float]) -> tuple[float, float, float] | None:
+            n = len(values)
+            if n < 3:
+                return None
+            s = 0.0
+            for i in range(n - 1):
+                for j in range(i + 1, n):
+                    diff = values[j] - values[i]
+                    if diff > 0.0:
+                        s += 1.0
+                    elif diff < 0.0:
+                        s -= 1.0
+            tie_groups = [c for c in Counter(values).values() if c > 1]
+            n0 = n * (n - 1) / 2.0
+            tau = s / n0 if n0 > 0.0 else 0.0
+            var_s = n * (n - 1.0) * (2.0 * n + 5.0) / 18.0
+            for t in tie_groups:
+                var_s -= t * (t - 1.0) * (2.0 * t + 5.0) / 18.0
+            if var_s <= 0.0:
+                return (0.0, 0.0, 1.0)
+            z = (s - 1.0) / math.sqrt(var_s) if s > 0 else ((s + 1.0) / math.sqrt(var_s) if s < 0 else 0.0)
+            return (tau, s, normal_tail_probability(z))
+
+        rng = random.Random(42)
+        cases: list[list[float]] = [
+            [],
+            [1.0],
+            [1.0, 2.0],
+            [0.0, -0.0, 0.0, 1.0],
+            [3.0, 3.0, 1.0, 1.0, 2.0, 2.0, 2.0],
+            [-5.0, 2.5, -5.0, 10.0, 0.0, 2.5],
+        ]
+        for n in (3, 4, 5, 8, 15, 35):
+            cases.append([rng.uniform(-100.0, 100.0) for _ in range(n)])
+            cases.append([float(rng.randint(-4, 4)) for _ in range(n)])
+
+        for series in cases:
+            got = mann_kendall(series)
+            expected = naive_mann_kendall(series)
+            if expected is None:
+                self.assertIsNone(got)
+            else:
+                self.assertIsNotNone(got)
+                assert got is not None
+                self.assertEqual(got[1], expected[1])
+                self.assertAlmostEqual(got[0], expected[0], places=14)
+                self.assertAlmostEqual(got[2], expected[2], places=14)
 
 
 class TestWassersteinKS(unittest.TestCase):
@@ -1426,6 +1486,84 @@ class TestSnQn(unittest.TestCase):
         data = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0]
         self.assertEqual(sn_estimator(data), sn_estimator(data))
         self.assertEqual(qn_estimator(data), qn_estimator(data))
+
+    def test_qn_matches_naive_quadratic_formula_with_ties_and_random_series(self):
+        import random
+
+        from lixity.style_fingerprint import QN_TO_SIGMA, qn_estimator
+
+        def naive_qn(values: list[float]) -> float:
+            n = len(values)
+            if n < 2:
+                return 0.0
+            diffs = sorted(abs(values[i] - values[j]) for i in range(n) for j in range(i + 1, n))
+            h_n = n // 2 + 1
+            h = max(1, min(h_n * (h_n - 1) // 2, len(diffs)))
+            return QN_TO_SIGMA * diffs[h - 1]
+
+        rng = random.Random(123)
+        cases: list[list[float]] = [
+            [],
+            [1.0],
+            [0.0, -0.0, 0.0, 0.0],
+            [1.0, 1.0, 2.0, 2.0, 2.0, 5.0],
+            [0.0] * 10 + [1.0] * 5,
+            [-10.5, -2.0, -2.0, 0.0, 3.5, 100.0],
+        ]
+        for n in (2, 3, 4, 5, 7, 12, 25, 50):
+            cases.append([rng.uniform(-50.0, 50.0) for _ in range(n)])
+            cases.append([float(rng.randint(-3, 3)) for _ in range(n)])
+
+        for series in cases:
+            with self.subTest(n=len(series), sample=series[:6]):
+                self.assertEqual(qn_estimator(series), naive_qn(series))
+
+    def test_qn_linear_space_no_quadratic_allocation(self):
+        import random
+        import tracemalloc
+
+        from lixity.style_fingerprint import qn_estimator
+
+        rng = random.Random(7)
+        data = [rng.uniform(-1000.0, 1000.0) for _ in range(2000)]
+        tracemalloc.start()
+        try:
+            value = qn_estimator(data)
+            _current, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+
+        self.assertGreater(value, 0.0)
+        # An O(n^2) pairwise list for n=2000 holds ~2M floats (~64 MB); O(n) stays well under 1 MB.
+        self.assertLess(peak, 1024 * 1024)
+
+    def test_synthetic_varying_chapter_benchmark_fixture(self):
+        import importlib.util
+        from pathlib import Path
+
+        from lixity.pipeline import fingerprint_document, resolve_document_config
+
+        script_path = Path(BASE_DIR) / "scripts" / "benchmark_pipeline.py"
+        spec = importlib.util.spec_from_file_location("benchmark_pipeline", script_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        text = module.synthetic_varying_chapter_manuscript(chapters=24)
+        config, _ = resolve_document_config(text, language="en")
+        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
+        fp = fingerprint_document(text, config, FingerprintThresholds(), metrics)
+
+        diag = fp.structural_diagnostics
+        self.assertTrue(diag.get("changepoints"), "expected non-empty changepoints on varying chapters")
+        self.assertTrue(
+            any(trend.get("S", 0.0) != 0.0 for trend in diag.get("trends", {}).values()),
+            "expected non-zero Mann-Kendall S on varying chapters",
+        )
+        self.assertTrue(
+            any(scale.get("qn", 0.0) > 0.0 for scale in diag.get("robust_scales", {}).values()),
+            "expected positive Qn scale on varying chapters",
+        )
 
 
 class TestStructuralIntegration(unittest.TestCase):

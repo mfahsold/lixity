@@ -619,24 +619,37 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     if penalty is None:
         penalty = 2.0 * math.log(n)
 
+    first = values[0]
+    if penalty >= 0.0 and all(v == first for v in values[1:]):
+        return []
+
+    math_log = math.log
     # opt[j] = minimum cost of segmenting values[0:j]
     opt = [0.0] * (n + 1)
     # last_cp[j] = the last changepoint index for opt[j]
     last_cp = [0] * (n + 1)
     for j in range(1, n + 1):
-        best_cost = math.inf
-        best_t = 0
         # Anchor separately at each end. One distant global anchor can erase
         # representable differences within a later, tightly clustered segment.
         anchor = values[j - 1]
-        mean = m2 = 0.0
-        for t in range(j - 1, -1, -1):
+        mean = 0.0
+        m2 = 0.0
+        single_cost = opt[j - 1] + penalty
+        if math.isfinite(anchor) and math.isfinite(single_cost):
+            best_cost = single_cost
+            best_t = j - 1
+            start_t = j - 2
+        else:
+            best_cost = math.inf
+            best_t = 0
+            start_t = j - 1
+        for t in range(start_t, -1, -1):
             count = j - t
             shifted = values[t] - anchor
             delta = shifted - mean
             mean += delta / count
             m2 += delta * (shifted - mean)
-            segment_cost = count * math.log(m2 / count) if m2 > 0.0 else 0.0
+            segment_cost = count * math_log(m2 / count) if m2 > 0.0 else 0.0
             cost = opt[t] + segment_cost + penalty
             # Prefer the earliest predecessor for exactly equal objectives.
             if cost < best_cost or (cost == best_cost and t < best_t):
@@ -676,21 +689,9 @@ def mann_kendall(
     if n < 3:
         return None
 
-    s = 0.0
-    for i in range(n - 1):
-        for j in range(i + 1, n):
-            diff = values[j] - values[i]
-            if diff > 0.0:
-                s += 1.0
-            elif diff < 0.0:
-                s -= 1.0
-
     # Tie groups
     tie_counts = Counter(values)
     tie_groups = [c for c in tie_counts.values() if c > 1]
-
-    n0 = n * (n - 1) / 2.0
-    tau = s / n0 if n0 > 0.0 else 0.0
 
     # Variance under H0 (tie-corrected)
     var_s = n * (n - 1.0) * (2.0 * n + 5.0) / 18.0
@@ -699,6 +700,34 @@ def mann_kendall(
 
     if var_s <= 0.0:
         return (0.0, 0.0, 1.0)
+
+    # O(n log n) discordant pair count via coordinate compression + Fenwick tree.
+    # S = total_pairs - tied_pairs - 2 * inversions, where inversions counts
+    # pairs (i < j) with values[i] > values[j].
+    unique_vals = sorted(tie_counts)
+    rank = {val: idx for idx, val in enumerate(unique_vals, 1)}
+    m = len(unique_vals)
+    tree = [0] * (m + 1)
+    inversions = 0
+    for seen, val in enumerate(values):
+        r = rank[val]
+        le_count = 0
+        k = r
+        while k > 0:
+            le_count += tree[k]
+            k -= k & -k
+        inversions += seen - le_count
+        k = r
+        while k <= m:
+            tree[k] += 1
+            k += k & -k
+
+    total_pairs = n * (n - 1) // 2
+    tied_pairs = sum(t * (t - 1) // 2 for t in tie_groups)
+    s = float(total_pairs - tied_pairs - 2 * inversions)
+
+    n0 = float(total_pairs)
+    tau = s / n0 if n0 > 0.0 else 0.0
 
     # Continuity correction
     if s > 0:
@@ -1015,28 +1044,124 @@ def sn_estimator(values: list[float]) -> float:
     return SN_TO_SIGMA * raw
 
 
+def _weighted_median(items: list[tuple[float, int]], total_weight: int) -> float:
+    """Return the weighted lower-median value in O(len(items)) expected time."""
+    target = (total_weight + 1) // 2
+    candidates = items
+    while len(candidates) > 32:
+        n = len(candidates)
+        a = candidates[0][0]
+        b = candidates[n // 2][0]
+        c = candidates[-1][0]
+        if a > b:
+            a, b = b, a
+        if b > c:
+            b = c
+            if a > b:
+                b = a
+        pivot = b
+
+        less: list[tuple[float, int]] = []
+        greater: list[tuple[float, int]] = []
+        w_less = 0
+        w_eq = 0
+        for val, w in candidates:
+            if val < pivot:
+                less.append((val, w))
+                w_less += w
+            elif val > pivot:
+                greater.append((val, w))
+            else:
+                w_eq += w
+
+        if target <= w_less:
+            candidates = less
+        elif target <= w_less + w_eq:
+            return pivot
+        else:
+            target -= w_less + w_eq
+            candidates = greater
+
+    candidates.sort(key=lambda pair: pair[0])
+    cum = 0
+    for val, w in candidates:
+        cum += w
+        if cum >= target:
+            return val
+    return candidates[-1][0]
+
+
 def qn_estimator(values: list[float]) -> float:
     """Qn robust scale estimator (Rousseeuw & Croux 1993).
 
     Qn = dn · {|xi − xj|; i < j}_(h) where h = ⌊n/2⌋·(⌊n/2⌋+1)/2 ≈ first
     quartile of all pairwise distances.  Returns 0.0 for fewer than 2 observations.
+    Uses O(n log n) exact order-statistic selection in O(n) space without
+    materializing the O(n²) distance matrix.
     """
     n = len(values)
     if n < 2:
         return 0.0
 
-    # All pairwise absolute differences
-    diffs = sorted(abs(values[i] - values[j]) for i in range(n) for j in range(i + 1, n))
-
-    # h = binomial(floor(n/2)+1, 2) ≈ first quartile index
+    y = sorted(values)
+    # h = binomial(floor(n/2)+1, 2) ≈ first quartile index (1-based)
     h_n = n // 2 + 1
     h = h_n * (h_n - 1) // 2
-    h = max(1, min(h, len(diffs)))
+    total_pairs = n * (n - 1) // 2
+    h = max(1, min(h, total_pairs))
 
-    raw = diffs[h - 1]  # 1-based → 0-based
+    # Active column bounds [left[i], right[i]] for each row i in 1..n-1,
+    # representing pairwise differences y[i] - y[j] (non-increasing in j).
+    left = [0] * n
+    right = [i - 1 for i in range(n)]
+    p_bounds = [0] * n
+    q_bounds = [0] * n
+
+    raw = 0.0
+    while True:
+        candidates: list[tuple[float, int]] = []
+        total_weight = 0
+        for i in range(1, n):
+            lo = left[i]
+            hi = right[i]
+            if lo <= hi:
+                mid = (lo + hi) // 2
+                w = hi - lo + 1
+                candidates.append((y[i] - y[mid], w))
+                total_weight += w
+
+        trial = _weighted_median(candidates, total_weight)
+
+        count_lt = 0
+        count_le = 0
+        p = 0
+        q = 0
+        for i in range(1, n):
+            yi = y[i]
+            while p < i and yi - y[p] >= trial:
+                p += 1
+            p_bounds[i] = p
+            count_lt += i - p
+
+            while q < i and yi - y[q] > trial:
+                q += 1
+            q_bounds[i] = q
+            count_le += i - q
+
+        if count_lt < h <= count_le:
+            raw = 0.0 if trial == 0.0 else trial
+            break
+        if h <= count_lt:
+            for i in range(1, n):
+                if p_bounds[i] > left[i]:
+                    left[i] = p_bounds[i]
+        else:
+            for i in range(1, n):
+                if q_bounds[i] - 1 < right[i]:
+                    right[i] = q_bounds[i] - 1
+
     # Modern Gaussian asymptotic scaling, without a finite-n correction.
-    dn = QN_TO_SIGMA
-    return dn * raw
+    return QN_TO_SIGMA * raw
 
 
 def jacobi_eigh(

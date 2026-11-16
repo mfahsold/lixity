@@ -43,8 +43,54 @@ def _digest(payload: Any) -> str:
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
-def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
+def synthetic_varying_chapter_manuscript(chapters: int = 120) -> str:
+    """Build a deterministic synthetic manuscript with varying chapter regimes.
+
+    Produces distinct stylistic phases and gradual drift across chapters so
+    chapter-level diagnostics (``pelt_changepoints``, ``mann_kendall``, and
+    ``qn_estimator``) are genuinely exercised on non-constant series.
+    """
+    short_words = ("walk", "stop", "look", "wait", "turn", "hear", "note", "hold")
+    mid_words = ("window", "morning", "lantern", "harbor", "shadow", "corridor", "letter")
+    long_words = (
+        "deliberation",
+        "circumstance",
+        "observation",
+        "architecture",
+        "recollection",
+        "conversation",
+    )
+    sections: list[str] = []
+    for idx in range(chapters):
+        phase = (idx * 3) // max(1, chapters)
+        sentences_per_para = 3 + phase + (idx % 2)
+        words_per_sentence = 4 + phase * 10 + (idx % 2)
+        dialogue_mod = 2 if phase == 1 else (3 if phase == 2 else 6)
+        paragraphs: list[str] = [f"## Chapter {idx + 1}"]
+        for p_idx in range(10):
+            sents: list[str] = []
+            for s_idx in range(sentences_per_para):
+                vocab = short_words if phase == 0 else (mid_words if phase == 1 else long_words)
+                tokens = [
+                    vocab[(idx + p_idx + s_idx + w_idx) % len(vocab)]
+                    for w_idx in range(words_per_sentence)
+                ]
+                tokens[0] = tokens[0].capitalize()
+                if phase >= 1 and len(tokens) >= 6:
+                    tokens[2] = f"{tokens[2]},"
+                if phase == 2 and len(tokens) >= 10:
+                    tokens[5] = f"{tokens[5]};"
+                punct = "?" if (s_idx + idx) % 7 == 0 else "."
+                sentence = " ".join(tokens) + punct
+                if (p_idx + s_idx) % dialogue_mod == 0:
+                    sentence = f'"{sentence}"'
+                sents.append(sentence)
+            paragraphs.append(" ".join(sents))
+        sections.append("\n\n".join(paragraphs))
+    return "\n\n".join(sections)
+
+
+def benchmark_text(label: str, text: str, language: str, iterations: int) -> dict[str, Any]:
     config, _ = resolve_document_config(text, language=language)
     thresholds = FingerprintThresholds()
 
@@ -116,7 +162,7 @@ def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str
             }
 
     return {
-        "file": str(path),
+        "file": label,
         "language": language,
         "chars": len(text),
         "words": word_count,
@@ -125,17 +171,38 @@ def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str
     }
 
 
+def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str, Any]:
+    return benchmark_text(str(path), path.read_text(encoding="utf-8"), language, iterations)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark Lixity pipeline stages.")
     parser.add_argument("--iterations", type=int, default=3, help="Runs per manuscript")
+    parser.add_argument(
+        "--synthetic-chapters",
+        type=int,
+        default=120,
+        help="Chapters for synthetic varying-chapter fixture (0 to skip)",
+    )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
     args = parser.parse_args()
 
+    iters = max(1, args.iterations)
     results = [
-        benchmark_manuscript(Path(rel_path), lang, max(1, args.iterations))
+        benchmark_manuscript(Path(rel_path), lang, iters)
         for rel_path, lang in DEFAULT_CORPUS
         if Path(rel_path).exists()
     ]
+    if args.synthetic_chapters > 0:
+        synthetic_text = synthetic_varying_chapter_manuscript(args.synthetic_chapters)
+        results.append(
+            benchmark_text(
+                f"synthetic://varying-chapters-{args.synthetic_chapters}",
+                synthetic_text,
+                "en",
+                iters,
+            )
+        )
     rss_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     payload = {
         "python": platform.python_version(),
