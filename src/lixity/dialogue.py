@@ -124,7 +124,9 @@ _NON_MANNER_ADVERBS: dict[str, frozenset[str]] = {
     }),
     "fr": frozenset({
         "moment", "comment", "seulement", "vraiment", "élément", "bâtiment",
-        "vêtement", "sentiment", "document",
+        "vêtement", "sentiment", "document", "gouvernement", "mouvement",
+        "appartement", "changement", "événement", "argument", "instrument",
+        "monument", "serment", "jugement",
     }),
     "es": frozenset({"solamente", "realmente", "finalmente", "exactamente", "mente"}),
     "it": frozenset({"solamente", "veramente", "finalmente", "mente"}),
@@ -154,8 +156,14 @@ _INDIRECT_SPEECH_REGEXES: dict[str, tuple[str, ...]] = {
         r"fürchtete|fürchteten|ahnte|ahnten|wusste|wussten|überlegte|überlegten|"
         r"gestand|gestanden|versicherte|versicherten|berichtete|berichteten|"
         r"erzählte|erzählten)\s*,\s*(?:dass|daß|ob)\b",
-        r"\b(?:er|sie|es|man)\s+(?:sei|habe|werde|könne|müsse|dürfe|wolle|solle|"
-        r"wäre|hätte|würde|könnte|müsste|dürfte|wollte|sollte)\b",
+        r"\b(?:er|sie|es|man)\s+(?:sei|habe|werde|könne|müsse|dürfe|wolle|solle)\b",
+        r"\b(?:sagte|sagten|erklärte|erklärten|behauptete|behaupteten|meinte|meinten|"
+        r"betonte|betonten|erwiderte|erwiderten|antwortete|antworteten|fragte|fragten|"
+        r"dachte|dachten|glaubte|glaubten|vermutete|vermuteten|hoffte|hofften|"
+        r"fürchtete|fürchteten|ahnte|ahnten|wusste|wussten|überlegte|überlegten|"
+        r"gestand|gestanden|versicherte|versicherten|berichtete|berichteten|"
+        r"erzählte|erzählten)\s*,\s*(?:er|sie|es|man)\s+"
+        r"(?:wäre|hätte|würde|könnte|müsste|dürfte|wollte|sollte)\b",
     ),
     "fr": (
         r"\b(?:dit|déclara|affirma|répondit|expliqua|ajouta|demanda|pensa|crut|"
@@ -414,6 +422,13 @@ def find_dialogue_tag_spans(
             para_end = len(clean)
         after_start = end
         after_end = min(para_end, end + 60)
+        for q_start, _q_end in quoted_spans:
+            if after_start <= q_start < after_end:
+                after_end = q_start
+        for sep in (".", "!", "?"):
+            pos = clean.find(sep, after_start, after_end)
+            if pos >= 0 and pos < after_end:
+                after_end = pos
         matched = False
         if after_start < after_end:
             match = tag_re.search(clean, after_start, after_end)
@@ -422,8 +437,16 @@ def find_dialogue_tag_spans(
                 matched = True
         if not matched:
             before_start = max(para_start, start - 50)
-            if before_start < start:
-                match = tag_re.search(clean, before_start, start)
+            before_end = start
+            for _q_start, q_end in quoted_spans:
+                if before_start < q_end <= before_end:
+                    before_start = q_end
+            for sep in (".", "!", "?"):
+                pos = clean.rfind(sep, before_start, before_end)
+                if pos >= 0 and pos + 1 > before_start:
+                    before_start = pos + 1
+            if before_start < before_end:
+                match = tag_re.search(clean, before_start, before_end)
                 if match is not None:
                     seen_spans.add(match.span())
     return sorted(seen_spans)
@@ -827,11 +850,14 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
 
 def _compile_character_patterns(
     names: Mapping[str, str] | Sequence[str],
+    *,
+    case_sensitive: bool = False,
 ) -> dict[str, list[re.Pattern[str]]]:
     patterns: dict[str, list[re.Pattern[str]]] = {}
+    flags = re.UNICODE if case_sensitive else re.IGNORECASE | re.UNICODE
     entries = names.items() if isinstance(names, Mapping) else ((name, name) for name in names)
     for pattern, label in entries:
-        compiled = re.compile(rf"(?<!\w)(?:{pattern})(?!\w)", re.IGNORECASE | re.UNICODE)
+        compiled = re.compile(rf"(?<!\w)(?:{pattern})(?!\w)", flags)
         patterns.setdefault(label, []).append(compiled)
     return patterns
 
@@ -885,6 +911,7 @@ def character_voice_profiles(
     config: CorpusConfig | None = None,
     *,
     min_turns: int = MIN_CHARACTER_VOICE_TURNS,
+    case_sensitive: bool = False,
 ) -> dict[str, Any]:
     """Per-character dialogue voice profiles compared against the narrator baseline.
 
@@ -897,7 +924,7 @@ def character_voice_profiles(
     word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)
     capture = quotation_capture_group(dialogue_re)
-    patterns = _compile_character_patterns(names)
+    patterns = _compile_character_patterns(names, case_sensitive=case_sensitive)
     func_words = resolved.function_words
 
     accum: dict[str, dict[str, int]] = {

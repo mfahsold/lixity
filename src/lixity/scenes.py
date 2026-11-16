@@ -92,8 +92,17 @@ _DE_ARTICLE_BEFORE_RE = re.compile(
 )
 
 
-def _chapter_recurring_names(paragraphs: Sequence[str]) -> set[str]:
+def _chapter_recurring_names(
+    paragraphs: Sequence[str],
+    *,
+    language_key: str = "en",
+    configured_names: Sequence[str] | None = None,
+) -> set[str]:
     """Identify recurring capitalized proper-name candidates within a chapter."""
+    if configured_names:
+        return {name for name in configured_names if name}
+    if language_key == "de":
+        return set()
     counts: dict[str, int] = {}
     for para in paragraphs:
         seen_in_para: set[str] = set()
@@ -364,7 +373,10 @@ def scene_report(
     implicit_breaks: list[dict[str, Any]] = []
     for chapter_num, title, body in split_chapters(text, config):
         clean = strip_html_comments(body)
-        recurring_names = _chapter_recurring_names(prose_paragraphs(clean, _front_matter=False))
+        recurring_names = _chapter_recurring_names(
+            prose_paragraphs(clean, _front_matter=False),
+            language_key=resolved.key,
+        )
         parts, scene_breaks = split_scenes(clean)
         chapter_dividers[chapter_num] = scene_breaks
         breaks += scene_breaks
