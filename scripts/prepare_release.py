@@ -2,13 +2,14 @@
 """Prepare a release: bump version, scaffold release notes and synchronize docs.
 
 Usage:
-    python3 scripts/prepare_release.py 0.8.1
-    make release-prepare VERSION=0.8.1
+    python3 scripts/prepare_release.py X.Y.Z
+    make release-prepare VERSION=X.Y.Z
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime
 import re
 import sys
 from pathlib import Path
@@ -20,7 +21,7 @@ def validate_version(version: str) -> tuple[int, int, int]:
     clean = version.lstrip("v")
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", clean)
     if not match:
-        raise ValueError(f"Version must be in semantic format X.Y.Z (e.g. 0.8.1), got: {version!r}")
+        raise ValueError(f"Version must be in semantic format X.Y.Z, got: {version!r}")
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
@@ -66,6 +67,31 @@ Record the publication date and GitHub, PyPI and website checks after publicatio
     return target
 
 
+def update_changelog(version: str, *, release_date: str | None = None) -> None:
+    """Promote [Unreleased] heading and compare links in CHANGELOG.md when present."""
+    path = ROOT / "CHANGELOG.md"
+    if not path.is_file():
+        return
+    text = path.read_text(encoding="utf-8")
+    updated = text
+    date_str = release_date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+    if f"## [{version}]" not in updated and "## [Unreleased]" in updated:
+        updated = updated.replace("## [Unreleased]", f"## [Unreleased]\n\n## [{version}] - {date_str}", 1)
+    unreleased_re = re.compile(
+        r"^\[Unreleased\]: (https://github\.com/[^/]+/[^/]+/compare/)v([^.\s]+\.[^.\s]+\.[^.\s]+)\.\.\.HEAD$",
+        re.MULTILINE,
+    )
+    if f"[{version}]: " not in updated:
+        updated = unreleased_re.sub(
+            rf"[Unreleased]: \1v{version}...HEAD\n[{version}]: \1v\2...v{version}",
+            updated,
+            count=1,
+        )
+    if updated != text:
+        path.write_text(updated, encoding="utf-8")
+        print(f"[OK] Updated {path.relative_to(ROOT)} for {version}")
+
+
 def run_sync() -> None:
     from sync_docs import check_or_sync_files, get_version
     version = get_version()
@@ -108,7 +134,7 @@ def report_partial_changes(before: dict[Path, bytes | None]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("version", help="New version in X.Y.Z format (e.g. 0.8.1)")
+    parser.add_argument("version", help="New version in X.Y.Z format")
     args = parser.parse_args()
 
     before: dict[Path, bytes | None] = {}
@@ -118,6 +144,7 @@ def main() -> int:
         before = preparation_snapshot(version_str)
         print(f"--- Preparing Lixity release v{version_str} ---")
         update_version_file(version_str)
+        update_changelog(version_str)
         scaffold_release_notes(version_str)
         # Import sync_docs from scripts dir
         sys.path.insert(0, str(ROOT / "scripts"))

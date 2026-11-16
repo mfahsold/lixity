@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-16
+
 ### Changed
 
 - **Research snapshot reuse (`research/api.py`)**: `research_gaps()` now reuses a single verified `Repository.snapshot()` across `_claim_matrix_data()`, `_editorial_review_data()`, and `_timeline_data()` instead of reloading the archive three times.
@@ -4001,7 +4003,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/mfahsold/lixity/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/mfahsold/lixity/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/mfahsold/lixity/compare/v0.7.9...v0.8.0
 [0.7.9]: https://github.com/mfahsold/lixity/compare/v0.7.7...v0.7.9
