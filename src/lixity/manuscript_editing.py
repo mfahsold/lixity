@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 import os
 import re
 import sqlite3
@@ -18,18 +19,35 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from .analyzer import CorpusAnalyzer
-from .dialogue import dialogue_report
+from .dialogue import find_indirect_speech_spans, indirect_speech_available
+from .diversity import mattr as mattr_value
 from .io import FileUtils
+from .language import (
+    compile_pattern,
+    compile_word_pattern,
+    quotation_capture_group,
+    quotation_texts,
+    resolve_language,
+)
 from .log import get_logger, log_event
+from .markdown_parser import (
+    COMMENT_STRIP_RE,
+    chapter_heading_spans,
+    prose_paragraphs,
+    prose_text,
+    split_chapters,
+    split_scenes,
+)
 from .models import CorpusConfig
-from .pacing import pacing_report
+from .pacing import compute_rhythm_profile
+from .sentences import split_prose_sentences
 
 logger = get_logger("manuscript")
 
 SOURCE_WRITE_LOCK = RLock()
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 _ID = re.compile(r"[a-f0-9]{32,64}\Z")
+_RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 
 
 class EditConflict(ValueError):
@@ -103,16 +121,38 @@ class ManuscriptStore:
             "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
             "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
             "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
-            "flags_count INTEGER NOT NULL DEFAULT 0, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
+            "flags_count INTEGER, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
             "PRIMARY KEY(document, revision))"
         )
-        existing_cols = {
-            str(row[1])
-            for row in db.execute("PRAGMA table_info(manuscript_revisions)").fetchall()
-        }
+        table_info = db.execute("PRAGMA table_info(manuscript_revisions)").fetchall()
+        existing_cols = {str(row[1]) for row in table_info}
         for col_name in ("length_entropy", "sticky_pct", "indirect_speech_per_1000"):
             if col_name not in existing_cols:
                 db.execute(f"ALTER TABLE manuscript_revisions ADD COLUMN {col_name} REAL")
+        flags_col = next((row for row in table_info if str(row[1]) == "flags_count"), None)
+        if flags_col is not None and int(flags_col[3]) != 0:
+            db.execute(
+                "CREATE TABLE manuscript_revisions_new ("
+                "document TEXT NOT NULL, revision TEXT NOT NULL, parent_revision TEXT, "
+                "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
+                "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
+                "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
+                "flags_count INTEGER, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
+                "PRIMARY KEY(document, revision))"
+            )
+            db.execute(
+                "INSERT INTO manuscript_revisions_new "
+                "(document, revision, parent_revision, created_at, words, sentences, "
+                "asl, asl_cv, dialogue_ratio, mattr, length_entropy, sticky_pct, "
+                "indirect_speech_per_1000, flags_count, chapter_metrics) "
+                "SELECT document, revision, parent_revision, created_at, words, sentences, "
+                "asl, asl_cv, dialogue_ratio, mattr, length_entropy, sticky_pct, "
+                "indirect_speech_per_1000, "
+                "CASE WHEN flags_count = 0 THEN NULL ELSE flags_count END, "
+                "chapter_metrics FROM manuscript_revisions"
+            )
+            db.execute("DROP TABLE manuscript_revisions")
+            db.execute("ALTER TABLE manuscript_revisions_new RENAME TO manuscript_revisions")
         db.execute("CREATE INDEX IF NOT EXISTS idx_manuscript_revisions_doc_created ON manuscript_revisions (document, created_at DESC)")
         db.commit()
         return db
@@ -121,26 +161,24 @@ class ManuscriptStore:
         """Compute deterministic offline stylometric metrics for a manuscript snapshot."""
         return analyze_manuscript_snapshot(text, language=self.language)
 
-    def _record_revision(
+    def _insert_revision_snapshot(
         self,
         db: sqlite3.Connection,
         revision: str,
-        text: str,
+        snap: dict[str, Any],
         *,
         parent_revision: str | None = None,
         created_at: float | None = None,
-        flags_count: int = 0,
+        flags_count: int | None = None,
     ) -> None:
-        existing = db.execute(
-            "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
-            (self.document, revision),
-        ).fetchone()
-        if existing is not None:
-            return
-        snap = self.analyze_snapshot(text)
         ts = float(created_at if created_at is not None else time.time())
+        resolved_flags = (
+            int(flags_count)
+            if flags_count is not None
+            else (int(snap["flags_count"]) if snap.get("flags_count") is not None else None)
+        )
         db.execute(
-            "INSERT INTO manuscript_revisions "
+            "INSERT OR IGNORE INTO manuscript_revisions "
             "(document, revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
             "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
             "flags_count, chapter_metrics) "
@@ -159,9 +197,35 @@ class ManuscriptStore:
                 snap["length_entropy"],
                 snap["sticky_pct"],
                 snap["indirect_speech_per_1000"],
-                int(flags_count),
+                resolved_flags,
                 json.dumps(snap["chapter_metrics"], ensure_ascii=False),
             ),
+        )
+
+    def _record_revision(
+        self,
+        db: sqlite3.Connection,
+        revision: str,
+        text: str,
+        *,
+        parent_revision: str | None = None,
+        created_at: float | None = None,
+        flags_count: int | None = None,
+    ) -> None:
+        existing = db.execute(
+            "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
+            (self.document, revision),
+        ).fetchone()
+        if existing is not None:
+            return
+        snap = self.analyze_snapshot(text)
+        self._insert_revision_snapshot(
+            db,
+            revision,
+            snap,
+            parent_revision=parent_revision,
+            created_at=created_at,
+            flags_count=flags_count,
         )
 
     def open(self) -> dict[str, Any]:
@@ -244,13 +308,26 @@ class ManuscriptStore:
                     )
                 FileUtils.atomic_write_bytes_if_changed(str(self.source), candidate, before_replace=guard)
             response = {"document": document, "revision": _digest(candidate)}
+            orig_rev = _digest(original)
+            target_rev = response["revision"]
+            changed = original != candidate
             now = time.time()
             with db:
-                if original != candidate:
-                    self._record_revision(db, _digest(original), original_text, parent_revision=None, created_at=now - 0.001)
-                    self._record_revision(db, response["revision"], text, parent_revision=_digest(original), created_at=now)
-                else:
-                    self._record_revision(db, response["revision"], text, parent_revision=None, created_at=now)
+                need_orig = (
+                    changed
+                    and db.execute(
+                        "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
+                        (self.document, orig_rev),
+                    ).fetchone()
+                    is None
+                )
+                need_target = (
+                    db.execute(
+                        "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
+                        (self.document, target_rev),
+                    ).fetchone()
+                    is None
+                )
                 db.execute("DELETE FROM recovery WHERE document=? AND id=? AND kind='draft'", (document, operation))
                 db.execute("INSERT INTO receipts (document, id, request, response, created) VALUES (?,?,?,?,?)", (document, operation, request, json.dumps(response), time.time()))
                 db.execute(
@@ -265,8 +342,30 @@ class ManuscriptStore:
                     "FROM receipts WHERE document=?) WHERE rn > 100)",
                     (document, document),
                 )
-            log_event(logger, "manuscript_save", changed=original != candidate, bytes=len(candidate))
-            return response
+        # Compute expensive stylometric snapshots outside SOURCE_WRITE_LOCK so
+        # concurrent readers/writers are not blocked while preserving revision identity.
+        orig_snap = self.analyze_snapshot(original_text) if need_orig else None
+        target_snap = self.analyze_snapshot(text) if need_target else None
+        if orig_snap is not None or target_snap is not None:
+            with SOURCE_WRITE_LOCK, closing(self._database()) as db, db:
+                if orig_snap is not None:
+                    self._insert_revision_snapshot(
+                        db,
+                        orig_rev,
+                        orig_snap,
+                        parent_revision=None,
+                        created_at=now - 0.001,
+                    )
+                if target_snap is not None:
+                    self._insert_revision_snapshot(
+                        db,
+                        target_rev,
+                        target_snap,
+                        parent_revision=orig_rev if changed else None,
+                        created_at=now,
+                    )
+        log_event(logger, "manuscript_save", changed=changed, bytes=len(candidate))
+        return response
 
     def discard(self, identifier: str) -> None:
         """Explicitly remove a selected recovery copy, never the manuscript."""
@@ -295,7 +394,7 @@ class ManuscriptStore:
                 if row["indirect_speech_per_1000"] is not None
                 else None
             ),
-            "flags_count": int(row["flags_count"]),
+            "flags_count": int(row["flags_count"]) if row["flags_count"] is not None else None,
             "chapter_metrics": json.loads(str(row["chapter_metrics"])),
         }
 
@@ -400,39 +499,171 @@ class ManuscriptStore:
 def analyze_manuscript_snapshot(text: str, *, language: str = "en") -> dict[str, Any]:
     """Compute deterministic offline stylometric metrics for a manuscript snapshot."""
     cfg = CorpusConfig(language=language or "en")
-    metrics = CorpusAnalyzer(cfg, sample_text=text).analyze_text(text)
-    pacing = pacing_report(text, cfg)
-    dialogue = dialogue_report(text, cfg)
-    chapters = [
-        {
-            "num": int(ch.num),
-            "title": str(ch.title),
-            "words": int(ch.words),
-            "asl": round(float(ch.asl), 2) if ch.sentences > 0 else None,
-            "dialog_pct": round(float(ch.dialog_pct), 2) if ch.words > 0 else None,
-        }
-        for ch in metrics.chapters
-    ]
-    raw_entropy = pacing.rhythm_profile.get("length_entropy")
+    resolved = resolve_language(cfg, sample_text=text)
+    word_re = compile_word_pattern(resolved.word_regex)
+    dialogue_re = compile_pattern(resolved.dialogue_regex)
+    lang_key = resolved.key
+    function_words = resolved.function_words
+    sticky_available = bool(function_words)
+    ind_speech_available = indirect_speech_available(lang_key)
+
+    if cfg.appendix_marker and cfg.appendix_marker in text:
+        main_text, _ = text.split(cfg.appendix_marker, 1)
+    else:
+        main_text = text
+
+    cleaned_main = COMMENT_STRIP_RE.sub("", main_text)
+    prose_parts: list[str] = []
+    cursor = 0
+    for start, end, _line, _title in chapter_heading_spans(cleaned_main, cfg):
+        prose_parts.append(cleaned_main[cursor:start])
+        prose_parts.append("\n" if cleaned_main[end - 1:end] == "\n" else "")
+        cursor = end
+    prose_parts.append(cleaned_main[cursor:])
+    legacy_clean_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
+    clean_words = len(legacy_clean_main.split())
+
+    prose_units = prose_paragraphs(main_text, cfg)
+    prose_main = "\n\n".join(prose_units)
+
+    tokens = word_re.findall(prose_main)
+    n_tokens = len(tokens)
+    lower_tokens = [t.lower() for t in tokens]
+    mattr_score = mattr_value(lower_tokens) if lower_tokens else None
+
+    sentences = split_prose_sentences(prose_main, lang_key)
+    sent_lengths = [n for n in (len(word_re.findall(s)) for s in sentences) if n > 0]
+    total_sentences = len(sent_lengths)
+    if total_sentences > 0:
+        asl = sum(sent_lengths) / total_sentences
+        variance = sum((x - asl) ** 2 for x in sent_lengths) / total_sentences
+        sentence_cv = (math.sqrt(variance) / asl) if asl else 0.0
+    else:
+        asl = 0.0
+        sentence_cv = 0.0
+
+    dialog_matches = quotation_texts(dialogue_re, prose_main)
+    dialog_words = sum(len(word_re.findall(m)) for m in dialog_matches)
+    dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
+
+    chapters: list[dict[str, Any]] = []
+    all_corpus_sentence_lengths: list[int] = []
+    total_sticky_sentences = 0
+    total_sticky_denom = 0
+    all_dialogue_words = 0
+    all_indirect_speech = 0
+    capture = quotation_capture_group(dialogue_re) if ind_speech_available else 0
+
+    for number, title, body in split_chapters(main_text, cfg):
+        cl_b = prose_text(body, _front_matter=False)
+        c_words = word_re.findall(cl_b)
+        if not c_words:
+            chapters.append({
+                "num": int(number),
+                "title": str(title),
+                "words": 0,
+                "asl": None,
+                "dialog_pct": None,
+            })
+            continue
+
+        n_cw = len(c_words)
+        c_sentences = split_prose_sentences(cl_b, lang_key)
+        c_sent_tokens = [
+            [w.lower() for w in word_re.findall(s)]
+            for s in c_sentences
+        ]
+        c_sent_lengths = [len(toks) for toks in c_sent_tokens if toks]
+        c_total_sents = len(c_sent_lengths)
+        c_asl = (sum(c_sent_lengths) / c_total_sents) if c_total_sents else 0.0
+        c_dial = quotation_texts(dialogue_re, cl_b)
+        c_dial_words = sum(len(word_re.findall(m)) for m in c_dial)
+        c_dial_pct = (c_dial_words / n_cw) * 100.0
+
+        chapters.append({
+            "num": int(number),
+            "title": str(title),
+            "words": int(n_cw),
+            "asl": round(float(c_asl), 2) if c_total_sents > 0 else None,
+            "dialog_pct": round(float(c_dial_pct), 2) if n_cw > 0 else None,
+        })
+        all_corpus_sentence_lengths.extend(c_sent_lengths)
+
+        if sticky_available:
+            raw_scenes, _ = split_scenes(body)
+            if len(raw_scenes) == 1 and raw_scenes[0] == body:
+                total_sticky_denom += c_total_sents
+                for toks in c_sent_tokens:
+                    n_w = len(toks)
+                    if n_w >= cfg.sticky_min_words:
+                        glue_pct = sum(1 for tok in toks if tok in function_words) / n_w * 100.0
+                        if glue_pct >= cfg.sticky_glue_pct:
+                            total_sticky_sentences += 1
+            else:
+                for scene_raw in raw_scenes:
+                    scene_clean = prose_text(scene_raw, _front_matter=False)
+                    if not word_re.findall(scene_clean):
+                        continue
+                    for s in split_prose_sentences(scene_clean, lang_key):
+                        toks = [w.lower() for w in word_re.findall(s)]
+                        n_w = len(toks)
+                        if not n_w:
+                            continue
+                        total_sticky_denom += 1
+                        if n_w >= cfg.sticky_min_words:
+                            glue_pct = sum(1 for tok in toks if tok in function_words) / n_w * 100.0
+                            if glue_pct >= cfg.sticky_glue_pct:
+                                total_sticky_sentences += 1
+
+        if ind_speech_available:
+            all_dialogue_words += n_cw
+            spans = sorted(
+                match.span(capture)
+                for match in dialogue_re.finditer(cl_b)
+                if match.start(capture) >= 0 and match.end(capture) > match.start(capture)
+            )
+            quoted_spans: list[tuple[int, int]] = []
+            for start, end in spans:
+                if quoted_spans and start <= quoted_spans[-1][1]:
+                    quoted_spans[-1] = (quoted_spans[-1][0], max(end, quoted_spans[-1][1]))
+                else:
+                    quoted_spans.append((start, end))
+            all_indirect_speech += len(find_indirect_speech_spans(cl_b, quoted_spans, lang_key))
+
+    rhythm = compute_rhythm_profile(
+        all_corpus_sentence_lengths, short_sentence_max=cfg.short_sentence_max
+    )
+    raw_entropy = rhythm.get("length_entropy")
+    sticky_pct_val = (
+        (total_sticky_sentences / total_sticky_denom * 100.0)
+        if (total_sticky_denom and sticky_available)
+        else 0.0
+    )
+    indirect_per_1000 = (
+        (all_indirect_speech / all_dialogue_words * 1000.0)
+        if (all_dialogue_words and ind_speech_available)
+        else 0.0
+    )
+
     return {
-        "words": int(metrics.clean_words),
-        "sentences": int(metrics.total_sentences),
-        "asl": round(float(metrics.asl), 3) if metrics.total_sentences > 0 else None,
-        "asl_cv": round(float(metrics.sentence_cv), 4) if metrics.total_sentences > 0 else None,
-        "dialogue_ratio": round(float(metrics.dialog_ratio), 3) if metrics.tokens > 0 else None,
-        "mattr": round(float(metrics.mattr), 4) if metrics.mattr is not None else None,
+        "words": int(clean_words),
+        "sentences": int(total_sentences),
+        "asl": round(float(asl), 3) if total_sentences > 0 else None,
+        "asl_cv": round(float(sentence_cv), 4) if total_sentences > 0 else None,
+        "dialogue_ratio": round(float(dialog_ratio), 3) if n_tokens > 0 else None,
+        "mattr": round(float(mattr_score), 4) if mattr_score is not None else None,
         "length_entropy": round(float(raw_entropy), 4) if raw_entropy is not None else None,
         "sticky_pct": (
-            round(float(pacing.sticky_sentence_pct), 2)
-            if (pacing.sticky_available and metrics.total_sentences > 0)
+            round(float(sticky_pct_val), 2)
+            if (sticky_available and total_sentences > 0)
             else None
         ),
         "indirect_speech_per_1000": (
-            round(float(dialogue.indirect_speech_per_1000), 2)
-            if metrics.clean_words > 0
+            round(float(indirect_per_1000), 2)
+            if (ind_speech_available and clean_words > 0)
             else None
         ),
-        "flags_count": 0,
+        "flags_count": None,
         "chapter_metrics": chapters,
     }
 

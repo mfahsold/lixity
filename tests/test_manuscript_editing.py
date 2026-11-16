@@ -338,3 +338,128 @@ def test_editing_timeline_routes_registered():
 
     assert LixityServerHandler.GET_ROUTES["/api/manuscript-timeline"] == "_handle_editor_timeline"
     assert LixityServerHandler.GET_ROUTES["/api/manuscript-delta"] == "_handle_editor_delta"
+
+
+def test_save_analyzes_snapshots_outside_write_lock_and_skips_reanalysis_on_aba(tmp_path, monkeypatch):
+    import threading
+
+    from lixity.manuscript_editing import SOURCE_WRITE_LOCK
+
+    initial = "## Chapter 1\n\nThe river was quiet.\n"
+    updated = "## Chapter 1\n\nThe river was loud and fast.\n"
+    editor, _source = store(tmp_path, initial.encode("utf-8"))
+    opened = editor.open()
+
+    calls: list[tuple[str, bool]] = []
+    orig_analyze = editor.analyze_snapshot
+
+    def spy_analyze(text: str):
+        # Verify SOURCE_WRITE_LOCK is NOT held by this thread during analysis
+        acquired_by_other = [False]
+
+        def probe():
+            got = SOURCE_WRITE_LOCK.acquire(blocking=False)
+            if got:
+                SOURCE_WRITE_LOCK.release()
+            acquired_by_other[0] = got
+
+        t = threading.Thread(target=probe)
+        t.start()
+        t.join()
+        calls.append((text, acquired_by_other[0]))
+        return orig_analyze(text)
+
+    monkeypatch.setattr(editor, "analyze_snapshot", spy_analyze)
+
+    saved_b = save(editor, opened, updated, "1" * 32)
+    assert len(calls) == 2
+    assert all(lock_free for _, lock_free in calls)
+
+    calls.clear()
+    reverted_a = save(editor, saved_b, initial, "2" * 32)
+    assert reverted_a["revision"] == opened["revision"]
+    assert calls == []
+    assert [row["revision"] for row in editor.timeline()] == [opened["revision"], saved_b["revision"]]
+
+
+def test_snapshot_matches_full_pipeline_and_unknown_semantics(tmp_path):
+    from lixity.analyzer import CorpusAnalyzer
+    from lixity.dialogue import dialogue_report
+    from lixity.manuscript_editing import analyze_manuscript_snapshot
+    from lixity.models import CorpusConfig
+    from lixity.pacing import pacing_report
+
+    text = (
+        "## Chapter 1\n\n"
+        "She said that the train had already departed. "
+        "\"Wait!\" he called across the platform.\n\n"
+        "---\n\n"
+        "It was a very quiet and very long day in the old house by the hill "
+        "where they had been waiting for the letter to arrive.\n\n"
+        "## Chapter 2\n\n"
+        "Rain fell softly.\n"
+    )
+    cfg = CorpusConfig(language="en")
+    metrics = CorpusAnalyzer(cfg, sample_text=text).analyze_text(text)
+    pacing = pacing_report(text, cfg)
+    dialogue = dialogue_report(text, cfg)
+    snap = analyze_manuscript_snapshot(text, language="en")
+
+    assert snap["words"] == metrics.clean_words
+    assert snap["sentences"] == metrics.total_sentences
+    assert snap["asl"] == round(float(metrics.asl), 3)
+    assert snap["asl_cv"] == round(float(metrics.sentence_cv), 4)
+    assert snap["dialogue_ratio"] == round(float(metrics.dialog_ratio), 3)
+    assert snap["mattr"] == (round(float(metrics.mattr), 4) if metrics.mattr is not None else None)
+    assert snap["length_entropy"] == round(float(pacing.rhythm_profile["length_entropy"]), 4)
+    assert snap["sticky_pct"] == round(float(pacing.sticky_sentence_pct), 2)
+    assert snap["indirect_speech_per_1000"] == round(float(dialogue.indirect_speech_per_1000), 2)
+    assert snap["flags_count"] is None
+    assert len(snap["chapter_metrics"]) == 2
+
+    # Generic language lacks indirect speech and function-word lexicons -> None, not 0.0
+    generic_snap = analyze_manuscript_snapshot(text, language="generic")
+    assert generic_snap["words"] > 0
+    assert generic_snap["indirect_speech_per_1000"] is None
+    assert generic_snap["sticky_pct"] is None
+    assert generic_snap["flags_count"] is None
+
+
+def test_flags_count_migration_from_not_null_zero_to_nullable(tmp_path):
+    import sqlite3
+    from contextlib import closing
+
+    initial = "## Chapter 1\n\nThe river was quiet.\n"
+    updated = "## Chapter 1\n\nThe river was loud.\n"
+    ms_path = tmp_path / "book.md"
+    ms_path.write_text(initial, encoding="utf-8")
+    db_dir = tmp_path / ".lixity" / "editing"
+    db_dir.mkdir(parents=True)
+    db_path = db_dir / "recovery.sqlite3"
+    editor = ManuscriptStore(tmp_path, ms_path)
+
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute(
+            "CREATE TABLE manuscript_revisions ("
+            "document TEXT NOT NULL, revision TEXT NOT NULL, parent_revision TEXT, "
+            "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
+            "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
+            "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
+            "flags_count INTEGER NOT NULL DEFAULT 0, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
+            "PRIMARY KEY(document, revision))"
+        )
+        db.execute(
+            "INSERT INTO manuscript_revisions "
+            "(document, revision, parent_revision, created_at, words, sentences, flags_count, chapter_metrics) "
+            "VALUES (?, ?, NULL, 1000.0, 4, 1, 0, '[]')",
+            (editor.document, "0" * 64),
+        )
+        db.commit()
+
+    opened = editor.open()
+    save(editor, opened, updated, "a" * 32)
+    history = editor.timeline()
+    assert all(row["flags_count"] is None for row in history)
+    delta = editor.delta()
+    assert delta["current"]["flags_count"] is None
+    assert delta["deltas"]["flags_count"] is None
