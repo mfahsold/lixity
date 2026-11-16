@@ -20,6 +20,12 @@
   var importedTake = null, takeTokens = null, takeImportSequence = 0;
   var recordingPending = false, recordingSequence = 0, takeUrl = null, takeTranscript = "", voiceSaving = false, takeValid = false;
   function label(key) { return uiLabel("speech_" + key); }
+  function optionalLabel(key, enFallback, deFallback) {
+    var text = label(key);
+    if (text && text !== "speech_" + key) return text;
+    var lang = (document.documentElement.lang || "en").toLowerCase();
+    return deFallback && lang.indexOf("de") === 0 ? deFallback : enFallback;
+  }
   function recordingFeedback(state, message, stateLabel) {
     if (!fields.recState) return;
     fields.recState.dataset.state = state;
@@ -385,7 +391,7 @@
     fields.instructions.disabled = noInstructions && !instructionPresent && !exportOnly;
     fields.instructions.setCustomValidity(noInstructions && instructionPresent && !exportOnly ? label("model_clear_instructions") : "");
     fields.instructions_note.hidden = !exportOnly;
-    fields.phonemes_section.hidden = !support.phonemes && !fields.phonemes.value.trim();
+    fields.phonemes_section.hidden = mode !== "profiles" || (!support.phonemes && !fields.phonemes.value.trim());
     fields.phonemes.disabled = !support.phonemes && !fields.phonemes.value.trim();
     fields.phonemes.setCustomValidity(!support.phonemes && fields.phonemes.value.trim() ? label("controls_unsupported") : "");
     profileProsody.update(support.prosody);
@@ -814,7 +820,7 @@
     } else {
       node("span", fields.profile_voice_card, "voice-card-info", label(curId ? "reference_unavailable_help" : "no_voice_yet"));
     }
-    var recordBtn = node("button", fields.profile_voice_card, "ctl", "🎙 " + label("record_author_title"));
+    var recordBtn = node("button", fields.profile_voice_card, "ctl", label("record_author_title"));
     recordBtn.type = "button";
     recordBtn.addEventListener("click", function() { switchMode("reference"); });
   }
@@ -837,7 +843,7 @@
         fields.audio.play().catch(function(error) { status(error.message); });
       });
     } else {
-      span.innerHTML = "⚪ <em>" + (label("no_voice_yet") || "Noch keine Autorenstimme für dieses Projekt hinterlegt.") + "</em>";
+      node("em", span, "", optionalLabel("no_voice_yet", "No author voice recorded yet", "Noch keine Autorenstimme hinterlegt"));
     }
   }
   function renderReferenceList(refs) {
@@ -867,7 +873,7 @@
       if (isCurrent) {
         node("span", actions, "badge", "✓ " + label("active_voice"));
       } else {
-        var useBtn = node("button", actions, "ctl", label("use_as_active") || "Aktivieren");
+        var useBtn = node("button", actions, "ctl", optionalLabel("use_as_active", "Use as active voice", "Als aktive Stimme verwenden"));
         useBtn.type = "button";
         useBtn.addEventListener("click", async function() {
           var curProf = settings && settings.selected && settings.profiles[settings.selected];
@@ -893,7 +899,7 @@
     if (fields.takeWidget) fields.takeWidget.clearLiveAnalyser();
     if (audioCtx) { audioCtx.close().catch(function() {}); audioCtx = null; }
     fields.recBtn.disabled = !speechReady;
-    fields.recBtn.textContent = "🎙 " + label("record_start");
+    fields.recBtn.textContent = label("record_start");
     fields.recBtn.classList.remove("is-recording");
     fields.recTimer.hidden = true;
     fields.promptControls.forEach(function(el) { el.disabled = false; });
@@ -952,7 +958,7 @@
       };
       stage = "capture_connect";
       audioSource.connect(audioProcessor); audioProcessor.connect(audioCtx.destination);
-      fields.recBtn.disabled = false; fields.recBtn.textContent = "⏹ " + label("record_stop"); fields.recBtn.classList.add("is-recording");
+      fields.recBtn.disabled = false; fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
       fields.recTimer.hidden = false; fields.recTimer.textContent = "00:00"; recStartTime = Date.now();
       recTimerInterval = setInterval(function() {
         var elapsed = Math.floor((Date.now() - recStartTime) / 1000);
@@ -1136,6 +1142,10 @@
     if (fields.reference_section) fields.reference_section.hidden = mode !== "reference";
     if (fields.profile_row) fields.profile_row.hidden = mode !== "profiles";
     fields.editor.hidden = mode !== "profiles";
+    if (fields.lexicon_section) fields.lexicon_section.hidden = mode !== "profiles";
+    if (fields.phonemes_section) {
+      fields.phonemes_section.hidden = mode !== "profiles" || (!profileSupport().phonemes && !fields.phonemes.value.trim());
+    }
     fields.create.hidden = mode !== "profiles";
     fields.remove_profile.hidden = mode !== "profiles";
     fields.save.hidden = mode !== "profiles";
@@ -1176,13 +1186,20 @@
       if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
       if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
       dialog.close();
-    }); close.className = "ctl"; close.setAttribute("aria-keyshortcuts", "Escape"); close.setAttribute("title", label("close"));
+    });
+    close.className = "modal-close";
+    close.textContent = "✕";
+    var closeLabel = uiLabel("modal_close");
+    if (!closeLabel || closeLabel === "modal_close") closeLabel = label("close");
+    close.setAttribute("aria-label", closeLabel);
+    close.setAttribute("title", closeLabel);
+    close.setAttribute("aria-keyshortcuts", "Escape");
     var tabsBar = node("div", card, "modal-tabs");
     tabsBar.setAttribute("role", "tablist");
-    var tabVoice = node("button", tabsBar, "modal-tab-btn", "🎙 " + (label("tab_voice") || "Autorenstimme"));
-    var tabProfiles = node("button", tabsBar, "modal-tab-btn", "🎭 " + (label("tab_profiles") || "Stimmprofile"));
-    var tabReader = node("button", tabsBar, "modal-tab-btn", "🎧 " + (label("tab_reader") || "Hörprobe & Regie"));
-    var tabMic = node("button", tabsBar, "modal-tab-btn", "🎚️ " + (label("tab_microphone") || "Mikrofon & Pegel"));
+    var tabVoice = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_voice", "Author's voice", "Autorenstimme"));
+    var tabProfiles = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_profiles", "Voice profiles", "Stimmprofile"));
+    var tabReader = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_reader", "Listen & direct", "Hörprobe & Regie"));
+    var tabMic = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_microphone", "Mic & levels", "Mikrofon & Pegel"));
     tabVoice.type = tabProfiles.type = tabReader.type = tabMic.type = "button";
     tabVoice.addEventListener("click", function() { switchMode("reference"); });
     tabProfiles.addEventListener("click", function() { switchMode("profiles"); });
@@ -1207,7 +1224,7 @@
     fields.reference_section = node("div", content, "author-voice-studio");
     fields.reference_section.hidden = true;
     var introCard = node("div", fields.reference_section, "voice-studio-intro");
-    node("p", introCard, "ctl-note", label("record_author_intro") || "Nimm eine 15–25-sekündige Sprachprobe auf. Sie dient als Stimmreferenz für den KI-Sprecher dieses Buchs.");
+    node("p", introCard, "ctl-note", optionalLabel("record_author_intro", "Record a 15–25 second sample to serve as the voice clone reference for this book.", "Nimm eine 15–25-sekündige Sprachprobe auf. Sie dient als Stimmreferenz für den KI-Sprecher dieses Buchs."));
     fields.active_voice_badge = node("div", fields.reference_section, "voice-active-card");
     var textCard = node("div", fields.reference_section, "voice-reading-card");
     var textHeader = node("div", textCard, "voice-reading-header");
@@ -1261,7 +1278,7 @@
     fields.promptControls.forEach(function(el) { el.dataset.help = label("transcript_help"); });
     updatePromptText();
     var recControls = node("div", fields.reference_section, "voice-record-controls");
-    fields.recBtn = node("button", recControls, "ctl voice-rec-btn", "🎙 " + (label("record_start") || "Aufnahme starten"));
+    fields.recBtn = node("button", recControls, "ctl voice-rec-btn", optionalLabel("record_start", "Start recording", "Aufnahme starten"));
     fields.recBtn.type = "button"; addHelp(fields.recBtn, "record_start");
     fields.recTimer = node("span", recControls, "voice-rec-timer", "00:00");
     fields.recTimer.hidden = true;
@@ -1290,7 +1307,7 @@
     fields.takeExports = node("div", fields.takeCard, "row"); fields.takeExports.hidden = true;
     button(fields.takeExports, "take_download_wav", function() { exportVoiceTake("wav"); });
     button(fields.takeExports, "take_download_json", function() { exportVoiceTake("json"); });
-    fields.saveVoiceBtn = node("button", fields.takeCard, "ctl primary voice-save-btn", "💾 " + (label("record_save") || "Als Autorenstimme für dieses Buch speichern"));
+    fields.saveVoiceBtn = node("button", fields.takeCard, "ctl primary voice-save-btn", optionalLabel("record_save", "Save as author voice for this book", "Als Autorenstimme für dieses Buch speichern"));
     fields.saveVoiceBtn.type = "button"; addHelp(fields.saveVoiceBtn, "record_save");
     fields.recBtn.addEventListener("click", function() {
       if (!isRecordingVoice) startVoiceRecording();
@@ -1298,10 +1315,10 @@
     });
     fields.saveVoiceBtn.addEventListener("click", saveVoiceTake);
     var librarySec = node("details", fields.reference_section, "settings-section voice-library-section");
-    node("summary", librarySec, "", label("choose_from_library") || "Gespeicherte Aufnahmen in diesem Projekt");
+    node("summary", librarySec, "", optionalLabel("choose_from_library", "Saved takes in this project", "Gespeicherte Aufnahmen in diesem Projekt"));
     fields.reference_list = node("div", librarySec, "voice-reference-list");
     var uploadSec = node("details", fields.reference_section, "settings-section voice-upload-section");
-    node("summary", uploadSec, "", label("upload_wav") || "Oder Studio-WAV hochladen");
+    node("summary", uploadSec, "", optionalLabel("upload_wav", "Or upload studio WAV", "Oder Studio-WAV hochladen"));
     var uploadFile = field(uploadSec, "upload_voice_file", "file");
     uploadFile.accept = ".wav";
     var uploadTranscript = field(uploadSec, "upload_voice_transcript", "textarea");
@@ -1410,7 +1427,8 @@
     [fields.voice_description, fields.reference_id, fields.instructions].forEach(function(input) {
       input.addEventListener("input", function() { updateModelFields(); updateVoiceCard(); });
     });
-    var lexicon = node("details", fields.editor, "settings-section"); lexicon.id = "speech-lexicon";
+    var lexicon = node("details", content, "settings-section"); lexicon.id = "speech-lexicon";
+    fields.lexicon_section = lexicon;
     node("summary", lexicon, "", label("pronunciations"));
     var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
     search.addEventListener("input", renderPronunciations);
@@ -1425,12 +1443,12 @@
     button(lexicon, "pronunciation_discard", function() {
       editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = ""; status("");
     });
-    var rawList = node("details", lexicon, "settings-section");
+    var rawList = node("details", lexicon, "settings-advanced");
     node("summary", rawList, "", label("pronunciation_bulk"));
     field(rawList, "pronunciations", "textarea").addEventListener("input", renderPronunciations);
     node("p", rawList, "ctl-note", label("pronunciation_hint"));
     node("p", rawList, "ctl-note", label("pronunciation_bulk_special"));
-    fields.phonemes_section = node("details", fields.editor, "settings-section"); fields.phonemes_section.id = "speech-phonemes-section";
+    fields.phonemes_section = node("details", content, "settings-section"); fields.phonemes_section.id = "speech-phonemes-section";
     node("summary", fields.phonemes_section, "", label("phonemes"));
     field(fields.phonemes_section, "phonemes", "textarea").rows = 5;
     fields.phonemes.placeholder = "Vogel=ˈfoːɡəl";
@@ -1507,8 +1525,9 @@
       if (microphoneBusy || !microphoneState || !fields.microphone_device.value) return;
       var sequence = openSequence, mixer = microphoneMixer(), dev = fields.microphone_device.value;
       microphoneBusy = true; microphoneControls(); fields.microphone_calib_result.replaceChildren();
-      var prepNote = node("p", fields.microphone_calib_result, "ctl-note", "4s Vorlauf... Danach 3× POPP, 2× Klatschen, 1× Sprechen.");
-      status("Kalibriere Mikrofonpegel...");
+      var prepNote = node("p", fields.microphone_calib_result, "ctl-note",
+        optionalLabel("microphone_calib_prep", "4s lead-in… Then 3× pop, 2× clap, 1× speak.", "4s Vorlauf… Danach 3× POPP, 2× Klatschen, 1× Sprechen."));
+      status(optionalLabel("microphone_calib_running", "Calibrating microphone level…", "Kalibriere Mikrofonpegel…"));
       try {
         // Measure the selected device at its current level. The calibration API's
         // optional gain targets its default mixer, which may be another card.
@@ -1522,18 +1541,21 @@
           if (cal.verdict === "too_hot") vBadge.classList.add("badge-fail");
           else if (cal.verdict === "calibrated") vBadge.classList.add("badge-pass");
           else vBadge.classList.add("badge-warn");
-          node("p", card, "", "Peak: " + (cal.peak_dbfs >= 0 ? "+" : "") + cal.peak_dbfs.toFixed(1) + " dBFS · Clipping: " + cal.clipping_samples + " · Rauschabstand (SNR): " + cal.snr_db.toFixed(1) + " dB");
+          var snrLabel = optionalLabel("microphone_calib_snr", "SNR", "Rauschabstand (SNR)");
+          node("p", card, "", "Peak: " + (cal.peak_dbfs >= 0 ? "+" : "") + cal.peak_dbfs.toFixed(1) + " dBFS · Clipping: " + cal.clipping_samples + " · " + snrLabel + ": " + cal.snr_db.toFixed(1) + " dB");
           // Recommendations currently use the backend's default card/Mic gain.
           if (mixer && mixer.max <= 100 && String(mixer.card) === "1" && mixer.control === "Mic" && Number.isInteger(cal.recommended_gain) &&
               cal.recommended_gain >= mixer.min && cal.recommended_gain <= mixer.max && cal.recommended_gain !== microphoneState.current_gain) {
-            var recBtn = node("button", card, "ctl", "Empfohlenen Gain " + cal.recommended_gain + " anwenden");
+            var applyGainText = optionalLabel("microphone_calib_apply_gain", "Apply recommended gain {gain}", "Empfohlenen Gain {gain} anwenden")
+              .replace("{gain}", String(cal.recommended_gain));
+            var recBtn = node("button", card, "ctl", applyGainText);
             recBtn.type = "button";
             recBtn.addEventListener("click", function() {
               fields.microphone_gain.value = fields.microphone_gain_range.value = String(cal.recommended_gain);
               fields.microphone_set_btn.click();
             });
           }
-          status("Kalibrierung abgeschlossen.");
+          status(optionalLabel("microphone_calib_done", "Calibration complete.", "Kalibrierung abgeschlossen."));
         }
       } catch (err) { if (sequence === openSequence && dialog.open) status(err.message); }
       finally { if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); } }
@@ -1642,15 +1664,18 @@
     fields.service_section.append(fields.target.closest("label"), fields.worker_status, fields.worker_guide, fields.worker_refresh);
     fields.render_section.append(fields.runtime_hint, reuse, actions, fields.context, fields.progress);
     fields.playback_section.append(fields.player_controls, fields.download);
-    fields.profile_row.after(fields.editor, fields.service_section, fields.save, fields.profile_discard);
+    fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section, fields.save, fields.profile_discard);
     fields.audit_section.before(fields.render_section, fields.export_section);
     fields.export_section.after(fields.chapter_audio_section);
     content.append(fields.playback_section);
     arrangeSections();
     fields.reuseLabel = reuse;
-    fields.editor.addEventListener("input", function(event) {
+    function markProfileDirty(event) {
       if (mode === "profiles" && ![fields.pronunciation_search, fields.pronunciation_term, fields.pronunciation_spoken].includes(event.target)) profilesDirty = true;
       invalidate();
+    }
+    [fields.editor, fields.lexicon_section, fields.phonemes_section].forEach(function(section) {
+      section.addEventListener("input", markProfileDirty);
     });
     fields.engine.addEventListener("change", function() {
       if (profileCapability().voices[fields.voice.value]) lastPreset = fields.voice.value;
