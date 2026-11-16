@@ -1,17 +1,14 @@
 """Explicit-project API for local evidence ingestion, lookup and integrity checks."""
 
 import contextlib
-import csv
-import io
 import os
 import re
 import tempfile
-import warnings
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, get_args, overload
+from typing import Any, Literal, overload
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -35,13 +32,56 @@ from .dossier_edit import (
 from .dossier_edit import (
     prepare_dossier_edits as prepare_dossier_edits,
 )
-from .geography import summarize_geography
+from .dossiers import (
+    _draft_matches_existing_dossier as _draft_matches_existing_dossier,
+)
+from .dossiers import (
+    _get_dossier as _get_dossier,
+)
+from .dossiers import (
+    _list_dossiers as _list_dossiers,
+)
+from .dossiers import (
+    create_dossier as create_dossier,
+)
+from .dossiers import (
+    create_dossier_from_manuscript as create_dossier_from_manuscript,
+)
+from .dossiers import (
+    delete_dossier_collection as delete_dossier_collection,
+)
+from .dossiers import (
+    delete_term_profile as delete_term_profile,
+)
+from .dossiers import (
+    get_dossier as get_dossier,
+)
+from .dossiers import (
+    list_dossiers as list_dossiers,
+)
+from .dossiers import (
+    manuscript_dossier_drafts as manuscript_dossier_drafts,
+)
+from .dossiers import (
+    save_dossier_collection as save_dossier_collection,
+)
+from .dossiers import (
+    save_term_profile as save_term_profile,
+)
+from .dossiers import (
+    set_dossier_collections as set_dossier_collections,
+)
+from .dossiers import (
+    set_term_profiles as set_term_profiles,
+)
+from .dossiers import (
+    supported_language as supported_language,
+)
 from .images import (
     IMAGE_SUFFIXES,
     IMAGE_TYPES,
     extract_image_references,
     extract_markdown_image_references,
-    image_descriptions,
     resolve_dossier_images,
     resolve_dossier_media,
     resolve_image_reference,
@@ -90,14 +130,42 @@ from .manuscript import (
 from .manuscript import (
     review_manuscript_terms as review_manuscript_terms,
 )
-from .manuscript_drafts import extract_manuscript_dossier_drafts
+from .matrix import (
+    _FORMAT_SENTINEL as _FORMAT_SENTINEL,
+)
+from .matrix import (
+    MATRIX_FORMATS as MATRIX_FORMATS,
+)
+from .matrix import (
+    MatrixFormat as MatrixFormat,
+)
+from .matrix import (
+    _claim_matrix_data as _claim_matrix_data,
+)
+from .matrix import (
+    claim_matrix as claim_matrix,
+)
+from .matrix import (
+    claim_matrix_data as claim_matrix_data,
+)
+from .matrix import (
+    claim_matrix_format as claim_matrix_format,
+)
+from .matrix import (
+    matrix_format as matrix_format,
+)
+from .matrix import (
+    render_claim_matrix as render_claim_matrix,
+)
+from .matrix import (
+    research_gaps as research_gaps,
+)
 from .media import MEDIA_TYPES, VIDEO_TYPES, validate_media
 from .media_metadata import update_dossier_media_context as update_dossier_media_context
 from .models import (
     CLAIM_CONFIDENCES,
     ENTITY,
     EVIDENCE_RELATIONS,
-    LANGUAGES,
     Activity,
     Blob,
     Claim,
@@ -111,7 +179,6 @@ from .models import (
     EvidenceLink,
     EvidenceRelation,
     Extraction,
-    Language,
     Manifest,
     Passage,
     Project,
@@ -140,7 +207,6 @@ from .revisions import (
     claim_relation_view,
     dossier_withdrawal,
     require_active_dossier_association,
-    source_updates,
 )
 from .revisions import (
     apply_record_revisions as apply_record_revisions,
@@ -184,7 +250,7 @@ from .sections import (
 from .sections import (
     extract_sections as extract_sections,
 )
-from .sections import preamble_text
+from .sections import preamble_text as preamble_text
 from .sections import (
     update_section as update_section,
 )
@@ -1853,645 +1919,6 @@ def evidence_relation(value: object) -> EvidenceRelation:
     )
 
 
-def supported_language(value: object) -> Language:
-    """Return the matching project language key or raise a clear error."""
-    text = str(value or "").strip().lower()
-    for candidate in LANGUAGES:
-        if text == candidate:
-            return candidate
-    raise ResearchError(f"Unsupported language: {value!r}")
-
-
-def create_dossier(
-    project: str | Path,
-    title: str,
-    body: str,
-    *,
-    language: str | None = None,
-    tags: list[str] | None = None,
-    evidence_ids: list[str] | None = None,
-    geography: dict[str, Any] | None = None,
-    actor: str = "local-author",
-) -> dict[str, Any]:
-    """Create and commit a new Dossier record."""
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-
-    title = title.strip()
-    if not (1 <= len(title) <= 500):
-        raise ResearchError("Dossier title must be between 1 and 500 characters")
-    language = supported_language(snapshot.project.language if language is None else language)
-
-    evidence_refs = [Reference(id=eid) for eid in dict.fromkeys(evidence_ids or [])]
-    for ref in evidence_refs:
-        snapshot.get(ref, Passage)
-
-    values = envelope(snapshot.project.id, actor)
-    if geography is not None:
-        values["schema_version"] = "research-local/8"
-    try:
-        dossier = Dossier.model_validate(
-            {
-                **values,
-                "title": title,
-                "language": language,
-                "tags": tags or [],
-                "body": body,
-                "evidence_refs": evidence_refs,
-                "geography": geography,
-            }
-        )
-    except ValidationError as error:
-        raise ResearchError(f"Invalid dossier fields: {error}") from None
-    new_snapshot = repository.commit([dossier], {}, snapshot)
-    return {
-        "schema_version": "research-dossier-local/1",
-        "dossier_id": dossier.id,
-        "title": dossier.title,
-        "snapshot": new_snapshot.digest,
-    }
-
-
-def list_dossiers(
-    project: str | Path,
-    *,
-    collection: str | None = None,
-) -> dict[str, Any]:
-    """List active dossiers and project-configured dossier collections."""
-    repository = Repository(project)
-    snapshot = repository.snapshot(
-        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
-    )
-    return _list_dossiers(snapshot, root=repository.root, collection=collection)
-
-
-def _list_dossiers(
-    snapshot: Snapshot,
-    *,
-    root: Path | None = None,
-    settings: Mapping[str, Any] | None = None,
-    collection: str | None = None,
-) -> dict[str, Any]:
-    from ..config import read_explicit_project_config
-    from ..dossier_collections import project_dossier_collections
-
-    withdrawn_or_purged = {
-        record.target_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
-    }
-    purged_passages = {
-        record.target_ref
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone)
-        and record.operation == "purge"
-        and record.target_kind == "passage"
-    }
-
-    dossier_reviews = editorial.dossier_reviews(snapshot)
-
-    dossiers_list = [
-        {
-            "id": record.id,
-            "title": record.title,
-            "language": record.language,
-            "tags": record.tags,
-            "revision": record.revision,
-            "evidence_count": len(record.evidence_refs),
-            "unavailable_evidence_count": sum(
-                ref in purged_passages for ref in record.evidence_refs
-            ),
-            "created_at": record.created_at,
-            "created_by": record.created_by,
-            "excerpt": image_descriptions(record.body)[:300].strip(),
-            "sections": list(extract_sections(record.body).keys()),
-            "review_needed": any(
-                review["status"] == "review_needed" for review in dossier_reviews.get(record.id, [])
-            ),
-        }
-        for record in snapshot.records.values()
-        if isinstance(record, Dossier) and record.id not in withdrawn_or_purged
-    ]
-
-    dossiers_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
-    withdrawn_dossiers = {
-        record.id: {"title": record.title, "revision": record.revision}
-        for record in snapshot.records.values()
-        if isinstance(record, Dossier) and record.id in withdrawn_or_purged
-    }
-    try:
-        raw_collections = (
-            settings.get("dossier_collections")
-            if settings is not None
-            else read_explicit_project_config(root, maximum_bytes=65536).get("dossier_collections")
-            if root is not None
-            else None
-        )
-        collections, unassigned_ids, memberships = project_dossier_collections(
-            raw_collections, dossiers_list, withdrawn_dossiers=withdrawn_dossiers
-        )
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid dossier collections configuration: {error}") from error
-
-    for item in dossiers_list:
-        item["collections"] = memberships.get(str(item["id"]), [])
-
-    if collection is not None:
-        selected = collection.strip()
-        if not selected:
-            raise ResearchError("Collection filter requires a nonblank collection ID")
-        if selected == "all":
-            pass
-        elif selected == "unassigned":
-            unassigned_set = set(unassigned_ids)
-            dossiers_list = [item for item in dossiers_list if item["id"] in unassigned_set]
-        else:
-            matched = next((entry for entry in collections if entry["id"] == selected), None)
-            if matched is None:
-                raise ResearchError(f"Unknown dossier collection: {selected!r}")
-            by_id = {str(item["id"]): item for item in dossiers_list}
-            dossiers_list = [by_id[did] for did in matched["dossier_ids"] if did in by_id]
-        return {
-            "schema_version": "research-dossiers-local/1",
-            "dossiers": dossiers_list,
-            "collections": collections,
-            "unassigned_dossier_ids": unassigned_ids,
-            "selected_collection": selected,
-        }
-
-    return {
-        "schema_version": "research-dossiers-local/1",
-        "dossiers": dossiers_list,
-        "collections": collections,
-        "unassigned_dossier_ids": unassigned_ids,
-    }
-
-
-def save_dossier_collection(
-    project: str | Path,
-    collection_id: str,
-    *,
-    name: str,
-    dossier_ids: list[str] | tuple[str, ...],
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Create or update one named dossier collection in lixity.toml without revising dossiers."""
-    from ..config import (
-        prepare_project_settings,
-        project_config_snapshot,
-        read_explicit_project_config,
-    )
-    from ..dossier_collections import (
-        DossierCollection,
-        parse_dossier_collections,
-        validate_collection_key,
-    )
-
-    repository = Repository(project)
-    snapshot = repository.snapshot(
-        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
-    )
-    try:
-        key = validate_collection_key(collection_id)
-        updated_collection = DossierCollection(name=name, dossier_ids=list(dossier_ids))
-        observed_config = project_config_snapshot(
-            repository.root / "lixity.toml", maximum_bytes=65536
-        )
-        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
-        collections = dict(parse_dossier_collections(current_settings.get("dossier_collections")))
-        collections[key] = updated_collection
-        serialized = {cid: item.model_dump() for cid, item in collections.items()}
-        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
-        if prepared.original != observed_config:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid dossier collection: {error}") from error
-    return _list_dossiers(snapshot, settings={"dossier_collections": serialized}, collection=key)
-
-
-def delete_dossier_collection(
-    project: str | Path,
-    collection_id: str,
-    *,
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Remove one named dossier collection from lixity.toml without revising dossiers."""
-    from ..config import (
-        prepare_project_settings,
-        project_config_snapshot,
-        read_explicit_project_config,
-    )
-    from ..dossier_collections import parse_dossier_collections, validate_collection_key
-
-    repository = Repository(project)
-    snapshot = repository.snapshot(
-        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
-    )
-    try:
-        key = validate_collection_key(collection_id)
-        observed_config = project_config_snapshot(
-            repository.root / "lixity.toml", maximum_bytes=65536
-        )
-        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
-        collections = dict(parse_dossier_collections(current_settings.get("dossier_collections")))
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid dossier collection: {error}") from error
-    if key not in collections:
-        raise ResearchError(f"Unknown dossier collection: {key!r}")
-    del collections[key]
-    serialized = {cid: item.model_dump() for cid, item in collections.items()}
-    try:
-        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
-        if prepared.original != observed_config:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except ValueError as error:
-        raise ResearchError(f"Could not update dossier collections: {error}") from error
-    return _list_dossiers(snapshot, settings={"dossier_collections": serialized})
-
-
-def set_dossier_collections(
-    project: str | Path,
-    collections: object,
-    *,
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Replace all configured dossier collections in lixity.toml without revising dossiers."""
-    from ..config import prepare_project_settings
-    from ..dossier_collections import parse_dossier_collections
-
-    repository = Repository(project)
-    snapshot = repository.snapshot(
-        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})
-    )
-    try:
-        parsed = parse_dossier_collections(collections)
-        serialized = {cid: item.model_dump() for cid, item in parsed.items()}
-        prepared = prepare_project_settings(repository.root, {"dossier_collections": serialized})
-        if expected_config_snapshot is not None and prepared.original != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid dossier collections: {error}") from error
-    return _list_dossiers(snapshot, settings={"dossier_collections": serialized})
-
-
-def save_term_profile(
-    project: str | Path,
-    term: str,
-    *,
-    aliases: list[str] | tuple[str, ...] = (),
-    scoped_alternatives: list[dict[str, Any]] | tuple[dict[str, Any], ...] = (),
-    case_sensitive: bool = False,
-    strict_boundaries: bool | None = None,
-    match_compounds: bool = False,
-    dossier_id: str | None = None,
-    claim_id: str | None = None,
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Create or update one author-chosen term/prop profile in lixity.toml without archive writes."""
-    from ..config import (
-        prepare_project_settings,
-        project_config_snapshot,
-        read_explicit_project_config,
-    )
-    from ..terms import parse_terms
-
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    try:
-        observed_config = project_config_snapshot(
-            repository.root / "lixity.toml", maximum_bytes=65536
-        )
-        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
-        terms_map = {
-            name: profile.model_dump(exclude_none=True)
-            for name, profile in parse_terms(current_settings.get("terms")).items()
-        }
-        candidate_entry: dict[str, Any] = {
-            "aliases": list(aliases),
-            "scoped_alternatives": list(scoped_alternatives),
-            "case_sensitive": case_sensitive,
-            "strict_boundaries": strict_boundaries,
-            "match_compounds": match_compounds,
-        }
-        if dossier_id:
-            candidate_entry["dossier_id"] = dossier_id
-        if claim_id:
-            candidate_entry["claim_id"] = claim_id
-        terms_map[term] = candidate_entry
-        validated = parse_terms(terms_map)
-        serialized = {
-            name: profile.model_dump(exclude_none=True) for name, profile in validated.items()
-        }
-        prepared = prepare_project_settings(repository.root, {"terms": serialized})
-        if prepared.original != observed_config:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid term profile: {error}") from error
-    return {
-        "schema_version": "research-terms-config-local/1",
-        "project_id": snapshot.project.id,
-        "snapshot": snapshot.digest,
-        "term": term,
-        "terms": [
-            {"term": name, **profile.model_dump(mode="json")} for name, profile in validated.items()
-        ],
-    }
-
-
-def delete_term_profile(
-    project: str | Path,
-    term: str,
-    *,
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Delete one configured term/prop profile from lixity.toml without archive writes."""
-    from ..config import (
-        prepare_project_settings,
-        project_config_snapshot,
-        read_explicit_project_config,
-    )
-    from ..terms import parse_terms
-
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    try:
-        observed_config = project_config_snapshot(
-            repository.root / "lixity.toml", maximum_bytes=65536
-        )
-        if expected_config_snapshot is not None and observed_config != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        current_settings = read_explicit_project_config(repository.root, maximum_bytes=65536)
-        terms_map = dict(parse_terms(current_settings.get("terms")))
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid term configuration: {error}") from error
-    if term not in terms_map:
-        raise ResearchError(f"Unknown configured term: {term!r}")
-    del terms_map[term]
-    serialized = {
-        name: profile.model_dump(exclude_none=True) for name, profile in terms_map.items()
-    }
-    try:
-        prepared = prepare_project_settings(repository.root, {"terms": serialized})
-        if prepared.original != observed_config:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except ValueError as error:
-        raise ResearchError(f"Could not update term configuration: {error}") from error
-    return {
-        "schema_version": "research-terms-config-local/1",
-        "project_id": snapshot.project.id,
-        "snapshot": snapshot.digest,
-        "deleted_term": term,
-        "terms": [
-            {"term": name, **profile.model_dump(mode="json")} for name, profile in terms_map.items()
-        ],
-    }
-
-
-def set_term_profiles(
-    project: str | Path,
-    terms: object,
-    *,
-    expected_config_snapshot: tuple[tuple[int, ...] | None, bytes] | None = None,
-) -> dict[str, Any]:
-    """Replace all configured term/prop profiles in lixity.toml without archive writes."""
-    from ..config import prepare_project_settings
-    from ..terms import parse_terms
-
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    try:
-        validated = parse_terms(terms)
-        serialized = {
-            name: profile.model_dump(exclude_none=True) for name, profile in validated.items()
-        }
-        prepared = prepare_project_settings(repository.root, {"terms": serialized})
-        if expected_config_snapshot is not None and prepared.original != expected_config_snapshot:
-            raise ValueError("Project config changed while saving; nothing was overwritten")
-        prepared.commit()
-    except (ValidationError, ValueError) as error:
-        raise ResearchError(f"Invalid term configuration: {error}") from error
-    return {
-        "schema_version": "research-terms-config-local/1",
-        "project_id": snapshot.project.id,
-        "snapshot": snapshot.digest,
-        "terms": [
-            {"term": name, **profile.model_dump(mode="json")} for name, profile in validated.items()
-        ],
-    }
-
-
-
-def get_dossier(
-    project: str | Path,
-    dossier_id: str,
-    *,
-    section: str | None = None,
-    preamble: bool = False,
-    revision: int | None = None,
-    summary: bool = False,
-    include_citations: bool = True,
-    manuscript: str | Path | None = None,
-) -> dict[str, Any]:
-    """Retrieve details of a specific dossier with optional section or summary bounding."""
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    return _get_dossier(
-        repository,
-        snapshot,
-        dossier_id,
-        section=section,
-        preamble=preamble,
-        revision=revision,
-        summary=summary,
-        include_citations=include_citations,
-        manuscript=manuscript,
-    )
-
-
-def _get_dossier(
-    repository: Repository,
-    snapshot: Snapshot,
-    dossier_id: str,
-    *,
-    section: str | None = None,
-    revision: int | None = None,
-    summary: bool = False,
-    include_citations: bool = True,
-    preamble: bool = False,
-    manuscript: str | Path | None = None,
-) -> dict[str, Any]:
-    """Build native dossier detail against one accepted snapshot."""
-
-    if revision is not None and (type(revision) is not int or revision < 1):
-        raise ResearchError("Revision must be a positive integer")
-    if type(preamble) is not bool or (preamble and (section is not None or summary)):
-        raise ResearchError("Choose a preamble, section or summary read")
-    dossier = (
-        snapshot.latest(dossier_id, Dossier)
-        if revision is None
-        else snapshot.get(Reference(id=dossier_id, revision=revision), Dossier)
-    )
-    availability = dossier_withdrawal(snapshot, dossier.id)
-
-    withdrawn_or_purged = {
-        record.target_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
-    }
-    if dossier.id in withdrawn_or_purged and not (revision is not None and availability):
-        raise ResearchError("Dossier has been withdrawn or purged")
-
-    decision_reviews = editorial.dossier_reviews(snapshot).get(dossier.id, [])
-
-    spans = _section_spans(dossier.body)
-    sections = _extract_sections(dossier.body, spans)
-    editable_sections = [] if availability else _editable_section_titles(spans)
-    if preamble:
-        content = preamble_text(dossier.body)
-        res = {
-            "id": dossier.id,
-            **availability,
-            "project_id": snapshot.project.id,
-            "snapshot": snapshot.digest,
-            "title": dossier.title,
-            "revision": dossier.revision,
-            "preamble": True,
-            "section": None,
-            "section_level": None,
-            "content": content,
-            "images": resolve_dossier_images(snapshot, content),
-            "media": resolve_dossier_media(snapshot, content),
-            "editable_sections": editable_sections,
-        }
-        if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(
-                repository.root, dossier.id, manuscript=manuscript
-            )
-        return res
-    if summary:
-        reader = EvidenceCitationReader(repository, snapshot)
-        resolved_citations = (
-            [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
-        )
-        res = {
-            "id": dossier.id,
-            **availability,
-            "project_id": snapshot.project.id,
-            "images": resolve_dossier_images(snapshot, dossier.body),
-            "media": resolve_dossier_media(snapshot, dossier.body),
-            "title": dossier.title,
-            "language": dossier.language,
-            "tags": dossier.tags,
-            "revision": dossier.revision,
-            "snapshot": snapshot.digest,
-            "created_at": dossier.created_at,
-            "created_by": dossier.created_by,
-            "body_length": len(dossier.body),
-            "sections": list(sections.keys()),
-            "editable_sections": editable_sections,
-            "citation_count": len(dossier.evidence_refs),
-            "geography_feature_count": len(dossier.geography.features) if dossier.geography else 0,
-            "geography_summary": summarize_geography(dossier.geography),
-            "excerpt": dossier.body[:500] + ("..." if len(dossier.body) > 500 else ""),
-            "decision_reviews": decision_reviews,
-            "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
-            "source_updates": source_updates(resolved_citations) if include_citations else [],
-        }
-        if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(
-                repository.root, dossier.id, manuscript=manuscript
-            )
-        return res
-
-    if section is not None:
-        matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
-        if len(matches) > 1:
-            raise ResearchError(
-                f"Section '{section}' is ambiguous: {len(matches)} headings share this title; read the full dossier"
-            )
-        matched = next((k for k in sections if k.casefold() == section.strip().casefold()), None)
-        if matched is None:
-            raise ResearchError(
-                f"Section '{section}' not found in dossier; available: {', '.join(sections.keys()) or 'none'}"
-            )
-        selected_content = (
-            dossier.body[
-                matches[0].content_start : _section_subtree_end(
-                    spans, matches[0], len(dossier.body)
-                )
-            ].strip("\r\n")
-            if matches
-            else sections[matched]
-        )
-        res = {
-            "id": dossier.id,
-            **availability,
-            "project_id": snapshot.project.id,
-            "images": resolve_dossier_images(snapshot, selected_content),
-            "media": resolve_dossier_media(snapshot, selected_content),
-            "title": dossier.title,
-            "revision": dossier.revision,
-            "snapshot": snapshot.digest,
-            "section": matched,
-            "section_level": matches[0].level if matches else None,
-            "editable_sections": editable_sections,
-            "content": selected_content,
-            "decision_reviews": decision_reviews,
-            "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
-        }
-        if manuscript is not None:
-            res["manuscript_evidence"] = dossier_manuscript_evidence(
-                repository.root, dossier.id, manuscript=manuscript
-            )
-        return res
-
-    reader = EvidenceCitationReader(repository, snapshot)
-    resolved_citations = (
-        [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
-    )
-
-    res = {
-        "id": dossier.id,
-        **availability,
-        "project_id": snapshot.project.id,
-        "images": resolve_dossier_images(snapshot, dossier.body),
-        "media": resolve_dossier_media(snapshot, dossier.body),
-        "title": dossier.title,
-        "language": dossier.language,
-        "tags": dossier.tags,
-        "body": dossier.body,
-        "geography": dossier.geography.model_dump(mode="json") if dossier.geography else None,
-        "geography_summary": summarize_geography(dossier.geography),
-        "sections": list(sections.keys()),
-        "editable_sections": editable_sections,
-        "section_map": sections,
-        "created_at": dossier.created_at,
-        "created_by": dossier.created_by,
-        "citations": resolved_citations,
-        "revision": dossier.revision,
-        "snapshot": snapshot.digest,
-        "source_updates": source_updates(resolved_citations),
-        "decision_reviews": decision_reviews,
-        "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
-    }
-    if manuscript is not None:
-        res["manuscript_evidence"] = dossier_manuscript_evidence(
-            repository.root, dossier.id, manuscript=manuscript
-        )
-    return res
-
-
 def create_claim(
     project: str | Path,
     *,
@@ -3103,496 +2530,3 @@ def _project_overview(
     data["dossier_collections"] = dossiers_listing["collections"]
     data["unassigned_dossier_ids"] = dossiers_listing["unassigned_dossier_ids"]
     return data
-
-
-MatrixFormat = Literal["json", "md", "csv"]
-MATRIX_FORMATS: tuple[MatrixFormat, ...] = get_args(MatrixFormat)
-_FORMAT_SENTINEL = object()
-
-
-def matrix_format(value: object) -> MatrixFormat:
-    """Normalise a submitted matrix format or raise a clear error."""
-    text = str(value or "").strip().lower()
-    for candidate in MATRIX_FORMATS:
-        if text == candidate:
-            return candidate
-    raise ResearchError(f"Unsupported claim matrix format: {value!r}")
-
-
-def claim_matrix(
-    project: str | Path,
-    *,
-    format: MatrixFormat | object = _FORMAT_SENTINEL,
-) -> dict[str, Any] | str:
-    """Return the claim-evidence-decision matrix.
-
-    Returns plain data. For rendered output call `render_claim_matrix`, or
-    `claim_matrix_format` to get data and rendering in one call.
-
-    Deprecated: passing ``format=``. The compatibility wrapper remains accepted
-    until a future release; use `render_claim_matrix` instead.
-    """
-    if format is not _FORMAT_SENTINEL:
-        warnings.warn(
-            "claim_matrix(format=...) is deprecated and will be removed in a future release; "
-            "call claim_matrix() for data and render_claim_matrix(data, format=...) "
-            "for rendered output",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return claim_matrix_format(project, format=matrix_format(format))
-    return claim_matrix_data(project)
-
-
-def claim_matrix_data(project: str | Path) -> dict[str, Any]:
-    """Compute the claim-evidence-decision matrix as plain data."""
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    return _claim_matrix_data(repository, snapshot)
-
-
-def _claim_matrix_data(repository: Repository, snapshot: Snapshot) -> dict[str, Any]:
-    withdrawn_or_purged = {
-        record.target_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
-    }
-
-    # Map dossiers by ID (latest revision)
-    dossiers_by_id: dict[str, Dossier] = {}
-    for record in snapshot.records.values():
-        if (
-            isinstance(record, Dossier)
-            and record.id not in withdrawn_or_purged
-            and (
-                record.id not in dossiers_by_id
-                or record.revision > dossiers_by_id[record.id].revision
-            )
-        ):
-            dossiers_by_id[record.id] = record
-
-    # Map claims by ID (latest revision)
-    claims_by_id: dict[str, Claim] = {}
-    for record in snapshot.records.values():
-        if (
-            isinstance(record, Claim)
-            and record.id not in withdrawn_or_purged
-            and (
-                record.id not in claims_by_id or record.revision > claims_by_id[record.id].revision
-            )
-        ):
-            claims_by_id[record.id] = record
-
-    # Evidence links grouped by claim_id
-    evidence_by_claim: dict[str, list[dict[str, Any]]] = {}
-    total_evidence_count = 0
-    reader = EvidenceCitationReader(repository, snapshot)
-    for record in snapshot.records.values():
-        if isinstance(record, EvidenceLink) and record.id not in withdrawn_or_purged:
-            cid = record.claim_ref.id
-            if cid not in evidence_by_claim:
-                evidence_by_claim[cid] = []
-            citation = reader.read(record.passage_ref)
-            evidence_by_claim[cid].append(
-                {
-                    "link_id": record.id,
-                    "relation": record.relation,
-                    "rationale": record.rationale,
-                    "passage_id": record.passage_ref.id,
-                    "source_title": citation.get("source_title", ""),
-                    "verbatim": citation.get("verbatim", ""),
-                    "citation": citation,
-                }
-            )
-            total_evidence_count += 1
-
-    # Decisions grouped by claim_id
-    decisions_by_claim: dict[str, list[dict[str, Any]]] = {}
-    unlinked_decisions: list[dict[str, Any]] = []
-    total_decisions_count = 0
-    for record in snapshot.records.values():
-        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
-            dec_item = {
-                "decision_id": record.id,
-                "title": record.title,
-                "rationale": record.rationale,
-                "deviation_from_fact": record.deviation_from_fact,
-                "impact_on_plot": record.impact_on_plot,
-            }
-            if record.claim_ref:
-                cid = record.claim_ref.id
-                if cid not in decisions_by_claim:
-                    decisions_by_claim[cid] = []
-                decisions_by_claim[cid].append(dec_item)
-            else:
-                unlinked_decisions.append(dec_item)
-            total_decisions_count += 1
-
-    matrix_claims: list[dict[str, Any]] = []
-    supported_count = 0
-    contradicted_count = 0
-    unverified_count = 0
-    deviation_count = 0
-
-    sorted_claims = sorted(claims_by_id.values(), key=lambda c: str(c.created_at))
-    for claim in sorted_claims:
-        c_evidence = evidence_by_claim.get(claim.id, [])
-        c_decisions = decisions_by_claim.get(claim.id, [])
-
-        counts = {
-            "supports": sum(1 for e in c_evidence if e["relation"] == "supports"),
-            "contradicts": sum(1 for e in c_evidence if e["relation"] == "contradicts"),
-            "qualifies": sum(1 for e in c_evidence if e["relation"] == "qualifies"),
-            "contextualizes": sum(1 for e in c_evidence if e["relation"] == "contextualizes"),
-            "total": len(c_evidence),
-        }
-
-        has_deviation = any(d["deviation_from_fact"] for d in c_decisions)
-        if has_deviation:
-            deviation_count += 1
-
-        if counts["contradicts"] > 0:
-            status = "contradicted"
-            contradicted_count += 1
-        elif counts["supports"] > 0:
-            status = "supported"
-            supported_count += 1
-        else:
-            status = "unverified"
-            unverified_count += 1
-
-        dossier_title = None
-        dossier_id = claim.dossier_ref.id if claim.dossier_ref else None
-        if dossier_id and dossier_id in dossiers_by_id:
-            dossier_title = dossiers_by_id[dossier_id].title
-
-        matrix_claims.append(
-            {
-                "claim_id": claim.id,
-                "revision": claim.revision,
-                "title": claim.title,
-                "statement": claim.statement,
-                "confidence": claim.confidence,
-                "scope": {
-                    "time_period": claim.scope.time_period,
-                    "place": claim.scope.place,
-                    "actors": claim.scope.actors,
-                },
-                "dossier_id": dossier_id,
-                "dossier_title": dossier_title,
-                "status": status,
-                "has_deviation": has_deviation,
-                "evidence_counts": counts,
-                "evidence": c_evidence,
-                "decisions": c_decisions,
-                "created_at": claim.created_at,
-            }
-        )
-
-    summary = {
-        "total_claims": len(matrix_claims),
-        "supported_claims": supported_count,
-        "contradicted_claims": contradicted_count,
-        "unverified_claims": unverified_count,
-        "deviation_claims": deviation_count,
-        "total_evidence_links": total_evidence_count,
-        "total_decisions": total_decisions_count,
-    }
-
-    return {
-        "schema_version": "research-claim-matrix-local/1",
-        "project_id": snapshot.project.id,
-        "project_title": snapshot.project.title,
-        "summary": summary,
-        "claims": matrix_claims,
-        "unlinked_decisions": unlinked_decisions,
-    }
-
-
-def render_claim_matrix(data: dict[str, Any], *, format: Literal["md", "csv"] = "md") -> str:
-    """Render a `claim_matrix` result as Markdown or CSV."""
-    project_title = data.get("project_title", "")
-    summary = data.get("summary", {})
-    matrix_claims = data.get("claims", [])
-
-    if format == "csv":
-        out = io.StringIO()
-        writer = csv.writer(out)
-        writer.writerow(
-            [
-                "claim_id",
-                "title",
-                "confidence",
-                "status",
-                "has_deviation",
-                "dossier",
-                "statement",
-                "evidence_relation",
-                "source_title",
-                "passage_quote",
-                "decision_title",
-                "deviation_from_fact",
-            ]
-        )
-        for c in matrix_claims:
-            ev_list = c["evidence"] or [{}]
-            dec_list = c["decisions"] or [{}]
-            for ev in ev_list:
-                for dec in dec_list:
-                    writer.writerow(
-                        [
-                            c["claim_id"],
-                            c["title"],
-                            c["confidence"],
-                            c["status"],
-                            "yes" if c["has_deviation"] else "no",
-                            c["dossier_title"] or "",
-                            c["statement"],
-                            ev.get("relation", ""),
-                            ev.get("source_title", ""),
-                            ev.get("verbatim", ""),
-                            dec.get("title", ""),
-                            "yes" if dec.get("deviation_from_fact") else ("no" if dec else ""),
-                        ]
-                    )
-        return out.getvalue()
-
-    lines = [
-        f"# Research Claim-Evidence Matrix: {project_title}",
-        "",
-        f"- **Total Claims:** {summary['total_claims']}",
-        f"- **Supported:** {summary['supported_claims']} · **Contradicted:** {summary['contradicted_claims']} · **Unverified:** {summary['unverified_claims']}",
-        f"- **Deliberate Deviations from Fact:** {summary['deviation_claims']}",
-        f"- **Total Evidence Citations:** {summary['total_evidence_links']}",
-        "",
-        "| Claim | Confidence | Status | Dossier | Evidence (Supp / Contradict / Total) | Decisions / Deviations |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- |",
-    ]
-    if not matrix_claims:
-        lines.append("| *(no claims recorded)* | – | – | – | – | – |")
-    else:
-        for c in matrix_claims:
-            counts = c["evidence_counts"]
-            ev_str = f"+{counts['supports']} / -{counts['contradicts']} (total: {counts['total']})"
-            dec_str = (
-                ", ".join(
-                    f"{d['title']}{' [DEVIATION]' if d['deviation_from_fact'] else ''}"
-                    for d in c["decisions"]
-                )
-                or "–"
-            )
-            dossier_str = c["dossier_title"] or "–"
-            dev_badge = " [DEVIATION]" if c["has_deviation"] else ""
-            clean_stmt = c["statement"].replace("\n", " ").replace("|", "\\|")
-            if len(clean_stmt) > 80:
-                clean_stmt = clean_stmt[:80] + "..."
-            clean_title = c["title"].replace("|", "\\|")
-            lines.append(
-                f"| **{clean_title}**<br/>*{clean_stmt}* | "
-                f"`{c['confidence']}` | `{c['status']}`{dev_badge} | {dossier_str} | {ev_str} | {dec_str} |"
-            )
-
-    return "\n".join(lines) + "\n"
-
-
-def claim_matrix_format(
-    project: str | Path, *, format: MatrixFormat = "json"
-) -> dict[str, Any] | str:
-    """Data and rendering in one call, selected by `format`."""
-    data = claim_matrix_data(project)
-    return data if format == "json" else render_claim_matrix(data, format=format)
-
-
-def research_gaps(project: str | Path) -> dict[str, Any]:
-    """Audit a research archive for unsupported, disputed, unanchored, or unplaced claims and pending decisions."""
-    from .models import ManuscriptClaimLink
-
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    matrix = _claim_matrix_data(repository, snapshot)
-    review = _editorial_review_data(repository, snapshot)
-    chrono = _timeline_data(repository, snapshot)
-
-    withdrawn_or_purged = {
-        record.target_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
-    }
-    anchored_claim_ids = {
-        record.claim_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, ManuscriptClaimLink) and record.id not in withdrawn_or_purged
-    }
-
-    unsupported_claims: list[dict[str, Any]] = []
-    disputed_claims: list[dict[str, Any]] = []
-    unanchored_claims: list[dict[str, Any]] = []
-    for claim in matrix.get("claims", []):
-        cid = str(claim.get("claim_id") or "")
-        counts = claim.get("evidence_counts") or {}
-        entry = {
-            "claim_id": cid,
-            "title": claim.get("title", ""),
-            "confidence": claim.get("confidence", ""),
-            "status": claim.get("status", ""),
-            "dossier_title": claim.get("dossier_title"),
-        }
-        if int(counts.get("supports", 0)) == 0:
-            unsupported_claims.append(entry)
-        if int(counts.get("contradicts", 0)) > 0 or claim.get("confidence") == "disputed":
-            disputed_claims.append({**entry, "contradicts": int(counts.get("contradicts", 0))})
-        if cid and cid not in anchored_claim_ids:
-            unanchored_claims.append(entry)
-
-    unplaced_timeline = [
-        {
-            "claim_id": item.get("claim_id", ""),
-            "title": item.get("title", ""),
-            "time_period": item.get("time_period", ""),
-            "reason": item.get("reason", ""),
-        }
-        for item in chrono.get("unplaced", [])
-    ]
-
-    pending_decisions = [
-        {
-            "decision_id": item.get("decision_id", ""),
-            "title": item.get("title", ""),
-            "reasons": list(item.get("reasons") or ()),
-        }
-        for item in review.get("candidates", [])
-        if item.get("kind") == "decision"
-    ]
-
-    summary = matrix.get("summary", {})
-    return {
-        "schema_version": "research-gaps-local/1",
-        "ok": True,
-        "project_id": matrix.get("project_id", ""),
-        "project_title": matrix.get("project_title", ""),
-        "summary": {
-            "total_claims": int(summary.get("total_claims", len(matrix.get("claims", [])))),
-            "total_decisions": int(summary.get("total_decisions", 0)),
-            "unsupported_claims": len(unsupported_claims),
-            "disputed_claims": len(disputed_claims),
-            "unanchored_claims": len(unanchored_claims),
-            "unplaced_timeline_claims": len(unplaced_timeline),
-            "pending_decisions": len(pending_decisions),
-        },
-        "unsupported_claims": unsupported_claims,
-        "disputed_claims": disputed_claims,
-        "unanchored_claims": unanchored_claims,
-        "unplaced_timeline_claims": unplaced_timeline,
-        "pending_decisions": pending_decisions,
-    }
-
-
-def _draft_matches_existing_dossier(draft: Mapping[str, Any], existing_titles: Sequence[str]) -> bool:
-    title_cf = str(draft.get("title") or "").strip().casefold()
-    if title_cf and any(t == title_cf for t in existing_titles):
-        return True
-    kind = str(draft.get("kind") or "")
-    if kind == "scene":
-        return any(
-            t.startswith(("szenenregister", "scene register", "szene:", "scene:"))
-            for t in existing_titles
-        )
-    hints = draft.get("evidence_hints")
-    entity_name = str(
-        (hints.get("character") or hints.get("location") or hints.get("scene"))
-        if isinstance(hints, Mapping)
-        else ""
-    ).strip()
-    if not entity_name:
-        return False
-    pattern = re.compile(rf"\b{re.escape(entity_name.casefold())}\b")
-    return any(bool(pattern.search(t)) for t in existing_titles)
-
-
-def manuscript_dossier_drafts(
-    project: str | Path,
-    manuscript: str | Path,
-    *,
-    language: str | None = None,
-    kind: Literal["all", "character", "scene", "location"] = "all",
-    exclude_existing: bool = True,
-) -> dict[str, Any]:
-    """Extract read-only dossier drafts from a manuscript using deterministic metrics."""
-    from ..config import read_explicit_project_config
-
-    root = Path(project)
-    manuscript_path = Path(manuscript)
-    if not manuscript_path.is_file():
-        raise ResearchError(f"Manuscript file does not exist: {manuscript_path}")
-    settings = read_explicit_project_config(root, maximum_bytes=65536) if root.is_dir() else {}
-    resolved_lang = supported_language(
-        language or (str(settings.get("language")) if settings.get("language") else "en")
-    )
-    text = manuscript_path.read_text(encoding="utf-8", errors="replace")
-    payload = extract_manuscript_dossier_drafts(
-        text,
-        language=resolved_lang,
-        settings=settings,
-        kind=kind,
-    )
-    skipped_existing = 0
-    if exclude_existing and (root / "research").is_dir():
-        existing_titles = [
-            str(d.get("title") or "").strip().casefold()
-            for d in list_dossiers(root).get("dossiers", [])
-            if str(d.get("title") or "").strip()
-        ]
-        if existing_titles:
-            kept: list[dict[str, Any]] = []
-            for item in payload.get("drafts", []):
-                if _draft_matches_existing_dossier(item, existing_titles):
-                    skipped_existing += 1
-                else:
-                    kept.append(item)
-            payload["drafts"] = kept
-    payload["skipped_existing"] = skipped_existing
-    payload["manuscript"] = str(manuscript_path)
-    return payload
-
-
-def create_dossier_from_manuscript(
-    project: str | Path,
-    manuscript: str | Path,
-    *,
-    draft_id: str | None = None,
-    kind: Literal["all", "character", "scene", "location"] = "character",
-    language: str | None = None,
-    actor: str = "local-author",
-) -> dict[str, Any]:
-    """Create a Dossier explicitly from a deterministic manuscript draft."""
-    payload = manuscript_dossier_drafts(
-        project,
-        manuscript,
-        language=language,
-        kind=kind if draft_id is None else "all",
-    )
-    drafts = payload.get("drafts", [])
-    if not drafts:
-        raise ResearchError("No manuscript dossier drafts could be extracted")
-    selected: dict[str, Any] | None = None
-    if draft_id is not None:
-        for item in drafts:
-            if item.get("id") == draft_id:
-                selected = item
-                break
-        if selected is None:
-            raise ResearchError(f"Unknown manuscript dossier draft ID: {draft_id}")
-    else:
-        selected = drafts[0]
-    created = create_dossier(
-        project,
-        str(selected["title"]),
-        str(selected["body"]),
-        language=payload["language"],
-        tags=list(selected.get("tags", [])),
-        actor=actor,
-    )
-    return {
-        **created,
-        "draft": selected,
-    }
