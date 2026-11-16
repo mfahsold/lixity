@@ -96,14 +96,22 @@ LONG_SENTENCE_MAX = 25
 
 _MASK = "\x00"  # replaces protected periods
 
+_ALPHA_SEG = r"[A-Za-zÄÖÜäöüßÀ-ÖØ-Þà-öø-ÿ]"
+_DOT_SPACE_RE = re.compile(r"\.\s+")
+# Spaced multi-part abbreviations, e.g. "z. B.", "d. h.", "p. ex.", "d. w. z."
+_SPACED_ABBR_RE = re.compile(
+    rf"(?<!{_ALPHA_SEG})({_ALPHA_SEG}{{1,4}}(?:\.\s+{_ALPHA_SEG}{{1,4}})+)\.(?=\s|$)",
+    re.UNICODE,
+)
 # Abbreviation at the end of a token, e.g. "z.B." / "Mr."
 _ABBR_RE = re.compile(
     r"(?<![A-Za-zÄÖÜäöüß])([A-Za-zÄÖÜäöüß][\wÄÖÜäöüß.&-]*?)\.(?=\s|$)", re.UNICODE
 )
 # Period between digits: 1.000 / 3.14 / 8.30
 _DIGIT_PERIOD_RE = re.compile(r"(?<=\d)\.(?=\d)")
-# Single-letter initial followed by space and another capital: "J. R. R. Tolkien"
-_INITIAL_RE = re.compile(r"(?<!\w)([A-ZÄÖÜ])\.(?=\s+[A-ZÄÖÜ])")
+# Single-letter initial followed by space and another capital: "J. R. R. Tolkien", "É. Zola"
+_UPPER_ALPHA = r"A-ZÀ-ÖØ-Þ"
+_INITIAL_RE = re.compile(rf"(?<!\w)([{_UPPER_ALPHA}])\.(?=\s+[{_UPPER_ALPHA}])")
 # Closing marks that belong to the preceding sentence
 _CLOSERS = "»«\"“”'’\u2018)]"
 _SPLIT_RE = re.compile(r"(?<=[.!?])([" + re.escape(_CLOSERS) + r"]*)\s+")
@@ -121,6 +129,14 @@ def _protect(text: str, language_key: str) -> str:
         return text
     abbreviations = _ABBREVIATIONS.get(language_key, _ABBREVIATIONS_UNIVERSAL)
     text = _DIGIT_PERIOD_RE.sub(_MASK, text)
+
+    def _spaced_abbr(match: re.Match[str]) -> str:
+        candidate = _DOT_SPACE_RE.sub(".", match.group(1)).lower()
+        if candidate in abbreviations:
+            return match.group(1).replace(".", _MASK) + _MASK
+        return match.group(0)
+
+    text = _SPACED_ABBR_RE.sub(_spaced_abbr, text)
     text = _INITIAL_RE.sub(lambda m: m.group(1) + _MASK, text)
 
     def _abbr(match: re.Match[str]) -> str:
@@ -172,11 +188,19 @@ def _sentence_spans(protected: str) -> list[tuple[int, int]]:
     for boundary in _SPLIT_RE.finditer(protected):
         end = boundary.start() + len(boundary.group(1))
         following = boundary.end()
+        had_closer = bool(boundary.group(1))
         while following in matched_closers:
+            had_closer = True
             end = following + 1
             following = end
             while following < len(protected) and protected[following].isspace():
                 following += 1
+        is_ellipsis = (
+            boundary.start() >= 3
+            and protected[boundary.start() - 3 : boundary.start()] == "..."
+        )
+        if (is_ellipsis or had_closer) and following < len(protected) and protected[following].islower():
+            continue
         while start < end and protected[start].isspace():
             start += 1
         if start < end:

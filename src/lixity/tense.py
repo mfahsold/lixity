@@ -24,9 +24,25 @@ from .models import CorpusConfig
 
 _WORD = re.compile(r"\w+")
 _BLANK_LINE = re.compile(r"\n\s*\n")
-_PERFECT_MAX_GAP_WORDS = 3
+_PERFECT_MAX_CLAUSE_WORDS = 12
+_EN_PERFECT_MAX_GAP_WORDS = 3
 _CLAUSE_END = re.compile(r"[.!?,;:]")
 _SPANISH_HABER = frozenset({"he", "has", "ha", "hemos", "habéis", "han"})
+_EN_PERFECT_AUX = frozenset({"have", "has", "had"})
+_EN_PRETERITE_ONLY = frozenset({
+    "went", "saw", "drank", "spoke", "wrote", "ate", "ran", "drove", "took", "gave",
+    "knew", "fell", "grew", "forgot", "chose", "wore", "rode", "rang", "sang",
+    "swam", "threw", "began", "became",
+})
+_EN_IRREGULAR_PARTICIPLES = frozenset({
+    "been", "done", "gone", "seen", "written", "spoken", "taken", "given", "known",
+    "eaten", "driven", "ridden", "risen", "chosen", "broken", "stolen", "frozen",
+    "woken", "fallen", "forgotten", "hidden", "bitten", "beaten", "blown", "drawn",
+    "flown", "grown", "shown", "thrown", "worn", "torn", "sworn", "born", "borne",
+    "begun", "drunk", "rung", "sung", "sunk", "sprung", "stunk", "swum", "run",
+    "come", "become", "laid", "lain", "shaken", "mistaken", "undertaken",
+    "forgiven", "forbidden", "proven", "gotten",
+})
 _COMPOUND_STARTER_RE = re.compile(r"^\\b\(\?:([^)]+)\)\\s\+")
 
 
@@ -53,6 +69,7 @@ class TenseMatcher:
         self._pronouns = frozenset(word.lower() for word in language.lexicon.get("pronouns", ()))
         self._auxiliaries = frozenset(word.lower() for word in language.lexicon.get("auxiliaries", ()))
         self._german = language.key == "de"
+        self._english = language.key == "en"
         self._spanish = language.key == "es"
         self._model = config.tense_model
         self._scope = config.tense_scope
@@ -125,7 +142,7 @@ class TenseMatcher:
                 continue
             previous_end = aux_end
             best: tuple[int, int, bool] | None = None
-            stop = min(n_words, index + _PERFECT_MAX_GAP_WORDS + 2)
+            stop = min(n_words, index + _PERFECT_MAX_CLAUSE_WORDS + 1)
             for position in range(index + 1, stop):
                 c_start, c_end, c_raw, word = tokens[position]
                 separator = text[previous_end:c_start]
@@ -167,8 +184,92 @@ class TenseMatcher:
                 ):
                     break
                 previous_end = c_end
+            if best is None and index > 0:
+                clause_final = (
+                    index + 1 == n_words
+                    or not text[aux_end:tokens[index + 1][0]].isspace()
+                    or tokens[index + 1][3] in self._conjunctions
+                )
+                if clause_final:
+                    next_start = aux_start
+                    stop_back = max(-1, index - _PERFECT_MAX_CLAUSE_WORDS - 1)
+                    for position in range(index - 1, stop_back, -1):
+                        c_start, c_end, c_raw, word = tokens[position]
+                        if constructions and c_start < constructions[-1][1]:
+                            break
+                        separator = text[c_end:next_start]
+                        if not separator.isspace() or ("\n\n" in separator or ("\n" in separator and _BLANK_LINE.search(separator))):
+                            break
+                        is_known = word in self._known_participles
+                        productive = c_raw.islower() and self._is_productive_participle(word)
+                        if (
+                            position == index - 1
+                            and aux_low in self._sein_forms
+                            and word == "worden"
+                            and position > 0
+                        ):
+                            p_start, p_end, p_raw, p_word = tokens[position - 1]
+                            p_sep = text[p_end:c_start]
+                            if (
+                                (not constructions or p_start >= constructions[-1][1])
+                                and p_sep.isspace()
+                                and not ("\n\n" in p_sep or ("\n" in p_sep and _BLANK_LINE.search(p_sep)))
+                                and (p_word in self._known_participles or (p_raw.islower() and self._is_productive_participle(p_word)))
+                            ):
+                                best = (p_start, aux_end, True)
+                                break
+                        if is_known:
+                            best = (c_start, aux_end, word in participles)
+                            break
+                        if position == index - 1 and productive:
+                            best = (c_start, aux_end, aux_low in self._haben_forms)
+                            break
+                        if (
+                            word in self._perfect_auxiliaries
+                            or word in self._conjunctions
+                            or word in self._curated_present_words
+                            or word in self._curated_past_words
+                        ):
+                            break
+                        next_start = c_start
             if best is not None:
                 constructions.append(best)
+        return constructions
+
+    def _english_perfect_spans(
+        self,
+        text: str,
+        word_tokens: Sequence[tuple[int, int, str, str]],
+    ) -> list[tuple[int, int, bool]]:
+        """Consume have/has/had + VBN so compounds count as one past cue."""
+        n_words = len(word_tokens)
+        constructions: list[tuple[int, int, bool]] = []
+        for index, (aux_start, aux_end, _aux_raw, aux_low) in enumerate(word_tokens):
+            if aux_low not in _EN_PERFECT_AUX or (constructions and aux_start < constructions[-1][1]):
+                continue
+            previous_end = aux_end
+            stop = min(n_words, index + _EN_PERFECT_MAX_GAP_WORDS + 2)
+            for position in range(index + 1, stop):
+                c_start, c_end, c_raw, word = word_tokens[position]
+                separator = text[previous_end:c_start]
+                if not separator.isspace() or ("\n\n" in separator or ("\n" in separator and _BLANK_LINE.search(separator))):
+                    break
+                is_vbn = c_raw.islower() and (
+                    word in _EN_IRREGULAR_PARTICIPLES
+                    or (word in self._curated_past_words and word not in _EN_PRETERITE_ONLY)
+                    or self._is_single_productive_past(word)
+                )
+                if is_vbn:
+                    constructions.append((aux_start, c_end, True))
+                    break
+                if (
+                    word in _EN_PERFECT_AUX
+                    or word in self._conjunctions
+                    or word in self._curated_present_words
+                    or word in self._curated_past_words
+                ):
+                    break
+                previous_end = c_end
         return constructions
 
     def count(self, text: str) -> tuple[int, int]:
@@ -209,7 +310,12 @@ class TenseMatcher:
                     [match.span() for match in self._past.finditer(text)])
         word_tokens = [(m.start(), m.end(), raw, raw.lower())
                        for m in _WORD.finditer(text) for raw in (m.group(),)]
-        constructions = self._german_perfect_spans(text, word_tokens) if self._german else []
+        if self._german:
+            constructions = self._german_perfect_spans(text, word_tokens)
+        elif self._english:
+            constructions = self._english_perfect_spans(text, word_tokens)
+        else:
+            constructions = []
         starts = [start for start, _, _ in constructions]
 
         def consumed(start: int, end: int, *, licensed_only: bool = False) -> bool:

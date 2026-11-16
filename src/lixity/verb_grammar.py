@@ -60,8 +60,14 @@ def classify_german(tokens: list[SyntaxToken]) -> VerbGroup:
         return VerbGroup(components, "imperative", mood, voice)
     if head.tense not in ("Pres", "Past"):
         return unknown("missing_finite_tense")
+    if head.mood == "Sub":
+        mood = "subjunctive_i" if head.tense == "Pres" else "subjunctive_ii"
     if head.lemma == "werden" and infinitives:
-        tense = "future_perfect" if parts and any(t.lemma in ("haben", "sein") for t in infinitives) else "future"
+        is_perfect_inf = parts and any(t.lemma in ("haben", "sein") for t in infinitives)
+        if head.mood == "Sub" and head.tense == "Past":
+            tense = "conditional_perfect" if is_perfect_inf else "conditional"
+        else:
+            tense = "future_perfect" if is_perfect_inf else "future"
     elif head.lemma == "haben" and (parts or replacement):
         tense = "perfect" if head.tense == "Pres" else "pluperfect"
     elif head.lemma == "sein" and parts:

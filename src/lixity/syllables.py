@@ -16,6 +16,7 @@ from unicodedata import normalize
 
 # --- Rule tables (data) -----------------------------------------------------
 
+DE_CLEAN = re.compile(r"[^a-zäöüß]")
 DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie|aa|ee|oo)")
 DE_VOWEL = re.compile(r"[aeiouyäöü]")
 
@@ -75,6 +76,40 @@ EN_EXCEPTIONS: dict[str, int] = {
 
 FR_CLEAN = re.compile(r"[^a-zàâäéèêëîïôöùûüÿçœæ]")
 FR_VOWEL_GROUP = re.compile(r"[aeiouyàâäéèêëîïôöùûüÿœæ]+")
+FR_MENT_MUTE_VERBS = frozenset(
+    {
+        "aiment",
+        "arment",
+        "blâment",
+        "calment",
+        "charment",
+        "chôment",
+        "clament",
+        "dorment",
+        "entament",
+        "estiment",
+        "ferment",
+        "filment",
+        "forment",
+        "fument",
+        "germent",
+        "hument",
+        "impriment",
+        "nomment",
+        "pâment",
+        "priment",
+        "rament",
+        "raniment",
+        "réclament",
+        "résument",
+        "riment",
+        "sèment",
+        "somment",
+        "trament",
+    }
+)
+FR_NON_MUTE_ENT = frozenset({"souvent"})
+FR_PENULTIMATE_E_ACUTE_ENT = re.compile(r"é[bcdfghjklmnpqrstvwxz]+ent$")
 
 ES_CLEAN = re.compile(r"[^a-záéíóúüñ]")
 ES_STRONG = "aeoáéó"
@@ -92,6 +127,7 @@ ES_NUCLEUS = re.compile(
 IT_CLEAN = re.compile(r"[^a-zàèéìíòóùú]")
 IT_VOWELS = "aeiouàèéìíòóùú"
 IT_WEAK = "iu"
+IT_SILENT_U = re.compile(r"(?<=[gq])u(?=[eièéìí])")
 
 PT_CLEAN = re.compile(r"[^a-zàâãáéêíóôõúüç]")
 # Accented closed vowels are separate nuclei, including both sides of baía.
@@ -111,7 +147,11 @@ GENERIC_VOWEL_GROUP = re.compile(r"[aeiouy]+")
 
 def count_de(word: str) -> int:
     """German: diphthongs and double vowels are one nucleus, vowel clusters count."""
-    w = DE_DIPHTHONG.sub("V", normalize("NFC", word).lower())
+    w = DE_CLEAN.sub("", normalize("NFC", word).lower())
+    if not w:
+        return 0
+    w = w.replace("qu", "k")
+    w = DE_DIPHTHONG.sub("V", w)
     w = DE_VOWEL.sub("V", w)
     return max(1, w.count("V"))
 
@@ -129,11 +169,17 @@ def count_en(word: str) -> int:
             pass  # syllabic l ("table", "people") keeps its vowel
         elif not w.endswith(("ee", "ye", "ie", "oe")):
             count -= 1
-    if w.endswith("ed") and not w.endswith(("ted", "ded")) and count > 1:
+    if (
+        w.endswith("ed")
+        and not w.endswith(("ted", "ded"))
+        and not (w.endswith("led") and len(w) > 3 and w[-4] not in "aeiouyl")
+        and count > 1
+    ):
         count -= 1
     if (
         w.endswith("es")
         and not w.endswith(("ses", "xes", "zes", "ches", "shes", "ges"))
+        and not (w.endswith("les") and len(w) > 3 and w[-4] not in "aeiouyl")
         and count > 1
     ):
         count -= 1
@@ -148,7 +194,13 @@ def count_fr(word: str) -> int:
     count = len(FR_VOWEL_GROUP.findall(w))
     if w.endswith("e") and not w.endswith(("ée", "eé", "eë", "eü")) and count > 1:
         count -= 1
-    if w.endswith("ent") and count > 1:
+    if (
+        w.endswith("ent")
+        and count > 1
+        and w not in FR_NON_MUTE_ENT
+        and (not w.endswith("ment") or w in FR_MENT_MUTE_VERBS)
+        and not FR_PENULTIMATE_E_ACUTE_ENT.search(w)
+    ):
         count -= 1
     if w.endswith("es") and count > 1 and w[-3] not in "aeiouyàâäéèêëîïôöùûüÿœæ":
         count -= 1
@@ -175,16 +227,19 @@ def count_es(word: str) -> int:
 
 
 def count_it(word: str) -> int:
-    """Italian: weak i/u join adjacent vowels into diphthongs."""
+    """Italian: silent u in que/qui/gue/gui is stripped; weak i/u merge with adjacent vowels."""
     w = IT_CLEAN.sub("", normalize("NFC", word).lower())
     if not w:
         return 0
+    w = IT_SILENT_U.sub("", w)
     count = 0
     i = 0
     while i < len(w):
         if w[i] in IT_VOWELS:
             count += 1
             j = i + 1
+            if w[i] in IT_WEAK and j < len(w) and w[j] in IT_VOWELS:
+                j += 1
             while j < len(w) and w[j] in IT_WEAK:
                 j += 1
             i = j

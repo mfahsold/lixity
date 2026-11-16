@@ -197,5 +197,55 @@ def test_analyzer_and_profile_count_letter_blocks_the_same():
     assert paragraphs[-1].asl == 8.0
 
 
+def test_spaced_abbreviations_do_not_split():
+    assert split_sentences("Er kaufte Obst, z. B. Äpfel und Birnen. Dann ging er.", "de") == [
+        "Er kaufte Obst, z. B. Äpfel und Birnen.",
+        "Dann ging er.",
+    ]
+    assert split_sentences("Das heißt, d. h. wir bleiben hier. Sie ging.", "de") == [
+        "Das heißt, d. h. wir bleiben hier.",
+        "Sie ging.",
+    ]
+    assert split_sentences("Er las Bücher, u. a. Romane o. ä. Werke. Danach schlief er.", "de") == [
+        "Er las Bücher, u. a. Romane o. ä. Werke.",
+        "Danach schlief er.",
+    ]
+    assert split_sentences("Il écrit, p. ex. des lettres. Elle lit.", "fr") == [
+        "Il écrit, p. ex. des lettres.",
+        "Elle lit.",
+    ]
+    assert split_sentences("Hij kwam, d. w. z. hij was er. Zij bleef.", "nl") == [
+        "Hij kwam, d. w. z. hij was er.",
+        "Zij bleef.",
+    ]
+
+
+def test_accented_uppercase_initials_are_protected():
+    assert split_sentences("É. Zola schrieb Romane. Sie las sie.", "de") == [
+        "É. Zola schrieb Romane.",
+        "Sie las sie.",
+    ]
+    assert split_sentences("À. B. Ç. Dupont partit. Il revint.", "fr") == [
+        "À. B. Ç. Dupont partit.",
+        "Il revint.",
+    ]
+
+
+def test_ellipses_and_post_quote_lowercase_dialogue_tags_do_not_split():
+    assert split_sentences("Er zögerte... und dann ging er.", "de") == [
+        "Er zögerte... und dann ging er.",
+    ]
+    assert split_sentences("Er zögerte... Dann ging er.", "de") == [
+        "Er zögerte...",
+        "Dann ging er.",
+    ]
+    assert split_sentences("»Komm!« sagte er. Dann ging sie.", "de") == [
+        "»Komm!« sagte er.",
+        "Dann ging sie.",
+    ]
+    assert split_sentences("„Komm!“ sagte er.", "de") == ["„Komm!“ sagte er."]
+    assert split_sentences("« Viens ! » dit-il.", "fr") == ["« Viens ! » dit-il."]
+
+
 if __name__ == "__main__":
     unittest.main()
