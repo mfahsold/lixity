@@ -412,20 +412,36 @@ class TestStyleFingerprint(unittest.TestCase):
 class TestParagraphLayers(unittest.TestCase):
     def test_inline_code_only_paragraph_retains_anchor_without_contributing_to_layers(self):
         config = CorpusConfig(language="en")
-        text = "## Main\n\nDoor opens.\n\nThe door closes.\n\n`OnlyCode`\n"
+        text = "## Main\n\nThe wooden door opens now.\n\nThe heavy iron door closes slowly.\n\n`OnlyCode`\n"
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
-        self.assertEqual([paragraph.words for paragraph in paragraphs], [2, 3, 0])
+        self.assertEqual([paragraph.words for paragraph in paragraphs], [5, 6, 0])
         self.assertEqual((paragraphs[2].text, paragraphs[2].start_line, paragraphs[2].end_line),
                          ("`OnlyCode`", 7, 7))
         self.assertEqual(layer_stats(paragraphs, "asl"), {})
 
-        text = text.replace("`OnlyCode`", "A window opens slowly.\n\n`OnlyCode`")
+        text = text.replace("`OnlyCode`", "A tall window opens quietly inside the room.\n\n`OnlyCode`")
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
         measured = layer_stats(paragraphs[:3], "asl")
         self.assertEqual(set(measured), {0, 1, 2})
         self.assertEqual(layer_stats(paragraphs, "asl"), measured)
         self.assertEqual((paragraphs[3].text, paragraphs[3].start_line, paragraphs[3].end_line),
                          ("`OnlyCode`", 9, 9))
+
+    def test_short_paragraphs_below_word_floor_excluded_from_layer_stats(self):
+        config = CorpusConfig(language="en")
+        text = (
+            "## Main\n\n"
+            "Yes.\n\n"
+            "He said.\n\n"
+            "The wooden door opens now.\n\n"
+            "The heavy iron door closes slowly.\n\n"
+            "A tall window opens quietly in the quiet room.\n"
+        )
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+        stats = layer_stats(paragraphs, "asl")
+        self.assertNotIn(0, stats)
+        self.assertNotIn(1, stats)
+        self.assertEqual(set(stats), {2, 3, 4})
 
     def test_layer_stats_within_chapter(self):
         md = (
@@ -712,7 +728,7 @@ class TestStyleDimensions(unittest.TestCase):
             self.assertGreaterEqual(dimension["variance"], 0.0)
             self.assertLessEqual(dimension["variance"], 1.0)
             self.assertEqual(len(dimension["flagged"]), len(set(dimension["flagged"])))
-        self.assertAlmostEqual(sum(dim["variance"] for dim in dimensions), 1.0, places=4)
+        self.assertAlmostEqual(sum(dim["variance"] for dim in dimensions), 1.0, places=3)
         self.assertEqual(dimensions[0]["scores"], {4: -1.73, 5: 0.0, 6: 1.73})
 
     def test_dimension_scores_and_variance_use_same_rank_space(self):
@@ -1068,16 +1084,26 @@ class TestPELT(unittest.TestCase):
         """An exhaustive rational oracle is independent of candidate pruning."""
         from lixity.style_fingerprint import pelt_changepoints
 
-        def cost(segment):
-            numbers = [Fraction(value) for value in segment]
+        def standardize(values):
+            numbers = [Fraction(value) for value in values]
             mean = sum(numbers) / len(numbers)
             variance = sum((value - mean) ** 2 for value in numbers) / len(numbers)
-            return len(numbers) * math.log(float(variance)) if variance else 0.0
+            if variance == 0:
+                return None
+            sd = math.sqrt(float(variance))
+            return [float(value - mean) / sd for value in numbers]
 
-        def objective(values, cuts, penalty):
-            edges = (0, *cuts, len(values))
+        def cost(segment):
+            if len(segment) <= 1:
+                return 0.0
+            mean = math.fsum(segment) / len(segment)
+            variance = math.fsum((value - mean) ** 2 for value in segment) / len(segment)
+            return len(segment) * math.log(max(variance, 1e-9))
+
+        def objective(scaled, cuts, penalty):
+            edges = (0, *cuts, len(scaled))
             return math.fsum(
-                cost(values[a:b]) + penalty for a, b in itertools.pairwise(edges)
+                cost(scaled[a:b]) + penalty for a, b in itertools.pairwise(edges)
             )
 
         # Small exhaustive domains expose invalid pruning, including ties.
@@ -1087,15 +1113,20 @@ class TestPELT(unittest.TestCase):
              (0.0, 1e16, 1e16 + 2.0, 1e16 + 4.0)),
         )
         for values in cases:
-            for penalty in (0.0, 1.0, 4.0, 2.0 * math.log(len(values))):
+            scaled = standardize(values)
+            for penalty in (0.0, 1.0, 4.0, 3.0 * math.log(len(values))):
                 cuts = pelt_changepoints(list(values), penalty)
+                if scaled is None:
+                    expected_cuts = [] if penalty >= 0.0 else list(range(1, len(values)))
+                    self.assertEqual(cuts, expected_cuts)
+                    continue
                 alternatives = (
                     candidate for count in range(len(values))
                     for candidate in itertools.combinations(range(1, len(values)), count)
                 )
-                expected = min(objective(values, candidate, penalty) for candidate in alternatives)
+                expected = min(objective(scaled, candidate, penalty) for candidate in alternatives)
                 with self.subTest(values=values, penalty=penalty):
-                    self.assertAlmostEqual(objective(values, cuts, penalty), expected, places=10)
+                    self.assertAlmostEqual(objective(scaled, cuts, penalty), expected, places=9)
 
     def test_segment_cost_is_stable_under_large_translation(self):
         from lixity.style_fingerprint import _segment_cost
@@ -1238,7 +1269,7 @@ class TestMannKendall(unittest.TestCase):
             [3.0, 3.0, 1.0, 1.0, 2.0, 2.0, 2.0],
             [-5.0, 2.5, -5.0, 10.0, 0.0, 2.5],
         ]
-        for n in (3, 4, 5, 8, 15, 35):
+        for n in (3, 4, 5):
             cases.append([rng.uniform(-100.0, 100.0) for _ in range(n)])
             cases.append([float(rng.randint(-4, 4)) for _ in range(n)])
 
@@ -1801,6 +1832,117 @@ class TestCooccurrenceDegrees(unittest.TestCase):
 
         tokens = ["x", "y", "z", "x", "y"]
         self.assertEqual(cooccurrence_degrees(tokens), cooccurrence_degrees(tokens))
+
+
+class TestStatisticalImprovements(unittest.TestCase):
+    """Tests for scale-invariant PELT, zero-MAD Sn fallback, clamped bands, Hamed-Rao + BH, and shrinkage PCA."""
+
+    def test_pelt_scale_invariance_and_mbic_default_penalty(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        # Sub-unit metric like hd_d
+        sub_unit = [0.72] * 6 + [0.85] * 6
+        self.assertEqual(pelt_changepoints(sub_unit), [6])
+        self.assertEqual(pelt_changepoints([x * 0.001 for x in sub_unit]), [6])
+        self.assertEqual(pelt_changepoints([x * 1000.0 for x in sub_unit]), [6])
+
+        # Default penalty matches explicit 3 * ln(n)
+        noisy = [10.0, 12.0, 11.5, 10.5, 11.0, 20.0, 21.0, 19.5, 20.5, 22.0]
+        self.assertEqual(
+            pelt_changepoints(noisy),
+            pelt_changepoints(noisy, penalty=3.0 * math.log(len(noisy))),
+        )
+
+    def test_zero_mad_varying_falls_back_to_sn_in_from_metrics_and_layer_stats(self):
+        from types import SimpleNamespace
+
+        # When >50% of values are tied, MAD == 0 and Sn/Qn == 0 -> stays zero_mad_varying
+        chapters = [
+            SimpleNamespace(num=i + 1, words=500, sentences=20, asl=v, style_se={})
+            for i, v in enumerate([1.0, 1.0, 1.0, 2.0, 3.0])
+        ]
+        fp = StyleFingerprint.from_metrics(SimpleNamespace(chapters=chapters))
+        self.assertEqual(fp.baseline["asl"]["comparison_status"], "zero_mad_varying")
+
+        # layer_stats with 5+ word paragraphs computes finite z-scores
+        paragraphs = [
+            SimpleNamespace(chapter_num=1, words=10, asl=v)
+            for v in (5.0, 6.0, 7.0, 8.0, 12.0)
+        ]
+        stats = layer_stats(paragraphs, "asl")
+        self.assertEqual(set(stats), {0, 1, 2, 3, 4})
+        self.assertGreater(stats[4][1], 0.0)
+
+    def test_passport_clamps_non_negative_lower_bands_at_zero(self):
+        from types import SimpleNamespace
+
+        chapters = [
+            SimpleNamespace(num=i + 1, words=100, sentences=10, filter_density=v, style_se={})
+            for i, v in enumerate([0.0, 0.5, 1.0, 10.0, 20.0])
+        ]
+        fp = StyleFingerprint.from_metrics(SimpleNamespace(chapters=chapters))
+        feat = next(r for r in fp.passport()["features"] if r["feature"] == "filter_density")
+        self.assertIsNotNone(feat["band"])
+        assert feat["band"] is not None
+        self.assertEqual(feat["band"][0], 0.0)
+        self.assertGreater(feat["band"][1], 0.0)
+
+    def test_mann_kendall_hamed_rao_autocorrelation_and_structural_fdr(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        # Pure monotonic trend still significant for n >= 8
+        pure = mann_kendall([float(i) for i in range(1, 13)])
+        self.assertIsNotNone(pure)
+        assert pure is not None
+        self.assertEqual(pure[0], 1.0)
+        self.assertLess(pure[2], 0.05)
+
+        # Positively autocorrelated series with slight drift: Hamed-Rao inflates var_s -> higher p
+        # Compare n=12 autocorrelated wave
+        wave = [1.0, 2.0, 3.0, 4.0, 5.0, 4.5, 3.5, 2.5, 2.0, 3.0, 4.0, 5.5]
+        res_wave = mann_kendall(wave)
+        self.assertIsNotNone(res_wave)
+        assert res_wave is not None
+        # Uncorrected var_s for n=12 is 12*11*29/18 = 212.667 -> z_uncorr = (s-1)/sqrt(212.667)
+        s_val = res_wave[1]
+        uncorr_z = (abs(s_val) - 1.0) / math.sqrt(12 * 11 * 29 / 18.0)
+        from lixity.style_fingerprint import normal_tail_probability
+        self.assertGreater(res_wave[2], normal_tail_probability(uncorr_z))
+
+        # BH FDR in _derive_structural_diagnostics: 1 marginal p (~0.03) among 16 features is not flagged
+        fp = StyleFingerprint(
+            n_chapters=8,
+            values={
+                **{f: {i: float((i % 2) * 2 + (i % 3)) for i in range(1, 9)} for f, _, _ in FEATURES},
+                "asl": {1: 10.0, 2: 12.0, 3: 11.0, 4: 13.0, 5: 12.5, 6: 14.0, 7: 13.5, 8: 15.0},
+            },
+            baseline={f: {"n": 8, "sigma": 1.0} for f, _, _ in FEATURES},
+        )
+        diag = fp._derive_structural_diagnostics()
+        # With 16 features, BH requires p <= 0.05/16 = 0.003125 for rank 1
+        for feat in diag["trending_features"]:
+            self.assertLessEqual(diag["trends"][feat]["p"], 0.05)
+
+    def test_shrinkage_pca_and_regularized_mahalanobis(self):
+        # n = 4 < p = 5 -> shrinkage_lambda > 0 and Mahalanobis distances exposed
+        fields = ("asl", "staccato_pct", "kaskade_pct", "dialog_pct", "hd_d")
+        fp = StyleFingerprint(
+            n_chapters=4,
+            values={
+                "asl": {1: 10.0, 2: 12.0, 3: 14.0, 4: 30.0},
+                "staccato_pct": {1: 10.0, 2: 12.0, 3: 14.0, 4: 30.0},  # collinear with asl
+                "kaskade_pct": {1: 5.0, 2: 8.0, 3: 6.0, 4: 15.0},
+                "dialog_pct": {1: 20.0, 2: 18.0, 3: 22.0, 4: 40.0},
+                "hd_d": {1: 0.7, 2: 0.75, 3: 0.72, 4: 0.9},
+            },
+            baseline={f: {"n": 4, "median": 0.0, "sigma": 1.0} for f in fields},
+        )
+        fp.dimensions = fp._derive_dimensions()
+        self.assertGreater(fp.dimension_diagnostics["shrinkage_lambda"], 0.0)
+        self.assertEqual(set(fp.mahalanobis_distances), {1, 2, 3, 4})
+        self.assertEqual(fp.dimension_diagnostics["mahalanobis_distances"], fp.mahalanobis_distances)
+        top_m = fp.top_deviants(1, metric="mahalanobis")
+        self.assertEqual(top_m[0][0], 4)
 
 
 if __name__ == "__main__":

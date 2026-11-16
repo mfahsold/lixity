@@ -14,9 +14,9 @@ from lixity.style_profile import ParagraphProfile
 
 TEXT = (
     "## Étude 🧭\n\n"
-    "Mara waits.\n\n"
-    "Mara reads the map.\n\n"
-    "Mara opens the gate then waits.\n\n"
+    "Mara waits by the gate.\n\n"
+    "Mara reads the old weathered paper map.\n\n"
+    "Mara opens the heavy iron gate then quietly waits.\n\n"
     "Mara carries twenty silver keys across the quiet courtyard while a distant "
     "clock marks the final hour before the dark storm.\n\n"
     "## Equal\n\nMara waits.\n\nMara waits.\n\nMara waits.\n\n"
@@ -78,8 +78,8 @@ def test_layer_json_reports_full_reference_and_unknown_comparisons(manuscript, c
         "notable_count": 1, "selected_count": 9,
     }
     rows = report["paragraphs"]
-    assert [row["value"] for row in rows] == [2, 4, 6, 21, 2, 2, 2, 3, 6]
-    assert [row["z"] for row in rows[:4]] == [-1.01, -0.34, 0.34, 5.4]
+    assert [row["value"] for row in rows] == [5, 7, 9, 21, 2, 2, 2, 3, 6]
+    assert [row["z"] for row in rows[:4]] == [-1.01, -0.34, 0.34, 4.38]
     assert rows[3]["notable"] is True
     assert rows[0]["notable"] is False
     assert rows[0]["chapter_title"] == "Étude 🧭"
@@ -100,7 +100,7 @@ def test_only_notable_filters_after_comparing_the_full_chapter(manuscript, capsy
         "only_notable": True, "total_count": 9, "comparable_count": 4,
         "notable_count": 1, "selected_count": 1,
     }
-    assert [(row["index"], row["z"]) for row in report["paragraphs"]] == [(3, 5.4)]
+    assert [(row["index"], row["z"]) for row in report["paragraphs"]] == [(3, 4.38)]
 
 
 @pytest.mark.parametrize("layer,feature,unit", [
@@ -141,7 +141,7 @@ def test_human_layer_lists_source_values_and_local_comparison_without_prose(manu
     assert status == 0, errors
     assert "Étude 🧭" in output and f"{manuscript}:9-9" in output
     assert "21.00 words per sentence" in output
-    assert "z +5.40" in output and "notable" in output
+    assert "z +4.38" in output and "notable" in output
     assert "9 total" in output and "4 comparable" in output and "1 shown" in output
     assert "within each chapter" in output and "MAD" in output
     assert "Mara carries" not in output
