@@ -32,9 +32,19 @@ def render_publication(
     cap = publication["max_chapter"]
     if type(cap) is not int or cap < 0:
         raise ValueError("A bounded publication chapter cap is required")
-    choices = f'<option value="0">{L("publication_before")}</option>' + ''.join(
-        f'<option value="{number}">{chapter(number)}</option>' for number in range(1, cap + 1))
+    chapter_options = ''.join(f'<option value="{number}">{chapter(number)}</option>' for number in range(1, cap + 1))
+    choices = f'<option value="0">{L("publication_before")}</option>' + (
+        f'<optgroup label="{L("manuscript")}">{chapter_options}</optgroup>' if cap > 0 else ""
+    )
     reading = publication["mode"] == "reader"
+    chapter_titles: dict[int, str] = {}
+    if reading and reader_document:
+        chapter_number = 0
+        for block in reader_document:
+            if block.is_chapter:
+                chapter_number += 1
+                if block.text:
+                    chapter_titles[chapter_number] = esc(block.text)
     audio = SiteAudio.model_validate(publication["audio"]) if publication.get("audio") is not None else None
     if audio and (not reading or audio.source_sha256 != publication.get("source_sha256")
                   or any(track.chapter > cap for track in audio.tracks)):
@@ -87,10 +97,18 @@ def render_publication(
     if audio:
         parts.append(f'<a class="ctl" href="#publication-audio">{L("publication_audio_title")}</a>')
     if reading:
+        reader_chapter_options = ''.join(
+            f'<option value="publication-chapter-{number}">{chapter(number)}'
+            f'{(" · " + chapter_titles[number]) if number in chapter_titles else ""}</option>'
+            for number in range(1, cap + 1)
+        )
+        reader_chapter_choices = (
+            f'<option value="">{L("reading_chapter")}…</option>'
+            + (f'<optgroup label="{L("manuscript")}">{reader_chapter_options}</optgroup>' if cap > 0 else "")
+        )
         parts.extend([
             f'<label for="publication-reader-chapter">{L("reading_chapter")}</label>',
-            '<select class="ctl" id="publication-reader-chapter"><option value="">' + L("reading_chapter") + '…</option>' + ''.join(
-                f'<option value="publication-chapter-{number}">{chapter(number)}</option>' for number in range(1, cap + 1)) + '</select>',
+            f'<select class="ctl" id="publication-reader-chapter">{reader_chapter_choices}</select>',
         ])
     parts.append('</nav>')
     parts.extend([
@@ -105,9 +123,12 @@ def render_publication(
                 f'<summary id="publication-audio-title">{L("publication_audio_title")}</summary>',
                 f'<p class="ctl-note">{esc(label(labels, "publication_audio_coverage_one" if cap == 1 else "publication_audio_coverage").format(count=len(audio.tracks), total=cap))}</p>',
                 f'<label class="form-label" for="publication-audio-chapter">{L("reading_chapter")}</label>',
-                '<select class="ctl full-width" id="publication-audio-chapter">' + ''.join(
-                    f'<option value="{track.chapter}">{chapter(track.chapter)}{(" · " + esc(track.title)) if track.title else ""}</option>'
-                    for track in audio.tracks) + '</select>',
+                '<select class="ctl full-width" id="publication-audio-chapter">' + (
+                    f'<optgroup label="{L("manuscript")}">' + ''.join(
+                        f'<option value="{track.chapter}">{chapter(track.chapter)}{(" · " + esc(track.title)) if track.title else ""}</option>'
+                        for track in audio.tracks
+                    ) + '</optgroup>'
+                ) + '</select>',
                 f'<audio id="publication-audio-player" controls preload="metadata" src="{esc(first.file)}"></audio>',
                 '<p class="ctl-note" id="publication-audio-status" role="status" aria-live="polite"></p>',
                 '<div class="row">',
