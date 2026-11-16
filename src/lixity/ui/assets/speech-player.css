@@ -26,7 +26,6 @@
 /* Audio sections have one owner; author styles must respect native hidden state. */
 #modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; flex: none; }
 #modal-speech .modal-tab-btn { min-width: 0; white-space: normal; overflow-wrap: anywhere; padding: .6rem .4rem; }
-#modal-speech .modal-tab-btn[aria-selected="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--fg); }
 #modal-speech .modal-body > * { min-width: 0; }
 #modal-speech .voice-active-card, #modal-speech .voice-ref-item { flex-wrap: wrap; }
 #modal-speech .voice-active-card > span { min-width: 0; overflow-wrap: anywhere; flex: 1 1 16rem; }

@@ -468,6 +468,12 @@
     document.body.style.setProperty("--reader-measure", {narrow: "54ch", standard: "68ch", wide: "78ch"}[preferences.width]);
     document.body.style.setProperty("--reader-leading", {compact: "1.5", standard: "1.8", relaxed: "2.1"}[preferences.spacing]);
     width.value = preferences.width; spacing.value = preferences.spacing;
+    document.querySelectorAll("[data-reader-width]").forEach(function(btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.readerWidth === preferences.width));
+    });
+    document.querySelectorAll("[data-reader-spacing]").forEach(function(btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.readerSpacing === preferences.spacing));
+    });
     document.getElementById("reader-size-value").value = String(preferences.size);
     document.getElementById("reader-text-smaller").disabled = preferences.size <= 16;
     document.getElementById("reader-text-larger").disabled = preferences.size >= 28;
@@ -1027,6 +1033,12 @@
   document.getElementById("reader-text-smaller").addEventListener("click", function() { retain(function() { preferences.size = Math.max(16, preferences.size - 2); appearance(); }); });
   document.getElementById("reader-text-larger").addEventListener("click", function() { retain(function() { preferences.size = Math.min(28, preferences.size + 2); appearance(); }); });
   [width, spacing].forEach(function(select) { select.addEventListener("change", function() { retain(function() { preferences[select === width ? "width" : "spacing"] = select.value; appearance(); }); }); });
+  document.querySelectorAll("[data-reader-width]").forEach(function(btn) {
+    btn.addEventListener("click", function() { retain(function() { preferences.width = btn.dataset.readerWidth; appearance(); }); });
+  });
+  document.querySelectorAll("[data-reader-spacing]").forEach(function(btn) {
+    btn.addEventListener("click", function() { retain(function() { preferences.spacing = btn.dataset.readerSpacing; appearance(); }); });
+  });
   focus.addEventListener("click", function() { setFocus(!document.body.classList.contains("reader-focus")); });
   function codepointSpansToRanges(prose, text, spans) {
     if (!prose || !spans || !spans.length || prose.textContent !== text) return [];

@@ -761,9 +761,6 @@ transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .
 #research-manager .ctl-group > * { min-width: 0; }
 #r-zotero-query { flex-basis: 14rem; }
 #research-manager .ctl { max-width: 100%; }
-.research-card { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .65rem .85rem; background: var(--surface); margin-block: .4rem; }
-.research-card-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
-.research-card-title { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-control); }
 .research-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
 .research-tag { font-size: var(--text-micro); padding: .1rem .45rem; border-radius: var(--radius-pill); background: var(--accent-light); color: var(--accent); border: 1px solid var(--line); }
 .research-passage-card { border-left: 3px solid var(--accent); background: var(--neutral); padding: .4rem .6rem; margin: .3rem 0; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; font-size: var(--text-control); }
@@ -777,7 +774,6 @@ transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .
 .selection-quote, .selection-context { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; padding: .5rem .75rem; border-left: 3px solid var(--accent); background: var(--neutral); border-radius: 0 var(--radius-xs) var(--radius-xs) 0; }
 mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weight: var(--weight-semibold); padding: 0.05em 0.2em; border-radius: var(--radius-xs); }
 .research-details { margin-top: .6rem; font-size: var(--text-control); }
-.research-details summary { cursor: pointer; color: var(--accent); }
 .research-details-body { margin-top: .5rem; }
 .research-details-body dt { font-weight: var(--weight-semibold); }
 .research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
@@ -799,7 +795,6 @@ mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weig
 #r-init-title { min-width: 200px; }
 #r-search-query { flex: 1; min-width: 240px; }
 #r-link-relation { min-width: 140px; }
-.research-excerpt { margin: .3rem 0; color: var(--fg); }
 .research-claim-scope { display: inline-flex; align-items: center; gap: .3rem; margin-bottom: .35rem; padding: .15rem .5rem; border-radius: var(--radius-xs); background: var(--neutral); border: 1px solid var(--line); font-size: var(--text-note); color: var(--fg); }
 .research-subpanel { margin-top: .6rem; padding-top: .4rem; border-top: 1px dashed var(--line); }
 .badge-sm { font-size: var(--text-note); padding: 2px 6px; }
@@ -1342,7 +1337,6 @@ anchors while scrolling. */
 .research-card-meta-pill { display: inline-flex; align-items: center; font-size: var(--text-micro); padding: 0.12rem 0.5rem; border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease; }
 .research-card-meta-pill:hover { color: var(--fg); border-color: var(--accent); }
 .research-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px solid var(--line-subtle, rgba(0, 0, 0, 0.06)); }
-.settings-advanced > summary, .research-details > summary { min-height: 2.2rem; align-content: center; }
 /* Creation is available beside the catalogue without occupying its reading area.
 Native details keeps drafts intact and works without animation or scripting. */
 .research-composer { margin-bottom: var(--space-4); border-block: 1px solid var(--line); }
