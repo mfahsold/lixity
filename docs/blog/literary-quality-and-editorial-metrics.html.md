@@ -4,7 +4,7 @@ Published 2 November 2026 · 10 minutes · [Deutsche Fassung](leseguete-und-lekt
 
 When an author and an editor sit down with a 350-page manuscript, they rarely argue about a single Flesch readability number. Developmental and line editors ask structural and rhythmic questions instead: *Do the characters sound distinct from the narrator, or does every dialogue turn read like an essay? Where does a chapter's tempo stall because four sentences in a row open with the same pronoun? When a chapter shifts into a long letter or an internal reckoning, is that shift deliberate?*
 
-Over the past decade, empirical literary studies, cognitive reading research and publishing scholarship have investigated how these craft questions relate to perceived literary quality and reader engagement. None of those studies justify reducing a novel to a single score. What they do show is which observable text signals are worth inspecting during revision — and why a manuscript must be compared against its own baseline rather than a generic rulebook.
+Over the past decade, empirical literary studies, cognitive reading research and publishing scholarship have investigated how these craft questions relate to perceived literary quality and reader engagement. None of those studies justify reducing a novel to a single score. What they do show is which observable text signals are worth inspecting during revision, and why a manuscript must be compared against its own baseline rather than a generic rulebook.
 
 ## 1. What empirical studies of novels and editing actually found
 
@@ -61,7 +61,7 @@ In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted pa
 
 - **Why Chapter 35 stands out:** In Chapter 35, 87.6% of the words sit inside quotation marks, yet `short_turn_pct` drops to **0.0%** and `Quoted ASL` doubles to **27.39 words per sentence** (`ASL Δ = +0.81`). Why? Because the entire quoted span is Mr. Darcy's formal letter explaining Wickham and Jane. In Lixity, an author writing an epistolary chapter like Chapter 35 can assign it to an explicit `epistolary` [chapter register](intentional-registers.html) so its formal sentence length is evaluated against letter targets rather than flagged as a dialogue anomaly.
 
-- **Why Chapter 15 chains almost every sentence:** In Chapter 15, where Austen summarizes Mr. Collins's self-important logic and his designs on Longbourn, narration ASL climbs to **36.62 words** and within-paragraph adjacent sentence overlap reaches **47.1%** — nearly double the novel's 23.6% mean — as each clauseelaborates the same social premise.
+- **Why Chapter 15 chains almost every sentence:** In Chapter 15, where Austen summarizes Mr. Collins's self-important logic and his designs on Longbourn, narration ASL climbs to **36.62 words** and within-paragraph adjacent sentence overlap reaches **47.1%** (nearly double the novel's 23.6% mean) as each clause elaborates the same social premise.
 
 - **Why Chapter 49 accelerates:** When news of Lydia and Wickham's marriage terms arrives in Chapter 49, nearly 70% of the 59 quoted spans are 12 words or fewer, and quoted ASL drops to **9.21 words**.
 
@@ -76,7 +76,7 @@ The same measurements trace Fontane's famous contrast between light social conve
 | Ch. 26 — Discovery of Crampas's letters and duel decision | 25.7% | 66.7% | 9.29 | 29.16 | −19.87 | **46.6%** |
 | Ch. 33 — Late Berlin scenes and medical advice | 62.5% | **68.4%** | 9.62 | 22.13 | −12.51 | 25.0% |
 
-In **Chapter 26** — the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table — dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
+In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
 
 ## 4. An editorial workflow ordered by how authors and editors actually work
 

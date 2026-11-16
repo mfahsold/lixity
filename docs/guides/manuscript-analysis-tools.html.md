@@ -68,7 +68,7 @@ Built-in analysis, dashboard generation and PDF export run locally without cloud
 
 **Is Lixity free?**
 
-Yes. Lixity is open source under the AGPL-3.0-or-later, so private, research and commercial writing — including self-publishing — needs no extra permission. A separate written commercial license is available for closed-source integrations.
+Yes. Lixity is open source under the AGPL-3.0-or-later, so private, research and commercial writing (including self-publishing) needs no extra permission. A separate written commercial license is available for closed-source integrations.
 
 **Which languages does Lixity support?**
 

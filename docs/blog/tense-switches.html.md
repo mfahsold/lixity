@@ -16,7 +16,7 @@ Out of that come two lists, and they answer different questions:
 
 - **The chapter line** summarizes the chapter's dominant tense markers. It supplies a comparison for the paragraph, rather than determining how a reader experiences the scene.
 
-The default heuristic readings come from verb forms and marker patterns. An explicitly configured [optional grammatical backend](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense) can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.
+The default heuristic readings come from verb forms and marker patterns. An explicitly configured [optional grammatical backend](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense) can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage, not a number.
 
 ## The review loop, step by step
 
@@ -42,7 +42,7 @@ A high rating measures a change, not a mistake. These cases are usually intentio
 
 - **Flashbacks and frame stories.** Moving from present to past may be exactly what the structure asked for.
 
-- **Free indirect speech.** A character’s inner voice can pull the tense along — effective, but easy to overuse.
+- **Free indirect speech.** A character’s inner voice can pull the tense along: effective, though easy to overuse.
 
 - **A scene turn.** One present-tense paragraph at the end of a past-tense chapter can be a strong, deliberate accent.
 
