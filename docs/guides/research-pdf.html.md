@@ -124,7 +124,7 @@ In **Review**, open **Read decision with dossier** to compare the named versions
 
 Inside **Claims**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
 
-The timeline sorts claims by the calendar value in their period and shows how the placed spans relate. Every dated claim is one row on a shared axis; the badge repeats its placed range and **Placed periods** lists the full cards below. Free-text periods such as *present day* are not calendar values, so they stay under **Unplaced periods** with a reason and a formatting hint. To place a claim, enter a value like `1926`, `1926-03`, `1926-03-15` or `1924–1926`; the claim form shows these formats and a save reports an unplaceable period as a warning. The axis shows only what you entered — placement never verifies a historical fact.
+The timeline sorts claims by the calendar value in their period and shows how the placed spans relate. Every dated claim is one row on a shared axis; the badge repeats its placed range and **Placed periods** lists the full cards below. Free-text periods such as *present day* are not calendar values, so they stay under **Unplaced periods** with a reason and a formatting hint. To place a claim, enter a value like `1926`, `1926-03`, `1926-03-15` or `1924–1926`; the claim form shows these formats and a save reports an unplaceable period as a warning. The axis shows only what you entered; placement never verifies a historical fact.
 
 [Video walkthrough](../videos/research-timeline.mp4)
 
@@ -313,7 +313,7 @@ Use **Project actions → Reading website** (or `POST /api/site-export`) to buil
 
 - **Section filter & title override:** Expose either the full dossier body or a single heading subtree (`section`), with an optional reader-facing title.
 
-- **Spoiler gate (`reveal_after_chapter`):** Hide entries in the client UI until the reader reaches a chosen chapter (persisted in `localStorage`). Note that `reveal_after_chapter` is a UI convenience gate for bytes already inside the bundle—use `max_chapter` whenever later chapters must not leave your machine.
+- **Spoiler gate (`reveal_after_chapter`):** Hide entries in the client UI until the reader reaches a chosen chapter (persisted in `localStorage`). Note that `reveal_after_chapter` only hides entries in the browser for material already inside the bundle. Use `max_chapter` whenever later chapters must not leave your machine.
 
 - **Citations & offline geography:** Toggle `include_citations` and `include_geography` independently per entry. Exported maps embed their geometry offline and make zero external tile requests.
 

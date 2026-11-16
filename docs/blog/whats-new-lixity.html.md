@@ -38,7 +38,7 @@ The following notes describe the 0.4.8 release line, first published on 16 Octob
 
 ### Small chapters no longer shout
 
-Short texts are noisy. A three-sentence stage note can look extreme in a z-score table — not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:
+Short texts are noisy. A three-sentence stage note can look extreme in a z-score table, not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:
 
 - Chapters under **100 words** get no z-scores, no effect sizes, no FDR marks.
 
@@ -68,17 +68,17 @@ Small thing, same spirit: you can now type a plain hyphen between years (`1929-1
 
 The research side keeps sources, dossiers, claims, decisions and evidence in one local archive. Recent polish:
 
-- The **timeline is a view**, not a separate world: switch between **List** and **Timeline** right where your claims live. The decisions pane says what it is for — deliberate choices with a reason, not historical claims.
+- The **timeline is a view**, not a separate world: switch between **List** and **Timeline** right where your claims live. The decisions pane says what it is for: deliberate choices with a reason, not historical claims.
 
 - **Zotero stays a catalogue, visibly.** Cards show a quiet *Zotero ↗* link and a type line; tags filter the list. Capturing a source into your archive is still a deliberate click, never a background sync.
 
-- Evidence panels keep their citations when other lists refresh — nothing you loaded gets rebuilt under your hands.
+- Evidence panels keep their citations when other lists refresh, so nothing you loaded gets rebuilt under your hands.
 
 ### One look, everywhere
 
 The interface had accumulated separate choices for corners, text sizes, spacing and loading states. Shared styles and components now give those controls a more consistent presentation:
 
-- **One scale** for corners, text sizes and spacing — shared by the app and the documentation site.
+- **One scale** for corners, text sizes and spacing, shared by the app and the documentation site.
 
 - **Shared controls**: the workspace switch and research tabs use the same control family. Badges, tags and touch spacing follow shared styles.
 
@@ -88,7 +88,7 @@ The interface had accumulated separate choices for corners, text sizes, spacing 
 
 ### Logs you can actually find
 
-Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). `--debug`, `LIXITY_DEBUG` and `LIXITY_LOG_LEVEL` choose how much you see, and `lixity service status` prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.
+Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). `--debug`, `LIXITY_DEBUG` and `LIXITY_LOG_LEVEL` choose how much you see, and `lixity service status` prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file, and log records never contain manuscript text.
 
 ### Your privacy, in plain words
 
@@ -96,14 +96,14 @@ Built-in analysis and dashboard generation run on your computer without cloud ca
 
 ## Try it
 
-- [Demo report](../demo/report.html) — invented text, opens in your browser, no install.
+- [Demo report](../demo/report.html): invented text, opens in your browser, no install.
 
-- [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) — literary case studies with interactive opening-chapter dashboards and PDF analyses of the complete public-domain novels.
+- [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html): literary case studies with interactive opening-chapter dashboards and PDF analyses of the complete public-domain novels.
 
-- [First look](../guides/first-look.html) — a three-minute tour of chapter comparisons and paragraphs with local measurements.
+- [First look](../guides/first-look.html): a three-minute tour of chapter comparisons and paragraphs with local measurements.
 
 - For your own manuscript: `uv tool install --python 3.12 --managed-python lixity`, then `lixity service start --open`.
 
-If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.
+If you try it, tell me which passage surprised you; that is the feedback that shapes the next release.
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

@@ -12,7 +12,7 @@ In the **Analysis overview**, the review entry links directly to the exploratory
 
 Because principal components have different eigenvalues, a raw coordinate of `2.5` does not represent the same relative distance on every axis. On the first dimension, whose variance across chapters is larger, `2.5` may sit little more than one sample standard deviation from zero; on a third dimension with tighter spread, the same `2.5` cutoff can sit more than two sample standard deviations out.
 
-Each style-dimension card and the cutoff explanation report the raw threshold together with its multiple of that axis's sample standard deviation—for example, `|Score| ≥ 2.5 (≈ 1.18 SD)` on Dimension 1 versus `|Score| ≥ 2.5 (≈ 2.09 SD)` on Dimension 3. That context shows why a chapter crosses the raw threshold on one axis more readily than on another, while keeping the exploratory coordinate ring separate from the noise-adjusted `z*` heatmap and Benjamini–Hochberg FDR selections. See the [methods reference](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions) and [interpretation guide](../guides/interpretation.html#visuals).
+Each style-dimension card and the cutoff explanation report the raw threshold together with its multiple of that axis's sample standard deviation, for example `|Score| ≥ 2.5 (≈ 1.18 SD)` on Dimension 1 versus `|Score| ≥ 2.5 (≈ 2.09 SD)` on Dimension 3. That context shows why a chapter crosses the raw threshold on one axis more readily than on another, while keeping the exploratory coordinate ring separate from the noise-adjusted `z*` heatmap and Benjamini–Hochberg FDR selections. See the [methods reference](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions) and [interpretation guide](../guides/interpretation.html#visuals).
 
 ## 2. Cleaner boundaries for quotations and lexical tense cues
 
@@ -28,7 +28,7 @@ When you follow a chapter from the overview back into the manuscript, paragraph-
 
 Reading a scene aloud is one of the oldest ways to test sentence rhythm, dialogue turns and local word echoes. Lixity stores project-local passage direction in `.lixity/audio-directions.json`, shares voice profiles between the CLI and browser workbench, supports FFmpeg tempo post-processing (`--speed`) without altering explicit pauses, and connects to separately installed speech workers. Qwen VoiceDesign, Qwen Base, Coqui/OpenVoice and IMS-Toucan have distinct voice and direction capabilities; selecting a profile does not start or replace a worker.
 
-At the same time, Lixity's core strength is understanding manuscript structure—scenes, paragraphs, pronunciation rules, pause timing and authored delivery notes—not bundling every neural TTS stack inside the analysis engine:
+At the same time, Lixity's core strength is understanding manuscript structure (scenes, paragraphs, pronunciation rules, pause timing and authored delivery notes), not bundling every neural TTS stack inside the analysis engine:
 
 1. **Provider-independent JSON and SSML export:** in **Listen & direct → Export direction** (or via `lixity audio-export-plan` and `lixity read-aloud --timeline` / `--ssml`), you can export the effective speech plan for a passage, a chapter or the entire manuscript without contacting any synthesis service. The `lixity-audio-timeline` JSON format preserves source-line provenance, spoken-form pronunciation substitutions, authored passage direction, voice bindings and explicit pause durations. The W3C SSML export projects supported breaks and substitutions while listing explicit portability warnings for controls that portable SSML cannot represent.
 
@@ -49,7 +49,7 @@ See the [audio export and provider guide](https://github.com/mfahsold/lixity/blo
 
 ## 4. Separate spoken words, IPA and delivery controls
 
-**Current main, unreleased:** IMS-Toucan adds a German/English author-reference path with real IPA overrides and structured passage-level duration, pitch-variation, energy-variation and pause controls. Spelling substitutions remain a separate field. Free acting prompts are preserved for export but rejected for Toucan synthesis; they are not silently translated into emotions or numeric controls.
+**In development (unreleased):** IMS-Toucan adds a German/English author-reference path with real IPA overrides and structured passage-level duration, pitch-variation, energy-variation and pause controls. Spelling substitutions remain a separate field. Free acting prompts are preserved for export but rejected for Toucan synthesis; they are not silently translated into emotions or numeric controls.
 
 The reviewed audio-settings schema `/5` migration preserves existing profiles. Plans using the new controls use version `/2`; older-feature plans keep their existing contract. The Teleprompter and export preview consume the same canonical spoken text and control summaries. [Controls, examples and limits](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
 

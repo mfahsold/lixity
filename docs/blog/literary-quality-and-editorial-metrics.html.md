@@ -48,16 +48,16 @@ When a draft manuscript feels wooden in dialogue scenes, one of the most common 
 
 Corpus averages only set the stage. The real editorial value appears when we inspect individual chapters where dialogue cadence, voice contrast or local sentence overlap breaks away from the novel's own baseline.
 
-### Case A: *Pride and Prejudice* — banter, pompous monologue, and Darcy's letter
+### Case A: *Pride and Prejudice* (banter, pompous monologue, and Darcy's letter)
 
 In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted passages** chapter disclosure immediately highlights four famous dramaturgical shifts:
 
 | Chapter & narrative moment | Quoted share | Short spans (≤ 12 w.) | Quoted ASL | Narration ASL | ASL Δ | Adjacent overlap |
 | --- | --- | --- | --- | --- | --- | --- |
-| Ch. 1–2 — Mr. & Mrs. Bennet's opening banter | 78.8% / 71.2% | 40.6% / 59.4% | 12.87 / 11.36 | 12.00 / 10.45 | +0.87 / +0.91 | 16.0% / 11.5% |
-| Ch. 15 — Mr. Collins's introduction and courtship | 3.0% | 50.0% | 25.50 | 36.62 | −11.12 | **47.1%** |
-| Ch. 35 — Darcy's letter to Elizabeth | 87.6% | 0.0% | **27.39** | 26.57 | **+0.81** | 31.7% |
-| Ch. 49 — Family reaction to Lydia's settlement | 62.5% | **69.5%** | **9.21** | 13.27 | −4.06 | 12.1% |
+| Ch. 1–2: Mr. & Mrs. Bennet's opening banter | 78.8% / 71.2% | 40.6% / 59.4% | 12.87 / 11.36 | 12.00 / 10.45 | +0.87 / +0.91 | 16.0% / 11.5% |
+| Ch. 15: Mr. Collins's introduction and courtship | 3.0% | 50.0% | 25.50 | 36.62 | −11.12 | **47.1%** |
+| Ch. 35: Darcy's letter to Elizabeth | 87.6% | 0.0% | **27.39** | 26.57 | **+0.81** | 31.7% |
+| Ch. 49: Family reaction to Lydia's settlement | 62.5% | **69.5%** | **9.21** | 13.27 | −4.06 | 12.1% |
 
 - **Why Chapter 35 stands out:** In Chapter 35, 87.6% of the words sit inside quotation marks, yet `short_turn_pct` drops to **0.0%** and `Quoted ASL` doubles to **27.39 words per sentence** (`ASL Δ = +0.81`). Why? Because the entire quoted span is Mr. Darcy's formal letter explaining Wickham and Jane. In Lixity, an author writing an epistolary chapter like Chapter 35 can assign it to an explicit `epistolary` [chapter register](intentional-registers.html) so its formal sentence length is evaluated against letter targets rather than flagged as a dialogue anomaly.
 
@@ -65,16 +65,16 @@ In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted pa
 
 - **Why Chapter 49 accelerates:** When news of Lydia and Wickham's marriage terms arrives in Chapter 49, nearly 70% of the 59 quoted spans are 12 words or fewer, and quoted ASL drops to **9.21 words**.
 
-### Case B: *Effi Briest* — conversational parlor vs. Innstetten's discovery of the letters
+### Case B: *Effi Briest* (conversational parlor vs. Innstetten's discovery of the letters)
 
 The same measurements trace Fontane's famous contrast between light social conversation (*Plauderton*) and psychological pressure:
 
 | Chapter & narrative moment | Quoted share | Short spans (≤ 12 w.) | Quoted ASL | Narration ASL | ASL Δ | Adjacent overlap |
 | --- | --- | --- | --- | --- | --- | --- |
-| Ch. 3 — Garden preparations and brief exchanges at Hohen-Cremmen | 19.2% | 64.3% | 7.26 | 27.65 | **−20.40** | 33.8% |
-| Ch. 10 — Arrival in Kessin; Innstetten explains the house | 85.8% | 39.3% | 12.02 | 11.63 | **+0.40** | 22.2% |
-| Ch. 26 — Discovery of Crampas's letters and duel decision | 25.7% | 66.7% | 9.29 | 29.16 | −19.87 | **46.6%** |
-| Ch. 33 — Late Berlin scenes and medical advice | 62.5% | **68.4%** | 9.62 | 22.13 | −12.51 | 25.0% |
+| Ch. 3: Garden preparations and brief exchanges at Hohen-Cremmen | 19.2% | 64.3% | 7.26 | 27.65 | **−20.40** | 33.8% |
+| Ch. 10: Arrival in Kessin; Innstetten explains the house | 85.8% | 39.3% | 12.02 | 11.63 | **+0.40** | 22.2% |
+| Ch. 26: Discovery of Crampas's letters and duel decision | 25.7% | 66.7% | 9.29 | 29.16 | −19.87 | **46.6%** |
+| Ch. 33: Late Berlin scenes and medical advice | 62.5% | **68.4%** | 9.62 | 22.13 | −12.51 | 25.0% |
 
 In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
 
@@ -82,7 +82,7 @@ In **Chapter 26** (the turning point where Innstetten finds Major Crampas's lett
 
 To make these signals practical during daily revision, Lixity organizes the **Analysis overview** in the order an author or editor moves through a draft:
 
-1. **Immediate passage triage (*Flagged passages* & *Work markers*).** Start with paragraphs that exhibit severe tense friction or open editorial notes, and record whether a passage was kept on purpose, revised, or deferred.
+1. **Immediate passage check (*Flagged passages* & *Work markers*).** Start with paragraphs that exhibit severe tense friction or open editorial notes, and record whether a passage was kept on purpose, revised, or deferred.
 
 2. **Dramaturgy, tempo & registers (*Pacing & scenes*, *Scenes & style registers*).** Inspect chapter ASL, closing hooks (0–3 heuristic), within-paragraph adjacent sentence overlap (`sentence_overlap_pct`), and runs of 3+ identical sentence openings (`repeated_start_runs`), then compare intentional registers (letters, diaries, flashbacks) against their own targets.
 

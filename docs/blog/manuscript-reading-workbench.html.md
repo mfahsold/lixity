@@ -34,7 +34,7 @@ The compact explanation puts the selected quotation and count first, with the pa
 
 Choose **Analysis overview** when the question calls for chapter comparisons or sentence rhythm. The manuscript remains mounted with the same paragraph text and source anchors. Hiding analysis keeps the active passage inspector or dossier available beside the text. A different sentence length can belong to a scene's purpose or a character's voice. The number locates a difference; reading supplies the judgment about what to do with it.
 
-The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other source structure can remain reading-only. [The coverage reference](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
+The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other structural elements can remain reading-only. [The coverage reference](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
 
 ## Give research its own space
 
@@ -76,7 +76,7 @@ Unzip the copy and open `index.html`, or host its folder as a static website. Th
 
 ## Know which document you are reading
 
-The browser reader now retains source structure around the same measured paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation anchors still use the established exact analysis text; inline link/code syntax and pipe tables remain literal where present in that text. This is a reading surface, not a Markdown editor or a complete typesetting engine. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) keep their existing output behavior.
+The browser reader now retains source structure around the same measured paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation anchors still use the established exact analysis text; inline link or code syntax and pipe tables remain literal where present in that text. This is a reading surface, not a Markdown editor or a complete typesetting engine. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) keep their existing output behavior.
 
 Built-in manuscript analysis runs locally without uploading the manuscript. Optional external workers have separate data boundaries, and retaining research sources requires permission. Measurements remain heuristic aids to human review.
 

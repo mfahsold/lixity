@@ -28,7 +28,7 @@ Eine vorläufige Notiz verortet die Öffnung einer Kiste am Kai. Ihre unterzeich
 
 **Von der Textstelle ins Dossier und wieder zurück**
 
-**Aktueller main-Stand:** Neutrale punktierte Markierungen und der Knopf mit Buchsymbol **Research** kennzeichnen gespeicherte Recherchebezüge. Durchgezogene Analyse-Unterstreichungen zeigen dagegen gezählte Textstellen. Recherchebezüge bleiben auch bei ausgeschalteter Analyse sichtbar.
+Neutrale punktierte Markierungen und der Knopf mit Buchsymbol **Research** kennzeichnen gespeicherte Recherchebezüge. Durchgezogene Analyse-Unterstreichungen zeigen dagegen gezählte Textstellen. Recherchebezüge bleiben auch bei ausgeschalteter Analyse sichtbar.
 
 Am Eröffnungsabsatz führt **… → Explore passage → Research for this passage** zur gespeicherten Verbindung. Ein Titel öffnet den Eintrag; **Linked version** zeigt die genau verknüpfte frühere Fassung. **Back to passage** führt zum Text zurück. **Dossier alongside** hält das Dossier neben dem Manuskript geöffnet.
 
@@ -91,7 +91,7 @@ Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sei
 
 In der lokalen Anwendung führt **Projekt → Einstellungen → Audio und Dienste** zu Aufnahmen, Stimmprofilen, Mikrofon und Dienststatus. **Anhören und Regie** öffnet sich auch aus der Manuskriptleiste. Die öffentliche Demo kann keine Stimmprobe speichern oder Sprachsynthese starten.
 
-In 0.8.1 hat der lokale Audiodialog vier klar zugeordnete Reiter: **Autorenstimme** für Aufnahme, WAV-Upload und gespeicherte Stimmproben, **Stimmprofile** für Stimme und Sprachdienst, **Hörprobe & Regie** für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie **Mikrofon & Pegel** für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.
+Seit 0.8.1 gliedert sich der lokale Audiodialog in vier Reiter: **Autorenstimme** für Aufnahme, WAV-Upload und gespeicherte Stimmproben, **Stimmprofile** für Stimme und Sprachdienst, **Hörprobe & Regie** für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie **Mikrofon & Pegel** für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.
 
 Der Zustand direkt neben dem Aufnahmebutton zeigt, ob die Freigabe aussteht, die Aufnahme läuft oder der Start fehlgeschlagen ist. Eine gespeicherte Mikrofon-Sperre entfernst du im Browser über das Symbol neben der Adresse; starte danach erneut und erlaube den Zugriff. Fehlgeschlagene Starts werden in der Browserkonsole protokolliert. Solange der Browser den Zugriff blockiert, gibt es dazu keinen Serveraufruf und keinen Eintrag im Dienstprotokoll. Mehr zur [Aufnahme und Fehlerdiagnose](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
 

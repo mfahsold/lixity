@@ -36,13 +36,13 @@ You have completed the first check when you can explain the contrast in the text
 
 Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
 
-**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation/count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
+**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation and count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
 
 Neutral dotted marks and a book-icon **Research** count identify saved research links. Their pattern stays distinct from solid counted-text underlines and the paragraph comparison colors, including with Analysis Off. Open the Research control to follow the exact saved connection; this is an author association, not an automatic fact check.
 
-**Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Deliberate **None** and either disabled switch survive Off/On and reload. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
+**Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Choosing **None** or turning off either switch persists across toggling Analysis and reloading. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
 
-Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; both disclosure levels can be closed again. The passage return keeps your earlier reading context.
+Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; you can close both panels again, and returning to the passage keeps your earlier reading context.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
@@ -56,7 +56,7 @@ Someone had tried the eastern gate of Warehouse 4.
 
 2. Open a title to read the current entry and its sources, or choose **Linked version** for the exact earlier version used by the association. **Versions** expands its history without changing the entry. A retained source and an authored claim are separate records; the association does not establish factual truth.
 
-3. Close the viewer and use **Back to passage** to resume reading. On narrow screens the context sits above the text; its close button or Escape returns to the paragraph.
+3. Close the viewer and use **Back to passage** to resume reading. On narrow screens the context panel sits above the text; its close button or Escape returns you to the paragraph.
 
 **Explore dossiers and review**
 
@@ -78,7 +78,7 @@ Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above th
 
 - [Standalone companion:](../demo/companion/index.html) explore those selected notes while reading the novel elsewhere.
 
-A reading copy is fixed. Progress hides or reveals included notes but does not protect their bytes. In your own export, use a chapter cap to omit later material. **Since 0.8.1:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+A reading copy is fixed. Reading progress hides or reveals included notes, though the underlying files remain in the export. In your own export, use a chapter cap to omit later material. **Since 0.8.1:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
 The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
 
@@ -106,7 +106,7 @@ Read a passage in the **Teleprompter** (`P`), record a take and edit the words a
 
 **Optional IMS-Toucan, available in 0.8.1:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
-In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; output source and generation history remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
+In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; where an output came from and how it was generated remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
 
 Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need no extra permission; a separate written commercial license exists for closed-source integrations. See [licensing](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 

@@ -8,7 +8,7 @@ Style guides can tell you that a mean sentence length of 12 words is “brisk”
 
 ## The idea: a corridor from the manuscript's own chapters
 
-Lixity computes, for each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), a robust description of the chapters you already wrote: a **median** and a spread derived from the median absolute deviation. From that it derives a **band** — a reference corridor — and reports for every chapter how far it sits outside it.
+Lixity computes, for each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), a robust description of the chapters you already wrote: a **median** and a spread derived from the median absolute deviation. From that it derives a **band** (a reference corridor) and reports how far each chapter sits outside it.
 
 Two details keep this useful instead of noisy:
 
@@ -20,9 +20,9 @@ Two details keep this useful instead of noisy:
 
 Open the [Effi Briest case study](../examples/effi-briest.html) in the browser. The read-only dashboard contains the novel's opening three chapters; its linked [PDF report](../examples/effi-briest-report.pdf) covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:
 
-1. **The chapter map (heatmap).** Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. A selected set of cells is the FDR set — the rest are visible but unselected.
+1. **The chapter map (heatmap).** Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. The selected cells form the FDR set; the rest stay visible but unselected.
 
-2. **The style reference (bands).** Each feature shows its corridor, the median tick and the strongest outliers as dots. This is the “what is normal here” view — the part a fixed style rule cannot provide.
+2. **The style reference (bands).** Each feature shows its corridor, the median tick and the strongest outliers as dots. This is the “what is normal here” view, the part a fixed style rule cannot provide.
 
 3. **The chapter matrix (drift column).** The reference summary of every chapter: words, sentence length, dialogue share, function words, tense, flags and the number of selected deviations.
 

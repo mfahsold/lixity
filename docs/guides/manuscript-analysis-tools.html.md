@@ -54,7 +54,7 @@ Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project
 
 - **Collaborative editing:** the workspace is single-user and local by design.
 
-- **Publishing production:** fixed-layout PDFs and reading websites provide review/reading copies, not EPUB production or print preflight.
+- **Publishing production:** fixed-layout PDFs and reading websites provide review and reading copies, not EPUB production or print preflight.
 
 ## Frequently asked questions
 

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>A reference corridor from Effi Briest — Lixity blog</title>
-<meta name="description" content="A walkthrough of the public Effi Briest case study: how a self-calibrating style reference describes where a manuscript moves away from its own norm — without turning measurements into verdicts."/>
+<title>A reference corridor from Effi Briest: Lixity blog</title>
+<meta name="description" content="A walkthrough of the public Effi Briest case study: how a self-calibrating style reference describes where a manuscript moves away from its own norm without turning measurements into verdicts."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
@@ -72,7 +72,7 @@
 <p>Style guides can tell you that a mean sentence length of 12 words is “brisk” and 24 words is “dense”. What they cannot tell you is whether <em>your</em> novel already lives at 19, whether chapter 4 broke that pattern on purpose, or whether the break holds for three chapters straight. Fixed norms make every manuscript an exception; a reference built from the manuscript itself is what actually describes change.</p>
 
 <h2 id="idea">The idea: a corridor from the manuscript's own chapters</h2>
-<p>Lixity computes, for each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), a robust description of the chapters you already wrote: a <strong>median</strong> and a spread derived from the median absolute deviation. From that it derives a <strong>band</strong> — a reference corridor — and reports for every chapter how far it sits outside it.</p>
+<p>Lixity computes, for each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), a robust description of the chapters you already wrote: a <strong>median</strong> and a spread derived from the median absolute deviation. From that it derives a <strong>band</strong> (a reference corridor) and reports how far each chapter sits outside it.</p>
 <p>Two details keep this useful instead of noisy:</p>
 <ul>
 <li><strong>Noise adjustment.</strong> The distance from the median is divided by a combination of the manuscript's descriptive spread and the chapter feature's estimated standard error (<code>z*</code>). A larger estimated error reduces the reported deviation. The spread is not an estimate of uncertainty in the median itself.</li>
@@ -82,8 +82,8 @@
 <h2 id="walkthrough">Walkthrough: the public example</h2>
 <p>Open the <a href="../examples/effi-briest.html">Effi Briest case study</a> in the browser. The read-only dashboard contains the novel's opening three chapters; its linked <a href="../examples/effi-briest-report.pdf">PDF report</a> covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:</p>
 <ol>
-<li><strong>The chapter map (heatmap).</strong> Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. A selected set of cells is the FDR set — the rest are visible but unselected.</li>
-<li><strong>The style reference (bands).</strong> Each feature shows its corridor, the median tick and the strongest outliers as dots. This is the “what is normal here” view — the part a fixed style rule cannot provide.</li>
+<li><strong>The chapter map (heatmap).</strong> Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. The selected cells form the FDR set; the rest stay visible but unselected.</li>
+<li><strong>The style reference (bands).</strong> Each feature shows its corridor, the median tick and the strongest outliers as dots. This is the “what is normal here” view, the part a fixed style rule cannot provide.</li>
 <li><strong>The chapter matrix (drift column).</strong> The reference summary of every chapter: words, sentence length, dialogue share, function words, tense, flags and the number of selected deviations.</li>
 </ol>
 <p>A useful question is “what changed in this chapter, and was it on purpose?”. Deviations are questions to the text: a chapter that sheds dialogue may be a solitary interior section; a jump in nominalisation may be a documentary letter; a drop in sentence length may be the action scene you intended. These are possible interpretations, not conclusions the measurements establish.</p>

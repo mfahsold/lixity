@@ -62,17 +62,17 @@ Published 19 October 2026 · 4 minutes
 
 Repetition across a book and repetition inside one passage raise different questions. Count a synthetic example yourself, see how local windows and overlapping phrases affect the result, then read the echo in context.
 
-## [Finding tense switches in a novel — and deciding which ones matter](tense-switches.html)
+## [Finding tense switches in a novel, and deciding which ones matter](tense-switches.html)
 
 Posted 15 October 2026 · 6 minutes
 
-Readers notice tense breaks long before they can name them. This workflow article shows how paragraph-level profiles and a flagged-passage list turn that vague feeling into passages you can review one by one — and when a switch is deliberate.
+Readers notice tense breaks long before they can name them. This workflow article shows how paragraph-level profiles and a flagged-passage list turn that vague feeling into passages you can review one by one, and help you see when a switch is deliberate.
 
 ## [A reference corridor from *Effi Briest*: measuring a draft against its own model](effi-briest-case-study.html)
 
 Posted 15 October 2026 · 7 minutes
 
-A walkthrough of the public example analysis: how a self-calibrating reference (robust median/MAD, noise-adjusted deviations, FDR selection) describes *where* a manuscript changes — without turning measurements into verdicts.
+A walkthrough of the public example analysis: how a self-calibrating reference (robust median/MAD, noise-adjusted deviations, FDR selection) describes *where* a manuscript changes without turning measurements into verdicts.
 
 **New to Lixity?**
 
@@ -88,12 +88,12 @@ show finished analyses without installation.
 
 ## More reading
 
-- [Share a reading website](../guides/research-pdf.html#reading-website) — choose what a reader receives in a fixed project snapshot.
+- [Share a reading website](../guides/research-pdf.html#reading-website): choose what a reader receives in a fixed project snapshot.
 
-- [How to interpret the results](../guides/interpretation.html) — what z*, FDR sets and heuristic profiles do and do not establish.
+- [How to interpret the results](../guides/interpretation.html): what z*, FDR sets and heuristic profiles do and do not establish.
 
-- [Manuscript analysis tools compared](../guides/manuscript-analysis-tools.html) — where Lixity sits next to grammar checkers and corpus suites.
+- [Manuscript analysis tools compared](../guides/manuscript-analysis-tools.html): where Lixity sits next to grammar checkers and corpus suites.
 
-- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) — the estimators behind every number.
+- [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md): the estimators behind every number.
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Mastodon](https://mastodon.social/@lixity)[Bluesky](https://bsky.app/profile/lixity.bsky.social)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

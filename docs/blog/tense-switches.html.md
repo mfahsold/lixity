@@ -1,4 +1,4 @@
-# Finding tense switches in a novel — and deciding which ones matter
+# Finding tense switches in a novel, and deciding which ones matter
 
 Posted 15 October 2026 · 6 minutes
 

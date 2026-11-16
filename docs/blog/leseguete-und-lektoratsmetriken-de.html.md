@@ -44,10 +44,10 @@ Erst im Kapitelvergleich zeigt sich, wie präzise diese Kennzahlen dramatische S
 
 | Kapitel & Szene | Zitatanteil | Kurze Zitate (≤ 12 W.) | ASL Zitate | ASL Erzähltext | ASL-Abstand | Wortbrücke Folgesätze |
 | --- | --- | --- | --- | --- | --- | --- |
-| Kap. 3 — Vorbereitungen in Hohen-Cremmen | 19,2 % | 64,3 % | 7,26 | 27,65 | **−20,40** | 33,8 % |
-| Kap. 10 — Ankunft in Kessin; Innstetten erklärt das Haus | 85,8 % | 39,3 % | 12,02 | 11,63 | **+0,40** | 22,2 % |
-| Kap. 26 — Fund der Crampas-Briefe und Duell-Entschluss | 25,7 % | 66,7 % | 9,29 | 29,16 | −19,87 | **46,6 %** |
-| Kap. 33 — Späte Berliner Szenen und ärztlicher Rat | 62,5 % | **68,4 %** | 9,62 | 22,13 | −12,51 | 25,0 % |
+| Kap. 3: Vorbereitungen in Hohen-Cremmen | 19,2 % | 64,3 % | 7,26 | 27,65 | **−20,40** | 33,8 % |
+| Kap. 10: Ankunft in Kessin; Innstetten erklärt das Haus | 85,8 % | 39,3 % | 12,02 | 11,63 | **+0,40** | 22,2 % |
+| Kap. 26: Fund der Crampas-Briefe und Duell-Entschluss | 25,7 % | 66,7 % | 9,29 | 29,16 | −19,87 | **46,6 %** |
+| Kap. 33: Späte Berliner Szenen und ärztlicher Rat | 62,5 % | **68,4 %** | 9,62 | 22,13 | −12,51 | 25,0 % |
 
 - **Kapitel 10 (Exposition im Dialog):** Bei Effis Ankunft in Kessin steigt der Zitatanteil auf **85,8 %**, und der ASL-Abstand dreht ins Positive (`+0,40`): Innstetten übernimmt im Gespräch die erklärende Beschreibung des Hauses und der Nachbarschaft.
 

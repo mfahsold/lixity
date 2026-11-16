@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>What's new in Lixity: speech direction, clearer marks and project structure — Lixity blog</title>
+<title>What's new in Lixity: speech direction, clearer marks and project structure | Lixity blog</title>
 <meta name="description" content="Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
@@ -95,7 +95,7 @@
 <p class="section-note">The following notes describe the 0.4.8 release line, first published on 16 October 2026. They are retained as history. Use the linked guides above for the current interface.</p>
 
 <h3 id="floors">Small chapters no longer shout</h3>
-<p>Short texts are noisy. A three-sentence stage note can look extreme in a z-score table — not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:</p>
+<p>Short texts are noisy. A three-sentence stage note can look extreme in a z-score table, not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:</p>
 <ul>
 <li>Chapters under <strong>100 words</strong> get no z-scores, no effect sizes, no FDR marks.</li>
 <li>Features about sentence variety (staccato, cascade, sentence length variation) need at least <strong>five sentences</strong>.</li>
@@ -118,22 +118,22 @@
 <h3 id="research">A calmer research workspace</h3>
 <p>The research side keeps sources, dossiers, claims, decisions and evidence in one local archive. Recent polish:</p>
 <ul>
-<li>The <strong>timeline is a view</strong>, not a separate world: switch between <strong>List</strong> and <strong>Timeline</strong> right where your claims live. The decisions pane says what it is for — deliberate choices with a reason, not historical claims.</li>
+<li>The <strong>timeline is a view</strong>, not a separate world: switch between <strong>List</strong> and <strong>Timeline</strong> right where your claims live. The decisions pane says what it is for: deliberate choices with a reason, not historical claims.</li>
 <li><strong>Zotero stays a catalogue, visibly.</strong> Cards show a quiet <em>Zotero ↗</em> link and a type line; tags filter the list. Capturing a source into your archive is still a deliberate click, never a background sync.</li>
-<li>Evidence panels keep their citations when other lists refresh — nothing you loaded gets rebuilt under your hands.</li>
+<li>Evidence panels keep their citations when other lists refresh, so nothing you loaded gets rebuilt under your hands.</li>
 </ul>
 
 <h3 id="interface">One look, everywhere</h3>
 <p>The interface had accumulated separate choices for corners, text sizes, spacing and loading states. Shared styles and components now give those controls a more consistent presentation:</p>
 <ul>
-<li><strong>One scale</strong> for corners, text sizes and spacing — shared by the app and the documentation site.</li>
+<li><strong>One scale</strong> for corners, text sizes and spacing, shared by the app and the documentation site.</li>
 <li><strong>Shared controls</strong>: the workspace switch and research tabs use the same control family. Badges, tags and touch spacing follow shared styles.</li>
 <li><strong>A component layer</strong> now renders the list panels (plain vendored JavaScript, no build step). It also fixed a real annoyance: the “Loading…” placeholder no longer lingers next to the loaded list.</li>
 <li>Regression checks cover selected shared styles and loading states to help catch inconsistent changes.</li>
 </ul>
 
 <h3 id="logging">Logs you can actually find</h3>
-<p>Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> choose how much you see, and <code>lixity service status</code> prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.</p>
+<p>Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> choose how much you see, and <code>lixity service status</code> prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file, and log records never contain manuscript text.</p>
 
 <h3 id="security">Your privacy, in plain words</h3>
 <p>Built-in analysis and dashboard generation run on your computer without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling. The browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s <code>SECURITY.md</code>. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.</p>
@@ -142,12 +142,12 @@
 
 <h2 id="try">Try it</h2>
 <ul>
-<li><a href="../demo/report.html">Demo report</a> — invented text, opens in your browser, no install.</li>
-<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — literary case studies with interactive opening-chapter dashboards and PDF analyses of the complete public-domain novels.</li>
-<li><a href="../guides/first-look.html">First look</a> — a three-minute tour of chapter comparisons and paragraphs with local measurements.</li>
+<li><a href="../demo/report.html">Demo report</a>: invented text, opens in your browser, no install.</li>
+<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a>: literary case studies with interactive opening-chapter dashboards and PDF analyses of the complete public-domain novels.</li>
+<li><a href="../guides/first-look.html">First look</a>: a three-minute tour of chapter comparisons and paragraphs with local measurements.</li>
 <li>For your own manuscript: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
 </ul>
-<p>If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.</p>
+<p>If you try it, tell me which passage surprised you; that is the feedback that shapes the next release.</p>
 
 <footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>
