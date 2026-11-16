@@ -2,17 +2,17 @@
 
 [Documentation map](README.md) · [Workspace manual](WORKSPACE.md) · [CLI reference](USAGE.md)
 
-Start with the part of your project that needs attention: prose, a research
-question or a reading copy. This walkthrough connects those activities through
-one inspected passage and a clear choice of output.
+Read a manuscript closely, follow its research links and prepare a copy for
+readers. This walkthrough starts with one passage, then shows where to inspect
+measurements, consult sources and choose an output.
 Install Lixity first using the [installation guide](INSTALLATION.md).
 
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
-the shared demo project for manuscript analysis, research and PDF layouts.
+the demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. The demo is generated through the same
-reading-website export as your own shareable copies. [Installation](INSTALLATION.md) covers setup, upgrades and
-service management;
+then try the steps below with your own manuscript. The demo uses the same
+reading-website export as your own shareable copies.
+[Installation](INSTALLATION.md) covers setup, upgrades and service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -122,11 +122,11 @@ of all metrics or proof that other patterns need no review.
 
 ### Choose a view
 
-The project sidebar stays available while you
-read on a wide screen. On mobile, use the same views above the workspace.
-**Manuscript** is the starting point for your text; open a dossier
-alongside it when you need context, and use **Research** to work on the source
-archive. Analysis guides your attention; the manuscript remains the reference.
+On a wide screen, choose a view in the project sidebar. On mobile, the same
+views sit above the workspace. Start in **Manuscript** to read your text, open a
+dossier alongside it for context, or use **Research** to work with sources and
+saved records. Analysis points to differences you can inspect; it does not
+decide whether a passage needs revision.
 
 Research references use a neutral dotted line and an adjacent book
 icon labelled **Research** with the association count. These identify saved links

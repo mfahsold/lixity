@@ -1,10 +1,11 @@
 # Lixity browser workspace manual
 
-Use this manual to work on a manuscript, retain its research, explore language
-and prepare reading copies in one local project. Integrated writing is available
-in the development checkout and explicitly marked unreleased below.
+Use this manual to read a manuscript, inspect language patterns, keep research
+linked to passages and prepare copies for readers. These activities share one
+local project. Integrated writing is available in the development checkout and
+explicitly marked unreleased below.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
-[Installation](INSTALLATION.md) owns application setup and service updates.
+use [Installation](INSTALLATION.md) for application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
@@ -15,11 +16,11 @@ Later changes marked **unreleased** require a development checkout.
 | Your next task | Start here |
 | --- | --- |
 | Write, undo or recover a draft (unreleased) | [Write a manuscript](#write-a-manuscript-unreleased) |
-| Read with one analysis question | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
+| Inspect one language pattern while reading | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
 | Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
 | Find text or review tense observations | [Search](#searching-the-manuscript), [Start a review](#start-a-review), [Save review decisions](#save-review-decisions) |
-| Compare chapters or style dimensions | [Style area](#style-area), [Settings and interpretation](#settings-and-interpretation), [Style-space navigation](#style-space-navigation) |
+| Compare language patterns across chapters | [Style area](#style-area), [Settings and interpretation](#settings-and-interpretation), [Style-space navigation](#style-space-navigation) |
 | Read evidence beside the text | [Dossier alongside](#read-a-dossier-beside-the-manuscript), [Claim associations](#link-a-manuscript-quote-to-a-claim) |
 | Leave an explicit note in the manuscript | [Work markers](#work-markers-editor-visible) |
 | Inspect files and project settings | [Project structure](#inspect-project-structure), [Saved project settings](#saved-project-settings) |
@@ -137,9 +138,9 @@ Reopen the project from the home address rather than reusing an expired view.
 
 ## Explore language in the browser
 
-Start with a concrete question: does sentence rhythm change between chapters,
-or does a passage use a different vocabulary from its surroundings? The same
-workspace supports close reading and descriptive linguistic investigation.
+Start with one question: do sentence lengths vary between chapters, or does a
+passage use different vocabulary from its surroundings? Inspect the counts,
+then read the passage to decide what the difference means in context.
 
 1. Open the text and confirm its analysis language in **Project → Settings**.
    Website language preferences do not select a linguistic profile. Applying
@@ -175,9 +176,9 @@ text and measurements, so treat it as manuscript material when sharing. Project
 settings, manuscript writes and research actions require a compatible local
 server; start the installed workspace with `lixity service start --open`.
 
-For research, use Zotero for ordinary source work and Lixity for retained evidence,
-authored records and manuscript associations; the [research guide](research/USAGE.md)
-defines that boundary and the optional local-import workflow.
+Use Zotero to manage your source library and Lixity to retain selected evidence,
+record claims and decisions, and link them to manuscript passages. The
+[research guide](research/USAGE.md) explains those roles and the optional local-import workflow.
 
 ### A connected first session
 

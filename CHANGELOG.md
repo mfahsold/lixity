@@ -43,6 +43,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Clarify central product and onboarding copy across seven public languages:
+  distinguish development availability, built-in offline analysis, optional
+  integrations, retained source provenance and heuristic text evidence.
+
 - Keep five Research content tabs and move search/link review into shared tools
   with explicit return controls. Compare vocabulary from the selected source,
   with current-source provenance and terms/chapter links before optional numeric

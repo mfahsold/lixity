@@ -8,41 +8,40 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-> **A private, local workspace for novelists, editors, and scholars.**
-> Inspect chapter rhythms, verify scene research, and share standalone reading copies with deterministic offline analysis.
+> **A local workspace for authors, editors, and researchers.**
+> Compare chapter rhythms, trace scene research to its sources, and choose what to share in a reading copy. Built-in analysis runs offline.
 >
 > 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · ✍️ **[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
 
-**Read closely. Trace the evidence. Understand your text.**
+**Read closely. Follow the evidence. Decide what to revise.**
 
-Lixity is a private, local manuscript studio for novelists, dramatists, editors,
-and linguistic researchers. It brings the craft of writing and the discipline of
-text analysis into a single, beautifully restrained environment: sense where a
-chapter's rhythm accelerates or falters, inspect the exact counted words behind
-every metric, and trace scene details back to retained primary sources. Keep
-dossiers, author decisions, and prose organically connected, then choose
-precisely what to share in a standalone reading edition. The browser app, CLI,
-and Python API share one deterministic analysis engine.
+Lixity helps authors read a manuscript alongside its analysis and research.
+Compare sentence rhythm across chapters, focus on dialogue, and inspect repeated
+words in context. Follow a scene detail to its linked source passages, claims,
+and author decisions, then choose which material to include in a reading copy.
+Editors and linguistic researchers can inspect the same measurements through
+the browser app, CLI, and Python API, which share one deterministic engine.
 
-- **Every finding connects to prose:** chapter comparisons, outlier flags, and
-  cadence explanations never live in isolated charts—they bring you directly back
-  to the sentence in context, where you make the artistic call.
-- **Research retains living memory:** primary sources, historical claims, and
-  authorial decisions have distinct roles; evidence links preserve the exact
-  revisions behind them even as sources or interpretations evolve.
-- **Local analysis without telemetry:** the built-in engine runs offline and
-  deterministically, with no required cloud account or automatic prose rewriting.
-  Optional map basemaps and configured speech providers use network connections;
-  a connected AI client's data handling is separate from Lixity's local engine.
-  Reading exports contain only the explicitly selected material.
+- **Return from a measurement to the prose:** compare chapters, inspect a
+  marked passage, and read the counted words and sentences before deciding
+  whether a difference matters. Signals support review; they do not grade
+  literary quality.
+- **Keep research traceable:** sources, claims, and author decisions have
+  distinct roles. Evidence links retain the exact versions you cited, so you can
+  revisit the basis for a scene detail as your interpretation changes. A retained
+  source does not establish that a claim is true.
+- **Analyze locally:** the built-in engine runs offline without telemetry, a
+  required cloud account, or automatic prose rewriting. Optional map basemaps
+  and configured speech providers use network connections; a connected AI
+  client's data handling is separate from Lixity's local engine. Choose the
+  material to include when exporting a reading copy.
 
-**Writing joins the workspace (unreleased).** The development checkout adds an
-integrated, distraction-free manuscript editor with multi-level undo, local
-autosave, conflict detection and recovery, search/replace, and a fluid single-row
-writing bar with auto-hiding chrome. Switching between writing and reading
-re-analyzes the saved revision while preserving your undo stack and editing
-buffer intact. Research links remain reviewable across text revisions; saved
-evidence is never silently rewritten. The public demo remains read-only.
+**Manuscript editing is unreleased.** The development checkout adds an editor
+with multi-level undo, local autosave, conflict detection and recovery, and
+search/replace. Switching between writing and reading re-analyzes the saved
+revision while preserving the undo stack and editing buffer. Research links
+remain reviewable across text revisions; saved evidence is never silently
+rewritten. The public demo remains read-only.
 See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).
 
 Lixity provides localized workspaces across seven languages ([Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
@@ -79,36 +78,31 @@ then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [inte
 
 ## What can you do with Lixity?
 
-The project is your creative anchor: manuscript prose, historical research, and
-authorial settings stay together while you move naturally between composing,
-close reading, investigation, and sharing. These are interwoven creative modes,
-not rigid steps:
+Keep manuscript prose, research, and project settings together as you move
+between reading, comparison, research, and sharing:
 
-- **Compose & Refine**: Write in a clean typography canvas with local autosave,
-  tactile review markers, and an auto-scrolling teleprompter for spoken auditions.
-- **Listen to Cadence & Melody**: Compare sentence lengths, rhythm entropy
-  (against narrative flattening), sticky-sentence glue-word density, dialogue
-  balance, tag/adverbial-tag density, indirect speech, narrator-vs-dialogue and
-  per-character voice separation, speaker turn exchanges and dominance, scene
-  entry/exit hooks, implicit scene breaks (including lexical cohesion drops),
-  intra-scene pacing dynamics and plateaus, declared POV chapter gaps, sensory
-  perception (showing vs. telling), tense consistency, and optional
-  non-prescriptive genre reference corridors across chapters—plus draft-to-draft
-  comparisons (`lixity diff`). Every metric is grounded in transparent counts
-  against chapter medians. In the reader, **Direct Speech Mode** (`D`) dims
-  narrative prose to audition spoken dialogue alone, and inline evidence filter
-  chips highlight **sticky sentences**, **dialogue tags**, **same-paragraph word
-  echoes**, and **indirect speech** directly in the prose. Try classic examples
-  immediately in the [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
-- **Anchor Scene Research**: Open dossiers alongside the manuscript (`Dossier daneben`).
-  Connect facts, character motives, and scene geography directly to paragraphs.
-- **Collaborate with AI on Your Terms (MCP)**: Run `lixity mcp` to connect Claude Desktop,
-  Cursor, Antigravity, or local coding agents to read-only analysis and research tools
-  (including `lixity_scenes`, `lixity_corridors`, and `revision_diff`) and structured editorial prompts.
-  Lixity returns results over local stdio; the connected client controls where it processes them.
-- **Curate Standalone Editions**: Generate beautiful print PDFs or self-contained,
-  offline companion websites for beta readers and editors without exposing
-  private working notes.
+- **Read and review passages:** read continuous prose, search, and place work
+  markers. The development checkout also supports manuscript editing
+  (**unreleased**). Use the teleprompter to rehearse a passage aloud.
+- **Compare prose patterns:** explore sentence lengths, dialogue balance,
+  repeated words, and heuristic signals for scene pacing, sensory language,
+  tense, and character voices. Compare chapters or drafts (`lixity diff`),
+  inspect explanations, and return to the relevant prose. Optional genre
+  reference ranges are descriptive, not targets. In the reader, **Direct Speech
+  Mode** (`D`) dims narration to focus on dialogue; evidence filters highlight
+  **sticky sentences**, **dialogue tags**, **same-paragraph word echoes**, and
+  **indirect speech**. Try a classic in the
+  [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
+- **Follow scene research:** open a dossier beside the manuscript and connect
+  paragraphs to claims, source passages, character notes, or scene geography.
+- **Connect an AI client (MCP):** run `lixity mcp` to give Claude Desktop,
+  Cursor, Antigravity, or local coding agents read-only analysis and research
+  tools (including `lixity_scenes`, `lixity_corridors`, and `revision_diff`) and
+  structured editorial prompts. Lixity returns results over local stdio; the
+  connected client controls where it processes them.
+- **Share selected material:** export a printable PDF or a self-contained,
+  offline reading website for beta readers and editors. Choose which manuscript,
+  companion notes, and analysis to include before exporting.
 
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |

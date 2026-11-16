@@ -1,6 +1,6 @@
 # Eine Frage, ein Dossier, zurück zur Szene.
 
-Lixity ist eine lokale Recherche- und Überarbeitungswerkstatt für Autorinnen, Autoren und Lektorat. Quellen, Textstellen und eigene Entscheidungen bleiben verbunden. Sprachmuster lassen sich am Text untersuchen; die Entscheidung über die Prosa bleibt beim Menschen.
+Mit Lixity liest du dein Manuskript, vergleichst Sprachmuster und findest die Quellen zu einem Szenendetail wieder. Die lokale Browser-App verbindet Textstellen, Recherche und eigene Entscheidungen. Ihre Sprachhinweise sind Heuristiken zur Prüfung; sie bewerten weder literarische Qualität noch die Wahrheit einer Aussage.
 
 Aktualisiert am 5. November 2026
 
@@ -12,7 +12,7 @@ Warum klingt dieses Kapitel anders als der Rest? Ist eine Wiederholung beabsicht
 
 Die schreibgeschützte Demo verwendet ein erfundenes englisches Hafenmanuskript und englische Bedienelemente. Diese Seite erklärt den Einstieg auf Deutsch; sie ist keine deutsche Fassung des Demo-Manuskripts. Kein Konto, keine Installation und kein Upload sind zum Ausprobieren nötig.
 
-Die beiden folgenden Wege beantworten unterschiedliche Fragen: [Welche Quellenfassung trägt die Szene?](#recherche) Oder: [Wie verändert sich der Satzrhythmus?](#rhythmus) Ein einziger nachvollziehbarer Prüfschritt genügt für den Einstieg.
+Wähle für den Einstieg eine Frage: [Auf welcher Quellenfassung beruht die Szene?](#recherche) Oder: [Wie verändert sich der Satzrhythmus?](#rhythmus) Beide Wege führen von einem Hinweis zurück zum Text, damit du eine eigene Entscheidung treffen kannst.
 
 ## Welche Quellenfassung trägt die Szene?
 
