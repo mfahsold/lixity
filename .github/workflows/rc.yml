@@ -1,0 +1,41 @@
+# Pre-tag release-candidate qualification: runs full Python 3.10/3.12 source
+# + wheel smoke, 4-shard Chromium browser matrix, and Windows/macOS native
+# gates on main before creating a public v* release tag.
+name: release-candidate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rc-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source_checks:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/tests.yml
+
+  browser_checks:
+    needs: source_checks
+    permissions:
+      contents: read
+    uses: ./.github/workflows/browser.yml
+
+  native_checks:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/research-platforms.yml
+    with:
+      scope: full
+
+  ready:
+    needs: [source_checks, browser_checks, native_checks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Record qualified release candidate commit
+        env:
+          RC_SHA: ${{ github.sha }}
+        run: |
+          printf 'Release candidate qualified for %s.\n' "$RC_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Source (Python 3.10 + 3.12 + wheel smoke), 4-shard Chromium browser, and Windows/macOS native gates passed.\n' >> "$GITHUB_STEP_SUMMARY"

@@ -281,18 +281,23 @@ Preparation does not commit, tag, push or publish. Follow this four-phase releas
    When pushing `.github/workflows/*.yml` or dispatching workflows from an editor shell
    that exports a narrow `GH_TOKEN` (without `workflow` scope) or stale `GIT_ASKPASS`,
    clear those overrides so Git and `gh` use the authenticated OS keyring (`env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS`).
-2. **Pre-release local gates & tag push**:
+2. **Pre-release local gates, `rc-gate`, & tag push**:
    After reviewing the changes and obtaining release authorization, run
    `make release-check RELEASE_TAG=vX.Y.Z`, `make docs-check`, `make workflow-check`
-   and `make browser-full` for UI-affecting releases, then push the reviewed commit
-   to `main` and its matching annotated `vX.Y.Z` tag. The tag must resolve to the
-   reviewed commit: compare `git rev-parse HEAD` with `git rev-parse 'vX.Y.Z^{commit}'`
-   locally, then verify the remote tag and the release workflow's commit after pushing.
-   Annotated tags must be dereferenced to their commit for this comparison. A matching
-   version string alone is insufficient.
+   and `make browser-full` for UI-affecting releases. Before creating a public
+   `v*` tag, optionally run `make rc-gate` (`rc.yml`) on `main` to qualify
+   Python `3.10`/`3.12` source + wheel smoke, the 4-shard Chromium browser matrix
+   and Windows/macOS `scope: full` on the candidate commit without touching tags.
+   Then push the reviewed commit to `main` and its matching annotated `vX.Y.Z`
+   tag. The tag must resolve to the reviewed commit: compare `git rev-parse HEAD`
+   with `git rev-parse 'vX.Y.Z^{commit}'` locally, then verify the remote tag
+   and the release workflow's commit after pushing. Annotated tags must be
+   dereferenced to their commit for this comparison. A matching version string
+   alone is insufficient.
 3. **Tag pipeline publication**:
    The tag workflow (`release.yml`) first requires reusable full source (`tests.yml`
-   across Python 3.10 and 3.12), full Chromium browser (`browser.yml`) and full native
+   across Python 3.10 and 3.12, including isolated wheel build + smoke),
+   4-shard Chromium browser (`browser.yml`) and full native
    (`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
    checks on the exact tagged commit; any failure or cancellation blocks publication.
    When unpublished, it then builds, verifies and smoke-installs artifacts from that

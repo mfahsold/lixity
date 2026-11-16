@@ -135,9 +135,11 @@ After a parallel run, the runner reports all failed suites with an `--only`
 command; completion order does not define a safe `--start` position. Repeat
 the full suite before a release after fixing a failure.
 The manually dispatched `browser` workflow accepts an optional space-separated
-`suites` input for focused GitHub-runner debugging (`--jobs 3`). Release gates
-always run the complete suite (`make browser-full PYTHON=python BROWSER_JOBS=2`)
-on the tagged commit. Passing `--diagnostics NEW_DIR` (or `LIXITY_BROWSER_DIAGNOSTICS`)
+`suites` input for focused GitHub-runner debugging (`--jobs 3`). Release and
+`rc.yml` gates shard the full suite across four hosted runners
+(`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`,
+where `--shard INDEX/TOTAL` distributes `_SLOW_SUITES_ORDER` round-robin) on
+the tagged commit. Passing `--diagnostics NEW_DIR` (or `LIXITY_BROWSER_DIAGNOSTICS`)
 writes an incremental `results.json` manifest, `<= 128 KiB` role-sanitized
 synthetic log tails per process, and at most 4 runner-owned PNG captures
 (`<= 2 MiB` each, `64 MiB` total) from failed processes only; `--summary DIAGNOSTICS_DIR`

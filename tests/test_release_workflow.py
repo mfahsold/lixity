@@ -129,6 +129,25 @@ def test_browser_release_gate_uses_the_shared_full_suite_command():
     assert "github.event_name == 'workflow_dispatch' && inputs.suites || ''" in source
     assert 'python scripts/run_browser_suites.py --only "${suite_names[@]}" --jobs 3' in source
     assert "make browser-full PYTHON=python" in source
+    assert "fromJson('[1, 2, 3, 4]')" in source
+    assert 'BROWSER_ARGS="--shard ${SHARD}/4"' in source
+
+
+def test_source_gate_runs_wheel_smoke_on_each_python_matrix_version():
+    gate = job(workflow("tests.yml"), "check")
+    assert "scripts/check_release.py --build --smoke" in gate
+
+
+def test_release_candidate_workflow_qualifies_source_browser_and_native_before_tagging():
+    source = workflow("rc.yml")
+    assert "workflow_dispatch:" in source
+    for job_name, filename in (("source_checks", "tests.yml"), ("browser_checks", "browser.yml"),
+                               ("native_checks", "research-platforms.yml")):
+        gate = job(source, job_name)
+        assert f"uses: ./.github/workflows/{filename}" in gate
+    assert "scope: full" in job(source, "native_checks")
+    ready = job(source, "ready")
+    assert "needs: [source_checks, browser_checks, native_checks]" in ready
 
 
 def test_release_skips_browser_gate_when_source_checks_fail():

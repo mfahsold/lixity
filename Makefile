@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -36,7 +36,7 @@ browser-changed: ## Run only the browser suites for modified paths (safe fallbac
 	$(PYTHON) scripts/run_browser_suites.py --changed --jobs $(BROWSER_JOBS)
 
 browser-full: ## Run every browser suite with the full locale/theme/pointer matrix before a release
-	LIXITY_BROWSER_FULL=1 $(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS)
+	LIXITY_BROWSER_FULL=1 $(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS) $(BROWSER_ARGS)
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts
@@ -71,9 +71,12 @@ release-prepare: ## Prepare a new release: bump version, draft notes, sync docs 
 github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
 	$(PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
 
-release-verify: ## Verify published GitHub Release, attestations, PyPI byte identity and live Pages (RELEASE_TAG=vX.Y.Z)
+rc-gate: ## Trigger pre-tag release-candidate qualification on main (source, sharded browser, Windows/macOS)
+	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml --ref main
+
+release-verify: ## Verify published GitHub Release, attestations, PyPI byte identity, live Pages and Zenodo status (RELEASE_TAG=vX.Y.Z)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
-	$(PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)"
+	$(PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py

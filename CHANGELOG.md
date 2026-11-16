@@ -19,6 +19,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Accept GitHub's `untagged-<hex>` draft asset URLs during `verify-draft`
+  before release publication binds `download/<tag>/` URLs, while keeping
+  published asset URL checks strict.
 - Honor `PYTHON_BIN` before falling back to `.venv/bin/python` across all browser
   suites (`editor-features.cjs`, `editor-navigation.cjs`, `manuscript-editor.cjs`,
   `home-tour.cjs`), verified with `tests/browser/support/python-entrypoints.test.cjs`.
@@ -68,12 +71,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fresh build/smoke artifacts before promoting into `dist/`; mark prepared
   release notes as pending verification; recover immutable GitHub release
   assets and reconcile existing PyPI digests without rebuilding or
-  `--skip-existing`; add `doctor`, `verify-pages` and `verify-release`
-  subcommands plus `make github-check` and `make release-verify` (with modern
-  `gh` binary discovery and askpass/keyring sanitization); retain bounded
-  failure-only browser CI diagnostics and summaries (`--diagnostics`,
-  `--summary`); check all four site/doc generators and record `deployment.json`
-  provenance on Pages; and pin workflow actions to explicit commit SHAs.
+  `--skip-existing`; add `doctor`, `verify-pages`, `verify-release` and
+  `--check-zenodo` subcommands/options plus `make github-check`, `make rc-gate`
+  and `make release-verify` (with modern `gh` binary discovery and
+  askpass/keyring sanitization); add pre-tag release-candidate qualification
+  (`rc.yml`), 4-shard Chromium browser CI (`--shard INDEX/TOTAL` in
+  `run_browser_suites.py` and `browser.yml`), and isolated wheel build + smoke
+  on both Python `3.10` and `3.12` in `tests.yml`; retain bounded failure-only
+  browser CI diagnostics and summaries (`--diagnostics`, `--summary`); check
+  all four site/doc generators and record `deployment.json` provenance on
+  Pages; and pin workflow actions to explicit commit SHAs.
 - Clarify central product and onboarding copy across seven public languages:
   distinguish development availability, built-in offline analysis, optional
   integrations, retained source provenance and heuristic text evidence.

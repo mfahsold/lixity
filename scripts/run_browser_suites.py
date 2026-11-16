@@ -20,6 +20,7 @@ import fnmatch
 import json
 import math
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -661,13 +662,29 @@ _SLOW_SUITES_ORDER = (
 )
 
 
+def ordered_suites(names: list[str]) -> list[str]:
+    """Order slowest known suites first to avoid tail-latency bottlenecks."""
+    priority = {suite: idx for idx, suite in enumerate(_SLOW_SUITES_ORDER)}
+    return sorted(names, key=lambda n: (priority.get(n, len(_SLOW_SUITES_ORDER)), n))
+
+
+def select_shard(names: list[str], spec: str) -> list[str]:
+    """Deterministically partition suites across N shards (1-based INDEX/TOTAL)."""
+    match = re.fullmatch(r"([1-9]\d*)/([1-9]\d*)", spec.strip())
+    if match is None:
+        raise ValueError("--shard must be INDEX/TOTAL (for example 1/4)")
+    index, total = int(match.group(1)), int(match.group(2))
+    if index > total:
+        raise ValueError("--shard INDEX must be <= TOTAL")
+    return ordered_suites(names)[index - 1 :: total]
+
+
 def run_parallel(
     node: str, names: list[str], jobs: int, durations: int = 5,
     evidence: BrowserEvidence | None = None,
 ) -> int:
     """Run independent suites in parallel (longest-first) and report atomically per suite."""
-    priority = {suite: idx for idx, suite in enumerate(_SLOW_SUITES_ORDER)}
-    ordered = sorted(names, key=lambda n: (priority.get(n, len(_SLOW_SUITES_ORDER)), n))
+    ordered = ordered_suites(names)
     print(f"Running {len(ordered)} suites with {jobs} parallel workers.", flush=True)
     started = time.monotonic()
     failures: list[tuple[str, int]] = []
@@ -728,6 +745,10 @@ def main() -> int:
     )
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
     parser.add_argument(
+        "--shard", metavar="INDEX/TOTAL",
+        help="Run deterministic round-robin shard INDEX of TOTAL (1-based, e.g. 1/4)",
+    )
+    parser.add_argument(
         "--durations", type=int, default=5, metavar="N",
         help="Report the N slowest completed suites (default: 5; 0 disables)",
     )
@@ -784,6 +805,11 @@ def main() -> int:
         if start not in names:
             parser.error(f"Unknown suite: {start}")
         names = names[names.index(start) :]
+    if arguments.shard:
+        try:
+            names = select_shard(names, arguments.shard)
+        except ValueError as exc:
+            parser.error(str(exc))
 
     if arguments.list:
         print("\n".join(names))

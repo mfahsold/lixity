@@ -37,3 +37,7 @@ jobs:
         run: python -m pytest -W error -q -p no:asyncio
         env:
           PYTHONPATH: src
+      - name: Build and smoke-install wheel on this Python version
+        run: |
+          python -m pip install build
+          python scripts/check_release.py --build --smoke --dist "${{ runner.temp }}/dist-${{ matrix.python-version }}"

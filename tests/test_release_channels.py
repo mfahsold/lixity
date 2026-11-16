@@ -287,10 +287,19 @@ def test_inspect_and_draft_verification_find_drafts_hidden_from_by_tag_endpoint(
     client, opener = client_for(channels, dist)
     opener.values[API + f"/releases/tags/{TAG}"] = urllib.error.HTTPError(API, 404, "not published", {}, io.BytesIO())
     draft = {**metadata(dist), "draft": True, "immutable": False, "published_at": None}
+    draft["assets"] = [
+        {**asset, "browser_download_url": f"https://github.com/{REPO}/releases/download/untagged-952a0a99dd3f413504a9/{asset['name']}"}
+        for asset in draft["assets"]
+    ]
     opener.values[API + "/releases?per_page=100&page=1"] = [draft]
     monkeypatch.setattr(channels, "verify_attestations", lambda *args: None)
     assert channels.inspect(source, TAG, SHA, REPO, client)["state"] == "draft"
     assert channels.verify_github(source, TAG, SHA, REPO, dist, client, draft=True)["state"] == "draft"
+    # Published releases must still reject untagged draft URLs.
+    published_untagged = {**draft, "draft": False, "immutable": True, "published_at": "2026-11-16T12:00:00Z"}
+    opener.values[API + f"/releases/tags/{TAG}"] = published_untagged
+    with pytest.raises(ValueError, match="URL"):
+        channels.verify_github(source, TAG, SHA, REPO, dist, client, draft=False)
 
 
 def test_failed_draft_listing_cannot_turn_404_into_missing(channels, candidate, monkeypatch):
@@ -617,3 +626,28 @@ def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, 
     opener.values[corrupted_url] = b"corrupted pypi bytes"
     with pytest.raises(ValueError, match=r"differ|PyPI"):
         channels.verify_release(source, TAG, SHA, REPO, recovered, client, base_url=base)
+
+
+def test_zenodo_status_classifies_minted_pending_and_unknown(channels):
+    query = channels.urllib.parse.urlencode({
+        "q": f'metadata.related_identifiers.identifier:"https://github.com/{REPO}/tree/{TAG}"',
+        "size": 1,
+    })
+    url = f"https://zenodo.org/api/records?{query}"
+    minted = {"hits": {"hits": [{"doi": "10.5281/zenodo.12345", "links": {"self_html": "https://zenodo.org/records/12345"}}]}}
+    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: minted}))) == {
+        "zenodo_status": "minted",
+        "zenodo_doi": "10.5281/zenodo.12345",
+        "zenodo_url": "https://zenodo.org/records/12345",
+    }
+    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: {"hits": {"hits": []}}}))) == {
+        "zenodo_status": "pending",
+        "zenodo_doi": None,
+        "zenodo_url": None,
+    }
+    error = urllib.error.HTTPError(url, 503, "down", {}, io.BytesIO())
+    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: error}))) == {
+        "zenodo_status": "unknown",
+        "zenodo_doi": None,
+        "zenodo_url": None,
+    }

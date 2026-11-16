@@ -73,12 +73,14 @@ and investigate reported bugs before changing behavior.
   running service; an authorized source rollout needs an explicit `make restart`.
   Matching version strings do not establish that a running process loaded a fix.
 - CI runs `tests` automatically for pull requests targeting `main`; `tests`,
-  `browser` and `research-platforms` also support manual dispatch. Tagged
-  releases reuse the source, browser and full native platform gates; `release` runs on `v*` tags. Local checks
-  (`make check`, `make fast-check`, `make docs-check`, `make browser-changed`,
-  `make github-check`) are the everyday gate; `make release-verify RELEASE_TAG=vX.Y.Z`
-  verifies published GitHub, PyPI and Pages artifacts end to end. Change workflow
-  YAML only with `make workflow-check` (needs `actionlint`).
+  `browser`, `research-platforms` and `release-candidate` (`rc.yml`,
+  `make rc-gate`) support manual dispatch. Tagged releases reuse the source,
+  sharded browser and full native platform gates; `release` runs on `v*` tags.
+  Local checks (`make check`, `make fast-check`, `make docs-check`,
+  `make browser-changed`, `make github-check`) are the everyday gate;
+  `make release-verify RELEASE_TAG=vX.Y.Z` verifies published GitHub, PyPI,
+  Pages and Zenodo status end to end. Change workflow YAML only with
+  `make workflow-check` (needs `actionlint`).
 
 ## Data boundaries
 

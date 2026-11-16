@@ -55,7 +55,9 @@ _ATTESTATION_FLAGS = (
     "--cert-identity",
     "--deny-self-hosted-runners",
 )
-_BASE_HOSTS = frozenset({"api.github.com", "github.com", "pypi.org", "files.pythonhosted.org"})
+_BASE_HOSTS = frozenset({
+    "api.github.com", "github.com", "pypi.org", "files.pythonhosted.org", "zenodo.org",
+})
 
 
 def resolve_gh_binary():
@@ -250,7 +252,7 @@ def published(release):
         raise ValueError("GitHub release must be immutable")
 
 
-def assets(release, repo, tag):
+def assets(release, repo, tag, *, draft=False):
     names = {f"lixity-{tag[1:]}-py3-none-any.whl", f"lixity-{tag[1:]}.tar.gz", "SHA256SUMS"}
     actual = release.get("assets")
     if not isinstance(actual, list) or len(actual) != 3:
@@ -268,7 +270,12 @@ def assets(release, repo, tag):
         size = asset.get("size")
         if not isinstance(size, int) or isinstance(size, bool) or not 0 < size <= ASSET_LIMIT:
             raise ValueError("GitHub release asset has an invalid or excessive size")
-        if asset.get("browser_download_url") != f"https://github.com/{repo}/releases/download/{tag}/{name}":
+        url = asset.get("browser_download_url")
+        expected_url = f"https://github.com/{repo}/releases/download/{tag}/{name}"
+        draft_pattern = re.compile(
+            rf"https://github\.com/{re.escape(repo)}/releases/download/untagged-[0-9a-f]+/{re.escape(name)}",
+        )
+        if url != expected_url and not (draft and isinstance(url, str) and draft_pattern.fullmatch(url)):
             raise ValueError("GitHub release asset URL differs from the selected release")
         result[name] = asset
     if set(result) != names:
@@ -299,8 +306,8 @@ def verify_attestations(paths, repo, tag, expected_commit):
             raise ValueError(f"attestation verification failed for {path.name}; a current gh CLI is required")
 
 
-def verify_files(root, dist, tag, repo, expected_commit, release):
-    expected = assets(release, repo, tag)
+def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False):
+    expected = assets(release, repo, tag, draft=draft)
     check_release.verify_checksums(dist, tag[1:])
     for name, asset in expected.items():
         path = dist / name
@@ -319,7 +326,7 @@ def verify_github(root, tag, expected_commit, repo, dist, client, *, draft=False
             raise ValueError("GitHub release must be an unpublished draft")
     else:
         published(release)
-    verify_files(root, dist, tag, repo, expected_commit, release)
+    verify_files(root, dist, tag, repo, expected_commit, release, draft=draft)
     return {"state": "draft" if draft else "published", "source_sha": expected_commit, "tag": tag}
 
 
@@ -557,7 +564,32 @@ def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_U
     }
 
 
-def verify_release(root, tag, expected_commit, repo, dist, client, *, base_url=DEFAULT_PAGES_URL):
+def zenodo_status(repo, tag, client):
+    """Query Zenodo asynchronously without blocking release publication on archival lag."""
+    query = urllib.parse.urlencode({
+        "q": f'metadata.related_identifiers.identifier:"https://github.com/{repo}/tree/{tag}"',
+        "size": 1,
+    })
+    try:
+        payload = client.json(f"https://zenodo.org/api/records?{query}")
+    except ValueError:
+        return {"zenodo_status": "unknown", "zenodo_doi": None, "zenodo_url": None}
+    hits = payload.get("hits", {}).get("hits") if isinstance(payload.get("hits"), dict) else None
+    if not isinstance(hits, list):
+        return {"zenodo_status": "unknown", "zenodo_doi": None, "zenodo_url": None}
+    if not hits:
+        return {"zenodo_status": "pending", "zenodo_doi": None, "zenodo_url": None}
+    record = hits[0] if isinstance(hits[0], dict) else {}
+    doi = record.get("doi") if isinstance(record.get("doi"), str) else None
+    links = record.get("links") if isinstance(record.get("links"), dict) else {}
+    self_html = links.get("self_html") if isinstance(links.get("self_html"), str) else None
+    return {"zenodo_status": "minted" if doi else "pending", "zenodo_doi": doi, "zenodo_url": self_html}
+
+
+def verify_release(
+    root, tag, expected_commit, repo, dist, client, *,
+    base_url=DEFAULT_PAGES_URL, check_zenodo=False,
+):
     """Run end-to-end verification across GitHub Releases, PyPI distributions and Pages."""
     if not dist.exists() or not any(dist.iterdir()):
         recover(root, tag, expected_commit, repo, dist, client)
@@ -583,7 +615,7 @@ def verify_release(root, tag, expected_commit, repo, dist, client, *, base_url=D
     if verified_pypi != expected_dists:
         raise ValueError("PyPI distribution set is incomplete")
     pages = verify_pages(root, tag, expected_commit, client, base_url=base_url)
-    return {
+    result = {
         "state": "verified",
         "tag": tag,
         "source_sha": expected_commit,
@@ -591,6 +623,9 @@ def verify_release(root, tag, expected_commit, repo, dist, client, *, base_url=D
         "github_pypi_bytes_identical": True,
         "pages_verified_paths": pages["verified_paths"],
     }
+    if check_zenodo:
+        result.update(zenodo_status(repo, tag, client))
+    return result
 
 
 def main():
@@ -609,6 +644,8 @@ def main():
     parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
     parser.add_argument("--use-keyring", action="store_true",
                         help="Unset GH_TOKEN/GITHUB_TOKEN for gh subprocesses so OS keyring is used")
+    parser.add_argument("--check-zenodo", action="store_true",
+                        help="Query Zenodo public records non-fatally for a minted release DOI")
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
     if args.command != "doctor":
@@ -632,7 +669,7 @@ def main():
         elif args.command == "verify-release":
             result = verify_release(
                 args.root, args.tag, args.expected_commit, args.repo, args.dist, client,
-                base_url=args.base_url,
+                base_url=args.base_url, check_zenodo=args.check_zenodo,
             )
         else:
             common = (args.root, args.tag, args.expected_commit, args.repo)

@@ -462,3 +462,34 @@ def test_ci_summary_reports_unknown_results_when_manifest_is_missing_or_invalid(
     assert "unavailable" in result.stdout and "job logs" in result.stdout
     assert "0 failed" not in result.stdout
     assert "Suite body:" not in result.stdout
+
+
+def test_shard_selection_partitions_all_suites_disjointly_and_balances_slow_suites(browser_runner):
+    codes = {
+        "settings.cjs": 0,
+        "visual-consistency.cjs": 0,
+        "scroll-regions.cjs": 0,
+        "research.cjs": 0,
+        "alpha.cjs": 0,
+        "beta.cjs": 0,
+    }
+    seen = []
+    for shard in ("1/3", "2/3", "3/3"):
+        result = browser_runner(codes, extra_args=("--list", "--shard", shard))
+        assert result.returncode == 0, result.stderr
+        items = result.stdout.strip().splitlines()
+        assert len(items) == 2
+        seen.extend(items)
+    assert sorted(seen) == sorted(codes)
+    # Slowest suites should be distributed one per shard across the first round.
+    first_shard = browser_runner(codes, extra_args=("--list", "--shard", "1/3")).stdout.strip().splitlines()
+    assert first_shard[0] == "settings.cjs"
+    assert first_shard[1] == "research.cjs"
+
+
+@pytest.mark.parametrize("bad_shard", ["0/4", "5/4", "abc", "1/0"])
+def test_invalid_shard_spec_fails_before_starting_suites(browser_runner, bad_shard):
+    result = browser_runner({"a.cjs": 0}, extra_args=("--shard", bad_shard))
+    assert result.returncode == 2
+    assert "--shard" in result.stderr
+    assert "Suite body:" not in result.stdout
