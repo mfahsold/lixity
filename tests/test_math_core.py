@@ -26,12 +26,17 @@ from lixity.analyzer import CorpusAnalyzer  # noqa: E402
 from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.math_core import (  # noqa: E402
     MAD_TO_SIGMA,
+    adjusted_boxplot_fences,
     binomial_se_percent,
+    huber_location,
+    mad_finite_sample_factor,
+    medcouple,
     per_mille,
     percent,
     poisson_se_per_mille,
     ratio_or_zero,
     robust_scale,
+    split_mad,
 )
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
@@ -491,6 +496,94 @@ class TestJacobiEigendecomposition(unittest.TestCase):
                     for j, right in enumerate(eigenvectors):
                         self.assertAlmostEqual(sum(a * b for a, b in zip(left, right, strict=True)),
                                                1.0 if i == j else 0.0, places=9)
+
+
+class TestContinuityAndRobustExtensions(unittest.TestCase):
+    def test_continuity_adjusted_standard_errors_prevent_zero_collapse(self):
+        expected_binom = math.sqrt((0.5 / 101.0) * (100.5 / 101.0) / 100.0) * 100.0
+        self.assertAlmostEqual(binomial_se_percent(0.0, 100), expected_binom, places=12)
+        self.assertAlmostEqual(binomial_se_percent(100.0, 100), expected_binom, places=12)
+        self.assertGreater(binomial_se_percent(0.0, 100), 0.0)
+        self.assertEqual(binomial_se_percent(0.0, 0), 0.0)
+
+        self.assertAlmostEqual(poisson_se_per_mille(0, 1000), math.sqrt(0.5), places=12)
+        self.assertGreater(poisson_se_per_mille(0, 1000), 0.0)
+        self.assertEqual(poisson_se_per_mille(0, 0), 0.0)
+
+    def test_mad_finite_sample_factor(self):
+        self.assertEqual(mad_finite_sample_factor(1), 1.0)
+        self.assertEqual(mad_finite_sample_factor(2), 1.196)
+        self.assertEqual(mad_finite_sample_factor(3), 1.495)
+        self.assertAlmostEqual(mad_finite_sample_factor(10), 10.0 / 9.2, places=12)
+        self.assertLess(mad_finite_sample_factor(100), mad_finite_sample_factor(10))
+        self.assertGreater(mad_finite_sample_factor(100), 1.0)
+
+    def test_split_mad_symmetric_and_skewed(self):
+        self.assertEqual(split_mad([]), (0.0, 0.0))
+        self.assertEqual(split_mad([3.0]), (0.0, 0.0))
+
+        sym = [1.0, 2.0, 3.0, 4.0, 5.0]
+        lower, upper = split_mad(sym)
+        self.assertAlmostEqual(lower, robust_scale(sym), places=12)
+        self.assertAlmostEqual(upper, robust_scale(sym), places=12)
+
+        right_skewed = [1.0, 2.0, 3.0, 10.0, 20.0]
+        low_r, high_r = split_mad(right_skewed)
+        self.assertGreater(high_r, low_r)
+
+    def test_medcouple_and_adjusted_boxplot_fences(self):
+        self.assertEqual(medcouple([1.0, 2.0]), 0.0)
+        self.assertEqual(medcouple([1.0, 2.0, 3.0, 4.0, 5.0]), 0.0)
+        self.assertEqual(medcouple([0.0, 1.0, 1.0, 1.0, 2.0]), 0.0)
+
+        right = [1.0, 2.0, 3.0, 10.0, 20.0]
+        mc_right = medcouple(right)
+        self.assertAlmostEqual(mc_right, 0.75, places=12)
+        self.assertLessEqual(mc_right, 1.0)
+        self.assertAlmostEqual(medcouple([-x for x in right]), -mc_right, places=12)
+
+        import statistics
+        with self.assertRaises(statistics.StatisticsError):
+            adjusted_boxplot_fences([])
+        self.assertEqual(adjusted_boxplot_fences([5.0]), (5.0, 5.0))
+
+        # Symmetric sample reduces to standard Tukey fences [Q1 - 1.5*IQR, Q3 + 1.5*IQR].
+        sym = [1.0, 2.0, 3.0, 4.0, 5.0]
+        lo_sym, hi_sym = adjusted_boxplot_fences(sym)
+        self.assertAlmostEqual(lo_sym, 2.0 - 1.5 * 2.0, places=12)
+        self.assertAlmostEqual(hi_sym, 4.0 + 1.5 * 2.0, places=12)
+
+        # Right-skewed sample expands upper fence and tightens lower fence vs Tukey.
+        lo_r, hi_r = adjusted_boxplot_fences(right)
+        self.assertGreater(lo_r, 2.0 - 1.5 * 8.0)
+        self.assertGreater(hi_r, 10.0 + 1.5 * 8.0)
+
+    def test_huber_location_is_outlier_resistant(self):
+        import statistics
+        with self.assertRaises(statistics.StatisticsError):
+            huber_location([])
+        self.assertEqual(huber_location([7.0]), 7.0)
+        self.assertAlmostEqual(huber_location([1.0, 2.0, 3.0, 4.0, 5.0]), 3.0, places=9)
+        self.assertEqual(huber_location([2.0, 2.0, 2.0, 100.0]), 2.0)
+
+        contaminated = [10.0, 11.0, 12.0, 13.0, 14.0, 1000.0]
+        loc = huber_location(contaminated)
+        self.assertLess(loc, 15.0)
+        self.assertGreater(loc, 11.0)
+
+    def test_analyzer_asl_se_uses_sample_sd_and_guards_single_sentence(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        single = analyzer.analyze_text("## Ch1\n\nOne short sentence.\n")
+        self.assertEqual(single.chapters[0].sentences, 1)
+        self.assertEqual(single.chapters[0].style_se["asl"], 0.0)
+
+        multi = analyzer.analyze_text("## Ch1\n\nOne. Two words. Three words here. Four words are here.\n")
+        ch = multi.chapters[0]
+        self.assertEqual(ch.sentences, 4)
+        lengths = [1, 2, 3, 4]
+        mean_l = sum(lengths) / 4
+        sample_sd = math.sqrt(sum((x - mean_l) ** 2 for x in lengths) / 3)
+        self.assertAlmostEqual(ch.style_se["asl"], sample_sd / math.sqrt(4), places=12)
 
 
 if __name__ == "__main__":

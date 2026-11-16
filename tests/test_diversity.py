@@ -16,14 +16,16 @@ from lixity.models import CorpusConfig
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _directional_mtld_reference(tokens: list[str], threshold: Fraction) -> Fraction | None:
+def _directional_mtld_reference(
+    tokens: list[str], threshold: Fraction, min_factor_len: int = 5
+) -> Fraction | None:
     """Find complete prefixes directly, without the incremental type inventory."""
     n = len(tokens)
     start = 0
     factors = Fraction(0)
     while start < n:
         end = next(
-            (stop for stop in range(start + 1, n + 1)
+            (stop for stop in range(start + min_factor_len, n + 1)
              if Fraction(len(set(tokens[start:stop])), stop - start) <= threshold),
             None,
         )
@@ -139,8 +141,9 @@ class YuleTests(unittest.TestCase):
         )
         for i, tokens in enumerate(fixtures):
             with self.subTest(fixture=i):
+                n = len(tokens)
                 equal_pairs = sum(left == right for left, right in combinations(tokens, 2))
-                expected = 20000 * equal_pairs / len(tokens)**2 if tokens else 0.0
+                expected = 20000 * equal_pairs / (n * (n - 1)) if n > 1 else 0.0
                 self.assertAlmostEqual(yules_k(tokens), expected, places=12)
 
 
@@ -153,9 +156,11 @@ class MTLDTests(unittest.TestCase):
 
     def test_asymmetric_directions_are_averaged_as_lengths(self) -> None:
         tokens = ["a"] * 50 + [f"unique{i}" for i in range(50)]
-        # Forward: 25 two-token factors, then a zero-weight unique remainder.
-        # Reverse: one 71-token factor, then 14 two-token factors and one token.
-        expected = (100 / 25 + 100 / 15) / 2
+        # Forward: 10 five-token factors (min_factor_len=5), then zero-weight unique remainder.
+        # Reverse: one 71-token factor, five 5-token factors, and a 4-token trailing remainder.
+        fwd_factors = Fraction(10)
+        bwd_factors = Fraction(1 + 5) + Fraction(3, 4) / Fraction(7, 25)
+        expected = float((Fraction(100) / fwd_factors + Fraction(100) / bwd_factors) / 2)
         self.assertAlmostEqual(mtld(tokens), expected, places=12)
         self.assertAlmostEqual(mtld(tokens[::-1]), expected, places=12)
 
@@ -183,7 +188,8 @@ class MTLDTests(unittest.TestCase):
         for n in (0, 1, 42, 99):
             with self.subTest(tokens=n):
                 self.assertIsNone(mtld(["a"] * n))
-        self.assertEqual(mtld(["a"] * 100), 2.0)
+        # With min_factor_len=5, 100 identical tokens form 20 five-token factors -> 100/20 = 5.0.
+        self.assertEqual(mtld(["a"] * 100), 5.0)
         for n in (100, 200):
             with self.subTest(unique_tokens=n):
                 self.assertIsNone(mtld([f"unique{i}" for i in range(n)]))
@@ -286,7 +292,7 @@ class BookScalePlausibilityTests(unittest.TestCase):
                 )
                 self.assertAlmostEqual(hd_d(chapter_tokens), ref_hdd, places=13)
                 spec = Counter(freqs.values())
-                ref_yule = 10_000.0 * (sum(m * m * vm for m, vm in spec.items()) - n) / (n * n)
+                ref_yule = 10_000.0 * (sum(m * m * vm for m, vm in spec.items()) - n) / (n * (n - 1))
                 self.assertAlmostEqual(yules_k(chapter_tokens), ref_yule, places=12)
 
 
