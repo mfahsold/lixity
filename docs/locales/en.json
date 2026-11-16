@@ -73,11 +73,11 @@
   "compare_lix_method": "Reveals pacing, sentence rhythm, dialogue balance, and word echoes chapter by chapter — click any signal to jump straight to the passage",
   "compare_cld_method": "Rule & AI suggestions, readability scores, optional rewrites",
   "compare_pln_method": "Scene checklists & story arcs, little sentence- or word-level feedback",
-  "compare_row_research": "Research & history",
+  "compare_row_research": "Sources & draft history",
   "compare_lix_research": "Links PDFs, images, and audio notes straight to the matching passage, and tracks how your drafts evolve",
   "compare_cld_research": "No built-in research archive",
   "compare_pln_research": "Character & plot notes without linked original sources",
-  "compare_row_license": "Model & license",
+  "compare_row_license": "Model & price",
   "compare_lix_license": "Free & open source (AGPL-3.0), no subscription, ready locally in 7 languages",
   "compare_cld_license": "Recurring subscription, tiered features",
   "compare_pln_license": "Recurring subscription",
@@ -90,5 +90,11 @@
   "compare_dsk_research": "Research folders & corkboards, without direct source links tied to draft history",
   "compare_oss_research": "Project notes, tags & plot trees, without a source archive or draft-level metrics",
   "compare_dsk_license": "Paid license (~€349 Papyrus Autor; per OS for Scrivener), paid major upgrades",
-  "compare_oss_license": "Open source (GPL-3.0), free core app (bibisco offers paid extras)"
+  "compare_oss_license": "Open source (GPL-3.0), free core app (bibisco offers paid extras)",
+  "compare_row_dossiers": "Characters, scenes & dossiers",
+  "compare_lix_dossiers": "Extracts character & scene dossier drafts straight from the manuscript into linked dossiers, collections, timelines & maps",
+  "compare_dsk_dossiers": "Character database, mind map & corkboard; maintained manually",
+  "compare_oss_dossiers": "Character sheets, tags & corkboard; maintained manually",
+  "compare_cld_dossiers": "No character or scene dossiers",
+  "compare_pln_dossiers": "Strong at timelines, scene cards & character arcs; pure planning without prose analysis"
 }
