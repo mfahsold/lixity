@@ -20,13 +20,14 @@ from __future__ import annotations
 import math
 import warnings
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 # Local minimum length for HD-D, MTLD and Maas; not a universal validity boundary.
 MIN_TOKENS_LD = 100
 HD_D_DRAW_SIZE = 42
 DEFAULT_MTLD_THRESHOLD = 0.72
+DEFAULT_MTLD_MIN_FACTOR_LEN = 5
 DEFAULT_MATTR_WINDOW = 50
 DEFAULT_STRATIFIED_WINDOW = 25
 
@@ -102,19 +103,38 @@ def hd_d_stats(
             probability = -math.expm1(log_absence)
         presence.append(type_count * probability)
     return math.fsum(presence) / HD_D_DRAW_SIZE, 0.0
+def _mtld_pass(
+    seq: Sequence[str],
+    threshold: float,
+    min_factor_len: int = DEFAULT_MTLD_MIN_FACTOR_LEN,
+) -> float:
+    """Single directional MTLD pass with minimum-run guard ``min_factor_len``."""
+    factors = 0.0
+    types: set[str] = set()
+    seg_len = 0
+    for tok in seq:
+        types.add(tok)
+        seg_len += 1
+        ttr = len(types) / seg_len
+        if seg_len >= min_factor_len and ttr <= threshold:
+            factors += 1.0
+            types.clear()
+            seg_len = 0
+    if seg_len > 0:
+        ttr = len(types) / seg_len
+        factors += (1.0 - ttr) / (1.0 - threshold)
+    return factors
+
+
 def mtld(tokens: list[str], threshold: float = DEFAULT_MTLD_THRESHOLD) -> float | None:
     """
     Original-style MTLD: arithmetic mean of forward and reverse N/F scores.
 
-    Each local pass completes a factor at TTR <= ``threshold``, resets the
-    token/type inventory without a minimum run length, and counts a trailing
-    run as (1 - TTR) / (1 - threshold) factors. Returns None below the local
+    Each local pass completes a factor at TTR <= ``threshold`` once at least
+    ``DEFAULT_MTLD_MIN_FACTOR_LEN`` (5) tokens have been seen, resets the
+    token/type inventory, and counts a trailing run as
+    ``(1 - TTR) / (1 - threshold)`` factors. Returns None below the local
     ``MIN_TOKENS_LD`` (100) token floor or for zero factors (all-unique tokens).
-
-    The author-lab TAALED ``mtldo`` supports averaging directional N/F scores,
-    but its minimum-run, strict-threshold and trailing-factor rules differ.
-    The full McCarthy & Jarvis (2010) paper was not available for this
-    implementation review; complete equivalence to TAALED is not claimed.
 
     Raise ValueError unless threshold is a finite number strictly between 0
     and 1. Boolean values are not accepted as numeric parameters.
@@ -125,25 +145,8 @@ def mtld(tokens: list[str], threshold: float = DEFAULT_MTLD_THRESHOLD) -> float 
     if n < MIN_TOKENS_LD:
         return None
 
-    def _factors(seq: list[str]) -> float:
-        factors = 0.0
-        types: set[str] = set()
-        seg_len = 0
-        for tok in seq:
-            types.add(tok)
-            seg_len += 1
-            ttr = len(types) / seg_len
-            if ttr <= threshold:
-                factors += 1.0
-                types.clear()
-                seg_len = 0
-        if seg_len > 0:
-            ttr = len(types) / seg_len
-            factors += (1.0 - ttr) / (1.0 - threshold)
-        return factors
-
-    fwd = _factors(tokens)
-    bwd = _factors(tokens[::-1])
+    fwd = _mtld_pass(tokens, threshold)
+    bwd = _mtld_pass(tokens[::-1], threshold)
     if fwd <= 0.0 or bwd <= 0.0:
         return None
     return (n / fwd + n / bwd) / 2.0
@@ -202,16 +205,16 @@ def stratified_mattr(
 
 
 def yules_k(tokens: list[str]) -> float:
-    """Yule's characteristic K = 10^4 * (Σ m² V_m − N) / N² (Yule 1944).
+    """Finite-sample Yule's K = 10^4 * (Σ m² V_m − N) / (N (N − 1)) (Yule 1944).
 
-    0.0 for empty input or all-unique tokens (no repetition).
+    0.0 for fewer than 2 tokens or all-unique tokens (no repetition).
     """
     n = len(tokens)
-    if n == 0:
+    if n <= 1:
         return 0.0
     counts = Counter(tokens)
     m2 = sum(c * c for c in counts.values())
-    return 10000.0 * (m2 - n) / (n * n)
+    return 10000.0 * (m2 - n) / (n * (n - 1))
 def maas_a2(n_tokens: int, v_types: int) -> float | None:
     """Maas a² = (log10 N − log10 V) / (log10 N)² (Maas 1972).
 

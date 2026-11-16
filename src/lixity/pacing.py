@@ -69,13 +69,36 @@ def _percentile(sorted_vals: Sequence[int | float], q: float) -> float:
     return float(sorted_vals[lo]) * (1.0 - frac) + float(sorted_vals[hi]) * frac
 
 
+def burstiness(values: Sequence[int | float]) -> float | None:
+    """Finite-sample Goh-Barabási burstiness in ``[-1.0, 1.0]`` (Kim & Jo 2016).
+
+    Uses sample SD ``s`` and ``r = s / mean`` with upper bound ``sqrt(n)``:
+    ``B_n = (sqrt(n) * (r - 1)) / ((sqrt(n) - 2) * r + sqrt(n))``.
+    Returns ``None`` when fewer than 2 observations exist or the mean is <= 0.
+    """
+    n = len(values)
+    if n < 2:
+        return None
+    mean_val = sum(values) / n
+    if mean_val <= 0.0:
+        return None
+    sample_var = sum((v - mean_val) ** 2 for v in values) / (n - 1)
+    r = math.sqrt(sample_var) / mean_val
+    root_n = math.sqrt(n)
+    denom = (root_n - 2.0) * r + root_n
+    if denom == 0.0:
+        return 0.0
+    b = root_n * (r - 1.0) / denom
+    return max(-1.0, min(1.0, b))
+
+
 def compute_rhythm_profile(
     sentence_lengths: Sequence[int],
     *,
     short_sentence_max: int = SHORT_SENTENCE_MAX,
     medium_sentence_max: int = MEDIUM_SENTENCE_MAX,
 ) -> dict[str, Any]:
-    """Compute sentence-length dispersion (CV, IQR) and Shannon bucket entropy.
+    """Compute sentence-length dispersion (CV, IQR, burstiness) and Shannon bucket entropy.
 
     Non-prescriptive anti-flattening signal inspired by Li et al. (2026).
     Returns ``available: False`` with ``None`` metrics when fewer than 2 sentences
@@ -88,6 +111,7 @@ def compute_rhythm_profile(
             "sentences": n,
             "asl_cv": None,
             "asl_iqr": None,
+            "burstiness": None,
             "length_entropy": None,
             "normalized_entropy": None,
             "bucket_shares": None,
@@ -95,6 +119,7 @@ def compute_rhythm_profile(
     mean_len = sum(sentence_lengths) / n
     var = sum((sl - mean_len) ** 2 for sl in sentence_lengths) / n
     cv = (math.sqrt(var) / mean_len) if mean_len > 0.0 else 0.0
+    b = burstiness(sentence_lengths)
 
     ordered = sorted(sentence_lengths)
     iqr = _percentile(ordered, 0.75) - _percentile(ordered, 0.25)
@@ -113,6 +138,7 @@ def compute_rhythm_profile(
         "sentences": n,
         "asl_cv": round(cv, 4),
         "asl_iqr": round(iqr, 2),
+        "burstiness": round(b, 4) if b is not None else None,
         "length_entropy": round(entropy, 4),
         "normalized_entropy": round(entropy / max_entropy, 4),
         "bucket_shares": {

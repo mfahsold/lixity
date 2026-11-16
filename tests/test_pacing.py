@@ -14,7 +14,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity.models import CorpusConfig  # noqa: E402
-from lixity.pacing import pacing_report  # noqa: E402
+from lixity.pacing import burstiness, compute_rhythm_profile, pacing_report  # noqa: E402
 
 DE = CorpusConfig(language="de")
 
@@ -214,6 +214,26 @@ class TestReportSurface(unittest.TestCase):
         self.assertIn("pacing_sparkline", payload)
         self.assertIn("sentence_cv", payload)
         self.assertIn("pacing_curve", payload)
+
+
+class TestBurstiness(unittest.TestCase):
+    def test_finite_sample_burstiness_bounds_and_rhythm_profile(self):
+        self.assertIsNone(burstiness([]))
+        self.assertIsNone(burstiness([5]))
+        self.assertIsNone(burstiness([0, 0, 0]))
+
+        self.assertAlmostEqual(burstiness([5, 5, 5, 5]), -1.0, places=12)
+        self.assertAlmostEqual(burstiness([0, 0, 0, 10]), 1.0, places=12)
+        varied = burstiness([4, 12, 25, 8, 30])
+        self.assertIsNotNone(varied)
+        assert varied is not None
+        self.assertGreater(varied, -1.0)
+        self.assertLess(varied, 1.0)
+
+        empty_prof = compute_rhythm_profile([5])
+        self.assertIsNone(empty_prof["burstiness"])
+        flat_prof = compute_rhythm_profile([10, 10, 10, 10])
+        self.assertEqual(flat_prof["burstiness"], -1.0)
 
 
 if __name__ == "__main__":

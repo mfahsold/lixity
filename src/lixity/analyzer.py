@@ -488,7 +488,7 @@ class CorpusAnalyzer:
 
         # Measurement uncertainty per feature (documented plug-ins)
         c_se: dict[str, float] = {
-            "asl": (stats.std / math.sqrt(stats.total)) if stats.total else 0.0,
+            "asl": (stats.std / math.sqrt(stats.total - 1)) if stats.total > 1 else 0.0,
             "staccato_pct": share_se(stats.staccato_pct, stats.total),
             "kaskade_pct": share_se(stats.kaskade_pct, stats.total),
             "sentence_cv": (
