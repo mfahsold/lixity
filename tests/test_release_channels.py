@@ -259,19 +259,23 @@ def test_attestation_policy_pins_repository_workflow_source_tag_and_hosted_runne
     _, dist = candidate
     commands = []
     def run(argv, **kwargs):
-        commands.append(argv)
+        commands.append((argv, kwargs.get("env")))
         return subprocess.CompletedProcess(argv, 0)
     monkeypatch.setattr(channels.subprocess, "run", run)
+    monkeypatch.setenv("GIT_ASKPASS", "/broken/askpass")
     channels.verify_attestations(sorted(dist.iterdir()), REPO, TAG, SHA)
     assert len(commands) == 3
-    for command in commands:
-        assert command[:3] == ["gh", "attestation", "verify"]
+    for command, env in commands:
+        assert Path(command[0]).name == "gh"
+        assert command[1:3] == ["attestation", "verify"]
         assert command[command.index("--repo") + 1] == REPO
         assert command[command.index("--source-digest") + 1] == SHA
         assert command[command.index("--source-ref") + 1] == "refs/tags/v0.3.0"
         assert command[command.index("--cert-identity") + 1] == (
             "https://github.com/example/lixity/.github/workflows/release.yml@refs/tags/v0.3.0")
         assert "--deny-self-hosted-runners" in command
+        assert env is not None and "GIT_ASKPASS" not in env
+        assert env["GIT_TERMINAL_PROMPT"] == "0"
     monkeypatch.setattr(channels.subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a[0], 1))
     with pytest.raises(ValueError, match="attestation"):
         channels.verify_attestations(sorted(dist.iterdir()), REPO, TAG, SHA)
@@ -429,3 +433,187 @@ def test_malformed_release_listing_cannot_establish_absence(channels, candidate,
     opener.values[API + "/releases?per_page=100&page=1"] = [entry]
     with pytest.raises(ValueError, match="listing"):
         channels.inspect(source, TAG, SHA, REPO, client)
+
+
+def test_resolve_gh_binary_and_github_subprocess_env(channels, monkeypatch, tmp_path):
+    fake_home = tmp_path / "home"
+    local_gh = fake_home / ".local/bin/gh"
+    local_gh.parent.mkdir(parents=True)
+    local_gh.write_text("#!/bin/sh\n")
+    local_gh.chmod(0o755)
+    monkeypatch.setattr(channels.Path, "home", classmethod(lambda cls: fake_home))
+    monkeypatch.delenv("GH_BIN", raising=False)
+    assert channels.resolve_gh_binary() == str(local_gh)
+
+    custom_gh = str(tmp_path / "custom-gh")
+    monkeypatch.setenv("GH_BIN", custom_gh)
+    assert channels.resolve_gh_binary() == custom_gh
+
+    monkeypatch.delenv("GH_BIN", raising=False)
+    local_gh.unlink()
+    monkeypatch.setattr(channels.shutil, "which", lambda name: "/usr/bin/gh" if name == "gh" else None)
+    assert channels.resolve_gh_binary() == "/usr/bin/gh"
+
+    base = {
+        "PATH": "/usr/bin",
+        "GH_TOKEN": "narrow-token",
+        "GITHUB_TOKEN": "other-token",
+        "GIT_ASKPASS": "/askpass",
+        "SSH_ASKPASS": "/ssh-askpass",
+        "VSCODE_GIT_ASKPASS_NODE": "/node",
+        "VSCODE_GIT_ASKPASS_MAIN": "/main.js",
+        "VSCODE_GIT_ASKPASS_EXTRA_ARGS": "--arg",
+        "VSCODE_GIT_IPC_HANDLE": str(tmp_path / "ipc.sock"),
+    }
+    sanitized = channels.github_subprocess_env(base)
+    assert sanitized == {"PATH": "/usr/bin", "GH_TOKEN": "narrow-token", "GITHUB_TOKEN": "other-token",
+                         "GIT_TERMINAL_PROMPT": "0"}
+    keyring_env = channels.github_subprocess_env(base, unset_env_tokens=True)
+    assert keyring_env == {"PATH": "/usr/bin", "GIT_TERMINAL_PROMPT": "0"}
+
+
+def _doctor_subprocess(channels, monkeypatch, *, flags="--source-digest --signer-digest --cert-identity --deny-self-hosted-runners",
+                       auth_code=0, auth_out="Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n"):
+    def fake_run(argv, **kwargs):
+        name = Path(argv[0]).name
+        if name == "gh":
+            if argv[1:] == ["--version"]:
+                return subprocess.CompletedProcess(argv, 0, "gh version 2.104.0\n", "")
+            if argv[1:] == ["attestation", "verify", "--help"]:
+                return subprocess.CompletedProcess(argv, 0, flags, "")
+            if argv[1:] == ["auth", "status"]:
+                return subprocess.CompletedProcess(argv, auth_code, auth_out, "")
+        if name == "git":
+            if argv[1:] == ["rev-parse", "HEAD"]:
+                return subprocess.CompletedProcess(argv, 0, SHA + "\n", "")
+            if argv[1:] == ["rev-parse", "--abbrev-ref", "HEAD"]:
+                return subprocess.CompletedProcess(argv, 0, "main\n", "")
+            if argv[1:] == ["status", "--porcelain"]:
+                return subprocess.CompletedProcess(argv, 0, "", "")
+            if argv[1:] == ["worktree", "list", "--porcelain"]:
+                return subprocess.CompletedProcess(
+                    argv, 0,
+                    f"worktree /repo\nHEAD {SHA}\nbranch refs/heads/main\n\n"
+                    f"worktree /tmp/stale\nHEAD {SHA}\nbranch refs/heads/old\nprunable gitdir\n",
+                    "",
+                )
+        raise AssertionError(f"Unexpected subprocess: {argv}")
+
+    monkeypatch.setattr(channels.subprocess, "run", fake_run)
+
+
+def test_doctor_reports_git_gh_and_channel_readiness(channels, candidate, monkeypatch):
+    source, dist = candidate
+    notes = source / "docs/releases" / f"{TAG}.md"
+    notes.parent.mkdir(parents=True)
+    notes.write_text("# Lixity v0.3.0\n\nVerified notes.\n", encoding="utf-8")
+    _doctor_subprocess(channels, monkeypatch)
+    client, opener = client_for(channels, dist)
+    opener.values[API + f"/releases/tags/{TAG}"] = urllib.error.HTTPError(API, 404, "missing", {}, io.BytesIO())
+    opener.values[f"https://pypi.org/pypi/lixity/{TAG[1:]}/json"] = urllib.error.HTTPError(
+        "https://pypi.org", 404, "missing", {}, io.BytesIO(),
+    )
+    report = channels.doctor(source, REPO, client, tag=TAG)
+    assert report["ok"] is True
+    assert report["gh_version"] == "gh version 2.104.0"
+    assert report["attestation_flags_supported"] is True
+    assert report["auth_ok"] is True
+    assert report["workflow_scope"] is True
+    assert report["git"]["clean"] is True
+    assert report["git"]["prunable_worktrees"] == 1
+    assert report["github_state"] == "missing"
+    assert report["pypi_missing"] == ["lixity-0.3.0-py3-none-any.whl", "lixity-0.3.0.tar.gz"]
+
+
+def test_doctor_rejects_old_gh_and_pending_release_notes(channels, candidate, monkeypatch):
+    source, dist = candidate
+    notes = source / "docs/releases" / f"{TAG}.md"
+    notes.parent.mkdir(parents=True)
+    notes.write_text("# Lixity v0.3.0\n\n## Verification (pending)\n", encoding="utf-8")
+    _doctor_subprocess(channels, monkeypatch)
+    client, _ = client_for(channels, dist)
+    with pytest.raises(ValueError, match="pending"):
+        channels.doctor(source, REPO, client, tag=TAG)
+
+    notes.write_text("# Lixity v0.3.0\n\nVerified.\n", encoding="utf-8")
+    _doctor_subprocess(channels, monkeypatch, flags="--repo --owner")
+    with pytest.raises(ValueError, match="attestation"):
+        channels.doctor(source, REPO, client, tag=TAG)
+
+
+def _setup_pages_stub(channels, monkeypatch, source):
+    pages = {rel: f"<html><body>{rel}</body></html>".encode() for rel in channels.PAGES_VERIFY_FILES}
+
+    class FakeStagePages:
+        @staticmethod
+        def stage(docs_dir, output):
+            assert docs_dir == source / "docs"
+            for rel, body in pages.items():
+                target = output / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(body)
+            return len(pages)
+
+    monkeypatch.setattr(channels, "_stage_pages_module", lambda: FakeStagePages)
+    return pages
+
+
+def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candidate, monkeypatch):
+    source, _dist = candidate
+    pages = _setup_pages_stub(channels, monkeypatch, source)
+    base = "https://mfahsold.github.io/lixity/"
+    values = {
+        base + "deployment.json": {"schema_version": 1, "source_sha": SHA, "workflow_run_url": "https://example"},
+        base: pages["index.html"],
+        **{base + rel: body for rel, body in pages.items()},
+    }
+    client = channels.HttpClient(opener=Responses(values))
+    result = channels.verify_pages(source, TAG, SHA, client, base_url=base)
+    assert result["state"] == "verified"
+    assert result["source_sha"] == SHA
+    assert result["verified_paths"] == len(channels.PAGES_VERIFY_FILES) + 2
+
+    values[base + "deployment.json"] = {"schema_version": 1, "source_sha": "b" * 40}
+    with pytest.raises(ValueError, match="source_sha"):
+        channels.verify_pages(source, TAG, SHA, client, base_url=base)
+
+    values[base + "deployment.json"] = {"schema_version": 1, "source_sha": SHA}
+    values[base + "index-de.html"] = b"stale german bytes"
+    with pytest.raises(ValueError, match=r"index-de\.html"):
+        channels.verify_pages(source, TAG, SHA, client, base_url=base)
+
+
+def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, candidate, monkeypatch):
+    source, dist = candidate
+    fake_git(monkeypatch, channels)
+    monkeypatch.setattr(channels, "verify_attestations", lambda *args: None)
+    pages = _setup_pages_stub(channels, monkeypatch, source)
+    base = "https://mfahsold.github.io/lixity/"
+    pypi_urls = []
+    extra = {
+        base + "deployment.json": {"schema_version": 1, "source_sha": SHA},
+        base: pages["index.html"],
+        **{base + rel: body for rel, body in pages.items()},
+    }
+    for name in ("lixity-0.3.0-py3-none-any.whl", "lixity-0.3.0.tar.gz"):
+        body = (dist / name).read_bytes()
+        url = f"https://files.pythonhosted.org/packages/test/{name}"
+        pypi_urls.append({
+            "filename": name,
+            "url": url,
+            "yanked": False,
+            "digests": {"sha256": hashlib.sha256(body).hexdigest()},
+        })
+        extra[url] = body
+    client, opener = client_for(channels, dist, pypi={"info": {"version": "0.3.0"}, "urls": pypi_urls})
+    opener.values.update(extra)
+    recovered = dist.parent / "verified-dist"
+    result = channels.verify_release(source, TAG, SHA, REPO, recovered, client, base_url=base)
+    assert result["state"] == "verified"
+    assert result["channels"] == ["github", "pypi", "pages"]
+    assert result["github_pypi_bytes_identical"] is True
+
+    corrupted_url = pypi_urls[0]["url"]
+    opener.values[corrupted_url] = b"corrupted pypi bytes"
+    with pytest.raises(ValueError, match=r"differ|PyPI"):
+        channels.verify_release(source, TAG, SHA, REPO, recovered, client, base_url=base)

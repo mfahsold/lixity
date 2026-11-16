@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build release-check release-prepare screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -68,6 +68,13 @@ release-prepare: ## Prepare a new release: bump version, draft notes, sync docs 
 	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
 	$(PYTHON) scripts/prepare_release.py "$(VERSION)"
 
+github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
+	$(PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
+
+release-verify: ## Verify published GitHub Release, attestations, PyPI byte identity and live Pages (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
+	$(PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)"
+
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
 
@@ -99,7 +106,7 @@ docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/build_public_site.py
 
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
-	gh workflow run pages.yml --ref main
+	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \

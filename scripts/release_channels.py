@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -25,6 +26,59 @@ JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
 SHA = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"[0-9a-f]{64}")
+DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
+PAGES_VERIFY_FILES = (
+    "index.html",
+    "index-de.html",
+    "index-fr.html",
+    "index-es.html",
+    "index-it.html",
+    "index-pt.html",
+    "index-nl.html",
+    "llms.txt",
+    "sandbox/index.html",
+    "demo/manifest.json",
+    "demo/reader/manifest.json",
+    "demo/companion/manifest.json",
+)
+_ASKPASS_ENV_VARS = (
+    "GIT_ASKPASS",
+    "SSH_ASKPASS",
+    "VSCODE_GIT_ASKPASS_NODE",
+    "VSCODE_GIT_ASKPASS_MAIN",
+    "VSCODE_GIT_ASKPASS_EXTRA_ARGS",
+    "VSCODE_GIT_IPC_HANDLE",
+)
+_ATTESTATION_FLAGS = (
+    "--source-digest",
+    "--signer-digest",
+    "--cert-identity",
+    "--deny-self-hosted-runners",
+)
+_BASE_HOSTS = frozenset({"api.github.com", "github.com", "pypi.org", "files.pythonhosted.org"})
+
+
+def resolve_gh_binary():
+    """Prefer explicit GH_BIN, then ~/.local/bin/gh, then PATH."""
+    explicit = os.environ.get("GH_BIN", "").strip()
+    if explicit:
+        return explicit
+    local_gh = Path.home() / ".local" / "bin" / "gh"
+    if local_gh.is_file() and os.access(local_gh, os.X_OK):
+        return str(local_gh)
+    return shutil.which("gh") or "gh"
+
+
+def github_subprocess_env(base_env=None, *, unset_env_tokens=False):
+    """Strip broken editor askpass hooks; optionally fall back to the OS keyring."""
+    env = dict(os.environ if base_env is None else base_env)
+    for key in _ASKPASS_ENV_VARS:
+        env.pop(key, None)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    if unset_env_tokens:
+        env.pop("GH_TOKEN", None)
+        env.pop("GITHUB_TOKEN", None)
+    return env
 
 
 class SafeRedirect(urllib.request.HTTPRedirectHandler):
@@ -35,7 +89,8 @@ class SafeRedirect(urllib.request.HTTPRedirectHandler):
         if (req.has_header("Authorization") or target.scheme != "https"
                 or target.username is not None or target.password is not None
                 or target.hostname not in {"github.com", "release-assets.githubusercontent.com",
-                                           "objects.githubusercontent.com"}):
+                                           "objects.githubusercontent.com",
+                                           "files.pythonhosted.org"}):
             raise ValueError("unexpected HTTP redirect")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -43,27 +98,33 @@ class SafeRedirect(urllib.request.HTTPRedirectHandler):
 class HttpClient:
     """Bounded HTTPS access; only the GitHub API receives the GitHub token."""
 
-    def __init__(self, token=None, opener=None):
+    def __init__(self, token=None, opener=None, extra_hosts=()):
         self.token = token
         self.opener = opener or urllib.request.build_opener(SafeRedirect())
+        self.allowed_hosts = _BASE_HOSTS | {
+            urllib.parse.urlsplit(DEFAULT_PAGES_URL).hostname,
+            *{host for host in extra_hosts if host},
+        }
 
-    def request(self, url):
+    def request(self, url, *, accept="application/json", headers=None):
         parsed = urllib.parse.urlsplit(url)
         if (parsed.scheme != "https" or parsed.username is not None or parsed.password is not None
-                or parsed.hostname not in {"api.github.com", "github.com", "pypi.org"}):
+                or parsed.hostname not in self.allowed_hosts):
             raise ValueError("unexpected channel URL")
-        headers = {"User-Agent": "lixity-release-check", "Accept": "application/json"}
+        req_headers = {"User-Agent": "lixity-release-check", "Accept": accept}
+        if headers:
+            req_headers.update(headers)
         if parsed.hostname == "api.github.com":
-            headers["Accept"] = "application/vnd.github+json"
-            headers["X-GitHub-Api-Version"] = "2022-11-28"
+            req_headers["Accept"] = "application/vnd.github+json"
+            req_headers["X-GitHub-Api-Version"] = "2022-11-28"
             if self.token:
-                headers["Authorization"] = f"Bearer {self.token}"
-        return urllib.request.Request(url, headers=headers)  # noqa: S310 - HTTPS and hosts checked above
+                req_headers["Authorization"] = f"Bearer {self.token}"
+        return urllib.request.Request(url, headers=req_headers)  # noqa: S310 - HTTPS and hosts checked above
 
-    def json(self, url, *, missing=False, array=False):
+    def bytes(self, url, *, limit=ASSET_LIMIT, missing=False, accept="*/*", headers=None):
         try:
-            with self.opener.open(self.request(url), timeout=30) as response:
-                raw = response.read(JSON_LIMIT + 1)
+            with self.opener.open(self.request(url, accept=accept, headers=headers), timeout=30) as response:
+                raw = response.read(limit + 1)
         except urllib.error.HTTPError as exc:
             status = exc.code
             exc.close()
@@ -72,8 +133,14 @@ class HttpClient:
             raise ValueError(f"channel query failed: HTTP {status}") from None
         except (urllib.error.URLError, OSError, TimeoutError):
             raise ValueError("channel query failed: transport state is unknown") from None
-        if len(raw) > JSON_LIMIT:
-            raise ValueError("channel response exceeds the JSON limit")
+        if len(raw) > limit:
+            raise ValueError("channel response exceeds the allowed byte limit")
+        return raw
+
+    def json(self, url, *, missing=False, array=False):
+        raw = self.bytes(url, limit=JSON_LIMIT, missing=missing, accept="application/json")
+        if raw is None:
+            return None
         try:
             value = json.loads(raw)
         except (ValueError, UnicodeError):
@@ -211,9 +278,11 @@ def assets(release, repo, tag):
 
 def verify_attestations(paths, repo, tag, expected_commit):
     """Require GitHub's signed workflow identity, tag/SHA and hosted runner."""
+    gh_bin = resolve_gh_binary()
+    sub_env = github_subprocess_env()
     for path in paths:
         command = [
-            "gh", "attestation", "verify", str(path), "--repo", repo,
+            gh_bin, "attestation", "verify", str(path), "--repo", repo,
             "--source-digest", expected_commit, "--source-ref", f"refs/tags/{tag}",
             "--signer-digest", expected_commit,
             "--cert-identity", f"https://github.com/{repo}/.github/workflows/release.yml@refs/tags/{tag}",
@@ -221,7 +290,8 @@ def verify_attestations(paths, repo, tag, expected_commit):
         ]
         try:
             result = subprocess.run(  # noqa: S603 - fixed gh command, argv only
-                command, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
+                command, check=False, env=sub_env, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=120,
             )
         except (OSError, subprocess.TimeoutExpired):
             raise ValueError(f"attestation verification unavailable for {path.name}") from None
@@ -326,31 +396,258 @@ def verify_pypi(root, tag, expected_commit, repo, dist, client):
     raise ValueError("PyPI publication is incomplete: " + ", ".join(missing))
 
 
+def _parse_worktrees(porcelain):
+    entries = []
+    current = {}
+    for line in porcelain.splitlines():
+        if not line.strip():
+            if current:
+                entries.append(current)
+                current = {}
+            continue
+        if line.startswith("worktree "):
+            current["path"] = line.split(" ", 1)[1]
+        elif line.startswith("HEAD "):
+            current["head"] = line.split(" ", 1)[1]
+        elif line.startswith("branch "):
+            current["branch"] = line.split(" ", 1)[1].removeprefix("refs/heads/")
+        elif line == "prunable" or line.startswith("prunable "):
+            current["prunable"] = True
+    if current:
+        entries.append(current)
+    for item in entries:
+        item.setdefault("prunable", False)
+    return entries
+
+
+def doctor(root, repo, client, *, tag=None, unset_env_tokens=False):
+    """Inspect local Git/worktree state, gh CLI readiness and optional release channels."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+        raise ValueError("repository must be owner/name")
+    gh_bin = resolve_gh_binary()
+    sub_env = github_subprocess_env(unset_env_tokens=unset_env_tokens)
+
+    def run_cmd(argv, cwd=None):
+        try:
+            return subprocess.run(  # noqa: S603 - fixed local git/gh command
+                argv, cwd=cwd, env=sub_env, text=True, capture_output=True, timeout=30, check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+    gh_ver = run_cmd([gh_bin, "--version"])
+    if gh_ver is None or gh_ver.returncode != 0:
+        raise ValueError("gh CLI is unavailable")
+    gh_version = (gh_ver.stdout or "").splitlines()[0].strip() if gh_ver.stdout else "unknown"
+
+    attest_help = run_cmd([gh_bin, "attestation", "verify", "--help"])
+    help_text = ((attest_help.stdout or "") + (attest_help.stderr or "")) if attest_help else ""
+    if attest_help is None or attest_help.returncode != 0 or any(flag not in help_text for flag in _ATTESTATION_FLAGS):
+        raise ValueError("installed gh CLI lacks required attestation verification flags")
+
+    auth_res = run_cmd([gh_bin, "auth", "status"])
+    auth_text = ((auth_res.stdout or "") + (auth_res.stderr or "")) if auth_res else ""
+    auth_ok = bool(auth_res is not None and auth_res.returncode == 0)
+    workflow_scope = bool(re.search(r"Token scopes:.*\bworkflow\b", auth_text))
+
+    head_res = run_cmd(["git", "rev-parse", "HEAD"], cwd=root)
+    branch_res = run_cmd(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root)
+    status_res = run_cmd(["git", "status", "--porcelain"], cwd=root)
+    wt_res = run_cmd(["git", "worktree", "list", "--porcelain"], cwd=root)
+    if (head_res is None or head_res.returncode != 0 or branch_res is None or branch_res.returncode != 0
+            or status_res is None or status_res.returncode != 0):
+        raise ValueError("could not inspect local Git repository state")
+    worktrees = _parse_worktrees(wt_res.stdout) if wt_res and wt_res.returncode == 0 else []
+
+    report = {
+        "ok": True,
+        "gh_binary": gh_bin,
+        "gh_version": gh_version,
+        "attestation_flags_supported": True,
+        "auth_ok": auth_ok,
+        "workflow_scope": workflow_scope,
+        "git": {
+            "head": head_res.stdout.strip(),
+            "branch": branch_res.stdout.strip(),
+            "clean": not bool(status_res.stdout.strip()),
+            "worktrees": worktrees,
+            "prunable_worktrees": sum(1 for item in worktrees if item.get("prunable")),
+        },
+    }
+    if tag is not None:
+        version = check_release.source_version(root, tag)
+        notes = root / "docs" / "releases" / f"{tag}.md"
+        if not notes.is_file():
+            raise ValueError(f"missing release notes for {tag}")
+        notes_text = notes.read_text(encoding="utf-8")
+        if not notes_text.strip() or "(pending)" in notes_text or "Pending release." in notes_text:
+            raise ValueError(f"release notes for {tag} still contain pending placeholders")
+        release = release_metadata(repo, tag, client, include_drafts=True)
+        github_state = "missing" if release is None else "draft" if release["draft"] else "published"
+        pypi_value = client.json(f"https://pypi.org/pypi/lixity/{version}/json", missing=True)
+        pypi_present = []
+        if pypi_value is not None:
+            if not isinstance(pypi_value.get("urls"), list):
+                raise ValueError("PyPI file state is unknown")
+            pypi_present = sorted(
+                item["filename"] for item in pypi_value["urls"]
+                if isinstance(item, dict) and isinstance(item.get("filename"), str)
+            )
+        expected_dists = {f"lixity-{version}-py3-none-any.whl", f"lixity-{version}.tar.gz"}
+        report.update(
+            tag=tag,
+            version=version,
+            release_notes_ready=True,
+            github_state=github_state,
+            pypi_present=pypi_present,
+            pypi_missing=sorted(expected_dists - set(pypi_present)),
+        )
+    return report
+
+
+def _stage_pages_module():
+    scripts_dir = str(Path(__file__).resolve().parent)
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import stage_pages
+    return stage_pages
+
+
+def _normalize_pages_base(base_url):
+    parsed = urllib.parse.urlsplit(base_url)
+    if (parsed.scheme != "https" or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None):
+        raise ValueError("Pages base URL must be a plain HTTPS URL")
+    normalized = base_url if base_url.endswith("/") else base_url + "/"
+    return normalized, parsed.hostname
+
+
+def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_URL):
+    """Verify live Pages deployment metadata and staged public resources."""
+    check_release.source_version(root, tag)
+    if not SHA.fullmatch(expected_commit):
+        raise ValueError("expected commit must be a full lowercase Git SHA")
+    normalized_base, host = _normalize_pages_base(base_url)
+    if host not in client.allowed_hosts:
+        raise ValueError("Pages host is not allowed by the verification client")
+
+    stage_pages = _stage_pages_module()
+    with tempfile.TemporaryDirectory(prefix="lixity-pages-verify-") as temp_dir:
+        staged = Path(temp_dir) / "public"
+        stage_pages.stage(root / "docs", staged)
+        deployment = client.json(urllib.parse.urljoin(normalized_base, "deployment.json"))
+        if deployment.get("schema_version") != 1 or deployment.get("source_sha") != expected_commit:
+            raise ValueError("Pages deployment.json source_sha differs from expected commit")
+
+        headers = {"Cache-Control": "no-cache", "Accept-Encoding": "identity"}
+        root_bytes = client.bytes(normalized_base, headers=headers)
+        if root_bytes != (staged / "index.html").read_bytes():
+            raise ValueError("public Pages canonical root differs from staged index.html")
+        for rel_path in PAGES_VERIFY_FILES:
+            expected_bytes = (staged / rel_path).read_bytes()
+            actual_bytes = client.bytes(urllib.parse.urljoin(normalized_base, rel_path), headers=headers)
+            if actual_bytes != expected_bytes:
+                raise ValueError(f"public Pages resource differs from staged build: {rel_path}")
+    return {
+        "state": "verified",
+        "tag": tag,
+        "source_sha": expected_commit,
+        "base_url": normalized_base,
+        "verified_paths": len(PAGES_VERIFY_FILES) + 2,
+    }
+
+
+def verify_release(root, tag, expected_commit, repo, dist, client, *, base_url=DEFAULT_PAGES_URL):
+    """Run end-to-end verification across GitHub Releases, PyPI distributions and Pages."""
+    if not dist.exists() or not any(dist.iterdir()):
+        recover(root, tag, expected_commit, repo, dist, client)
+    else:
+        verify_github(root, tag, expected_commit, repo, dist, client)
+    verify_pypi(root, tag, expected_commit, repo, dist, client)
+    version = tag[1:]
+    pypi_meta = client.json(f"https://pypi.org/pypi/lixity/{version}/json")
+    expected_dists = {f"lixity-{version}-py3-none-any.whl", f"lixity-{version}.tar.gz"}
+    verified_pypi = set()
+    for entry in pypi_meta.get("urls", []):
+        name = entry.get("filename")
+        if name not in expected_dists:
+            raise ValueError("PyPI has an unexpected distribution filename")
+        url = entry.get("url")
+        if not isinstance(url, str):
+            raise ValueError(f"PyPI distribution URL missing for {name}")
+        data = client.bytes(url)
+        expected_bytes = (dist / name).read_bytes()
+        if hashlib.sha256(data).hexdigest() != entry["digests"]["sha256"] or data != expected_bytes:
+            raise ValueError(f"downloaded PyPI distribution differs from GitHub asset for {name}")
+        verified_pypi.add(name)
+    if verified_pypi != expected_dists:
+        raise ValueError("PyPI distribution set is incomplete")
+    pages = verify_pages(root, tag, expected_commit, client, base_url=base_url)
+    return {
+        "state": "verified",
+        "tag": tag,
+        "source_sha": expected_commit,
+        "channels": ["github", "pypi", "pages"],
+        "github_pypi_bytes_identical": True,
+        "pages_verified_paths": pages["verified_paths"],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("inspect", "recover", "verify-github", "verify-draft",
-                                           "stage-pypi", "verify-pypi"))
+    parser.add_argument(
+        "command",
+        choices=("inspect", "recover", "verify-github", "verify-draft", "stage-pypi",
+                 "verify-pypi", "doctor", "verify-pages", "verify-release"),
+    )
     parser.add_argument("--root", type=Path, required=True)
-    parser.add_argument("--tag", required=True)
-    parser.add_argument("--expected-commit", required=True)
+    parser.add_argument("--tag")
+    parser.add_argument("--expected-commit")
     parser.add_argument("--repo", required=True)
     parser.add_argument("--dist", type=Path, default=Path("dist"))
     parser.add_argument("--upload", type=Path, default=Path("upload"))
+    parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
+    parser.add_argument("--use-keyring", action="store_true",
+                        help="Unset GH_TOKEN/GITHUB_TOKEN for gh subprocesses so OS keyring is used")
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
-    client = HttpClient(token=os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"))
-    common = (args.root, args.tag, args.expected_commit, args.repo)
+    if args.command != "doctor":
+        if not args.tag:
+            parser.error(f"--tag is required for {args.command}")
+        if args.command != "verify-pages" and not args.expected_commit:
+            parser.error(f"--expected-commit is required for {args.command}")
+        if args.command == "verify-pages" and not args.expected_commit:
+            parser.error("--expected-commit is required for verify-pages")
+    _normalized_base, pages_host = _normalize_pages_base(args.base_url)
+    if args.use_keyring:
+        os.environ.pop("GH_TOKEN", None)
+        os.environ.pop("GITHUB_TOKEN", None)
+    token = None if args.use_keyring else (os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"))
+    client = HttpClient(token=token, extra_hosts=(pages_host,))
     try:
-        if args.command == "inspect":
-            result = inspect(*common, client)
-        elif args.command == "recover":
-            result = recover(*common, args.dist, client)
-        elif args.command == "stage-pypi":
-            result = stage_pypi(*common, args.dist, args.upload, client)
-        elif args.command == "verify-pypi":
-            result = verify_pypi(*common, args.dist, client)
+        if args.command == "doctor":
+            result = doctor(args.root, args.repo, client, tag=args.tag, unset_env_tokens=args.use_keyring)
+        elif args.command == "verify-pages":
+            result = verify_pages(args.root, args.tag, args.expected_commit, client, base_url=args.base_url)
+        elif args.command == "verify-release":
+            result = verify_release(
+                args.root, args.tag, args.expected_commit, args.repo, args.dist, client,
+                base_url=args.base_url,
+            )
         else:
-            result = verify_github(*common, args.dist, client, draft=args.command == "verify-draft")
+            common = (args.root, args.tag, args.expected_commit, args.repo)
+            if args.command == "inspect":
+                result = inspect(*common, client)
+            elif args.command == "recover":
+                result = recover(*common, args.dist, client)
+            elif args.command == "stage-pypi":
+                result = stage_pypi(*common, args.dist, args.upload, client)
+            elif args.command == "verify-pypi":
+                result = verify_pypi(*common, args.dist, client)
+            else:
+                result = verify_github(
+                    *common, args.dist, client, draft=args.command == "verify-draft",
+                )
         if args.github_output:
             with args.github_output.open("a", encoding="utf-8") as output:
                 for key, value in result.items():

@@ -63,9 +63,11 @@ and investigate reported bugs before changing behavior.
 - Pages preview & rollout: `python3 scripts/stage_pages.py --output /tmp/NEW_DIR`
   for local preview (only explicitly staged paths publish). Because
   `pages.yml` uses `workflow_dispatch`, use `make pages-deploy`
-  (`gh workflow run pages.yml --ref main`) after pushing `docs/` changes
-  to `main` for an authorized documentation rollout. A source edit alone does
-  not authorize deployment; tagged releases publish their verified Pages build.
+  (runs `gh workflow run pages.yml --ref main` with keyring credentials rather
+  than narrow ambient `GH_TOKEN`/`GIT_ASKPASS` overrides) after pushing `docs/`
+  changes to `main` for an authorized documentation rollout. A source edit
+  alone does not authorize deployment; tagged releases publish their verified
+  Pages build.
 - Dashboard & rollout: `make run` (foreground) vs `make start`/`stop`/`restart`
   (managed service, default port 8765). Installing a package never updates a
   running service; an authorized source rollout needs an explicit `make restart`.
@@ -73,9 +75,10 @@ and investigate reported bugs before changing behavior.
 - CI runs `tests` automatically for pull requests targeting `main`; `tests`,
   `browser` and `research-platforms` also support manual dispatch. Tagged
   releases reuse the source, browser and full native platform gates; `release` runs on `v*` tags. Local checks
-  (`make check`, `make fast-check`, `make docs-check`, `make browser-changed`)
-  are the everyday gate. Change workflow YAML only with `make workflow-check`
-  (needs `actionlint`).
+  (`make check`, `make fast-check`, `make docs-check`, `make browser-changed`,
+  `make github-check`) are the everyday gate; `make release-verify RELEASE_TAG=vX.Y.Z`
+  verifies published GitHub, PyPI and Pages artifacts end to end. Change workflow
+  YAML only with `make workflow-check` (needs `actionlint`).
 
 ## Data boundaries
 

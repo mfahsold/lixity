@@ -60,7 +60,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Harden the release and CI pipeline (`scripts/check_release.py`,
+- Harden the release and CI pipeline (`Makefile`, `scripts/check_release.py`,
   `scripts/prepare_release.py`, `scripts/release_channels.py`,
   `scripts/run_browser_suites.py`, `.github/workflows/*.yml`): require full
   source (`Python 3.10` and `3.12`), Chromium browser and Windows/macOS native
@@ -68,10 +68,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fresh build/smoke artifacts before promoting into `dist/`; mark prepared
   release notes as pending verification; recover immutable GitHub release
   assets and reconcile existing PyPI digests without rebuilding or
-  `--skip-existing`; retain bounded failure-only browser CI diagnostics and
-  summaries (`--diagnostics`, `--summary`); check all four site/doc generators
-  and record `deployment.json` provenance on Pages; and pin workflow actions to
-  explicit commit SHAs.
+  `--skip-existing`; add `doctor`, `verify-pages` and `verify-release`
+  subcommands plus `make github-check` and `make release-verify` (with modern
+  `gh` binary discovery and askpass/keyring sanitization); retain bounded
+  failure-only browser CI diagnostics and summaries (`--diagnostics`,
+  `--summary`); check all four site/doc generators and record `deployment.json`
+  provenance on Pages; and pin workflow actions to explicit commit SHAs.
 - Clarify central product and onboarding copy across seven public languages:
   distinguish development availability, built-in offline analysis, optional
   integrations, retained source provenance and heuristic text evidence.

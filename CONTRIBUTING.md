@@ -271,28 +271,49 @@ reports with the packaged source. A stale demo is a failing check, even if its
 version string still matches. Before rollout, verify the installed distribution
 and running service separately; rebuilding public pages does not update either.
 
-Preparation does not commit, tag, push or publish. After reviewing the changes
-and obtaining release authorization, complete `make browser-full` for UI-affecting releases,
-push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
-must resolve to the reviewed commit: compare `git rev-parse HEAD` with
-`git rev-parse 'vX.Y.Z^{commit}'` locally, then verify the remote tag and the
-release workflow's commit after pushing. Annotated tags must be dereferenced to
-their commit for this comparison. A matching version string alone is insufficient.
-The tag workflow (`release.yml`) first requires reusable full source (`tests.yml`
-across Python 3.10 and 3.12), full Chromium browser (`browser.yml`) and full native
-(`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
-checks on the exact tagged commit; any failure or cancellation blocks publication.
-When unpublished, it then builds, verifies and smoke-installs artifacts from that
-commit, attests them for `gh attestation verify`, attaches them to a draft release,
-verifies the draft manifest, digests and attestations via `scripts/release_channels.py verify-draft`,
-publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
-of an already published tag, `scripts/release_channels.py recover` retrieves and
-verifies the immutable GitHub assets instead of rebuilding.
-The local `make release-check` and applicable browser checks remain required:
-the CI gate does not replace the local dependency audit or cross-platform work.
-Release build, smoke installation and attestation remain automatic; after GitHub publication
-and a successful or intentionally skipped PyPI step, the release pipeline
-deploys Pages from that exact tag.
+Preparation does not commit, tag, push or publish. Follow this four-phase release flow:
+
+1. **Preflight tooling & GitHub environment (`make github-check`)**:
+   Run `make github-check RELEASE_TAG=vX.Y.Z` (`scripts/release_channels.py doctor`)
+   to verify clean Git/worktree state, a current `gh` CLI supporting `--source-digest` /
+   `--signer-digest` / `--cert-identity` / `--deny-self-hosted-runners`, completed
+   release notes without pending placeholders, and current GitHub/PyPI channel state.
+   When pushing `.github/workflows/*.yml` or dispatching workflows from an editor shell
+   that exports a narrow `GH_TOKEN` (without `workflow` scope) or stale `GIT_ASKPASS`,
+   clear those overrides so Git and `gh` use the authenticated OS keyring (`env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS`).
+2. **Pre-release local gates & tag push**:
+   After reviewing the changes and obtaining release authorization, run
+   `make release-check RELEASE_TAG=vX.Y.Z`, `make docs-check`, `make workflow-check`
+   and `make browser-full` for UI-affecting releases, then push the reviewed commit
+   to `main` and its matching annotated `vX.Y.Z` tag. The tag must resolve to the
+   reviewed commit: compare `git rev-parse HEAD` with `git rev-parse 'vX.Y.Z^{commit}'`
+   locally, then verify the remote tag and the release workflow's commit after pushing.
+   Annotated tags must be dereferenced to their commit for this comparison. A matching
+   version string alone is insufficient.
+3. **Tag pipeline publication**:
+   The tag workflow (`release.yml`) first requires reusable full source (`tests.yml`
+   across Python 3.10 and 3.12), full Chromium browser (`browser.yml`) and full native
+   (`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
+   checks on the exact tagged commit; any failure or cancellation blocks publication.
+   When unpublished, it then builds, verifies and smoke-installs artifacts from that
+   commit, attests them for `gh attestation verify`, attaches them to a draft release,
+   verifies the draft manifest, digests and attestations via `scripts/release_channels.py verify-draft`,
+   publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
+   of an already published tag, `scripts/release_channels.py recover` retrieves and
+   verifies the immutable GitHub assets instead of rebuilding.
+   The local `make release-check` and applicable browser checks remain required:
+   the CI gate does not replace the local dependency audit or cross-platform work.
+   Release build, smoke installation and attestation remain automatic; after GitHub publication
+   and a successful or intentionally skipped PyPI step, the release pipeline
+   deploys Pages from that exact tag.
+4. **Post-publication cross-channel verification & local rollout**:
+   Run `make release-verify RELEASE_TAG=vX.Y.Z` (`scripts/release_channels.py verify-release`)
+   to recover/verify the immutable GitHub Release and attestations, verify byte-for-byte
+   identity of the downloaded PyPI wheel and sdist, and verify live GitHub Pages
+   `deployment.json` (`source_sha`) plus staged HTML/JSON entrypoints. Verify the
+   Zenodo version DOI asynchronously before reporting archival complete. For local
+   service rollout, install the verified wheel and restart the managed service explicitly
+   (`make restart`).
 Verify a downloaded artifact with:
 
 ```bash
