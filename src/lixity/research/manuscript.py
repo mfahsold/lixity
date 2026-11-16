@@ -157,7 +157,10 @@ def manuscript_review_data(
     include_context: bool = False,
 ) -> dict[str, Any]:
     """Derive review flags only; resolving happens in an explicit re-pin."""
-    identities = [(paragraph, paragraph_identity(paragraph)) for paragraph in paragraphs]
+    by_hash: dict[str, list[ParagraphProfile | ParagraphText]] = {}
+    for paragraph in paragraphs:
+        by_hash.setdefault(paragraph_identity(paragraph)["paragraph_sha256"], []).append(paragraph)
+    quote_index: _ParagraphQuoteIndex | None = None
     rows = []
     for record in snapshot.records.values():
         if (
@@ -182,9 +185,8 @@ def manuscript_review_data(
                 flags.append(ManuscriptFlag.SOURCE_CHANGED)
             candidates = [
                 p
-                for p, identity in identities
-                if identity["paragraph_sha256"] == anchor.paragraph_sha256
-                and p.text[anchor.start : anchor.end] == anchor.quote
+                for p in by_hash.get(anchor.paragraph_sha256, ())
+                if p.text[anchor.start : anchor.end] == anchor.quote
             ]
             exact = [
                 p
@@ -209,7 +211,9 @@ def manuscript_review_data(
                 # contract: exactly one remaining occurrence keeps the anchor
                 # resolvable (`adjusted`); missing or duplicated quotes need
                 # review before any re-pin.
-                occurrences = _quote_occurrences(paragraphs, anchor.quote)
+                if quote_index is None:
+                    quote_index = _ParagraphQuoteIndex(paragraphs)
+                occurrences = _quote_occurrences(paragraphs, anchor.quote, index=quote_index)
                 if len(occurrences) == 1:
                     resolved, resolved_start = occurrences[0]
                     resolved_end = resolved_start + len(anchor.quote)
@@ -590,11 +594,52 @@ def dossier_manuscript_evidence(
     }
 
 
+class _ParagraphQuoteIndex:
+    """Character 3-gram inverted index for fast exact quote lookup across paragraphs."""
+
+    def __init__(self, paragraphs: Sequence[ParagraphProfile | ParagraphText]) -> None:
+        self.paragraphs = paragraphs
+        self._trigrams: dict[str, set[int]] = {}
+        for idx, paragraph in enumerate(paragraphs):
+            text = paragraph.text
+            for pos in range(len(text) - 2):
+                gram = text[pos : pos + 3]
+                bucket = self._trigrams.get(gram)
+                if bucket is None:
+                    self._trigrams[gram] = {idx}
+                else:
+                    bucket.add(idx)
+
+    def candidate_indices(self, quote: str) -> list[int] | None:
+        """Return sorted paragraph indices containing all 3-grams of `quote`, or None if len < 3."""
+        if len(quote) < 3:
+            return None
+        postings: list[set[int]] = []
+        seen: set[str] = set()
+        for pos in range(len(quote) - 2):
+            gram = quote[pos : pos + 3]
+            if gram in seen:
+                continue
+            seen.add(gram)
+            bucket = self._trigrams.get(gram)
+            if not bucket:
+                return []
+            postings.append(bucket)
+        postings.sort(key=len)
+        matched = set(postings[0])
+        for bucket in postings[1:]:
+            matched.intersection_update(bucket)
+            if not matched:
+                return []
+        return sorted(matched)
+
+
 def _quote_occurrences(
     paragraphs: Sequence[ParagraphProfile | ParagraphText],
     quote: str,
     *,
     limit: int | None = None,
+    index: _ParagraphQuoteIndex | None = None,
 ) -> list[tuple[ParagraphProfile | ParagraphText, int]]:
     """Exact quote occurrences in displayed text, stopping at an optional limit.
 
@@ -603,7 +648,13 @@ def _quote_occurrences(
     the surrounding paragraph text changes.
     """
     occurrences: list[tuple[ParagraphProfile | ParagraphText, int]] = []
-    for paragraph in paragraphs:
+    candidate_idxs = index.candidate_indices(quote) if index is not None else None
+    iterable = (
+        (paragraphs[idx] for idx in candidate_idxs)
+        if candidate_idxs is not None
+        else paragraphs
+    )
+    for paragraph in iterable:
         start = paragraph.text.find(quote)
         while start != -1:
             occurrences.append((paragraph, start))

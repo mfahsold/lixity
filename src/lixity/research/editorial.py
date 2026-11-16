@@ -132,26 +132,32 @@ def editorial_review(project: str | Path, *, outline: Outline | None = None) -> 
 def editorial_review_data(snapshot: Snapshot, *, outline: Outline | None = None) -> dict[str, Any]:
     graph = decision_graph(snapshot, outline=outline)
     candidates = []
+    dossier_outlines: dict[str, list[str]] = {}
     for impact in graph.values():
         decision = impact["decision"]
         affected = impact["dossiers"] if not impact["unlinked"] else [None]
         for dossier in affected:
             if dossier is not None and not dossier["flags"]:
                 continue
+            sections = dossier["sections"] if dossier else []
+            dossier_id = dossier["id"] if dossier else None
+            if dossier_id and sections and dossier_id not in dossier_outlines:
+                dossier_outlines[dossier_id] = list(sections)
             candidate = {"decision_id": decision["id"], "title": decision["title"],
                 "decision_revision": decision["revision"], "decision_created_at": decision["created_at"],
-                "dossier_id": dossier["id"] if dossier else None, "dossier_title": dossier["title"] if dossier else None,
+                "dossier_id": dossier_id, "dossier_title": dossier["title"] if dossier else None,
                 "current_revision": dossier["current_revision"] if dossier else None,
                 "dossier_created_at": dossier["created_at"] if dossier else None,
                 "pinned_revisions": dossier["pinned_revisions"] if dossier else [],
-                "sections": dossier["sections"] if dossier else [],
+                "sections_count": len(sections),
                 "flags": dossier["flags"] if dossier else ["no_linked_dossier"]}
             if dossier and dossier.get("acknowledgement"):
                 candidate["acknowledgement"] = dossier["acknowledgement"]
             candidates.append(candidate)
     candidates.sort(key=lambda candidate: (candidate["decision_created_at"], candidate["decision_id"]), reverse=True)
     return {"schema_version": "research-editorial-review-local/1", "snapshot": snapshot.digest,
-            "decision_count": len(graph), "candidate_count": len(candidates), "candidates": candidates,
+            "decision_count": len(graph), "candidate_count": len(candidates),
+            "dossier_outlines": dossier_outlines, "candidates": candidates,
             "scope": SCOPE}
 
 

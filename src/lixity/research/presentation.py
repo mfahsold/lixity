@@ -373,10 +373,12 @@ def editorial_report(result: dict[str, Any], *, markdown: bool) -> str:
         if entry["current_revision"] is not None:
             field("Current dossier revision", entry["current_revision"])
             field("Pinned dossier revisions", ", ".join(map(str, entry["pinned_revisions"])))
-        if entry["sections"]:
-            field("Sections to inspect", "; ".join(entry["sections"][:20]))
-            if len(entry["sections"]) > 20:
-                field("Further sections", f"{len(entry['sections']) - 20}; use --format json for all headings")
+        outlines = result.get("dossier_outlines") or {}
+        sections = entry.get("sections") or (outlines.get(entry.get("dossier_id") or "", []) if review else [])
+        if sections:
+            field("Sections to inspect", "; ".join(sections[:20]))
+            if len(sections) > 20:
+                field("Further sections", f"{len(sections) - 20}; use --format json for all headings")
         acknowledgement = entry.get("acknowledgement")
         if acknowledgement:
             status = ("Author acknowledgement concerns earlier revisions" if not acknowledgement["current"]

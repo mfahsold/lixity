@@ -7,6 +7,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Normalized editorial review & UI disclosure (`research/editorial.py`, `research/presentation.py`, `research-review.js`, `manuscript-links.js`)**: `editorial_review_data()` now deduplicates affected dossier outlines into top-level `dossier_outlines` with `sections_count` per candidate; `research-review.js` collapses section outlines behind a disclosure toggle and `manuscript-links.js` groups large manuscript link lists (>12 links) by chapter `<details>` while keeping chapters needing attention open.
+- **Inverted 3-gram & hash quote lookup (`research/manuscript.py`)**: `derive_manuscript_review()` now indexes paragraph SHA-256 hashes in O(1) (`by_hash`) and uses a character 3-gram inverted index (`_ParagraphQuoteIndex`) for exact quote fallback resolution.
+
 ## [0.8.2] - 2026-11-16
 
 ### Changed

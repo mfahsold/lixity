@@ -192,13 +192,20 @@ function advanceResearchDecisionComparisons(payload, acknowledged) {
   });
 }
 
+function renderDossierSectionsDisclosure(sections) {
+  if (!sections || !sections.length) return "";
+  return '<details class="research-sections-disclosure"><summary class="research-tag research-tag-more">' +
+    escapeHtml(uiLabel("research_sections")) + ' (' + sections.length + ')</summary>' +
+    '<p class="ctl-note">' + sections.map(escapeHtml).join(" · ") + '</p></details>';
+}
+
 function researchAffectedDossier(dossier, impact) {
   return '<div class="research-card"><strong>' + escapeHtml(dossier.title) + '</strong>' +
     '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
       pinned: dossier.pinned_revisions.join(", "), current: dossier.current_revision
     })) + '</p><p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
     researchEditorialTime(dossier.created_at) + '</p>' + researchEditorialFlags(dossier.flags, dossier.decision_after_dossier) +
-    (dossier.sections.length ? '<p class="ctl-note">' + dossier.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
+    renderDossierSectionsDisclosure(dossier.sections) +
     (!dossier.withdrawn ? researchDetailsControl("dossier", dossier.id) : '') +
     researchDecisionComparison({decisionId: impact.decision.id, decisionRevision: impact.decision.revision,
       dossierId: dossier.id, dossierRevision: dossier.current_revision, snapshot: impact.snapshot,
@@ -238,8 +245,12 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
     host.textContent = uiLabel("research_editorial_empty");
     return;
   }
+  var outlines = report.dossier_outlines || {};
   var rendered = '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_editorial_count", report.candidate_count)) + '</p>' +
     report.candidates.map(function(candidate) {
+      var sections = (candidate.sections && candidate.sections.length)
+        ? candidate.sections
+        : ((candidate.dossier_id && outlines[candidate.dossier_id]) || []);
       return '<div class="research-card" data-review-candidate-decision="' + escapeHtml(candidate.decision_id) + '" data-review-candidate-dossier="' + escapeHtml(candidate.dossier_id || "") + '"><strong>' + escapeHtml(candidate.title) + '</strong>' +
         (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
         '<p class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", {revision: candidate.decision_revision})) + ' · ' +
@@ -250,7 +261,7 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
         (candidate.dossier_id ? '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
           pinned: candidate.pinned_revisions.join(", "), current: candidate.current_revision
         })) + '</p>' : '') +
-        (candidate.sections.length ? '<p class="ctl-note">' + candidate.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
+        renderDossierSectionsDisclosure(sections) +
         (candidate.dossier_id && !candidate.flags.includes("withdrawn_dossier") ? researchDetailsControl("dossier", candidate.dossier_id) : '') +
         researchRevisionActions("decision", candidate.decision_id) +
         researchDecisionComparison({decisionId: candidate.decision_id, decisionRevision: candidate.decision_revision,

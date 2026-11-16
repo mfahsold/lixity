@@ -186,6 +186,26 @@ class EditorialReviewTest(unittest.TestCase):
             self.assertEqual(data["operation_count"], 1)
             self.assertTrue(data["batch_packet"]["ready"])
 
+    def test_editorial_review_deduplicates_dossier_outlines(self):
+        self.revise("dossier", self.dossier, {"body": "## Reviewed voice\nUpdated voice notes."})
+        claim_two = api.create_claim(
+            self.project, title="Second claim", statement="Also checks the edited voice dossier.",
+            dossier_id=self.dossier,
+        )["claim_id"]
+        api.record_decision(
+            self.project, title="Second decision",
+            rationale="Also touches the same edited dossier.",
+            claim_id=claim_two, dossier_ids=[self.dossier],
+        )
+        review = api.editorial_review(self.project)
+        self.assertIn(self.dossier, review["dossier_outlines"])
+        self.assertEqual(review["dossier_outlines"][self.dossier], ["Reviewed voice"])
+        matching = [c for c in review["candidates"] if c["dossier_id"] == self.dossier]
+        self.assertEqual(len(matching), 2)
+        for cand in matching:
+            self.assertEqual(cand["sections_count"], 1)
+            self.assertNotIn("sections", cand)
+
 
 if __name__ == "__main__":
     unittest.main()

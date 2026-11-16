@@ -296,47 +296,67 @@
       return chapterNumber(a) - chapterNumber(b) ||
         (a.resolved_start_line || Infinity) - (b.resolved_start_line || Infinity);
     });
-    var currentChapter = null;
+    var groups = [];
+    var currentGroup = null;
     rows.forEach(function(row) {
       var number = chapterNumber(row);
-      if (number !== currentChapter) {
-        currentChapter = number;
+      if (!currentGroup || currentGroup.number !== number) {
         var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
           label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() {return row.resolved_chapter_title || "";});
-        var heading = element("h3", title); heading.dataset.manuscriptCurrentChapter = "";
-        fragment.appendChild(heading);
+        currentGroup = {number: number, title: title, rows: [], hasAttention: number === Infinity};
+        groups.push(currentGroup);
       }
-      var item = element("div", "", "manuscript-link-review-item");
-      item.appendChild(element("p", window.LixityComponents.recordLabel({title:row.claim_title}, label("research_name_unavailable_claim"))));
       var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
-      var flags = [label("manuscript_link_" + state)];
-      (row.flags || []).forEach(function(flag) {
-        if (["source_changed", "claim_changed", "claim_withdrawn"].includes(flag)) flags.push(label("manuscript_link_" + flag));
+      if (state !== "resolved" || (row.flags && row.flags.length)) currentGroup.hasAttention = true;
+      currentGroup.rows.push(row);
+    });
+    var autoExpandClean = rows.length <= 12;
+    groups.forEach(function(group) {
+      var details = document.createElement("details");
+      details.className = "research-details mb-2";
+      details.dataset.manuscriptChapterGroup = "";
+      details.open = autoExpandClean || group.hasAttention;
+      var summary = document.createElement("summary");
+      var heading = element("h3", group.title);
+      heading.dataset.manuscriptCurrentChapter = "";
+      heading.style.display = "inline";
+      summary.appendChild(heading);
+      summary.appendChild(element("span", " (" + group.rows.length + ")", "ctl-note"));
+      details.appendChild(summary);
+      group.rows.forEach(function(row) {
+        var item = element("div", "", "manuscript-link-review-item");
+        item.appendChild(element("p", window.LixityComponents.recordLabel({title:row.claim_title}, label("research_name_unavailable_claim"))));
+        var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
+        var flags = [label("manuscript_link_" + state)];
+        (row.flags || []).forEach(function(flag) {
+          if (["source_changed", "claim_changed", "claim_withdrawn"].includes(flag)) flags.push(label("manuscript_link_" + flag));
+        });
+        item.appendChild(element("p", flags.join(" · "), "ctl-note"));
+        if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
+        if (linkedPanel(row)) {
+          var jump = element("button", label("manuscript_link_open_passage"), "ctl"); jump.type = "button";
+          jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
+        }
+        if (candidatePanel(row)) {
+          var inspect = element("button", label("manuscript_link_inspect_candidate"), "ctl"); inspect.type = "button";
+          inspect.dataset.manuscriptLinkCandidate = row.link_id; item.appendChild(inspect);
+        }
+        var history = element("button", label("research_revision_linked_version").replace("{revision}", row.claim_revision), "ctl"); history.type = "button";
+        history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id;
+        history.dataset.recordRevision = String(row.claim_revision); item.appendChild(history);
+        if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
+          var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
+          var accept = element("button", label(acceptLabel), "ctl");
+          accept.type = "button"; accept.dataset.manuscriptLinkAccept = row.link_id;
+          accept.dataset.manuscriptLinkAcceptRevision = String(row.revision);
+          item.appendChild(accept);
+          var acceptStatus = element("p", "", "ctl-status");
+          acceptStatus.dataset.manuscriptLinkAcceptStatus = ""; acceptStatus.hidden = true;
+          item.appendChild(acceptStatus);
+        }
+        details.appendChild(item);
       });
-      item.appendChild(element("p", flags.join(" · "), "ctl-note"));
-      if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
-      if (linkedPanel(row)) {
-        var jump = element("button", label("manuscript_link_open_passage"), "ctl"); jump.type = "button";
-        jump.dataset.manuscriptLinkJump = row.link_id; item.appendChild(jump);
-      }
-      if (candidatePanel(row)) {
-        var inspect = element("button", label("manuscript_link_inspect_candidate"), "ctl"); inspect.type = "button";
-        inspect.dataset.manuscriptLinkCandidate = row.link_id; item.appendChild(inspect);
-      }
-      var history = element("button", label("research_revision_linked_version").replace("{revision}", row.claim_revision), "ctl"); history.type = "button";
-      history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id;
-      history.dataset.recordRevision = String(row.claim_revision); item.appendChild(history);
-      if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
-        var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
-        var accept = element("button", label(acceptLabel), "ctl");
-        accept.type = "button"; accept.dataset.manuscriptLinkAccept = row.link_id;
-        accept.dataset.manuscriptLinkAcceptRevision = String(row.revision);
-        item.appendChild(accept);
-        var acceptStatus = element("p", "", "ctl-status");
-        acceptStatus.dataset.manuscriptLinkAcceptStatus = ""; acceptStatus.hidden = true;
-        item.appendChild(acceptStatus);
-      }
-      fragment.appendChild(item);
+      fragment.appendChild(details);
     });
     if (!rows.length) fragment.appendChild(element("p", label("manuscript_link_review_empty"), "ctl-note"));
     return fragment;

@@ -1345,3 +1345,22 @@ def test_editor_save_preserves_archive_and_exposes_review_state(manuscript_archi
     assert review["links"][0]["anchor_state"] == state
     assert review["review_needed_count"] == 1
     assert accepted_bytes(project) == before
+
+
+def test_paragraph_quote_index_matches_linear_scan():
+    from types import SimpleNamespace
+
+    from lixity.research.manuscript import _ParagraphQuoteIndex, _quote_occurrences
+
+    paragraphs = [
+        SimpleNamespace(text="Alpha beta gamma delta."),
+        SimpleNamespace(text="Second paragraph with gamma delta epsilon."),
+        SimpleNamespace(text="ab"),
+        SimpleNamespace(text="Repeating xy and xy again."),
+    ]
+    index = _ParagraphQuoteIndex(paragraphs)
+    for query in ("gamma delta", "Alpha", "not present", "xy", "ab", "epsilon."):
+        expected = _quote_occurrences(paragraphs, query)
+        actual = _quote_occurrences(paragraphs, query, index=index)
+        assert [(p.text, off) for p, off in actual] == [(p.text, off) for p, off in expected]
+
