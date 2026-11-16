@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Research snapshot reuse (`research/api.py`)**: `research_gaps()` now reuses a single verified `Repository.snapshot()` across `_claim_matrix_data()`, `_editorial_review_data()`, and `_timeline_data()` instead of reloading the archive three times.
+- **Manuscript save lock & single-pass metrics (`manuscript_editing.py`)**: `ManuscriptStore.save()` releases `SOURCE_WRITE_LOCK` while computing missing revision snapshots and inserts them with `INSERT OR IGNORE`; `analyze_manuscript_snapshot()` computes required metrics in a single pass.
+- **Unknown semantics (`manuscript_editing.py`)**: `indirect_speech_per_1000` now guards on `indirect_speech_available` (returning `None` when unavailable), and unpopulated `flags_count` returns `None` instead of `0` with a nullable SQLite schema migration.
+- **Chapter diagnostics scaling (`style_fingerprint.py`, `scripts/benchmark_pipeline.py`)**: Replaced O(n²) `mann_kendall` pair scans and `qn_estimator` distance materialization with O(n log n) Fenwick-tree inversion counting and O(n log n)/O(n)-space selection, added a constant-series fast path to `pelt_changepoints`, and added a synthetic varying-chapter benchmark fixture.
+
 ## [0.8.1] - 2026-11-16
 
 ### Added
