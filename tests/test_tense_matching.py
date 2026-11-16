@@ -81,7 +81,7 @@ def test_known_present_only_forms_are_not_also_productive_past(language, sentenc
     ("it", "Noi abbiamo parlato.", 2, 2),
     ("es", "Nosotros hemos hablado.", 0, 2),
     ("nl", "Wij hebben gesproken.", 2, 2),
-    ("en", "We have worked.", 2, 2),
+    ("en", "We have worked.", 0, 2),
     ("pt", "Nós falamos.", 2, 2),
     ("de", "Wir sind gewarnt.", 2, 2),
 ])
@@ -167,3 +167,36 @@ def test_word_character_prefixes_do_not_invent_a_present_only_final_word(token):
     # including word-like strings with digits or underscores.
     config = CorpusConfig(language="de")
     assert TenseMatcher(config, resolve_language(config)).count(token) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_present", "expected_past"),
+    [
+        ("Er hat das sehr lange rote Buch gestern abend gelesen.", 0, 1),
+        ("Ich weiß, weil er das Buch gelesen hat.", 1, 1),
+        ("Sie lacht, nachdem er eingeschlafen ist.", 1, 1),
+        ("Sie bleibt, weil er gewarnt worden ist.", 1, 1),
+        ("Er hat ein Buch, und sie liest es.", 2, 0),
+    ],
+)
+def test_german_perfect_clause_boundaries_and_subordinate_clauses(text, expected_present, expected_past):
+    config = CorpusConfig(language="de")
+    matcher = TenseMatcher(config, resolve_language(config))
+    assert matcher.count(text) == (expected_present, expected_past)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_present", "expected_past"),
+    [
+        ("She has walked home.", 0, 1),
+        ("She had written a letter.", 0, 1),
+        ("She had walked home.", 0, 1),
+        ("They have never spoken about it.", 0, 1),
+        ("They have a dog.", 1, 0),
+        ("She had a dog.", 0, 1),
+    ],
+)
+def test_english_perfect_spans_avoid_double_counting(text, expected_present, expected_past):
+    config = CorpusConfig(language="en")
+    matcher = TenseMatcher(config, resolve_language(config))
+    assert matcher.count(text) == (expected_present, expected_past)

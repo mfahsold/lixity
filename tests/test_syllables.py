@@ -6,7 +6,7 @@ import pytest
 
 from lixity.analyzer import CorpusAnalyzer
 from lixity.models import CorpusConfig
-from lixity.syllables import count_es, count_syllables
+from lixity.syllables import count_de, count_en, count_es, count_fr, count_it, count_syllables
 
 
 @pytest.mark.parametrize(
@@ -170,3 +170,75 @@ def test_dutch_ij_nuclei_reach_readability(form):
     assert metrics.tokens == metrics.total_sentences == 6
     assert metrics.asw == pytest.approx(13 / 6)
     assert metrics.flesch_de == pytest.approx(39.23666666666668)
+
+
+@pytest.mark.parametrize(
+    ("word", "expected"),
+    [
+        ("piede", 2),
+        ("uomo", 2),
+        ("buono", 2),
+        ("questo", 2),
+        ("guida", 2),
+        ("quieto", 2),
+        ("miei", 1),
+        ("più", 1),
+        ("acqua", 2),
+        ("casa", 2),
+        ("", 0),
+        ("---", 0),
+    ],
+)
+def test_italian_rising_diphthongs_and_silent_u(word, expected):
+    assert count_it(word) == expected
+
+
+@pytest.mark.parametrize(
+    ("word", "expected"),
+    [
+        ("Quelle", 2),
+        ("bequem", 2),
+        ("Qual", 1),
+        ("Aquarium", 4),
+        ("heute", 2),
+        ("", 0),
+        ("...", 0),
+        ("123", 0),
+    ],
+)
+def test_german_clean_and_qu_normalization(word, expected):
+    assert count_de(word) == expected
+
+
+@pytest.mark.parametrize(
+    ("word", "expected"),
+    [
+        ("moment", 2),
+        ("souvent", 2),
+        ("vraiment", 2),
+        ("différent", 3),
+        ("diffèrent", 2),
+        ("aiment", 1),
+        ("calment", 1),
+        ("dorment", 1),
+        ("ferment", 1),
+        ("parlent", 1),
+    ],
+)
+def test_french_ment_and_mute_ent_verbs(word, expected):
+    assert count_fr(word) == expected
+
+
+@pytest.mark.parametrize(
+    ("word", "expected"),
+    [
+        ("bottled", 2),
+        ("settled", 2),
+        ("tables", 2),
+        ("called", 1),
+        ("smiled", 1),
+        ("miles", 1),
+    ],
+)
+def test_english_syllabic_le_before_ed_and_es(word, expected):
+    assert count_en(word) == expected
