@@ -69,8 +69,8 @@ The demo cannot import or save; generating new analysis or PDFs requires the
 [local app](../guides/installation.html).
 
 The published documentation and author-workspace demo use the configured
-GoatCounter counter for page paths and named links. A PDF event records activation of a prepared-file
-link, not a completed filesystem save. The public-only wrapper includes explicit
+GoatCounter counter for page paths and named links. A PDF event records a click
+on a prepared-file link, not a completed save to disk. The public-only wrapper includes explicit
 reviewed analytics configuration and a matching content policy. The production
 snapshot transport has no analytics exceptions or write routes. Local application
 views, the two curated examples and ordinary exported reading websites carry no

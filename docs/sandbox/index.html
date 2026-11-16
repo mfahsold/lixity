@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Lixity — Browser-Sandbox: Absatz lokal prüfen</title>
+<title>Lixity Browser-Sandbox: Absatz lokal prüfen</title>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/sandbox/index.html"/>
-<meta name="description" content="Teste einen eigenen Absatz, eine lokale .txt/.md-Szene oder Klassiker (Effi Briest, Pride & Prejudice, Rohentwurf) 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
-<meta property="og:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
-<meta property="og:description" content="Teste einen eigenen Absatz oder Klassiker 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Klebesätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
+<meta name="description" content="Teste einen eigenen Absatz, eine lokale .txt- oder .md-Datei oder Textproben direkt im Browser: Satzlängen-Rhythmus, Stimmenkontrast, klebrige Sätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
+<meta property="og:title" content="Lixity Browser-Sandbox: Absatz lokal prüfen"/>
+<meta property="og:description" content="Teste einen eigenen Absatz oder Textproben direkt im Browser: Satzlängen-Rhythmus, Stimmenkontrast, klebrige Sätze, Wortechos, indirekte Rede und Nur-Dialog-Modus [D] ohne Server-Upload."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/sandbox/index.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
 <meta property="og:image:height" content="2070"/>
 <meta property="og:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity — Browser-Sandbox: Absatz lokal prüfen"/>
-<meta name="twitter:description" content="Teste einen eigenen Absatz 100 % lokal im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, klebrige Sätze und Nur-Dialog-Modus ohne Server-Upload."/>
+<meta name="twitter:title" content="Lixity Browser-Sandbox: Absatz lokal prüfen"/>
+<meta name="twitter:description" content="Teste einen eigenen Absatz direkt im Browser: Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, klebrige Sätze und Nur-Dialog-Modus ohne Server-Upload."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity — Browser-Sandbox: Absatz lokal prüfen", "url": "https://mfahsold.github.io/lixity/sandbox/index.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/sandbox/index.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2070}, "inLanguage": ["de", "en"], "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity Browser-Sandbox: Absatz lokal prüfen", "url": "https://mfahsold.github.io/lixity/sandbox/index.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/sandbox/index.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 2070}, "inLanguage": ["de", "en"], "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}}
 </script>
 <style>
   :root {
@@ -154,7 +154,7 @@
   <main>
   <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
   <h1 id="title">Eigenen Absatz direkt im Browser prüfen</h1>
-  <p class="lead" id="lead">Füge eine Szene ein oder lade eine lokale <code>.txt</code>/<code>.md</code>-Datei, um Satzlängen-Rhythmus, Stimmenkontrast, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Keine „Qualitätsnote“ — jede stilistische Entscheidung bleibt bei dir.</p>
+  <p class="lead" id="lead">Füge eine Szene ein oder lade eine lokale <code>.txt</code>- oder <code>.md</code>-Datei. Sofort siehst du Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, indirekte Rede und lokale Wortechos. Es gibt keine „Qualitätsnote“: Jede stilistische Entscheidung bleibt bei dir.</p>
 
   <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
@@ -164,11 +164,11 @@
         <span id="preset-lbl" style="font-size:.85rem;color:var(--muted);">Beispiele:</span>
         <button type="button" class="btn" id="preset-de" data-preset="effi-briest">Effi Briest · Kap. 7</button>
         <button type="button" class="btn" id="preset-en" data-preset="pride-prejudice">Pride &amp; Prejudice · Dialog</button>
-        <button type="button" class="btn" id="preset-draft" data-preset="rough-draft">Rohentwurf (Echos &amp; Klebesätze)</button>
+        <button type="button" class="btn" id="preset-draft" data-preset="rough-draft">Rohentwurf (Echos &amp; klebrige Sätze)</button>
         <button type="button" class="btn" id="preset-clear">Leeren</button>
       </div>
       <div class="editor-wrap" id="editor-wrap">
-        <textarea id="input" aria-label="Manuskript-Absatz"></textarea>
+        <textarea id="input" aria-label="Manuskript-Absatz" placeholder="Text hier einfügen oder eine .txt-/.md-Datei ablegen…"></textarea>
       </div>
       <div class="editor-foot">
         <span id="drop-hint">Tipp: Du kannst auch eine lokale <code>.txt</code>- oder <code>.md</code>-Datei hier ablegen.</span>
@@ -187,9 +187,9 @@
         <div class="kpi"><span class="kpi-val" id="k-sents">0</span><span class="kpi-lbl" id="l-sents">Sätze</span></div>
         <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Ø Satzlänge (ASL)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Dialoganteil</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Satzlängen-VK (asl_cv)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Satzlängen-Streuung (asl_cv)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze (≥45 %)</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze (≥ 45 %)</span></div>
         <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Indirekte Rede</span></div>
       </div>
 
@@ -219,7 +219,7 @@
       <div class="spark-wrap">
         <div class="spark-head">
           <strong style="font-size:.875rem;" id="spark-title">Satz-für-Satz-Puls</strong>
-          <span class="spark-note" id="spark-hover">Balken antippen/hover für Satzlänge</span>
+          <span class="spark-note" id="spark-hover">Balken antippen oder überfahren für Satzlänge</span>
         </div>
         <svg class="spark-svg" id="spark-svg" viewBox="0 0 400 56" preserveAspectRatio="none" role="img" aria-label="Satzlängen-Puls"></svg>
       </div>
@@ -232,7 +232,7 @@
       <div class="filter-bar" role="group" aria-label="Markierungen filtern">
         <button type="button" class="btn btn-sm" id="direct-speech-btn" aria-pressed="false">Nur Dialoge [D]</button>
         <button type="button" class="btn btn-sm" id="flt-echo" aria-pressed="true">Wortechos</button>
-        <button type="button" class="btn btn-sm" id="flt-sticky" aria-pressed="true">Klebesätze</button>
+        <button type="button" class="btn btn-sm" id="flt-sticky" aria-pressed="true">Klebrige Sätze</button>
         <button type="button" class="btn btn-sm" id="flt-indirect" aria-pressed="true">Indirekte Rede</button>
       </div>
 
@@ -240,15 +240,15 @@
       <div class="preview-legend" id="preview-legend">
         <span><mark class="echo" id="leg-echo">Wortecho</mark></span>
         <span><mark class="indirect" id="leg-indirect">Indirekte Rede</mark></span>
-        <span><span class="sticky-sent" id="leg-sticky">Klebriger Satz (≥45 %)</span></span>
+        <span><span class="sticky-sent" id="leg-sticky">Klebriger Satz (≥ 45 %)</span></span>
       </div>
     </div>
   </div>
 
   <section class="card" style="margin-top:18px;" aria-label="Hinweise zur Analyse">
-    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft — und was Lixity lokal ergänzt</h2>
+    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft und was Lixity lokal ergänzt</h2>
     <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;" id="about-body">
-      Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa, den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie</strong> gegen Rhythmus-Monotonie, <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) sowie <strong>lokale Wortechos</strong>.
+      Alle Berechnungen laufen deterministisch im Browser, sodass kein Text deinen Rechner verlässt. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Sätze ≤ 7 Wörter, mittlere 8–24 Wörter, lange ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa sowie <strong>Streuung (<code>asl_cv</code>)</strong> und <strong>Längen-Entropie</strong> gegen eintöniges Tempo. Dazu markiert die Vorschau <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) und <strong>lokale Wortechos</strong>.
     </p>
     <div class="compare-grid">
       <div class="compare-col">
@@ -256,14 +256,14 @@
         <ul id="cmp-sandbox-list">
           <li>Einzelne Szene oder lokale <code>.txt</code>/<code>.md</code>-Datei sofort prüfen</li>
           <li>Satz-für-Satz-Puls, Stimmenkontrast &amp; Nur-Dialog-Modus <code>[D]</code></li>
-          <li>Klickbare Wortechos, Klebesätze &amp; indirekte Rede</li>
+          <li>Klickbare Wortechos, klebrige Sätze &amp; indirekte Rede</li>
           <li>Markdown-Kurzbericht für Notizen kopieren</li>
         </ul>
       </div>
       <div class="compare-col">
         <h3 id="cmp-local-title">Volle Lixity-App &amp; CLI (lokal installiert)</h3>
         <ul id="cmp-local-list">
-          <li>Ganze Romane mit Kapitelmatrix (robustes <code>z*</code> &amp; Benjamini-Hochberg FDR)</li>
+          <li>Ganze Romane mit Kapitelmatrix (z* &amp; Benjamini-Hochberg-FDR)</li>
           <li>Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion &amp; Inquit-Dichte</li>
           <li>Manuskript-Editor mit Live-Sitzungspuls &amp; SQLite-Revisionsdiff</li>
           <li>Vorlese-Teleprompter &amp; quellenverifizierte Recherche-Dossiers</li>
@@ -275,7 +275,7 @@
 
   <footer>
     <p id="footer-note">
-      Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- &amp; Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.
+      Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen direkt auf deinem Gerät. Für ganze Romane mit Kapitelmatrix, Tempus- &amp; Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.
     </p>
     <p style="margin-top:10px;">
       <a href="../index-de.html#website-measurement" id="footer-privacy">Website-Messung</a> ·
@@ -308,37 +308,39 @@
       home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN',
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Eigenen Absatz direkt im Browser prüfen',
-      lead: 'Füge eine Szene ein oder lade eine lokale .txt/.md-Datei, um Satzlängen-Rhythmus, Stimmenkontrast, Längen-Entropie, Dialoganteil, indirekte Rede und lokale Wortechos sofort sichtbar zu machen. Keine „Qualitätsnote“ — jede stilistische Entscheidung bleibt bei dir.',
-      preset: 'Beispiele:', draftBtn: 'Rohentwurf (Echos & Klebesätze)', clear: 'Leeren',
+      lead: 'Füge eine Szene ein oder lade eine lokale .txt- oder .md-Datei. Sofort siehst du Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, indirekte Rede und lokale Wortechos. Es gibt keine „Qualitätsnote“: Jede stilistische Entscheidung bleibt bei dir.',
+      placeholder: 'Text hier einfügen oder eine .txt-/.md-Datei ablegen…',
+      emptyPreview: 'Füge links Text ein oder wähle oben ein Beispiel, um Markierungen für Wortechos, klebrige Sätze und indirekte Rede zu sehen.',
+      preset: 'Beispiele:', draftBtn: 'Rohentwurf (Echos & klebrige Sätze)', clear: 'Leeren',
       dropHint: 'Tipp: Du kannst auch eine lokale .txt- oder .md-Datei hier ablegen.',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
-      directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wortechos', fltSticky: 'Klebesätze', fltIndirect: 'Indirekte Rede',
+      directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wortechos', fltSticky: 'Klebrige Sätze', fltIndirect: 'Indirekte Rede',
       words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
-      cv: 'Satzlängen-VK (asl_cv)', entropy: 'Längen-Entropie (Bit)',
-      sticky: 'Klebrige Sätze (≥45 %)', indirect: 'Indirekte Rede',
-      voiceTitle: 'Stimmenkontrast: Erzählprosa vs. Dialog', vNar: 'Ø Prosa-Satz', vDlg: 'Ø Dialog-Satz', vCon: 'Kontrast (Δ)',
+      cv: 'Satzlängen-Streuung (asl_cv)', entropy: 'Längen-Entropie (Bit)',
+      sticky: 'Klebrige Sätze (≥ 45 %)', indirect: 'Indirekte Rede',
+      voiceTitle: 'Stimmenkontrast: Erzählprosa vs. Dialog', vNar: 'Ø Prosa-Satz', vDlg: 'Ø Dialog-Satz', vCon: 'Kontrast (Δ)', wordUnit: ' W',
       rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
-      sparkTitle: 'Satz-für-Satz-Puls', sparkHover: 'Balken antippen/hover für Satzlänge',
+      sparkTitle: 'Satz-für-Satz-Puls', sparkHover: 'Balken antippen oder überfahren für Satzlänge',
       sparkWords: 'Wörter',
       echoTitle: 'Lokale Wortechos (≥ 3× · klickbar)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
-      legEcho: 'Wortecho', legIndirect: 'Indirekte Rede', legSticky: 'Klebriger Satz (≥45 %)',
-      aboutTitle: 'Was diese Browser-Sandbox direkt prüft — und was Lixity lokal ergänzt',
-      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser — kein Text verlässt deinen Rechner. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Staccato-Sätze ≤ 7 Wörter vs. mittlere und lange Kaskaden ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa, den <strong>Variationskoeffizienten (<code>asl_cv</code>)</strong> und die <strong>Shannon-Längenentropie</strong> gegen Rhythmus-Monotonie, <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) sowie <strong>lokale Wortechos</strong>.',
+      legEcho: 'Wortecho', legIndirect: 'Indirekte Rede', legSticky: 'Klebriger Satz (≥ 45 %)',
+      aboutTitle: 'Was diese Browser-Sandbox direkt prüft und was Lixity lokal ergänzt',
+      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser, sodass kein Text deinen Rechner verlässt. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Sätze ≤ 7 Wörter, mittlere 8–24 Wörter, lange ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa sowie <strong>Streuung (<code>asl_cv</code>)</strong> und <strong>Längen-Entropie</strong> gegen eintöniges Tempo. Dazu markiert die Vorschau <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) und <strong>lokale Wortechos</strong>.',
       cmpSandboxTitle: 'Browser-Sandbox (diese Seite)',
       cmpSandbox: [
         'Einzelne Szene oder lokale .txt/.md-Datei sofort prüfen',
         'Satz-für-Satz-Puls, Stimmenkontrast & Nur-Dialog-Modus [D]',
-        'Klickbare Wortechos, Klebesätze & indirekte Rede',
+        'Klickbare Wortechos, klebrige Sätze & indirekte Rede',
         'Markdown-Kurzbericht für Notizen kopieren'
       ],
       cmpLocalTitle: 'Volle Lixity-App & CLI (lokal installiert)',
       cmpLocal: [
-        'Ganze Romane mit Kapitelmatrix (robustes z* & Benjamini-Hochberg FDR)',
+        'Ganze Romane mit Kapitelmatrix (z* & Benjamini-Hochberg-FDR)',
         'Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion & Inquit-Dichte',
         'Manuskript-Editor mit Live-Sitzungspuls & SQLite-Revisionsdiff',
         'Vorlese-Teleprompter & quellenverifizierte Recherche-Dossiers'
       ],
-      footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen clientseitig. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.',
+      footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen direkt auf deinem Gerät. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.',
       privacy: 'Website-Messung', privacyHref: '../index-de.html#website-measurement',
       legal: 'Impressum', legalHref: '../index-de.html#impressum'
     },
@@ -346,22 +348,24 @@
       home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE',
       pill: '100% local in your browser · Zero server upload',
       title: 'Test your own passage right in the browser',
-      lead: 'Paste a scene or drop a local .txt/.md file to inspect sentence-length rhythm, voice contrast, length entropy, dialogue share, indirect speech, and nearby word echoes immediately. No quality score — every stylistic choice stays yours.',
+      lead: 'Paste a scene or drop a local .txt or .md file to inspect sentence-length rhythm, voice contrast, dialogue share, indirect speech, and nearby word echoes right away. There is no quality score: every stylistic choice stays yours.',
+      placeholder: 'Paste your passage here or drop a .txt/.md file…',
+      emptyPreview: 'Paste text on the left or pick an example above to see highlights for word echoes, sticky sentences, and indirect speech.',
       preset: 'Examples:', draftBtn: 'Rough draft (echoes & glue)', clear: 'Clear',
       dropHint: 'Tip: You can also drop a local .txt or .md file here.',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
       directSpeech: 'Dialogue only [D]', fltEcho: 'Word echoes', fltSticky: 'Sticky sentences', fltIndirect: 'Indirect speech',
       words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
-      cv: 'Length CV (asl_cv)', entropy: 'Length entropy (bit)',
-      sticky: 'Sticky sentences (≥45%)', indirect: 'Indirect speech',
-      voiceTitle: 'Voice contrast: narration vs. dialogue', vNar: 'Avg. narration', vDlg: 'Avg. dialogue', vCon: 'Contrast (Δ)',
+      cv: 'Length variation (asl_cv)', entropy: 'Length entropy (bit)',
+      sticky: 'Sticky sentences (≥ 45%)', indirect: 'Indirect speech',
+      voiceTitle: 'Voice contrast: narration vs. dialogue', vNar: 'Avg. narration', vDlg: 'Avg. dialogue', vCon: 'Contrast (Δ)', wordUnit: ' w',
       rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
-      sparkTitle: 'Sentence-by-sentence pulse', sparkHover: 'Hover/tap a bar for sentence length',
+      sparkTitle: 'Sentence-by-sentence pulse', sparkHover: 'Hover or tap a bar for sentence length',
       sparkWords: 'words',
       echoTitle: 'Nearby word echoes (≥ 3× · clickable)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
-      legEcho: 'Word echo', legIndirect: 'Indirect speech', legSticky: 'Sticky sentence (≥45%)',
-      aboutTitle: 'What this browser sandbox checks — and what local Lixity adds',
-      aboutHtml: 'All calculations run deterministically in your browser — no text leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short staccato ≤ 7 words vs. medium and long cascades ≥ 25 words), <strong>voice contrast</strong> between dialogue and narration, <strong>coefficient of variation (<code>asl_cv</code>)</strong> and <strong>Shannon length entropy</strong> to spot pacing flattening, <strong>sticky sentences</strong> (≥ 45% function words at ≥ 8 words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong>.',
+      legEcho: 'Word echo', legIndirect: 'Indirect speech', legSticky: 'Sticky sentence (≥ 45%)',
+      aboutTitle: 'What this browser sandbox checks and what local Lixity adds',
+      aboutHtml: 'All calculations run deterministically in your browser, so no text ever leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short ≤ 7 words, medium 8–24, long ≥ 25), <strong>voice contrast</strong> between dialogue and narration, and <strong>variation (<code>asl_cv</code>)</strong> plus <strong>Shannon length entropy</strong> to spot flat pacing. The preview also highlights <strong>sticky sentences</strong> (≥ 45% function words in sentences of 8+ words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong>.',
       cmpSandboxTitle: 'Browser sandbox (this page)',
       cmpSandbox: [
         'Inspect a single scene or local .txt/.md file immediately',
@@ -371,12 +375,12 @@
       ],
       cmpLocalTitle: 'Full Lixity App & CLI (installed locally)',
       cmpLocal: [
-        'Full novels with chapter matrix (robust z* & Benjamini-Hochberg FDR)',
+        'Full novels with chapter matrix (z* & Benjamini-Hochberg FDR)',
         'Character network, POV spacing, scene cohesion & attribution tags',
         'Manuscript editor with live session pulse & SQLite revision diff',
         'Read-aloud teleprompter & source-verified research dossiers'
       ],
-      footer: 'Note: This browser sandbox analyzes single passages client-side. For full novels with chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.',
+      footer: 'Note: This browser sandbox analyzes single passages directly on your device. For full novels with a chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.',
       privacy: 'Website measurement', privacyHref: '../index.html#website-measurement',
       legal: 'Legal notice (Impressum)', legalHref: '../index.html#impressum'
     }
@@ -488,7 +492,7 @@
     el('v-narration').textContent = narAsl !== null ? narAsl.toFixed(1) : '–';
     el('v-dialogue').textContent = dlgAsl !== null ? dlgAsl.toFixed(1) : '–';
     el('v-contrast').textContent = (narAsl !== null && dlgAsl !== null)
-      ? ((dlgAsl - narAsl >= 0 ? '+' : '') + (dlgAsl - narAsl).toFixed(1) + ' W')
+      ? ((dlgAsl - narAsl >= 0 ? '+' : '') + (dlgAsl - narAsl).toFixed(1) + I18N[lang].wordUnit)
       : '–';
 
     let indirectC = 0;
@@ -558,6 +562,13 @@
     };
 
     const preview = el('preview');
+    if (!raw.trim()) {
+      const hint = document.createElement('span');
+      hint.style.color = 'var(--muted)';
+      hint.textContent = t.emptyPreview;
+      preview.replaceChildren(hint);
+      return;
+    }
     function renderEchoes(text) {
       let html = esc(text);
       if (echoSet.size) {
@@ -604,6 +615,7 @@
     el('privacy-pill').textContent = t.pill;
     el('title').textContent = t.title;
     el('lead').textContent = t.lead;
+    input.placeholder = t.placeholder;
     el('preset-lbl').textContent = t.preset;
     el('preset-draft').textContent = t.draftBtn;
     el('preset-clear').textContent = t.clear;
