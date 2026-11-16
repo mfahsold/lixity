@@ -17,12 +17,105 @@
     return "";
   }
 
+  function activateAnalysisLayer(layerValue, workbench) {
+    if (typeof switchActiveView === "function") switchActiveView("analysis");
+    if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
+    if (typeof selectAnalysisMetric === "function") {
+      selectAnalysisMetric(layerValue);
+    } else {
+      var sel = document.getElementById("style-layer");
+      if (sel) { sel.value = layerValue; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+    }
+  }
+
+  function buildAnalysisLayerCommands(isDe, workbench) {
+    var styleLayer = document.getElementById("style-layer");
+    var analysisCat = isDe ? "Analyse" : "Analysis";
+    if (styleLayer && styleLayer.options && styleLayer.options.length > 1) {
+      var layerCommands = [];
+      Array.prototype.slice.call(styleLayer.options).forEach(function (opt) {
+        var val = opt.value || "";
+        var label = (opt.textContent || "").trim();
+        if (!label) return;
+        var parent = opt.parentElement;
+        var groupLabel = (parent && parent.tagName === "OPTGROUP" && parent.label) ? parent.label.trim() : "";
+        layerCommands.push({
+          id: val ? ("layer-" + val) : "layer-off",
+          category: groupLabel ? (analysisCat + ": " + groupLabel) : analysisCat,
+          title: label,
+          subtitle: groupLabel || (isDe ? "Analyse-Ebene im Manuskript umschalten" : "Toggle analysis layer in manuscript"),
+          icon: val ? "sigma" : "eye",
+          action: function () {
+            activateAnalysisLayer(val, workbench);
+          }
+        });
+      });
+      if (layerCommands.length) return layerCommands;
+    }
+    return [
+      {
+        id: "metric-asl",
+        category: analysisCat,
+        title: isDe ? "Satzlänge & Rhythmus (ASL) hervorheben" : "Highlight Sentence Length & Rhythm",
+        subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
+        icon: "sigma",
+        action: function () { activateAnalysisLayer("asl", workbench); }
+      },
+      {
+        id: "metric-dialogue",
+        category: analysisCat,
+        title: isDe ? "Dialoge & Redeanteile hervorheben" : "Highlight Dialogue & Direct Speech",
+        subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
+        icon: "quote",
+        action: function () { activateAnalysisLayer("dialogue", workbench); }
+      },
+      {
+        id: "metric-tense",
+        category: analysisCat,
+        title: isDe ? "Tempus-Marker hervorheben" : "Highlight Grammatical Tense",
+        subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
+        icon: "tag",
+        action: function () { activateAnalysisLayer("", workbench); }
+      }
+    ];
+  }
+
+  function buildChapterCommands(isDe, workbench) {
+    var chapterSelect = document.getElementById("reader-chapter");
+    if (!chapterSelect || !chapterSelect.options) return [];
+    var chapterCommands = [];
+    Array.prototype.slice.call(chapterSelect.options).forEach(function (opt) {
+      var chId = opt.value;
+      if (!chId) return;
+      var chTitle = (opt.textContent || "").trim() || chId;
+      chapterCommands.push({
+        id: "chapter-" + chId,
+        category: isDe ? "Kapitel" : "Chapters",
+        title: (isDe ? "Zu Kapitel springen: " : "Jump to Chapter: ") + chTitle,
+        subtitle: isDe ? "Im Manuskript-Leser öffnen" : "Open in manuscript reader",
+        icon: "book-open",
+        action: function () {
+          if (typeof switchActiveView === "function") switchActiveView("analysis");
+          if (workbench) workbench.dispatch({ type: "surface", value: "document" });
+          var sel = document.getElementById("reader-chapter");
+          if (sel) {
+            sel.value = chId;
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+          } else {
+            var target = document.getElementById(chId);
+            if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
+          }
+        }
+      });
+    });
+    return chapterCommands;
+  }
+
   function getCommands() {
     var isDe = (document.documentElement.lang || "en").startsWith("de");
     var workbench = window.LixityWorkbench;
     var state = workbench && typeof workbench.state === "function" ? workbench.state() : {};
-
-    return [
+    var commands = [
       // View switches
       {
         id: "view-analysis",
@@ -103,60 +196,30 @@
             try { localStorage.setItem("lixity-theme", isDark ? "dark" : "light"); } catch (_) {}
           }
         }
-      },
+      }
+    ];
 
-      // Analysis & Metrics
-      {
-        id: "metric-asl",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Satzlänge & Rhythmus (ASL) hervorheben" : "Highlight Sentence Length & Rhythm",
-        subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
-        icon: "sigma",
+    if (document.querySelector("#manuscript-write") || document.querySelector("#manuscript-close")) {
+      commands.push({
+        id: "toggle-manuscript-write",
+        category: isDe ? "Ansicht" : "Views",
+        title: isDe ? "Schreiben / Lesen umschalten" : "Toggle Write / Read Mode",
+        subtitle: isDe ? "Zwischen Manuskript-Editor und Lesemodus wechseln" : "Switch between manuscript editor and reading view",
+        icon: "edit",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("asl");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = "asl"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          var closeBtn = document.querySelector("#manuscript-close");
+          var writeBtn = document.querySelector("#manuscript-write");
+          if (closeBtn && !closeBtn.hidden) {
+            closeBtn.click();
+          } else if (writeBtn) {
+            writeBtn.click();
           }
         }
-      },
-      {
-        id: "metric-dialogue",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Dialoge & Redeanteile hervorheben" : "Highlight Dialogue & Direct Speech",
-        subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
-        icon: "quote",
-        action: function () {
-          if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("dialogue");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = "dialogue"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-          }
-        }
-      },
-      {
-        id: "metric-tense",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Tempus-Marker hervorheben" : "Highlight Grammatical Tense",
-        subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
-        icon: "tag",
-        action: function () {
-          if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = ""; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-          }
-        }
-      },
+      });
+    }
+
+    commands = commands.concat(buildAnalysisLayerCommands(isDe, workbench), [
       {
         id: "metric-pacing",
         category: isDe ? "Analyse" : "Analysis",
@@ -338,7 +401,9 @@
           link.click();
         }
       }
-    ];
+    ]);
+
+    return commands.concat(buildChapterCommands(isDe, workbench));
   }
 
   function createPaletteDOM() {

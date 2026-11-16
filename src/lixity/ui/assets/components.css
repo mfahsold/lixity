@@ -4,6 +4,12 @@ family; view-specific rules stay in dashboard.css. Loaded after the
 design tokens and before the views (see _CSS_FILES). */
 /* Hidden state must survive shared display recipes in the app and Pages. */
 [hidden] { display: none !important; }
+/* Inline display:flex toggled by project-ui.js must still reveal initially hidden elements. */
+#import-preview-box[hidden][style*="flex"], .modal-tab-pane[hidden][style*="flex"] { display: flex !important; }
+.reader-setting-field { display: grid; gap: .3rem; }
+.reader-segmented { position: relative; display: flex; flex-wrap: wrap; gap: .25rem; }
+.reader-segmented > button.ctl { flex: 1 1 auto; }
+.reader-settings-body .reader-segmented-native { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: 1px; height: 1px; min-height: 0; opacity: 0; pointer-events: none; padding: 0; border: 0; margin: 0; }
 /* Long localized headings and help text may wrap at enlarged text sizes. */
 :where(body) { overflow-wrap: anywhere; }
 /* --- Panels & Cards --------------------------------------------------- */
