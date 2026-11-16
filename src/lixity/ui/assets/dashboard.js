@@ -1293,6 +1293,7 @@ if (settingsForm) {
       return false;
     });
     presetSelect.value = matched;
+    syncSelectPills("set-threshold-preset");
   }
   if (presetSelect && presets) {
     presetSelect.addEventListener("change", function() {
@@ -1305,6 +1306,7 @@ if (settingsForm) {
           el.setCustomValidity("");
         }
       });
+      syncAllSelectPills();
     });
     Object.keys(thresholdControlMap).forEach(function(key) {
       var el = document.getElementById(thresholdControlMap[key]);
@@ -1327,6 +1329,7 @@ if (settingsForm) {
       input.setCustomValidity("");
     });
     document.getElementById("settings-thresholds").open = true;
+    syncAllSelectPills();
   });
 }
 var fdrFilter = document.getElementById("heatmap-fdr-only");
@@ -1513,3 +1516,187 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     runAction(btn.dataset.action, payload, btn);
   });
 });
+
+function syncSelectPills(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select) return;
+  document.querySelectorAll('[data-sync-select="' + selectId + '"] button[data-value]').forEach(function (btn) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.value === select.value));
+    btn.disabled = Boolean(select.disabled);
+  });
+}
+
+function syncAllSelectPills() {
+  document.querySelectorAll("[data-sync-select]").forEach(function (group) {
+    syncSelectPills(group.dataset.syncSelect);
+  });
+}
+
+(function initSelectPillGroups() {
+  var groups = document.querySelectorAll("[data-sync-select]");
+  if (!groups.length) return;
+  var boundSelects = new Set();
+  groups.forEach(function (group) {
+    var selectId = group.dataset.syncSelect;
+    var select = document.getElementById(selectId);
+    if (!select) return;
+    group.addEventListener("click", function (event) {
+      var btn = event.target.closest("button[data-value]");
+      if (!btn || btn.disabled || select.disabled) return;
+      if (select.value !== btn.dataset.value) {
+        select.value = btn.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncSelectPills(selectId);
+    });
+    if (!boundSelects.has(selectId)) {
+      boundSelects.add(selectId);
+      select.addEventListener("change", function () { syncSelectPills(selectId); });
+      new MutationObserver(function () { syncSelectPills(selectId); })
+        .observe(select, { attributes: true, attributeFilter: ["disabled"] });
+    }
+    syncSelectPills(selectId);
+  });
+
+  var scopeStatus = document.getElementById("analysis-scope-status");
+  if (scopeStatus) {
+    new MutationObserver(function () {
+      syncSelectPills("analysis-scope-register");
+      syncSelectPills("analysis-scope-pov");
+    }).observe(scopeStatus, { childList: true, characterData: true, subtree: true });
+  }
+
+  var dimRetained = document.getElementById("dim-retained");
+  if (dimRetained) {
+    new MutationObserver(function () {
+      syncSelectPills("dim-projection");
+    }).observe(dimRetained, { childList: true, characterData: true, subtree: true });
+  }
+})();
+
+(function initTriagePills() {
+  var panel = document.getElementById("flags");
+  if (!panel) return;
+  var chapter = document.getElementById("triage-chapter");
+  var severity = document.getElementById("triage-severity");
+  var statusFilter = document.getElementById("triage-status-filter");
+  var progress = document.getElementById("triage-progress");
+  var sevGroup = panel.querySelector('[data-triage-pill-group="severity"]');
+  var statusGroup = panel.querySelector('[data-triage-pill-group="status"]');
+  var rows = Array.from(panel.querySelectorAll(".flag-row"));
+  var numbers = new Intl.NumberFormat(document.documentElement.lang || "en");
+
+  function syncPills() {
+    var chVal = chapter ? chapter.value : "";
+    var sevVal = severity ? severity.value : "";
+    var stVal = statusFilter ? statusFilter.value : "";
+
+    if (sevGroup) {
+      var sevCounts = {};
+      var sevTotal = 0;
+      rows.forEach(function (row) {
+        if (chVal && row.dataset.triageChapter !== chVal) return;
+        if (stVal && row.dataset.reviewState !== stVal) return;
+        sevTotal++;
+        var s = row.dataset.triageSeverity || "";
+        sevCounts[s] = (sevCounts[s] || 0) + 1;
+      });
+      sevGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
+        var val = btn.dataset.value;
+        btn.setAttribute("aria-pressed", String(val === sevVal));
+        var badge = btn.querySelector("[data-pill-count]");
+        if (badge) badge.textContent = numbers.format(val === "" ? sevTotal : (sevCounts[val] || 0));
+      });
+    }
+
+    if (statusGroup) {
+      var stCounts = {};
+      var stTotal = 0;
+      rows.forEach(function (row) {
+        if (chVal && row.dataset.triageChapter !== chVal) return;
+        if (sevVal && row.dataset.triageSeverity !== sevVal) return;
+        stTotal++;
+        var st = row.dataset.reviewState || "";
+        if (st) stCounts[st] = (stCounts[st] || 0) + 1;
+      });
+      statusGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
+        var val = btn.dataset.value;
+        btn.setAttribute("aria-pressed", String(val === stVal));
+        var badge = btn.querySelector("[data-pill-count]");
+        if (badge) badge.textContent = numbers.format(val === "" ? stTotal : (stCounts[val] || 0));
+      });
+    }
+  }
+
+  function syncRowQuick(row) {
+    if (!row) return;
+    var choice = row.querySelector(".triage-choice");
+    var activeVal = choice && choice.value ? choice.value : (row.dataset.reviewState || "");
+    var isDisabled = !choice || choice.disabled;
+    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
+      btn.disabled = isDisabled;
+      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === activeVal));
+    });
+  }
+
+  function bindPillGroup(group, select) {
+    if (!group || !select) return;
+    group.addEventListener("click", function (event) {
+      var btn = event.target.closest("button[data-value]");
+      if (!btn || btn.disabled) return;
+      if (select.value !== btn.dataset.value) {
+        select.value = btn.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncPills();
+    });
+  }
+
+  bindPillGroup(sevGroup, severity);
+  bindPillGroup(statusGroup, statusFilter);
+  [chapter, severity, statusFilter].forEach(function (control) {
+    if (control) control.addEventListener("change", syncPills);
+  });
+
+  if (progress) {
+    new MutationObserver(syncPills)
+      .observe(progress, { childList: true, characterData: true, subtree: true });
+  }
+
+  panel.addEventListener("click", function (event) {
+    var quickBtn = event.target.closest(".triage-quick-btn");
+    if (!quickBtn) return;
+    event.stopPropagation();
+    var row = quickBtn.closest(".flag-row");
+    if (!row) return;
+    var choice = row.querySelector(".triage-choice");
+    var save = row.querySelector("[data-triage-save]");
+    var savedState = row.querySelector(".triage-saved-state");
+    if (!choice || choice.disabled || !save) return;
+    var nextVal = quickBtn.dataset.triageQuick;
+    choice.value = nextVal;
+    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === nextVal));
+    });
+    if (savedState && typeof uiLabel === "function") {
+      savedState.textContent = uiLabel("triage_" + nextVal);
+    }
+    save.click();
+  });
+
+  var rowObserver = new MutationObserver(function (mutations) {
+    var touched = new Set();
+    mutations.forEach(function (m) {
+      var row = m.target && m.target.closest ? m.target.closest(".flag-row") : null;
+      if (row) touched.add(row);
+    });
+    touched.forEach(syncRowQuick);
+  });
+  rows.forEach(function (row) {
+    rowObserver.observe(row, { attributes: true, attributeFilter: ["data-review-state"] });
+    var choice = row.querySelector(".triage-choice");
+    if (choice) rowObserver.observe(choice, { attributes: true, attributeFilter: ["disabled"] });
+    syncRowQuick(row);
+  });
+  syncPills();
+})();

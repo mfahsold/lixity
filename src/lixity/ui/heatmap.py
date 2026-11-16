@@ -250,6 +250,41 @@ def render_heatmap_panel(
             parts.append('</select></label>')
         parts.append(f'<button type="button" class="ctl" id="analysis-scope-reset">'
                      f'{L("analysis_scope_reset")}</button></div>')
+        if register_names:
+            reg_counts = {name: sum(1 for num in chapter_numbers if fingerprint.chapter_registers.get(num) == name)
+                          for name in register_names}
+            unassigned_count = sum(1 for num in chapter_numbers if num not in fingerprint.chapter_registers)
+            parts.append(
+                f'<div class="chip-row analysis-scope-pills" role="group" '
+                f'aria-label="{L("analysis_scope_register")}" data-sync-select="analysis-scope-register">'
+                f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
+                f'{L("analysis_scope_all")} <span class="badge">{N(len(chapter_numbers), 0)}</span></button>'
+            )
+            parts.extend(
+                f'<button type="button" class="ctl ctl-sm" data-value="{register_keys[name]}" aria-pressed="false">'
+                f'{esc(name)} <span class="badge">{N(reg_counts[name], 0)}</span></button>'
+                for name in register_names
+            )
+            if unassigned_count:
+                parts.append(
+                    f'<button type="button" class="ctl ctl-sm" data-value="unassigned" aria-pressed="false">'
+                    f'{L("analysis_scope_unassigned")} <span class="badge">{N(unassigned_count, 0)}</span></button>'
+                )
+            parts.append('</div>')
+        if pov_groups:
+            parts.append(
+                f'<div class="chip-row analysis-scope-pills" role="group" '
+                f'aria-label="{L("analysis_scope_pov")}" data-sync-select="analysis-scope-pov">'
+                f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
+                f'{L("analysis_scope_all")} <span class="badge">{N(len(chapter_numbers), 0)}</span></button>'
+            )
+            for index, (name, members) in enumerate(pov_groups):
+                pov_count = sum(1 for num in chapter_numbers if num in members)
+                parts.append(
+                    f'<button type="button" class="ctl ctl-sm" data-value="p-{index}" aria-pressed="false">'
+                    f'{esc(name)} <span class="badge">{N(pov_count, 0)}</span></button>'
+                )
+            parts.append('</div>')
         template = label(labels, "analysis_scope_status")
         initial = template.replace("{shown}", N(len(chapter_numbers), 0)).replace("{total}", N(len(chapter_numbers), 0))
         parts.append(f'<p class="ctl-note" id="analysis-scope-status" role="status" '

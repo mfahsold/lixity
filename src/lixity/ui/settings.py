@@ -170,7 +170,8 @@ def settings_form(
         f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
         '<div class="settings-grid">',
         '<div class="setting-field">',
-        f'<label for="set-threshold-preset">{translated("settings_preset_label")}</label>',
+        f'<label for="set-threshold-preset">{translated("settings_preset_label")} '
+        f'<span class="help" data-help="{translated("settings_preset_hint")}" tabindex="0" aria-label="{translated("settings_preset_label")}">?</span></label>',
         f'<select class="ctl" id="set-threshold-preset" data-default="balanced" '
         f'data-presets="{presets_json}" aria-describedby="set-threshold-preset-help settings-scope-help">',
         *(
@@ -178,7 +179,13 @@ def settings_form(
             for key, label_key in preset_choices
         ),
         '</select>',
-        f'<p id="set-threshold-preset-help">{translated("settings_preset_hint")}</p></div>',
+        f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("settings_preset_label")}" data-sync-select="set-threshold-preset">',
+        *(
+            f'<button type="button" class="ctl ctl-sm" data-value="{key}" aria-pressed="{"true" if key == active_preset else "false"}">{translated(label_key)}</button>'
+            for key, label_key in preset_choices
+        ),
+        '</div>',
+        f'<p class="ctl-note" id="set-threshold-preset-help" hidden>{translated("settings_preset_hint")}</p></div>',
     ])
     fields = (
         ("z_mild", "set-z-mild"),
@@ -204,31 +211,38 @@ def settings_form(
             )
         default_note = esc(label(labels, "settings_default")).replace("{value}", str(default))
         parts.append(
-            f'<div class="setting-field"><label for="{control_id}">{translated(key)}</label>'
+            f'<div class="setting-field"><label for="{control_id}">{translated(key)} '
+            f'<span class="help" data-help="{esc(help_text, quote=True)}" tabindex="0" aria-label="{translated(key)}">?</span></label>'
             f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
             f'{" ".join(constraints)} required '
-            f'data-default="{default!r}" aria-describedby="{control_id}-help settings-scope-help"/>'
-            f'<p id="{control_id}-help">{esc(help_text)} <span class="ctl-note">{default_note}</span></p></div>'
+            f'data-default="{default!r}" data-help="{esc(help_text, quote=True)}" aria-describedby="{control_id}-help settings-scope-help"/>'
+            f'<p class="ctl-note" id="{control_id}-help">{default_note}</p></div>'
         )
         if key == "fdr_q":
             method = thresholds.fdr_method.lower()
             default_method = defaults.fdr_method.lower()
             method_default = esc(label(labels, "settings_default")).replace(
                 "{value}", "Benjamini–Hochberg" if default_method == "bh" else "Benjamini–Yekutieli")
+            fdr_help = esc(label(labels, "help_fdr"), quote=True)
             parts.append(
-                f'<div class="setting-field"><label for="set-fdr-method">{translated("settings_fdr_method")}</label>'
+                f'<div class="setting-field"><label for="set-fdr-method">{translated("settings_fdr_method")} '
+                f'<span class="help" data-help="{fdr_help}" tabindex="0" aria-label="{translated("settings_fdr_method")}">?</span></label>'
                 f'<select class="ctl" id="set-fdr-method" data-default="{default_method}" '
-                f'aria-describedby="set-fdr-method-help settings-scope-help">'
+                f'data-help="{fdr_help}" aria-describedby="set-fdr-method-help settings-scope-help">'
                 f'<option value="bh"{" selected" if method == "bh" else ""}>Benjamini–Hochberg</option>'
                 f'<option value="by"{" selected" if method == "by" else ""}>Benjamini–Yekutieli</option>'
-                f'</select><p id="set-fdr-method-help">{esc(label(labels, "help_fdr"))} '
-                f'<span class="ctl-note">{method_default}</span></p></div>'
+                f'</select>'
+                f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("settings_fdr_method")}" data-sync-select="set-fdr-method">'
+                f'<button type="button" class="ctl ctl-sm" data-value="bh" aria-pressed="{"true" if method == "bh" else "false"}">Benjamini–Hochberg</button>'
+                f'<button type="button" class="ctl ctl-sm" data-value="by" aria-pressed="{"true" if method == "by" else "false"}">Benjamini–Yekutieli</button>'
+                f'</div><p class="ctl-note" id="set-fdr-method-help">{method_default}</p></div>'
             )
     parts.extend([
         '<div class="setting-field">',
-        f'<label for="set-flag-min-sev">{translated("flag_min_severity")}</label>',
+        f'<label for="set-flag-min-sev">{translated("flag_min_severity")} '
+        f'<span class="help" data-help="{translated("help_flag_min_severity")}" tabindex="0" aria-label="{translated("flag_min_severity")}">?</span></label>',
         '<select class="ctl" id="set-flag-min-sev" data-default="2" '
-        'aria-describedby="flag-severity-help settings-scope-help">',
+        f'data-help="{translated("help_flag_min_severity")}" aria-describedby="flag-severity-help settings-scope-help">',
     ])
     for severity in (1, 2, 3):
         selected = " selected" if severity == thresholds.flag_min_severity else ""
@@ -236,9 +250,19 @@ def settings_form(
         parts.append(
             f'<option value="{severity}"{selected}>{translated(f"severity_{severity}")} ≥ {severity}{marker}</option>'
         )
+    parts.append('</select>')
+    parts.append(
+        f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("flag_min_severity")}" data-sync-select="set-flag-min-sev">'
+    )
+    for severity in (1, 2, 3):
+        pressed = "true" if severity == thresholds.flag_min_severity else "false"
+        parts.append(
+            f'<button type="button" class="ctl ctl-sm" data-value="{severity}" aria-pressed="{pressed}">'
+            f'{translated(f"severity_{severity}")} ≥ {severity}</button>'
+        )
     parts.extend([
-        '</select>',
-        f'<p id="flag-severity-help">{translated("help_flag_min_severity")}</p></div>',
+        '</div>',
+        f'<p class="ctl-note" id="flag-severity-help" hidden>{translated("help_flag_min_severity")}</p></div>',
         '</div>',
         '<div class="settings-actions">',
         f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',

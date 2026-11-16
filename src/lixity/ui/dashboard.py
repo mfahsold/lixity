@@ -1653,6 +1653,32 @@ def render_dashboard(
                          for status in ("unreviewed", "stale", "later", "kept", "changed"))
             parts.append('</select></label>')
         parts.append(f'<button type="button" class="ctl" id="triage-next">{L("triage_next")}</button></div>')
+        parts.append('<div class="triage-pill-filters">')
+        parts.append(
+            f'<div class="chip-row" role="group" aria-label="{L("flags_stage")}" data-triage-pill-group="severity">'
+            f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
+            f'{L("triage_all")} <span class="badge" data-pill-count>{N(len(flagged), 0)}</span></button>'
+        )
+        for severity in sorted({p.severity for p in flagged}):
+            sev_count = sum(1 for p in flagged if p.severity == severity)
+            parts.append(
+                f'<button type="button" class="ctl ctl-sm" data-value="{severity}" aria-pressed="false">'
+                f'{L(f"severity_{severity}")} <span class="badge" data-pill-count>{N(sev_count, 0)}</span></button>'
+            )
+        parts.append('</div>')
+        if review_capable:
+            parts.append(
+                f'<div class="chip-row" role="group" aria-label="{L("triage_status")}" data-triage-pill-group="status">'
+                f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
+                f'{L("triage_all")} <span class="badge" data-pill-count>{N(len(flagged), 0)}</span></button>'
+            )
+            parts.extend(
+                f'<button type="button" class="ctl ctl-sm" data-value="{triage_status}" aria-pressed="false">'
+                f'{L("triage_" + triage_status)} <span class="badge" data-pill-count>0</span></button>'
+                for triage_status in ("unreviewed", "stale", "later", "kept", "changed")
+            )
+            parts.append('</div>')
+        parts.append('</div>')
     if flagged or review_capable:
         parts.append('<p class="ctl-note" id="triage-progress" role="status" aria-live="polite"></p>')
         if review_capable:
@@ -1707,7 +1733,14 @@ def render_dashboard(
                     f'<option value="">{L("triage_choose")}</option>'
                     + "".join(f'<option value="{status}">{L("triage_" + status)}</option>'
                               for status in ("kept", "changed", "later"))
-                    + f'</select><button type="button" class="ctl" data-triage-save disabled>{L("triage_save")}</button></td>'
+                    + f'</select><button type="button" class="ctl" data-triage-save disabled>{L("triage_save")}</button>'
+                    + f'<div class="chip-row triage-quick-actions" role="group" aria-label="{L("triage_status")}">'
+                    + "".join(
+                        f'<button type="button" class="ctl ctl-sm triage-quick-btn" data-triage-quick="{triage_status}" '
+                        f'aria-pressed="false" disabled>{L("triage_" + triage_status)}</button>'
+                        for triage_status in ("kept", "changed", "later")
+                    )
+                    + '</div></td>'
                 )
             parts.append("</tr>")
         parts.append("</tbody></table></div>")

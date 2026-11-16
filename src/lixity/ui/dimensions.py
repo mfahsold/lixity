@@ -26,8 +26,7 @@ def style_dimensions(
         return format_num(value, language_key, decimals, signed=signed)
 
     parts = ['<section class="panel" id="dimensions">',
-             f"<h2>{help_term(labels, 'dimensions', translated('style_dimensions'))}</h2>",
-             f'<p class="dim-guide">{translated("dim_guide")}</p>']
+             f"<h2>{help_term(labels, 'dimensions', translated('style_dimensions'))}</h2>"]
     diagnostics = fingerprint.dimension_diagnostics
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
 
@@ -51,10 +50,17 @@ def style_dimensions(
         })
     features = diagnostics.get("features", list(dim_list[0]["loadings"]) if dim_list else [])
     if diagnostics or points_data:
-        parts.append(f'<p class="dim-coverage">{translated("dim_coverage", scored=len(points_data), total=len(chapters), features=len(features))}</p>')
-    if dim_list:
-        retained = diagnostics.get("retained_variance", sum(dim["variance"] for dim in dim_list))
-        parts.append(f'<p class="hint" id="dim-retained">{translated("dim_retained", variance=number(retained * 100, 1))}</p>')
+        strip = [
+            '<div class="chip-row dim-summary-strip">',
+            f'<span class="badge dim-coverage">{translated("dim_coverage", scored=len(points_data), total=len(chapters), features=len(features))}</span>',
+        ]
+        if dim_list:
+            retained = diagnostics.get("retained_variance", sum(dim["variance"] for dim in dim_list))
+            strip.append(f'<span class="badge" id="dim-retained">{translated("dim_retained", variance=number(retained * 100, 1))}</span>')
+        if points_data:
+            strip.append(f'<span class="badge dim-3d-count">{len(points_data)} / {len(chapters)} {translated("chapters")}</span>')
+        strip.append('</div>')
+        parts.extend(strip)
 
     axes_data = []
     for dim in dim_list[:3]:
@@ -85,7 +91,15 @@ def style_dimensions(
         for a in range(len(axes_data)):
             parts.extend(f'<option value="d{a + 1}-d{b + 1}">D{axes_data[a]["idx"]} / D{axes_data[b]["idx"]}</option>'
                          for b in range(a + 1, len(axes_data)))
-        parts.append('</select></div>')
+        parts.append('</select>')
+        parts.append(f'<div class="chip-row dim-projection-pills" role="group" aria-label="{translated("dim_projection")}" data-sync-select="dim-projection">')
+        parts.append(f'<button type="button" class="ctl ctl-sm" data-value="3d" aria-pressed="true" disabled>{translated("dim_3d")}</button>')
+        parts.extend(
+            f'<button type="button" class="ctl ctl-sm" data-value="d{a + 1}-d{b + 1}" aria-pressed="false" disabled>D{axes_data[a]["idx"]}/D{axes_data[b]["idx"]}</button>'
+            for a in range(len(axes_data))
+            for b in range(a + 1, len(axes_data))
+        )
+        parts.append('</div></div>')
         parts.append('<ul id="dim-legend" class="dim-legend">')
         for glyph, key in (("chapter", "dim_legend_chapter"), ("threshold", "dim_legend_threshold"),
                            ("selected", "dim_legend_selected")):
@@ -100,7 +114,6 @@ def style_dimensions(
             parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')
         missing_axes_description = " dim-incomplete-axes" if len(axes_data) < 3 else ""
         parts.append(f'<div class="dim-canvas-wrap" id="dim-canvas"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
-        parts.append(f'<p id="dim-legend-note" class="dim-legend-note">{translated("dim_legend_note")}</p>')
         parts.append('<div class="dim-3d-actions dim-display-options">')
         for control_id, key, pressed in (
             ("dim-ctl-traj", "dim_ctl_trajectory", True),
@@ -116,7 +129,7 @@ def style_dimensions(
             ("dim-ctl-zoom-in", "dim_ctl_zoom_in"), ("dim-ctl-zoom-out", "dim_ctl_zoom_out"),
         ):
             parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="{control_id}" disabled>{translated(key)}</button>')
-        parts.append(f'</div><div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span><span>{len(points_data)} / {len(chapters)} {translated("chapters")}</span></div>')
+        parts.append('</div>')
         parts.append(f'<details class="dim-cutoff"><summary>{translated("dim_score_threshold")}: |score| ≥ {threshold_label}</summary><p>{translated("dim_cutoff", threshold=threshold_label)}</p></details>')
         parts.append('</div>')
         point = points_data[0]
@@ -179,7 +192,11 @@ def style_dimensions(
         parts.append('</tbody></table></div>')
     if not points_data:
         parts.append(f'<p class="hint dim-cutoff">{translated("dim_cutoff", threshold=threshold_label)}</p>')
-    parts.append(f'<details id="dim-expert"><summary>{translated("dim_expert")}</summary><p>{translated("dim_method")}</p><p>{translated("dim_limits")}</p>')
+    parts.append(f'<details id="dim-expert"><summary>{translated("dim_expert")}</summary><p class="dim-guide">{translated("dim_guide")}</p>')
+    if points_data:
+        parts.append(f'<p id="dim-legend-note" class="dim-legend-note">{translated("dim_legend_note")}</p>')
+        parts.append(f'<p class="hint">{translated("dim_3d_hint")}</p>')
+    parts.append(f'<p>{translated("dim_method")}</p><p>{translated("dim_limits")}</p>')
     omitted = diagnostics.get("omitted_chapters", [])
     if omitted:
         parts.append(f'<h3>{translated("dim_omitted")}</h3><ul>')
