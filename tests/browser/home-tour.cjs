@@ -9,7 +9,10 @@ const {spawnSync} = require('node:child_process');
 const repository = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = path.join(artifacts, 'site');
-assert.equal(spawnSync(path.join(repository, '.venv/bin/python'), ['scripts/stage_pages.py', '--output', root], {cwd: repository}).status, 0);
+const staged = spawnSync(process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python'),
+  ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
+if (staged.error) throw staged.error;
+assert.equal(staged.status, 0, staged.stderr);
 (async () => {
   const browser = await launchChromium();
   try {

@@ -232,7 +232,9 @@ threads, dependencies, a database service or a native extension.
 
 ### Preparing a release
 
-To prepare a new release, bump the version, scaffold release notes and synchronize documentation pins in one step:
+To prepare a new release, bump the version, scaffold pending release notes (explicitly
+marking publication date and verification results as pending) and synchronize
+documentation pins in one step via `scripts/prepare_release.py`:
 
 ```bash
 make release-prepare VERSION=X.Y.Z
@@ -248,12 +250,14 @@ This first rejects a missing tag argument, a tag name that does not match the
 source version, or absent/empty release notes, before heavy checks even under
 `make -j`. The argument check does not inspect a Git tag or its target commit.
 It then runs `make check` once, `make docs-generated-check` and the dependency audit,
-then builds fresh archives, requires an exact tag/source/wheel/sdist version match,
-and installs the wheel in a temporary
-isolated environment outside the checkout. It checks dependencies, CLI/distribution
-identity, diagnostics, all three reading-website formats and a neutral document PDF.
-The output is the verified wheel, source archive and
-`SHA256SUMS` in `dist/`. Full pytest already covers Pages/documentation tests;
+then builds fresh archives and runs the isolated wheel smoke test in a temporary
+staging directory before promoting the verified wheel, source archive and
+`SHA256SUMS` into `dist/`. `scripts/check_release.py` validates archives read-only
+and verifies existing `SHA256SUMS` via `verify_checksums` without overwriting them;
+it requires an exact tag/source/wheel/sdist version match and tests the wheel
+in a temporary isolated environment outside the checkout across dependencies,
+CLI/distribution identity, diagnostics, all three reading-website formats and a
+neutral document PDF. Full pytest already covers Pages/documentation tests;
 `docs-generated-check` adds check-only version-pin, bundle and guide-alternative
 validation without running those tests twice. `make docs-check` remains the
 complete standalone documentation check. Recheck existing artifacts without rebuilding with
@@ -274,10 +278,16 @@ must resolve to the reviewed commit: compare `git rev-parse HEAD` with
 `git rev-parse 'vX.Y.Z^{commit}'` locally, then verify the remote tag and the
 release workflow's commit after pushing. Annotated tags must be dereferenced to
 their commit for this comparison. A matching version string alone is insufficient.
-The tag workflow first runs the reusable full source and browser checks on the same
-commit; either failure blocks publication. It then builds, verifies and
-smoke-installs artifacts from that commit, attests them for `gh attestation verify`,
-attaches them to a draft release and publishes only when every asset is present.
+The tag workflow (`release.yml`) first requires reusable full source (`tests.yml`
+across Python 3.10 and 3.12), full Chromium browser (`browser.yml`) and full native
+(`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
+checks on the exact tagged commit; any failure or cancellation blocks publication.
+When unpublished, it then builds, verifies and smoke-installs artifacts from that
+commit, attests them for `gh attestation verify`, attaches them to a draft release,
+verifies the draft manifest, digests and attestations via `scripts/release_channels.py verify-draft`,
+publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
+of an already published tag, `scripts/release_channels.py recover` retrieves and
+verifies the immutable GitHub assets instead of rebuilding.
 The local `make release-check` and applicable browser checks remain required:
 the CI gate does not replace the local dependency audit or cross-platform work.
 Release build, smoke installation and attestation remain automatic; after GitHub publication
@@ -304,10 +314,14 @@ and corrected targets. Never replace an already published release or artifact.
 Every tagged release is distributed and archived automatically:
 
 - the workflow uploads wheel and sdist to PyPI when the repository variable
-  `PUBLISH_PYPI` is `true` (trusted publishing, environment `pypi`); if a run
-  misses PyPI, dispatch the same workflow with the `tag` input to build and
-  publish without touching the GitHub release; this catch-up uses the previously
-  published tag and does not rerun the push-only test gates;
+  `PUBLISH_PYPI` is `true` (trusted publishing, environment `pypi`); initial
+  tag runs reuse the verified artifact set from `publish`, while reruns and
+  manual PyPI catch-up dispatches (`workflow_dispatch` with `tag`) use
+  `scripts/release_channels.py` (`inspect`, `recover`, `stage-pypi`,
+  `verify-pypi`) from the workflow commit to recover the immutable GitHub Release
+  assets, verify `SHA256SUMS`, GitHub digests, source equivalence and GitHub
+  attestations, reconcile existing PyPI filenames and SHA-256 digests, and upload
+  only missing identical distributions without rebuilding or using `--skip-existing`;
 - Zenodo archives each new release once the repository is enabled there, so
   released versions receive a DOI without a local step.
 
@@ -320,11 +334,15 @@ republishing an immutable tag. When both metadata files exist,
 description and conceptual citation consistently. See
 [Zenodo's metadata guidance](https://help.zenodo.org/docs/github/describe-software/).
 
-Documentation deployment uses the separate reusable Pages workflow, called for
-the published release tag after those publication steps. A PyPI catch-up dispatch
-also pins Pages to its selected existing tag. The `github-pages` environment must
-permit version tags (`v*`); existing branch policies remain separate. A manual
-Pages dispatch can deliberately preview an explicitly selected, permitted ref.
+Documentation deployment uses the separate reusable Pages workflow (`pages.yml`),
+called for the published release tag after those publication steps. It verifies
+all four documentation generators (`sync_docs.py`, `build_public_site.py`,
+`build_llms_full.py`, `build_guide_markdown.py`), uses non-cancelling production
+concurrency and records the verified checkout `source_sha` and `workflow_run_url`
+in `deployment.json`. A PyPI catch-up dispatch also pins Pages to its selected
+existing tag. The `github-pages` environment must permit version tags (`v*`);
+existing branch policies remain separate. A manual Pages dispatch can deliberately
+preview an explicitly selected, permitted ref.
 A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager

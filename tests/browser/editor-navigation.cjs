@@ -10,7 +10,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
   const source = path.join(root, 'book.md');
   const original = '# Synthetic chapter\r\n\r\nA quiet morning beside the river.\r\n\r\nGrüße 🌊 café repeated café.\r\n\r\nGrüße 🌊 café repeated café.\r\n';
   fs.writeFileSync(source, original);
-  const server = spawn('.venv/bin/python', ['tests/browser/editor-server.py', root], {env:{...process.env, PYTHONPATH:'src:.'}});
+  const server = spawn(process.env.PYTHON_BIN || '.venv/bin/python', ['tests/browser/editor-server.py', root], {env:{...process.env, PYTHONPATH:'src:.'}});
   server.stderr.on('data', data => process.stderr.write(data));
   let browser;
   try {

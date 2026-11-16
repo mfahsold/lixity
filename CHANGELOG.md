@@ -19,6 +19,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Honor `PYTHON_BIN` before falling back to `.venv/bin/python` across all browser
+  suites (`editor-features.cjs`, `editor-navigation.cjs`, `manuscript-editor.cjs`,
+  `home-tour.cjs`), verified with `tests/browser/support/python-entrypoints.test.cjs`.
 - Keep logging importable on Python 3.10 by restricting generic handler types
   to static type checking.
 - Preserve the zero-MAD population-deviation fallback at extreme finite scales
@@ -57,6 +60,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Harden the release and CI pipeline (`scripts/check_release.py`,
+  `scripts/prepare_release.py`, `scripts/release_channels.py`,
+  `scripts/run_browser_suites.py`, `.github/workflows/*.yml`): require full
+  source (`Python 3.10` and `3.12`), Chromium browser and Windows/macOS native
+  gates before release publication; verify `SHA256SUMS` read-only and stage
+  fresh build/smoke artifacts before promoting into `dist/`; mark prepared
+  release notes as pending verification; recover immutable GitHub release
+  assets and reconcile existing PyPI digests without rebuilding or
+  `--skip-existing`; retain bounded failure-only browser CI diagnostics and
+  summaries (`--diagnostics`, `--summary`); check all four site/doc generators
+  and record `deployment.json` provenance on Pages; and pin workflow actions to
+  explicit commit SHAs.
 - Clarify central product and onboarding copy across seven public languages:
   distinguish development availability, built-in offline analysis, optional
   integrations, retained source provenance and heuristic text evidence.

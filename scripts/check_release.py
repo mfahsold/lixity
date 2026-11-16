@@ -5,6 +5,7 @@ import ast
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -121,9 +122,74 @@ def write_checksums(dist: Path) -> None:
     (dist / "SHA256SUMS").write_text(sums, encoding="utf-8")
 
 
-def build(root: Path, dist: Path, tag: str | None = None) -> None:
-    """Replace only managed build outputs after a fresh build passes validation."""
-    source_version(root, tag)
+def verify_checksums(dist: Path, version: str) -> None:
+    """Read and verify declared hashes; never create or repair release evidence."""
+    manifest = dist / "SHA256SUMS"
+    if dist.is_symlink() or manifest.is_symlink() or not manifest.is_file():
+        raise ValueError("SHA256SUMS must be a regular file in the artifact directory")
+    expected = {f"lixity-{version}-py3-none-any.whl", f"lixity-{version}.tar.gz"}
+    declared: dict[str, str] = {}
+    for line in manifest.read_text(encoding="utf-8").splitlines():
+        match = re.fullmatch(r"([0-9a-fA-F]{64}) [ *](.+)", line)
+        if match is None:
+            raise ValueError("malformed SHA256SUMS entry")
+        digest, name = match.groups()
+        if name not in expected or name in declared:
+            raise ValueError("SHA256SUMS must declare each current artifact exactly once")
+        declared[name] = digest.lower()
+    if declared.keys() != expected:
+        raise ValueError("SHA256SUMS must declare the current wheel and sdist")
+    for name, digest in declared.items():
+        path = dist / name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"checksum artifact must be a regular file: {name}")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise ValueError(f"checksum mismatch: {name}")
+
+
+def promote_artifacts(root: Path, fresh: Path, dist: Path, tag: str | None) -> None:
+    """Stage complete bytes locally, then replace with rollback on caught failures.
+
+    The two directory renames are not one atomic operation. A process kill or
+    power loss between them can leave the prior directory at the backup path.
+    """
+    dist.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{dist.name}-release-", dir=dist.parent))
+    candidate = staging / "candidate"
+    previous = staging / "previous"
+    try:
+        candidate.mkdir()
+        for path in sorted(fresh.iterdir()):
+            shutil.copy2(path, candidate / path.name)
+        version = validate(root, candidate, tag)
+        verify_checksums(candidate, version)
+        try:
+            if dist.exists():
+                dist.rename(previous)
+            candidate.rename(dist)
+        except BaseException:
+            if previous.exists():
+                try:
+                    previous.rename(dist)
+                except OSError as exc:
+                    raise OSError("artifact promotion and rollback failed; previous artifacts "
+                                  f"retained at {previous}") from exc
+            raise
+        if previous.exists():
+            try:
+                shutil.rmtree(previous)
+            except OSError as exc:
+                raise OSError(f"artifacts promoted to {dist}, but previous artifacts could not "
+                              f"be removed from {previous}") from exc
+    finally:
+        # Never clean away the only retained copy when rollback/cleanup failed.
+        if not previous.exists():
+            shutil.rmtree(staging)
+
+
+def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool = False) -> None:
+    """Replace managed outputs only after candidate validation and requested smoke checks."""
+    version = source_version(root, tag)
     if dist.is_symlink():
         raise ValueError("artifact output directory must not be a symlink")
     old = list(dist.iterdir()) if dist.exists() else []
@@ -139,12 +205,11 @@ def build(root: Path, dist: Path, tag: str | None = None) -> None:
             [sys.executable, "-m", "build", "--outdir", str(fresh)], cwd=root, check=True,
         )
         validate(root, fresh, tag)
+        if smoke_wheel:
+            smoke(fresh, version)
+            validate(root, fresh, tag)
         write_checksums(fresh)
-        dist.mkdir(parents=True, exist_ok=True)
-        for path in old:
-            path.unlink()
-        for path in sorted(fresh.iterdir()):
-            shutil.copy2(path, dist / path.name)
+        promote_artifacts(root, fresh, dist, tag)
 
 
 def smoke(dist: Path, version: str) -> None:
@@ -163,23 +228,30 @@ def smoke(dist: Path, version: str) -> None:
         executable = work / "venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         cli = work / "venv" / ("Scripts/lixity.exe" if os.name == "nt" else "bin/lixity")
 
-        def run(command: list[str]) -> str:
-            return subprocess.run(  # noqa: S603 - controlled venv interpreter, no shell
-                command, cwd=work, env=env, check=True,
-                capture_output=True, text=True,
-            ).stdout
+        def run(command: list[str], label: str) -> str:
+            try:
+                return subprocess.run(  # noqa: S603 - controlled venv interpreter, no shell
+                    command, cwd=work, env=env, check=True,
+                    capture_output=True, text=True,
+                ).stdout
+            except subprocess.CalledProcessError as exc:
+                detail = (exc.stderr or exc.stdout or "no diagnostic output").strip()[-4000:]
+                raise ValueError(f"installed wheel smoke failed ({label}, exit {exc.returncode}):"
+                                 f"\n{detail}") from exc
 
-        run([str(executable), "-m", "pip", "install", str(wheel)])
-        run([str(executable), "-m", "pip", "check"])
-        if run([str(cli), "--version"]).strip() != f"lixity {version}":
+        run([str(executable), "-m", "pip", "install", str(wheel)], "install wheel")
+        run([str(executable), "-m", "pip", "check"], "check dependencies")
+        if run([str(cli), "--version"], "CLI version").strip() != f"lixity {version}":
             raise ValueError("installed CLI version differs from release version")
-        about = json.loads(run([str(cli), "about", "--json"]))
+        about = json.loads(run([str(cli), "about", "--json"], "about metadata"))
         if about["meta"]["version"] != version:
             raise ValueError("installed about metadata differs from release version")
-        status = json.loads(run([str(cli), "service", "status", "--port", "59973", "--json"]))
+        status = json.loads(run([str(cli), "service", "status", "--port", "59973", "--json"],
+                                "service status"))
         if status["schema_version"] != "lixity-service-status/1" or not status["ok"]:
             raise ValueError("installed service status did not return its inspection contract")
-        diagnostics = json.loads(run([str(cli), "doctor", "--port", "59973", "--json"]))
+        diagnostics = json.loads(run([str(cli), "doctor", "--port", "59973", "--json"],
+                                     "installation diagnostics"))
         if (diagnostics["schema_version"] != "lixity-doctor/1" or not diagnostics["ok"]
                 or diagnostics["installation"]["distribution_version"] != version):
             raise ValueError("installed diagnostics disagree with the release installation")
@@ -210,9 +282,9 @@ for mode in ('review', 'reader', 'companion'):
     assert 'data-read-only="true"' in content
     if mode != 'review': assert 'LATE_SMOKE_SENTINEL' not in content
     if mode == 'companion': assert 'Synthetic opening.' not in content
-"""])
+"""], "reading website exports")
         run([str(cli), "pdf", str(work / "synthetic-project/manuscript.md"),
-             "--layout", "document", "-o", str(work / "document.pdf")])
+             "--layout", "document", "-o", str(work / "document.pdf")], "document PDF export")
         if not (work / "document.pdf").read_bytes().startswith(b"%PDF-"):
             raise ValueError("installed neutral document export did not produce a PDF")
 
@@ -235,11 +307,11 @@ def main() -> None:
             print(f"release source verified: {source_version(root, args.tag)}")
             return
         if args.build:
-            build(root, dist, args.tag)
+            build(root, dist, args.tag, smoke_wheel=args.smoke)
         version = validate(root, dist, args.tag)
-        if args.smoke:
+        verify_checksums(dist, version)
+        if args.smoke and not args.build:
             smoke(dist, version)
-        write_checksums(dist)
     except (ValueError, OSError, tarfile.TarError, zipfile.BadZipFile,
             subprocess.CalledProcessError) as exc:
         parser.exit(1, f"release check failed: {exc}\n")

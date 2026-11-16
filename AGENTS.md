@@ -72,7 +72,7 @@ and investigate reported bugs before changing behavior.
   Matching version strings do not establish that a running process loaded a fix.
 - CI runs `tests` automatically for pull requests targeting `main`; `tests`,
   `browser` and `research-platforms` also support manual dispatch. Tagged
-  releases reuse the source and browser gates; `release` runs on `v*` tags. Local checks
+  releases reuse the source, browser and full native platform gates; `release` runs on `v*` tags. Local checks
   (`make check`, `make fast-check`, `make docs-check`, `make browser-changed`)
   are the everyday gate. Change workflow YAML only with `make workflow-check`
   (needs `actionlint`).

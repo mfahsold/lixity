@@ -1,3 +1,4 @@
+# Dispatch deploys production. Local previews use scripts/stage_pages.py.
 name: pages
 on:
   workflow_dispatch:
@@ -13,7 +14,7 @@ permissions:
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -22,19 +23,38 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.source_ref || github.ref }}
-      - uses: actions/configure-pages@v6
+          persist-credentials: false
+          ref: ${{ inputs.source_ref || github.sha }}
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Verify generated documentation
         run: |
           python3 scripts/sync_docs.py --check
+          python3 scripts/build_public_site.py --check
           python3 scripts/build_llms_full.py --check
           python3 scripts/build_guide_markdown.py --check
       - name: Stage public product documentation
         run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages"
-      - uses: actions/upload-pages-artifact@v5
+      - name: Record exact public deployment source
+        env:
+          SOURCE_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          metadata = {"schema_version": 1, "source_sha": source,
+                      "workflow_run_url": os.environ["SOURCE_RUN_URL"]}
+          output = Path(os.environ["RUNNER_TEMP"]) / "lixity-pages" / "deployment.json"
+          output.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+              summary.write(f"Pages deployment source: `{source}`\n\n")
+          PY
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: ${{ runner.temp }}/lixity-pages
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

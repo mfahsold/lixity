@@ -17,13 +17,19 @@ local and CI runs stay aligned.
 import argparse
 import concurrent.futures
 import fnmatch
+import json
+import math
 import os
 import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
+import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITE_DIR = ROOT / "tests" / "browser"
@@ -324,6 +330,184 @@ def suites_for_paths(paths: list[str], available: list[str] | None = None) -> li
     return [name for name in names if name in selected]
 
 
+class BrowserEvidence:
+    """Persist bounded evidence from reviewed synthetic suites, never project trees.
+
+    A killed runner leaves its last atomic snapshot with active/not-run states.
+    Only failed processes retain PNGs, preserving the budget for failures. They
+    are copied from temporary directories created for these subprocesses; suites
+    that hardcode /tmp paths retain their logs but not those captures.
+    """
+
+    LOG_BYTES = 128 * 1024
+    CAPTURE_BYTES = 2 * 1024 * 1024
+    CAPTURE_COUNT = 4
+    TOTAL_CAPTURE_BYTES = 64 * 1024 * 1024
+
+    def __init__(self, directory: Path, names: list[str], jobs: int):
+        directory.mkdir(parents=True, exist_ok=False)
+        self.directory = directory
+        (directory / "logs").mkdir()
+        (directory / "captures").mkdir()
+        self.lock = threading.Lock()
+        self.started = time.monotonic()
+        self.capture_bytes = 0
+        self.stopped = threading.Event()
+        self.data: dict[str, Any] = {
+            "schema_version": 1,
+            "status": "running",
+            "started_at": self.timestamp(),
+            "finished_at": None,
+            "jobs": jobs,
+            "full_matrix": os.environ.get("LIXITY_BROWSER_FULL") == "1",
+            "preflight": {"status": "not_run"},
+            "suites": [{"name": name, "status": "not_run"} for name in names],
+            "limits": {
+                "log_bytes_per_process": self.LOG_BYTES,
+                "capture_bytes_per_file": self.CAPTURE_BYTES,
+                "captures_per_suite": self.CAPTURE_COUNT,
+                "capture_bytes_total": self.TOTAL_CAPTURE_BYTES,
+                "capture_policy": "failed_processes_only",
+            },
+        }
+        self.refresh()
+        self.heartbeat = threading.Thread(target=self._heartbeat, daemon=True)
+        self.heartbeat.start()
+
+    @staticmethod
+    def timestamp() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _write(self) -> None:
+        statuses = [item["status"] for item in self.data["suites"]]
+        self.data["counts"] = {
+            "selected": len(statuses),
+            "completed": statuses.count("passed") + statuses.count("failed"),
+            **{status: statuses.count(status) for status in ("passed", "failed", "active", "not_run")},
+        }
+        self.data["seconds"] = round(time.monotonic() - self.started, 3)
+        self.data["updated_at"] = self.timestamp()
+        temporary = self.directory / "results.json.tmp"
+        temporary.write_text(json.dumps(self.data, indent=2) + "\n", encoding="utf-8")
+        temporary.replace(self.directory / "results.json")
+
+    def refresh(self) -> None:
+        with self.lock:
+            self._write()
+
+    def _heartbeat(self) -> None:
+        while not self.stopped.wait(1):
+            self.refresh()
+
+    def finish(self, code: int) -> None:
+        self.stopped.set()
+        self.heartbeat.join()
+        with self.lock:
+            self.data["status"] = "failed" if code else "passed"
+            self.data["finished_at"] = self.timestamp()
+            self._write()
+
+    def _captures(self, workspace: Path, name: str) -> tuple[list[str], bool]:
+        kept: list[str] = []
+        truncated = False
+        # os.walk does not follow directory symlinks; validate each file too.
+        for directory, children, files in os.walk(workspace, followlinks=False):
+            children.sort()
+            for filename in sorted(files):
+                source = Path(directory) / filename
+                if source.suffix.lower() != ".png" or source.is_symlink():
+                    continue
+                if not source.resolve().is_relative_to(workspace.resolve()):
+                    continue
+                size = source.stat().st_size
+                if size > self.CAPTURE_BYTES:
+                    truncated = True
+                    continue
+                with source.open("rb") as image:
+                    if image.read(8) != b"\x89PNG\r\n\x1a\n":
+                        continue
+                if (len(kept) == self.CAPTURE_COUNT
+                        or self.capture_bytes + size > self.TOTAL_CAPTURE_BYTES):
+                    return kept, True
+                target = Path("captures") / f"{name}-{len(kept) + 1}.png"
+                shutil.copyfile(source, self.directory / target)
+                self.capture_bytes += size
+                kept.append(target.as_posix())
+        return kept, truncated
+
+    def _process(self, command: list[str], name: str, record: dict[str, Any]) -> tuple[float, int, str]:
+        started = time.monotonic()
+        log = Path("logs") / f"{name}.log"
+        (self.directory / log).write_bytes(b"")
+        with self.lock:
+            record.update(status="active", started_at=self.timestamp(), log=log.as_posix())
+            self._write()
+        with tempfile.TemporaryDirectory(prefix="lixity-browser-run-") as directory:
+            workspace = Path(directory)
+            environment = {**os.environ, "TMPDIR": directory, "TMP": directory, "TEMP": directory}
+            tail = b""
+            total = 0
+
+            def retain(chunk: bytes) -> None:
+                nonlocal tail, total
+                total += len(chunk)
+                tail = (tail + chunk)[-self.LOG_BYTES:]
+                # Paths are useful as roles, not as local machine identifiers.
+                clean = tail
+                for path, label in ((directory, "<suite-temp>"), (str(ROOT), "<checkout>"),
+                                    (str(Path.home()), "<home>")):
+                    clean = clean.replace(path.encode(), label.encode())
+                # A byte bound may split a multibyte character at either edge.
+                (self.directory / log).write_bytes(
+                    clean[-self.LOG_BYTES:].decode("utf-8", errors="ignore").encode("utf-8"),
+                )
+
+            try:
+                with subprocess.Popen(  # noqa: S603 - reviewed local suites, fixed executable
+                    command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                ) as process:
+                    if process.stdout is None:
+                        raise RuntimeError("Browser subprocess output pipe unavailable")
+                    while chunk := process.stdout.read1(8192):
+                        retain(chunk)
+                    code = process.wait()
+            except OSError as exc:
+                retain(f"Cannot execute browser check: {exc}\n".encode())
+                code = 2
+            if not (self.directory / log).exists():
+                (self.directory / log).write_bytes(b"")
+            seconds = time.monotonic() - started
+            with self.lock:
+                captures, truncated = self._captures(workspace, name) if code else ([], False)
+                record.update(
+                    status="failed" if code else "passed", exit_code=code,
+                    seconds=round(seconds, 3), finished_at=self.timestamp(),
+                    log_truncated=total > self.LOG_BYTES, captures=captures,
+                    captures_truncated=truncated,
+                )
+                self._write()
+        return seconds, code, (self.directory / log).read_text(encoding="utf-8")
+
+    def preflight(self, command: list[str]) -> int:
+        _seconds, code, output = self._process(command, "harness", self.data["preflight"])
+        if output:
+            print(output.rstrip(), flush=True)
+        return code
+
+    def no_preflight(self) -> None:
+        with self.lock:
+            self.data["preflight"] = {
+                "status": "not_required", "reason": "No support harness tests found.",
+            }
+            self._write()
+
+    def run_suite(self, node: str, name: str, _capture: bool) -> tuple[str, float, int, str]:
+        record = next(item for item in self.data["suites"] if item["name"] == name)
+        seconds, code, output = self._process([node, str(SUITE_DIR / name)], name, record)
+        return name, seconds, code, output
+
+
 def run_suite(node: str, name: str, capture: bool) -> tuple[str, float, int, str]:
     """Run one suite; capture its output when suites share the terminal."""
     started = time.monotonic()
@@ -365,6 +549,101 @@ def report_durations(timings: list[tuple[str, float]], limit: int) -> None:
         print(f"  {seconds:.1f}s {name}", flush=True)
 
 
+def diagnostic_counts(data: Any) -> dict[str, int]:
+    """Validate the supported result contract before making summary claims."""
+    if (not isinstance(data, dict) or type(data.get("schema_version")) is not int
+            or data["schema_version"] != 1 or data.get("status") not in ("running", "passed", "failed")
+            or type(data.get("full_matrix")) is not bool):
+        raise ValueError("Unsupported browser result schema or run state")
+
+    def duration(value: Any) -> None:
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+            raise ValueError("Invalid browser duration")
+
+    def process(record: Any, *, preflight: bool = False) -> None:
+        allowed = ("not_run", "active", "passed", "failed") + (("not_required",) if preflight else ())
+        if not isinstance(record, dict) or record.get("status") not in allowed:
+            raise ValueError("Unknown browser process state")
+        status = record["status"]
+        if "seconds" in record:
+            duration(record["seconds"])
+        if status in ("passed", "failed"):
+            duration(record["seconds"])
+            code = record.get("exit_code")
+            if type(code) is not int or (code == 0) != (status == "passed"):
+                raise ValueError("Browser exit code contradicts process state")
+        elif record.get("exit_code") is not None:
+            raise ValueError("Unfinished browser process has an exit code")
+        if status == "not_required" and (
+            not isinstance(record.get("reason"), str) or not record["reason"].strip()
+        ):
+            raise ValueError("Missing reason for an unneeded preflight")
+
+    duration(data["seconds"])
+    process(data["preflight"], preflight=True)
+    suites = data["suites"]
+    if not isinstance(suites, list):
+        raise ValueError("Browser suite records must be a list")
+    names: set[str] = set()
+    counts = dict.fromkeys(("passed", "failed", "active", "not_run"), 0)
+    for suite in suites:
+        process(suite)
+        name = suite.get("name")
+        if not isinstance(name, str) or not name.strip() or name in names:
+            raise ValueError("Missing or duplicate browser suite name")
+        names.add(name)
+        counts[suite["status"]] += 1
+    counts.update(selected=len(suites), completed=counts["passed"] + counts["failed"])
+    saved = data["counts"]
+    if (not isinstance(saved, dict) or saved.keys() != counts.keys()
+            or any(type(value) is not int or value < 0 for value in saved.values())
+            or saved != counts):
+        raise ValueError("Browser aggregate contradicts suite records")
+    jobs = data["jobs"]
+    if type(jobs) is not int or jobs < 0 or (bool(jobs) != bool(suites)):
+        raise ValueError("Invalid browser worker count")
+    if data["status"] == "passed" and (
+        counts["passed"] != counts["selected"]
+        or data["preflight"]["status"] not in ("passed", "not_required")
+    ):
+        raise ValueError("Passed browser run has incomplete or failed checks")
+    return counts
+
+
+def diagnostic_summary(directory: Path) -> str:
+    """Render saved evidence even when the browser step failed or was terminated."""
+    try:
+        data = json.loads((directory / "results.json").read_text(encoding="utf-8"))
+        counts = diagnostic_counts(data)
+        lines = [
+            "### Browser regression evidence", "",
+            f"Runner state: **{data['status']}** (last saved snapshot; the job conclusion is authoritative).",
+            f"{counts['completed']}/{counts['selected']} completed, "
+            f"{counts['passed']} passed, {counts['failed']} failed, "
+            f"{counts['active']} active, {counts['not_run']} not run in {data['seconds']:.1f}s.",
+            f"{data['jobs']} workers; "
+            f"{'full locale matrix' if data['full_matrix'] else 'everyday locale matrix'}; "
+            f"harness: {data['preflight']['status']}.", "",
+        ]
+        for status, label in (("failed", "Failed suites"),
+                              ("active", "Active in last saved snapshot"), ("not_run", "Not run")):
+            items = [f"`{item['name']}`" + (f" (exit {item['exit_code']})" if status == "failed" else "")
+                     for item in data["suites"] if item["status"] == status]
+            if items:
+                lines.append(f"{label}: " + ", ".join(items) + ".")
+        completed = [item for item in data["suites"] if item["status"] in ("passed", "failed")]
+        if completed:
+            lines.extend(("", "Slowest completed suites (wall time, including worker contention):", ""))
+            lines.extend(f"- {item['seconds']:.1f}s `{item['name']}`"
+                         for item in sorted(completed,
+                                            key=lambda item: (-item["seconds"], item["name"]))[:5])
+        lines.extend(("", "The artifact contains bounded synthetic logs and owned PNG captures "
+                      "from failed processes only. An interrupted run may have incomplete logs or captures."))
+        return "\n".join(lines)
+    except (OSError, ValueError, KeyError, TypeError, OverflowError):
+        return "Browser result manifest unavailable or invalid; inspect the job logs. Results are unknown."
+
+
 _SLOW_SUITES_ORDER = (
     "settings.cjs",
     "visual-consistency.cjs",
@@ -382,7 +661,10 @@ _SLOW_SUITES_ORDER = (
 )
 
 
-def run_parallel(node: str, names: list[str], jobs: int, durations: int = 5) -> int:
+def run_parallel(
+    node: str, names: list[str], jobs: int, durations: int = 5,
+    evidence: BrowserEvidence | None = None,
+) -> int:
     """Run independent suites in parallel (longest-first) and report atomically per suite."""
     priority = {suite: idx for idx, suite in enumerate(_SLOW_SUITES_ORDER)}
     ordered = sorted(names, key=lambda n: (priority.get(n, len(_SLOW_SUITES_ORDER)), n))
@@ -391,7 +673,8 @@ def run_parallel(node: str, names: list[str], jobs: int, durations: int = 5) -> 
     failures: list[tuple[str, int]] = []
     timings: list[tuple[str, float]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = [pool.submit(run_suite, node, name, True) for name in ordered]
+        execute = evidence.run_suite if evidence else run_suite
+        futures = [pool.submit(execute, node, name, True) for name in ordered]
         for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             name, seconds, code, output = future.result()
             timings.append((name, seconds))
@@ -448,7 +731,19 @@ def main() -> int:
         "--durations", type=int, default=5, metavar="N",
         help="Report the N slowest completed suites (default: 5; 0 disables)",
     )
+    parser.add_argument(
+        "--diagnostics", type=Path, default=os.environ.get("LIXITY_BROWSER_DIAGNOSTICS"),
+        metavar="NEW_DIR",
+        help="Retain bounded synthetic logs, owned PNGs and incremental results in a new directory",
+    )
+    parser.add_argument(
+        "--summary", type=Path, metavar="DIAGNOSTICS_DIR",
+        help="Print a Markdown summary of saved diagnostics without starting suites",
+    )
     arguments = parser.parse_args()
+    if arguments.summary:
+        print(diagnostic_summary(arguments.summary))
+        return 0
     if arguments.durations < 0:
         parser.error("--durations must be nonnegative")
 
@@ -494,40 +789,68 @@ def main() -> int:
         print("\n".join(names))
         return 0
 
+    evidence = None
+    if arguments.diagnostics:
+        try:
+            evidence = BrowserEvidence(arguments.diagnostics, names,
+                                       min(max(1, arguments.jobs), len(names)))
+        except OSError as exc:
+            parser.error(f"Cannot create new browser diagnostics directory: {exc}")
+
     node = shutil.which("node")
     if node is None:
         print("Node.js is required for the browser suites.", file=sys.stderr)
+        if evidence:
+            evidence.finish(2)
         return 2
 
     support_tests = sorted((SUITE_DIR / "support").glob("*.test.cjs"))
     if support_tests:
-        result = subprocess.run(  # noqa: S603 - fixed node binary and local harness tests
-            [node, "--test", *(str(path) for path in support_tests)], cwd=ROOT, check=False,
-        )
-        if result.returncode:
+        command = [node, "--test", *(str(path) for path in support_tests)]
+        if evidence:
+            code = evidence.preflight(command)
+        else:
+            code = subprocess.run(  # noqa: S603 - fixed node binary and local harness tests
+                command, cwd=ROOT, check=False,
+            ).returncode
+        if code:
             print("Browser harness checks failed; UI suites were not started.", file=sys.stderr)
-            return result.returncode
+            if evidence:
+                evidence.finish(code)
+            return code
+    elif evidence:
+        evidence.no_preflight()
 
     if arguments.jobs > 1:
         jobs = min(arguments.jobs, len(names))
         if jobs > 1:
-            return run_parallel(node, names, jobs, arguments.durations)
+            code = run_parallel(node, names, jobs, arguments.durations, evidence)
+            if evidence:
+                evidence.finish(code)
+            return code
 
     started = time.monotonic()
     timings: list[tuple[str, float]] = []
     for index, name in enumerate(names, start=1):
         print(f"[{index}/{len(names)}] {name}", flush=True)
-        _name, seconds, code, _output = run_suite(node, name, False)
+        execute = evidence.run_suite if evidence else run_suite
+        _name, seconds, code, output = execute(node, name, False)
+        if output.strip():
+            print(output.rstrip(), flush=True)
         timings.append((name, seconds))
         if code:
             print(f"Failed: {name} (exit {code}, {seconds:.1f}s)", file=sys.stderr)
             report_durations(timings, arguments.durations)
             report_summary(names, index, [(name, code)], time.monotonic() - started)
             print(f"Resume after the fix with: --start {name}", file=sys.stderr)
+            if evidence:
+                evidence.finish(code)
             return code
         print(f"Passed: {name} ({seconds:.1f}s)", flush=True)
     report_durations(timings, arguments.durations)
     report_summary(names, len(names), [], time.monotonic() - started)
+    if evidence:
+        evidence.finish(0)
     return 0
 
 

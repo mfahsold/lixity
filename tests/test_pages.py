@@ -3,8 +3,13 @@
 import hashlib
 import html
 import json
+import os
+import re
+import shutil
 import struct
+import subprocess
 import tempfile
+import textwrap
 import unittest
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
@@ -15,6 +20,72 @@ from urllib.parse import urljoin
 from scripts.stage_pages import stage
 
 SITE = "https://mfahsold.github.io/lixity/"
+BASH = shutil.which("bash")
+GIT = shutil.which("git")
+
+
+def pages_workflow_script(name):
+    """Extract one reviewed literal shell step for a local workflow boundary test."""
+    source = (Path(__file__).resolve().parents[1] / ".github/workflows/pages.yml").read_text()
+    step = source.split(f"      - name: {name}\n", 1)[1].split("      - ", 1)[0]
+    return textwrap.dedent(step.split("        run: |\n", 1)[1])
+
+
+@unittest.skipUnless(BASH and GIT, "Workflow boundary requires the Pages runner's bash and git")
+class TestPagesWorkflow(unittest.TestCase):
+    def test_stale_public_site_fails_the_standalone_generated_documentation_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            for name in ("sync_docs", "build_public_site", "build_llms_full", "build_guide_markdown"):
+                (scripts / f"{name}.py").write_text(
+                    "import sys\nfrom pathlib import Path\n"
+                    "if sys.argv[1:] != ['--check']: raise SystemExit(9)\n"
+                    f"Path('{name}.checked').touch()\n"
+                    f"raise SystemExit({23 if name == 'build_public_site' else 0})\n",
+                    encoding="utf-8",
+                )
+            result = subprocess.run(  # noqa: S603 - reviewed workflow step, disposable generators
+                [BASH, "-e", "-c", pages_workflow_script("Verify generated documentation")],
+                cwd=root, capture_output=True, text=True, check=False, timeout=10,
+            )
+            self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+            self.assertTrue((root / "sync_docs.checked").exists())
+            self.assertTrue((root / "build_public_site.checked").exists())
+            self.assertFalse((root / "build_llms_full.checked").exists())
+
+    def test_public_deployment_metadata_records_actual_checkout_head(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for command in ([GIT, "init", "-q"],
+                            [GIT, "-c", "user.name=Synthetic CI", "-c", "user.email=ci@example.test",
+                             "commit", "--allow-empty", "-qm", "Synthetic Pages source"]):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)  # noqa: S603
+            expected = subprocess.check_output([GIT, "rev-parse", "HEAD"],  # noqa: S603
+                                               cwd=root, text=True).strip()
+            (root / "lixity-pages").mkdir()
+            summary = root / "summary.md"
+            run_url = "https://github.com/example/synthetic/actions/runs/123"
+            result = subprocess.run(  # noqa: S603 - reviewed workflow step, synthetic repository
+                [BASH, "-e", "-c", pages_workflow_script("Record exact public deployment source")],
+                cwd=root, capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "RUNNER_TEMP": directory, "GITHUB_STEP_SUMMARY": str(summary),
+                     "SOURCE_RUN_URL": run_url, "GITHUB_SHA": "0" * 40},
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            metadata = json.loads((root / "lixity-pages/deployment.json").read_text())
+            self.assertEqual(metadata, {"schema_version": 1, "source_sha": expected,
+                                        "workflow_run_url": run_url})
+            self.assertIn(expected, summary.read_text())
+            self.assertNotIn(directory, json.dumps(metadata))
+
+    def test_production_deployment_preserves_an_active_run_and_uses_an_immutable_default(self):
+        source = (Path(__file__).resolve().parents[1] / ".github/workflows/pages.yml").read_text()
+        concurrency = re.search(r"(?ms)^concurrency:\n(.*?)(?=^jobs:)", source)
+        self.assertIsNotNone(concurrency)
+        self.assertIn("cancel-in-progress: false", concurrency.group(1))
+        self.assertIn("ref: ${{ inputs.source_ref || github.sha }}", source)
 
 
 class PageHead(HTMLParser):

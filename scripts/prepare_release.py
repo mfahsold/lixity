@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,32 +36,29 @@ def scaffold_release_notes(version: str) -> Path:
     if target.exists():
         print(f"[NOTE] Release notes already exist at {target.relative_to(ROOT)}")
         return target
-    today = datetime.now(timezone.utc).date().isoformat()
     template = f"""# Lixity v{version}
 
-Released on {today}.
+Pending release. Publication date and verification results have not been recorded.
 
 ## Highlights
 
-- Continuous manuscript reader with responsive single-row controls and unified search.
-- Native manuscript analysis, localized diagnostics and offline deterministic stats.
-- Privacy-first reading website exports and research dossiers.
+- Pending maintainer review of the changes in this release.
 
 ## Changes
 
-### User Interface & Experience
-- Seamlessly docked search toolbar with glassmorphism styling and quick keyboard shortcuts (`Ctrl+F`, `/`).
-- Enriched DevTools console logging with styled badges and transparent performance tracking.
+- Pending review. Describe the actual changes and any migration requirements.
 
-### Reliability & Verification
-- Full offline test suite passing under `-W error`.
-- Synchronized documentation version claims and verified example artifacts.
-
-## Verification
+## Verification (pending)
 
 ```bash
 make release-check RELEASE_TAG=v{version}
 ```
+
+Record completed command results, tested platforms and any skips after running the checks.
+
+## Publication (pending)
+
+Record the publication date and GitHub, PyPI and website checks after publication.
 """
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(template, encoding="utf-8")
@@ -80,14 +76,46 @@ def run_sync() -> None:
         print("[OK] Version pins already synchronized.")
 
 
+def preparation_snapshot(version: str) -> dict[Path, bytes | None]:
+    """Capture files preparation can change, including pins written before a sync failure."""
+    paths = {ROOT / "src/lixity/_version.py", ROOT / "README.md", ROOT / "CITATION.cff",
+             ROOT / "docs/releases" / f"v{version}.md"}
+    for pattern in ("*.md", "*.html", "*.txt"):
+        paths.update((ROOT / "docs").rglob(pattern))
+    return {path: path.read_bytes() if path.is_file() else None for path in paths}
+
+
+def report_partial_changes(before: dict[Path, bytes | None]) -> None:
+    """Report retained edits without claiming that multi-file preparation is atomic."""
+    changed = []
+    unknown = []
+    for path, contents in before.items():
+        try:
+            current = path.read_bytes() if path.is_file() else None
+        except OSError:
+            unknown.append(str(path.relative_to(ROOT)))
+            continue
+        if current != contents:
+            changed.append(str(path.relative_to(ROOT)))
+    if changed:
+        print("[NOTE] Changes already made (not rolled back):", file=sys.stderr)
+        for path in sorted(changed):
+            print(f"  {path}", file=sys.stderr)
+    if unknown:
+        print("[NOTE] Could not inspect possible changes: " + ", ".join(sorted(unknown)),
+              file=sys.stderr)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version", help="New version in X.Y.Z format (e.g. 0.8.1)")
     args = parser.parse_args()
 
+    before: dict[Path, bytes | None] = {}
     try:
         parts = validate_version(args.version)
         version_str = f"{parts[0]}.{parts[1]}.{parts[2]}"
+        before = preparation_snapshot(version_str)
         print(f"--- Preparing Lixity release v{version_str} ---")
         update_version_file(version_str)
         scaffold_release_notes(version_str)
@@ -100,8 +128,9 @@ def main() -> int:
         print(f"  3. Validate release: make release-check RELEASE_TAG=v{version_str}")
         print(f"  4. Commit and tag: git tag -a v{version_str} -m 'Release v{version_str}'")
         return 0
-    except (ValueError, OSError) as exc:
+    except Exception as exc:  # noqa: BLE001 - CLI boundary must report retained partial edits
         print(f"[ERROR] Release preparation failed: {exc}", file=sys.stderr)
+        report_partial_changes(before)
         return 1
 
 

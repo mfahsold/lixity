@@ -135,8 +135,14 @@ After a parallel run, the runner reports all failed suites with an `--only`
 command; completion order does not define a safe `--start` position. Repeat
 the full suite before a release after fixing a failure.
 The manually dispatched `browser` workflow accepts an optional space-separated
-`suites` input for focused GitHub-runner debugging. Release gates always run
-the complete suite on the tagged commit.
+`suites` input for focused GitHub-runner debugging (`--jobs 3`). Release gates
+always run the complete suite (`make browser-full PYTHON=python BROWSER_JOBS=2`)
+on the tagged commit. Passing `--diagnostics NEW_DIR` (or `LIXITY_BROWSER_DIAGNOSTICS`)
+writes an incremental `results.json` manifest, `<= 128 KiB` role-sanitized
+synthetic log tails per process, and at most 4 runner-owned PNG captures
+(`<= 2 MiB` each, `64 MiB` total) from failed processes only; `--summary DIAGNOSTICS_DIR`
+validates that manifest and prints a Markdown summary. Full synthetic fixture
+workspaces stay temporary and are not retained in the evidence bundle.
 
 A failed Git comparison, including an invalid `BASE`, stops selection with an
 error. Shared support files and runner changes select all suites, as do unknown
@@ -283,7 +289,9 @@ that the user saved the file. Local reports and other hosts remain unmeasured.
 `scripts/browser_tools.cjs` probes common local Playwright and Chromium
 locations automatically; `PLAYWRIGHT_MODULE` and
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` remain optional overrides.
-`PYTHON_BIN` optionally overrides `.venv/bin/python`.
+`PYTHON_BIN` optionally overrides `.venv/bin/python`, and all browser suites honor
+`PYTHON_BIN` before falling back to `.venv/bin/python` (checked by
+`tests/browser/support/python-entrypoints.test.cjs`).
 The style-space test generates a synthetic manuscript, checks canvas interaction,
 keyboard/touch rotation and zoom, semantic chapter-score links with JavaScript
 enabled and disabled, tooltip escaping, idle rendering, touch targets and mobile
@@ -299,9 +307,11 @@ are checked separately in `tests/test_server_debug.py`.
 
 Browser suites are local-first: run `make browser` after UI changes and before
 preparing a release. The manual `browser` workflow (Actions → browser → Run
-workflow) runs the same script in one Chromium job on demand; screenshots stay
-temporary and are not uploaded as persistent CI artifacts. The manual
-`research-platforms` workflow covers macOS and Windows.
+workflow) runs the same script in one Chromium job (`BROWSER_JOBS=2` for full
+runs) with bounded 7-day `browser-evidence-<run_id>-<attempt>` diagnostic
+artifacts (`results.json`, bounded log tails, and failure-only owned PNGs) and
+a Markdown step summary; full synthetic fixture workspaces stay temporary and
+are not uploaded. The manual `research-platforms` workflow covers macOS and Windows.
 
 The research test starts its own disposable loopback server and archive. It checks
 persistent New/Open/Show guidance actions after dismissal and in a loaded project,
