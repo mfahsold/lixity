@@ -392,14 +392,14 @@ def stage_pypi(root, tag, expected_commit, repo, dist, upload, client):
 
 def verify_pypi(root, tag, expected_commit, repo, dist, client):
     result = verify_github(root, tag, expected_commit, repo, dist, client)
-    # Newly uploaded files can take a moment to appear. Retry only missing
-    # visibility, never digest/auth/transport failures and never the upload.
-    for attempt in range(3):
+    # Newly uploaded files can take up to ~60s to appear on PyPI CDN. Retry only
+    # missing visibility, never digest/auth/transport failures and never the upload.
+    for attempt in range(12):
         missing = pypi_missing(dist, tag, client)
         if not missing:
             return {**result, "state": "complete"}
-        if attempt < 2:
-            time.sleep(2)
+        if attempt < 11:
+            time.sleep(5)
     raise ValueError("PyPI publication is incomplete: " + ", ".join(missing))
 
 

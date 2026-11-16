@@ -44,7 +44,7 @@ def main() -> int:
         check=True,
     )
 
-    png_sizes = (16, 32, 48, 64, 192, 512)
+    png_sizes = (16, 32, 48, 64, 128, 192, 256, 400, 512)
     commands: list[list[str]] = [
         [
             magick,
@@ -57,6 +57,24 @@ def main() -> int:
         ]
         for size in png_sizes
     ]
+    social_banners = (
+        "banner-1500x500",
+        "banner-reddit-1280x384",
+        "social-preview-1280x640",
+        "devto-cover-1000x420",
+    )
+    for banner_name in social_banners:
+        banner_svg = BRAND_DIR / f"{banner_name}.svg"
+        if banner_svg.is_file():
+            commands.append(
+                [
+                    magick,
+                    "-background",
+                    "none",
+                    str(banner_svg),
+                    str(BRAND_DIR / f"{banner_name}.png"),
+                ]
+            )
     # Apple Touch Icon requires an opaque background so iOS does not render black corners.
     commands.append(
         [

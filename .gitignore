@@ -52,6 +52,7 @@ dmypy.json
 /docs/superpowers/specs/
 .planning/
 .artifacts/
+/outreach/
 .pytest-artifacts/
 .mutmut-cache
 node_modules/

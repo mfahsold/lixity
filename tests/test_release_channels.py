@@ -366,7 +366,7 @@ def test_post_upload_verification_waits_only_for_missing_visibility(channels, ca
     delays = []
     monkeypatch.setattr(channels.time, "sleep", delays.append)
     assert channels.verify_pypi(source, TAG, SHA, REPO, dist, client)["state"] == "complete"
-    assert delays == [2]
+    assert delays == [5]
     assert len([r for r in opener.requests if r.full_url == url]) == 2
     assert not (dist.parent / "upload").exists()
 
@@ -381,8 +381,8 @@ def test_post_upload_verification_is_bounded_and_never_reuploads(channels, candi
     with pytest.raises(ValueError, match="incomplete"):
         channels.verify_pypi(source, TAG, SHA, REPO, dist, client)
     url = f"https://pypi.org/pypi/lixity/{TAG[1:]}/json"
-    assert len([r for r in opener.requests if r.full_url == url]) == 3
-    assert delays == [2, 2]
+    assert len([r for r in opener.requests if r.full_url == url]) == 12
+    assert delays == [5] * 11
     assert not (dist.parent / "upload").exists()
 
 
