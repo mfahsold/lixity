@@ -230,6 +230,9 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
 
 FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
 
+#: Features whose natural domain is non-negative (rates, shares, densities, lengths).
+NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(FEATURE_FIELDS)
+
 # Paragraph-level overlay layers for the chapter strips (chip bottom edge).
 # Values are the fingerprint/chapter field names (FEATURES / deviations).
 LAYER_FEATURES: dict[str, str] = {
@@ -254,6 +257,7 @@ LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "passive": "passive_density",
 }
 PARAGRAPH_LAYER_Z_CUTOFF = 1.5
+MIN_PARAGRAPH_LAYER_WORDS = 5
 
 # Dimensions to extract from the feature correlation matrix.
 N_DIMENSIONS = 3
@@ -276,7 +280,7 @@ class ThresholdInputPolicy:
 
     def validate(self, name: str, value: Any) -> None:
         try:
-            finite = not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+            finite = not isinstance(value, bool) and isinstance(value, int | float) and math.isfinite(value)
         except OverflowError:
             finite = False
         if not finite:
@@ -600,8 +604,10 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     """Exact dynamic-programming segmentation (legacy PELT entrypoint).
 
     Detects structural breaks (phase shifts) in a chapter-level metric series
-    using the guarded Gaussian cost with default penalty ``2·ln(n)``.
-    The zero-variance guard does not meet PELT's pruning condition; therefore
+    using standardized values (by global SD when > 0) and the guarded Gaussian
+    cost ``count·ln(max(var, 1e-9))`` with mBIC-inspired default penalty
+    ``3·ln(n)``.
+    The variance floor does not meet PELT's pruning condition; therefore
     every predecessor is considered. Incremental centred moments give O(n²)
     time and O(n) memory without unstable raw-moment subtraction.
     Returns the 0-based indices
@@ -609,29 +615,46 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
 
     Edge cases:
     - ``n < 3``  → ``[]``  (too short to split)
-    - Constant series → ``[]``  (zero variance everywhere)
-    - ``penalty=None`` → BIC default ``2·ln(n)``
+    - Constant series → ``[]`` (when ``penalty >= 0``), else ``[1, ..., n-1]``
+    - ``penalty=None`` → mBIC-inspired default ``3·ln(n)``
     """
     n = len(values)
     if n < 3:
         return []
 
     if penalty is None:
-        penalty = 2.0 * math.log(n)
+        penalty = 3.0 * math.log(n)
 
     first = values[0]
-    if penalty >= 0.0 and all(v == first for v in values[1:]):
-        return []
+    if all(v == first for v in values[1:]):
+        return [] if penalty >= 0.0 else list(range(1, n))
+
+    # Standardize by global SD (when finite and > 0) for scale- and
+    # translation-invariance across sub-unit and large-variance metrics.
+    if all(math.isfinite(v) for v in values):
+        diffs = [v - first for v in values]
+        if all(math.isfinite(d) for d in diffs):
+            d_mean = math.fsum(diffs) / n
+            global_var = math.fsum((d - d_mean) ** 2 for d in diffs) / n
+            global_sd = math.sqrt(global_var)
+            if math.isfinite(global_sd) and global_sd > 0.0:
+                scaled = [(d - d_mean) / global_sd for d in diffs]
+            else:
+                scaled = diffs
+        else:
+            scaled = list(values)
+    else:
+        scaled = list(values)
 
     math_log = math.log
-    # opt[j] = minimum cost of segmenting values[0:j]
+    # opt[j] = minimum cost of segmenting scaled[0:j]
     opt = [0.0] * (n + 1)
     # last_cp[j] = the last changepoint index for opt[j]
     last_cp = [0] * (n + 1)
     for j in range(1, n + 1):
         # Anchor separately at each end. One distant global anchor can erase
         # representable differences within a later, tightly clustered segment.
-        anchor = values[j - 1]
+        anchor = scaled[j - 1]
         mean = 0.0
         m2 = 0.0
         single_cost = opt[j - 1] + penalty
@@ -645,11 +668,11 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
             start_t = j - 1
         for t in range(start_t, -1, -1):
             count = j - t
-            shifted = values[t] - anchor
+            shifted = scaled[t] - anchor
             delta = shifted - mean
             mean += delta / count
             m2 += delta * (shifted - mean)
-            segment_cost = count * math_log(m2 / count) if m2 > 0.0 else 0.0
+            segment_cost = count * math_log(max(m2 / count, 1e-9))
             cost = opt[t] + segment_cost + penalty
             # Prefer the earliest predecessor for exactly equal objectives.
             if cost < best_cost or (cost == best_cost and t < best_t):
@@ -728,6 +751,36 @@ def mann_kendall(
 
     n0 = float(total_pairs)
     tau = s / n0 if n0 > 0.0 else 0.0
+
+    # Hamed & Rao (1998) variance correction for autocorrelated series (n >= 8)
+    if n >= 8:
+        slopes = [
+            (values[j] - values[i]) / (j - i)
+            for i in range(n - 1)
+            for j in range(i + 1, n)
+        ]
+        slopes.sort()
+        m_slopes = len(slopes)
+        if m_slopes % 2 == 1:
+            beta = slopes[m_slopes // 2]
+        else:
+            beta = 0.5 * (slopes[m_slopes // 2 - 1] + slopes[m_slopes // 2])
+        detrended = [values[i] - beta * i for i in range(n)]
+        ranks = _midranks(detrended)
+        mean_r = 0.5 * (n + 1.0)
+        d = [r - mean_r for r in ranks]
+        denom = math.fsum(x * x for x in d)
+        if denom > 0.0:
+            sig_bound = 1.96 / math.sqrt(n)
+            n_prod = n * (n - 1.0) * (n - 2.0)
+            ess_sum = 0.0
+            for lag in range(1, n - 2):
+                rho_k = math.fsum(d[i] * d[i + lag] for i in range(n - lag)) / denom
+                if abs(rho_k) > sig_bound:
+                    ess_sum += (n - lag) * (n - lag - 1.0) * (n - lag - 2.0) * rho_k
+            n_over_n_star = 1.0 + (2.0 / n_prod) * ess_sum
+            if n_over_n_star > 0.0:
+                var_s *= n_over_n_star
 
     # Continuity correction
     if s > 0:
@@ -1328,6 +1381,7 @@ class StyleFingerprint:
     register_targets: dict[int, dict[str, dict[str, Any]]] = field(default_factory=dict)
     dimensions: list[dict[str, Any]] = field(default_factory=list)
     dimension_diagnostics: dict[str, Any] = field(default_factory=dict)
+    mahalanobis_distances: dict[int, float] = field(default_factory=dict)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
     structural_diagnostics: dict[str, Any] = field(default_factory=dict)
@@ -1412,15 +1466,29 @@ class StyleFingerprint:
                 continue
             centre = median(obs)
             spread = mad(obs, centre)
-            sigma = MAD_TO_SIGMA * spread
+            is_varying = any(value != centre for value in obs)
+            if spread > 0.0:
+                sigma = MAD_TO_SIGMA * spread
+                status = "available"
+            elif is_varying:
+                fallback_sigma = sn_estimator(obs)
+                if fallback_sigma <= 0.0:
+                    fallback_sigma = qn_estimator(obs)
+                if fallback_sigma > 0.0 and math.isfinite(fallback_sigma):
+                    sigma = fallback_sigma
+                    status = "available"
+                else:
+                    sigma = 0.0
+                    status = "zero_mad_varying"
+            else:
+                sigma = 0.0
+                status = "zero_mad_constant"
             baseline[field_name] = {
                 "median": centre,
                 "mad": spread,
                 "sigma": sigma,
                 "n": len(obs),
-                "comparison_status": ("available" if spread > 0 else
-                                      "zero_mad_varying" if any(value != centre for value in obs)
-                                      else "zero_mad_constant"),
+                "comparison_status": status,
             }
             chapter_cliffs = _chapter_cliff_deltas(values[field_name])
             for chapter in chapters:
@@ -1428,9 +1496,9 @@ class StyleFingerprint:
                 if value is None:
                     continue
                 cliffs[chapter.num][field_name] = chapter_cliffs[chapter.num]
-                if spread == 0.0:
+                if sigma <= 0.0:
                     continue
-                z_raw = robust_z(value, centre, spread)
+                z_raw = robust_z(value, centre, spread) if spread > 0.0 else (value - centre) / sigma
                 z_sig = significance_z(value, centre, sigma, ses[field_name][chapter.num])
                 z_scores[chapter.num][field_name] = z_sig
                 effect_sizes[chapter.num][field_name] = z_raw
@@ -1560,6 +1628,8 @@ class StyleFingerprint:
         trend_incomplete: list[str] = []
         chapter_ids = sorted({chapter for column in self.values.values() for chapter in column})
         midpoint = len(chapter_ids) // 2
+        trend_p_cells: list[tuple[int, str, float]] = []
+        shift_p_cells: list[tuple[int, str, float]] = []
 
         for field_name in fields:
             column = self.values[field_name]
@@ -1587,6 +1657,7 @@ class StyleFingerprint:
                         "S": round(s_val, 1),
                         "p": round(p_val, 4),
                     }
+                    trend_p_cells.append((0, field_name, p_val))
 
             if len(series) >= 2:
                 sn = sn_estimator(series)
@@ -1617,15 +1688,20 @@ class StyleFingerprint:
                     "ks_d": round(ks_d, 4),
                     "ks_p": round(ks_p, 4),
                 }
+                shift_p_cells.append((0, field_name, ks_p))
             else:
                 distribution_unavailable.append(field_name)
 
-        # Summary: features with significant trends (p < 0.05)
-        trending = [f for f, t in trends.items() if t["p"] < 0.05]
+        # Summary: BH FDR-controlled features with significant trends
+        trending = [
+            feat for _ch, feat in benjamini_hochberg(trend_p_cells, q=self.thresholds.fdr_q)
+        ]
         # Summary: features with changepoints
         segmented = list(changepoints.keys())
-        # Summary: features whose early/late chapter halves differ (KS p < 0.05)
-        shifted = [f for f, s in distribution_shift.items() if s["ks_p"] < 0.05]
+        # Summary: BH FDR-controlled features whose early/late chapter halves differ
+        shifted = [
+            feat for _ch, feat in benjamini_hochberg(shift_p_cells, q=self.thresholds.fdr_q)
+        ]
 
         return {
             "changepoints": changepoints,
@@ -1660,6 +1736,7 @@ class StyleFingerprint:
         statistical reliability. Jacobi rotations and signs are deterministic.
         """
         self.dimension_axis_scales = []
+        self.mahalanobis_distances = {}
         fields = self._usable_features()
         chapter_ids = sorted({ch for column in self.values.values() for ch in column})
         common = [ch for ch in chapter_ids if fields and all(
@@ -1698,21 +1775,52 @@ class StyleFingerprint:
         if len(fields) < MIN_DIMENSION_FEATURES:
             diagnostics["status"] = "insufficient_varying_features"
             return []
+        n_obs = len(common)
+        p_dim = len(fields)
         matrix = [
             [math.fsum(a * b for a, b in zip(columns[x], columns[y], strict=True))
-             / (len(common) - 1) for y in fields]
+             / (n_obs - 1) for y in fields]
             for x in fields
         ]
         eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        max_eig = max(eigenvalues[0], 1e-12)
+        min_eig = min(eigenvalues)
+        lam = 0.0
+        if n_obs <= p_dim:
+            lam = min(0.5, max(0.1, (p_dim - n_obs + 1) / (p_dim + n_obs)))
+        elif min_eig <= 1e-6 * max_eig:
+            lam = 0.05
+        if lam > 0.0:
+            matrix = [
+                [(1.0 - lam) * matrix[i][j] + (lam if i == j else 0.0) for j in range(p_dim)]
+                for i in range(p_dim)
+            ]
+            eigenvalues, eigenvectors = jacobi_eigh(matrix)
+
+        mahalanobis: dict[int, float] = {}
+        for row, chapter_num in enumerate(common):
+            ch_z = self.z_scores.get(chapter_num, {})
+            if all(f in ch_z for f in fields):
+                z_vec = [ch_z[f] for f in fields]
+            else:
+                z_vec = [columns[f][row] for f in fields]
+            d_m_sq = math.fsum(
+                (math.fsum(eigenvectors[k][j] * z_vec[j] for j in range(p_dim)) ** 2)
+                / max(eigenvalues[k], 1e-6)
+                for k in range(p_dim)
+            )
+            mahalanobis[chapter_num] = round(math.sqrt(max(0.0, d_m_sq)), 4)
+        self.mahalanobis_distances = mahalanobis
+
         leading_scale = math.sqrt(max(0.0, eigenvalues[0]))
         dims: list[dict[str, Any]] = []
-        for dim_index in range(min(N_DIMENSIONS, len(fields))):
+        for dim_index in range(min(N_DIMENSIONS, p_dim)):
             loading_vector = eigenvectors[dim_index]
             # Deterministic sign: the largest absolute loading points upward.
             anchor = max(range(len(loading_vector)), key=lambda k: abs(loading_vector[k]))
             if loading_vector[anchor] < 0.0:
                 loading_vector = [-v for v in loading_vector]
-            loadings = {fields[k]: round(loading_vector[k], 3) for k in range(len(fields))}
+            loadings = {fields[k]: round(loading_vector[k], 3) for k in range(p_dim)}
             scores: dict[int, float] = {}
             flagged: list[int] = []
             raw_scores: list[float] = []
@@ -1733,14 +1841,19 @@ class StyleFingerprint:
             dims.append(
                 {
                     "index": dim_index + 1,
-                    "variance": round(eigenvalues[dim_index] / len(fields), 4),
+                    "variance": round(eigenvalues[dim_index] / p_dim, 4),
                     "loadings": loadings,
                     "scores": scores,
                     "flagged": flagged,
                 }
             )
-        diagnostics.update(status="available", scored_chapters=list(common),
-                           retained_variance=round(math.fsum(dim["variance"] for dim in dims), 4))
+        diagnostics.update(
+            status="available",
+            scored_chapters=list(common),
+            retained_variance=round(math.fsum(dim["variance"] for dim in dims), 4),
+            shrinkage_lambda=round(lam, 4),
+            mahalanobis_distances=mahalanobis,
+        )
         return dims
 
     def _derive_redundancies(self) -> list[dict[str, Any]]:
@@ -1766,8 +1879,11 @@ class StyleFingerprint:
         pairs.sort(key=lambda p: abs(float(p["rho"])), reverse=True)
         return pairs[:10]
 
-    def top_deviants(self, n: int = 3) -> list[tuple[int, float]]:
-        """Chapters with the highest mean absolute significance-adjusted z."""
+    def top_deviants(self, n: int = 3, *, metric: str = "mean_abs") -> list[tuple[int, float]]:
+        """Chapters with the highest mean absolute significance-adjusted z (or Mahalanobis distance)."""
+        if metric == "mahalanobis" and self.mahalanobis_distances:
+            scored = sorted(self.mahalanobis_distances.items(), key=lambda kv: kv[1], reverse=True)
+            return scored[:n]
         scored = []
         for chapter_num, cells in self.z_scores.items():
             if not cells:
@@ -1786,14 +1902,20 @@ class StyleFingerprint:
             centre = float(base.get("median", 0.0))
             status = str(base.get("comparison_status", "insufficient_chapters"))
             measured = status != "insufficient_chapters"
+            if status == "available":
+                low = centre - 2 * sigma
+                if field_name in NON_NEGATIVE_FEATURES:
+                    low = max(0.0, low)
+                band: list[float] | None = [round(low, 4), round(centre + 2 * sigma, 4)]
+            else:
+                band = None
             features.append(
                 {
                     "feature": field_name,
                     "unit": unit,
                     "median": round(centre, 4) if measured else None,
                     "sigma": round(sigma, 4) if measured else None,
-                    "band": ([round(centre - 2 * sigma, 4), round(centre + 2 * sigma, 4)]
-                             if status == "available" else None),
+                    "band": band,
                     "comparison_status": status,
                     "chapters_measured": int(base.get("n", 0)),
                 }
@@ -2104,7 +2226,7 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         return {}
     by_chapter: dict[int, list[tuple[int, float]]] = {}
     for idx, p in enumerate(paragraphs):
-        if getattr(p, "words", 0) <= 0:
+        if getattr(p, "words", 0) < MIN_PARAGRAPH_LAYER_WORDS:
             continue
         value = getattr(p, field_name, None)
         if not isinstance(value, int | float):
@@ -2117,10 +2239,16 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         obs = [v for _, v in pairs]
         centre = median(obs)
         spread = mad(obs, centre)
-        if spread == 0.0:
-            continue
-        for idx, value in pairs:
-            stats[idx] = (value, robust_z(value, centre, spread))
+        if spread > 0.0:
+            for idx, value in pairs:
+                stats[idx] = (value, robust_z(value, centre, spread))
+        elif any(v != centre for v in obs):
+            fallback_sigma = sn_estimator(obs)
+            if fallback_sigma <= 0.0:
+                fallback_sigma = qn_estimator(obs)
+            if fallback_sigma > 0.0 and math.isfinite(fallback_sigma):
+                for idx, value in pairs:
+                    stats[idx] = (value, (value - centre) / fallback_sigma)
     return stats
 
 
