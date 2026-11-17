@@ -233,10 +233,12 @@
     sidebarToggleBtn.innerHTML = dossierIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_dossiers", "Dossiers") + "</span>";
     sidebarToggleBtn.title = label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder") + " (D)";
     sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder"));
+    sidebarToggleBtn.setAttribute("aria-pressed", "false");
     sidebarToggleBtn.addEventListener("click", function() {
       if (sidebar) {
-        sidebar.classList.toggle("is-open");
-        sidebarToggleBtn.classList.toggle("is-active", sidebar.classList.contains("is-open"));
+        var open = sidebar.classList.toggle("is-open");
+        sidebarToggleBtn.classList.toggle("is-active", open);
+        sidebarToggleBtn.setAttribute("aria-pressed", String(open));
       }
     });
     rightGroup.appendChild(sidebarToggleBtn);
@@ -313,7 +315,10 @@
     sidebarClose.setAttribute("aria-label", label("modal_close", "Schließen"));
     sidebarClose.addEventListener("click", function() {
       sidebar.classList.remove("is-open");
-      if (sidebarToggleBtn) sidebarToggleBtn.classList.remove("is-active");
+      if (sidebarToggleBtn) {
+        sidebarToggleBtn.classList.remove("is-active");
+        sidebarToggleBtn.setAttribute("aria-pressed", "false");
+      }
     });
     sidebarHeader.appendChild(sidebarClose);
     sidebar.appendChild(sidebarHeader);
@@ -371,8 +376,11 @@
       } else if (e.code === "KeyD" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         if (sidebar) {
-          sidebar.classList.toggle("is-open");
-          if (sidebarToggleBtn) sidebarToggleBtn.classList.toggle("is-active", sidebar.classList.contains("is-open"));
+          var open = sidebar.classList.toggle("is-open");
+          if (sidebarToggleBtn) {
+            sidebarToggleBtn.classList.toggle("is-active", open);
+            sidebarToggleBtn.setAttribute("aria-pressed", String(open));
+          }
         }
       } else if (e.code === "KeyR" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
@@ -805,7 +813,7 @@
       document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {detail:detail}));
     });
     if (document.body.dataset.speechCapable === "true") takeCard.appendChild(studio);
-    sidebarScroll.prepend(takeCard); sidebar.classList.add("is-open"); sidebarToggleBtn.classList.add("is-active");
+    sidebarScroll.prepend(takeCard); sidebar.classList.add("is-open"); sidebarToggleBtn.classList.add("is-active"); sidebarToggleBtn.setAttribute("aria-pressed", "true");
   }
   function toggleRecording() {
     if (recordBtn.disabled) return;
@@ -821,7 +829,10 @@
     activeDossierKey = null; ++dossierSequence; dossierReads = new Map();
     dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
     if (sidebar) sidebar.classList.remove("is-open");
-    if (sidebarToggleBtn) sidebarToggleBtn.classList.remove("is-active");
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.classList.remove("is-active");
+      sidebarToggleBtn.setAttribute("aria-pressed", "false");
+    }
     buildRunwayContent();
     modal.hidden = false;
     loadContextData();

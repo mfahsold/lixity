@@ -1602,12 +1602,18 @@
     [0.8, 1.0, 1.25, 1.5].forEach(function(rate) {
       var rateBtn = button(fields.player_controls, "rate_" + rate, function() {
         fields.audio.playbackRate = rate;
-        fields.player_controls.querySelectorAll(".speech-rate-btn").forEach(function(b) { b.classList.remove("active"); });
+        fields.player_controls.querySelectorAll(".speech-rate-btn").forEach(function(b) {
+          b.classList.remove("active");
+          b.setAttribute("aria-pressed", "false");
+        });
         rateBtn.classList.add("active");
+        rateBtn.setAttribute("aria-pressed", "true");
       });
       rateBtn.textContent = rate + "×";
       rateBtn.classList.add("speech-rate-btn");
-      if (rate === 1.0) rateBtn.classList.add("active");
+      var isDefaultRate = rate === 1.0;
+      if (isDefaultRate) rateBtn.classList.add("active");
+      rateBtn.setAttribute("aria-pressed", String(isDefaultRate));
     });
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
     var activeKaraokeSha = null;

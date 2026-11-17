@@ -52,14 +52,14 @@
   function Tag(props) {
     if (props.interactive) {
       return html`<button type="button" class="research-tag" data-filter-tag=${props.value}
-        title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
+        aria-pressed="false" title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
     }
     return html`<span class="research-tag">${props.value}</span>`;
   }
 
   function SectionTag(props) {
     return html`<button type="button" class="research-tag research-tag-section" data-filter-tag=${props.value}
-      title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
+      aria-pressed="false" title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
   }
 
   function DossierSections(props) {

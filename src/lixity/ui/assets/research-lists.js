@@ -51,6 +51,17 @@ function syncResearchTagCloud(kind, query) {
   });
 }
 
+function syncResearchFilterTags(kind, query) {
+  var list = document.getElementById("research-" + kind + "-list");
+  if (!list) return;
+  var active = String(query || "").trim().toLowerCase();
+  list.querySelectorAll("[data-filter-tag]").forEach(function(btn) {
+    var match = Boolean(active) && String(btn.dataset.filterTag || "").trim().toLowerCase() === active;
+    btn.classList.toggle("active", match);
+    btn.setAttribute("aria-pressed", String(match));
+  });
+}
+
 function renderResearchTagCloud(kind, records) {
   var host = document.getElementById("r-filter-" + kind + "-tags");
   if (!host) return;
@@ -114,6 +125,7 @@ function filterResearchList(kind) {
       });
       status.hidden = !normalized || !domCards.length || domMatches > 0;
       status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+      syncResearchFilterTags(kind, query);
       return;
     }
     var matched = normalized
@@ -125,6 +137,7 @@ function filterResearchList(kind) {
     });
     status.hidden = !normalized || !allItems.length || matched.length > 0;
     status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+    syncResearchFilterTags(kind, query);
     return;
   }
   var cards = list.querySelectorAll(".research-card[data-filter-text]");
@@ -135,6 +148,7 @@ function filterResearchList(kind) {
   });
   status.hidden = !normalized || !cards.length || matches > 0;
   status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+  syncResearchFilterTags(kind, query);
 }
 
 document.addEventListener("input", function(event) {
