@@ -61,6 +61,9 @@ def style_dimensions(
             strip.append(f'<span class="badge dim-3d-count">{len(points_data)} / {len(chapters)} {translated("chapters")}</span>')
         strip.append('</div>')
         parts.extend(strip)
+        if dim_list and "shrinkage_lambda" in diagnostics:
+            parts.append(f'<p class="hint" id="dim-regularization">'
+                         f'{translated("dim_regularization", lam=number(diagnostics["shrinkage_lambda"], 4), chapters=len(points_data), features=len(features))}</p>')
 
     axes_data = []
     for dim in dim_list[:3]:

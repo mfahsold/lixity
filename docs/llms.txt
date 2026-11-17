@@ -105,6 +105,14 @@ Selection and axis-cutoff rings are distinct; cutoff marks are not FDR results
 or a blue–orange signed-deviation scale. Missing dimensions are disclosed;
 the cutoff count and next-chapter control support review without ranking quality.
 
+Unreleased statistical correction: regularized Mahalanobis distances use the
+same standardized midrank coordinates as their covariance. Passport schema 5
+retains existing fields and adds meta.interpretation (style-interpretation/1)
+with separate band/deviation/FDR/paragraph rules and per-feature two-chapter
+cutoff limits. Normal-tail calibration and FDR guarantees are not established.
+The rank-projection UI exposes ridge lambda and regularized eigenvalue shares;
+no narrator/register classification or error-rate guarantee follows.
+
 Research requires an initialized, explicitly selected project. Its usage guide
 owns available commands; RFC command sketches are not executable contracts.
 The Zotero bridge is read-only and captures selected eligible attachments with

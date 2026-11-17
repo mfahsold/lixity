@@ -47,6 +47,7 @@ from .status import (
     STRUCTURAL_DIAGNOSTICS_KEY,
     ContractKeys,
 )
+from .workspace_labels import WORKSPACE_LABELS
 
 # Descriptive, register-neutral features: (model field, label key, unit).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
@@ -257,6 +258,8 @@ LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "passive": "passive_density",
 }
 PARAGRAPH_LAYER_Z_CUTOFF = 1.5
+PARAGRAPH_LAYER_Z_DECIMALS = 2
+REFERENCE_BAND_SIGMA = 2.0
 MIN_PARAGRAPH_LAYER_WORDS = 5
 
 # Dimensions to extract from the feature correlation matrix.
@@ -1300,7 +1303,7 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "zero_mad": "zero MAD; chapter values vary",
         "reference_unavailable": "reference unavailable: {measured}/{required} measurable chapters",
         "consistency": "Comparisons within the limit",
-        "cells_in_band": "of cells within the band",
+        "cells_in_band": "of measurable cells below the deviation cutoff",
         "multiplicity": "Multiplicity",
         "expected_hits": "normal-model reference hits",
         "fdr_confirmed": "nominal FDR selection",
@@ -1309,8 +1312,8 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "order_unavailable": "unavailable",
         "order_features": "features measured",
         "order_flags": "features with a heuristic flag",
-        "dimension": "Dimension",
-        "variance": "variance",
+        "dimension": "Rank axis",
+        "variance": "regularized eigenvalue share",
         "flagged": "flagged",
         "redundant": "Redundant features",
         PASSPORT_LABEL_STRUCTURAL: "Structural diagnostics",
@@ -1329,7 +1332,7 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "zero_mad": "MAD = 0; Kapitelwerte unterscheiden sich",
         "reference_unavailable": "Referenz nicht verfügbar: {measured}/{required} messbare Kapitel",
         "consistency": "Vergleiche innerhalb der Schwelle",
-        "cells_in_band": "der Zellen im Korridor",
+        "cells_in_band": "der messbaren Zellen unter der Abweichungsschwelle",
         "multiplicity": "Multiplizität",
         "expected_hits": "Treffer als Referenz des Normalmodells",
         "fdr_confirmed": "nominale FDR-Auswahl",
@@ -1338,8 +1341,8 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "order_unavailable": "nicht verfügbar",
         "order_features": "Merkmale gemessen",
         "order_flags": "Merkmale mit heuristischem Hinweis",
-        "dimension": "Dimension",
-        "variance": "Varianz",
+        "dimension": "Rangachse",
+        "variance": "regularisierter Eigenwertanteil",
         "flagged": "auffällig",
         "redundant": "Redundante Merkmale",
         PASSPORT_LABEL_STRUCTURAL: "Strukturelle Diagnostik",
@@ -1353,16 +1356,16 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
 @dataclass
 class StyleFingerprint:
     """
-    Self-calibrated style fingerprint of a corpus.
+    Descriptive within-manuscript reference and exploratory model selections.
 
     - values:       feature -> {chapter_num: value} (None = not measurable)
     - baseline:     feature -> {"median", "mad", "sigma", "n"}
-    - z_scores:     chapter -> {feature: z*}  (significance-adjusted)
+    - z_scores:     chapter -> {feature: z*}  (noise-adjusted, uncalibrated)
     - effect_sizes: chapter -> {feature: z}   (deviation in house-style sigma)
     - deviations:   chapter -> {feature: z*}  (only |z*| >= z_mild)
-    - fdr_flagged:  chapter -> [feature]      (Benjamini-Hochberg set, q=0.05)
-    - consistency:  share of measurable cells inside the band [0, 1]
-    - dimensions:   self-calibrated principal style dimensions (loadings/scores)
+    - fdr_flagged:  chapter -> [feature]      (nominal BH/BY selection)
+    - consistency:  share of measurable cells below the z* cutoff [0, 1]
+    - dimensions:   exploratory rank-space axes (loadings/scores)
     - redundant_features: feature pairs with |Spearman rho| >= 0.8
     """
 
@@ -1394,6 +1397,90 @@ class StyleFingerprint:
     def measured_cells(self) -> int:
         """Number of chapter-feature cells supporting the consistency ratio."""
         return sum(len(cells) for cells in self.z_scores.values())
+
+    def interpretation(self) -> dict[str, Any]:
+        """Additive interpretation contract; no claim of calibrated error control."""
+        pair_bound = 1.0 / MAD_TO_SIGMA
+        pairs = [name for name, _, _ in FEATURES
+                 if self.baseline.get(name, {}).get("n") == 2
+                 and self.baseline[name].get("comparison_status") == "available"]
+        # A floating-point median need not represent the exact midpoint of two
+        # adjacent values. Never call a cutoff unreachable if numerical z*
+        # already exceeds it; zero SE bounds the implemented nonnegative-SE path.
+        numerical_bounds = {
+            name: max(pair_bound, max((abs(significance_z(
+                value, float(self.baseline[name]["median"]),
+                float(self.baseline[name]["sigma"]), 0.0))
+                for value in self.values.get(name, {}).values() if value is not None), default=0.0))
+            for name in pairs
+        }
+        return {
+            "schema_version": "style-interpretation/1",
+            "mode": "exploratory",
+            "normal_tail_calibration": "not_established",
+            "fdr_guarantee": "not_established",
+            "band": {"sigma_multiplier": REFERENCE_BAND_SIGMA, "includes_se": False},
+            "deviation": {"absolute_z_star_min": self.thresholds.z_mild, "includes_se": True},
+            "consistency": {"absolute_z_star_lt": self.thresholds.z_mild,
+                            "excludes_unavailable": True},
+            "fdr": {"method": self.thresholds.fdr_method, "q": self.thresholds.fdr_q,
+                    "probability_source": "standard_normal_tail_of_same_sample_z_star"},
+            "normal_model_reference": {"count": round(self.expected_false_positives, 2),
+                                       "measured_cells": self.measured_cells,
+                                       "absolute_z_cutoff": self.thresholds.z_mild},
+            "paragraph_layer": {
+                "absolute_z_min": PARAGRAPH_LAYER_Z_CUTOFF,
+                "reference_scope": "all_measurable_paragraphs_within_each_chapter",
+                "z_decimals": PARAGRAPH_LAYER_Z_DECIMALS,
+                "cutoff_applied_to": "rounded_z",
+            },
+            "register_excluded_chapters": sorted(self.chapter_registers),
+            "two_chapter_features": pairs,
+            "two_chapter_abs_z_star_upper_bound": pair_bound,
+            "two_chapter_bound_assumption": "exact_arithmetic",
+            "two_chapter_abs_z_star_upper_bounds": numerical_bounds,
+            "two_chapter_rounding_sensitive_features": [
+                name for name in pairs
+                if not math.isclose(numerical_bounds[name], pair_bound, rel_tol=1e-12)
+            ],
+            "unreachable_deviation_features": [
+                name for name in pairs if self.thresholds.z_mild > numerical_bounds[name]
+            ],
+        }
+
+    def interpretation_texts(
+        self, labels: Mapping[str, str] | None = None, language_key: str = "en"
+    ) -> dict[str, str]:
+        """Use the JSON contract's thresholds for the UI and text legend alike."""
+        pack = METRIC_LABELS.get(language_key, METRIC_LABELS["en"])
+
+        def text(key: str) -> str:
+            return (labels or {}).get(key, pack.get(key, METRIC_LABELS["en"][key]))
+
+        info = self.interpretation()
+        fields = {
+            "band": precise_num(info["band"]["sigma_multiplier"], language_key),
+            "z": precise_num(info["deviation"]["absolute_z_star_min"], language_key),
+            "method": str(info["fdr"]["method"]).upper(),
+            "q": precise_num(info["fdr"]["q"], language_key),
+            "layer": precise_num(info["paragraph_layer"]["absolute_z_min"], language_key),
+            "limit": format_num(info["two_chapter_abs_z_star_upper_bound"], language_key, 5),
+            "scale": format_num(MAD_TO_SIGMA, language_key, 4),
+            "count": len(info["unreachable_deviation_features"]),
+        }
+        notes = {key: text(key).format(**fields) for key in (
+            "selection_limits", "decision_legend", "decision_band", "decision_deviation",
+            "decision_fdr", "decision_layer",
+        )}
+        if info["unreachable_deviation_features"]:
+            notes["small_sample"] = text("selection_two_chapters").format(**fields)
+        if info["two_chapter_rounding_sensitive_features"]:
+            notes["rounding_sensitive"] = text("selection_pair_rounding")
+        if info["register_excluded_chapters"]:
+            notes["register_exemptions"] = (labels or {}).get(
+                "analysis_scope_exemption", WORKSPACE_LABELS.get(
+                    language_key, WORKSPACE_LABELS["en"])["analysis_scope_exemption"])
+        return notes
 
     @classmethod
     def from_metrics(
@@ -1692,13 +1779,14 @@ class StyleFingerprint:
             else:
                 distribution_unavailable.append(field_name)
 
-        # Summary: BH FDR-controlled features with significant trends
+        # Nominal BH trend shortlist; input probabilities are not calibrated
+        # for dependent literary chapters, so this is not proven FDR control.
         trending = [
             feat for _ch, feat in benjamini_hochberg(trend_p_cells, q=self.thresholds.fdr_q)
         ]
         # Summary: features with changepoints
         segmented = list(changepoints.keys())
-        # Summary: BH FDR-controlled features whose early/late chapter halves differ
+        # Nominal BH early/late shortlist, with the same calibration limits.
         shifted = [
             feat for _ch, feat in benjamini_hochberg(shift_p_cells, q=self.thresholds.fdr_q)
         ]
@@ -1743,6 +1831,7 @@ class StyleFingerprint:
             self.values[field_name].get(ch) is not None for field_name in fields)]
         diagnostics: dict[str, Any] = {
             "method": "standardized_midranks", "status": "insufficient_features",
+            "mahalanobis_space": "standardized_midranks",
             "min_chapters": MIN_DIMENSION_CHAPTERS, "min_features": MIN_DIMENSION_FEATURES,
             "total_chapters": self.n_chapters, "candidate_features": list(fields),
             "complete_chapters": common, "scored_chapters": [], "features": [],
@@ -1799,11 +1888,9 @@ class StyleFingerprint:
 
         mahalanobis: dict[int, float] = {}
         for row, chapter_num in enumerate(common):
-            ch_z = self.z_scores.get(chapter_num, {})
-            if all(f in ch_z for f in fields):
-                z_vec = [ch_z[f] for f in fields]
-            else:
-                z_vec = [columns[f][row] for f in fields]
+            # Covariance and observations must share the same coordinates.
+            # Same-sample z* cells have a different scale and are not inputs.
+            z_vec = [columns[f][row] for f in fields]
             d_m_sq = math.fsum(
                 (math.fsum(eigenvectors[k][j] * z_vec[j] for j in range(p_dim)) ** 2)
                 / max(eigenvalues[k], 1e-6)
@@ -1903,10 +1990,10 @@ class StyleFingerprint:
             status = str(base.get("comparison_status", "insufficient_chapters"))
             measured = status != "insufficient_chapters"
             if status == "available":
-                low = centre - 2 * sigma
+                low = centre - REFERENCE_BAND_SIGMA * sigma
                 if field_name in NON_NEGATIVE_FEATURES:
                     low = max(0.0, low)
-                band: list[float] | None = [round(low, 4), round(centre + 2 * sigma, 4)]
+                band: list[float] | None = [round(low, 4), round(centre + REFERENCE_BAND_SIGMA * sigma, 4)]
             else:
                 band = None
             features.append(
@@ -1948,6 +2035,7 @@ class StyleFingerprint:
                 "min_chapters": self.thresholds.min_chapters,
                 "flag_min_severity": self.thresholds.flag_min_severity,
                 "expected_false_positives": round(self.expected_false_positives, 2),
+                "interpretation": self.interpretation(),
             },
             "consistency": round(self.consistency, 4),
             "measured_cells": self.measured_cells,
@@ -1991,6 +2079,16 @@ class StyleFingerprint:
             f"({self.n_chapters} {t('chapters' if self.n_chapters != 1 else 'chapter')})",
             "=" * 72,
         ]
+        notes = self.interpretation_texts(labels, language_key)
+        lines.extend(notes[key] for key in (
+            "selection_limits", "decision_band", "decision_deviation", "decision_fdr", "decision_layer"
+        ))
+        if "small_sample" in notes:
+            lines.append(notes["small_sample"])
+        if "rounding_sensitive" in notes:
+            lines.append(notes["rounding_sensitive"])
+        if "register_exemptions" in notes:
+            lines.append(notes["register_exemptions"])
         for field_name, label_key, unit_default in FEATURES:
             unit_pack = FEATURE_UNITS.get(language_key) or FEATURE_UNITS["en"]
             unit = unit_pack.get(field_name, unit_default)
@@ -2010,8 +2108,8 @@ class StyleFingerprint:
                 lines.append(
                     f"{label:<22} {t('median')} {format_num(centre, language_key, 2):>9}   "
                     f"{t('band')} "
-                    f"{format_num(centre - 2 * sigma, language_key, 2):>8} – "
-                    f"{format_num(centre + 2 * sigma, language_key, 2):>7}   [{unit}]"
+                    f"{format_num(centre - REFERENCE_BAND_SIGMA * sigma, language_key, 2):>8} – "
+                    f"{format_num(centre + REFERENCE_BAND_SIGMA * sigma, language_key, 2):>7}   [{unit}]"
                 )
             else:
                 observations = [value for value in self.values.get(field_name, {}).values() if value is not None]
@@ -2069,6 +2167,9 @@ class StyleFingerprint:
                     chapters=diagnostics["min_chapters"], features=diagnostics["min_features"]))
             else:
                 lines.append(t("dim_method"))
+                lines.append(t("dim_regularization").format(
+                    lam=format_num(diagnostics["shrinkage_lambda"], language_key, 4),
+                    chapters=len(diagnostics["scored_chapters"]), features=len(diagnostics["features"])))
                 lines.append(t("dim_retained").format(
                     variance=format_num(diagnostics["retained_variance"] * 100, language_key, 1)))
             lines.append(t("dim_cutoff").format(
@@ -2273,7 +2374,7 @@ def paragraph_layer_projection(
         value = getattr(paragraph, LAYER_PARAGRAPH_ATTR[layer], None)
         if paragraph.words <= 0 or not isinstance(value, int | float):
             value = None
-        z = round(stats[index][1], 2) if index in stats else None
+        z = round(stats[index][1], PARAGRAPH_LAYER_Z_DECIMALS) if index in stats else None
         rows.append({
             "index": index, "chapter_num": paragraph.chapter_num,
             "chapter_title": paragraph.chapter_title,
@@ -2289,7 +2390,7 @@ def paragraph_layer_projection(
         "comparison": {
             "reference_scope": "all_measurable_paragraphs_within_each_chapter",
             "method": "median_mad_robust_z", "minimum_paragraphs": 3,
-            "requires_nonzero_mad": True, "z_decimals": 2,
+            "requires_nonzero_mad": True, "z_decimals": PARAGRAPH_LAYER_Z_DECIMALS,
             "notable_abs_z": PARAGRAPH_LAYER_Z_CUTOFF,
         },
         "selection": {

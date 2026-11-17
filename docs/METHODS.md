@@ -298,6 +298,57 @@ Lixity estimates its median/MAD from the same chapters it scores and then
 applies a normal tail to the custom $z^*$. That calibration has not been
 established. Runs/lag diagnostics and switching to BY do not establish it.
 
+### Decision legend and small chapter sets (Unreleased)
+
+The reference panel, text passport and additive
+`passport.meta.interpretation` contract (`style-interpretation/1`) distinguish:
+
+| Output | Rule and reference | Interpretation |
+| --- | --- | --- |
+| Passport band | Median ± 2σ of usable chapter values, no chapter SE; nonnegative JSON bounds are clipped at zero | Descriptive spread, not a confidence interval |
+| `deviations` | \|z*\| ≥ active `z_mild`, including the available chapter SE | Descriptive chapter contrast |
+| `consistency` | Share of measurable cells with \|z*\| < `z_mild` | Not the share within the ±2σ band and not a quality score |
+| `fdr_flagged` | Nominal BH/BY selection of standard-normal tails of same-sample z* | Model selection; calibrated error control is not established |
+| `expected_false_positives` | Measured-cell count × standard-normal tail at `z_mild` | Model reference expectation, not an observed or calibrated false-positive count |
+| Paragraph layer | \|z\| ≥ 1.5 against eligible paragraphs within each chapter, after rounding z to two decimals | Separate population and cutoff; not chapter FDR |
+| Projection flags | Absolute unrounded rank-axis score ≥ active `dim_score_threshold` | Descriptive coordinate cutoff, not a probability |
+
+Register-assigned chapters remain in the manuscript reference and consistency
+ratio but are excluded from deviation/FDR shortlists; the contract lists them
+in `register_excluded_chapters`.
+
+These rules intentionally remain distinct. Changing a label or raising a minimum
+sample count cannot supply their missing statistical calibration.
+
+For two distinct usable chapter values, exact-arithmetic median/MAD gives
+σ = 1.4826 · |x₁−x₂| / 2. Thus \|z*\| ≤ 1/1.4826 ≈ 0.67449076;
+nonnegative SE can only decrease the magnitude. z* cells are still calculated,
+but the default cutoff 2.5 cannot be reached. The contract identifies such
+features individually in `two_chapter_features` and
+`unreachable_deviation_features`; unavailable/constant features are not included.
+Floating-point midpoint rounding can violate that ideal bound: `[1.0,
+math.nextafter(1.0, 2.0)]` rounds its median to an endpoint and can produce an
+implemented magnitude near 1.34898. The contract labels the ideal bound's
+`two_chapter_bound_assumption` as `exact_arithmetic`, additionally computes
+`two_chapter_abs_z_star_upper_bounds` with zero SE in the implemented coordinates,
+and guards unreachable-cutoff claims against these numerical bounds.
+`two_chapter_rounding_sensitive_features` identifies material disagreement
+(relative tolerance 1e-12); UI/text report the comparison as rounding-sensitive.
+The underlying z*/selection algorithm is not silently changed.
+
+A configured cutoff at or below this bound is not declared unreachable, although
+SE can still prevent an actual flag. The minimum of two is a computational
+availability policy, not an inferential reliability guarantee.
+
+There is no corresponding universal MAD ceiling at three, four or five values:
+`[0, 1, M]`, for example, has median 1 and MAD 1 for sufficiently large M,
+so its largest unadjusted score grows with M. No normal-tail calibration is
+inferred from these examples. Permuting chapter labels alone preserves the
+unordered values and their same-sample outlier scores; it does not calibrate
+this selection procedure. Any future resampling design needs a specified null,
+appropriate exchangeability/symmetry assumptions and separate operating-error
+validation, including ordered chapters, ties and heterogeneous chapter sizes.
+
 ## 4a. Effect sizes (magnitude, not just significance)
 
 For every FDR-selected cell, passport `effect_magnitudes` carries a band label
@@ -461,12 +512,24 @@ rank space:
    $(1-\lambda)C + \lambda I$ is applied before re-running Jacobi
    eigendecomposition. Eigenvalues are sorted descending; the largest-absolute
    loading fixes each axis sign. `StyleFingerprint` also computes regularized
-   Mahalanobis distances $D_M(c) = \sqrt{\sum_k (v_k^\mathsf{T} z_c)^2 / \max(\lambda_k, 10^{-6})}$
+   Mahalanobis distances $D_M(c) = \sqrt{\sum_k (v_k^\mathsf{T} r_c)^2 / \max(\mu_k, 10^{-6})}$
    per complete chapter (`mahalanobis_distances`, `top_deviants(..., metric="mahalanobis")`).
+   Here $r_c$ is the standardized midrank row and $\mu_k$ is an eigenvalue
+   of the regularized matrix.
+   **Unreleased correction:** the vector in this distance is the same centered,
+   standardized midrank row used to construct C. Chapter z* cells are never
+   substituted. `dimension_diagnostics.mahalanobis_space` identifies the space
+   as `standardized_midranks`; earlier builds could mix coordinates when z*
+   cells were present. Recompute distances before comparing those builds.
 4. Project the same standardized ranks: $s_k=Xv_k$. Only the common complete
    chapters receive `scores`; missing measurements are not imputed. The
-   reported `variance` is $\lambda_k/p$ for $p$ unit-variance columns, the
-   explained fraction in this rank space.
+   reported `variance` is $\mu_k/p$ for $p$ unit-variance columns, the
+   eigenvalue share of the regularized rank matrix. When shrinkage is active,
+   this is not the empirical fraction of variance of the projected scores.
+   Ridge toward the identity changes eigenvalues, not the matrix's eigenvectors
+   (apart from numerical choices within degenerate eigenspaces). The UI exposes
+   lambda and the complete-chapter/feature counts; axes are exploratory
+   projections, not established literary registers.
 5. A completed, unrounded score with |score| ≥ `dim_score_threshold` (default
    2.5) puts a chapter in `flagged` on that axis. Scores are stored rounded to
    two decimals; the cutoff remains descriptive, not a calibrated probability.

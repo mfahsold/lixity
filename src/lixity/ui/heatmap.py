@@ -14,6 +14,7 @@ from ..style_fingerprint import (
     LAYER_FEATURES,
     MIN_COMPARABLE_SENTENCES,
     MIN_COMPARABLE_WORDS,
+    REFERENCE_BAND_SIGMA,
     Z_COLOR_LIMIT,
     StyleFingerprint,
     z_color,
@@ -460,6 +461,19 @@ def render_style_passport_panel(
     parts: list[str] = ['<section class="panel" id="bands">']
     parts.append(f"<h2>{help_term(labels, 'passport', L('style_passport'))}</h2>")
     parts.append(f'<p class="panel-guide">{L("reference_reading")}</p>')
+    notes = fingerprint.interpretation_texts(labels, language_key)
+    parts.append(f'<p class="hint">{esc(notes["selection_limits"])}</p>')
+    if "small_sample" in notes:
+        parts.append(f'<p class="hint" id="style-small-sample" role="status">{esc(notes["small_sample"])}</p>')
+    if "rounding_sensitive" in notes:
+        parts.append(f'<p class="hint" id="style-rounding-sensitive" role="status">{esc(notes["rounding_sensitive"])}</p>')
+    parts.append(f'<details id="style-decision-legend"><summary>{esc(notes["decision_legend"])}</summary><ul>')
+    parts.extend(f'<li>{esc(notes[key])}</li>' for key in (
+        "decision_band", "decision_deviation", "decision_fdr", "decision_layer"
+    ))
+    if "register_exemptions" in notes:
+        parts.append(f'<li>{esc(notes["register_exemptions"])}</li>')
+    parts.append('</ul></details>')
     parts.append('<div class="bands">')
     for field_name, label_key, _unit in FEATURES:
         base = fingerprint.baseline.get(field_name, {})
@@ -488,7 +502,7 @@ def render_style_passport_panel(
         title = (
             f"{label(labels, label_key)}: {L('median')} {N(centre, 2)} · "
             f"σ = {N(sigma, 2)} · n = {int(base['n'])} · "
-            f"{L('band')} {N(centre - 2 * sigma, 2)} – {N(centre + 2 * sigma, 2)} · "
+            f"{L('band')} {N(centre - REFERENCE_BAND_SIGMA * sigma, 2)} – {N(centre + REFERENCE_BAND_SIGMA * sigma, 2)} · "
             f"{L('outliers')}: {n_out}" + (f" · {click_hint}" if n_out or layer else "")
         )
         row_attrs = [
@@ -510,8 +524,8 @@ def render_style_passport_panel(
         parts.append(
             band_chart(
                 title,
-                centre - 2 * sigma,
-                centre + 2 * sigma,
+                centre - REFERENCE_BAND_SIGMA * sigma,
+                centre + REFERENCE_BAND_SIGMA * sigma,
                 centre,
                 values,
                 outliers,

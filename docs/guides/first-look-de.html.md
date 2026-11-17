@@ -105,4 +105,6 @@ Im **Teleprompter** (`P`) liest du den geplanten Sprechtext mit Regiehinweisen u
 
 Weiter geht es im [UI-Handbuch](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md), in der [CLI-Referenz](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) oder über die [Dokumentationsübersicht](https://github.com/mfahsold/lixity/blob/main/docs/README.md) (Englisch).
 
+Unveröffentlicht: Die Stilreferenz erklärt die getrennten Schwellen für Korridor, Abweichung, nominale FDR und Absatzmarkierung. Bei nur zwei unterschiedlichen vergleichbaren Kapiteln ist die Standard-Abweichungsschwelle unerreichbar; das belegt keine Gleichförmigkeit. Rangprojektionen zeigen ihre Regularisierung. Kalibrierte Fehlerraten sind für diese Auswahl nicht nachgewiesen.
+
 [Über Lixity](../index-de.html)[Installation](installation.html)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

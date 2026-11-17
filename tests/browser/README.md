@@ -303,6 +303,10 @@ keyboard/touch rotation and zoom, semantic chapter-score links with JavaScript
 enabled and disabled, tooltip escaping, idle rendering, touch targets and mobile
 layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
+It also checks the shared band/deviation/FDR/paragraph legend and two-chapter
+cutoff notice in all seven locales at 1440 and 320 px, plus the rank projection's
+visible regularization notice. These checks establish rendering and interaction,
+not statistical calibration.
 
 The debug test uses an intercepted synthetic host. It checks explicit enabled
 and disabled preferences across reloads, window/server defaults, unavailable

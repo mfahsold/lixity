@@ -9,6 +9,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Correct regularized Mahalanobis distances to use the same standardized midrank
+  coordinates as their covariance, including the production path with populated
+  z* cells. Earlier mixed-space distances must be recomputed.
+- Add versioned `meta.interpretation` diagnostics and a shared UI/text threshold
+  legend for descriptive bands, deviations, nominal FDR and paragraph layers.
+  Explain per-feature two-chapter cutoff limits without hiding computed scores
+  or claiming that larger sample minima establish calibration.
+- Present style axes as exploratory feature-rank projections, surface ridge
+  regularization and clarify that reported eigenvalue shares describe the
+  regularized matrix. Existing schema-5 fields and thresholds remain intact.
+
 - Keep passage research compact with nested claim cards and a smaller linked-version action. The desktop return control stays hidden while its origin passage is visible and becomes available after leaving it; the mobile return bar keeps its place to avoid shifting the prose. Reader tools compact when an open context panel reduces their available width.
 - Dismiss contextual help when activating a native disclosure, so its hint does not intercept the next Escape intended to close the opened settings.
 - **Statistical & changepoint core (`math_core.py`, `diversity.py`, `pacing.py`, `analyzer.py`, `style_fingerprint.py`)**:

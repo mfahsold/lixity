@@ -486,10 +486,28 @@ BY and the exploratory runs/lag diagnostics do not repair that gap.
 observed error count. Cliff's delta describes ordinal contrast, not quality.
 Definitions and active thresholds: [METHODS §§1–4](METHODS.md#1-robust-house-style-baseline).
 
+The additive `meta.interpretation` legend identifies model selection explicitly.
+With two distinct observations per feature, z* is available but its ideal
+exact-arithmetic magnitude is bounded by 1/1.4826. The default cutoff cannot
+flag ordinary such pairs; numerical midpoint rounding can exceed the ideal
+bound. Per-feature zero-SE bounds guard unreachable-cutoff claims and a
+rounding-sensitive status discloses material differences. The UI/text
+warn per feature about unreachable cutoffs. Neither five observations nor any
+other fixed minimum establishes inferential validity; no general n≥3 MAD ceiling
+is assumed. Paragraph marks, chapter bands, deviation flags and FDR have different
+reference populations/rules and must not be treated as one decision threshold.
+
 Style axes now use PCA of standardized tied midranks on one common complete
 chapter set, with ridge shrinkage $(1-\lambda)C + \lambda I$ when $n \le p$ or
 $\lambda_{\min} \le 10^{-6}\lambda_{\max}$ and regularized Mahalanobis distances
-($D_M$) per complete chapter. Covariance, explained variance and scores share that rank space;
+($D_M$) per complete chapter. **Unreleased:** the distance now uses the same
+standardized midrank rows as the covariance. Earlier builds could instead use
+noise-adjusted z* cells, yielding an incoherent distance; historical values must
+be recomputed. Synthetic tests check a closed-form collinear solution, the
+production `from_metrics()` path, ties, incomplete chapters and invariance to
+optional z* fields. These establish coordinate correctness, not calibration.
+The reported eigenvalue shares belong to the regularized matrix and need not
+match empirical score-variance shares. Covariance and scores share the rank space;
 missing measurements are not imputed. At least three complete chapters and
 three varying baseline-usable features are required, with constant columns
 dropped on that set. Incomplete chapters have no dimension scores. Complete-case selection, small samples, and shrinkage regularization still limit interpretation. Score flags and Mahalanobis distances are

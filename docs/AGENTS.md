@@ -417,8 +417,33 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
+**Unreleased additive contract:** `meta.interpretation` has
+`schema_version: "style-interpretation/1"`, `mode: "exploratory"`,
+`normal_tail_calibration: "not_established"` and `fdr_guarantee: "not_established"`.
+Its `band`, `deviation`, `consistency`, `fdr`, `normal_model_reference` and
+`paragraph_layer` objects report the different rules and populations. Paragraph selection is
+within each chapter and uses z rounded to two decimals (`reference_scope`,
+`z_decimals`, `cutoff_applied_to`). `register_excluded_chapters` lists the
+chapters exempt from deviation/FDR flags, not from the baseline or consistency. Read
+`two_chapter_features`, `two_chapter_abs_z_star_upper_bound` and
+`unreachable_deviation_features` to distinguish computed scores from an
+unreachable configured cutoff. Counts are per feature's usable observations,
+not simply manuscript chapter count. Unavailable/constant baselines are excluded.
+The single two-chapter bound is an exact-arithmetic reference (see
+`two_chapter_bound_assumption`). Use the per-feature numerical
+`two_chapter_abs_z_star_upper_bounds` for implemented reachability; material
+midpoint rounding is disclosed by `two_chapter_rounding_sensitive_features`.
+Existing schema-5 fields and sentinels retain their meanings; these diagnostics
+add interpretation rather than a new calibrated test.
+
 `dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
+**Unreleased correction:** `dimension_diagnostics.mahalanobis_space` is
+`standardized_midranks`. Covariance and distance rows now use that same space,
+independently of populated z* fields. Recompute old mixed-space distances.
+`shrinkage_lambda` describes ridge regularization; `dimensions[].variance` and
+`retained_variance` are regularized eigenvalue shares, not necessarily empirical
+score-variance shares and not literary-register evidence.
 
 `structural_diagnostics` contains empty result maps when no feature is measurable.
 Changepoint indices are 0-based positions of the first chapter after each break;

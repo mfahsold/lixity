@@ -97,6 +97,11 @@ between reading, comparison, research, and sharing:
   **sticky sentences**, **dialogue tags**, **same-paragraph word echoes**, and
   **indirect speech**. Try a classic in the
   [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
+  **Unreleased:** the reference view explains its separate thresholds and warns
+  when two comparable chapters cannot reach the configured deviation cutoff.
+  Rank projections expose regularization; nominal FDR is exploratory selection,
+  with no established error-rate calibration. See the
+  [methods](https://mfahsold.github.io/lixity/METHODS.md#decision-legend-and-small-chapter-sets-unreleased).
 - **Follow scene research:** open a dossier beside the manuscript and connect
   paragraphs to claims, source passages, weighted tag clouds, character notes,
   or scene geography.

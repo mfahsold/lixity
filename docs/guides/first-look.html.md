@@ -112,4 +112,6 @@ Lixity is open source under AGPL-3.0-or-later. Writing and self-publishing need 
 
 Continue with the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md), [CLI reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) or [complete documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md).
 
+Unreleased: the reference panel explains its separate band, deviation, nominal FDR and paragraph thresholds. With only two distinct comparable chapters, the default deviation cutoff cannot be reached; this does not establish uniformity. Rank projections show their regularization. These selections have no established error-rate calibration.
+
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

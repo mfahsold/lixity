@@ -263,7 +263,7 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Chapter comparison | Review route `Kapitel erkunden` | `Analysis overview` → `Kapitelmatrix`, right-hand outline nav, heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
 | Sentence rhythm & dialogue | Review route `Satzrhythmus öffnen`, `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
 | Tense review | `Analysis On` with `Measure: None` or review badge on paragraph | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
-| Style-space & scenes | Review route `3D-Stilraum öffnen` | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Dimensionen`), 3D canvas point click |
+| Style-space & scenes | Review route `3D-Rangprojektion öffnen` | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
 | Passage values & evidence | Paragraph `…` button → `Explore passage` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
@@ -688,6 +688,14 @@ The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
 FDR-selected cell; color alone is not a significance decision. Cell details
 include raw values, z*, standardized effect and Cliff's δ. The style reference
 shows the manuscript median ± 2 robust standard deviations, with sample counts.
+**Unreleased:** a shared legend distinguishes the ±2σ band, SE-adjusted
+chapter cutoff, nominal FDR selection and chapter-local paragraph cutoff.
+`consistency` counts measurable cells below the chapter deviation cutoff, not
+inside the ±2σ band. A per-feature notice explains when only two distinct
+comparable chapters make the configured deviation cutoff unreachable. This
+retains calculated z* cells; absence of marks does not establish uniformity.
+Normal-model tails and nominal FDR have no established error-rate calibration.
+
 Its cutoff-hit counts differ from FDR decisions; the bands are neither
 confidence intervals nor external editorial targets. Paragraph style layers
 show measured values and flag unusual values relative to the chapter.
@@ -739,6 +747,13 @@ scores beside the plot. Choose a flat axis pair in **View** when points overlap;
 return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
+
+**Unreleased:** this view is labelled a feature-rank projection. The regularization
+notice shows ridge lambda and the complete-chapter/feature counts. Reported
+variance shares refer to the regularized matrix's eigenvalues, not necessarily
+empirical score variance. They do not establish literary registers. Mahalanobis
+distances use the same rank coordinates as the covariance; recompute distances
+from earlier mixed-space builds before comparing them.
 
 **Available in 0.8.0:** the count beside the plot shows how many measured chapters
 reach an axis cutoff. **Next chapter at cutoff** cycles through those chapters

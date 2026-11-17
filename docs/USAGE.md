@@ -1282,6 +1282,19 @@ Use `--min-chapters` on style/dashboard/build or server startup, or
 style baseline is available. The minimum is 2; fewer usable chapters mean
 unavailable evidence, not a perfectly consistent style.
 
+**Unreleased:** two distinct usable chapter values still receive z* scores. In
+exact arithmetic, |z*| cannot exceed 1/1.4826; numerical zero-SE bounds additionally
+guard the unreachable-cutoff notice against floating-point midpoint rounding.
+The reference panel and text export explain this per feature and show a shared
+legend for bands, deviations, nominal FDR and paragraph layers. Raising
+`min_chapters` changes availability, not statistical validity. Normal-tail/FDR
+outputs are exploratory model selections with no established error calibration.
+The rank-projection panel displays regularization and its data support; its
+Mahalanobis distances now consistently use rank coordinates. API consumers can
+read the additive `meta.interpretation` and
+`dimension_diagnostics.mahalanobis_space` contracts; see [Methods](METHODS.md).
+
+
 For API project isolation, pass `project_config={}` to `profile`, `fingerprint`,
 `passport` or `dashboard` to avoid implicit threshold lookup. A supplied mapping
 provides thresholds and known `CorpusConfig` fields; explicit options win.

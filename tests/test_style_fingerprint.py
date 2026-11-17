@@ -376,11 +376,14 @@ class TestStyleFingerprint(unittest.TestCase):
         for language in LOCALES:
             with self.subTest(language=language):
                 text = fingerprint.passport_text(labels=labels, language_key=language)
-                self.assertNotIn("σ", text)
+                # Sigma belongs in the separate band legend, never as a unit
+                # appended to a significance-adjusted deviation.
                 for chapter, _mean in strongest:
                     deviations = sorted(fingerprint.deviations.get(chapter, {}).items(), key=lambda item: abs(item[1]), reverse=True)[:4]
                     for field, value in deviations:
-                        self.assertIn(f"{field} z* {num(value, language, 1, signed=True)}", text)
+                        cell = f"{field} z* {num(value, language, 1, signed=True)}"
+                        self.assertIn(cell, text)
+                        self.assertNotIn(cell + "σ", text)
                 self.assertEqual(json.dumps(fingerprint.passport(), sort_keys=True), before)
 
     def test_comparability_floors_withhold_unstable_comparisons(self):

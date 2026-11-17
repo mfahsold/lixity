@@ -5,7 +5,7 @@ const path = require('node:path');
 const os = require('node:os');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
-const locales = pythonFixture(`
+const {locales, pairs} = pythonFixture(`
 from lixity.api import dashboard
 from tests.locales import LOCALES
 import json
@@ -22,8 +22,11 @@ text += "\\n\\n## Third chapter\\n\\n" + (
 ) * 10
 text += "\\n\\nI walk home." * 100
 text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
-print(json.dumps({language: dashboard(text, language=language, title="Browser regression")
-                  for language in LOCALES}))
+pair_text = text.split("## Third chapter")[0]
+print(json.dumps({"locales": {language: dashboard(text, language=language, title="Browser regression")
+                              for language in LOCALES},
+                  "pairs": {language: dashboard(pair_text, language=language, title="Two chapters")
+                            for language in LOCALES}}))
 `);
 
 (async () => {
@@ -488,6 +491,8 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
           await localizedPage.goto('http://lixity.test/');
           await localizedPage.locator('#style-tab-dimensions').click();
           const dimensions = localizedPage.locator('#dimensions');
+          assert.equal(await dimensions.locator('#dim-regularization').isVisible(), true);
+          assert.ok((await dimensions.locator('#dim-regularization').textContent()).includes('λ'));
           assert.ok((await dimensions.locator('.dim-guide').textContent()).length > 50);
           const legend = dimensions.locator('#dim-legend');
           assert.equal(await legend.locator('li').count(), 3);
@@ -544,6 +549,23 @@ print(json.dumps({language: dashboard(text, language=language, title="Browser re
             window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(toolbar?.offsetHeight||0)-12, behavior:'instant'});
           });
           await settledScreenshot(localizedPage, `${language}-${width}-overview.png`);
+          // The same decision legend is usable with the two-chapter limit,
+          // independent of any optional PCA view.
+          const pairPage = await browser.newPage({viewport:{width,height:1000}, reducedMotion:'reduce'});
+          try {
+            await pairPage.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:pairs[language]}));
+            await pairPage.goto('http://lixity.test/');
+            await pairPage.locator('#style-tab-bands').click();
+            assert.equal(await pairPage.locator('#style-small-sample').isVisible(), true);
+            const disclosure = pairPage.locator('#style-decision-legend');
+            assert.equal(await disclosure.getAttribute('open'), null);
+            await disclosure.locator('summary').click();
+            assert.equal(await disclosure.locator('li').count(), 4);
+            assert.ok((await disclosure.textContent()).includes('FDR') || (await disclosure.textContent()).includes('BH'));
+            assert.equal(await disclosure.evaluate(element => element.scrollWidth <= element.clientWidth), true);
+            assert.equal(await pairPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+            await pairPage.locator('#bands').screenshot({path:path.join(artifacts, `${language}-${width}-decision-legend.png`)});
+          } finally { await pairPage.close(); }
           if (width === 320) {
             await localizedPage.locator('.dim-selection-panel').evaluate(element => {
               const toolbar = document.querySelector('.toolbar');
