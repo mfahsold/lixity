@@ -12189,26 +12189,36 @@ function researchTimelineStrip(rows) {
       '<span class="research-timeline-strip-track"><span class="research-timeline-strip-bar" style="left:' +
       left.toFixed(3) + '%;width:' + width.toFixed(3) + '%"></span></span></a></li>';
   }).join("");
+  var summaryText = uiCountFormat("research_timeline_span", rows.length, {start: earliest.slice(0, 4), end: latest.slice(0, 4)});
+  var listBlock = '<ol>' + body + '</ol>' +
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_strip_hint")) + '</p>';
+  if (rows.length > 12) {
+    return '<div class="research-timeline-strip"><details class="research-details" id="r-timeline-strip-details">' +
+      '<summary>' + escapeHtml(uiLabel("research_timeline_strip_heading")) + ' · ' + escapeHtml(summaryText) + '</summary>' +
+      listBlock + '</details></div>';
+  }
   return '<div class="research-timeline-strip"><h4>' + escapeHtml(uiLabel("research_timeline_strip_heading")) + '</h4>' +
-    '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_timeline_span", rows.length,
-      {start: earliest.slice(0, 4), end: latest.slice(0, 4)})) + '</p>' +
-    '<ol>' + body + '</ol>' +
-    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_strip_hint")) + '</p></div>';
+    '<p class="ctl-note">' + escapeHtml(summaryText) + '</p>' + listBlock + '</div>';
 }
 
-function researchTimelineEntry(entry) {
+function researchTimelineEntry(entry, compactMode) {
+  var isDe = (document.documentElement.lang || "").toLowerCase().startsWith("de");
   var scale = researchTimelineScale(entry);
   var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
   var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
   var details = [authored, scope].filter(Boolean).join(" · ");
-  var longStatement = (entry.statement || "").length > 200;
+  var fullText = String(entry.statement || "");
+  var longStatement = Boolean(compactMode) && fullText.length > 180;
+  var shortText = longStatement ? (fullText.slice(0, 180).trim() + "…") : fullText;
   return '<li id="' + researchTimelineAnchor(entry.claim_id) + '" data-claim-id="' + escapeHtml(entry.claim_id) +
     '"><article class="research-card">' +
     (scale ? '<p class="research-timeline-scale"><span>' + escapeHtml(scale) + '</span></p>' : '') +
     '<h4>' + escapeHtml(entry.title) + '</h4>' +
     (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
-    '<p class="research-timeline-statement' + (longStatement ? ' research-excerpt' : '') + '">' + escapeHtml(entry.statement) + '</p>' +
-    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">…</button>' : '') +
+    '<p class="research-timeline-statement"' +
+      (longStatement ? ' data-full-statement="' + escapeHtml(fullText).replace(/"/g, "&quot;") + '" data-short-statement="' + escapeHtml(shortText).replace(/"/g, "&quot;") + '"' : '') +
+      '>' + escapeHtml(shortText) + '</p>' +
+    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">' + escapeHtml(isDe ? "Mehr lesen" : "Read more") + '</button>' : '') +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
     (entry.reason ? '<p class="research-timeline-reason">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
@@ -12242,7 +12252,9 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
   });
   var activeEra = "all";
   var filterText = "";
-  var limit = 25;
+  var pageSize = 10;
+  var limit = pageSize;
+  var compactCards = datedRows.length > 6;
 
   function filteredDated() {
     var q = filterText.trim().toLowerCase();
@@ -12284,14 +12296,14 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
       researchTimelineStrip(visible) +
       '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + visible.length + ')</h3>' +
       (capped.length ? '<ol class="research-timeline research-timeline-dated">' +
-        capped.map(researchTimelineEntry).join("") + '</ol>' +
+        capped.map(function(r) { return researchTimelineEntry(r, compactCards); }).join("") + '</ol>' +
         (remaining > 0 ? '<p class="mt-2"><button type="button" class="ctl ctl-sm" id="r-timeline-more">' +
           escapeHtml((isDe ? "Mehr anzeigen" : "Show more") + " (+" + remaining + ")") + '</button></p>' : '') :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
       '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
       (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
         '<ol class="research-timeline research-timeline-unplaced">' +
-        unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
+        unplacedRows.map(function(r) { return researchTimelineEntry(r, compactCards); }).join("") + '</ol>' :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>');
 
     var prevQuery = preserveInput ? document.getElementById("r-timeline-filter") : null;
@@ -12307,21 +12319,21 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
       }
       input.addEventListener("input", function() {
         filterText = input.value || "";
-        limit = 25;
+        limit = pageSize;
         paint(true);
       });
     }
     timelineHost.querySelectorAll("[data-timeline-era]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         activeEra = btn.dataset.timelineEra || "all";
-        limit = 25;
+        limit = pageSize;
         paint(false);
       });
     });
     var moreBtn = document.getElementById("r-timeline-more");
     if (moreBtn) {
       moreBtn.addEventListener("click", function() {
-        limit += 25;
+        limit += pageSize;
         paint(false);
       });
     }
@@ -12330,9 +12342,9 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
         var stmt = btn.previousElementSibling;
         if (!stmt) return;
         var expanded = btn.getAttribute("aria-expanded") === "true";
-        stmt.classList.toggle("research-excerpt", expanded);
+        stmt.textContent = expanded ? (stmt.dataset.shortStatement || "") : (stmt.dataset.fullStatement || "");
         btn.setAttribute("aria-expanded", String(!expanded));
-        btn.textContent = expanded ? "…" : (isDe ? "Weniger" : "Less");
+        btn.textContent = expanded ? (isDe ? "Mehr lesen" : "Read more") : (isDe ? "Weniger" : "Less");
       });
     });
     timelineHost.querySelectorAll(".research-timeline-strip-row").forEach(function(link) {
