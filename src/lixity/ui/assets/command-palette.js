@@ -39,11 +39,19 @@
         if (!label) return;
         var parent = opt.parentElement;
         var groupLabel = (parent && parent.tagName === "OPTGROUP" && parent.label) ? parent.label.trim() : "";
+        var valHints = {
+          dialogue: isDe ? "Dialoge, Sprecherwechsel & Redeanteile" : "Dialogue turns & spoken share",
+          asl: isDe ? "Satzlänge & Rhythmus" : "Sentence length & rhythm",
+          tense: isDe ? "Tempus-Marker & Zeitformen" : "Grammatical tense & shifts"
+        };
+        var subtitle = valHints[val]
+          ? (groupLabel ? (groupLabel + " · " + valHints[val]) : valHints[val])
+          : (groupLabel || (isDe ? "Analyse-Ebene im Manuskript umschalten" : "Toggle analysis layer in manuscript"));
         layerCommands.push({
           id: val ? ("layer-" + val) : "layer-off",
           category: groupLabel ? (analysisCat + ": " + groupLabel) : analysisCat,
           title: label,
-          subtitle: groupLabel || (isDe ? "Analyse-Ebene im Manuskript umschalten" : "Toggle analysis layer in manuscript"),
+          subtitle: subtitle,
           icon: val ? "sigma" : "eye",
           action: function () {
             activateAnalysisLayer(val, workbench);

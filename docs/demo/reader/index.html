@@ -126,6 +126,12 @@ family; view-specific rules stay in dashboard.css. Loaded after the
 design tokens and before the views (see _CSS_FILES). */
 /* Hidden state must survive shared display recipes in the app and Pages. */
 [hidden] { display: none !important; }
+/* Inline display:flex toggled by project-ui.js must still reveal initially hidden elements. */
+#import-preview-box[hidden][style*="flex"], .modal-tab-pane[hidden][style*="flex"] { display: flex !important; }
+.reader-setting-field { display: grid; gap: .3rem; }
+.reader-segmented { position: relative; display: flex; flex-wrap: wrap; gap: .25rem; }
+.reader-segmented > button.ctl { flex: 1 1 auto; }
+.reader-settings-body .reader-segmented-native { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: 1px; height: 1px; min-height: 0; opacity: 0; pointer-events: none; padding: 0; border: 0; margin: 0; }
 /* Long localized headings and help text may wrap at enlarged text sizes. */
 :where(body) { overflow-wrap: anywhere; }
 /* --- Panels & Cards --------------------------------------------------- */
@@ -1599,9 +1605,6 @@ transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .
 #research-manager .ctl-group > * { min-width: 0; }
 #r-zotero-query { flex-basis: 14rem; }
 #research-manager .ctl { max-width: 100%; }
-.research-card { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .65rem .85rem; background: var(--surface); margin-block: .4rem; }
-.research-card-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
-.research-card-title { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-control); }
 .research-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
 .research-tag { font-size: var(--text-micro); padding: .1rem .45rem; border-radius: var(--radius-pill); background: var(--accent-light); color: var(--accent); border: 1px solid var(--line); }
 .research-passage-card { border-left: 3px solid var(--accent); background: var(--neutral); padding: .4rem .6rem; margin: .3rem 0; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; font-size: var(--text-control); }
@@ -1615,7 +1618,6 @@ transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .
 .selection-quote, .selection-context { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; padding: .5rem .75rem; border-left: 3px solid var(--accent); background: var(--neutral); border-radius: 0 var(--radius-xs) var(--radius-xs) 0; }
 mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weight: var(--weight-semibold); padding: 0.05em 0.2em; border-radius: var(--radius-xs); }
 .research-details { margin-top: .6rem; font-size: var(--text-control); }
-.research-details summary { cursor: pointer; color: var(--accent); }
 .research-details-body { margin-top: .5rem; }
 .research-details-body dt { font-weight: var(--weight-semibold); }
 .research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
@@ -1637,7 +1639,6 @@ mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weig
 #r-init-title { min-width: 200px; }
 #r-search-query { flex: 1; min-width: 240px; }
 #r-link-relation { min-width: 140px; }
-.research-excerpt { margin: .3rem 0; color: var(--fg); }
 .research-claim-scope { display: inline-flex; align-items: center; gap: .3rem; margin-bottom: .35rem; padding: .15rem .5rem; border-radius: var(--radius-xs); background: var(--neutral); border: 1px solid var(--line); font-size: var(--text-note); color: var(--fg); }
 .research-subpanel { margin-top: .6rem; padding-top: .4rem; border-top: 1px dashed var(--line); }
 .badge-sm { font-size: var(--text-note); padding: 2px 6px; }
@@ -2180,7 +2181,6 @@ anchors while scrolling. */
 .research-card-meta-pill { display: inline-flex; align-items: center; font-size: var(--text-micro); padding: 0.12rem 0.5rem; border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease; }
 .research-card-meta-pill:hover { color: var(--fg); border-color: var(--accent); }
 .research-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin-top: 0.65rem; padding-top: 0.55rem; border-top: 1px solid var(--line-subtle, rgba(0, 0, 0, 0.06)); }
-.settings-advanced > summary, .research-details > summary { min-height: 2.2rem; align-content: center; }
 /* Creation is available beside the catalogue without occupying its reading area.
 Native details keeps drafts intact and works without animation or scripting. */
 .research-composer { margin-bottom: var(--space-4); border-block: 1px solid var(--line); }
@@ -4740,7 +4740,6 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 /* Audio sections have one owner; author styles must respect native hidden state. */
 #modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; flex: none; }
 #modal-speech .modal-tab-btn { min-width: 0; white-space: normal; overflow-wrap: anywhere; padding: .6rem .4rem; }
-#modal-speech .modal-tab-btn[aria-selected="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--fg); }
 #modal-speech .modal-body > * { min-width: 0; }
 #modal-speech .voice-active-card, #modal-speech .voice-ref-item { flex-wrap: wrap; }
 #modal-speech .voice-active-card > span { min-width: 0; overflow-wrap: anywhere; flex: 1 1 16rem; }
@@ -4854,7 +4853,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <a class="ctl" href="analysis.html">Analysis</a>
 <a class="ctl" href="#publication-audio">Chapter audio</a>
 <label for="publication-reader-chapter">Chapter</label>
-<select class="ctl" id="publication-reader-chapter"><option value="">Chapter…</option><option value="publication-chapter-1">Chapter 1</option><option value="publication-chapter-2">Chapter 2</option><option value="publication-chapter-3">Chapter 3</option><option value="publication-chapter-4">Chapter 4</option><option value="publication-chapter-5">Chapter 5</option><option value="publication-chapter-6">Chapter 6</option></select>
+<select class="ctl" id="publication-reader-chapter"><option value="">Chapter…</option><optgroup label="Manuscript"><option value="publication-chapter-1">Chapter 1 · The Eastern Gate</option><option value="publication-chapter-2">Chapter 2 · The Loose Board</option><option value="publication-chapter-3">Chapter 3 · Questions on the Quay</option><option value="publication-chapter-4">Chapter 4 · The Customs Note</option><option value="publication-chapter-5">Chapter 5 · The Blank Line</option><option value="publication-chapter-6">Chapter 6 · Morning Handover</option></optgroup></select>
 </nav>
 <div class="publication-reading-layout">
 <section class="publication-novel" aria-label="Manuscript">
@@ -4862,7 +4861,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <summary id="publication-audio-title">Chapter audio</summary>
 <p class="ctl-note">Audio available for 1 of 6 exported chapters.</p>
 <label class="form-label" for="publication-audio-chapter">Chapter</label>
-<select class="ctl full-width" id="publication-audio-chapter"><option value="1">Chapter 1 · The Eastern Gate</option></select>
+<select class="ctl full-width" id="publication-audio-chapter"><optgroup label="Manuscript"><option value="1">Chapter 1 · The Eastern Gate</option></optgroup></select>
 <audio id="publication-audio-player" controls preload="metadata" src="assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav"></audio>
 <p class="ctl-note" id="publication-audio-status" role="status" aria-live="polite"></p>
 <div class="row">
@@ -4950,13 +4949,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <h2 id="publication-progress-title">Reading progress</h2>
 <form id="publication-progress-form" class="row">
 <label for="publication-progress">Finished reading through</label>
-<select class="ctl" id="publication-progress"><option value="0">Before Chapter 1</option><option value="1">Chapter 1</option><option value="2">Chapter 2</option><option value="3">Chapter 3</option><option value="4">Chapter 4</option><option value="5">Chapter 5</option><option value="6">Chapter 6</option></select>
+<select class="ctl" id="publication-progress"><option value="0">Before Chapter 1</option><optgroup label="Manuscript"><option value="1">Chapter 1</option><option value="2">Chapter 2</option><option value="3">Chapter 3</option><option value="4">Chapter 4</option><option value="5">Chapter 5</option><option value="6">Chapter 6</option></optgroup></select>
 <button type="submit" class="ctl primary" id="publication-progress-apply">Apply</button>
 <button type="button" class="ctl" id="publication-progress-reset">Reset</button></form>
 <button type="button" class="ctl" id="publication-preview-open" aria-expanded="false" aria-controls="publication-preview-form">Open later notes</button>
 <form class="row publication-preview" id="publication-preview-form" hidden>
 <label for="publication-preview-progress">Preview through</label>
-<select class="ctl" id="publication-preview-progress"><option value="0">Before Chapter 1</option><option value="1">Chapter 1</option><option value="2">Chapter 2</option><option value="3">Chapter 3</option><option value="4">Chapter 4</option><option value="5">Chapter 5</option><option value="6">Chapter 6</option></select>
+<select class="ctl" id="publication-preview-progress"><option value="0">Before Chapter 1</option><optgroup label="Manuscript"><option value="1">Chapter 1</option><option value="2">Chapter 2</option><option value="3">Chapter 3</option><option value="4">Chapter 4</option><option value="5">Chapter 5</option><option value="6">Chapter 6</option></optgroup></select>
 <button type="submit" class="ctl">Preview</button>
 <button type="button" class="ctl" id="publication-preview-close">Return to saved progress</button></form>
 <p class="ctl-note" id="publication-progress-status" role="status" aria-live="polite"></p></section>
@@ -4968,7 +4967,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then <strong>Back to reading copy</strong> to return. This example includes all six chapters; the analysis is not hidden by reading progress.</p><p><strong>Chapter audio</strong> contains the complete first chapter, synthesized with the generic eSpeak NG English voice and imported through the ordinary chapter-audio path. Press Play to listen or download the WAV. This demonstrates the export workflow, not neural voice quality; no human voice reference is used and the other five chapters have no audio.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.8.2</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A4d179a98-30ad-46af-819c-21fc3a81b56f\u0026version_id=urn%3Auuid%3A0129281a-cd9b-4a5e-ab83-dd799bd09647":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Ad957223e-1724-467a-8c10-cbd94140099f\u0026source_id=urn%3Auuid%3A4d179a98-30ad-46af-819c-21fc3a81b56f\u0026version_id=urn%3Auuid%3A0129281a-cd9b-4a5e-ab83-dd799bd09647":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A2dffaefc-21c8-4496-962a-6f9db26346da\u0026version_id=urn%3Auuid%3A840b68c9-dcc0-4ff1-9b0b-c2d9669a75fa":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Ad957223e-1724-467a-8c10-cbd94140099f\u0026source_id=urn%3Auuid%3A2dffaefc-21c8-4496-962a-6f9db26346da\u0026version_id=urn%3Auuid%3A840b68c9-dcc0-4ff1-9b0b-c2d9669a75fa":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/2","mode":"reader","profile":"readers","project_id":"urn:uuid:d957223e-1724-467a-8c10-cbd94140099f","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:1d3f4af1-5493-4d53-9fa3-ebb892244c88","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:9fd812ae-9695-42c7-b325-64b58931f9d9","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:4d179a98-30ad-46af-819c-21fc3a81b56f/urn:uuid:0129281a-cd9b-4a5e-ab83-dd799bd09647)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:d957223e-1724-467a-8c10-cbd94140099f","source_id":"urn:uuid:4d179a98-30ad-46af-819c-21fc3a81b56f","source_version_id":"urn:uuid:0129281a-cd9b-4a5e-ab83-dd799bd09647","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Ad957223e-1724-467a-8c10-cbd94140099f\u0026source_id=urn%3Auuid%3A4d179a98-30ad-46af-819c-21fc3a81b56f\u0026version_id=urn%3Auuid%3A0129281a-cd9b-4a5e-ab83-dd799bd09647","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:9fd812ae-9695-42c7-b325-64b58931f9d9","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:2dffaefc-21c8-4496-962a-6f9db26346da/urn:uuid:840b68c9-dcc0-4ff1-9b0b-c2d9669a75fa)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:d957223e-1724-467a-8c10-cbd94140099f","source_id":"urn:uuid:2dffaefc-21c8-4496-962a-6f9db26346da","source_version_id":"urn:uuid:840b68c9-dcc0-4ff1-9b0b-c2d9669a75fa","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Ad957223e-1724-467a-8c10-cbd94140099f\u0026source_id=urn%3Auuid%3A2dffaefc-21c8-4496-962a-6f9db26346da\u0026version_id=urn%3Auuid%3A840b68c9-dcc0-4ff1-9b0b-c2d9669a75fa","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:1d3f4af1-5493-4d53-9fa3-ebb892244c88","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:1d3f4af1-5493-4d53-9fa3-ebb892244c88","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:1d3f4af1-5493-4d53-9fa3-ebb892244c88","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"a4cc76c71e09afae8d8d85ec2c76743b3c9cd5ac6874742390db3baeb98c76fa","audio":{"schema_version":"lixity-reader-audio/1","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","tracks":[{"chapter":1,"title":"The Eastern Gate","file":"assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav","sha256":"9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501","byte_length":3002838,"duration_seconds":68.09056689342404,"origin":"imported"}]}}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Aaf90c07b-4083-4254-97f6-0ef1c60c4f91\u0026version_id=urn%3Auuid%3Ac4737968-9f35-44cd-99b5-3950cb2ce64d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A2897c1d7-64b1-4b6e-9c01-5ecb9df94651\u0026source_id=urn%3Auuid%3Aaf90c07b-4083-4254-97f6-0ef1c60c4f91\u0026version_id=urn%3Auuid%3Ac4737968-9f35-44cd-99b5-3950cb2ce64d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A23d3d07a-f188-463c-90cf-1bcebf7d5d3c\u0026version_id=urn%3Auuid%3A1b254f71-b983-4a92-9f6c-650bc1db3fa3":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A2897c1d7-64b1-4b6e-9c01-5ecb9df94651\u0026source_id=urn%3Auuid%3A23d3d07a-f188-463c-90cf-1bcebf7d5d3c\u0026version_id=urn%3Auuid%3A1b254f71-b983-4a92-9f6c-650bc1db3fa3":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/2","mode":"reader","profile":"readers","project_id":"urn:uuid:2897c1d7-64b1-4b6e-9c01-5ecb9df94651","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:8ac7d541-69af-4fb4-8314-ff627e27c0d3","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:c761bc32-620e-44ce-a8eb-c0a45d1565ec","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:af90c07b-4083-4254-97f6-0ef1c60c4f91/urn:uuid:c4737968-9f35-44cd-99b5-3950cb2ce64d)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:2897c1d7-64b1-4b6e-9c01-5ecb9df94651","source_id":"urn:uuid:af90c07b-4083-4254-97f6-0ef1c60c4f91","source_version_id":"urn:uuid:c4737968-9f35-44cd-99b5-3950cb2ce64d","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A2897c1d7-64b1-4b6e-9c01-5ecb9df94651\u0026source_id=urn%3Auuid%3Aaf90c07b-4083-4254-97f6-0ef1c60c4f91\u0026version_id=urn%3Auuid%3Ac4737968-9f35-44cd-99b5-3950cb2ce64d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:c761bc32-620e-44ce-a8eb-c0a45d1565ec","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:23d3d07a-f188-463c-90cf-1bcebf7d5d3c/urn:uuid:1b254f71-b983-4a92-9f6c-650bc1db3fa3)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:2897c1d7-64b1-4b6e-9c01-5ecb9df94651","source_id":"urn:uuid:23d3d07a-f188-463c-90cf-1bcebf7d5d3c","source_version_id":"urn:uuid:1b254f71-b983-4a92-9f6c-650bc1db3fa3","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A2897c1d7-64b1-4b6e-9c01-5ecb9df94651\u0026source_id=urn%3Auuid%3A23d3d07a-f188-463c-90cf-1bcebf7d5d3c\u0026version_id=urn%3Auuid%3A1b254f71-b983-4a92-9f6c-650bc1db3fa3","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:8ac7d541-69af-4fb4-8314-ff627e27c0d3","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:8ac7d541-69af-4fb4-8314-ff627e27c0d3","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:8ac7d541-69af-4fb4-8314-ff627e27c0d3","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"fe6eab22bb888e2d0a8835f5885e73f966b9cdc6f9bff1cf9bc0d412a36531fe","audio":{"schema_version":"lixity-reader-audio/1","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","tracks":[{"chapter":1,"title":"The Eastern Gate","file":"assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav","sha256":"9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501","byte_length":3002838,"duration_seconds":68.09056689342404,"origin":"imported"}]}}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -6898,12 +6897,113 @@ document.addEventListener("keydown", function(event) {
     return "";
   }
 
+  function activateAnalysisLayer(layerValue, workbench) {
+    if (typeof switchActiveView === "function") switchActiveView("analysis");
+    if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
+    if (typeof selectAnalysisMetric === "function") {
+      selectAnalysisMetric(layerValue);
+    } else {
+      var sel = document.getElementById("style-layer");
+      if (sel) { sel.value = layerValue; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+    }
+  }
+
+  function buildAnalysisLayerCommands(isDe, workbench) {
+    var styleLayer = document.getElementById("style-layer");
+    var analysisCat = isDe ? "Analyse" : "Analysis";
+    if (styleLayer && styleLayer.options && styleLayer.options.length > 1) {
+      var layerCommands = [];
+      Array.prototype.slice.call(styleLayer.options).forEach(function (opt) {
+        var val = opt.value || "";
+        var label = (opt.textContent || "").trim();
+        if (!label) return;
+        var parent = opt.parentElement;
+        var groupLabel = (parent && parent.tagName === "OPTGROUP" && parent.label) ? parent.label.trim() : "";
+        var valHints = {
+          dialogue: isDe ? "Dialoge, Sprecherwechsel & Redeanteile" : "Dialogue turns & spoken share",
+          asl: isDe ? "Satzlänge & Rhythmus" : "Sentence length & rhythm",
+          tense: isDe ? "Tempus-Marker & Zeitformen" : "Grammatical tense & shifts"
+        };
+        var subtitle = valHints[val]
+          ? (groupLabel ? (groupLabel + " · " + valHints[val]) : valHints[val])
+          : (groupLabel || (isDe ? "Analyse-Ebene im Manuskript umschalten" : "Toggle analysis layer in manuscript"));
+        layerCommands.push({
+          id: val ? ("layer-" + val) : "layer-off",
+          category: groupLabel ? (analysisCat + ": " + groupLabel) : analysisCat,
+          title: label,
+          subtitle: subtitle,
+          icon: val ? "sigma" : "eye",
+          action: function () {
+            activateAnalysisLayer(val, workbench);
+          }
+        });
+      });
+      if (layerCommands.length) return layerCommands;
+    }
+    return [
+      {
+        id: "metric-asl",
+        category: analysisCat,
+        title: isDe ? "Satzlänge & Rhythmus (ASL) hervorheben" : "Highlight Sentence Length & Rhythm",
+        subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
+        icon: "sigma",
+        action: function () { activateAnalysisLayer("asl", workbench); }
+      },
+      {
+        id: "metric-dialogue",
+        category: analysisCat,
+        title: isDe ? "Dialoge & Redeanteile hervorheben" : "Highlight Dialogue & Direct Speech",
+        subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
+        icon: "quote",
+        action: function () { activateAnalysisLayer("dialogue", workbench); }
+      },
+      {
+        id: "metric-tense",
+        category: analysisCat,
+        title: isDe ? "Tempus-Marker hervorheben" : "Highlight Grammatical Tense",
+        subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
+        icon: "tag",
+        action: function () { activateAnalysisLayer("", workbench); }
+      }
+    ];
+  }
+
+  function buildChapterCommands(isDe, workbench) {
+    var chapterSelect = document.getElementById("reader-chapter");
+    if (!chapterSelect || !chapterSelect.options) return [];
+    var chapterCommands = [];
+    Array.prototype.slice.call(chapterSelect.options).forEach(function (opt) {
+      var chId = opt.value;
+      if (!chId) return;
+      var chTitle = (opt.textContent || "").trim() || chId;
+      chapterCommands.push({
+        id: "chapter-" + chId,
+        category: isDe ? "Kapitel" : "Chapters",
+        title: (isDe ? "Zu Kapitel springen: " : "Jump to Chapter: ") + chTitle,
+        subtitle: isDe ? "Im Manuskript-Leser öffnen" : "Open in manuscript reader",
+        icon: "book-open",
+        action: function () {
+          if (typeof switchActiveView === "function") switchActiveView("analysis");
+          if (workbench) workbench.dispatch({ type: "surface", value: "document" });
+          var sel = document.getElementById("reader-chapter");
+          if (sel) {
+            sel.value = chId;
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+          } else {
+            var target = document.getElementById(chId);
+            if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
+          }
+        }
+      });
+    });
+    return chapterCommands;
+  }
+
   function getCommands() {
     var isDe = (document.documentElement.lang || "en").startsWith("de");
     var workbench = window.LixityWorkbench;
     var state = workbench && typeof workbench.state === "function" ? workbench.state() : {};
-
-    return [
+    var commands = [
       // View switches
       {
         id: "view-analysis",
@@ -6984,60 +7084,30 @@ document.addEventListener("keydown", function(event) {
             try { localStorage.setItem("lixity-theme", isDark ? "dark" : "light"); } catch (_) {}
           }
         }
-      },
+      }
+    ];
 
-      // Analysis & Metrics
-      {
-        id: "metric-asl",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Satzlänge & Rhythmus (ASL) hervorheben" : "Highlight Sentence Length & Rhythm",
-        subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
-        icon: "sigma",
+    if (document.querySelector("#manuscript-write") || document.querySelector("#manuscript-close")) {
+      commands.push({
+        id: "toggle-manuscript-write",
+        category: isDe ? "Ansicht" : "Views",
+        title: isDe ? "Schreiben / Lesen umschalten" : "Toggle Write / Read Mode",
+        subtitle: isDe ? "Zwischen Manuskript-Editor und Lesemodus wechseln" : "Switch between manuscript editor and reading view",
+        icon: "edit",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("asl");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = "asl"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+          var closeBtn = document.querySelector("#manuscript-close");
+          var writeBtn = document.querySelector("#manuscript-write");
+          if (closeBtn && !closeBtn.hidden) {
+            closeBtn.click();
+          } else if (writeBtn) {
+            writeBtn.click();
           }
         }
-      },
-      {
-        id: "metric-dialogue",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Dialoge & Redeanteile hervorheben" : "Highlight Dialogue & Direct Speech",
-        subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
-        icon: "quote",
-        action: function () {
-          if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("dialogue");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = "dialogue"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-          }
-        }
-      },
-      {
-        id: "metric-tense",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Tempus-Marker hervorheben" : "Highlight Grammatical Tense",
-        subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
-        icon: "tag",
-        action: function () {
-          if (typeof switchActiveView === "function") switchActiveView("analysis");
-          if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-          if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("");
-          } else {
-            var sel = document.getElementById("style-layer");
-            if (sel) { sel.value = ""; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-          }
-        }
-      },
+      });
+    }
+
+    commands = commands.concat(buildAnalysisLayerCommands(isDe, workbench), [
       {
         id: "metric-pacing",
         category: isDe ? "Analyse" : "Analysis",
@@ -7219,7 +7289,9 @@ document.addEventListener("keydown", function(event) {
           link.click();
         }
       }
-    ];
+    ]);
+
+    return commands.concat(buildChapterCommands(isDe, workbench));
   }
 
   function createPaletteDOM() {
@@ -9015,6 +9087,7 @@ if (settingsForm) {
       return false;
     });
     presetSelect.value = matched;
+    syncSelectPills("set-threshold-preset");
   }
   if (presetSelect && presets) {
     presetSelect.addEventListener("change", function() {
@@ -9027,6 +9100,7 @@ if (settingsForm) {
           el.setCustomValidity("");
         }
       });
+      syncAllSelectPills();
     });
     Object.keys(thresholdControlMap).forEach(function(key) {
       var el = document.getElementById(thresholdControlMap[key]);
@@ -9049,6 +9123,7 @@ if (settingsForm) {
       input.setCustomValidity("");
     });
     document.getElementById("settings-thresholds").open = true;
+    syncAllSelectPills();
   });
 }
 var fdrFilter = document.getElementById("heatmap-fdr-only");
@@ -9235,6 +9310,216 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     runAction(btn.dataset.action, payload, btn);
   });
 });
+
+function syncSelectPills(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select) return;
+  document.querySelectorAll('[data-sync-select="' + selectId + '"] button[data-value]').forEach(function (btn) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.value === select.value));
+    btn.disabled = Boolean(select.disabled);
+  });
+}
+
+function syncAllSelectPills() {
+  document.querySelectorAll("[data-sync-select]").forEach(function (group) {
+    syncSelectPills(group.dataset.syncSelect);
+  });
+}
+
+(function initSelectPillGroups() {
+  var groups = document.querySelectorAll("[data-sync-select]");
+  if (!groups.length) return;
+  var boundSelects = new Set();
+  groups.forEach(function (group) {
+    var selectId = group.dataset.syncSelect;
+    var select = document.getElementById(selectId);
+    if (!select) return;
+    group.addEventListener("click", function (event) {
+      var btn = event.target.closest("button[data-value]");
+      if (!btn || btn.disabled || select.disabled) return;
+      if (select.value !== btn.dataset.value) {
+        select.value = btn.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncSelectPills(selectId);
+    });
+    if (!boundSelects.has(selectId)) {
+      boundSelects.add(selectId);
+      select.addEventListener("change", function () { syncSelectPills(selectId); });
+      new MutationObserver(function () { syncSelectPills(selectId); })
+        .observe(select, { attributes: true, attributeFilter: ["disabled"] });
+    }
+    syncSelectPills(selectId);
+  });
+
+  var scopeStatus = document.getElementById("analysis-scope-status");
+  if (scopeStatus) {
+    new MutationObserver(function () {
+      syncSelectPills("analysis-scope-register");
+      syncSelectPills("analysis-scope-pov");
+    }).observe(scopeStatus, { childList: true, characterData: true, subtree: true });
+  }
+
+  var dimRetained = document.getElementById("dim-retained");
+  if (dimRetained) {
+    new MutationObserver(function () {
+      syncSelectPills("dim-projection");
+    }).observe(dimRetained, { childList: true, characterData: true, subtree: true });
+  }
+})();
+
+(function initTriagePills() {
+  var panel = document.getElementById("flags");
+  if (!panel) return;
+  var chapter = document.getElementById("triage-chapter");
+  var severity = document.getElementById("triage-severity");
+  var statusFilter = document.getElementById("triage-status-filter");
+  var progress = document.getElementById("triage-progress");
+  var sevGroup = panel.querySelector('[data-triage-pill-group="severity"]');
+  var statusGroup = panel.querySelector('[data-triage-pill-group="status"]');
+  var rows = Array.from(panel.querySelectorAll(".flag-row"));
+  var numbers = new Intl.NumberFormat(document.documentElement.lang || "en");
+
+  function syncPills() {
+    var chVal = chapter ? chapter.value : "";
+    var sevVal = severity ? severity.value : "";
+    var stVal = statusFilter ? statusFilter.value : "";
+
+    if (sevGroup) {
+      var sevCounts = {};
+      var sevTotal = 0;
+      rows.forEach(function (row) {
+        if (chVal && row.dataset.triageChapter !== chVal) return;
+        if (stVal && row.dataset.reviewState !== stVal) return;
+        sevTotal++;
+        var s = row.dataset.triageSeverity || "";
+        sevCounts[s] = (sevCounts[s] || 0) + 1;
+      });
+      sevGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
+        var val = btn.dataset.value;
+        btn.setAttribute("aria-pressed", String(val === sevVal));
+        var badge = btn.querySelector("[data-pill-count]");
+        if (badge) badge.textContent = numbers.format(val === "" ? sevTotal : (sevCounts[val] || 0));
+      });
+    }
+
+    if (statusGroup) {
+      var stCounts = {};
+      var stTotal = 0;
+      rows.forEach(function (row) {
+        if (chVal && row.dataset.triageChapter !== chVal) return;
+        if (sevVal && row.dataset.triageSeverity !== sevVal) return;
+        stTotal++;
+        var st = row.dataset.reviewState || "";
+        if (st) stCounts[st] = (stCounts[st] || 0) + 1;
+      });
+      statusGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
+        var val = btn.dataset.value;
+        btn.setAttribute("aria-pressed", String(val === stVal));
+        var badge = btn.querySelector("[data-pill-count]");
+        if (badge) badge.textContent = numbers.format(val === "" ? stTotal : (stCounts[val] || 0));
+      });
+    }
+  }
+
+  function ensureRowQuick(row, choice) {
+    if (!row || !choice) return null;
+    var existing = row.querySelector(".triage-quick-actions");
+    if (existing) return existing;
+    var cell = choice.closest("td");
+    if (!cell) return null;
+    var group = document.createElement("div");
+    group.className = "chip-row triage-quick-actions";
+    group.setAttribute("role", "group");
+    if (typeof uiLabel === "function") group.setAttribute("aria-label", uiLabel("triage_status"));
+    Array.from(choice.options).forEach(function (opt) {
+      if (!opt.value) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ctl ctl-sm triage-quick-btn";
+      btn.dataset.triageQuick = opt.value;
+      btn.setAttribute("aria-pressed", "false");
+      btn.disabled = choice.disabled;
+      btn.textContent = opt.textContent;
+      group.appendChild(btn);
+    });
+    cell.appendChild(group);
+    return group;
+  }
+
+  function syncRowQuick(row) {
+    if (!row) return;
+    var choice = row.querySelector(".triage-choice");
+    ensureRowQuick(row, choice);
+    var activeVal = choice && choice.value ? choice.value : (row.dataset.reviewState || "");
+    var isDisabled = !choice || choice.disabled;
+    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
+      btn.disabled = isDisabled;
+      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === activeVal));
+    });
+  }
+
+  function bindPillGroup(group, select) {
+    if (!group || !select) return;
+    group.addEventListener("click", function (event) {
+      var btn = event.target.closest("button[data-value]");
+      if (!btn || btn.disabled) return;
+      if (select.value !== btn.dataset.value) {
+        select.value = btn.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncPills();
+    });
+  }
+
+  bindPillGroup(sevGroup, severity);
+  bindPillGroup(statusGroup, statusFilter);
+  [chapter, severity, statusFilter].forEach(function (control) {
+    if (control) control.addEventListener("change", syncPills);
+  });
+
+  if (progress) {
+    new MutationObserver(syncPills)
+      .observe(progress, { childList: true, characterData: true, subtree: true });
+  }
+
+  panel.addEventListener("click", function (event) {
+    var quickBtn = event.target.closest(".triage-quick-btn");
+    if (!quickBtn) return;
+    event.stopPropagation();
+    var row = quickBtn.closest(".flag-row");
+    if (!row) return;
+    var choice = row.querySelector(".triage-choice");
+    var save = row.querySelector("[data-triage-save]");
+    var savedState = row.querySelector(".triage-saved-state");
+    if (!choice || choice.disabled || !save) return;
+    var nextVal = quickBtn.dataset.triageQuick;
+    choice.value = nextVal;
+    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === nextVal));
+    });
+    if (savedState && typeof uiLabel === "function") {
+      savedState.textContent = uiLabel("triage_" + nextVal);
+    }
+    save.click();
+  });
+
+  var rowObserver = new MutationObserver(function (mutations) {
+    var touched = new Set();
+    mutations.forEach(function (m) {
+      var row = m.target && m.target.closest ? m.target.closest(".flag-row") : null;
+      if (row) touched.add(row);
+    });
+    touched.forEach(syncRowQuick);
+  });
+  rows.forEach(function (row) {
+    rowObserver.observe(row, { attributes: true, attributeFilter: ["data-review-state"] });
+    var choice = row.querySelector(".triage-choice");
+    if (choice) rowObserver.observe(choice, { attributes: true, attributeFilter: ["disabled"] });
+    syncRowQuick(row);
+  });
+  syncPills();
+})();
 
 // Zotero catalogue results as components on the vendored Preact + HTM stack.
 //
@@ -10529,32 +10814,60 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
   }) : [];
   var dossierRoute = canOpenLinks && dossierLinks.length ? '<p><button type="button" class="ctl" data-manuscript-links-dossier="' +
     escapeHtml(detail.id) + '">' + escapeHtml(uiCountFormat("research_manuscript_quote_count", dossierLinks.length)) + '</button></p>' : '';
+  function renderDossierClaimItem(claim, linked) {
+    var confidence = ["evidenced", "disputed"].includes(claim.confidence) ? claim.confidence : "hypothetical";
+    var badge = confidence === "evidenced" ? "badge-success" : confidence === "disputed" ? "badge-warning" : "badge-neutral";
+    var usageText = escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) : uiLabel("research_manuscript_quote_none"));
+    var usage = linksAvailable ? '<p class="ctl-note">' +
+      (canOpenLinks && linked.length ? '<button type="button" class="ctl ctl-sm" data-manuscript-link-count="' + linked.length +
+        '" data-manuscript-links-claim="' + escapeHtml(claim.id) + '" data-manuscript-links-dossier="' + escapeHtml(detail.id) + '">' + usageText + '</button>' :
+        '<span data-manuscript-link-count="' + linked.length + '">' + usageText + '</span>') + '</p>' :
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
+    if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
+      usage += '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';
+    if (linked.some(function(link) { return link.dossier_revision !== detail.revision; }))
+      usage += '<p class="ctl-note" data-dossier-version-review>' + escapeHtml(uiLabel("research_manuscript_quote_dossier_version")) + '</p>';
+    return '<li><strong>' + escapeHtml(claim.title || uiLabel("research_revision_kind_claim")) + '</strong>' +
+      '<div class="row"><span class="research-badge ' + badge + '">' +
+      escapeHtml(uiLabel("research_confidence_" + confidence)) + '</span>' +
+      '<span class="ctl-note" data-claim-revision="' + Number(claim.revision) + '">' +
+      escapeHtml(uiFormat("research_revision_number", {revision: claim.revision})) + '</span>' +
+      '<button type="button" class="ctl ctl-sm" data-research-history="claim" data-record-id="' +
+      escapeHtml(claim.id) + '">' + escapeHtml(uiLabel("research_claim_open")) + '</button></div>' + usage + '</li>';
+  }
+  var claimEntries = claims.map(function(claim) {
+    var linked = linksAvailable ? manuscriptLinks.links.filter(function(link) {
+      return link.state === "active" && link.claim_id === claim.id && link.dossier_id === detail.id;
+    }) : [];
+    var needsReview = linked.some(function(link) {
+      return link.claim_changed || link.claim_withdrawn || link.dossier_revision !== detail.revision;
+    });
+    return {claim: claim, linked: linked, needsReview: needsReview};
+  });
+  var visibleEntries = claimEntries;
+  var foldedEntries = [];
+  if (claimEntries.length > 4) {
+    var prioritized = claimEntries.filter(function(entry) { return entry.needsReview; })
+      .concat(claimEntries.filter(function(entry) { return !entry.needsReview; }));
+    visibleEntries = prioritized.slice(0, 3);
+    foldedEntries = prioritized.slice(3);
+  }
+  var claimsHtml = '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_empty")) + '</p>';
+  if (claims.length) {
+    claimsHtml = '<ul class="research-dossier-claims-list">' +
+      visibleEntries.map(function(entry) { return renderDossierClaimItem(entry.claim, entry.linked); }).join("") +
+      '</ul>';
+    if (foldedEntries.length) {
+      var moreWord = uiLabel("research_sections_more") || "more";
+      claimsHtml += '<details class="research-details" data-dossier-claims-more><summary>+' +
+        foldedEntries.length + ' ' + escapeHtml(moreWord) + '</summary>' +
+        '<ul class="research-dossier-claims-list">' +
+        foldedEntries.map(function(entry) { return renderDossierClaimItem(entry.claim, entry.linked); }).join("") +
+        '</ul></details>';
+    }
+  }
   slot.innerHTML = heading + '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_hint")) + '</p>' +
-    dossierRoute +
-    (claims.length ? '<ul class="research-dossier-claims-list">' + claims.map(function(claim) {
-      var confidence = ["evidenced", "disputed"].includes(claim.confidence) ? claim.confidence : "hypothetical";
-      var badge = confidence === "evidenced" ? "badge-success" : confidence === "disputed" ? "badge-warning" : "badge-neutral";
-      var linked = linksAvailable ? manuscriptLinks.links.filter(function(link) {
-        return link.state === "active" && link.claim_id === claim.id && link.dossier_id === detail.id;
-      }) : [];
-      var usageText = escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) : uiLabel("research_manuscript_quote_none"));
-      var usage = linksAvailable ? '<p class="ctl-note">' +
-        (canOpenLinks && linked.length ? '<button type="button" class="ctl ctl-sm" data-manuscript-link-count="' + linked.length +
-          '" data-manuscript-links-claim="' + escapeHtml(claim.id) + '" data-manuscript-links-dossier="' + escapeHtml(detail.id) + '">' + usageText + '</button>' :
-          '<span data-manuscript-link-count="' + linked.length + '">' + usageText + '</span>') + '</p>' :
-        '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
-      if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
-        usage += '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';
-      if (linked.some(function(link) { return link.dossier_revision !== detail.revision; }))
-        usage += '<p class="ctl-note" data-dossier-version-review>' + escapeHtml(uiLabel("research_manuscript_quote_dossier_version")) + '</p>';
-      return '<li><strong>' + escapeHtml(claim.title || uiLabel("research_revision_kind_claim")) + '</strong>' +
-        '<div class="row"><span class="research-badge ' + badge + '">' +
-        escapeHtml(uiLabel("research_confidence_" + confidence)) + '</span>' +
-        '<span class="ctl-note" data-claim-revision="' + Number(claim.revision) + '">' +
-        escapeHtml(uiFormat("research_revision_number", {revision: claim.revision})) + '</span>' +
-        '<button type="button" class="ctl ctl-sm" data-research-history="claim" data-record-id="' +
-        escapeHtml(claim.id) + '">' + escapeHtml(uiLabel("research_claim_open")) + '</button></div>' + usage + '</li>';
-    }).join("") + '</ul>' : '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_empty")) + '</p>');
+    dossierRoute + claimsHtml;
 }
 
 function researchDossierSectionAction(detail, section) {
@@ -10963,6 +11276,91 @@ document.addEventListener("click", async function(event) {
 // Research workspace: list filtering, sources, dossiers, timeline, claims, decisions.
 // Split of the former research.js; _JS_FILES concatenates the parts in
 // the original order, so load-time behaviour is unchanged.
+var RESEARCH_LIST_PAGE_SIZE = 40;
+var researchWindowState = {
+  sources: {items: [], limit: RESEARCH_LIST_PAGE_SIZE},
+  claims: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"},
+  decisions: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"}
+};
+
+function renderWindowedResearchList(kind, listHost, items, emptyMessage) {
+  var moreHost = document.getElementById("research-" + kind + "-more");
+  if (!items.length) {
+    if (emptyMessage) LixityResearchCards.render(listHost, {message: emptyMessage});
+    else LixityResearchCards.render(listHost, {items: []});
+    if (moreHost) {
+      moreHost.hidden = true;
+      moreHost.replaceChildren();
+    }
+    return;
+  }
+  var state = researchWindowState[kind] || {limit: RESEARCH_LIST_PAGE_SIZE};
+  var limit = state.limit || RESEARCH_LIST_PAGE_SIZE;
+  var visible = items.slice(0, limit);
+  var remaining = items.length - visible.length;
+  LixityResearchCards.render(listHost, {items: visible});
+  if (moreHost) {
+    if (remaining > 0) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ctl ctl-sm";
+      btn.dataset.researchShowMore = kind;
+      btn.textContent = (uiLabel("research_show_more") || "Show more") + " (+" + remaining + ")";
+      moreHost.replaceChildren(btn);
+      moreHost.hidden = false;
+    } else {
+      moreHost.hidden = true;
+      moreHost.replaceChildren();
+    }
+  }
+}
+
+function syncResearchTagCloud(kind, query) {
+  var host = document.getElementById("r-filter-" + kind + "-tags");
+  if (!host) return;
+  var active = String(query || "").trim().toLowerCase();
+  host.querySelectorAll("[data-cloud-tag]").forEach(function(btn) {
+    var match = Boolean(active) && btn.dataset.cloudTag.toLowerCase() === active;
+    btn.classList.toggle("active", match);
+    btn.setAttribute("aria-pressed", String(match));
+  });
+}
+
+function renderResearchTagCloud(kind, records) {
+  var host = document.getElementById("r-filter-" + kind + "-tags");
+  if (!host) return;
+  var counts = Object.create(null);
+  (records || []).forEach(function(item) {
+    (item.tags || []).forEach(function(raw) {
+      var tag = String(raw || "").trim();
+      if (tag) counts[tag] = (counts[tag] || 0) + 1;
+    });
+  });
+  var tags = Object.keys(counts).sort(function(a, b) {
+    return counts[b] - counts[a] || a.localeCompare(b);
+  }).slice(0, 20);
+  if (!tags.length) {
+    host.hidden = true;
+    host.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  tags.forEach(function(tag) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "research-tag";
+    btn.dataset.cloudKind = kind;
+    btn.dataset.cloudTag = tag;
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = tag + " (" + counts[tag] + ")";
+    frag.appendChild(btn);
+  });
+  host.replaceChildren(frag);
+  host.hidden = false;
+  var input = document.getElementById("r-filter-" + kind);
+  syncResearchTagCloud(kind, input ? input.value : "");
+}
+
 function filterResearchList(kind) {
   var input = document.getElementById("r-filter-" + kind);
   var list = document.getElementById("research-" + kind + "-list");
@@ -10973,6 +11371,37 @@ function filterResearchList(kind) {
   var state = researchListRefreshes[kind];
   // Keep a query and its focus available when the last record disappears.
   input.hidden = Boolean(state && state.count === 0 && !normalized && document.activeElement !== input);
+  syncResearchTagCloud(kind, query);
+  if (kind === "sources" && researchWindowState.sources.items.length) {
+    var allItems = researchWindowState.sources.items;
+    var limit = researchWindowState.sources.limit || RESEARCH_LIST_PAGE_SIZE;
+    if (allItems.length <= limit) {
+      // All items fit in the current window: ensure all are rendered once and
+      // filter in-place via `card.hidden` so open details/DOM state survive.
+      if (list.querySelectorAll(".research-card").length !== allItems.length) {
+        renderWindowedResearchList("sources", list, allItems, null);
+      }
+      var domCards = list.querySelectorAll(".research-card[data-filter-text]");
+      var domMatches = 0;
+      domCards.forEach(function(card) {
+        card.hidden = Boolean(normalized) && !card.dataset.filterText.includes(normalized);
+        if (!card.hidden) domMatches++;
+      });
+      status.hidden = !normalized || !domCards.length || domMatches > 0;
+      status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+      return;
+    }
+    var matched = normalized
+      ? allItems.filter(function(item) { return item.filterText && item.filterText.includes(normalized); })
+      : allItems;
+    renderWindowedResearchList("sources", list, matched, null);
+    list.querySelectorAll(".research-card[data-filter-text]").forEach(function(card) {
+      card.hidden = false;
+    });
+    status.hidden = !normalized || !allItems.length || matched.length > 0;
+    status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+    return;
+  }
   var cards = list.querySelectorAll(".research-card[data-filter-text]");
   var matches = 0;
   cards.forEach(function(card) {
@@ -10984,7 +11413,10 @@ function filterResearchList(kind) {
 }
 
 document.addEventListener("input", function(event) {
-  if (event.target.id === "r-filter-sources") filterResearchList("sources");
+  if (event.target.id === "r-filter-sources") {
+    researchWindowState.sources.limit = RESEARCH_LIST_PAGE_SIZE;
+    filterResearchList("sources");
+  }
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
 
@@ -10994,6 +11426,29 @@ document.addEventListener("focusout", function(event) {
 });
 
 document.addEventListener("click", function(event) {
+  var showMore = event.target.closest("[data-research-show-more]");
+  if (showMore) {
+    var moreKind = showMore.dataset.researchShowMore;
+    if (researchWindowState[moreKind]) {
+      researchWindowState[moreKind].limit += RESEARCH_LIST_PAGE_SIZE;
+      if (moreKind === "sources") filterResearchList("sources");
+      else if (moreKind === "claims") renderResearchClaimCards();
+      else if (moreKind === "decisions") renderResearchDecisionCards();
+    }
+    return;
+  }
+  var cloudTag = event.target.closest("[data-cloud-tag]");
+  if (cloudTag) {
+    var cloudKind = cloudTag.dataset.cloudKind;
+    var cloudInput = document.getElementById("r-filter-" + cloudKind);
+    if (cloudInput) {
+      var tagVal = cloudTag.dataset.cloudTag;
+      cloudInput.value = cloudInput.value.trim().toLowerCase() === tagVal.toLowerCase() ? "" : tagVal;
+      if (researchWindowState[cloudKind]) researchWindowState[cloudKind].limit = RESEARCH_LIST_PAGE_SIZE;
+      filterResearchList(cloudKind);
+    }
+    return;
+  }
   var filterTag = event.target.closest("[data-filter-tag]");
   if (filterTag) {
     var list = filterTag.closest("#research-sources-list, #research-dossiers-list");
@@ -11001,6 +11456,7 @@ document.addEventListener("click", function(event) {
     var input = document.getElementById("r-filter-" + kind);
     if (input) {
       input.value = filterTag.dataset.filterTag;
+      if (researchWindowState[kind]) researchWindowState[kind].limit = RESEARCH_LIST_PAGE_SIZE;
       filterResearchList(kind);
     }
     return;
@@ -11063,7 +11519,9 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     ++researchProjectStatusRead;
   }
   if (!data.ok || !Array.isArray(data.sources)) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_sources_failed")});
+    researchWindowState.sources.items = [];
+    renderResearchTagCloud("sources", []);
+    renderWindowedResearchList("sources", listHost, [], data.message || uiLabel("research_load_sources_failed"));
     filterResearchList("sources");
     return;
   }
@@ -11073,11 +11531,13 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var libraryInput = document.getElementById("r-zotero-library");
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
   if (!sources.length) {
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_sources")});
+    researchWindowState.sources.items = [];
+    renderResearchTagCloud("sources", []);
+    renderWindowedResearchList("sources", listHost, [], uiLabel("research_no_sources"));
     filterResearchList("sources");
     return;
   }
-  LixityResearchCards.render(listHost, {items: sources.map(function(s) {
+  researchWindowState.sources.items = sources.map(function(s) {
     var external = s.context && s.context.external_reference;
     var mediaOrPassages = ["image/png", "image/jpeg", "video/mp4", "video/webm"].includes(s.media_type)
       ? s.media_type
@@ -11097,7 +11557,11 @@ async function refreshResearchSources(overview, changedId, freshRead) {
       details: "source",
       filterText: [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase(),
     };
-  })});
+  });
+  renderResearchTagCloud("sources", sources);
+  if (researchWindowState.sources.items.length <= (researchWindowState.sources.limit || RESEARCH_LIST_PAGE_SIZE)) {
+    renderWindowedResearchList("sources", listHost, researchWindowState.sources.items, null);
+  }
   filterResearchList("sources");
 }
 
@@ -11140,10 +11604,12 @@ function renderResearchDossiersView(data) {
     colNote.textContent = unavailableCount ? uiCountFormat("research_dossier_collection_unavailable", unavailableCount) : "";
   }
   if (!dossiers.length) {
+    renderResearchTagCloud("dossiers", []);
     LixityResearchCards.render(listHost, {message: uiLabel("research_no_dossiers")});
     filterResearchList("dossiers");
     return;
   }
+  renderResearchTagCloud("dossiers", visibleDossiers);
   if (!visibleDossiers.length) {
     LixityResearchCards.render(listHost, {message: uiLabel("research_dossier_collection_empty")});
     filterResearchList("dossiers");
@@ -11233,6 +11699,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     window.LixityComponents.renderTagSuggestions("r-ingest-tag-suggestions", dosTags, uiLabel("research_tag_suggestions"));
     window.LixityComponents.syncEmptySelect("r-dos-eids");
   }
+  syncAllSearchableSelects();
   if (typeof refreshResearchCollectionEditor === "function") refreshResearchCollectionEditor(data);
   renderResearchDossiersView(data);
   return data;
@@ -11347,6 +11814,7 @@ async function refreshResearchClaimProjections() {
       }).join("");
     if (researchClaimChoices[previous]) select.value = previous;
   });
+  syncAllSearchableSelects();
   updateResearchRelationControls();
   var include = document.getElementById("r-relation-retracted").checked;
   var responses = await Promise.all([researchApiGet("research/timeline"),
@@ -11441,9 +11909,67 @@ if (researchRelationForm) researchRelationForm.addEventListener("submit", async 
 var researchClaimCardItems = [];
 var researchDecisionsRender = 0;
 
+function renderResearchFilterPills(hostId, attrName, options, activeValue, onSelect) {
+  var host = document.getElementById(hostId);
+  if (!host) return;
+  if (!options || !options.length) {
+    host.hidden = true;
+    host.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  options.forEach(function(opt) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    var isActive = opt.value === activeValue;
+    btn.className = "ctl ctl-sm" + (isActive ? " active" : "");
+    btn.setAttribute(attrName, opt.value);
+    btn.setAttribute("aria-pressed", String(isActive));
+    btn.textContent = opt.label + " (" + opt.count + ")";
+    btn.addEventListener("click", function() { onSelect(opt.value); });
+    frag.appendChild(btn);
+  });
+  host.replaceChildren(frag);
+  host.hidden = false;
+}
+
+function renderResearchClaimFilterPills() {
+  var items = researchClaimCardItems;
+  if (!items.length) {
+    renderResearchFilterPills("r-claims-filter-pills", "data-claim-filter", [], "all", function() {});
+    return;
+  }
+  var counts = {evidenced: 0, disputed: 0, hypothetical: 0};
+  items.forEach(function(item) {
+    var conf = item.confidence === "evidenced" || item.confidence === "disputed" ? item.confidence : "hypothetical";
+    counts[conf] += 1;
+  });
+  var options = [
+    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "evidenced", label: uiLabel("research_confidence_evidenced"), count: counts.evidenced},
+    {value: "disputed", label: uiLabel("research_confidence_disputed"), count: counts.disputed},
+    {value: "hypothetical", label: uiLabel("research_confidence_hypothetical"), count: counts.hypothetical}
+  ];
+  renderResearchFilterPills("r-claims-filter-pills", "data-claim-filter", options, researchWindowState.claims.filter, function(val) {
+    researchWindowState.claims.filter = val;
+    researchWindowState.claims.limit = RESEARCH_LIST_PAGE_SIZE;
+    renderResearchClaimFilterPills();
+    renderResearchClaimCards();
+  });
+}
+
 function renderResearchClaimCards() {
   var host = document.getElementById("research-claims-list");
-  if (host) LixityResearchCards.render(host, {items: researchClaimCardItems});
+  if (!host) return;
+  if (!researchClaimCardItems.length) {
+    renderWindowedResearchList("claims", host, [], uiLabel("research_no_claims"));
+    return;
+  }
+  var activeFilter = researchWindowState.claims.filter || "all";
+  var filtered = activeFilter === "all"
+    ? researchClaimCardItems
+    : researchClaimCardItems.filter(function(item) { return item.confidence === activeFilter; });
+  renderWindowedResearchList("claims", host, filtered, filtered.length ? null : uiLabel("research_no_claims"));
 }
 
 async function refreshResearchClaims(overview) {
@@ -11462,7 +11988,8 @@ async function refreshResearchClaims(overview) {
   if (request !== researchClaimsRead || !acceptResearchContext(context, data)) return;
   if (!data.ok) {
     researchClaimCardItems = [];
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_claims_failed")});
+    renderResearchClaimFilterPills();
+    renderWindowedResearchList("claims", listHost, [], data.message || uiLabel("research_load_claims_failed"));
     return;
   }
   var claims = data.claims || [];
@@ -11488,9 +12015,11 @@ async function refreshResearchClaims(overview) {
       }).join("");
     if (claims.some(function(c) { return c.id === selectedEvidenceClaim; })) linkClaimSelect.value = selectedEvidenceClaim;
   }
+  syncAllSearchableSelects();
   if (!claims.length) {
     researchClaimCardItems = [];
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_claims")});
+    renderResearchClaimFilterPills();
+    renderWindowedResearchList("claims", listHost, [], uiLabel("research_no_claims"));
     return;
   }
   var catalogueContext = researchClaimsSnapshot ? JSON.stringify([context.projectId, context.token, researchClaimsSnapshot]) : null;
@@ -11500,9 +12029,10 @@ async function refreshResearchClaims(overview) {
     // Evidence/source changes can leave the claim bytes unchanged. Reuse its
     // pending or loaded panel only for the same accepted archive and context.
     if (catalogueContext && previous && previous.key === key && previous.catalogueContext === catalogueContext) return previous;
-    var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
-    var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced")
-      : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
+    var confKey = c.confidence === "evidenced" ? "evidenced" : (c.confidence === "disputed" ? "disputed" : "hypothetical");
+    var confClass = confKey === "evidenced" ? "badge-success" : (confKey === "disputed" ? "badge-warning" : "badge-neutral");
+    var confLabel = confKey === "evidenced" ? uiLabel("research_confidence_evidenced")
+      : (confKey === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
     var scopeParts = [];
     if (c.scope) {
       if (c.scope.time_period) scopeParts.push(uiLabel("research_scope_time") + " " + c.scope.time_period);
@@ -11524,6 +12054,7 @@ async function refreshResearchClaims(overview) {
       key: key,
       catalogueContext: catalogueContext,
       id: c.id,
+      confidence: confKey,
       title: c.title,
       badges: [{label: confLabel, cls: confClass}],
       metaRight: metaRight,
@@ -11535,7 +12066,47 @@ async function refreshResearchClaims(overview) {
       revision: "claim",
     };
   });
+  renderResearchClaimFilterPills();
   renderResearchClaimCards();
+}
+
+function renderResearchDecisionFilterPills() {
+  var items = researchWindowState.decisions.items;
+  if (!items.length) {
+    renderResearchFilterPills("r-decisions-filter-pills", "data-decision-filter", [], "all", function() {});
+    return;
+  }
+  var devCount = 0, noDevCount = 0;
+  items.forEach(function(item) {
+    if (item.deviation) devCount += 1;
+    else noDevCount += 1;
+  });
+  var options = [
+    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "deviation", label: uiLabel("research_deliberate_deviation"), count: devCount},
+    {value: "no_deviation", label: uiLabel("research_no_deviation_recorded"), count: noDevCount}
+  ];
+  renderResearchFilterPills("r-decisions-filter-pills", "data-decision-filter", options, researchWindowState.decisions.filter, function(val) {
+    researchWindowState.decisions.filter = val;
+    researchWindowState.decisions.limit = RESEARCH_LIST_PAGE_SIZE;
+    renderResearchDecisionFilterPills();
+    renderResearchDecisionCards();
+  });
+}
+
+function renderResearchDecisionCards() {
+  var host = document.getElementById("research-decisions-list");
+  if (!host) return;
+  var items = researchWindowState.decisions.items;
+  if (!items.length) {
+    renderWindowedResearchList("decisions", host, [], uiLabel("research_no_decisions"));
+    return;
+  }
+  var activeFilter = researchWindowState.decisions.filter || "all";
+  var filtered = activeFilter === "all"
+    ? items
+    : items.filter(function(item) { return activeFilter === "deviation" ? item.deviation : !item.deviation; });
+  renderWindowedResearchList("decisions", host, filtered, filtered.length ? null : uiLabel("research_no_decisions"));
 }
 
 async function refreshResearchDecisions(overview) {
@@ -11544,12 +12115,16 @@ async function refreshResearchDecisions(overview) {
   if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var data = overview && Array.isArray(overview.decisions) ? overview : await researchApiGet("research/decisions");
   if (!data.ok) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_decisions_failed")});
+    researchWindowState.decisions.items = [];
+    renderResearchDecisionFilterPills();
+    renderWindowedResearchList("decisions", listHost, [], data.message || uiLabel("research_load_decisions_failed"));
     return;
   }
   var decisions = data.decisions || [];
   if (!decisions.length) {
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_decisions")});
+    researchWindowState.decisions.items = [];
+    renderResearchDecisionFilterPills();
+    renderWindowedResearchList("decisions", listHost, [], uiLabel("research_no_decisions"));
     return;
   }
   // The previous string renderer replaced the whole list, so a refresh closed
@@ -11557,7 +12132,7 @@ async function refreshResearchDecisions(overview) {
   // the impact view can hold stale acknowledgement state. Sources and dossiers
   // keep their open details via identity keys.
   var decisionsRender = ++researchDecisionsRender;
-  LixityResearchCards.render(listHost, {items: decisions.map(function(d) {
+  researchWindowState.decisions.items = decisions.map(function(d) {
     var badges = [d.deviation_from_fact
       ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
       : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
@@ -11575,6 +12150,7 @@ async function refreshResearchDecisions(overview) {
     return {
       key: "decision:" + decisionsRender + ":" + d.id,
       id: d.id,
+      deviation: Boolean(d.deviation_from_fact),
       title: d.title,
       badges: badges,
       metaRight: metaRight,
@@ -11585,8 +12161,129 @@ async function refreshResearchDecisions(overview) {
       decisionImpact: true,
       revision: "decision",
     };
-  })});
+  });
+  renderResearchDecisionFilterPills();
+  renderResearchDecisionCards();
 }
+
+var SEARCHABLE_SELECT_IDS = [
+  "r-dos-eids",
+  "r-claim-dossier-select",
+  "r-decision-claim-select",
+  "r-decision-dossier-select",
+  "r-link-claim-select",
+  "r-relation-from",
+  "r-relation-to"
+];
+
+function filterSelectOptions(select, rawQuery) {
+  var query = String(rawQuery || "").trim().toLowerCase();
+  Array.from(select.options).forEach(function(opt) {
+    var keep = opt.value === "" || opt.selected || !query || opt.textContent.toLowerCase().includes(query);
+    opt.hidden = !keep;
+    opt.disabled = !keep;
+  });
+}
+
+function renderSelectChips(select) {
+  var chipsHost = document.getElementById(select.id + "-chips");
+  if (!chipsHost) return;
+  var selected = Array.from(select.options).filter(function(opt) { return opt.selected && opt.value !== ""; });
+  if (!selected.length) {
+    chipsHost.hidden = true;
+    chipsHost.replaceChildren();
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  selected.forEach(function(opt) {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "research-tag";
+    chip.dataset.selectChipSelect = select.id;
+    chip.dataset.selectChipValue = opt.value;
+    chip.textContent = opt.textContent + " ×";
+    frag.appendChild(chip);
+  });
+  chipsHost.replaceChildren(frag);
+  chipsHost.hidden = false;
+}
+
+function syncSearchableSelect(select) {
+  if (!select || !select.id) return;
+  var searchInput = document.getElementById(select.id + "-search");
+  if (!searchInput) return;
+  var isMultiEids = select.id === "r-dos-eids";
+  var shouldShowSearch = !select.hidden && (isMultiEids ? select.options.length > 0 : select.options.length > 10);
+  searchInput.hidden = !shouldShowSearch;
+  if (!shouldShowSearch && searchInput.value) searchInput.value = "";
+  filterSelectOptions(select, searchInput.value);
+  renderSelectChips(select);
+}
+
+function ensureSearchableSelect(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select || select.dataset.searchableMounted === "1") return select;
+  select.dataset.searchableMounted = "1";
+  var search = document.createElement("input");
+  search.type = "search";
+  search.className = "ctl ctl-sm mb-1";
+  search.id = select.id + "-search";
+  search.placeholder = uiLabel("research_filter_select") || "Filter options…";
+  search.setAttribute("aria-label", search.placeholder);
+  search.dataset.selectSearchFor = select.id;
+  search.hidden = true;
+  search.addEventListener("input", function() {
+    filterSelectOptions(select, search.value);
+  });
+  var chips = document.createElement("div");
+  chips.className = "research-tags mt-1";
+  chips.id = select.id + "-chips";
+  chips.dataset.selectChipsFor = select.id;
+  chips.hidden = true;
+  select.parentNode.insertBefore(search, select);
+  select.parentNode.insertBefore(chips, select.nextSibling);
+  select.addEventListener("change", function() {
+    filterSelectOptions(select, search.value);
+    renderSelectChips(select);
+  });
+  if (typeof MutationObserver === "function") {
+    var syncing = false;
+    new MutationObserver(function() {
+      if (syncing) return;
+      syncing = true;
+      try { syncSearchableSelect(select); }
+      finally { syncing = false; }
+    }).observe(select, {childList: true, attributes: true, attributeFilter: ["hidden"]});
+  }
+  syncSearchableSelect(select);
+  return select;
+}
+
+function syncAllSearchableSelects() {
+  SEARCHABLE_SELECT_IDS.forEach(function(id) {
+    var select = ensureSearchableSelect(id);
+    if (select) syncSearchableSelect(select);
+  });
+}
+
+document.addEventListener("click", function(event) {
+  var chip = event.target.closest("[data-select-chip-select]");
+  if (!chip) return;
+  var select = document.getElementById(chip.dataset.selectChipSelect);
+  if (!select) return;
+  var val = chip.dataset.selectChipValue;
+  if (select.multiple) {
+    Array.from(select.options).forEach(function(opt) {
+      if (opt.value === val) opt.selected = false;
+    });
+  } else {
+    select.value = "";
+  }
+  select.dispatchEvent(new Event("change", {bubbles: true}));
+  syncSearchableSelect(select);
+});
+
+syncAllSearchableSelects();
 
 // Research workspace: editorial review and decision acknowledgements.
 // Split of the former research.js; _JS_FILES concatenates the parts in

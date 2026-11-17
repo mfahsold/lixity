@@ -1733,14 +1733,7 @@ def render_dashboard(
                     f'<option value="">{L("triage_choose")}</option>'
                     + "".join(f'<option value="{status}">{L("triage_" + status)}</option>'
                               for status in ("kept", "changed", "later"))
-                    + f'</select><button type="button" class="ctl" data-triage-save disabled>{L("triage_save")}</button>'
-                    + f'<div class="chip-row triage-quick-actions" role="group" aria-label="{L("triage_status")}">'
-                    + "".join(
-                        f'<button type="button" class="ctl ctl-sm triage-quick-btn" data-triage-quick="{triage_status}" '
-                        f'aria-pressed="false" disabled>{L("triage_" + triage_status)}</button>'
-                        for triage_status in ("kept", "changed", "later")
-                    )
-                    + '</div></td>'
+                    + f'</select><button type="button" class="ctl" data-triage-save disabled>{L("triage_save")}</button></td>'
                 )
             parts.append("</tr>")
         parts.append("</tbody></table></div>")

@@ -108,7 +108,7 @@ def test_cli_missing_model_returns_error_without_traceback_or_output(tmp_path, c
 @pytest.mark.parametrize(("sentence", "specs", "expected"), [
     ("Sie hat gesungen.", [("hat","haben","AUX","Fin","Ind","Pres",0,"ROOT"), ("gesungen","singen","VERB","Part","","",0,"oc")], ("perfect","indicative","active")),
     ("Sie hatte gesungen.", [("hatte","haben","AUX","Fin","Ind","Past",0,"ROOT"), ("gesungen","singen","VERB","Part","","",0,"oc")], ("pluperfect","indicative","active")),
-    ("Sie hätte gesungen.", [("hätte","haben","AUX","Fin","Sub","Past",0,"ROOT"), ("gesungen","singen","VERB","Part","","",0,"oc")], ("pluperfect","subjunctive","active")),
+    ("Sie hätte gesungen.", [("hätte","haben","AUX","Fin","Sub","Past",0,"ROOT"), ("gesungen","singen","VERB","Part","","",0,"oc")], ("pluperfect","subjunctive_ii","active")),
     ("Sie wird gesungen haben.", [("wird","werden","AUX","Fin","Ind","Pres",0,"ROOT"), ("gesungen","singen","VERB","Part","","",2,"oc"), ("haben","haben","AUX","Inf","","",0,"oc")], ("future_perfect","indicative","active")),
     ("Sie ist gerufen worden.", [("ist","sein","AUX","Fin","Ind","Pres",0,"ROOT"), ("gerufen","rufen","VERB","Part","","",2,"oc"), ("worden","werden","AUX","Part","","",0,"oc")], ("perfect","indicative","passive")),
     ("Sie wird gerufen.", [("wird","werden","AUX","Fin","Ind","Pres",0,"ROOT"), ("gerufen","rufen","VERB","Part","","",0,"oc")], ("present","indicative","passive")),

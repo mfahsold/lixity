@@ -455,7 +455,24 @@
     setPronunciations(profile.pronunciations);
     editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
     fields.pronunciation_search.value = ""; renderPronunciations();
-    fields.editor.disabled = false; fields.save.disabled = false;
+    setEditorDisabled(false); fields.save.disabled = false;
+  }
+  function setEditorDisabled(disabled) {
+    fields.editor.disabled = disabled;
+    if (fields.lexicon_section) {
+      fields.lexicon_section.querySelectorAll("input, textarea, select, button").forEach(function(el) {
+        el.disabled = disabled;
+      });
+    }
+    if (fields.phonemes_section) {
+      if (disabled) {
+        fields.phonemes_section.querySelectorAll("input, textarea, select, button").forEach(function(el) {
+          el.disabled = true;
+        });
+      } else {
+        updateModelFields();
+      }
+    }
   }
   function pronunciationEntries() {
     var replacements = Object.create(null);
@@ -760,7 +777,8 @@
         return profile.engine === "ims-toucan" || Object.keys(profile.phonemes || {}).length || Object.keys(profile.prosody || {}).length;
       })) { status(label("phonemes_schema_required")); return false; }
       invalidate(); var serial = generation; profileSaving = true;
-      fields.editor.disabled = fields.profile.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile_discard.disabled = fields.save.disabled = true;
+      setEditorDisabled(true);
+      fields.profile.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile_discard.disabled = fields.save.disabled = true;
       status(label("saving"));
       await request("settings", {project_token: tokens().project_token, audio: settings});
       if (!valid(serial)) return false;
@@ -774,7 +792,7 @@
       if (profileSaving) {
         profileSaving = false;
         if (dialog.open) {
-          fields.editor.disabled = false; fields.profile_discard.disabled = false;
+          setEditorDisabled(false); fields.profile_discard.disabled = false;
           if (openedContext === context()) { fields.profile.disabled = false; profileOptions(); fields.save.disabled = migrationRequired || !settings.selected; }
         }
       } else if (serial == null || valid(serial)) fields.save.disabled = false;
@@ -1751,7 +1769,7 @@
     fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = false; fields.reuse.closest("label").hidden = true;
     fields.editor.querySelectorAll("input, textarea").forEach(function(input) { input.value = ""; });
     ["profile", "engine", "language", "voice", "reference_id", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
-    dialog.showModal(); status(label("loading")); fields.editor.disabled = true; fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
+    dialog.showModal(); status(label("loading")); setEditorDisabled(true); fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
     var serial = generation;
     try {
       var data = await request("speech"); if (!valid(serial)) return;

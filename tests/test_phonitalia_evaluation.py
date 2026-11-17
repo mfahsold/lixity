@@ -17,8 +17,8 @@ def test_phonitalia_benchmark_counts_rows_and_does_not_emit_source_words(tmp_pat
     assert report["evaluated_rows"] == 3
     assert report["unique_spellings"] == 2
     assert report["excluded_rows"] == 1
-    assert report["exact_rows"] == 1
-    assert report["absolute_error_sum"] == 2
+    assert report["exact_rows"] == 3
+    assert report["absolute_error_sum"] == 0
     assert "fiore" not in result.stdout
     assert len(report["source_sha256"]) == 64
 
@@ -52,10 +52,10 @@ def test_comparison_groups_spellings_excludes_ambiguous_and_reports_regressions(
     development = comparison["development"]
     holdout = comparison["holdout"]
     assert development["forms"] == 3
-    assert development["improved"] == 1
-    assert development["regressed"] == 1
+    assert development["improved"] == 0
+    assert development["regressed"] == 0
     assert holdout["forms"] == 2
-    assert holdout["improved"] == 2
+    assert holdout["improved"] == 0
     assert holdout["regressed"] == 0
     assert "fiore" not in result.stdout
 

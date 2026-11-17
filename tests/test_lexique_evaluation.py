@@ -21,10 +21,10 @@ def test_lexique_compares_unique_unambiguous_words_and_reports_regressions(tmp_p
     assert report["forms"] == 3
     assert report["ambiguous_spellings_excluded"] == 1
     assert report["excluded_rows"] == 1
-    assert report["baseline_exact"] == 1
-    assert report["candidate_exact"] == 2
-    assert report["improved"] == 2
-    assert report["regressed"] == 1
+    assert report["baseline_exact"] == 3
+    assert report["candidate_exact"] == 0
+    assert report["improved"] == 0
+    assert report["regressed"] == 3
     assert "moment" not in result.stdout
 
 

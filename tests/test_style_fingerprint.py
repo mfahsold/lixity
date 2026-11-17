@@ -432,13 +432,13 @@ class TestParagraphLayers(unittest.TestCase):
         text = (
             "## Main\n\n"
             "Yes.\n\n"
-            "He said.\n\n"
+            "He might.\n\n"
             "The wooden door opens now.\n\n"
-            "The heavy iron door closes slowly.\n\n"
-            "A tall window opens quietly in the quiet room.\n"
+            "The heavy iron door can close slowly.\n\n"
+            "A tall window must open quietly in the quiet room.\n"
         )
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
-        stats = layer_stats(paragraphs, "asl")
+        stats = layer_stats(paragraphs, "modal")
         self.assertNotIn(0, stats)
         self.assertNotIn(1, stats)
         self.assertEqual(set(stats), {2, 3, 4})

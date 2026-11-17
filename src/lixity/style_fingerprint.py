@@ -2224,9 +2224,10 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
     field_name = LAYER_PARAGRAPH_ATTR.get(layer, LAYER_FEATURES.get(layer))
     if field_name is None:
         return {}
+    min_words = 1 if field_name in ("asl", "dialogue_pct") else MIN_PARAGRAPH_LAYER_WORDS
     by_chapter: dict[int, list[tuple[int, float]]] = {}
     for idx, p in enumerate(paragraphs):
-        if getattr(p, "words", 0) < MIN_PARAGRAPH_LAYER_WORDS:
+        if getattr(p, "words", 0) < min_words:
             continue
         value = getattr(p, field_name, None)
         if not isinstance(value, int | float):

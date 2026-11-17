@@ -1628,9 +1628,35 @@ function syncAllSelectPills() {
     }
   }
 
+  function ensureRowQuick(row, choice) {
+    if (!row || !choice) return null;
+    var existing = row.querySelector(".triage-quick-actions");
+    if (existing) return existing;
+    var cell = choice.closest("td");
+    if (!cell) return null;
+    var group = document.createElement("div");
+    group.className = "chip-row triage-quick-actions";
+    group.setAttribute("role", "group");
+    if (typeof uiLabel === "function") group.setAttribute("aria-label", uiLabel("triage_status"));
+    Array.from(choice.options).forEach(function (opt) {
+      if (!opt.value) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ctl ctl-sm triage-quick-btn";
+      btn.dataset.triageQuick = opt.value;
+      btn.setAttribute("aria-pressed", "false");
+      btn.disabled = choice.disabled;
+      btn.textContent = opt.textContent;
+      group.appendChild(btn);
+    });
+    cell.appendChild(group);
+    return group;
+  }
+
   function syncRowQuick(row) {
     if (!row) return;
     var choice = row.querySelector(".triage-choice");
+    ensureRowQuick(row, choice);
     var activeVal = choice && choice.value ? choice.value : (row.dataset.reviewState || "");
     var isDisabled = !choice || choice.disabled;
     row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {

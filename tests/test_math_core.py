@@ -263,9 +263,11 @@ class TestSyllableRules(unittest.TestCase):
                 self.assertEqual(count_en(word), expected)
 
     def test_minimum_one_syllable(self):
-        for word in ("x", "bzgl", ""):
+        for word in ("x", "bzgl"):
             self.assertGreaterEqual(count_de(word), 1)
-            self.assertGreaterEqual(count_en(word), 0)
+            self.assertGreaterEqual(count_en(word), 1)
+        self.assertEqual(count_de(""), 0)
+        self.assertEqual(count_en(""), 0)
 
 
 class TestRobustStatistics(unittest.TestCase):
