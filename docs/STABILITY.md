@@ -323,8 +323,8 @@ The audit also reproduces unresolved weaknesses:
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
 | Spanish compound cues | Under the default lexical patterns, adjacent present-tense `haber` plus a detected regular `-ado/-ido` candidate is counted once as past, not again as present. This remains a surface pattern: irregular participles and intervening adverbs may be missed, and the broad past bucket does not establish the construction's temporal reference. French, Italian and Dutch compound cues may still count auxiliary and participle in both categories. Custom patterns and optional contextual models are unchanged. |
-| Dialogue | Quoted-segment patterns miss conventional dialogue dashes and some single-quote styles. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words more than once in turn and quote-word totals, although paragraph shares use their union. |
-| Syllables | Italian rising diphthongs such as `fiore`/`buono` remain overcounted; `paura` is undercounted. Broadly merging vowels would introduce other hiatus errors. French `vraiment`/`moment` are undercounted by the final `-ent` rule, which also serves silent verb endings; neither issue is resolved by spelling alone. The corrected Dutch `ij` rule is not a complete pronunciation model. |
+| Dialogue | Romance language profiles (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`), but inline mid-paragraph dashes and unclosed quotes remain outside default patterns. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words more than once in turn and quote-word totals, although paragraph shares use their union. |
+| Syllables | Italian `count_it()` strips silent `qu`/`gu` and merges rising `[iu]`+vowel diphthongs; unmarked hiatuses (`paura`, `mio` vs. `fiore`) and stress-dependent splits remain heuristic. French `count_fr()` adds exceptions for `-ment` mute verbs, `souvent`, and `-éC+ent`, while remaining orthographic rather than phonological. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |
 
@@ -468,8 +468,14 @@ Current media, provider and schema boundaries live in [Research usage](research/
 
 Median/MAD and the noise-adjusted $z^*$ describe contrast within the supplied
 manuscript. A normal-consistency multiplier does not make arbitrary chapter
-features normally distributed. Missing SE means no estimated measurement error;
-zero event counts or constant samples do not establish certainty.
+features normally distributed; `split_mad()`, `medcouple()`, `adjusted_boxplot_fences()`,
+and `huber_location()` expose skew-aware and M-estimator primitives without
+replacing the chapter-baseline assumptions. When `MAD = 0` on a varying series,
+`StyleFingerprint` falls back to `sn_estimator()` / `qn_estimator()`, marking
+`zero_mad_varying` only if both are non-positive or non-finite. Jeffreys
+continuity-adjusted binomial/Poisson SEs and the sample-SD `asl` SE prevent
+zero-SE collapse on 0%/100% or zero-hit chapters without establishing population
+certainty; missing SE still means no estimated measurement error.
 
 BH/BY are established selection procedures **given valid null probabilities**
 and their dependence conditions. Lixity's normal-tail probabilities use a
@@ -481,10 +487,12 @@ observed error count. Cliff's delta describes ordinal contrast, not quality.
 Definitions and active thresholds: [METHODS §§1–4](METHODS.md#1-robust-house-style-baseline).
 
 Style axes now use PCA of standardized tied midranks on one common complete
-chapter set. Covariance, explained variance and scores share that rank space;
+chapter set, with ridge shrinkage $(1-\lambda)C + \lambda I$ when $n \le p$ or
+$\lambda_{\min} \le 10^{-6}\lambda_{\max}$ and regularized Mahalanobis distances
+($D_M$) per complete chapter. Covariance, explained variance and scores share that rank space;
 missing measurements are not imputed. At least three complete chapters and
 three varying baseline-usable features are required, with constant columns
-dropped on that set. Incomplete chapters have no dimension scores. Complete-case selection and small samples still limit interpretation. Score flags are
+dropped on that set. Incomplete chapters have no dimension scores. Complete-case selection, small samples, and shrinkage regularization still limit interpretation. Score flags and Mahalanobis distances are
 descriptive and do not validate prose quality or simultaneous confidence.
 See [METHODS §5](METHODS.md#5-exploratory-style-dimensions).
 
@@ -502,7 +510,10 @@ to length; fixed-window MATTR and fixed-draw HD-D still depend on their paramete
 and the supplied vocabulary distribution.
 
 HD-D is exact expected TTR for a fixed draw. Exact computation removes Monte Carlo
-error, not population uncertainty. MTLD variants also differ in direction
+error, not population uncertainty. MTLD enforces `DEFAULT_MTLD_MIN_FACTOR_LEN = 5`
+so short initial repetitions do not complete premature factors, and `yules_k()`
+uses the finite-sample $N(N-1)$ denominator (`0.0` for $N \le 1$ or all-unique
+tokens). MTLD variants also differ in direction
 averaging, threshold and trailing-factor rules. Compare measurements only after
 aligning formulas, parameters and segmentation; regenerate historical reports
 when those contracts changed. See [formula and guard details](METHODS.md#6-lexical-diversity-indices).
@@ -565,7 +576,8 @@ deliberate calm endings and repeated motifs can be appropriate author choices.
 These diagnostics preserve their declared numerical definitions; an exact
 implementation does not validate the underlying model:
 
-- `pelt_changepoints` uses exact unpruned dynamic programming: $O(n^2)$
+- `pelt_changepoints` uses exact unpruned dynamic programming on
+  global-SD-standardized series with mBIC-inspired default penalty $3\ln n$: $O(n^2)$
   time and $O(n)$ storage. The retained singleton/zero-variance guard violates
   the PELT pruning premise, so no pruning or linear-time claim is made.
   Anchored variance updates reduce cancellation; exact optimization of this
@@ -581,7 +593,10 @@ implementation does not validate the underlying model:
   evaluation. The same asymptotic probability model remains: ties, short
   samples, serial dependence and fitted distributions are not calibrated by
   this numerical correction. Mann–Kendall `tau` remains tau-a, with a
-  tie-corrected approximate normal probability for $S$, not tau-b.
+  tie-corrected approximate normal probability for $S$ (and Hamed–Rao 1998
+  autocorrelation variance correction for $n \ge 8$), not tau-b. `trending_features`
+  and `shifted_features` apply Benjamini–Hochberg FDR (`q = fdr_q`) across
+  tested features, which still depends on the uncalibrated underlying $p$-values.
 - The graph exponent follows the approximate discrete estimator in
   [Clauset–Shalizi–Newman Eq. 3.7](https://arxiv.org/abs/0706.1062v2).
   The current continuous fitted CDF and ordinary KS probability do not implement
@@ -671,10 +686,11 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   A high glue-word share often reflects explanatory clauses, dialogue cadence,
   or complex syntax rather than a writing defect.
 - **Dialogue tag density:** relies on curated per-language speech-attribution
-  verb lists (`generic` sets `dialogue_tag_available: false`). Action-beat
-  attributions and unlisted verbs are missed, while narrative uses of listed
-  verbs can match. `dialogue_tag_pct` is capped at `100.0` and is a surface
-  density proxy, not speaker-attribution parsing.
+  verb lists (`generic` sets `dialogue_tag_available: false`), clamping tag
+  searches at sentence terminators (`.`, `!`, `?`) and adjacent quote
+  boundaries. Action-beat attributions and unlisted verbs are missed, while
+  narrative uses of listed verbs can match. `dialogue_tag_pct` is capped at
+  `100.0` and is a surface density proxy, not speaker-attribution parsing.
 - **Scene entry/exit hooks:** `classify_scene_hook` inspects only the first and
   last sentence of a scene using surface cues. `"action"` is the fallback for
   any non-empty sentence that is neither dialogue, question, nor reflection; it
@@ -724,15 +740,17 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   unattributed rapid banter or missing aliases reduce exchange counts. Short
   turns or dialectal contractions can skew `function_word_share` and `asl`; this
   is not coreference resolution or stylometric authorship attribution.
-- **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `length_entropy`,
-  and `normalized_entropy` require `sentences >= 2` (`available: false`
-  otherwise). Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
+- **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `burstiness`,
+  `length_entropy`, and `normalized_entropy` require `sentences >= 2`
+  (`available: false` otherwise; `burstiness` also requires `mean > 0`).
+  Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
   `long > 20`) depends on sentence splitting and bucket thresholds; high or low
-  entropy is a descriptive dispersion signal, not an aesthetic or "AI-ness"
+  entropy or burstiness is a descriptive dispersion signal, not an aesthetic or "AI-ness"
   verdict.
 - **Indirect speech (`indirect_speech`):** relies on curated reporting/reflection
   verb + complementizer patterns and German *Konjunktiv I* surface cues
-  (`language_unavailable` for `generic`). It misses unmarked free indirect
+  (`language_unavailable` for `generic`); German *Konjunktiv II* matches require
+  a curated reporting/cognitive verb + comma before the pronoun. It misses unmarked free indirect
   discourse (*erlebte Rede*) and can match non-speech cognitive verbs or
   archaic subjunctive forms.
 - **Enriched revision diff (`length_entropy`, `sticky_pct`,
