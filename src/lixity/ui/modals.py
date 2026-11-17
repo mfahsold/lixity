@@ -46,7 +46,7 @@ def render_project_modals(
                  '<div id="runtime-content"></div>'
                  f'<p class="ctl-note">{L("runtime_scope_note")}</p></div><div class="modal-footer">'
                  f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_close")}</button>'
-                 f'<button type="button" class="ctl primary" id="runtime-refresh">{L("runtime_refresh")}</button>'
+                 f'<button type="button" class="ctl" id="runtime-refresh">{L("runtime_refresh")}</button>'
                  '</div></div></dialog>')
 
     parts.append('<dialog class="lixity-modal" id="modal-site-export" data-requires-write closedby="any" aria-labelledby="site-export-title">')
@@ -291,11 +291,11 @@ def render_project_modals(
     parts.append(f'        <span>{L("wizard_switch_prompt")} <button type="button" class="ctl-link" id="link-switch-to-import">{L("wizard_switch_action")}</button></span>')
     parts.append('      </div>')
     parts.append('      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>')
-    parts.append('      <div class="modal-footer">')
-    parts.append(f'        <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
-    parts.append(f'        <button type="submit" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>')
-    parts.append('      </div>')
     parts.append('    </form>')
+    parts.append('    <div class="modal-footer">')
+    parts.append(f'      <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>')
+    parts.append(f'      <button type="submit" form="form-project-open" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>')
+    parts.append('    </div>')
     parts.append('  </div>')
     parts.append('</dialog>')
 

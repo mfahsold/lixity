@@ -150,6 +150,11 @@
   padding: 0 .45rem;
   border: none;
   border-radius: 0;
+}
+.reader-outlier-navigation .ctl:focus-visible { outline-offset: -3px; }
+@media (pointer: coarse) {
+  .reader-outlier-navigation, .reader-analysis-controls select, .reader-evidence-toggle, .reader-comparison-toggle, #paragraph-filter-reset { min-height: 2.75rem; height: auto; }
+}
   background: transparent;
   color: var(--fg);
   font-size: .85rem;

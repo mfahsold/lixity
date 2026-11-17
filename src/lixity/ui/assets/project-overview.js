@@ -242,6 +242,9 @@
   }
   refresh.addEventListener("click", load);
   document.addEventListener("lixity:viewchange", function () { if (active()) load(); else invalidate(); });
+  ["lixity:manuscript-saved", "lixity:research-revision-saved"].forEach(function (evt) {
+    document.addEventListener(evt, function () { if (active()) load(); });
+  });
   document.addEventListener("click", function (event) {
     if (event.target.closest("[data-project-research]")) {
       var tab = document.querySelector('#research-tabs [data-rtab="dossiers"]');

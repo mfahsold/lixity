@@ -449,5 +449,12 @@
     active: function() { return active; }, restore: paint,
     sourceChanged: function(id, version) { if (comparison && (comparison.detail.id !== id || comparison.detail.version_id !== version)) close(false); }
   };
+  ["lixity:research-revision-saved", "lixity:dossier-image-saved", "lixity:manuscript-saved"].forEach(function(evt) {
+    document.addEventListener(evt, function() {
+      if (active === "review" && typeof refreshResearchEditorialReview === "function") {
+        refreshResearchEditorialReview(true);
+      }
+    });
+  });
   paint();
 })();

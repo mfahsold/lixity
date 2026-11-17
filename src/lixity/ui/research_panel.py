@@ -703,7 +703,7 @@ def render_research_panel(
     parts.append(f'<h3 class="section-heading">{L("research_editorial_heading")}</h3>')
     parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
     parts.append(
-        f'<button type="button" class="ctl" id="r-review-refresh" '
+        f'<button type="button" class="ctl ctl-sm" id="r-review-refresh" '
         f'title="{L("research_editorial_refresh")}" data-help="{L("research_review_refresh_help")}">{L("research_editorial_refresh")}</button>'
     )
     parts.append(f'<button type="button" class="ctl mb-2" id="research-review-all" hidden>{L("research_review_all")}</button>')
@@ -778,7 +778,7 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</div></details>")
     parts.append(
-        f'<button type="button" class="ctl mb-2" id="r-terms-refresh" '
+        f'<button type="button" class="ctl ctl-sm mb-2" id="r-terms-refresh" '
         f'title="{L("research_editorial_refresh")}" data-help="{L("research_terms_refresh_help")}">{L("research_editorial_refresh")}</button>'
     )
     parts.append(
