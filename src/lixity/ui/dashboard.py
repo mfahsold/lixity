@@ -1175,8 +1175,18 @@ def render_dashboard(
     )
     parts.append("</span>")
     if controls and research_context_token:
+        terms_icon = (
+            '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+            'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/>'
+            '<circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>'
+        )
         parts.append(
-            f'<button type="button" class="ctl" id="research-reader-terms">{L("manuscript_terms_heading")}</button>'
+            f'<button type="button" class="ctl reader-compact-control reader-terms-btn" id="research-reader-terms" '
+            f'aria-label="{L("manuscript_terms_heading")}" title="{L("manuscript_terms_heading")}" '
+            f'data-help="{L("manuscript_terms_help")}">'
+            f'<span class="reader-control-icon" aria-hidden="true">{terms_icon}</span>'
+            f'<span class="reader-control-label sr-only">{L("manuscript_terms_heading")}</span></button>'
         )
     if not (has_reading and controls):
         parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),

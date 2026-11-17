@@ -59,27 +59,33 @@ def reading_controls(
         if not reader_document[0].is_chapter and source_chapters:
             options = f'<option value="reader-preface">{text("reading_view")}</option>' + options
     focus_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
         '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>'
         '<path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>'
     )
     teleprompter_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
         '<rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 8h8"/>'
         '<path d="m8 12 2 1.5L8 15"/><path d="M12 13.5h4"/></svg>'
     )
     overview_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
         '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/>'
         '<rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>'
     )
     direct_speech_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
+        '<path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 12h6"/></svg>'
+    )
+    help_icon = (
+        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
     )
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
@@ -88,7 +94,7 @@ def reading_controls(
         f'<select class="ctl reader-chapter" id="reader-chapter" aria-label="{text("reading_chapter")}">'
         f'<option value="">{text("reading_chapter")}…</option>{options}</select>'
         '<details class="reader-settings" id="reader-settings" name="reader-settings">'
-        f'<summary class="ctl reader-compact-control" aria-label="{text("reading_appearance")}">'
+        f'<summary class="ctl reader-compact-control" aria-label="{text("reading_appearance")}" title="{text("reading_appearance")}">'
         '<span class="reader-control-icon" aria-hidden="true">Aa</span>'
         f'<span class="reader-control-label">{text("reading_appearance")}</span></summary><div class="reader-settings-body">'
         f'<div class="reader-size-controls" role="group" aria-label="{text("reading_size")}">'
@@ -134,14 +140,14 @@ def reading_controls(
         f'<span class="reader-control-label">{text("reading_direct_speech")}</span></button>'
         '<div class="reader-analysis-toggle-controls">'
         f'<button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" '
-        f'aria-label="{text("reading_analysis")}" aria-pressed="false" data-help="{text("reading_help_analysis")}">'
+        f'aria-label="{text("reading_analysis")}" title="{text("reading_analysis")}" aria-pressed="false" data-help="{text("reading_help_analysis")}">'
         '<span class="analysis-switch" aria-hidden="true"></span>'
         f'{text("reading_analysis")} <span class="analysis-state" aria-hidden="true">'
         f'<span class="analysis-state-measure">{text("reading_on")}</span>'
         f'<span class="analysis-state-measure">{text("reading_off")}</span>'
         f'<span id="manuscript-analysis-state">{text("reading_off")}</span></span></button>'
         '<details class="reader-settings reader-analysis-guide" id="reader-analysis-guide" name="reader-settings" hidden>'
-        f'<summary class="ctl" aria-label="{text("analysis_guide_title")}">?</summary>'
+        f'<summary class="ctl" aria-label="{text("analysis_guide_title")}" title="{text("analysis_guide_title")}" data-help="{text("analysis_guide_intro")}"><span class="reader-control-icon" aria-hidden="true">{help_icon}</span><span class="sr-only">?</span></summary>'
         '<div class="reader-settings-body">'
         f'<strong>{text("analysis_guide_title")}</strong>'
         f'<p>{text("analysis_guide_intro")}</p>'

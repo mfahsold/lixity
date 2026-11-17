@@ -409,13 +409,15 @@
       open("review", reviewAction, {filter: {dossierId: reviewAction.dataset.researchReviewDossier,
         decisionId: reviewAction.dataset.researchReviewDecision}}); return;
     }
-    if (event.target.closest("#research-review-all")) {
-      open("review", event.target);
+    var reviewAll = event.target.closest("#research-review-all");
+    if (reviewAll) {
+      open("review", reviewAll);
       var header = document.querySelector('#research-tools-entry [data-rtab="review"]');
       header.click(); title.focus({preventScroll: true}); return;
     }
-    if (event.target.closest("#research-reader-terms")) {
-      open("review", event.target);
+    var termsTrigger = event.target.closest("#research-reader-terms");
+    if (termsTrigger) {
+      open("review", termsTrigger);
       var terms = document.getElementById("research-manuscript-terms-section");
       terms.open = true; terms.scrollIntoView({block: "start"});
     }

@@ -25,11 +25,12 @@
     b.className = opts.className || 'ctl';
     b.id = id;
     b.setAttribute('aria-label', label);
+    b.setAttribute('title', help || label);
     if (opts.icon && window.LixityIcons && typeof window.LixityIcons.svg === 'function') {
       const iconWrap = document.createElement('span');
       iconWrap.className = 'reader-control-icon';
       iconWrap.setAttribute('aria-hidden', 'true');
-      iconWrap.innerHTML = window.LixityIcons.svg(opts.icon, {size: 15});
+      iconWrap.innerHTML = window.LixityIcons.svg(opts.icon, {size: 16});
       const labelWrap = document.createElement('span');
       labelWrap.className = opts.labelClass || 'editor-tool-label';
       labelWrap.textContent = label;
@@ -45,6 +46,7 @@
   }
   function setButtonLabel(b, newLabel) {
     b.setAttribute('aria-label', newLabel);
+    b.setAttribute('title', newLabel);
     b.setAttribute('data-help', newLabel);
     const span = b.querySelector('.reader-control-label, .editor-tool-label');
     if (span) span.textContent = newLabel;

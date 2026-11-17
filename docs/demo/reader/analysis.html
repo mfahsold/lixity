@@ -1105,8 +1105,23 @@ font-size: var(--text-small);
   white-space: nowrap;
   flex-shrink: 0;
 }
+.text-search-group .ctl-note#text-search-status:empty,
 .text-search-group .ctl-note:empty {
   display: none;
+}
+.toolbar .reader-terms-btn {
+  padding: .35rem .5rem;
+  min-width: 2.25rem;
+  justify-content: center;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+}
+.toolbar .reader-terms-btn:hover,
+.toolbar .reader-terms-btn:focus-visible {
+  color: var(--fg);
+  background: var(--surface-hover);
+  border-color: var(--line);
 }
 /* A paragraph that does not match the query leaves the page entirely, so the
 result list is the manuscript filtered down to what was searched for. */
