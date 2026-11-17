@@ -72,7 +72,7 @@
 
   function Results(props) {
     if (props.message) return html`<p class="ctl-note">${props.message}</p>`;
-    return html`<div>
+    return html`<div class="research-zotero-results">
       ${props.item ? html`<${ParentCard} item=${props.item} library=${props.library} />` : null}
       ${props.items.map(function (item, index) {
         return html`<${ItemCard} key=${item.key || index} item=${item} index=${index}

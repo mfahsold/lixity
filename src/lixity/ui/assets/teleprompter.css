@@ -42,7 +42,7 @@ ruby.teleprompter-phonetic { ruby-position: over; color: #ffd166; font-weight: 5
 .teleprompter-dossier-meta { padding: .85rem 1rem; }
 .teleprompter-dossier-title { font-size: .95rem; font-weight: 600; color: #e6edf3; margin: 0 0 .35rem; }
 .teleprompter-dossier-caption { font-size: .825rem; color: #8b949e; line-height: 1.45; margin: 0; }
-.teleprompter-sidebar-empty { color: #6e7681; font-size: .85rem; text-align: center; padding: 2.5rem 1rem; }
+.teleprompter-sidebar-empty { color: var(--muted, #9aa4b2); font-size: .85rem; text-align: center; padding: 2.5rem 1rem; }
 body.teleprompter-open { overflow: hidden !important; }
 @media (max-width: 900px) {
   .teleprompter-title-text, .teleprompter-btn-label { display: none; }
@@ -62,6 +62,11 @@ body.teleprompter-open { overflow: hidden !important; }
   .teleprompter-speed-val { min-width: 3.8rem; font-size: .75rem; }
 }
 
+@media (pointer: coarse) {
+  .teleprompter-btn-close { width: 2.75rem; height: 2.75rem; min-width: 2.75rem; min-height: 2.75rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .teleprompter-paragraph, .teleprompter-sidebar { transition: none; }
+  .teleprompter-paragraph, .teleprompter-sidebar, .teleprompter-btn, .teleprompter-voice-studio-link { transition: none; }
+  .teleprompter-btn-record.is-active { animation: none; }
 }
