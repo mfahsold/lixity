@@ -68,9 +68,14 @@ and missing evidence; do not turn diagnostic scores into quality verdicts.
 ## 1. What Lixity does (one paragraph)
 
 Lixity turns a Markdown manuscript into quantitative text linguistics:
-sentence rhythm, lexical diversity, readability, dialogue share,
+sentence rhythm (with finite-sample burstiness), length-invariant lexical
+diversity (`MATTR`, `MTLD`, exact `HD-D`), readability, dialogue share,
 paragraph-level heuristic tense profiles, and a **self-calibrating style reference**.
-Style references use the manuscript's own robust median/MAD baseline.
+Style references use the manuscript's own skew-aware robust baseline
+(median/MAD with `Sn`/`Qn` fallback, split-MAD, medcouple, and ridge-regularized
+Mahalanobis distances). The browser UI pairs these measurements with live-count
+filter pills, inline triage toggles, weighted tag clouds, and auto-refreshing
+review.
 Heuristic threshold hits, FDR-selected cells and paragraph tense flags are
 different result sets. Readability formulas have their own language-specific
 assumptions; none of these outputs is an objective literary quality score.
@@ -107,7 +112,7 @@ Lixity exposes the shared Python analysis and research APIs through a JSON-RPC 2
 }
 ```
 
-The server exposes deterministic read-only analysis and research tools. Query
+The server exposes 16 deterministic read-only analysis and research tools. Query
 `tools/list` on the installed server for its current inventory:
 
 - `lixity_about`: Engine version, languages, supported features and thresholds.

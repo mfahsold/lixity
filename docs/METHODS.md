@@ -135,9 +135,10 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 
 | Quantity | Definition | Notes |
 | :--- | :--- | :--- |
-| Centre | $\tilde{x} = \mathrm{median}(x_i)$ | robust to single outliers |
-| Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
-| Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | rounded normal-consistency factor $1/\Phi^{-1}(0.75)$; not a finite-sample correction |
+| Centre | $\tilde{x} = \mathrm{median}(x_i)$ | robust to single outliers; `huber_location()` provides an IRLS Huber M-estimator ($k=1.345$, MAD scale) |
+| Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$; `split_mad()` gives asymmetric lower/upper $\sigma_{\mathrm{MAD}}$ around the median |
+| Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | rounded normal-consistency factor $1/\Phi^{-1}(0.75)$; `mad_finite_sample_factor(n)` provides Croux & Rousseeuw (1992) small-sample $b_n$ |
+| Skew & fences | $\mathrm{MC} \in [-1, 1]$ (`medcouple()`) | Brys et al. (2004) non-parametric skewness; `adjusted_boxplot_fences()` uses Hubert & Vandervieren (2008) fences ($Q_1 - 1.5 e^{-4\mathrm{MC}}\mathrm{IQR}$, $Q_3 + 1.5 e^{3\mathrm{MC}}\mathrm{IQR}$ for $\mathrm{MC} \ge 0$, swapped exponents for $\mathrm{MC} < 0$) |
 
 The shared median sorts once and retains the ordinary midpoint arithmetic. If
 two finite middle values overflow their floating sum, the midpoint uses the
@@ -149,12 +150,16 @@ signed-zero and empty-input conventions are unchanged; this is not a claim of
 exact arithmetic throughout every downstream statistic.
 
 A standardized chapter–feature comparison requires at least
-`FingerprintThresholds.min_chapters` observations and a nonzero MAD. Schema 5
-marks insufficient references and both constant and varying zero-MAD series
-explicitly. It excludes those cells from z*, nominal FDR and consistency;
-zero MAD does not establish that every observation is equal. Raw values and
+`FingerprintThresholds.min_chapters` observations and a nonzero scale $\sigma$.
+When `MAD = 0` on a varying series, `StyleFingerprint` falls back to
+`sn_estimator()` and then `qn_estimator()`; only if both are non-positive or
+non-finite is the series marked `zero_mad_varying`. Schema 5 marks insufficient
+references and both constant and remaining zero-MAD series explicitly,
+excluding those cells from $z^*$, nominal FDR and consistency. Raw values and
 separately calculated Cliff's delta remain available where supported. Ranked
 dimensions and structural measurements can still use varying zero-MAD series.
+In `StyleFingerprint.passport()`, non-negative features (`NON_NEGATIVE_FEATURES`)
+clamp their lower reference band $\tilde{x} - 2\sigma$ at `0.0`.
 
 Text passports show unavailable reference bands and their reason. JSON uses
 `null` for the band when MAD is zero and for median, sigma and band when there
@@ -182,9 +187,9 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 
 | Feature family | Estimator |
 | :--- | :--- |
-| Count densities (per 1 000 words) | Poisson plug-in: $\mathrm{SE} = 1000\sqrt{k}/W$, for observed count $k$ and $W$ tokens |
-| Shares (%) | binomial plug-in: $\mathrm{SE} = 100\sqrt{p(1-p)/N}$ percentage points, with $p$ on 0–1 |
-| ASL | observed-population plug-in: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$, where $\sigma_s^2=\sum_i (l_i-\bar l)^2/N_s$ |
+| Count densities (per 1 000 words) | Continuity-adjusted Poisson (`poisson_se_per_mille`): $\mathrm{SE} = 1000\sqrt{k_{\mathrm{eff}}}/W$, where $k_{\mathrm{eff}} = 0.5$ when $k = 0$ and $W > 0$, else $\max(k, 0)$ |
+| Shares (%) | Jeffreys continuity-adjusted binomial (`binomial_se_percent`): $\mathrm{SE} = 100\sqrt{p_{\mathrm{eff}}(1-p_{\mathrm{eff}})/N}$ percentage points, using $p_{\mathrm{eff}} = 0.5/(N+1)$ when $p \le 0$ and $(N+0.5)/(N+1)$ when $p \ge 1$ |
+| ASL | Sample-SD standard error of the mean: $\mathrm{SE} = \sigma_s/\sqrt{N_s - 1} = s/\sqrt{N_s}$ for $N_s > 1$ (0 for $N_s \le 1$), where $\sigma_s^2 = \sum_i (l_i-\bar l)^2/N_s$ |
 | Sentence-length CV | delta method: $\mathrm{SE} = \frac{\mathrm{CV}}{\sqrt{2N_s}}\sqrt{1+2\,\mathrm{CV}^2}$ |
 | Start entropy | plug-in variance $(H_2 - H^2)/N$ with $H_2=\sum p\log_2^2 p$; negative values clamp to 0 |
 | Guiraud R | relative-error approximation $\mathrm{SE} = 0.5\,R/\sqrt{N}$ over $N$ content tokens |
@@ -197,14 +202,15 @@ These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
 
-The ASL plug-in uses the observed sentence population variance (divisor $N_s$),
-not the conventional sample variance (divisor $N_s-1$). For sentence lengths
-10, 10, 20, 30, 30, it returns 4.0 words; the conventional sample SEM is about
-4.4721 words. An empty or one-sentence unit currently has zero plug-in error,
-not evidence of certainty. The manuscript's sentences are not an IID sample;
-neither estimator alone establishes a confidence interval for narrative style.
-Changing the estimator or one-sentence availability policy is a separate model
-decision, not a correction to the descriptive sentence-length SD/CV.
+The ASL standard error uses the conventional sample-SD denominator
+($\mathrm{SE} = \sigma_s/\sqrt{N_s - 1} = s/\sqrt{N_s}$) for $N_s > 1$, avoiding
+the slight downward bias of the $N_s$ divisor on short chapters. An empty or
+one-sentence unit currently has zero plug-in error, not evidence of certainty.
+Jeffreys continuity adjustments on binomial shares and `count = 0.5` on
+zero-hit Poisson densities prevent `SE = 0.0` collapse on zero-hit or 100%-hit
+chapters without establishing population certainty. The manuscript's sentences
+are not an IID sample; neither estimator alone establishes a confidence interval
+for narrative style.
 
 The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
 to avoid overflow and underflow from squaring extreme finite spread/SE values.
@@ -343,14 +349,14 @@ limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
-| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
+| `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
+| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$, continuity correction, and Hamed & Rao (1998) autocorrelation variance correction for $n \ge 8$ ($\mathrm{Var}(S)\cdot n/n^*$ over significant detrended midrank lags $|\rho_k|>1.96/\sqrt{n}$); $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
 | `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | the chapter sequence is split before dropping unavailable values; both original halves need $\ge2$ observations or the feature is listed in `distribution_unavailable`; computed but partial comparisons appear in `distribution_incomplete`. Coverage is in `baseline_diagnostics.features`. $D=0$ → $p=1$; $p$ is not calibrated for tied/fitted distributions |
-| `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
+| `trending_features` | feature names selected by Benjamini–Hochberg FDR (`q = fdr_q`) across Mann–Kendall $p$-values | summary list |
 | `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
-| `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
+| `shifted_features` | feature names selected by Benjamini–Hochberg FDR (`q = fdr_q`) across early/late KS $p$-values | summary list |
 | `cooccurrence` *(token-level)* | content-word graph (window 2; single-character tokens excluded); approximate discrete exponent $\hat\alpha=1+n/\sum\ln(k_i/(k_{\min}-0.5))$ and fitted-CDF comparison | estimator follows Clauset–Shalizi–Newman Eq. 3.7; current truncated continuous CDF and ordinary KS $p$ do not establish discrete power-law goodness of fit; ≥50 content tokens, ≥5 positive nonconstant degrees |
 | `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only (single-character tokens excluded); signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
 
@@ -450,8 +456,13 @@ rank space:
    and divide by its sample standard deviation ($n-1$ denominator). Drop
    columns constant on this set; at least three varying features must remain.
 3. Form $C=X^\mathsf{T}X/(n-1)$ and use cyclic Jacobi eigendecomposition
-   (standard library only). Eigenvalues are sorted descending; the
-   largest-absolute loading fixes each axis sign.
+   (standard library only). When $n \le p$ ($\lambda = \min(0.5, \max(0.1, (p-n+1)/(p+n)))$)
+   or $\lambda_{\min} \le 10^{-6}\lambda_{\max}$ ($\lambda = 0.05$), ridge shrinkage
+   $(1-\lambda)C + \lambda I$ is applied before re-running Jacobi
+   eigendecomposition. Eigenvalues are sorted descending; the largest-absolute
+   loading fixes each axis sign. `StyleFingerprint` also computes regularized
+   Mahalanobis distances $D_M(c) = \sqrt{\sum_k (v_k^\mathsf{T} z_c)^2 / \max(\lambda_k, 10^{-6})}$
+   per complete chapter (`mahalanobis_distances`, `top_deviants(..., metric="mahalanobis")`).
 4. Project the same standardized ranks: $s_k=Xv_k$. Only the common complete
    chapters receive `scores`; missing measurements are not imputed. The
    reported `variance` is $\lambda_k/p$ for $p$ unit-variance columns, the
@@ -487,17 +498,18 @@ at the ten strongest pairs.
 | :--- | :--- | :--- |
 | Guiraud $R$ | $\mathrm{TTR} \sqrt{N}$ | length-dependent; prefer with HD-D |
 | HD-D | hypergeometric expected TTR of one 42-token draw without replacement from whole-text type frequencies | $\ge 100$ tokens else `null` |
-| MTLD | arithmetic mean $\tfrac12(N/F_{\mathrm{forward}}+N/F_{\mathrm{reverse}})$; factor completes at TTR ≤0.72; trailing weight $(1-\mathrm{TTR})/(1-0.72)$ | $\ge100$ tokens; zero factors/all-unique input → `null`; no minimum run length |
-| MATTR | mean TTR over sliding 50-token windows | window length |
+| MTLD | arithmetic mean $\tfrac12(N/F_{\mathrm{forward}}+N/F_{\mathrm{reverse}})$; factor completes at TTR ≤0.72 with minimum-run guard `DEFAULT_MTLD_MIN_FACTOR_LEN = 5`; trailing weight $(1-\mathrm{TTR})/(1-0.72)$ | $\ge100$ tokens; zero factors/all-unique input → `null` |
+| MATTR | mean TTR over sliding 50-token windows (`mattr()`) | returns `null` below window length |
 | Maas $a^2$ | $a^2 = (\log_{10} N - \log_{10} V)/(\log_{10} N)^2$ | $\ge 100$ tokens; base 10 as in the implementation |
-| Yule $K$ | $10^4 \cdot (\sum m^2 V_m - N)/N^2$ | length-dependent by design |
+| Yule $K$ | $10^4 \cdot (\sum m^2 V_m - N)/(N(N-1))$ | finite-sample denominator $N(N-1)$; `0.0` for $N \le 1$ or all-unique tokens |
 
 MTLD now averages directional $N/F$ scores arithmetically, following the
 original-style `mtldo` aggregation in the
 [author-lab TAALED reference](https://github.com/LCR-ADS-Lab/TAALED/blob/f3c39692b01efa84e39e4de69f8ac109ac1c4bcd/taaled/ld.py).
 The previous combination averaged factors first, yielding the harmonic mean
-of directional scores. Lixity retains its inclusive threshold, fractional
-remainder, no minimum run length and local availability policies. TAALED's
+of directional scores. Lixity retains its inclusive threshold and fractional
+remainder while enforcing `DEFAULT_MTLD_MIN_FACTOR_LEN = 5` tokens per completed
+factor so tiny initial repetitions cannot trigger premature resets. TAALED's
 segmentation conventions differ, so complete tool equivalence is not claimed.
 The original McCarthy–Jarvis full paper was unavailable for this review; the
 author-lab source supports the narrower aggregation claim. See
@@ -617,8 +629,11 @@ attribution or historical-accuracy judgment.
 
 Each chapter is its own reference: robust $z$ of the paragraph value against
 that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs, else
-skipped). Layer fill uses the absolute value span (min–max per dimension);
-the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
+skipped). Per-1,000-word rate layers in `layer_stats()` require at least
+`MIN_PARAGRAPH_LAYER_WORDS = 5` words (`asl` and `dialogue_pct` keep
+`min_words = 1`) so 1–4 word paragraphs do not spike rate layers. Layer fill uses
+the absolute value span (min–max per dimension); the ring marks
+$\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 
 The **Signal-group comparison** (command `showing`) standardizes each raw signal
 against the manuscript's chapter median/MAD, then averages each group with equal
@@ -665,7 +680,12 @@ source-span mismatches; expanded words may share their original token span.
 The finite carrier's tense and mood are composed with participles, infinitives,
 replacement infinitives and passive auxiliaries. Resolved simple present maps
 to present; preterite, imperfect, perfect, pluperfect and anterior perfect map to
-past. Absent English/Dutch Mood features remain `unmarked`, not indicative. Future and subjunctive
+past. Absent English/Dutch Mood features remain `unmarked`, not indicative.
+In `verb_grammar.py`, German subjunctive splits Konjunktiv I (`mood="subjunctive_i"`,
+`Mood=Sub` + `Tense=Pres`) from Konjunktiv II (`mood="subjunctive_ii"`,
+`Mood=Sub` + `Tense=Past`), and `würde + Infinitiv` resolves to
+`tense="conditional"` (or `conditional_perfect` with `haben`/`sein`) instead
+of indicative `future`. Future and subjunctive
 forms remain separate and do not enter the binary counts. Ambiguous unlicensed
 `sein`/participle complexes remain unresolved. The existing curated `sein` inventory
 provides positive licensing only, not a complete valency lexicon.
@@ -814,6 +834,13 @@ For a configured quotation pattern, word counts use the full match when there
 are no capture groups and the first capture group otherwise. An unmatched
 optional first group contributes no words. Overlapping matches can count words
 more than once in quote-word and turn totals; paragraph shares use their union.
+
+**Since 0.8.2 / `[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
+- **Syllables (`syllables.py`):** `count_it()` strips silent `u` in `que/qui/gue/gui` and merges rising `[iu]` + vowel diphthongs; `count_de()` applies `DE_CLEAN` with an empty-word guard and normalizes `qu -> k`; `count_fr()` adds exceptions for `-ment` mute-verb forms (`FR_MENT_MUTE_VERBS`), `souvent` (`FR_NON_MUTE_ENT`), and `-éC+ent` endings (`FR_PENULTIMATE_E_ACUTE_ENT`); `count_en()` preserves `-Cle(d|s)` syllabic `l` endings (`table`/`bottled`/`handles`).
+- **Sentences (`sentences.py`):** protects spaced multi-part abbreviations (`z. B.`, `d. h.`, `u. a.`, `o. ä.`, `p. ex.`, `d. w. z.`), accented single-letter initials (`É. Zola`), ellipses, and post-quote lowercase dialogue tags (`"Hello." she said`).
+- **Tense spans (`tense.py`):** German `_german_perfect_spans()` extends the bounded clause window to `_PERFECT_MAX_CLAUSE_WORDS = 12` tokens and supports subordinate clause-final backward scans (`..., weil er das Buch gelesen hat`); English `_english_perfect_spans()` consumes `have/has/had + VBN` (regular `-ed` or `_EN_IRREGULAR_PARTICIPLES`) as a single past cue without double-counting the auxiliary.
+- **Dialogue, indirect speech, scenes & characters (`dialogue.py`, `scenes.py`, `characters.py`):** Romance dialogue defaults (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`); `find_dialogue_tag_spans()` clamps tag searches at sentence terminators (`.`, `!`, `?`) and adjacent quote boundaries; German indirect-speech Konjunktiv II requires a curated reporting/cognitive verb + comma before the pronoun; French non-manner `-ment` nouns are excluded from `adverbial_tags`; unconfigured `scenes.py` character cues guard against German sentence-internal capitalized nouns; and `characters.py` supports optional `case_sensitive` matching.
+
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
 ## 12. Voice-reference signal diagnostics (`audio-reference inspect`)
@@ -1022,6 +1049,12 @@ they do not estimate literary quality or a reader's experienced immersion.
   Fewer than w category tokens returns `null`. The implementation's default
   category window is defined by `DEFAULT_STRATIFIED_WINDOW` in `diversity.py`.
 - For sentence token lengths L, `sentence_cv = population_stddev(L) / mean(L)`.
+  `compute_rhythm_profile()` (`pacing.py`) also computes `asl_iqr`, three-bucket
+  Shannon entropy (`length_entropy`, `normalized_entropy`), and finite-sample
+  Goh–Barabási `burstiness()` (Kim & Jo 2016):
+  $B_n = \frac{\sqrt{n}(r - 1)}{(\sqrt{n} - 2)r + \sqrt{n}}$ clamped to $[-1, 1]$,
+  using sample SD $s$ and $r = s / \bar{x}$ (returning `null` for $n < 2$ or
+  $\bar{x} \le 0$).
   Rolling sentence length uses w=N for fewer than six sentences, otherwise
   `w=min(15,max(3,N//3))`. Sliding means are rounded to one decimal and, when
   longer than twelve points, averaged into twelve contiguous index bins.

@@ -84,22 +84,29 @@ between reading, comparison, research, and sharing:
 - **Read and review passages:** read continuous prose, search, and place work
   markers. The native manuscript editor supports writing, local autosave and
   reviewed recovery. Use the teleprompter to rehearse a passage aloud.
-- **Compare prose patterns:** explore sentence lengths, dialogue balance,
-  repeated words, and heuristic signals for scene pacing, sensory language,
+- **Compare prose patterns:** explore sentence lengths, length-invariant
+  lexical diversity (`MATTR`, `MTLD`, exact `HD-D`), dialogue balance,
+  repeated words, and skew-aware robust style baselines (median/MAD with
+  `Sn`/`Qn` fallback, split-MAD, medcouple, and regularized Mahalanobis
+  distances), plus heuristic signals for scene pacing, sensory language,
   tense, and character voices. Compare chapters or drafts (`lixity diff`),
-  inspect explanations, and return to the relevant prose. Optional genre
+  triage passages with live-count filter pills, inline decision toggles, and
+  auto-refreshing review, and return to the relevant prose. Optional genre
   reference ranges are descriptive, not targets. In the reader, **Direct Speech
   Mode** (`D`) dims narration to focus on dialogue; evidence filters highlight
   **sticky sentences**, **dialogue tags**, **same-paragraph word echoes**, and
   **indirect speech**. Try a classic in the
   [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
 - **Follow scene research:** open a dossier beside the manuscript and connect
-  paragraphs to claims, source passages, character notes, or scene geography.
+  paragraphs to claims, source passages, weighted tag clouds, character notes,
+  or scene geography.
 - **Connect an AI client (MCP):** run `lixity mcp` to give Claude Desktop,
-  Cursor, Antigravity, or local coding agents read-only analysis and research
-  tools (including `lixity_scenes`, `lixity_corridors`, and `revision_diff`) and
-  structured editorial prompts. Lixity returns results over local stdio; the
-  connected client controls where it processes them.
+  Cursor, Antigravity, or local coding agents 16 read-only analysis and
+  research tools (including `lixity_scenes`, `lixity_corridors`,
+  `lixity_manuscript_dossier_drafts`, `lixity_outlier_matrix`, `revision_diff`,
+  and `lixity_research_gaps`) and 3 structured editorial prompts. Lixity
+  returns results over local stdio; the connected client controls where it
+  processes them.
 - **Share selected material:** export a printable PDF or a self-contained,
   offline reading website for beta readers and editors. Choose which manuscript,
   companion notes, and analysis to include before exporting.
