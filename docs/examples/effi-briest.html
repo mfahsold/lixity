@@ -1389,8 +1389,9 @@ td.flag-excerpt { min-width: 16rem; max-width: 24rem; overflow: hidden; text-ove
 .dim-cutoff { max-width: 95ch; padding: .5rem .85rem; font-size: var(--text-small); }
 .dim-cutoff > summary { cursor: pointer; }
 .dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
-.dim-view-control { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .5rem .85rem; }
-.dim-view-control select { min-width: 0; max-width: 100%; }
+.dim-view-control { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .35rem .75rem; }
+.dim-view-control > select#dim-projection { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.dim-projection-pills { margin-block: 0; }
 #dimensions:not(.dim-ready) #dim-3d-view :is(.dim-view-control, .dim-legend, .dim-threshold-controls,
 .dim-canvas-wrap, .dim-3d-actions, .dim-3d-footer, #dim-legend-note, #dim-incomplete-axes),
 #dimensions:not(.dim-ready) .dim-selection-panel { display: none; }
@@ -2176,6 +2177,18 @@ anchors while scrolling. */
 #research-revision-batch-list pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; }
 /* Research records styled as clean, structured cards within the workspace. */
 .research-record-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.research-card { display: flex; flex-direction: column; gap: var(--space-2); }
+.research-card > .research-claim-scope { margin-bottom: 0; align-self: flex-start; }
+.research-card > .research-tags { margin-top: 0; }
+.research-card > .research-zotero-link { margin-block: 0; align-self: flex-start; }
+.research-card > .research-details { margin-top: 0; }
+.research-card > .research-subpanel { margin-top: 0; }
+.research-card > .research-excerpt { margin: 0; }
+.research-card > button.ctl { align-self: flex-start; }
+.research-zotero-results { display: grid; gap: var(--space-3); }
+.research-zotero-results > .research-card { contain: layout style; margin: 0; padding: 0.85rem 1.15rem; border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.research-zotero-results > .research-card:hover { border-color: var(--line-strong, #888); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.research-zotero-results > #r-zotero-more { justify-self: start; }
 .research-record-list > .research-card { contain: layout style; margin: 0; padding: 0.85rem 1.15rem; border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .research-record-list > .research-card:hover { border-color: var(--line-strong, #888); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .research-card:focus-within { border-color: var(--line-strong); box-shadow: 0 0 0 2px var(--accent-light, rgba(0, 0, 0, 0.08)); }
@@ -3708,7 +3721,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .passage-research-item { padding-block: var(--space-3); border-top: 1px solid var(--line-subtle, var(--line)); }
 .passage-research-item .ctl { max-width: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
 .passage-research-record { margin-bottom: var(--space-3); }
-.passage-research-record > .ctl-note { margin: 0; }
+.passage-research-record > .ctl-note { margin-block: var(--space-1); }
+@media (pointer: coarse) {
+  .passage-research .workspace-reader-head button.ctl { min-width: 2.75rem; min-height: 2.75rem; }
+}
 .passage-research-item .passage-record-title { display: block; width: 100%; padding: var(--space-2); margin-inline: calc(-1 * var(--space-2)); border-color: transparent; background: transparent; color: var(--accent); font-weight: var(--weight-semibold); }
 .passage-research-item .passage-record-title:hover { background: var(--accent-light); color: var(--accent); }
 .passage-research-item .passage-record-pin,
@@ -9982,7 +9998,7 @@ function syncAllSelectPills() {
 
   function Results(props) {
     if (props.message) return html`<p class="ctl-note">${props.message}</p>`;
-    return html`<div>
+    return html`<div class="research-zotero-results">
       ${props.item ? html`<${ParentCard} item=${props.item} library=${props.library} />` : null}
       ${props.items.map(function (item, index) {
         return html`<${ItemCard} key=${item.key || index} item=${item} index=${index}
@@ -10059,14 +10075,14 @@ function syncAllSelectPills() {
   function Tag(props) {
     if (props.interactive) {
       return html`<button type="button" class="research-tag" data-filter-tag=${props.value}
-        title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
+        aria-pressed="false" title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
     }
     return html`<span class="research-tag">${props.value}</span>`;
   }
 
   function SectionTag(props) {
     return html`<button type="button" class="research-tag research-tag-section" data-filter-tag=${props.value}
-      title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
+      aria-pressed="false" title=${uiLabel("research_filter_tag")}>${props.value}</button>`;
   }
 
   function DossierSections(props) {
@@ -11713,6 +11729,17 @@ function syncResearchTagCloud(kind, query) {
   });
 }
 
+function syncResearchFilterTags(kind, query) {
+  var list = document.getElementById("research-" + kind + "-list");
+  if (!list) return;
+  var active = String(query || "").trim().toLowerCase();
+  list.querySelectorAll("[data-filter-tag]").forEach(function(btn) {
+    var match = Boolean(active) && String(btn.dataset.filterTag || "").trim().toLowerCase() === active;
+    btn.classList.toggle("active", match);
+    btn.setAttribute("aria-pressed", String(match));
+  });
+}
+
 function renderResearchTagCloud(kind, records) {
   var host = document.getElementById("r-filter-" + kind + "-tags");
   if (!host) return;
@@ -11776,6 +11803,7 @@ function filterResearchList(kind) {
       });
       status.hidden = !normalized || !domCards.length || domMatches > 0;
       status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+      syncResearchFilterTags(kind, query);
       return;
     }
     var matched = normalized
@@ -11787,6 +11815,7 @@ function filterResearchList(kind) {
     });
     status.hidden = !normalized || !allItems.length || matched.length > 0;
     status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+    syncResearchFilterTags(kind, query);
     return;
   }
   var cards = list.querySelectorAll(".research-card[data-filter-text]");
@@ -11797,6 +11826,7 @@ function filterResearchList(kind) {
   });
   status.hidden = !normalized || !cards.length || matches > 0;
   status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+  syncResearchFilterTags(kind, query);
 }
 
 document.addEventListener("input", function(event) {

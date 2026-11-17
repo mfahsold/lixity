@@ -143,12 +143,19 @@ nohup.out
 .ipynb_checkpoints/
 
 # Local tool caches beyond the Python defaults
+.cache/
+.benchmarks/
+*.prof
+*.lprof
 .pyre/
 .pytype/
 .pylint.d/
 .pnpm-store/
 .yarn/
 .parcel-cache/
+npm-debug.log*
+yarn-debug.log*
+*.part
 
 # Lockfiles from local tooling (the project pins via pyproject and release wheels)
 uv.lock
