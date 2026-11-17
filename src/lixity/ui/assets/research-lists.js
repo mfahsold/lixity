@@ -519,16 +519,158 @@ function researchTimelineEntry(entry) {
   var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
   var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
   var details = [authored, scope].filter(Boolean).join(" · ");
+  var longStatement = (entry.statement || "").length > 200;
   return '<li id="' + researchTimelineAnchor(entry.claim_id) + '" data-claim-id="' + escapeHtml(entry.claim_id) +
     '"><article class="research-card">' +
     (scale ? '<p class="research-timeline-scale"><span>' + escapeHtml(scale) + '</span></p>' : '') +
     '<h4>' + escapeHtml(entry.title) + '</h4>' +
     (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
-    '<p class="research-timeline-statement">' + escapeHtml(entry.statement) + '</p>' +
+    '<p class="research-timeline-statement' + (longStatement ? ' research-excerpt' : '') + '">' + escapeHtml(entry.statement) + '</p>' +
+    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">…</button>' : '') +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
     (entry.reason ? '<p class="research-timeline-reason">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
     researchRevisionActions("claim", entry.claim_id) + '</article></li>';
+}
+
+function researchTimelineEraKey(entry) {
+  var endYear = Number(String((entry.period && (entry.period.end || entry.period.start)) || "").slice(0, 4));
+  var startYear = Number(String((entry.period && entry.period.start) || "").slice(0, 4));
+  var y = Number.isFinite(startYear) && startYear > 0 ? startYear : endYear;
+  if (!Number.isFinite(y) || y <= 0) return "other";
+  if (y <= 1945) return "pre1945";
+  if (y <= 1999) return "1946_1999";
+  if (y <= 2024) return "2000_2024";
+  return "2025_plus";
+}
+
+function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows) {
+  var isDe = (document.documentElement.lang || "").toLowerCase().startsWith("de");
+  var eraLabels = {
+    all: isDe ? "Alle" : "All",
+    pre1945: "≤ 1945",
+    "1946_1999": "1946–1999",
+    "2000_2024": "2000–2024",
+    "2025_plus": "2025+",
+  };
+  var counts = {all: datedRows.length, pre1945: 0, "1946_1999": 0, "2000_2024": 0, "2025_plus": 0};
+  datedRows.forEach(function(r) {
+    var k = researchTimelineEraKey(r);
+    if (counts[k] !== undefined) counts[k] += 1;
+  });
+  var activeEra = "all";
+  var filterText = "";
+  var limit = 25;
+
+  function filteredDated() {
+    var q = filterText.trim().toLowerCase();
+    return datedRows.filter(function(r) {
+      if (activeEra !== "all" && researchTimelineEraKey(r) !== activeEra) return false;
+      if (!q) return true;
+      var hay = [r.title, r.statement, r.place, r.time_period].concat(r.actors || []).join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  function paint(preserveInput) {
+    var visible = filteredDated();
+    var capped = visible.slice(0, limit);
+    var remaining = visible.length - capped.length;
+    var eraOrder = ["all", "pre1945", "1946_1999", "2000_2024", "2025_plus"].filter(function(k) {
+      return k === "all" || counts[k] > 0;
+    });
+    var controlsHtml = datedRows.length > 6 ? (
+      '<div class="research-timeline-controls">' +
+        '<input type="search" class="ctl" id="r-timeline-filter" value="' + escapeHtml(filterText) + '" placeholder="' +
+          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern…" : "Filter timeline…")) + '" aria-label="' +
+          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern" : "Filter timeline")) + '"/>' +
+        '<div class="chip-row" role="group" aria-label="' + escapeHtml(isDe ? "Zeitabschnitte" : "Eras") + '">' +
+          eraOrder.map(function(k) {
+            var pressed = activeEra === k;
+            return '<button type="button" class="ctl ctl-sm" data-timeline-era="' + k + '" aria-pressed="' + pressed + '">' +
+              escapeHtml(eraLabels[k]) + ' (' + counts[k] + ')</button>';
+          }).join("") +
+        '</div>' +
+      '</div>'
+    ) : "";
+
+    var bodyHtml =
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
+        ' <code>1912 · 1912-03 · 1912-05-01 · 1912–1914</code></p>' +
+      controlsHtml +
+      researchTimelineStrip(visible) +
+      '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + visible.length + ')</h3>' +
+      (capped.length ? '<ol class="research-timeline research-timeline-dated">' +
+        capped.map(researchTimelineEntry).join("") + '</ol>' +
+        (remaining > 0 ? '<p class="mt-2"><button type="button" class="ctl ctl-sm" id="r-timeline-more">' +
+          escapeHtml((isDe ? "Mehr anzeigen" : "Show more") + " (+" + remaining + ")") + '</button></p>' : '') :
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
+      '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
+      (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
+        '<ol class="research-timeline research-timeline-unplaced">' +
+        unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>');
+
+    var prevQuery = preserveInput ? document.getElementById("r-timeline-filter") : null;
+    var selStart = prevQuery ? prevQuery.selectionStart : null;
+    timelineHost.innerHTML = bodyHtml;
+    var input = document.getElementById("r-timeline-filter");
+    if (input) {
+      if (preserveInput) {
+        input.focus({preventScroll: true});
+        if (selStart !== null && typeof input.setSelectionRange === "function") {
+          input.setSelectionRange(selStart, selStart);
+        }
+      }
+      input.addEventListener("input", function() {
+        filterText = input.value || "";
+        limit = 25;
+        paint(true);
+      });
+    }
+    timelineHost.querySelectorAll("[data-timeline-era]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        activeEra = btn.dataset.timelineEra || "all";
+        limit = 25;
+        paint(false);
+      });
+    });
+    var moreBtn = document.getElementById("r-timeline-more");
+    if (moreBtn) {
+      moreBtn.addEventListener("click", function() {
+        limit += 25;
+        paint(false);
+      });
+    }
+    timelineHost.querySelectorAll("[data-timeline-expand]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var stmt = btn.previousElementSibling;
+        if (!stmt) return;
+        var expanded = btn.getAttribute("aria-expanded") === "true";
+        stmt.classList.toggle("research-excerpt", expanded);
+        btn.setAttribute("aria-expanded", String(!expanded));
+        btn.textContent = expanded ? "…" : (isDe ? "Weniger" : "Less");
+      });
+    });
+    timelineHost.querySelectorAll(".research-timeline-strip-row").forEach(function(link) {
+      link.addEventListener("click", function(event) {
+        var href = link.getAttribute("href") || "";
+        if (!href.startsWith("#")) return;
+        var targetId = href.slice(1);
+        if (!document.getElementById(targetId)) {
+          limit = visible.length;
+          paint(false);
+          var target = document.getElementById(targetId);
+          if (target) {
+            event.preventDefault();
+            target.scrollIntoView({behavior: "smooth", block: "start"});
+          }
+        }
+      });
+    });
+  }
+  paint(false);
 }
 
 function researchRelationEndpoint(endpoint) {
@@ -561,21 +703,11 @@ async function refreshResearchClaimProjections() {
   if (request !== researchProjectionRead || !responses.every(function(data) {return acceptResearchContext(context, data);})) return;
   var timeline = responses[0], relations = responses[1];
   var datedRows = timeline.dated || [], unplacedRows = timeline.unplaced || [];
-  timelineHost.innerHTML = timeline.ok ?
-    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
-    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
-      ' <code>1912 · 1912-03 · 1912-05-01 · 1912–1914</code></p>' +
-    researchTimelineStrip(datedRows) +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + datedRows.length + ')</h3>' +
-    (datedRows.length ? '<ol class="research-timeline research-timeline-dated">' +
-      datedRows.map(researchTimelineEntry).join("") + '</ol>' :
-      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
-    (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
-      '<ol class="research-timeline research-timeline-unplaced">' +
-      unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
-      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>') :
-    '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  if (timeline.ok) {
+    researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows);
+  } else {
+    timelineHost.innerHTML = '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  }
   var callout = document.getElementById("r-timeline-callout");
   if (callout && timeline.ok) {
     callout.textContent = uiFormat("research_timeline_callout", {

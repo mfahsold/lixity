@@ -383,6 +383,17 @@ server.serve_forever()
     await expect(page.locator('#research-search-results')).toContainText('Version 1');
     assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
     await expect(page.locator('#research-search-results [data-research-history]')).toHaveAccessibleName('View entry');
+    const searchCardGeometry = await page.locator('#research-search-results .research-passage-card').first().evaluate(card => {
+      const title = card.querySelector('.research-card-title');
+      const btn = card.querySelector('button.ctl[data-research-history]');
+      return {
+        cardWidth: card.getBoundingClientRect().width,
+        titleHeight: title ? title.getBoundingClientRect().height : 0,
+        btnWidth: btn ? btn.getBoundingClientRect().width : 0,
+      };
+    });
+    assert.ok(searchCardGeometry.titleHeight > 0 && searchCardGeometry.titleHeight < 80, 'Search card title stays compact: ' + JSON.stringify(searchCardGeometry));
+    assert.ok(searchCardGeometry.btnWidth > 0 && searchCardGeometry.btnWidth < searchCardGeometry.cardWidth * 0.7, 'Search card button does not stretch full width: ' + JSON.stringify(searchCardGeometry));
     await page.locator('#research-search-results [data-research-history]').click();
     await expect(page.locator('#modal-research-revision')).toBeVisible();
     await expect(page.locator('#modal-research-revision')).toContainText('End of synthetic dossier.');

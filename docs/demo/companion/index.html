@@ -1389,7 +1389,7 @@ td.flag-excerpt { min-width: 16rem; max-width: 24rem; overflow: hidden; text-ove
 .dim-cutoff > summary { cursor: pointer; }
 .dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
 .dim-view-control { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .35rem .75rem; }
-.dim-view-control > select#dim-projection { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.dim-view-control > select#dim-projection { position: absolute; width: 44px; min-width: 44px; min-height: 2.75rem; opacity: 0; pointer-events: none; }
 .dim-projection-pills { margin-block: 0; }
 #dimensions:not(.dim-ready) #dim-3d-view :is(.dim-view-control, .dim-legend, .dim-threshold-controls,
 .dim-canvas-wrap, .dim-3d-actions, .dim-3d-footer, #dim-legend-note, #dim-incomplete-axes),
@@ -1611,6 +1611,7 @@ transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .
 .research-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
 .research-tag { font-size: var(--text-micro); padding: .1rem .45rem; border-radius: var(--radius-pill); background: var(--accent-light); color: var(--accent); border: 1px solid var(--line); }
 .research-passage-card { display: flex; flex-direction: column; gap: var(--space-1); border-left: 3px solid var(--accent); background: var(--neutral); padding: .5rem .75rem; margin: .4rem 0; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; font-size: var(--text-control); }
+.research-passage-card > button.ctl { align-self: flex-start; }
 .research-passage-quote { font-style: italic; font-size: var(--text-small); margin: .2rem 0; white-space: pre-wrap; }
 .research-passage-card, .research-passage-card :is(.ctl-note, .research-passage-cite) { color: var(--fg); }
 .selection-toolbar { position: sticky; top: .75rem; z-index: 8; display: flex; flex-wrap: wrap; gap: .6rem; padding: .65rem .85rem; margin: .75rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
@@ -1665,10 +1666,12 @@ margin: 0 0 .35rem;
 }
 & .research-timeline-reason { margin: .35rem 0 0; font-weight: var(--weight-semibold); }
 }
+.research-timeline-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block: var(--space-2) var(--space-3); }
+.research-timeline-controls input[type="search"] { flex: 1 1 14rem; min-width: 0; }
 .research-timeline-strip {
 margin: .7rem 0 1rem;
 & h4 { margin: 0 0 .2rem; }
-& ol { list-style: none; margin: .5rem 0; padding: 0; display: grid; gap: .22rem; }
+& ol { list-style: none; margin: .5rem 0; padding: 0 .25rem 0 0; display: grid; gap: .22rem; max-height: 18rem; overflow-y: auto; scrollbar-gutter: stable; }
 & .research-timeline-strip-row {
 display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: .6rem; align-items: center;
 padding: .12rem .3rem; border-radius: var(--radius-sm); text-decoration: none; color: inherit;
@@ -2192,7 +2195,8 @@ anchors while scrolling. */
 .research-record-list > .research-card:hover { border-color: var(--line-strong, #888); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .research-card:focus-within { border-color: var(--line-strong); box-shadow: 0 0 0 2px var(--accent-light, rgba(0, 0, 0, 0.08)); }
 .research-card-header { gap: var(--space-2) var(--space-3); display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
-.research-card-title { flex: 1 1 16rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-control); }
+.research-card-title { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-control); }
+.research-card-header > .research-card-title { flex: 1 1 16rem; }
 .research-card-meta { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
 .research-card-meta-pill { display: inline-flex; align-items: center; font-size: var(--text-micro); padding: 0.12rem 0.5rem; border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--muted); border: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease; }
 .research-card-meta-pill:hover { color: var(--fg); border-color: var(--accent); }
@@ -4845,7 +4849,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.8.2</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A91168b4d-9d88-4e12-ad28-42fd22b8f645\u0026version_id=urn%3Auuid%3A8d85f246-e949-41bf-adca-7bfda37cc26d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A065cb054-d4b8-441a-990f-a7e4011b4671\u0026source_id=urn%3Auuid%3A91168b4d-9d88-4e12-ad28-42fd22b8f645\u0026version_id=urn%3Auuid%3A8d85f246-e949-41bf-adca-7bfda37cc26d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ae8644047-2054-4b25-a4c7-9112059d7498\u0026version_id=urn%3Auuid%3A25416bd7-29b8-4664-b100-e7e4a95c8509":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A065cb054-d4b8-441a-990f-a7e4011b4671\u0026source_id=urn%3Auuid%3Ae8644047-2054-4b25-a4c7-9112059d7498\u0026version_id=urn%3Auuid%3A25416bd7-29b8-4664-b100-e7e4a95c8509":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:065cb054-d4b8-441a-990f-a7e4011b4671","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:7293f6a0-ca8d-4b1a-bcb7-721ef4e95308","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:d15f43d9-e95c-4b5c-8915-76f6886a70d7","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:91168b4d-9d88-4e12-ad28-42fd22b8f645/urn:uuid:8d85f246-e949-41bf-adca-7bfda37cc26d)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:065cb054-d4b8-441a-990f-a7e4011b4671","source_id":"urn:uuid:91168b4d-9d88-4e12-ad28-42fd22b8f645","source_version_id":"urn:uuid:8d85f246-e949-41bf-adca-7bfda37cc26d","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A065cb054-d4b8-441a-990f-a7e4011b4671\u0026source_id=urn%3Auuid%3A91168b4d-9d88-4e12-ad28-42fd22b8f645\u0026version_id=urn%3Auuid%3A8d85f246-e949-41bf-adca-7bfda37cc26d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:d15f43d9-e95c-4b5c-8915-76f6886a70d7","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:e8644047-2054-4b25-a4c7-9112059d7498/urn:uuid:25416bd7-29b8-4664-b100-e7e4a95c8509)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:065cb054-d4b8-441a-990f-a7e4011b4671","source_id":"urn:uuid:e8644047-2054-4b25-a4c7-9112059d7498","source_version_id":"urn:uuid:25416bd7-29b8-4664-b100-e7e4a95c8509","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A065cb054-d4b8-441a-990f-a7e4011b4671\u0026source_id=urn%3Auuid%3Ae8644047-2054-4b25-a4c7-9112059d7498\u0026version_id=urn%3Auuid%3A25416bd7-29b8-4664-b100-e7e4a95c8509","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:7293f6a0-ca8d-4b1a-bcb7-721ef4e95308","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:7293f6a0-ca8d-4b1a-bcb7-721ef4e95308","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"4776f336069e16d9220657bffcca3b08f730259a7bd030b59fb22fb9d45ee39b"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A7cc7f3f8-5a65-4843-b97c-c47ab4f824b0\u0026version_id=urn%3Auuid%3A69f1ae1f-ee8d-41c6-be41-3d478081110b":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Abee7edc1-1722-4a3f-aea1-e96b984bc7af\u0026source_id=urn%3Auuid%3A7cc7f3f8-5a65-4843-b97c-c47ab4f824b0\u0026version_id=urn%3Auuid%3A69f1ae1f-ee8d-41c6-be41-3d478081110b":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ae77faf2b-2c8a-4c4f-b58c-a9a207611d6e\u0026version_id=urn%3Auuid%3A496b1726-f3ea-4e12-94ad-b2aab54c0576":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Abee7edc1-1722-4a3f-aea1-e96b984bc7af\u0026source_id=urn%3Auuid%3Ae77faf2b-2c8a-4c4f-b58c-a9a207611d6e\u0026version_id=urn%3Auuid%3A496b1726-f3ea-4e12-94ad-b2aab54c0576":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:bee7edc1-1722-4a3f-aea1-e96b984bc7af","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:0e430055-5954-464e-8607-7d95e9ee968b","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:ad042a29-86c5-42aa-97b2-36facdf7096a","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:7cc7f3f8-5a65-4843-b97c-c47ab4f824b0/urn:uuid:69f1ae1f-ee8d-41c6-be41-3d478081110b)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:bee7edc1-1722-4a3f-aea1-e96b984bc7af","source_id":"urn:uuid:7cc7f3f8-5a65-4843-b97c-c47ab4f824b0","source_version_id":"urn:uuid:69f1ae1f-ee8d-41c6-be41-3d478081110b","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Abee7edc1-1722-4a3f-aea1-e96b984bc7af\u0026source_id=urn%3Auuid%3A7cc7f3f8-5a65-4843-b97c-c47ab4f824b0\u0026version_id=urn%3Auuid%3A69f1ae1f-ee8d-41c6-be41-3d478081110b","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:ad042a29-86c5-42aa-97b2-36facdf7096a","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:e77faf2b-2c8a-4c4f-b58c-a9a207611d6e/urn:uuid:496b1726-f3ea-4e12-94ad-b2aab54c0576)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:bee7edc1-1722-4a3f-aea1-e96b984bc7af","source_id":"urn:uuid:e77faf2b-2c8a-4c4f-b58c-a9a207611d6e","source_version_id":"urn:uuid:496b1726-f3ea-4e12-94ad-b2aab54c0576","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Abee7edc1-1722-4a3f-aea1-e96b984bc7af\u0026source_id=urn%3Auuid%3Ae77faf2b-2c8a-4c4f-b58c-a9a207611d6e\u0026version_id=urn%3Auuid%3A496b1726-f3ea-4e12-94ad-b2aab54c0576","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:0e430055-5954-464e-8607-7d95e9ee968b","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:0e430055-5954-464e-8607-7d95e9ee968b","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"6b7f5994cea3c9c7ecd2aef67b9c73278b5b3c00e78e1c7ed1bacf9bcaa6a0f2"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -11672,16 +11676,158 @@ function researchTimelineEntry(entry) {
   var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
   var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
   var details = [authored, scope].filter(Boolean).join(" · ");
+  var longStatement = (entry.statement || "").length > 200;
   return '<li id="' + researchTimelineAnchor(entry.claim_id) + '" data-claim-id="' + escapeHtml(entry.claim_id) +
     '"><article class="research-card">' +
     (scale ? '<p class="research-timeline-scale"><span>' + escapeHtml(scale) + '</span></p>' : '') +
     '<h4>' + escapeHtml(entry.title) + '</h4>' +
     (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
-    '<p class="research-timeline-statement">' + escapeHtml(entry.statement) + '</p>' +
+    '<p class="research-timeline-statement' + (longStatement ? ' research-excerpt' : '') + '">' + escapeHtml(entry.statement) + '</p>' +
+    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">…</button>' : '') +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
     (entry.reason ? '<p class="research-timeline-reason">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
     researchRevisionActions("claim", entry.claim_id) + '</article></li>';
+}
+
+function researchTimelineEraKey(entry) {
+  var endYear = Number(String((entry.period && (entry.period.end || entry.period.start)) || "").slice(0, 4));
+  var startYear = Number(String((entry.period && entry.period.start) || "").slice(0, 4));
+  var y = Number.isFinite(startYear) && startYear > 0 ? startYear : endYear;
+  if (!Number.isFinite(y) || y <= 0) return "other";
+  if (y <= 1945) return "pre1945";
+  if (y <= 1999) return "1946_1999";
+  if (y <= 2024) return "2000_2024";
+  return "2025_plus";
+}
+
+function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows) {
+  var isDe = (document.documentElement.lang || "").toLowerCase().startsWith("de");
+  var eraLabels = {
+    all: isDe ? "Alle" : "All",
+    pre1945: "≤ 1945",
+    "1946_1999": "1946–1999",
+    "2000_2024": "2000–2024",
+    "2025_plus": "2025+",
+  };
+  var counts = {all: datedRows.length, pre1945: 0, "1946_1999": 0, "2000_2024": 0, "2025_plus": 0};
+  datedRows.forEach(function(r) {
+    var k = researchTimelineEraKey(r);
+    if (counts[k] !== undefined) counts[k] += 1;
+  });
+  var activeEra = "all";
+  var filterText = "";
+  var limit = 25;
+
+  function filteredDated() {
+    var q = filterText.trim().toLowerCase();
+    return datedRows.filter(function(r) {
+      if (activeEra !== "all" && researchTimelineEraKey(r) !== activeEra) return false;
+      if (!q) return true;
+      var hay = [r.title, r.statement, r.place, r.time_period].concat(r.actors || []).join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  function paint(preserveInput) {
+    var visible = filteredDated();
+    var capped = visible.slice(0, limit);
+    var remaining = visible.length - capped.length;
+    var eraOrder = ["all", "pre1945", "1946_1999", "2000_2024", "2025_plus"].filter(function(k) {
+      return k === "all" || counts[k] > 0;
+    });
+    var controlsHtml = datedRows.length > 6 ? (
+      '<div class="research-timeline-controls">' +
+        '<input type="search" class="ctl" id="r-timeline-filter" value="' + escapeHtml(filterText) + '" placeholder="' +
+          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern…" : "Filter timeline…")) + '" aria-label="' +
+          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern" : "Filter timeline")) + '"/>' +
+        '<div class="chip-row" role="group" aria-label="' + escapeHtml(isDe ? "Zeitabschnitte" : "Eras") + '">' +
+          eraOrder.map(function(k) {
+            var pressed = activeEra === k;
+            return '<button type="button" class="ctl ctl-sm" data-timeline-era="' + k + '" aria-pressed="' + pressed + '">' +
+              escapeHtml(eraLabels[k]) + ' (' + counts[k] + ')</button>';
+          }).join("") +
+        '</div>' +
+      '</div>'
+    ) : "";
+
+    var bodyHtml =
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
+        ' <code>1912 · 1912-03 · 1912-05-01 · 1912–1914</code></p>' +
+      controlsHtml +
+      researchTimelineStrip(visible) +
+      '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + visible.length + ')</h3>' +
+      (capped.length ? '<ol class="research-timeline research-timeline-dated">' +
+        capped.map(researchTimelineEntry).join("") + '</ol>' +
+        (remaining > 0 ? '<p class="mt-2"><button type="button" class="ctl ctl-sm" id="r-timeline-more">' +
+          escapeHtml((isDe ? "Mehr anzeigen" : "Show more") + " (+" + remaining + ")") + '</button></p>' : '') :
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
+      '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
+      (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
+        '<ol class="research-timeline research-timeline-unplaced">' +
+        unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>');
+
+    var prevQuery = preserveInput ? document.getElementById("r-timeline-filter") : null;
+    var selStart = prevQuery ? prevQuery.selectionStart : null;
+    timelineHost.innerHTML = bodyHtml;
+    var input = document.getElementById("r-timeline-filter");
+    if (input) {
+      if (preserveInput) {
+        input.focus({preventScroll: true});
+        if (selStart !== null && typeof input.setSelectionRange === "function") {
+          input.setSelectionRange(selStart, selStart);
+        }
+      }
+      input.addEventListener("input", function() {
+        filterText = input.value || "";
+        limit = 25;
+        paint(true);
+      });
+    }
+    timelineHost.querySelectorAll("[data-timeline-era]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        activeEra = btn.dataset.timelineEra || "all";
+        limit = 25;
+        paint(false);
+      });
+    });
+    var moreBtn = document.getElementById("r-timeline-more");
+    if (moreBtn) {
+      moreBtn.addEventListener("click", function() {
+        limit += 25;
+        paint(false);
+      });
+    }
+    timelineHost.querySelectorAll("[data-timeline-expand]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var stmt = btn.previousElementSibling;
+        if (!stmt) return;
+        var expanded = btn.getAttribute("aria-expanded") === "true";
+        stmt.classList.toggle("research-excerpt", expanded);
+        btn.setAttribute("aria-expanded", String(!expanded));
+        btn.textContent = expanded ? "…" : (isDe ? "Weniger" : "Less");
+      });
+    });
+    timelineHost.querySelectorAll(".research-timeline-strip-row").forEach(function(link) {
+      link.addEventListener("click", function(event) {
+        var href = link.getAttribute("href") || "";
+        if (!href.startsWith("#")) return;
+        var targetId = href.slice(1);
+        if (!document.getElementById(targetId)) {
+          limit = visible.length;
+          paint(false);
+          var target = document.getElementById(targetId);
+          if (target) {
+            event.preventDefault();
+            target.scrollIntoView({behavior: "smooth", block: "start"});
+          }
+        }
+      });
+    });
+  }
+  paint(false);
 }
 
 function researchRelationEndpoint(endpoint) {
@@ -11714,21 +11860,11 @@ async function refreshResearchClaimProjections() {
   if (request !== researchProjectionRead || !responses.every(function(data) {return acceptResearchContext(context, data);})) return;
   var timeline = responses[0], relations = responses[1];
   var datedRows = timeline.dated || [], unplacedRows = timeline.unplaced || [];
-  timelineHost.innerHTML = timeline.ok ?
-    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
-    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
-      ' <code>1912 · 1912-03 · 1912-05-01 · 1912–1914</code></p>' +
-    researchTimelineStrip(datedRows) +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + datedRows.length + ')</h3>' +
-    (datedRows.length ? '<ol class="research-timeline research-timeline-dated">' +
-      datedRows.map(researchTimelineEntry).join("") + '</ol>' :
-      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
-    (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
-      '<ol class="research-timeline research-timeline-unplaced">' +
-      unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
-      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>') :
-    '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  if (timeline.ok) {
+    researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows);
+  } else {
+    timelineHost.innerHTML = '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  }
   var callout = document.getElementById("r-timeline-callout");
   if (callout && timeline.ok) {
     callout.textContent = uiFormat("research_timeline_callout", {
