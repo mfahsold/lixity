@@ -157,7 +157,9 @@ server.serve_forever()
         const second = await context.newPage(); await second.goto(server.fixture.url + firstUrl);
         await openProjectActions(second); await second.locator('#btn-modal-open-project').click();
         await second.locator('#open-proj-path').fill(server.fixture.paths[1]);
-        await second.locator('#form-project-open button[type=submit]').click();
+        const openSubmit = second.locator('#btn-submit-open-project');
+        assert.equal(await openSubmit.getAttribute('form'), 'form-project-open');
+        await openSubmit.click();
         await second.waitForURL(url => url.pathname !== firstUrl && /^\/w\/[a-f0-9]{32}\/$/.test(url.pathname));
         assert.equal(await first.locator('#chapters').textContent(), sourceText, 'Opening another project cannot replace an existing tab');
         await first.reload(); assert.equal(await first.locator('#chapters').textContent(), sourceText);

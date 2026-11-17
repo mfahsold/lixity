@@ -140,6 +140,10 @@ and investigate reported bugs before changing behavior.
 
 - `AGENT_PROFILE.md` — delegated agent operating rules: verify before
   asserting, surgical diffs, explicit unknowns, escalation.
+- Local communication operations: the ignored `outreach/START-HERE.md` indexes
+  Postiz, publication references and metrics. Keep credentials, account data and
+  operational history outside shipped product files; connecting an account does
+  not authorize sending a post.
 - `CONTRIBUTING.md` — contributor checks, test architecture, release flow,
   migrations and PR checklist.
 - `docs/AGENTS.md` — the product's automation interface for AI agents and

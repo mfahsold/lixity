@@ -34,7 +34,7 @@ You have completed the first check when you can explain the contrast in the text
 
 **More controls, marks and chapter comparisons**
 
-Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading.
+Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading. On desktop, the passage return stays hidden while that passage is already visible.
 
 **In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation and count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
 

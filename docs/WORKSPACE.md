@@ -324,7 +324,8 @@ measurement** action inspects counted text; **Research for this passage** reads
 explicitly linked claims, sources and decisions. Switch between passage values,
 linked research and the chosen dossier explicitly. On mobile, a paragraph-to-tool
 action reveals the stacked tool heading; close or Escape returns to that passage
-and its control. Desktop tools occupy adjacent space.
+and its control. Desktop tools occupy adjacent space; the reader toolbar compacts
+to the available width when the context panel is open.
 
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
@@ -820,11 +821,14 @@ refreshing the summary reads existing records without saving or repinning them.
 
 When following a connection from the manuscript, **Back to passage** returns to
 the preserved origin while the project/source context still matches. The work
-thread groups this action with the originating chapter and lines. **Viewed version:**
+thread groups this action with the originating chapter and lines. On desktop,
+the passage return is hidden while its origin is visible and reappears when you
+leave it. The mobile return bar stays in place to avoid moving the prose.
+**Viewed version:**
 introduces the title and version of the claim or dossier you opened. Labels distinguish a pinned
 version from a current or viewed version; browsing history does not repin a
-record. Returning to the manuscript, or changing the project/source context,
-clears the thread.
+record. Using the return action, or changing the project/source context,
+clears the corresponding journey; simply viewing its origin does not discard it.
 Cited source
 quotations remain pinned retained passages; opening an ordinary source reader is
 not a new historical-source navigation contract.

@@ -27,7 +27,7 @@ dossier = api.create_dossier(project, title='Origin synthetic dossier', body=bod
 claim = api.create_claim(project, title='Synthetic linked claim', statement='Synthetic archive interpretation.', dossier_id=dossier['dossier_id'])
 api.link_evidence(project, claim_id=claim['claim_id'], passage_id=passage)
 manuscript = project / 'manuscript.md'
-manuscript.write_text('# Synthetic native manuscript\\n\\n## First chapter\\n\\nA bird crosses the quiet garden. Rain begins.\\n\\n## Second chapter\\n\\nA quiet house stands beyond the garden.\\n', encoding='utf-8')
+manuscript.write_text('# Synthetic native manuscript\\n\\n## First chapter\\n\\nA bird crosses the quiet garden. Rain begins.\\n\\n## Second chapter\\n\\nA quiet house stands beyond the garden.\\n\\n' + '\\n\\n'.join('Synthetic garden note %d. The rain reaches the distant trees.' % n for n in range(40)), encoding='utf-8')
 anchor = api.resolve_manuscript_anchor(project, manuscript, query='A bird crosses the quiet garden.')
 api.link_manuscript_claim(project, manuscript, claim['claim_id'], claim_revision=1,
     selection={key: anchor[key] for key in ('start_line','end_line','paragraph_sha256','start','end','quote')},
@@ -254,8 +254,30 @@ async function depart(page, control, tab) {
             await paragraph.locator('[data-manuscript-links-paragraph]').click();
             await expect(page.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
             await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
-            await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
-            await page.locator('#workbench-return').click();
+            // The requesting passage is still on screen: the desktop sidebar
+            // return is redundant. The in-flow mobile thread stays put.
+            if (width >= 1100) {
+              await expect(page.locator('#workbench-thread')).toBeHidden();
+              // Height-only resizing must refresh visibility without a scroll
+              // event or crossing the desktop/mobile breakpoint.
+              await page.setViewportSize({width, height: 120});
+              await expect(page.locator('#workbench-return')).toBeVisible();
+              await page.setViewportSize({width, height});
+              await expect(page.locator('#workbench-return')).toBeHidden();
+              const originScroll = await page.evaluate(() => window.scrollY);
+              await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+              await expect(page.locator('#workbench-return')).toBeVisible();
+              await page.evaluate(top => window.scrollTo(0, top), originScroll);
+              await expect(page.locator('#workbench-return')).toBeHidden();
+              await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+              await expect(page.locator('#workbench-return')).toBeVisible();
+              await page.locator('#workbench-return').click();
+              await expect(paragraph).toBeFocused();
+              await expect(page.locator('#workbench-thread')).toBeHidden();
+            } else {
+              await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
+              await page.locator('#workbench-return').click();
+            }
             // Create another passage journey, then detour through a companion dossier.
             await paragraph.locator('[data-manuscript-links-paragraph]').click();
             await page.locator('#tab-view-analysis').click();
@@ -265,10 +287,15 @@ async function depart(page, control, tab) {
             const companion = page.locator('#workspace-reader-body');
             await expect(companion.locator('.research-dossier-claims-list li')).toHaveCount(1);
             await depart(page, companion.locator('[data-manuscript-links-claim]'), 'review');
-            await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
+            // Back beside the dossier, the earlier passage is still on screen:
+            // the desktop sidebar return stays out of the way until the reader leaves it.
             await expect(page.locator('#workspace-reader-panel')).toBeVisible();
-            await page.locator('#workbench-return').click();
-            await expect(paragraph).toBeFocused();
+            if (width >= 1100) await expect(page.locator('#workbench-return')).toBeHidden();
+            else {
+              await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
+              await page.locator('#workbench-return').click();
+              await expect(paragraph).toBeFocused();
+            }
             await depart(page, companion.locator('[data-research-global=claims]'), 'claims');
             await expect(page.locator('#workspace-reader-dossier')).toHaveValue(fixture.dossier);
             await companion.locator('[data-research-global=decisions]').click();
@@ -285,6 +312,11 @@ async function depart(page, control, tab) {
             await expect(page.locator('#workbench-return')).toHaveText('Back to dossier');
             await assertReturnAvailable(page);
             await page.evaluate(() => document.getElementById('workspace-reader-body').replaceChildren());
+            if (width >= 1100) {
+              // The unused earlier passage journey remains the valid return.
+              await expect(page.locator('#workbench-return')).toHaveText('Back to passage');
+              await page.locator('#workbench-return').click();
+            }
             await expect(page.locator('#workbench-return')).toBeHidden();
           }
           await expect(page.locator('#workbench-thread')).toBeHidden();

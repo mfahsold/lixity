@@ -30,7 +30,7 @@ Eine vorläufige Notiz verortet die Öffnung einer Kiste am Kai. Ihre unterzeich
 
 Neutrale punktierte Markierungen und der Knopf mit Buchsymbol **Research** kennzeichnen gespeicherte Recherchebezüge. Durchgezogene Analyse-Unterstreichungen zeigen dagegen gezählte Textstellen. Recherchebezüge bleiben auch bei ausgeschalteter Analyse sichtbar.
 
-Am Eröffnungsabsatz führt **… → Explore passage → Research for this passage** zur gespeicherten Verbindung. Ein Titel öffnet den Eintrag; **Linked version** zeigt die genau verknüpfte frühere Fassung. **Back to passage** führt zum Text zurück. **Dossier alongside** hält das Dossier neben dem Manuskript geöffnet.
+Am Eröffnungsabsatz führt **… → Explore passage → Research for this passage** zur gespeicherten Verbindung. Ein Titel öffnet den Eintrag; **Linked version** zeigt die genau verknüpfte frühere Fassung. **Back to passage** führt zum Text zurück. Am Desktop bleibt diese Rückkehr ausgeblendet, solange die Textstelle bereits sichtbar ist. **Dossier alongside** hält das Dossier neben dem Manuskript geöffnet.
 
 Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. Eine gespeicherte Verbindung ist keine automatische Faktenprüfung; auch die historischen Bilder beweisen die erfundenen Ereignisse nicht.
 

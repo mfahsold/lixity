@@ -42,6 +42,10 @@ Use `node tests/browser/reader-toolbar.cjs --firefox` for the same checks in Fir
 `teleprompter-scroll.cjs` checks long-paragraph selection, chapter synchronization
 and continuous automatic scrolling.
 
+`dossier-return.cjs` checks exact dossier/passage returns and retained drafts at
+desktop/mobile sizes. It also checks that the desktop return follows passage
+visibility on scrolling and viewport resizing, while the mobile bar stays stable.
+
 `teleprompter-context.cjs` checks lazy, project-bound context loading and clearing
 previous speech context on reopening without audio capability.
 

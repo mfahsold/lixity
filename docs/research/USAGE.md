@@ -718,6 +718,10 @@ and the view names the recognized formats and how to place a claim. Every period
 label is preserved and the record's creation date is never substituted. Opening
 or filtering the timeline changes no archive records or index.
 
+The overview strip starts collapsed for more than twelve dated claims. Era
+filters narrow the same list, and **Show more** reveals additional cards. Long
+statements have an explicit expand/collapse control; the saved text is unchanged.
+
 The chronology places valid four-digit CE years (`0001`–`9999`), ISO months
 (`YYYY-MM`), ISO calendar dates (`YYYY-MM-DD`) and ranges whose endpoints have the
 same precision, for example `1912`, `1912-03`, `1912–1914`, `1912-05-01` and

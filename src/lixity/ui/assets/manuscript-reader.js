@@ -34,6 +34,7 @@
     threadHeight();
   }
   sidebar.addEventListener("change", placeThread);
+  sidebar.addEventListener("change", function() { update(); });
   if (typeof ResizeObserver === "function") new ResizeObserver(threadHeight).observe(thread);
   placeThread();
   var passage = null, dossier = null, pendingDossier = null, returnSerial = 0;
@@ -51,7 +52,11 @@
     if (dossier && !current(dossier)) dossier = null;
     if (pendingDossier && !current(pendingDossier)) pendingDossier = null;
     if (passage && !passage.valid()) passage = null;
-    thread.hidden = button.hidden = !dossier && !passage;
+    // A passage return is redundant while that passage is already in view.
+    // Only the desktop sidebar thread hides: the mobile thread is in-flow and
+    // toggling it while reading would shift the prose.
+    var atOrigin = !dossier && passage && sidebar.matches && typeof passage.atOrigin === "function" && passage.atOrigin();
+    thread.hidden = button.hidden = (!dossier && !passage) || Boolean(atOrigin);
     text(button, uiLabel(dossier ? "reading_back_dossier" : "reading_back"));
     text(originText, dossier ? uiFormat("reading_dossier_origin", {title: dossier.reading.title, revision: dossier.reading.revision}) : passage ? passage.description : "");
     threadHeight();
@@ -83,6 +88,15 @@
   var dialog = document.getElementById("modal-research-revision");
   if (dialog) dialog.addEventListener("close", function() { if (!dialog.open) pendingDossier = null; });
   document.addEventListener("lixity:workbench-change", update);
+  // The desktop thread lives in the sidebar, so revealing it after the reader
+  // scrolls away from the passage never shifts the prose.
+  var visibilityFrame = null;
+  function refreshPassageVisibility() {
+    if (!passage || dossier || !sidebar.matches || visibilityFrame !== null) return;
+    visibilityFrame = requestAnimationFrame(function() { visibilityFrame = null; update(); });
+  }
+  window.addEventListener("scrollend", refreshPassageVisibility, {passive: true});
+  window.addEventListener("resize", refreshPassageVisibility, {passive: true});
   new MutationObserver(function(records) {
     if (!dossier && !pendingDossier && !passage) {
       var hasAttr = false;
@@ -1378,7 +1392,14 @@
       offsets = {anchor: from, focus: prefix.toString().length};
     }
     origin = {anchor: anchor, offsets: offsets, state: workbench.state(), hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
-    readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage});
+    var originPanel = anchor.panel;
+    readingThread.rememberPassage({description: passageContext(anchor.panel), valid: validOrigin, restore: returnToPassage,
+      atOrigin: function() {
+        var state = workbench.state();
+        if (state.view !== "analysis" || state.surface !== "document" || !originPanel.isConnected) return false;
+        var rect = originPanel.getBoundingClientRect();
+        return rect.height > 0 && rect.bottom > readingViewportTop() && rect.top < innerHeight;
+      }});
   }
   window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, captureForRestore: captureForRestore, restore: restore, retain: retain,
     cancelRestore: function() { ++passageNavigationRevision; pendingDockAnchor = null; clampedAnchor = null; },

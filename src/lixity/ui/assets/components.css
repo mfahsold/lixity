@@ -55,7 +55,8 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 /* --- Focus & anchors (keyboard accessibility) -------------------------- */
 :where(a, button, select, input, textarea, summary, .chip, .help, .table-wrap, [role="button"]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-xs); }
 .chapter, .ptext, .panel, section[id] { scroll-margin-top: 4.5rem; }
-/* --- Skip link (keyboard accessibility) ------------------------------- */
+/* --- Skip link & screen-reader utility (accessibility) ---------------- */
+.sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important; }
 .skip-link { position: absolute; left: -9999px; top: 0; z-index: 1000; padding: 0.5rem 1rem; background: var(--accent); color: var(--bg); border-radius: var(--radius-sm); font-weight: var(--weight-strong); }
 .skip-link:focus { left: 1rem; top: 1rem; }
 /* --- Register badge (intentional style register) ----------------------- */

@@ -9,6 +9,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Keep passage research compact with nested claim cards and a smaller linked-version action. The desktop return control stays hidden while its origin passage is visible and becomes available after leaving it; the mobile return bar keeps its place to avoid shifting the prose. Reader tools compact when an open context panel reduces their available width.
+- Dismiss contextual help when activating a native disclosure, so its hint does not intercept the next Escape intended to close the opened settings.
 - **Statistical & changepoint core (`math_core.py`, `diversity.py`, `pacing.py`, `analyzer.py`, `style_fingerprint.py`)**:
   - Added Jeffreys continuity-adjusted standard errors (`binomial_se_percent`, `poisson_se_per_mille`), sample-SD `asl` SE, `split_mad()`, `medcouple()`, `adjusted_boxplot_fences()`, `mad_finite_sample_factor()`, and `huber_location()`.
   - Fixed `yules_k` finite-sample denominator (`n * (n - 1)`), added `DEFAULT_MTLD_MIN_FACTOR_LEN = 5` minimum-run guard in `mtld`, and added Goh-Barabási finite-sample `burstiness()` to `pacing.py` (`compute_rhythm_profile`).

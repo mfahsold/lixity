@@ -395,7 +395,7 @@
 
   function isActionControl(target) {
     if (!target || !target.closest) return false;
-    var action = target.closest("button, a, [role=button], input[type=button], input[type=submit], input[type=checkbox], input[type=radio], select, label[for], label:has(input, select)");
+    var action = target.closest("button, a, summary, [role=button], input[type=button], input[type=submit], input[type=checkbox], input[type=radio], select, label[for], label:has(input, select)");
     var trigger = target.closest(HELP_TRIGGER_SELECTOR);
     if (!action) return false;
     if (trigger && trigger.matches(".help[data-help]") && !trigger.closest("button, a")) return false;

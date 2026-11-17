@@ -38,6 +38,7 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
         <button id="menu-owner" type="button" aria-haspopup="menu" aria-controls="owned-menu" aria-expanded="true" data-help="Menu explanation." style="position:fixed;top:600px;left:20px">Menu</button>
         <div id="owned-menu" role="menu" style="position:fixed;top:650px;left:20px"><button id="owned-menu-action" role="menuitem">Menu action</button></div>
         <details id="composer"><summary id="help" data-help="${explanation}" aria-describedby="hint">Create dossier</summary></details>
+        <details id="appearance" style="position:fixed;top:720px;left:20px"><summary id="appearance-action" data-help="Appearance settings.">Appearance</summary></details>
         <span id="hint" hidden>Preserved description</span>
         <div id="scroll-panel" style="position:fixed;top:350px;left:20px;height:80px;overflow:auto">
           <button id="scroll-help" data-help="Nested scrolling help">Help</button><div style="height:400px"></div>
@@ -51,6 +52,9 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
           window.navigationClicks=0;document.querySelector('#navigation').addEventListener('click',()=>window.navigationClicks++);
           window.plainEscapes=0;document.querySelector('#plain-one').addEventListener('keydown',event=>{if(event.key==='Escape')window.plainEscapes++});
           window.menuEscapes=0;document.querySelector('#owned-menu').addEventListener('keydown',event=>{if(event.key==='Escape')window.menuEscapes++});
+          document.querySelector('#appearance-action').addEventListener('click',()=>{
+            window.appearanceHelpAtActivation=document.querySelector('#lixity-tooltip').getAttribute('aria-hidden');
+          });
           document.querySelector('#modal').addEventListener('keydown',event=>{
             if(event.key==='Escape'&&event.target.id==='modal-input')event.currentTarget.close();
           });
@@ -62,6 +66,13 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       const help = page.locator('#help');
       const tip = page.locator('#lixity-tooltip');
       const copy = tip.locator('.tooltip-copy');
+
+      await page.locator('#appearance-action').focus();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await page.locator('#appearance-action').click();
+      assert.equal(await page.evaluate(() => window.appearanceHelpAtActivation), 'true',
+        'Activating a native disclosure dismisses help before its action receives the click');
+      await page.locator('#appearance-action').click();
 
       await page.locator('#scroll-help').focus();
       await expect(copy).toHaveText('Nested scrolling help');
@@ -124,6 +135,16 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
         'Showing or dismissing help must preserve the native disclosure');
 
       await page.locator('#plain-one').focus();
+      await help.focus();
+      await expect(tip).toHaveAttribute('aria-hidden', 'false');
+      await help.click();
+      await expect(page.locator('#composer')).toHaveAttribute('open', '');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      await help.click();
+      await expect(page.locator('#composer')).not.toHaveAttribute('open');
+
+      await page.locator('#plain-one').focus();
+      await page.mouse.move(0, 0);
       await help.hover();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');
       await page.keyboard.press('Escape');

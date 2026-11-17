@@ -569,6 +569,16 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .reader-control-label { display: none; }
   .reader-compact-control { min-width: 2.5rem; }
 }
+/* An open context dock narrows the reader: keep every tool on one row
+   (including the dock toggle) by capping the chapter picker and gaps. */
+@container reader-tools (max-width: 62rem) {
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 9rem; min-width: 6rem; max-width: 9rem; }
+  .manuscript-reader-controls .reader-controls,
+  .manuscript-reader-controls .reader-analysis-toggle-controls { gap: .15rem; }
+  .manuscript-reader-controls > button.ctl,
+  .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
+  .manuscript-reader-controls .reader-controls > button.ctl { padding-inline: .35rem; }
+}
 body.lixity-workspace.reader-focus {
   --bg: light-dark(#e9edf4, #080c13);
   --surface: light-dark(#fff, #111824);
