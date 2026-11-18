@@ -140,7 +140,7 @@ def test_settings_reject_empty_selection_and_validate_complete_round_trip():
 def test_default_qwen_language_is_explicit(language):
     profile = parse_audio_settings(None, language=language).profiles["narrator"]
     assert profile.language == language and profile.engine == "qwen3"
-    assert profile.voice == "Ryan" and profile.speed == 1.2
+    assert profile.voice == "Ryan" and profile.speed == 1.1
 
 
 def test_unsupported_default_language_does_not_silently_select_english():

@@ -18,7 +18,7 @@ def test_existing_audio_profiles_keep_their_speed_and_new_default_is_faster():
     old = {"selected": "narrator", "profiles": {"narrator": {
         "engine": "qwen3", "language": "de", "voice": "Ryan", "speed": 1.0}}}
     assert parse_audio_settings(old).profiles["narrator"].speed == 1.0
-    assert parse_audio_settings(None, language="de").profiles["narrator"].speed == 1.2
+    assert parse_audio_settings(None, language="de").profiles["narrator"].speed == 1.1
     old["profiles"]["narrator"].pop("speed")
     assert parse_audio_settings(old).profiles["narrator"].speed == 1.0
     assert AudioProfile(speed=1.2).speed == 1.2
@@ -123,6 +123,24 @@ def test_speed_requires_ffmpeg_before_synthesis_and_keeps_old_output(tmp_path, m
         render_speech_audio(source, output, profile=AudioProfile(speed=1.2))
     assert not calls
     assert output.read_bytes() == b"prior"
+
+
+def test_zonos_speed_is_applied_inside_model_without_ffmpeg(tmp_path, monkeypatch):
+    from lixity.speech import generate_silence_wav
+
+    source = tmp_path / "source.md"
+    source.write_text("A synthetic passage.")
+    profile = AudioProfile(engine="mlx-audio", language="de", speed=1.1)
+    monkeypatch.setattr("lixity.speech.shutil.which", lambda _name: None)
+    calls = []
+
+    def synthesize(text, selected, **_kwargs):
+        calls.append((text, selected.speed))
+        return generate_silence_wav(1)
+
+    monkeypatch.setattr("lixity.speech_providers.synthesize_external", synthesize)
+    render_speech_audio(source, tmp_path / "out.wav", profile=profile)
+    assert calls and all(speed == 1.1 for _text, speed in calls)
 
 
 def test_tempo_filter_failure_keeps_existing_output(tmp_path, monkeypatch):

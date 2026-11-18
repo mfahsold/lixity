@@ -96,7 +96,9 @@ def references_for_plan(project: str | Path, plan: list[SpeechSegment]) -> dict[
     from .speech_engines import native_engine
 
     ids = {row.profile.reference_id for row in plan if row.text
-           and row.profile.engine not in EXTERNAL_ENGINES and native_engine(row.profile.engine).reference_required}
+           and ((row.profile.engine not in EXTERNAL_ENGINES
+                 and native_engine(row.profile.engine).reference_required)
+                or (row.profile.engine == "mlx-audio" and row.profile.voice == "reference"))}
     return {reference_id: load_reference(project, reference_id) for reference_id in sorted(ids)}
 
 

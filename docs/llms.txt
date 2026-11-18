@@ -233,7 +233,7 @@ spoken-form substitutions, model-interpreted direction and explicit silence;
 native phonemes, native SSML rendering and precise model rate are not implemented.
 Version 0.7.7 can apply a 0.5–2.0 FFmpeg tempo factor to synthesized speech,
 without changing explicit pauses or cached raw audio. `read-aloud --speed`
-overrides all profile rates for one run. New implicit profiles default to 1.2;
+overrides all profile rates for one run. New implicit profiles default to 1.1;
 existing saved values and omitted legacy speed remain unchanged. Non-1.0
 speed requires FFmpeg on the Lixity host.
 

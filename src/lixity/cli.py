@@ -1756,6 +1756,8 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
             changes["voice"] = "design"
         if args.engine in NATIVE_ENGINES and native_engine(args.engine).reference_required and args.voice is None:
             changes["voice"] = "reference"
+        if args.engine == "mlx-audio" and args.reference_id and args.voice is None:
+            changes["voice"] = "reference"
         if args.engine in ("coqui", "coqui-reference") and args.voice is None:
             changes["voice"] = "reference" if args.engine == "coqui-reference" else "thorsten"
         if args.engine and args.engine != "qwen3-design" and previous_engine == "qwen3-design" and args.voice_description is None:
@@ -1771,13 +1773,17 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         if (args.engine == "openai-compatible" and previous_engine not in EXTERNAL_ENGINES
                 and args.voice is None):
             raise ValueError("Choose an explicit --voice identifier supported by the external provider")
-        reference_engine = changes["engine"] in NATIVE_ENGINES and native_engine(changes["engine"]).reference_required
+        reference_engine = ((changes["engine"] in NATIVE_ENGINES
+                             and native_engine(changes["engine"]).reference_required)
+                            or (changes["engine"] == "mlx-audio"
+                                and changes.get("voice") == "reference"))
         if not reference_engine and args.reference_id:
             raise ValueError(_m("audio_reference_wrong_engine"))
         if reference_engine:
             if not changes.get("reference_id"):
                 raise ValueError(_m("audio_base_reference_required"))
-            if changes.get("instructions") and changes["engine"] != "ims-toucan":
+            if (changes.get("instructions")
+                    and changes["engine"] not in ("ims-toucan", "mlx-audio")):
                 raise ValueError(_m("audio_base_instructions_inherited" if args.instructions is None
                                     else "audio_base_instructions_explicit"))
         if changes["engine"] == "qwen3-design" and not changes.get("voice_description"):

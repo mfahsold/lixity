@@ -237,10 +237,13 @@ uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python
 MLX-Audio and its model weights are optional and are not installed by Lixity.
 The first selected model can require an explicit download and substantial memory;
 16 GB unified memory is not a guarantee that every model fits. The recommended
-small German TTS path uses
-`mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit`; the recommended STT path uses
-`mlx-community/parakeet-tdt-0.6b-v3`. Kokoro is useful for English but is not the
-German default. Model and voice licenses remain separate from MLX-Audio's license.
+local German TTS path uses `mlx-community/ZONOS3-Mini` with fixed `liesel` voice
+or an explicitly saved project reference. Lixity runs this TTS checkpoint in a
+short-lived worker inside the isolated MLX environment because the tested 0.6.6
+HTTP broker produced silent ZONOS3 WAV files. The recommended STT path continues
+to use the running service and `mlx-community/parakeet-tdt-0.6b-v3`. Kokoro is
+useful for English but is not the German default. Model and voice licenses remain
+separate from MLX-Audio's license.
 
 Existing settings require the reviewed `audio-migrate --to-schema-4` workflow
 before saving an external profile. Keep its backup and use a compatible reader;

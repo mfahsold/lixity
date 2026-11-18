@@ -273,7 +273,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         (
             'Native rendering requires a separately installed matching worker; an explicit external '
             'profile sends speech text to its configured provider. FFmpeg is required for MP3 and tempo '
-            'other than 1.0. New default profiles use speed 1.2. Invocations do not save profile '
+            'other than 1.0. New default profiles use speed 1.1. Invocations do not save profile '
             'overrides. Rendering normally reads/writes private segment cache; previews bypass it. '
             'Explicit --project plus --chapter retains completed WAV audio in .lixity/audio/exports/. '
             'Plan/export modes make no synthesis request and need no worker.'

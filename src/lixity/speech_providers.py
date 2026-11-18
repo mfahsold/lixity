@@ -10,6 +10,7 @@ import ipaddress
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import urllib.error
 import urllib.parse
@@ -20,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .speech_profiles import AudioProfile
+    from .speech_references import SpeechReference
 
 ADAPTER_ID = "lixity-openai-speech/1"
 MAX_REQUEST_BYTES = 32768
@@ -126,22 +128,85 @@ def _normalize_wav(data: bytes) -> bytes:
         return normalized
 
 
-def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None) -> bytes:
+def external_speech_request(text: str, profile: AudioProfile) -> dict[str, str | float]:
+    """Build the adapter-specific speech JSON from one validated profile."""
+    from .speech_profiles import MLX_AUDIO_DEFAULT_VOICE, MLX_AUDIO_TEMPERATURE
+
+    request_data: dict[str, str | float] = {
+        "model": profile.model, "input": text, "response_format": "wav",
+    }
+    if profile.engine == "mlx-audio":
+        if profile.voice not in (MLX_AUDIO_DEFAULT_VOICE, "reference"):
+            request_data["voice"] = profile.voice
+        request_data["lang_code"] = profile.language
+        request_data["speed"] = profile.speed
+        request_data["temperature"] = MLX_AUDIO_TEMPERATURE
+        return request_data
+    request_data["voice"] = profile.voice
+    if profile.instructions:
+        request_data["instructions"] = profile.instructions
+    return request_data
+
+
+def _uses_zonos_direct_worker(profile: AudioProfile) -> bool:
+    from .speech_profiles import MLX_AUDIO_BASE_URL, MLX_AUDIO_TTS_MODEL
+
+    return (profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL
+            and speech_endpoint(profile.base_url) == speech_endpoint(MLX_AUDIO_BASE_URL))
+
+
+def _synthesize_zonos_direct(text: str, profile: AudioProfile,
+                             reference: SpeechReference | None) -> bytes:
+    from .speech_references import validate_reference
+
+    runtime = Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python"
+    if not runtime.is_file():
+        raise FileNotFoundError("The local MLX-Audio runtime is required for ZONOS3")
+    if profile.voice == "reference":
+        if reference is None or reference.id != profile.reference_id:
+            raise ValueError("A verified reference is required for the selected ZONOS3 voice")
+        validate_reference(reference)
+    elif reference is not None:
+        raise ValueError("A preset ZONOS3 voice cannot use a local reference")
+    request_data = external_speech_request(text, profile)
+    with tempfile.TemporaryDirectory(prefix="lixity-zonos-") as directory:
+        output = Path(directory) / "speech.wav"
+        worker_request = dict(request_data)
+        worker_request.pop("response_format", None)
+        worker_request["output_path"] = str(output)
+        if reference is not None:
+            reference_path = Path(directory) / "reference.wav"
+            reference_path.write_bytes(reference.audio)
+            worker_request["ref_audio"] = str(reference_path)
+        result = subprocess.run(  # noqa: S603 - fixed isolated runtime and package worker
+            [str(runtime), str(Path(__file__).with_name("speech_mlx_zonos.py"))],
+            input=json.dumps(worker_request, ensure_ascii=False).encode("utf-8"),
+            capture_output=True, timeout=REQUEST_TIMEOUT_SECONDS, check=False,
+        )
+        if result.returncode != 0 or not output.is_file():
+            raise RuntimeError("Local ZONOS3 synthesis failed")
+        with output.open("rb") as stream:
+            data = stream.read(MAX_RESPONSE_BYTES + 1)
+    if not 44 < len(data) <= MAX_RESPONSE_BYTES:
+        raise ValueError("Local ZONOS3 audio is empty or exceeds the byte limit")
+    return data
+
+
+def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None,
+                        reference: SpeechReference | None = None) -> bytes:
     """Send one explicit bounded request and return normalized PCM, without fallback."""
     from .speech import MAX_SEGMENT_CHARS
-    from .speech_profiles import EXTERNAL_ENGINES, QWEN_LANGUAGES, AudioProfile
+    from .speech_profiles import EXTERNAL_ENGINES, AudioProfile
 
     profile = AudioProfile.model_validate(profile.model_dump())
     if profile.engine not in EXTERNAL_ENGINES or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
         raise ValueError("Invalid external speech synthesis request")
+    if _uses_zonos_direct_worker(profile):
+        return _normalize_wav(_synthesize_zonos_direct(text, profile, reference))
+    if profile.engine == "mlx-audio" and profile.voice == "reference":
+        raise ValueError("ZONOS3 reference voices require the default local MLX worker binding")
     endpoint = speech_endpoint(profile.base_url)
-    request_data = {"model": profile.model, "input": text, "voice": profile.voice, "response_format": "wav"}
-    if profile.engine == "mlx-audio":
-        request_data["lang_code"] = QWEN_LANGUAGES[profile.language]
-        if profile.instructions:
-            request_data["instruct"] = profile.instructions
-    elif profile.instructions:
-        request_data["instructions"] = profile.instructions
+    request_data = external_speech_request(text, profile)
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
     if len(payload) > MAX_REQUEST_BYTES:
         raise ValueError("External speech request exceeds the byte limit")

@@ -13,9 +13,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   compact review disclosures and paginated dossier lists. Dossier cards retain
   details and actions while limiting long excerpts, tags and section previews.
 - Add an explicit `mlx-audio` speech profile for Apple Silicon and a bounded
-  `audio-transcribe` command. The recommended local defaults use an 8-bit
-  Qwen3-TTS 0.6B model for German synthesis and Parakeet TDT v3 for transcription;
-  MLX-Audio remains an optional Python 3.11+ service outside Lixity's core dependencies.
+  `audio-transcribe` command. German TTS uses the local ZONOS3-Mini worker with
+  a fixed `liesel` voice or an explicit, hash-bound project reference, and applies
+  speed as a model condition rather than FFmpeg postprocessing. Speech recognition
+  uses Parakeet TDT v3. MLX-Audio remains optional and outside Lixity's core dependencies.
 - Run source, browser and platform release checks concurrently. Use four
   pytest workers on Linux CI, and balance full browser shards with measured
   suite timings while keeping the publication checks on the tagged commit.

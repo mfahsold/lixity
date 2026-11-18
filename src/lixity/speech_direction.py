@@ -83,7 +83,8 @@ def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
     if narrator.engine == 'qwen3-design':
         return narrator.voice_description == delivery.voice_description
     if narrator.engine in EXTERNAL_ENGINES:
-        return (narrator.base_url, narrator.model, narrator.voice) == (delivery.base_url, delivery.model, delivery.voice)
+        return (narrator.base_url, narrator.model, narrator.voice, narrator.reference_id) == (
+            delivery.base_url, delivery.model, delivery.voice, delivery.reference_id)
     return narrator.voice == delivery.voice
 
 
@@ -272,7 +273,9 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
         chunks: list[tuple[str, AudioProfile, float, float | None, Direction | None, str]] = []
         for d in records:
             if cursor < d.start:
-                chunks.append((cue.text[cursor:d.start], profile, 0.0, None, None, profile.instructions))
+                gap = cue.text[cursor:d.start]
+                if gap.strip():
+                    chunks.append((gap, profile, 0.0, None, None, profile.instructions))
             selected = (profiles or {}).get(d.profile_id) if d.profile_id else profile
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
@@ -351,12 +354,14 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
 
 def segment_speech_text(text: str, profile: AudioProfile) -> list[str]:
-    """Keep phonetic rules intact while preserving established plain-text plans."""
-    from .speech import MAX_SEGMENT_CHARS, _speech_segments
+    """Keep phonetic rules intact while respecting adapter fragment limits."""
+    from .speech import _speech_segments
+    from .speech_profiles import speech_segment_limit
 
+    maximum = speech_segment_limit(profile)
     if profile.phonemes:
-        return phonetic_segments(text, profile.phonemes, maximum=MAX_SEGMENT_CHARS) or ['']
-    return _speech_segments(text, profile.language) or ['']
+        return phonetic_segments(text, profile.phonemes, maximum=maximum) or ['']
+    return _speech_segments(text, profile.language, maximum=maximum) or ['']
 
 
 def has_extended_controls(row: SpeechSegment) -> bool:

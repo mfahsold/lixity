@@ -156,8 +156,8 @@ def _is_cjk(character: str) -> bool:
             "\uf900" <= character <= "\ufaff" or "\U00020000" <= character <= "\U000323af")
 
 
-def _speech_segments(text: str, language: str = "en") -> list[str]:
-    """Pack sentences within the transport bound, splitting long ones at words.
+def _speech_segments(text: str, language: str = "en", *, maximum: int = MAX_SEGMENT_CHARS) -> list[str]:
+    """Pack sentences within an explicit fragment bound, splitting at words.
 
     This is transport segmentation, not linguistic word segmentation. Preserve
     CJK and mixed-script text exactly; Latin tokens still remain indivisible.
@@ -166,11 +166,11 @@ def _speech_segments(text: str, language: str = "en") -> list[str]:
         segments = []
         pending = ""
         for sentence in split_sentences(text, language):
-            for piece in textwrap.wrap(sentence, MAX_SEGMENT_CHARS, break_long_words=False,
+            for piece in textwrap.wrap(sentence, maximum, break_long_words=False,
                                        break_on_hyphens=False):
-                if len(piece) > MAX_SEGMENT_CHARS:
+                if len(piece) > maximum:
                     raise ValueError("A word exceeds the speech segment limit; its spelling was not changed")
-                if pending and len(pending) + len(piece) + 1 > MAX_SEGMENT_CHARS:
+                if pending and len(pending) + len(piece) + 1 > maximum:
                     segments.append(pending)
                     pending = ""
                 pending = (pending + " " + piece).strip()
@@ -178,10 +178,10 @@ def _speech_segments(text: str, language: str = "en") -> list[str]:
             segments.append(pending)
         return segments
     pieces = []
-    while len(text) > MAX_SEGMENT_CHARS:
+    while len(text) > maximum:
         boundaries = []
         sentences = []
-        for index in range(1, MAX_SEGMENT_CHARS + 1):
+        for index in range(1, maximum + 1):
             previous, following = text[index - 1], text[index]
             if unicodedata.category(following).startswith("M") or following in ("\u200d", "\ufe0f"):
                 continue
@@ -409,13 +409,18 @@ def render_speech_audio(
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
     for reference_id in {cue.profile.reference_id for cue in cues
-                         if cue.text and cue.profile.engine not in EXTERNAL_ENGINES
-                         and native_engine(cue.profile.engine).reference_required}:
+                         if cue.text and ((cue.profile.engine not in EXTERNAL_ENGINES
+                                           and native_engine(cue.profile.engine).reference_required)
+                                          or (cue.profile.engine == "mlx-audio"
+                                              and cue.profile.voice == "reference"))}:
         reference = (references or {}).get(reference_id)
         if reference is None or reference.id != reference_id:
             raise ValueError("A verified reference is required for every reference voice profile")
         validate_reference(reference)
-    needs_tempo = any(cue.text and cue.profile.speed != 1.0 for cue in cues)
+    from .speech_profiles import mlx_audio_uses_model_speed
+
+    needs_tempo = any(cue.text and cue.profile.speed != 1.0
+                      and not mlx_audio_uses_model_speed(cue.profile) for cue in cues)
     ffmpeg = shutil.which("ffmpeg") if output.suffix.lower() == ".mp3" or needs_tempo else None
     if not ffmpeg and needs_tempo:
         raise FileNotFoundError("FFmpeg is required for audio speed adjustment; install FFmpeg or set speed to 1.0")
@@ -497,7 +502,9 @@ def render_speech_audio(
                         if effective.engine in EXTERNAL_ENGINES:
                             from .speech_providers import synthesize_external
 
-                            data = synthesize_external(cue.text, effective)
+                            reference = ((references or {}).get(effective.reference_id)
+                                         if effective.voice == "reference" else None)
+                            data = synthesize_external(cue.text, effective, reference=reference)
                         elif effective.engine == "f5-tts":
                             from .speech_f5 import synthesize_f5
 
@@ -522,7 +529,7 @@ def render_speech_audio(
                     else:
                         params, frames = _read_pcm(data)
                     _check_cancelled(cancelled)
-                    if effective.speed != 1.0:
+                    if effective.speed != 1.0 and not mlx_audio_uses_model_speed(effective):
                         # Cache the unmodified model audio. Processing each spoken
                         # segment leaves explicit pauses and per-profile rates intact.
                         tempo_source = Path(directory) / "tempo-source.wav"

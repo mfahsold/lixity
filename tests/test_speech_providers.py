@@ -116,21 +116,20 @@ def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatc
     assert audio_capabilities()['openai-compatible']['instructions'] is False
 
 
-def test_mlx_audio_request_uses_language_and_delivery_fields():
+def test_mlx_audio_request_uses_language_model_speed_and_temperature():
     from lixity.speech_profiles import MLX_AUDIO_TTS_MODEL
     from lixity.speech_providers import synthesize_external
 
     with provider() as (url, records):
-        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de',
-                                instructions='Ruhig lesen.')
+        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de')
         synthesize_external('Synthetischer Text.', selected)
     assert records[0][2] == {
         'model': MLX_AUDIO_TTS_MODEL,
         'input': 'Synthetischer Text.',
-        'voice': 'Ryan',
         'response_format': 'wav',
-        'lang_code': 'German',
-        'instruct': 'Ruhig lesen.',
+        'lang_code': 'de',
+        'speed': 1.1,
+        'temperature': 0.0,
     }
 
 
@@ -141,8 +140,27 @@ def test_mlx_audio_render_dispatches_through_the_shared_pipeline(tmp_path):
         selected = AudioProfile(engine='mlx-audio', base_url=url, language='de', speed=1.0)
         render_speech_audio(source, output, profile=selected)
     assert output.is_file()
-    assert records[0][2]['lang_code'] == 'German'
+    assert records[0][2]['lang_code'] == 'de'
     assert _read_pcm(output.read_bytes())[0] == (1, 2, 24000)
+
+
+def test_local_zonos_dispatches_reference_through_private_worker(monkeypatch):
+    from lixity.speech_providers import synthesize_external
+    from lixity.speech_references import SpeechReference
+
+    reference = SpeechReference('a' * 64, generate_silence_wav(1), 'Synthetic reference.')
+    selected = AudioProfile(engine='mlx-audio', language='de', voice='reference',
+                            reference_id=reference.id)
+    observed = []
+
+    def synthesize(text, profile, bound_reference):
+        observed.append((text, profile, bound_reference))
+        return generate_silence_wav(1)
+
+    monkeypatch.setattr('lixity.speech_providers._synthesize_zonos_direct', synthesize)
+    audio = synthesize_external('Synthetic text.', selected, reference=reference)
+    assert observed == [('Synthetic text.', selected, reference)]
+    assert _read_pcm(audio)[0] == (1, 2, 24000)
 
 
 def test_render_dispatches_multiple_external_models_and_reuses_distinct_cache(tmp_path):

@@ -48,8 +48,14 @@ QWEN_LANGUAGES = {
 QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee")
 EXTERNAL_ENGINES = ("openai-compatible", "mlx-audio")
 MLX_AUDIO_BASE_URL = "http://127.0.0.1:8000/v1"
-MLX_AUDIO_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit"
-DEFAULT_PLAYBACK_SPEED = 1.2
+MLX_AUDIO_TTS_MODEL = "mlx-community/ZONOS3-Mini"
+MLX_AUDIO_DEFAULT_VOICE = "liesel"
+MLX_AUDIO_LANGUAGES = ("zh", "en", "de", "es", "fr", "ko", "ja")
+MLX_AUDIO_MING_SEGMENT_CHARS = 220
+MLX_AUDIO_ZONOS_SEGMENT_CHARS = 220
+MLX_AUDIO_TEMPERATURE = 0.0
+MLX_AUDIO_DEFAULT_MODEL_SPEED = 1.1
+DEFAULT_PLAYBACK_SPEED = 1.1
 MIN_PLAYBACK_SPEED = 0.5
 MAX_PLAYBACK_SPEED = 2.0
 _PROFILE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
@@ -58,6 +64,33 @@ _REMOVED_ENGINE = ("Piper audio profiles are no longer supported. Make a backup 
                    "Use audio-migrate --project PATH --replace PROFILE=VOICE to review the migration.")
 PronunciationMap = dict[Annotated[str, Field(min_length=1, max_length=100)],
                         Annotated[str, Field(min_length=1, max_length=300)]]
+
+
+def speech_segment_limit(profile: AudioProfile) -> int:
+    """Return an adapter-specific fragment bound, below the transport maximum."""
+    from .speech import MAX_SEGMENT_CHARS
+
+    if profile.engine == "mlx-audio" and profile.model.startswith("mlx-community/Ming-"):
+        return MLX_AUDIO_MING_SEGMENT_CHARS
+    if profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL:
+        return MLX_AUDIO_ZONOS_SEGMENT_CHARS
+    return MAX_SEGMENT_CHARS
+
+
+def mlx_audio_profile_defaults(language: str) -> dict[str, str | float]:
+    """Return one owner for implicit MLX-Audio profile values."""
+    defaults: dict[str, str | float] = {
+        "base_url": MLX_AUDIO_BASE_URL,
+        "model": MLX_AUDIO_TTS_MODEL,
+        "voice": MLX_AUDIO_DEFAULT_VOICE,
+        "speed": MLX_AUDIO_DEFAULT_MODEL_SPEED,
+    }
+    return defaults
+
+
+def mlx_audio_uses_model_speed(profile: AudioProfile) -> bool:
+    """Return whether this MLX model applies speed inside generation."""
+    return profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL
 
 
 def _text(value: str, *, empty: bool = False) -> str:
@@ -140,9 +173,8 @@ class AudioProfile(BaseModel):
             raise ValueError(_REMOVED_ENGINE)
         if isinstance(raw, Mapping) and raw.get("engine") == "mlx-audio":
             raw = dict(raw)
-            raw.setdefault("base_url", MLX_AUDIO_BASE_URL)
-            raw.setdefault("model", MLX_AUDIO_TTS_MODEL)
-            raw.setdefault("voice", "Ryan")
+            for key, value in mlx_audio_profile_defaults(str(raw.get("language", ""))).items():
+                raw.setdefault(key, value)
         if (isinstance(raw, Mapping) and raw.get("engine") in EXTERNAL_ENGINES
                 and any(not raw.get(key) for key in ("voice", "model", "base_url"))):
             raise ValueError("External speech profiles require an explicit base URL, model and voice")
@@ -157,11 +189,20 @@ class AudioProfile(BaseModel):
 
             speech_endpoint(self.base_url)
             _text(self.model)
-            if self.voice_description or self.reference_id:
-                raise ValueError("External speech does not support voice descriptions or local reference identities")
-            if self.engine == "mlx-audio" and self.language not in QWEN_LANGUAGES:
-                raise ValueError("MLX-Audio Qwen TTS supports only registered Qwen languages")
-            if self.instructions and not (self.supports_instructions or self.engine == "mlx-audio"):
+            if self.voice_description:
+                raise ValueError("External speech does not support voice descriptions")
+            if self.engine != "mlx-audio" and self.reference_id:
+                raise ValueError("External speech does not support local reference identities")
+            if self.engine == "mlx-audio" and self.voice == "reference":
+                if self.model != MLX_AUDIO_TTS_MODEL or re.fullmatch(r"[0-9a-f]{64}", self.reference_id) is None:
+                    raise ValueError("ZONOS3 reference voice requires a saved reference identity")
+            elif self.engine == "mlx-audio" and self.reference_id:
+                raise ValueError("ZONOS3 reference identity requires voice='reference'")
+            if self.engine == "mlx-audio" and self.language not in MLX_AUDIO_LANGUAGES:
+                raise ValueError("MLX-Audio ZONOS3 supports Chinese, English, German, Spanish, French, Korean and Japanese")
+            if self.instructions and (not self.supports_instructions
+                                      or (self.engine == "mlx-audio"
+                                          and self.model == MLX_AUDIO_TTS_MODEL)):
                 raise ValueError("External speech instructions require explicit provider support")
             return self
         if self.base_url or self.model or self.api_key_env is not None or self.supports_instructions:
@@ -333,14 +374,18 @@ def audio_capabilities() -> dict[str, Any]:
             "model": None,
         },
         "mlx-audio": {
-            "name": "MLX-Audio Qwen3-TTS", "targets": ["local"],
-            "languages": list(QWEN_LANGUAGES),
-            "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
+            "name": "MLX-Audio ZONOS3 TTS", "targets": ["local"],
+            "languages": list(MLX_AUDIO_LANGUAGES),
+            "voices": {
+                MLX_AUDIO_DEFAULT_VOICE: {"name": "Liesel", "languages": ["de"]},
+                "wolfgang": {"name": "Wolfgang", "languages": ["de"]},
+                "reference": {"name": "Project voice reference", "languages": ["de"]},
+            },
             "configurable_model": True, "configurable_voice": True,
-            "configurable_language": True, "instructions": True, "configurable_instructions": False,
+            "configurable_language": True, "instructions": False, "configurable_instructions": False,
             "control_support": speech_control_support("mlx-audio").as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
-                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+                      "default": MLX_AUDIO_DEFAULT_MODEL_SPEED, "implementation": "model-condition"},
             "model": MLX_AUDIO_TTS_MODEL, "default_base_url": MLX_AUDIO_BASE_URL,
         },
         **{engine: {

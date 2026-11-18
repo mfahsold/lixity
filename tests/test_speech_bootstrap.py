@@ -40,7 +40,7 @@ def test_explicit_external_cli_preserves_dutch_without_native_default(dutch_proj
     row = result["segments"][0]
     assert row["profile"]["engine"] == "openai-compatible"
     assert row["profile"]["language"] == "nl"
-    assert row["profile"]["speed"] == 1.2
+    assert row["profile"]["speed"] == 1.1
     assert row["text"] == "De rivier stroomt."
     assert {p.name: p.read_bytes() for p in dutch_project.iterdir()} == before
 

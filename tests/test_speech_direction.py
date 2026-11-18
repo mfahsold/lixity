@@ -27,6 +27,45 @@ def test_passage_direction_compiles_separate_model_controls_and_exact_pauses():
     assert TEXT.count('A quiet river flows.') == 2
 
 
+def test_mlx_rejects_ineffective_free_text_delivery_instructions():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match='require explicit provider support'):
+        AudioProfile(engine='mlx-audio', language='de', instructions='Knappe Spannung.')
+
+
+def test_adjacent_directions_do_not_emit_whitespace_segments():
+    from lixity.speech_direction import Direction, build_speech_plan, speech_passages
+    text = '## First\n\nEins. Zwei. Drei.\n'
+    profile = AudioProfile(engine='qwen3', language='de', voice='Ryan',
+                           instructions='Ruhig und klar.')
+    anchor = speech_passages(text, 'de')[0]['anchor']
+    directions = [
+        Direction(anchor=anchor, start=0, end=5, instructions='Ruhig.'),
+        Direction(anchor=anchor, start=6, end=11, instructions='Bestimmt.'),
+    ]
+    spoken = [row for row in build_speech_plan(text, profile, directions=directions, chapter=1)
+              if row.anchor]
+    assert [row.text for row in spoken] == ['Eins.', 'Zwei.', 'Drei.']
+    assert all(row.text.strip() for row in spoken)
+    assert spoken[0].profile.instructions.endswith('Ruhig.')
+    assert spoken[1].profile.instructions.endswith('Bestimmt.')
+    assert spoken[2].profile.instructions == 'Ruhig und klar.'
+
+
+def test_zonos_uses_shorter_fragments_without_changing_transport_limit():
+    from lixity.speech_direction import build_speech_plan
+    from lixity.speech_profiles import MLX_AUDIO_ZONOS_SEGMENT_CHARS
+
+    passage = ' '.join(f'Satz Nummer {index} bleibt verständlich.' for index in range(40))
+    text = f'## First\n\n{passage}\n'
+    profile = AudioProfile(engine='mlx-audio', language='de')
+    spoken = [row for row in build_speech_plan(text, profile, chapter=1) if row.anchor]
+    assert len(spoken) > 1
+    assert max(len(row.text) for row in spoken) <= MLX_AUDIO_ZONOS_SEGMENT_CHARS
+    assert ''.join(''.join(row.text.split()) for row in spoken) == ''.join(passage.split())
+
+
 def test_base_allows_passage_pauses_and_other_explicit_profiles():
     from lixity.speech_direction import Direction, build_speech_plan, speech_passages
 

@@ -64,9 +64,11 @@ def test_mlx_audio_bootstraps_recommended_german_model_without_network(tmp_path,
     profile = json.loads(capsys.readouterr().out)['segments'][0]['profile']
     assert profile['engine'] == 'mlx-audio'
     assert profile['language'] == 'de'
-    assert profile['voice'] == 'Ryan'
+    assert profile['voice'] == 'liesel'
+    assert profile['speed'] == 1.1
     assert profile['base_url'] == MLX_AUDIO_BASE_URL
     assert profile['model'] == MLX_AUDIO_TTS_MODEL
+    assert profile['instructions'] == ''
 
 
 def test_base_rejects_explicit_delivery_instruction_without_exposing_it(tmp_path, capsys):

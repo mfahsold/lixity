@@ -1160,26 +1160,35 @@ reference data and cache keys retain their behavior.
 
 ### MLX-Audio on Apple Silicon
 
-Start the separate MLX-Audio service as described in
+Start the MLX-Audio service for speech recognition as described in
 [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
-For a German plan or render, the explicit `mlx-audio` engine supplies the local
-0.6B 8-bit Qwen TTS model and `Ryan` voice defaults without adding MLX imports to
-Lixity itself:
+For the local default TTS binding, Lixity starts a short-lived worker in the
+isolated MLX-Audio runtime and loads `mlx-community/ZONOS3-Mini` directly. This
+avoids the installed HTTP broker's silent ZONOS3 output while keeping MLX imports
+out of Lixity's own Python environment. The default fixed German voice is `liesel`.
+
+ZONOS3 also accepts a saved project voice reference. Lixity resolves the explicit
+reference ID, validates its immutable audio record and passes only a temporary
+copy to the local worker. The reference remains inside the project and is removed
+from the worker request after each segment. Configure the profile with
+`voice = "reference"` and the reference ID returned by `audio-reference create`.
 
 ```bash
 lixity read-aloud --project ./novel --engine mlx-audio --language de \
   --preview --plan-only
 lixity read-aloud --project ./novel --engine mlx-audio --language de \
-  --preview --speed 1.0 -o preview.wav
+  --preview --speed 1.1 -o preview.wav
 ```
 
-Lixity maps its language code to MLX-Audio's `lang_code`, maps supported delivery
-instructions to `instruct`, normalizes returned WAV to the existing pipeline and
-applies pauses, cache reuse and playback speed as usual. A saved `mlx-audio`
-profile is editable in **Audio and services** alongside other providers. Model,
-voice and base URL remain explicit fields when you choose another MLX-Audio
-checkpoint. Test short previews before chapter rendering; 4-bit or 8-bit is a
-memory tradeoff, not a measured quality guarantee.
+For ZONOS3, Lixity sends `speed` directly to the model. It is a trained
+`speaking_rate` condition rather than an FFmpeg `atempo` step; `1.1` is the
+profile default. Pauses and cache reuse remain in Lixity. The model controls
+loudness, spectral range and speaking rate, but this MLX checkpoint does not
+interpret free-text delivery instructions. Existing passage directions remain
+saved and exportable; use `--no-direction` for a ZONOS3 render until a model with
+a validated direction control is selected. Test short previews before chapter
+rendering. Quantized weights, voice similarity and exact audio duration remain
+qualities to audition, not guarantees inferred from model size or a speed value.
 
 For German speech recognition, send one selected audio file to the same local
 service with Parakeet v3 and convert the normalized word timings for Lixity's
