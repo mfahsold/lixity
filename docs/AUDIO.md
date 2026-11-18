@@ -1158,6 +1158,48 @@ they never contain the key value. Request fresh audio after changing the model
 behind an existing provider model ID. Existing native workers, profiles,
 reference data and cache keys retain their behavior.
 
+### MLX-Audio on Apple Silicon
+
+Start the separate MLX-Audio service as described in
+[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
+For a German plan or render, the explicit `mlx-audio` engine supplies the local
+0.6B 8-bit Qwen TTS model and `Ryan` voice defaults without adding MLX imports to
+Lixity itself:
+
+```bash
+lixity read-aloud --project ./novel --engine mlx-audio --language de \
+  --preview --plan-only
+lixity read-aloud --project ./novel --engine mlx-audio --language de \
+  --preview --speed 1.0 -o preview.wav
+```
+
+Lixity maps its language code to MLX-Audio's `lang_code`, maps supported delivery
+instructions to `instruct`, normalizes returned WAV to the existing pipeline and
+applies pauses, cache reuse and playback speed as usual. A saved `mlx-audio`
+profile is editable in **Audio and services** alongside other providers. Model,
+voice and base URL remain explicit fields when you choose another MLX-Audio
+checkpoint. Test short previews before chapter rendering; 4-bit or 8-bit is a
+memory tradeoff, not a measured quality guarantee.
+
+For German speech recognition, send one selected audio file to the same local
+service with Parakeet v3 and convert the normalized word timings for Lixity's
+audio comparison pipeline:
+
+```bash
+lixity audio-transcribe chapter-2.wav --language de -o chapter-2.asr.json
+lixity audio-import-transcript chapter-2.wav chapter-2.asr.json --language de \
+  -o chapter-2.words.json
+lixity audio-verify chapter-2.wav --plan chapter-2.timeline.json \
+  --transcript chapter-2.words.json --language de
+```
+
+Transcription is an explicit request to the configured service, limited to a
+200 MiB input and a 16 MiB JSON response. If MLX-Audio returns Parakeet sentence
+tokens, Lixity retains a flat word list for the import step. Missing timestamps
+are not invented. `audio-transcribe` exposes the external evidence; it does not
+certify transcription fidelity, and its process does not become a source-writing
+or manuscript-editing step automatically.
+
 <a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
 
 ## Inspect and compare externally generated audio

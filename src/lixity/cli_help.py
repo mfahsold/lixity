@@ -356,6 +356,19 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'lixity audio-import --project ./novel --chapter 2 --audio chapter-2.wav --source-sha256 '
          'REVIEWED_FULL_MANUSCRIPT_SHA256'),
     ),
+    'audio-transcribe': (
+        'AUDIO.md',
+        (
+            'Sends one explicitly selected audio file to an OpenAI-compatible MLX-Audio service. '
+            'The default model is Parakeet TDT v3 for 25 European languages and the default endpoint '
+            'is the local service at 127.0.0.1:8000. The model is loaded by MLX-Audio, not by Lixity. '
+            'Output includes transcript text and normalized word timestamps when the model supplies '
+            'them; recognition quality and timestamps remain external evidence to review.'
+        ),
+        ('lixity audio-transcribe chapter-2.wav --language de -o chapter-2.asr.json',
+         'lixity audio-import-transcript chapter-2.wav chapter-2.asr.json --language de -o '
+         'chapter-2.words.json'),
+    ),
     'audio-import-transcript': (
         'AUDIO.md',
         (
@@ -486,8 +499,8 @@ AUDIO_OPTION_HELP: dict[str, dict[str, str]] = {'read-aloud': {'--output': 'WAV/
                 '--speech-target': 'Native execution target (default: local); Jetson supports Qwen only and '
                                    'needs its configured SSH forward; external profiles use their provider '
                                    'URL',
-                '--engine': 'Select a native engine or openai-compatible provider; native worker must match '
-                            'the selected model',
+                '--engine': 'Select a native engine, mlx-audio for Apple Silicon, or an '
+                            'openai-compatible provider; a native worker must match the selected model',
                 '--voice': 'Qwen preset, design for VoiceDesign, reference for reference engines, thorsten '
                            "for Coqui, or the external provider's voice identifier"},
  'audio-microphone': {'action': 'status (default): inspect default mixer; devices: list inputs; set: change '

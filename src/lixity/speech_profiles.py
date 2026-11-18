@@ -46,6 +46,9 @@ QWEN_LANGUAGES = {
     "es": "Spanish", "it": "Italian",
 }
 QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee")
+EXTERNAL_ENGINES = ("openai-compatible", "mlx-audio")
+MLX_AUDIO_BASE_URL = "http://127.0.0.1:8000/v1"
+MLX_AUDIO_TTS_MODEL = "mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit"
 DEFAULT_PLAYBACK_SPEED = 1.2
 MIN_PLAYBACK_SPEED = 0.5
 MAX_PLAYBACK_SPEED = 2.0
@@ -70,7 +73,7 @@ class AudioProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False, hide_input_in_errors=True)
     name: str = Field(default="Narrator", min_length=1, max_length=100)
-    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible"] = "qwen3"
+    engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible", "mlx-audio"] = "qwen3"
     language: str = "en"
     voice: str = Field(default="Ryan", min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
@@ -100,7 +103,7 @@ class AudioProfile(BaseModel):
             data.pop("phonemes", None)
         if not self.prosody.model_dump():
             data.pop("prosody", None)
-        if self.engine != "openai-compatible":
+        if self.engine not in EXTERNAL_ENGINES:
             for key in ("base_url", "model", "api_key_env", "supports_instructions"):
                 data.pop(key, None)
         elif self.api_key_env is None:
@@ -135,7 +138,12 @@ class AudioProfile(BaseModel):
     def reject_removed_engine(cls, raw: Any) -> Any:
         if isinstance(raw, Mapping) and raw.get("engine") == "piper":
             raise ValueError(_REMOVED_ENGINE)
-        if (isinstance(raw, Mapping) and raw.get("engine") == "openai-compatible"
+        if isinstance(raw, Mapping) and raw.get("engine") == "mlx-audio":
+            raw = dict(raw)
+            raw.setdefault("base_url", MLX_AUDIO_BASE_URL)
+            raw.setdefault("model", MLX_AUDIO_TTS_MODEL)
+            raw.setdefault("voice", "Ryan")
+        if (isinstance(raw, Mapping) and raw.get("engine") in EXTERNAL_ENGINES
                 and any(not raw.get(key) for key in ("voice", "model", "base_url"))):
             raise ValueError("External speech profiles require an explicit base URL, model and voice")
         return raw
@@ -144,14 +152,16 @@ class AudioProfile(BaseModel):
     def supported_controls(self) -> AudioProfile:
         if self.engine != "ims-toucan" and (self.phonemes or self.prosody.model_dump()):
             raise ValueError("Phonetic overrides and structured prosody require IMS-Toucan")
-        if self.engine == "openai-compatible":
+        if self.engine in EXTERNAL_ENGINES:
             from .speech_providers import speech_endpoint
 
             speech_endpoint(self.base_url)
             _text(self.model)
             if self.voice_description or self.reference_id:
                 raise ValueError("External speech does not support voice descriptions or local reference identities")
-            if self.instructions and not self.supports_instructions:
+            if self.engine == "mlx-audio" and self.language not in QWEN_LANGUAGES:
+                raise ValueError("MLX-Audio Qwen TTS supports only registered Qwen languages")
+            if self.instructions and not (self.supports_instructions or self.engine == "mlx-audio"):
                 raise ValueError("External speech instructions require explicit provider support")
             return self
         if self.base_url or self.model or self.api_key_env is not None or self.supports_instructions:
@@ -241,7 +251,7 @@ class AudioSettings(BaseModel):
                                      "review the old profile before replacing it")
                 if isinstance(profile, Mapping) and profile.get("engine") in ("coqui", "coqui-reference") and raw.get("schema_version") not in ("lixity-audio-settings/3", "lixity-audio-settings/4", "lixity-audio-settings/5"):
                     raise ValueError("Coqui profiles require audio schema lixity-audio-settings/3 or later")
-                if isinstance(profile, Mapping) and profile.get("engine") == "openai-compatible" and raw.get("schema_version") not in ("lixity-audio-settings/4", "lixity-audio-settings/5"):
+                if isinstance(profile, Mapping) and profile.get("engine") in EXTERNAL_ENGINES and raw.get("schema_version") not in ("lixity-audio-settings/4", "lixity-audio-settings/5"):
                     raise ValueError("External speech profiles require audio schema lixity-audio-settings/4 or later")
         return raw
 
@@ -254,7 +264,7 @@ class AudioSettings(BaseModel):
                 validate_pronunciation_keys(self.pronunciations, case_sensitive=False)
             return self
         if (self.schema_name not in ("lixity-audio-settings/4", "lixity-audio-settings/5")
-                and any(profile.engine == "openai-compatible" for profile in self.profiles.values())):
+                and any(profile.engine in EXTERNAL_ENGINES for profile in self.profiles.values())):
             raise ValueError("External speech profiles require audio schema lixity-audio-settings/4 or later")
         if self.schema_name != "lixity-audio-settings/5" and any(profile.engine == "ims-toucan" or profile.phonemes or profile.prosody.model_dump() for profile in self.profiles.values()):
             raise ValueError("IMS-Toucan and phonetic or prosody controls require audio schema lixity-audio-settings/5")
@@ -321,6 +331,17 @@ def audio_capabilities() -> dict[str, Any]:
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": None,
+        },
+        "mlx-audio": {
+            "name": "MLX-Audio Qwen3-TTS", "targets": ["local"],
+            "languages": list(QWEN_LANGUAGES),
+            "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
+            "configurable_model": True, "configurable_voice": True,
+            "configurable_language": True, "instructions": True, "configurable_instructions": False,
+            "control_support": speech_control_support("mlx-audio").as_dict(),
+            "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
+                      "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
+            "model": MLX_AUDIO_TTS_MODEL, "default_base_url": MLX_AUDIO_BASE_URL,
         },
         **{engine: {
             "name": name, "targets": ["local"], "languages": ["de"],

@@ -127,6 +127,7 @@
     select.value = selected || (values[0] && values[0][0]) || "";
   }
   function profileCapability() { return capabilities && capabilities[fields.engine.value] || {}; }
+  function externalEngine(engine) { return !!(capabilities && capabilities[engine] && capabilities[engine].configurable_model); }
   function profileSupport() {
     var cap = profileCapability(), support = Object.assign({}, cap.control_support || {});
     if (cap.configurable_instructions) support.direction = fields.supports_instructions.checked ? "model_interpreted" : "unsupported";
@@ -349,9 +350,11 @@
   }
   function updateWorkerStatus() {
     if (!fields.worker_status || !fields.engine || !capabilities) return;
-    fields.worker_guide.hidden = fields.engine.value === "openai-compatible" || profileCapability().runtime_status === "unavailable";
+    var external = fields.engine.value === "openai-compatible" ||
+      !!(capabilities[fields.engine.value] && capabilities[fields.engine.value].configurable_model);
+    fields.worker_guide.hidden = external || profileCapability().runtime_status === "unavailable";
     fields.worker_guide.href = profileCapability().guide_url || (fields.engine.value.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
-    if (fields.engine.value === "openai-compatible") { fields.worker_status.textContent = label("provider_status"); return; }
+    if (external) { fields.worker_status.textContent = label("provider_status"); return; }
     if (profileCapability().runtime_status === "unavailable") { fields.worker_status.textContent = label("engine_unavailable"); return; }
     var target = fields.target.value || "local", cap = capabilities[fields.engine.value];
     var worker = Array.isArray(workers) ? workers.find(function(item) { return item.target === target && (!item.engines || item.engines.includes(fields.engine.value)); }) : null;
@@ -424,6 +427,8 @@
     ["base_url", "provider_model", "api_key_env", "provider_voice", "provider_language", "supports_instructions"].forEach(function(key) {
       fields[key].closest("label").hidden = !external; fields[key].disabled = !external;
     });
+    fields.supports_instructions.closest("label").hidden = !external || fields.engine.value === "mlx-audio";
+    fields.supports_instructions.disabled = !external || fields.engine.value === "mlx-audio";
     updateModelFields();
     fields.reference_hint.hidden = !referenced;
     fields.voice_hint.hidden = true;
@@ -453,7 +458,7 @@
     }), profile.engine);
     fields.base_url.value = profile.base_url || ""; fields.provider_model.value = profile.model || "";
     fields.api_key_env.value = profile.api_key_env || ""; fields.supports_instructions.checked = !!profile.supports_instructions;
-    fields.provider_voice.value = profile.engine === "openai-compatible" ? profile.voice : "";
+    fields.provider_voice.value = externalEngine(profile.engine) ? profile.voice : "";
     fields.provider_language.value = profile.language;
     fields.voice_description.value = profile.voice_description || "";
     fields.phonemes.value = Object.entries(profile.phonemes || {}).map(function(pair) { return pair.join("="); }).join("\n");
@@ -522,7 +527,7 @@
     var phonemes = phonemeEntries(), prosody = profileProsody.read();
     if (Object.keys(phonemes).length) profile.phonemes = phonemes;
     if (Object.keys(prosody).length) profile.prosody = prosody;
-    if (profile.engine === "openai-compatible") {
+    if (externalEngine(profile.engine)) {
       profile.base_url = fields.base_url.value.trim(); profile.model = fields.provider_model.value.trim();
       profile.api_key_env = fields.api_key_env.value.trim() || null;
       profile.supports_instructions = fields.supports_instructions.checked;
@@ -716,7 +721,7 @@
       } else if (!fields.ignore_direction.checked) {
         var draft = direction.draft(); if (draft) { payload.draft_direction = draft; var replacement=direction.replacement(); if (replacement) payload.draft_replace_id=replacement; }
       }
-      fields.context.textContent = (planOnly ? label("direction_plan") : profile.engine === "openai-compatible" ? label("provider_model") : label("target_" + payload.target)) + " · " + (mode === "manuscript" ? label("scope_manuscript") : fields.chapter.selectedOptions[0].textContent) +
+      fields.context.textContent = (planOnly ? label("direction_plan") : externalEngine(profile.engine) ? label("provider_model") : label("target_" + payload.target)) + " · " + (mode === "manuscript" ? label("scope_manuscript") : fields.chapter.selectedOptions[0].textContent) +
         (mode === "preview" ? " · " + label(paragraph ? "paragraph_preview" : "first_preview") : "") +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
       var data = await request(planOnly ? "speech-plan" : "speech-render", payload);
@@ -778,7 +783,7 @@
       if (!["lixity-audio-settings/3", "lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return profile.engine.startsWith("coqui"); })) {
         status(label("coqui_schema_required")); return false;
       }
-      if (!["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return profile.engine === "openai-compatible"; })) {
+      if (!["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return externalEngine(profile.engine); })) {
         status(label("provider_schema_required")); return false;
       }
       if (settings.schema_version !== currentAudioSchema && Object.values(settings.profiles).some(function(profile) {
@@ -1715,6 +1720,11 @@
       if (cap.languages.length && !cap.languages.includes(fields.language.value)) options(fields.language, [[cap.languages[0], languageName(cap.languages[0])]], cap.languages[0]);
       var voice = cap.voice_design ? "design" : cap.reference_required ? "reference" : cap.voices[lastPreset] ? lastPreset : Object.keys(cap.voices)[0] || "";
       options(fields.voice, [], voice);
+      if (fields.engine.value === "mlx-audio") {
+        fields.base_url.value = cap.default_base_url || fields.base_url.value;
+        fields.provider_model.value = cap.model || fields.provider_model.value;
+        fields.provider_voice.value = voice || fields.provider_voice.value;
+      }
       voiceControls(); invalidate();
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 from .io import FileUtils
 from .research.repository import Repository
+from .speech_profiles import EXTERNAL_ENGINES
 from .speech_qwen import MAX_BASE_REQUEST_BYTES, MAX_REFERENCE_BYTES, _decode_reference
 
 _SCHEMA = "lixity-audio-reference/1"
@@ -95,7 +96,7 @@ def references_for_plan(project: str | Path, plan: list[SpeechSegment]) -> dict[
     from .speech_engines import native_engine
 
     ids = {row.profile.reference_id for row in plan if row.text
-           and row.profile.engine != "openai-compatible" and native_engine(row.profile.engine).reference_required}
+           and row.profile.engine not in EXTERNAL_ENGINES and native_engine(row.profile.engine).reference_required}
     return {reference_id: load_reference(project, reference_id) for reference_id in sorted(ids)}
 
 

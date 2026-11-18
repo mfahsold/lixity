@@ -116,6 +116,35 @@ def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatc
     assert audio_capabilities()['openai-compatible']['instructions'] is False
 
 
+def test_mlx_audio_request_uses_language_and_delivery_fields():
+    from lixity.speech_profiles import MLX_AUDIO_TTS_MODEL
+    from lixity.speech_providers import synthesize_external
+
+    with provider() as (url, records):
+        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de',
+                                instructions='Ruhig lesen.')
+        synthesize_external('Synthetischer Text.', selected)
+    assert records[0][2] == {
+        'model': MLX_AUDIO_TTS_MODEL,
+        'input': 'Synthetischer Text.',
+        'voice': 'Ryan',
+        'response_format': 'wav',
+        'lang_code': 'German',
+        'instruct': 'Ruhig lesen.',
+    }
+
+
+def test_mlx_audio_render_dispatches_through_the_shared_pipeline(tmp_path):
+    source, output = tmp_path / 'source.md', tmp_path / 'out.wav'
+    source.write_text('Synthetischer Satz.')
+    with provider() as (url, records):
+        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de', speed=1.0)
+        render_speech_audio(source, output, profile=selected)
+    assert output.is_file()
+    assert records[0][2]['lang_code'] == 'German'
+    assert _read_pcm(output.read_bytes())[0] == (1, 2, 24000)
+
+
 def test_render_dispatches_multiple_external_models_and_reuses_distinct_cache(tmp_path):
     source, output = tmp_path/'source.md', tmp_path/'out.wav'
     source.write_text('Synthetic source.')

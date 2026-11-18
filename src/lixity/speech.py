@@ -30,6 +30,7 @@ from .log import get_logger, speech_diagnostic_id, speech_diagnostic_scope
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .sentences import split_sentences
 from .speech_profiles import (
+    EXTERNAL_ENGINES,
     MAX_PLAYBACK_SPEED,
     MIN_PLAYBACK_SPEED,
     QWEN_LANGUAGES,
@@ -110,7 +111,7 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
     diagnostic_id = speech_diagnostic_id()
     from .speech_engines import NATIVE_ENGINES
 
-    engine = profile.engine if profile.engine in NATIVE_ENGINES or profile.engine == "openai-compatible" else "unknown"
+    engine = profile.engine if profile.engine in NATIVE_ENGINES or profile.engine in EXTERNAL_ENGINES else "unknown"
     voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference", "thorsten") else "unknown"
     language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
     has_instruction = "true" if profile.instructions else "false"
@@ -400,15 +401,15 @@ def render_speech_audio(
     from .speech_engines import NATIVE_ENGINES, native_endpoint, native_engine
 
     for cue in cues:
-        if cue.text and cue.profile.engine != "openai-compatible":
+        if cue.text and cue.profile.engine not in EXTERNAL_ENGINES:
             native_endpoint(cue.profile.engine, target)
         if cue.text and cue.profile.engine == "ims-toucan" and cue.profile.instructions:
             raise ValueError("IMS-Toucan requires structured prosody; free-form instructions can only be exported")
-    if target != "local" and any(cue.text and cue.profile.engine == "openai-compatible" for cue in cues):
+    if target != "local" and any(cue.text and cue.profile.engine in EXTERNAL_ENGINES for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
     for reference_id in {cue.profile.reference_id for cue in cues
-                         if cue.text and cue.profile.engine != "openai-compatible"
+                         if cue.text and cue.profile.engine not in EXTERNAL_ENGINES
                          and native_engine(cue.profile.engine).reference_required}:
         reference = (references or {}).get(reference_id)
         if reference is None or reference.id != reference_id:
@@ -435,7 +436,7 @@ def render_speech_audio(
                 continue
             cached = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, cue.profile)
             if cached is None:
-                if cue.profile.engine != "openai-compatible":
+                if cue.profile.engine not in EXTERNAL_ENGINES:
                     endpoint = native_endpoint(cue.profile.engine, target)
                     missing_engines.setdefault(endpoint, set()).add(cue.profile.engine)
                 if any(len(engines) > 1 for engines in missing_engines.values()):
@@ -443,7 +444,7 @@ def render_speech_audio(
                                      "one model. Choose profiles using the same model or reuse previously "
                                      "cached segments")
     total = sum(bool(cue.text) for cue in cues)
-    requested_engines = sorted({cue.profile.engine if cue.profile.engine in NATIVE_ENGINES or cue.profile.engine == "openai-compatible" else "unknown"
+    requested_engines = sorted({cue.profile.engine if cue.profile.engine in NATIVE_ENGINES or cue.profile.engine in EXTERNAL_ENGINES else "unknown"
                                 for cue in cues if cue.text})
     cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
     get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
@@ -493,7 +494,7 @@ def render_speech_audio(
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
                                            "hit" if data is not None else "miss")
                     if data is None:
-                        if effective.engine == "openai-compatible":
+                        if effective.engine in EXTERNAL_ENGINES:
                             from .speech_providers import synthesize_external
 
                             data = synthesize_external(cue.text, effective)

@@ -40,6 +40,7 @@ from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .site import docs_url
 from .speech_engines import NATIVE_ENGINES, native_engine
+from .speech_profiles import EXTERNAL_ENGINES
 from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import (
     LAYER_FEATURES,
@@ -501,6 +502,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("audio-export-plan", "Export manuscript direction as JSON timeline or SSML without synthesis"),
     ("audio-inspect", "Inspect a chapter audio file locally (JSON; no speech recognition)"),
     ("audio-verify", "Compare chapter audio with a direction plan and optional timestamped transcript (JSON)"),
+    ("audio-transcribe", "Transcribe audio through an explicit local MLX-Audio service"),
     ("audio-import-transcript", "Convert external ASR word timestamps (e.g. Whisper) to lixity-audio-transcript/1"),
     ("audio-status", "Inspect audio profiles and worker readiness"),
     ("audio-microphone", "Inspect and set hardware microphone gain and list recording devices"),
@@ -556,7 +558,7 @@ _lixity_complete() {
                 --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
                 --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
                 --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio" -- "$cur") ) ;;
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed|--base-url|--model|--api-key-env) ;;
@@ -575,6 +577,14 @@ _lixity_complete() {
             esac
             return 0
             ;;
+        audio-transcribe)
+            case "$prev" in
+                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
+                --base-url|--model|--language) ;;
+                *) COMPREPLY=( $(compgen -W "--help -o --output --base-url --model --language" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
+            esac
+            return 0
+            ;;
         audio-import-transcript)
             case "$prev" in
                 -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
@@ -586,7 +596,7 @@ _lixity_complete() {
         audio-status)
             case "$prev" in
                 --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible" -- "$cur") ) ;;
+                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio" -- "$cur") ) ;;
                 *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
             esac
             return 0
@@ -778,7 +788,7 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
             '--profile[Saved narrator profile]:profile:' \
             '--instructions[Delivery instructions where supported, otherwise export-only]:text:' \
-            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible)' \
+            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio)' \
             '--voice[Speech voice]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten)' \
             '--voice-description[VoiceDesign description]:text:' \
             '--reference-id[Saved project reference]:id:' \
@@ -808,11 +818,21 @@ __LIXITY_ZSH_COMMANDS__
             '--language[Explicit analysis language]:language:(en de fr es it pt nl generic)' \
             '--json[JSON output]'
           ;;
+        audio-transcribe)
+          _arguments \
+            '1:audio:_files' \
+            '--help[Help]' \
+            '-o[Transcription JSON output]:file:_files' \
+            '--output[Transcription JSON output]:file:_files' \
+            '--base-url[MLX-Audio base URL]:url:' \
+            '--model[Transcription model]:model:' \
+            '--language[Transcription language]:language:'
+          ;;
         audio-status)
           _arguments \
             '--help[Help]' \
             '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible)' \
+            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio)' \
             '--json[Machine-readable status]'
           ;;
         audio-microphone)
@@ -1707,14 +1727,14 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
     try:
         raw_audio = args._project_config.get("audio")
         saved_audio = parse_audio_settings(raw_audio, language=args.language) if raw_audio is not None else None
-        external_bootstrap = args.engine == "openai-compatible" and (
+        external_bootstrap = args.engine in EXTERNAL_ENGINES and (
             (saved_audio is None and args.profile in (None, "narrator"))
             or (saved_audio is not None and not saved_audio.profiles and args.profile is None)
         )
         previous_engine = None
         if external_bootstrap:
             # Validate the requested provider directly, without an unrelated native language gate.
-            changes = {"language": args.language, "speed": DEFAULT_PLAYBACK_SPEED}
+            changes = {"engine": args.engine, "language": args.language, "speed": DEFAULT_PLAYBACK_SPEED}
         else:
             profile = resolve_audio_profile(args._project_config, args.profile, language=args.language)
             changes = profile.model_dump()
@@ -1744,11 +1764,12 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
                 and previous_engine is not None and previous_engine in NATIVE_ENGINES and native_engine(previous_engine).reference_required
                 and args.reference_id is None):
             changes.pop("reference_id", None)
-        if args.engine and args.engine != "openai-compatible" and previous_engine == "openai-compatible":
+        if args.engine and args.engine not in EXTERNAL_ENGINES and previous_engine in EXTERNAL_ENGINES:
             for key in ("base_url", "model", "api_key_env", "supports_instructions"):
                 if getattr(args, key) is None:
                     changes.pop(key, None)
-        if args.engine == "openai-compatible" and previous_engine != "openai-compatible" and args.voice is None:
+        if (args.engine == "openai-compatible" and previous_engine not in EXTERNAL_ENGINES
+                and args.voice is None):
             raise ValueError("Choose an explicit --voice identifier supported by the external provider")
         reference_engine = changes["engine"] in NATIVE_ENGINES and native_engine(changes["engine"]).reference_required
         if not reference_engine and args.reference_id:
@@ -2325,6 +2346,15 @@ def _build_parser() -> argparse.ArgumentParser:
             p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
             p.add_argument("--json", action="store_true", help="JSON output (also the default)")
             continue
+        if name == "audio-transcribe":
+            from .speech_transcription import DEFAULT_BASE_URL, DEFAULT_MODEL
+            p.add_argument("audio", help="WAV, FLAC or MP3 audio file sent to the explicit service")
+            p.add_argument("--base-url", default=DEFAULT_BASE_URL,
+                           help="MLX-Audio OpenAI-compatible base URL (default: local service)")
+            p.add_argument("--model", default=DEFAULT_MODEL, help="MLX-Audio transcription model")
+            p.add_argument("--language", default=None, help="Optional explicit transcription language code")
+            p.add_argument("-o", "--output", help="Write transcription JSON atomically")
+            continue
         if name == "audio-import-transcript":
             p.add_argument("audio", help="Reference WAV, FLAC or MP3 file for SHA-256 binding")
             p.add_argument("transcript", help=AUDIO_OPTION_HELP[name]['transcript'])
@@ -2334,7 +2364,7 @@ def _build_parser() -> argparse.ArgumentParser:
             continue
         if name == "audio-status":
             p.add_argument("--project", help="Explicit project root; omit to inspect workers only")
-            p.add_argument("--engine", choices=(*NATIVE_ENGINES, "openai-compatible"), help="Compare this model variant instead of the selected profile")
+            p.add_argument("--engine", choices=(*NATIVE_ENGINES, *EXTERNAL_ENGINES), help="Compare this model variant instead of the selected profile")
             p.add_argument("--json", action="store_true", help="Machine-readable status")
             continue
         if name == "audio-microphone":
@@ -2608,7 +2638,7 @@ def _build_parser() -> argparse.ArgumentParser:
             p.add_argument("--progress", action="store_true", help="Report segment progress and estimated remaining time to stderr")
             p.add_argument("--no-direction", action="store_true", help="Ignore saved passage direction, range voice assignments and pauses for this invocation")
             p.add_argument("--instructions", default=None, help="Delivery instructions for this invocation; selected engine must support free-text direction")
-            p.add_argument("--engine", choices=(*NATIVE_ENGINES, "openai-compatible"), default=None, help=AUDIO_OPTION_HELP[name]['--engine'])
+            p.add_argument("--engine", choices=(*NATIVE_ENGINES, *EXTERNAL_ENGINES), default=None, help=AUDIO_OPTION_HELP[name]['--engine'])
             p.add_argument("--voice-description", default=None, help="VoiceDesign voice description")
             p.add_argument("--reference-id", default=None, help="Project-local saved voice reference identity")
             p.add_argument("--voice", default=None, help=AUDIO_OPTION_HELP[name]['--voice'])
@@ -2898,6 +2928,16 @@ def _main(argv: list[str] | None = None) -> int:
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
+    if args.command == "audio-transcribe":
+        from .speech_transcription import transcribe_audio
+        try:
+            result = transcribe_audio(
+                args.audio, base_url=args.base_url, model=args.model, language=args.language,
+            )
+            return _run_text_report(args, lambda: print(_json(result, indent=True)) or EXIT_OK)
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
     if args.command in ("audio-inspect", "audio-verify"):
         from .audio_audit import inspect_audio, load_audit_json
         try:

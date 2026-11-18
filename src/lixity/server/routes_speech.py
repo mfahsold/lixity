@@ -36,6 +36,7 @@ from ..speech_direction import (
 from ..speech_export import ssml_export, timeline_json
 from ..speech_jobs import SpeechJobs, prepare_speech_source
 from ..speech_profiles import (
+    EXTERNAL_ENGINES,
     AudioProfile,
     audio_capabilities,
     parse_audio_settings,
@@ -188,7 +189,7 @@ class SpeechRoutesMixin(ResponseMixin):
                                else resolve_audio_profile(settings, language=self.language))
                     view = None if payload.get("ignore_direction") else self._direction_view()
                     direction_hash = view["direction_sha256"] if view else None
-                    profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine == "openai-compatible"
+                    profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine in EXTERNAL_ENGINES
                                 else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
                     plan = build_speech_plan(text, profile, directions=saved_directions(view) if view else [],
                         profiles=profiles,
@@ -314,7 +315,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 }
             # Probe fixed loopback endpoints without holding the workspace lock.
             # A worker status is a snapshot, not a promise of later readiness.
-            if selected_profile is not None and selected_profile.engine == "openai-compatible":
+            if selected_profile is not None and selected_profile.engine in EXTERNAL_ENGINES:
                 from ..speech_providers import external_provider_status
                 response["workers"] = [external_provider_status(selected_profile)]
             else:
@@ -430,7 +431,7 @@ class SpeechRoutesMixin(ResponseMixin):
                     if "draft_replace_id" in payload and not any(direction_id(d) == replacement for d in directions):
                         raise ValueError("Choose an existing direction to replace")
                     directions = [d for d in directions if direction_id(d) != replacement] + [draft]
-                profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine == "openai-compatible"
+                profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine in EXTERNAL_ENGINES
                             else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
                 plan = build_speech_plan(text, profile, directions=directions, profiles=profiles,
                                          chapter=payload["chapter"], project_config=settings, for_export=plan_only)

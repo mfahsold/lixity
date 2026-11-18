@@ -209,7 +209,8 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 Direction/timeline and SSML export need no speech model, worker or API key.
 For synthesis, run a separately managed service that implements
 `POST /v1/audio/speech`, then explicitly configure its base URL, model and voice
-in an `openai-compatible` profile. The minimal Lixity installation adds no
+in an `openai-compatible` profile. MLX-Audio has its own `mlx-audio` profile so
+Lixity can pass its model-specific language and direction fields explicitly. The minimal Lixity installation adds no
 inference dependency and does not install or start that service. HTTPS endpoints
 and explicitly configured local HTTP addresses (localhost, loopback or private
 LAN IPs) are supported. URLs cannot contain credentials, query parameters or
@@ -222,6 +223,24 @@ variable in the new start/restart environment; an already running service does
 not inherit later terminal changes. Direct CLI rendering can use any valid name.
 Opening a dialog, exporting a plan or checking provider status sends no text.
 Provider readiness remains unknown until an explicit render.
+
+On an Apple Silicon Mac, keep MLX-Audio in a separate Python 3.11+ environment:
+
+```sh
+uv venv --python 3.11 "$HOME/.local/share/lixity/runtimes/mlx-audio"
+uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" \
+  'mlx-audio[stt,tts,server]'
+"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" -m mlx_audio.server \
+  --host 127.0.0.1 --port 8000
+```
+
+MLX-Audio and its model weights are optional and are not installed by Lixity.
+The first selected model can require an explicit download and substantial memory;
+16 GB unified memory is not a guarantee that every model fits. The recommended
+small German TTS path uses
+`mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-8bit`; the recommended STT path uses
+`mlx-community/parakeet-tdt-0.6b-v3`. Kokoro is useful for English but is not the
+German default. Model and voice licenses remain separate from MLX-Audio's license.
 
 Existing settings require the reviewed `audio-migrate --to-schema-4` workflow
 before saving an external profile. Keep its backup and use a compatible reader;

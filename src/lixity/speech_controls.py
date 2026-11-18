@@ -83,6 +83,8 @@ def speech_control_support(engine: str, *, supports_instructions: bool = False) 
     """Describe the actual Lixity adapter, not the model's theoretical features."""
     if engine == "openai-compatible":
         return _QWEN_SUPPORT if supports_instructions else _QWEN_BASE_SUPPORT
+    if engine == "mlx-audio":
+        return _QWEN_SUPPORT
     if engine == "ims-toucan":
         return _TOUCAN_SUPPORT
     if engine in ("qwen3-base", "coqui", "coqui-reference", "f5-tts"):

@@ -129,14 +129,18 @@ def _normalize_wav(data: bytes) -> bytes:
 def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None) -> bytes:
     """Send one explicit bounded request and return normalized PCM, without fallback."""
     from .speech import MAX_SEGMENT_CHARS
-    from .speech_profiles import AudioProfile
+    from .speech_profiles import EXTERNAL_ENGINES, QWEN_LANGUAGES, AudioProfile
 
     profile = AudioProfile.model_validate(profile.model_dump())
-    if profile.engine != "openai-compatible" or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+    if profile.engine not in EXTERNAL_ENGINES or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
         raise ValueError("Invalid external speech synthesis request")
     endpoint = speech_endpoint(profile.base_url)
     request_data = {"model": profile.model, "input": text, "voice": profile.voice, "response_format": "wav"}
-    if profile.instructions:
+    if profile.engine == "mlx-audio":
+        request_data["lang_code"] = QWEN_LANGUAGES[profile.language]
+        if profile.instructions:
+            request_data["instruct"] = profile.instructions
+    elif profile.instructions:
         request_data["instructions"] = profile.instructions
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
     if len(payload) > MAX_REQUEST_BYTES:

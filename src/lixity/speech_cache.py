@@ -10,7 +10,7 @@ from typing import Any
 
 from .io import FileUtils
 from .speech_engines import native_engine
-from .speech_profiles import AudioProfile
+from .speech_profiles import EXTERNAL_ENGINES, AudioProfile
 from .speech_qwen import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
@@ -43,13 +43,14 @@ class SpeechSegmentCache:
         self.directory, self.max_bytes = directory, max_bytes
 
     def _paths(self, text: str, profile: AudioProfile) -> tuple[str, Path, Path]:
-        request: dict[str, Any] = {"schema_version": _SCHEMA, "model": profile.model if profile.engine == "openai-compatible" else native_engine(profile.engine).model, "text": text,
+        request: dict[str, Any] = {"schema_version": _SCHEMA, "model": profile.model if profile.engine in EXTERNAL_ENGINES else native_engine(profile.engine).model, "text": text,
                    "language": profile.language, "voice": profile.voice,
                    "instructions": profile.instructions}
-        if profile.engine == "openai-compatible":
+        if profile.engine in EXTERNAL_ENGINES:
             from .speech_providers import ADAPTER_ID, speech_endpoint
 
-            request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url), adapter=ADAPTER_ID,
+            request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url),
+                           adapter=ADAPTER_ID if profile.engine == "openai-compatible" else "lixity-mlx-audio/1",
                            api_key_env=profile.api_key_env or "")
         else:
             if profile.engine == "qwen3-design":

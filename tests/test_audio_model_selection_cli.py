@@ -55,6 +55,20 @@ def test_voice_design_selection_explains_missing_description(tmp_path, capsys):
     assert '--voice-description' in capsys.readouterr().err
 
 
+def test_mlx_audio_bootstraps_recommended_german_model_without_network(tmp_path, capsys):
+    from lixity.speech_profiles import MLX_AUDIO_BASE_URL, MLX_AUDIO_TTS_MODEL
+
+    root = _project(tmp_path)
+    assert main(['read-aloud', '--project', str(root), '--preview', '--plan-only',
+                 '--engine', 'mlx-audio']) == 0
+    profile = json.loads(capsys.readouterr().out)['segments'][0]['profile']
+    assert profile['engine'] == 'mlx-audio'
+    assert profile['language'] == 'de'
+    assert profile['voice'] == 'Ryan'
+    assert profile['base_url'] == MLX_AUDIO_BASE_URL
+    assert profile['model'] == MLX_AUDIO_TTS_MODEL
+
+
 def test_base_rejects_explicit_delivery_instruction_without_exposing_it(tmp_path, capsys):
     root = _project(tmp_path)
     reference = save_reference(root, generate_silence_wav(1), 'Synthetic reference.')

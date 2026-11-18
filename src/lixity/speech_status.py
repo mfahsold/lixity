@@ -7,7 +7,12 @@ from typing import Any
 
 from .config import read_explicit_project_config
 from .speech_engines import NATIVE_ENGINES, native_endpoint, native_engine
-from .speech_profiles import QWEN_LANGUAGES, audio_capabilities, parse_audio_settings
+from .speech_profiles import (
+    EXTERNAL_ENGINES,
+    QWEN_LANGUAGES,
+    audio_capabilities,
+    parse_audio_settings,
+)
 from .speech_qwen import worker_health
 
 
@@ -70,7 +75,7 @@ def audio_status(project: str | Path | None = None, *, engine: str | None = None
             selected = settings.profiles.get(settings.selected)
             if selected is not None:
                 comparison_engine = engine or selected.engine
-                if selected.engine == "openai-compatible":
+                if selected.engine in EXTERNAL_ENGINES:
                     provider_profile = selected
             project_view = {
                 "root": str(root),
@@ -82,7 +87,7 @@ def audio_status(project: str | Path | None = None, *, engine: str | None = None
             }
             if selected is None:
                 project_view["profile_issue"] = "speech_profile_unconfigured"
-    if comparison_engine == "openai-compatible":
+    if comparison_engine in EXTERNAL_ENGINES:
         from .speech_providers import external_provider_status
 
         return {"schema_version": "lixity-audio-status/1", "project": project_view,

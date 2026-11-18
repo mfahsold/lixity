@@ -40,7 +40,7 @@ from .speech_controls import (
     pronunciation_spans,
     speech_control_support,
 )
-from .speech_profiles import AudioProfile, parse_audio_settings
+from .speech_profiles import EXTERNAL_ENGINES, AudioProfile, parse_audio_settings
 
 POLICY = 'lixity-speech-plan/1'
 MAX_BYTES = 4 * 1024 * 1024
@@ -82,7 +82,7 @@ def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
         return True
     if narrator.engine == 'qwen3-design':
         return narrator.voice_description == delivery.voice_description
-    if narrator.engine == 'openai-compatible':
+    if narrator.engine in EXTERNAL_ENGINES:
         return (narrator.base_url, narrator.model, narrator.voice) == (delivery.base_url, delivery.model, delivery.voice)
     return narrator.voice == delivery.voice
 
