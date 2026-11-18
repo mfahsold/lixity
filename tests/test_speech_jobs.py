@@ -13,9 +13,9 @@ from lixity.speech_profiles import AudioProfile
 TEXT = "## First\n\nA bird crosses the garden.\n\n## Second\n\nAnother passage waits here.\n"
 
 
-def wait_for(jobs, identifier):
+def wait_for(jobs, identifier, context="context"):
     for _ in range(200):
-        result = jobs.status(identifier, "context")
+        result = jobs.status(identifier, context)
         if result["state"] not in ("pending", "running"):
             return result
         time.sleep(0.005)
@@ -313,12 +313,9 @@ def test_different_project_jobs_queue_without_overlapping_and_pending_cancel_nev
         assert rendered == ['First project.']
         release.set()
         assert wait_for(jobs, first['id'])['state'] == 'ready'
-        for _ in range(200):
-            if jobs.status(second['id'], 'other')['state'] == 'ready':
-                break
-            time.sleep(0.005)
+        assert wait_for(jobs, second['id'], 'other')['state'] == 'ready'
+        assert wait_for(jobs, third['id'], 'third')['state'] == 'cancelled'
         assert rendered == ['First project.', 'Second project.']
-        assert jobs.status(third['id'], 'third')['state'] == 'cancelled'
     finally:
         release.set()
         jobs.close()
@@ -362,13 +359,15 @@ def test_source_cleanup_failure_does_not_block_the_queue(monkeypatch):
     entered, release = threading.Event(), threading.Event()
     unlink = Path.unlink
     failed = []
+    sources = []
     def failing_unlink(path, *args, **kwargs):
-        if path.name == 'source.md' and not failed:
-            failed.append(True)
+        if sources and path == sources[0] and not failed:
+            failed.append(path)
             raise PermissionError('Synthetic cleanup failure')
         return unlink(path, *args, **kwargs)
     monkeypatch.setattr(Path, 'unlink', failing_unlink)
     def render(source, output, **kwargs):
+        sources.append(Path(source))
         entered.set()
         release.wait(2)
         Path(output).write_bytes(generate_silence_wav(0.01))
@@ -378,12 +377,10 @@ def test_source_cleanup_failure_does_not_block_the_queue(monkeypatch):
         assert entered.wait(1)
         second = jobs.start('second', 'Second', AudioProfile(), {}, lambda: True)
         release.set()
-        for _ in range(200):
-            if jobs.status(second['id'], 'second')['state'] == 'ready':
-                break
-            time.sleep(0.005)
-        assert jobs.status(second['id'], 'second')['state'] == 'ready'
-        assert jobs.status(first['id'], 'context')['state'] == 'error'
+        assert wait_for(jobs, second['id'], 'second')['state'] == 'ready'
+        assert wait_for(jobs, first['id'])['state'] == 'error'
+        assert failed == [sources[0]]
+        assert not sources[0].exists()
     finally:
         release.set()
         jobs.close()
