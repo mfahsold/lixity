@@ -23,9 +23,9 @@ def transcription_server(result):
         def do_POST(self):
             length = int(self.headers["Content-Length"])
             records.append((self.path, self.headers["Content-Type"], self.rfile.read(length)))
-            data = json.dumps(result).encode()
+            data = (json.dumps({"text": "partial"}) + "\n" + json.dumps(result) + "\n").encode()
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/x-ndjson")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -67,6 +67,7 @@ def test_transcribe_audio_uses_mlx_endpoint_and_normalizes_parakeet_tokens(tmp_p
     assert records[0][1].startswith("multipart/form-data; boundary=")
     body = records[0][2]
     assert b'name="model"' in body and DEFAULT_MODEL.encode() in body
+    assert b'name="response_format"' in body and b"ndjson" in body
     assert b'name="language"' in body and b"de" in body
     assert audio.read_bytes() in body
     assert transcript["schema_version"] == "lixity-audio-transcription/1"

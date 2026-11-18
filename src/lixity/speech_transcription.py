@@ -50,7 +50,7 @@ def _multipart(audio: Path, data: bytes, *, model: str, language: str | None) ->
     boundary = "----lixity-" + secrets.token_hex(16)
     fields = {
         "model": model,
-        "response_format": "verbose_json",
+        "response_format": "ndjson",
         "word_timestamps": "true",
     }
     if language:
@@ -134,7 +134,9 @@ def transcribe_audio(
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     try:
         with client.open(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            if response.status != 200 or response.headers.get_content_type() != "application/json":
+            if response.status != 200 or response.headers.get_content_type() not in (
+                "application/json", "application/x-ndjson",
+            ):
                 raise ValueError("Unexpected transcription response")
             raw = response.read(MAX_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as exc:
@@ -150,10 +152,12 @@ def transcribe_audio(
     if len(raw) > MAX_RESPONSE_BYTES:
         raise ValueError("Transcription response exceeds the byte limit")
     try:
-        result = json.loads(raw)
+        rows = [json.loads(line) for line in raw.splitlines() if line.strip()]
     except (UnicodeError, json.JSONDecodeError):
         raise ValueError("Transcription provider returned malformed JSON") from None
-    if not isinstance(result, dict) or not isinstance(result.get("text"), str):
+    results = [row for row in rows if isinstance(row, dict)]
+    result = next((row for row in reversed(results) if isinstance(row.get("text"), str)), None)
+    if result is None:
         raise ValueError("Transcription provider returned an invalid transcript")
     detected_language = result.get("language")
     return {
