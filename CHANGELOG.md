@@ -12,6 +12,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Run source, browser and platform release checks concurrently. Use four
   pytest workers on Linux CI, and balance full browser shards with measured
   suite timings while keeping the publication checks on the tagged commit.
+- Pass the verified Python 3.12 build to publication within the same CI run.
+  Recheck archive contents and checksums against the tag and attest the SBOM
+  alongside the existing build provenance.
+- Run hosted browser checks in a digest-pinned Playwright image. Use small
+  synthetic media fixtures for playback coverage without installing FFmpeg
+  on each browser runner.
 - Track editor npm updates, verify the checked-in editor bundle against its
   lockfile, and audit Python, editor and separately vendored dependencies.
   Generate a CycloneDX inventory from the verified release and its smoke install.

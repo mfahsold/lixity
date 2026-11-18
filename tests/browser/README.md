@@ -17,9 +17,9 @@ replace-all undo, reviewed comparison, cancellation and stale save rejection.
 across return, Escape, reload and pending/failed requests. Both accept `--firefox`
 and use synthetic native projects. They run in the analysis browser group.
 
-Run after installing the Python development environment, FFmpeg and Playwright
-with Chromium. FFmpeg creates synthetic media for the dossier-media suite;
-install `axe-core` as well to run the audio direction accessibility audit.
+Run after installing the Python development environment and Playwright with
+Chromium. Install `axe-core` as well to run the audio direction accessibility
+audit.
 Playwright and axe-core are optional tooling, not Lixity runtime dependencies.
 The shared browser launchers mute desktop audio output in both Chromium and
 Firefox. Media timing and analyser data remain available to synthetic playback
@@ -140,10 +140,13 @@ command; completion order does not define a safe `--start` position. Repeat
 the full suite before a release after fixing a failure.
 The manually dispatched `browser` workflow accepts an optional space-separated
 `suites` input for focused GitHub-runner debugging (`--jobs 3`). Release and
-`rc.yml` gates shard the full suite across four hosted runners
-(`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`)
-on the selected commit. The browser workflow uses Ubuntu 24.04 with Playwright
-1.59.1. Review the runner image when upgrading Playwright.
+`rc.yml` gates shard the full suite across four hosted runners on the selected
+commit. The jobs use Microsoft's digest-pinned Playwright Noble image for
+Chromium and its system libraries. Keep the image version and the installed
+Playwright npm version in sync when updating the workflow.
+
+For the equivalent local run, use
+`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`.
 `--shard INDEX/TOTAL` assigns suites in descending
 estimated duration to the shard with the lowest estimated workload. Each shard
 queues its longest suites first. All four shards together run every suite once.
@@ -614,13 +617,27 @@ withdrawal/purge placeholders, keyboard enlargement and inert hostile metadata.
 No external image is fetched and no running user project is selected. Screenshots
 remain temporary; these cases run in the existing single Chromium job.
 
-The dossier-media suite additionally needs `ffmpeg` with libx264/libvpx to create
-short synthetic MP4/WebM clips; it retains no third-party media fixtures.
-It checks the shared PDF/video attachment dialog, explicit consent/cancellation,
+The dossier-media suite uses the checked-in half-second, solid-color H.264 MP4
+and VP8 WebM clips under `tests/browser/fixtures`. It checks the shared PDF/video
+attachment dialog, explicit consent/cancellation,
 exact downloaded PDF bytes, actual WebM playback, pinned-history immutability,
 source-file export scope, no remote requests and 1440/320-pixel native/companion
 layouts. Run with a canonical temporary directory when testing project paths:
 `TMPDIR="$PWD/.artifacts" PYTHONPATH=src node tests/browser/dossier-media.cjs`.
+
+Regenerate the synthetic clips from the repository root with FFmpeg and its
+libx264 and libvpx encoders.
+
+```sh
+for format in mp4 webm; do
+  codec=libx264
+  if [ "$format" = webm ]; then codec=libvpx; fi
+  ffmpeg -y -nostdin -hide_banner -loglevel error \
+    -f lavfi -i 'color=c=0x6594a3:s=160x90:r=10:d=0.5' \
+    -an -c:v "$codec" -pix_fmt yuv420p -fflags +bitexact -flags:v +bitexact -threads 1 \
+    "tests/browser/fixtures/synthetic-dossier-media.$format"
+done
+```
 
 The dossier-workflows suite exercises titled contextual claim/decision forms and
 the shared section editor against a disposable server: preserved drafts and pins,

@@ -106,7 +106,10 @@ def test_first_publication_and_reruns_select_one_verified_artifact_set():
     assert "release_channels.py recover" in publish
     assert "release_channels.py verify-draft" in publish
     assert "release_channels.py verify-github" in publish
-    assert publish.count("--build --smoke") == 1
+    assert "--build" not in publish and "--smoke" not in publish
+    assert "actions/download-artifact@" in publish
+    assert "name: verified-release-candidate" in publish
+    assert 'scripts/check_release.py --dist .release-candidate/dist --tag "$RELEASE_TAG"' in publish
     assert "if: steps.release_state.outputs.state != 'published'" in publish
     assert "if: steps.release_state.outputs.state == 'published'" in publish
     assert "echo missing" not in publish
@@ -134,14 +137,19 @@ def test_browser_release_gate_uses_the_shared_full_suite_command():
     source = workflow("browser.yml")
     assert "github.event_name == 'workflow_dispatch' && inputs.suites || ''" in source
     assert 'python scripts/run_browser_suites.py --only "${suite_names[@]}" --jobs 3' in source
-    assert "make browser-full PYTHON=python" in source
+    assert "LIXITY_BROWSER_FULL=1 python scripts/run_browser_suites.py" in source
     assert "fromJson('[1, 2, 3, 4]')" in source
-    assert 'BROWSER_ARGS="--shard ${SHARD}/4"' in source
+    assert '--shard "$SHARD/4"' in source
 
 
 def test_source_gate_runs_wheel_smoke_on_each_python_matrix_version():
     gate = job(workflow("tests.yml"), "check")
     assert "scripts/check_release.py --build --smoke" in gate
+    assert "--install-report" in gate
+    assert "name: verified-release-candidate" in gate
+    assert "inputs.stage_candidate && matrix.python-version == '3.12'" in gate
+    for name in ("release.yml", "rc.yml"):
+        assert "stage_candidate: true" in job(workflow(name), "source_checks")
 
 
 def test_release_candidate_workflow_qualifies_source_browser_and_native_before_tagging():
@@ -154,17 +162,19 @@ def test_release_candidate_workflow_qualifies_source_browser_and_native_before_t
     assert "scope: full" in job(source, "native_checks")
     ready = job(source, "ready")
     assert f"needs: [{', '.join(RELEASE_GATES)}]" in ready
+    assert "name: verified-release-candidate" in ready
+    assert "scripts/check_release.py --dist .release-candidate/dist" in ready
 
 
 def test_release_checks_install_synthetic_audio_prerequisites():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert any(re.match(r"numpy(?:[<>=!~; ]|$)", dep, re.IGNORECASE)
                for dep in project["project"]["optional-dependencies"]["dev"])
-    for filename in ("tests.yml", "browser.yml"):
-        source = workflow(filename)
-        assert 'python -m pip install ".[dev]"' in source
-        assert re.search(r"apt-get install -y [^\n]*\bffmpeg\b", source)
+    source = workflow("tests.yml")
+    assert 'python -m pip install ".[dev]"' in source
+    assert re.search(r"apt-get install -y [^\n]*\bffmpeg\b", source)
     browser = workflow("browser.yml")
+    assert 'python -m pip install ".[dev]"' in browser
     assert re.search(r"npm install --no-save [^\n]*\baxe-core@", browser)
 
 

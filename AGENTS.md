@@ -47,8 +47,8 @@ and investigate reported bugs before changing behavior.
   reports an explicit skip when missing. The `portability` marker covers only
   Windows/macOS seams; a Linux pass does not establish equivalent behavior.
 - UI changes: `make browser` (fast Playwright group) or `make browser-changed`
-  (maps modified git paths to suites). Browser checks need Node, Playwright
-  with Chromium, and FFmpeg for synthetic media, per `tests/browser/README.md`;
+  (maps modified git paths to suites). Browser checks need Node and Playwright
+  with Chromium, per `tests/browser/README.md`;
   run `make browser-full` before a release affecting rendered output. Inspect
   rendered desktop and mobile states, not just HTML strings. Ensure multi-tier
   sticky header geometries dynamically scale paragraph `scroll-margin-top` so

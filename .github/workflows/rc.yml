@@ -14,6 +14,8 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/tests.yml
+    with:
+      stage_candidate: true
 
   browser_checks:
     permissions:
@@ -37,6 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: verified-release-candidate
+          path: .release-candidate
+      - name: Verify the candidate archives from this run
+        run: |
+          python scripts/check_release.py --dist .release-candidate/dist
+          test -s .release-candidate/lixity-release.cdx.json
       - name: Record qualified release candidate commit
         env:
           RC_SHA: ${{ github.sha }}

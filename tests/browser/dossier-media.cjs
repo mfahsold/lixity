@@ -14,8 +14,12 @@ const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const env = {...process.env, PYTHONPATH: path.join(root, 'src')};
 
 (async () => {
+  for (const extension of ['mp4', 'webm']) {
+    const clip = path.join(__dirname, 'fixtures', `synthetic-dossier-media.${extension}`);
+    fs.copyFileSync(clip, path.join(artifacts, `clip.${extension}`));
+  }
   const server = spawn(python, ['-u', '-c', `
-import functools, json, subprocess, sys, threading
+import functools, json, sys, threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from lixity.research import api
@@ -26,10 +30,6 @@ api.init(project, title='Synthetic media workspace')
 (project / 'manuscript.md').write_text('# The gate\\n\\n## Arrival\\n\\nThe gate was open.\\n')
 (project / 'lixity.toml').write_text('manuscript = "manuscript.md"\\nlanguage = "en"\\n')
 (base / 'note.pdf').write_bytes(make_synthetic_pdf('A synthetic gate survey.'))
-for suffix, codec in [('mp4', 'libx264'), ('webm', 'libvpx')]:
-    subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i',
-        'color=c=0x6594a3:s=160x90:r=10:d=0.5', '-an', '-c:v', codec, '-pix_fmt', 'yuv420p',
-        str(base / ('clip.' + suffix))], check=True, timeout=30)
 dossier = api.create_dossier(project, title='Synthetic media dossier', body='## Survey\\n\\nRead the evidence, then decide.')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.exports_dir = str(base / 'exports')

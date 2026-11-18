@@ -138,8 +138,8 @@ The source archive also includes and verifies shared Python test fixtures.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. Select them locally with `pytest -m native_pdf`.
-FFmpeg exercises speech tempo processing and creates synthetic video fixtures for
-the full browser suite; install it to run these integration checks.
+FFmpeg exercises speech tempo processing and verifies the published media in
+the Python suite. The browser suite uses checked-in synthetic clips.
 Synthetic worker and Tesseract protocol tests need no model or installed OCR engine.
 For optional hooks, install `pre-commit` separately, then run
 `pre-commit install`; see
@@ -302,12 +302,12 @@ Preparation does not commit, tag, push or publish. Follow this four-phase releas
    timing on the same commit with the `tests` workflow's `pytest_workers`
    dispatch input (`0` for serial, `2` or `4` for parallel). In a four-core local
    comparison of the same suite, the three modes took 128, 66 and 39 seconds.
-   When unpublished, it then builds, verifies and smoke-installs artifacts from that
-   commit. It records the actual smoke-install resolution and shipped browser
-   components in a CycloneDX workflow artifact tied to the source commit and
-   archive digests. It then attests the release archives for `gh attestation
-   verify`, attaches them to a draft release,
-   verifies the draft manifest, digests and attestations via `scripts/release_channels.py verify-draft`,
+   The Python 3.12 source job stages its smoke-tested archives and a CycloneDX
+   SBOM from that same install. The RC workflow validates the handoff against
+   its checked-out source. A new tag publication retrieves the staged archive
+   set from its own run and checks the contents and checksums against the tag.
+   It attests the archives and their SBOM, attaches the archives to a draft release,
+   verifies the draft manifest, digests and provenance via `scripts/release_channels.py verify-draft`,
    publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
    of an already published tag, `scripts/release_channels.py recover` retrieves and
    verifies the immutable GitHub assets instead of rebuilding.
