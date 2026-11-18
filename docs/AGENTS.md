@@ -2272,6 +2272,16 @@ Use `audio-status --help` for engine names supported by the installed version.
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.
+**Unreleased additive worker metadata:** native target observations can include
+`model_state` (`unloaded|loading|loaded|failed`), strict boolean `active`, and
+actual `idle_timeout_seconds`. Missing residency is unknown, not proof that a
+model is loaded. `state=ready` means the service accepts requests. Health probes
+never start inference or extend the idle interval. The raw worker `/health`
+includes `runtime` only when the loaded renderer provides resolved values.
+All native worker entrypoints share configurable 300-second completion-based
+idle release; lifecycle policy belongs to the shared worker/service, not the
+project profile. See [worker configuration](INSTALLATION.md#native-audio-model-lifecycle-unreleased).
+
 `read-aloud --preview` or `--preview-line N` selects a bounded source paragraph,
 uses a fresh render and a separate preview output by default; `--plan-only`
 retains its existing speech-plan JSON contract. In 0.8.0, `--progress`

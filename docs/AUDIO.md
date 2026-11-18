@@ -58,6 +58,12 @@ lixity read-aloud --project ./novel --preview --speed 1.0 -o preview.wav
 lixity read-aloud --project ./novel --chapter 1 --progress -o chapter-1.wav
 ```
 
+**Unreleased native workers:** models load for a concrete render and are released
+by default after five idle minutes following completion. All supported native
+workers share the configurable policy described in
+[Installation](INSTALLATION.md#native-audio-model-lifecycle-unreleased). Status
+checks do not load a model. The first render after release includes loading time.
+
 Only the last two commands synthesize audio. Plan JSON includes manuscript text
 and private direction. Local workers keep synthesis on the configured computer;
 a configured Jetson receives text through the operator's SSH forward, and an
@@ -198,7 +204,7 @@ render; it is not part of a saved voice profile. The default is local, and an
 unavailable target fails explicitly without switching machines or models.
 In 0.8.0, the native audio interface names the choices by how the voice
 is selected: a preset, a description or a reference recording. It also displays
-a point-in-time worker status and compares a known loaded model with the selected
+a point-in-time worker status and compares a known configured model with the selected
 profile's model. An unreachable worker is unavailable; a missing or unrecognised
 model identity leaves the match unknown. The display neither downloads a checkpoint
 nor switches a worker. Check again before rendering if the worker has changed

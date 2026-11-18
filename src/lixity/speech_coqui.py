@@ -12,11 +12,13 @@ import logging
 import os
 import tempfile
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any
 
+from .speech_lifecycle import add_lifecycle_arguments, serve_worker
 from .speech_profiles import COQUI_MODEL, COQUI_REFERENCE_MODEL
-from .speech_worker import SAMPLE_RATE, _decode_reference, worker_server
+from .speech_worker import SAMPLE_RATE, _decode_reference
 
 # The Thorsten vocabulary has no affricate tie bar, no non-syllabic mark and no
 # typographic quotation marks. gruut emits the first two and manuscripts contain
@@ -31,9 +33,9 @@ def unexpected_discards(discarded: list[str]) -> str:
     return " ".join(f"U+{ord(char):04X}" for char in sorted(set(discarded) - _EXPECTED_DISCARDS))
 
 
-def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
-    """Load local checkpoints and return a serialized-worker renderer."""
-    if not 1 <= threads <= 64:
+def _validate_assets(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> tuple[Path, Path | None]:
+    """Validate local settings without importing the optional inference stack."""
+    if type(threads) is not int or not 1 <= threads <= 64:
         raise ValueError("Threads must be between 1 and 64")
     model_dir = model_dir.expanduser().resolve(strict=True)
     model_file, config_file = model_dir / "model_file.pth", model_dir / "config.json"
@@ -43,6 +45,13 @@ def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads
         converter_dir = converter_dir.expanduser().resolve(strict=True)
         if not (converter_dir / "checkpoint.pth").is_file() or not (converter_dir / "config.json").is_file():
             raise ValueError("OpenVoice converter directory requires checkpoint.pth and config.json")
+    return model_dir, converter_dir
+
+
+def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
+    """Load local checkpoints and return a serialized-worker renderer."""
+    model_dir, converter_dir = _validate_assets(model_dir, converter_dir, threads=threads)
+    model_file, config_file = model_dir / "model_file.pth", model_dir / "config.json"
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ.setdefault("NUMBA_CPU_NAME", "generic")
@@ -92,15 +101,12 @@ def main() -> None:
     parser.add_argument("--model", required=True, type=Path, help="Local Thorsten VITS model directory")
     parser.add_argument("--converter", type=Path, help="Local OpenVoice V2 converter directory")
     parser.add_argument("--threads", type=int, default=4)
+    add_lifecycle_arguments(parser)
     args = parser.parse_args()
-    renderer = load_renderer(args.model, args.converter, threads=args.threads)
-    server = worker_server(renderer, model=COQUI_REFERENCE_MODEL if args.converter else COQUI_MODEL)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    model, converter = _validate_assets(args.model, args.converter, threads=args.threads)
+    serve_worker(partial(load_renderer, model, converter, threads=args.threads),
+                 model=COQUI_REFERENCE_MODEL if converter else COQUI_MODEL, port=8769,
+                 idle_timeout_seconds=args.idle_timeout_seconds)
 
 
 if __name__ == "__main__":

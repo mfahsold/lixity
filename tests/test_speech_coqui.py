@@ -162,3 +162,12 @@ def test_reference_plan_sends_verified_reference_through_worker(tmp_path, monkey
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+@pytest.mark.parametrize("threads", [True, 1.5, 0, 65])
+def test_coqui_rejects_invalid_threads_before_optional_imports(tmp_path, monkeypatch, threads):
+    from lixity import speech_coqui
+
+    monkeypatch.setattr(speech_coqui.importlib, "import_module", lambda _: pytest.fail("optional import"))
+    with pytest.raises(ValueError, match="Threads"):
+        speech_coqui.load_renderer(tmp_path, threads=threads)

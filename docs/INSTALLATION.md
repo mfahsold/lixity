@@ -236,6 +236,43 @@ with the standard library; other WAV formats, FLAC and MP3 require FFmpeg.
 transcript explicitly when text or pause comparison is wanted. See the
 [audio usage guide](AUDIO.md#audio-export-and-external-providers-unreleased).
 
+### Native audio model lifecycle (unreleased)
+
+Qwen (all three variants), Coqui/OpenVoice and IMS Toucan share one worker
+lifecycle. Starting a worker binds its loopback service and validates local
+settings/assets without importing the inference stack or loading weights. The
+first validated synthesis request loads the model in an owned child process.
+Keep the worker's separate optional environment and complete local checkpoints.
+This lifecycle applies to the unreleased source; use its verified development
+wheel until the next release.
+
+The default idle interval is **300 seconds after the last completed synthesis**.
+The child exits after that interval, releasing model allocations and its inference
+runtime. Active synthesis is protected; subsequent requests reuse a resident
+model and start a new interval only after completion. Health/capability probes
+neither load the model nor extend the interval. The lightweight service remains
+available. The next render can therefore take longer while the model loads.
+
+Configure the same option on every supported worker, for example:
+
+```sh
+python -m lixity.speech_qwen --model /path/to/CustomVoice --idle-timeout-seconds 900
+```
+
+`--idle-timeout-seconds` accepts finite values from 0 to 86400; 0 releases the
+model after each completed request. Persist the option in the worker's service
+command and restart that worker after changing it. This is shared worker policy,
+not a project profile or a setting inferred from whichever manuscript is open.
+Existing explicit library loaders remain available to callers that own a model.
+
+`GET /health` distinguishes service readiness (`ready`) from residency
+(`model_state`: `unloaded`, `loading`, `loaded`, `failed`), reports `active` and
+actual `idle_timeout_seconds`, and includes resolved `runtime` metadata only
+while a loaded renderer supplies it. Cold asset validation checks local files;
+checkpoint integrity, optional dependencies and hardware compatibility are
+resolved on first synthesis. A failed load/render is explicit and a subsequent
+request can retry in a fresh child. No checkpoint is downloaded automatically.
+
 ### Optional Qwen audio worker
 
 Version 0.7.7 supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and also
@@ -261,8 +298,8 @@ The migration preserves source files and never assumes an equivalent Qwen timbre
 or precise speed; see the same [read-aloud guide](AUDIO.md#lixity-read-aloud).
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
-hardware-appropriate PyTorch installation. Install Lixity 0.8.1 into that
-environment (`python -m pip install 'lixity==0.8.1'`) and obtain the
+hardware-appropriate PyTorch installation. Install the current Lixity release into that
+environment (`python -m pip install 'lixity==0.8.2'`) and obtain the
 complete local CustomVoice checkpoint, including its speech tokenizer, using the
 [upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
 build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker
@@ -274,8 +311,8 @@ Start the worker explicitly from that environment:
 python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
 ```
 
-It binds only to `127.0.0.1:8769`, loads the local model once and serializes
-synthesis. CPU operation supports full chapters; generation can be much slower than the
+It binds only to `127.0.0.1:8769` and serializes synthesis. The unreleased
+source uses the [shared on-demand lifecycle](#native-audio-model-lifecycle-unreleased). CPU operation supports full chapters; generation can be much slower than the
 result's duration, so use a short preview to choose the voice. Match Torch threads
 to the CPU budget assigned to the worker. A heavily throttled four-thread worker
 can waste time contending within a one-core quota. Keep workstation CPU/memory

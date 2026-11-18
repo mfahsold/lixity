@@ -12,15 +12,16 @@ import io
 import os
 import sys
 from collections.abc import Callable, Collection, Mapping
+from functools import partial
 from pathlib import Path
 from typing import Any
 
-from .log import get_logger
 from .speech_controls import phoneme_spans
 from .speech_engines import TOUCAN_MODEL
+from .speech_lifecycle import add_lifecycle_arguments, serve_worker
 from .speech_profiles import AudioProfile
 from .speech_references import SpeechReference
-from .speech_worker import SAMPLE_RATE, _decode_reference, synthesize_native, worker_server
+from .speech_worker import SAMPLE_RATE, _decode_reference, synthesize_native
 
 UPSTREAM_REVISION = "3cc2094d9c7123336eda7e299ac0bc90319ca9ff"
 _LANGUAGES = {"de": ("deu", "de"), "en": ("eng", "en-us")}
@@ -97,9 +98,9 @@ def _local_files(directory: Path, names: tuple[str, ...]) -> Path:
     return root
 
 
-def load_renderer(source_dir: Path, model_dir: Path, speaker_dir: Path, *, device: str = "cpu",
-                  threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
-    """Load only supplied checkpoints; never request missing model resources."""
+def _validate_assets(source_dir: Path, model_dir: Path, speaker_dir: Path, *, device: str = "cpu",
+                  threads: int = 4) -> tuple[Path, Path, Path]:
+    """Validate local settings without importing the optional inference stack."""
     if type(threads) is not int or not 1 <= threads <= 64:
         raise ValueError("Threads must be between 1 and 64")
     if device not in ("cpu", "cuda"):
@@ -109,6 +110,13 @@ def load_renderer(source_dir: Path, model_dir: Path, speaker_dir: Path, *, devic
                                       "Preprocessing/TextFrontend.py", "Preprocessing/multilinguality/iso_lookup.json"))
     model = _local_files(model_dir, ("ToucanTTS.pt", "Vocoder.pt"))
     speaker = _local_files(speaker_dir, _SPEAKER_FILES)
+    return source, model, speaker
+
+
+def load_renderer(source_dir: Path, model_dir: Path, speaker_dir: Path, *, device: str = "cpu",
+                  threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
+    """Load only supplied checkpoints; never request missing model resources."""
+    source, model, speaker = _validate_assets(source_dir, model_dir, speaker_dir, device=device, threads=threads)
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ["HF_DATASETS_OFFLINE"] = "1"
@@ -223,22 +231,12 @@ def main() -> None:
     parser.add_argument("--speaker", required=True, type=Path, help="Local SpeechBrain ECAPA checkpoint directory")
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--threads", type=int, default=4)
+    add_lifecycle_arguments(parser)
     args = parser.parse_args()
-    logger = get_logger("speech.worker")
-    logger.info("event=worker_model_load engine=ims-toucan device=%s status=started", args.device)
-    try:
-        renderer = load_renderer(args.source, args.model, args.speaker, device=args.device, threads=args.threads)
-    except Exception:
-        logger.warning("event=worker_model_load engine=ims-toucan status=failed")
-        raise
-    logger.info("event=worker_model_load engine=ims-toucan device=%s status=ready", args.device)
-    server = worker_server(renderer, port=8772, model=TOUCAN_MODEL)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    source, model, speaker = _validate_assets(args.source, args.model, args.speaker,
+                                             device=args.device, threads=args.threads)
+    serve_worker(partial(load_renderer, source, model, speaker, device=args.device, threads=args.threads),
+                 model=TOUCAN_MODEL, port=8772, idle_timeout_seconds=args.idle_timeout_seconds)
 
 
 if __name__ == "__main__":

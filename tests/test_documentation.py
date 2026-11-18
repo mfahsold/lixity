@@ -416,6 +416,26 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(check_or_sync_files("2.3.4", check_only=True), [])
                 self.assertEqual(find_version_drift("2.3.4"), [])
 
+    def test_audio_worker_package_pin_sync_preserves_historical_feature_versions(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        original = "Version 0.7.7 introduced audio. Install `lixity==0.8.1`.\n"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installation = root / "docs/INSTALLATION.md"
+            installation.parent.mkdir(parents=True)
+            installation.write_text(original, encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                self.assertTrue(find_version_drift("0.8.2"))
+                self.assertEqual(check_or_sync_files("0.8.2", check_only=True), ["docs/INSTALLATION.md"])
+                check_or_sync_files("0.8.2")
+                self.assertEqual(installation.read_text(encoding="utf-8"),
+                                 original.replace("lixity==0.8.1", "lixity==0.8.2"))
+                self.assertEqual(find_version_drift("0.8.2"), [])
+
     def test_wheel_install_pin_checks_and_syncs_both_tag_and_artifact_version(self):
         import tempfile
         from unittest.mock import patch

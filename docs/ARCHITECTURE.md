@@ -1668,6 +1668,19 @@ controls while export preserves author intent. Cache identities include all new
 synthesis inputs. Existing profiles are preserved by reviewed schema `/5` upgrades;
 new direction/plan/timeline data uses `/2` while old representations remain stable.
 
+### Native model residency (unreleased)
+
+`speech_lifecycle` owns the common native worker policy, spawned inference child,
+completion-based idle deadline and shutdown/retry cleanup. Qwen, Coqui/OpenVoice
+and Toucan entrypoints validate lightweight local assets and pass picklable
+loaders into that shared serving path. Their explicit library loaders and the
+shared `speech_worker` transport remain the existing adapter boundaries. Health
+separates service readiness from model residency and never creates or refreshes
+a model. Child exit releases allocator/device ownership; dropping Python tensor
+references alone is not used as proof of RAM reclamation. Browser synthesis and
+external providers do not own native model processes. F5's unavailable bundled
+runtime remains unavailable.
+
 ### Authored passage direction
 
 `speech_direction.py` owns the versioned project-local ledger and pure speech

@@ -64,6 +64,7 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
             ROOT / "docs" / "INSTALLATION.md",
             [
                 install_pin,
+                (r"lixity==\d+\.\d+\.\d+", f"lixity=={version}"),
                 (r"this source documentation describes the prepared \*\*v\d+\.\d+\.\d+\*\*",
                  f"this source documentation describes the prepared **v{version}**"),
                 (r"this documentation describes \*\*v\d+\.\d+\.\d+\*\*",
@@ -237,6 +238,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
          re.compile(r'Current release:\s*<a href="releases/v(\d+\.\d+\.\d+)\.md">')),
     ),
     Path("docs/INSTALLATION.md"): (
+        ("worker package install pin", re.compile(r"lixity==(\d+\.\d+\.\d+)")),
         ("current release-note target",
          re.compile(r"\[release notes\]\(releases/v(\d+\.\d+\.\d+)\.md\)")),
     ),

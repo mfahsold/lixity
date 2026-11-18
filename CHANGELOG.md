@@ -9,6 +9,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Load native Qwen, Coqui/OpenVoice and Toucan models only for synthesis, using
+  one shared spawned-process lifecycle. Release the child after a configurable
+  idle interval (default 300 seconds after completion), protect active jobs and
+  retain the lightweight HTTP worker. Health/status distinguishes configured
+  models, residency and active work without loading weights.
+- Consolidate native worker startup/serving/shutdown policy, validate local
+  Qwen assets before serving, and recover model processes after load/render
+  failures. Explicit library loaders and existing transport adapters remain.
+
 - Organize the native analysis overview into passage review, chapter comparison
   and pattern exploration, revealing one existing section at a time while
   retaining deep links, input state and complete no-script reports.

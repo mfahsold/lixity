@@ -260,11 +260,12 @@ server.serve_forever()
       page.on('pageerror',error=>errors.push(error.message));
       let workerModel = data.audioCapabilities.qwen3.model;
       let workerState = 'ready';
+      let workerResidency = {};
       await page.route('**/api/speech?*', async route => {
         try {
           const response = await route.fetch(), payload = await response.json();
           payload.workers = [
-            {target:'local', state:workerState, model:workerModel, transport:'loopback', model_matches:null},
+            {target:'local', state:workerState, model:workerModel, transport:'loopback', model_matches:null, ...workerResidency},
             {target:'jetson', state:'unavailable', model:null, transport:'ssh', model_matches:null},
           ];
           await route.fulfill({response, json:payload});
@@ -316,6 +317,21 @@ server.serve_forever()
       const workerText = (key, model) => labels['speech_worker_' + key]
         .replace('{target}', labels.speech_target_local).replace('{model}', model);
       assert.equal(await page.locator('#speech-worker-status').textContent(),workerText('match',data.audioCapabilities.qwen3.name));
+      for (const [state, active] of [['unloaded',false], ['loading',true], ['loaded',false], ['loaded',true], ['failed',false]]) {
+        workerResidency = {model_state:state, active, idle_timeout_seconds:17.5};
+        await page.locator('[data-speech-action=worker_refresh]').click();
+        const key = state === 'loaded' && active ? 'active' : state;
+        const expected = workerText('model_' + key, data.audioCapabilities.qwen3.name) + ' ' +
+          labels.speech_worker_idle_policy.replace('{seconds}',new Intl.NumberFormat(locale).format(17.5));
+        await page.waitForFunction(text => document.querySelector('#speech-worker-status').textContent === text, expected);
+        assert.ok(await page.locator('#speech-worker-status').evaluate(node => node.scrollWidth <= node.clientWidth + 1),
+          `${locale}/${width}: residency and actual idle policy remain readable`);
+      }
+      workerResidency = {};
+      await page.locator('[data-speech-action=worker_refresh]').click();
+      await page.waitForFunction(text => document.querySelector('#speech-worker-status').textContent === text,
+        workerText('match',data.audioCapabilities.qwen3.name));
+
       assert.equal(await page.locator('#speech-target').isVisible(),true, 'Profile work can inspect either worker without changing saved settings');
       await page.locator('#speech-target').selectOption('jetson');
       assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson));

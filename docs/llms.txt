@@ -138,6 +138,10 @@ voice references, transcripts, speech-profile IDs or service endpoints. `audio-i
 ROOT --audio WAV --chapter N --source-sha256 HASH [--manuscript manuscript.md]` explicitly binds
 an existing PCM recording; this is not transcript verification or forced alignment.
 
+Unreleased native workers share on-demand loading and configurable completion-based
+idle release (default 300 seconds); readiness and model residency are distinct.
+See Installation for worker/service configuration and the Audio manual for rendering.
+
 Native audio shares profiles, passage direction, planning and worker contracts between
 CLI and browser. Qwen, Coqui/OpenVoice and optional IMS-Toucan differ in supported
 languages, references and delivery controls. IMS-Toucan's German/English path in 0.8.1

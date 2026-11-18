@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
 import threading
 import time
@@ -50,6 +51,7 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
     request = urllib.request.Request(endpoints[target].replace("/v1/audio/speech", "/health"))  # noqa: S310 - fixed loopback allowlist
     client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
     model_id = None
+    residency: dict[str, Any] = {}
     try:
         with client.open(request, timeout=1.5) as response:
             raw = response.read(4097)
@@ -60,10 +62,20 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
             raise ValueError("Unexpected worker identity")
         engine_for_model(value["model"])
         model_id = value["model"]
+        if "model_state" in value:
+            if value["model_state"] not in ("unloaded", "loading", "loaded", "failed") or type(value.get("active")) is not bool:
+                raise ValueError("Unexpected model residency")
+            residency = {"model_state": value["model_state"], "active": value["active"]}
+            if "idle_timeout_seconds" in value:
+                from .speech_lifecycle import MAX_IDLE_TIMEOUT_SECONDS
+                timeout = value["idle_timeout_seconds"]
+                if type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 <= timeout <= MAX_IDLE_TIMEOUT_SECONDS:
+                    raise ValueError("Unexpected model idle timeout")
+                residency["idle_timeout_seconds"] = timeout
         state = "ready" if value["ready"] else "starting"
     except (OSError, ValueError, urllib.error.URLError):
         state = "unavailable"
-    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id}
+    return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id, **residency}
 
 
 def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
@@ -170,6 +182,7 @@ def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes
 
 def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
                   runtime_info: Any = None, model: str = QWEN_MODEL,
+                  health_info: Callable[[], dict[str, Any]] | None = None,
                   server_class: type[ThreadingHTTPServer] = ThreadingHTTPServer) -> ThreadingHTTPServer:
     """Build a loopback-only worker with injectable serialized inference."""
     engine = engine_for_model(model)
@@ -210,7 +223,8 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
         def do_GET(self) -> None:
             if self.path == "/health":
                 self._send_reply(200, json.dumps({"ready": True, "model": model,
-                                                 **({"runtime": asdict(runtime_info)} if runtime_info is not None else {})}).encode())
+                                                 **({"runtime": asdict(runtime_info)} if runtime_info is not None else {}),
+                                                 **(health_info() if health_info is not None else {})}).encode())
             elif self.path == "/capabilities":
                 self._send_reply(200, json.dumps(audio_capabilities()[engine]).encode())
             else:

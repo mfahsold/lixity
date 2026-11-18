@@ -11,7 +11,6 @@ import urllib.request
 import wave
 from contextlib import contextmanager
 from email.message import Message
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -19,6 +18,15 @@ import pytest
 from lixity.speech import SpeechCancelled, generate_silence_wav, render_speech_audio
 from lixity.speech_profiles import QWEN_MODEL, AudioProfile
 from lixity.speech_qwen import ENDPOINT, SYNTHESIS_TIMEOUT_SECONDS, synthesize_qwen, worker_server
+
+
+def _write_qwen_assets(path):
+    for name in ("model.safetensors", "generation_config.json", "tokenizer_config.json", "vocab.json", "merges.txt",
+                 "speech_tokenizer/config.json", "speech_tokenizer/preprocessor_config.json",
+                 "speech_tokenizer/model.safetensors"):
+        target = path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("{}", encoding="utf-8")
 
 
 def profile(**updates):
@@ -271,6 +279,7 @@ def test_worker_explicit_device_loading(tmp_path, monkeypatch, device, bf16, dty
     (tmp_path / "config.json").write_text(json.dumps({
         "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
     }))
+    _write_qwen_assets(tmp_path)
     calls = []
     model = SimpleNamespace(get_supported_speakers=lambda: list(QWEN_VOICES),
                             get_supported_languages=lambda: list(QWEN_LANGUAGES.values()))
@@ -302,6 +311,7 @@ def test_worker_unavailable_cuda_has_no_cpu_fallback(tmp_path, monkeypatch):
     (tmp_path / "config.json").write_text(json.dumps({
         "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
     }))
+    _write_qwen_assets(tmp_path)
     imported = []
 
     def import_module(name):
@@ -434,6 +444,7 @@ def test_worker_explicit_codec_placement(tmp_path, monkeypatch, device, codec_de
     (tmp_path / "config.json").write_text(json.dumps({
         "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
     }))
+    _write_qwen_assets(tmp_path)
     events = []
     codec = SimpleNamespace(device="original", model=SimpleNamespace(
         to=lambda **kwargs: events.append(("codec", kwargs))))
@@ -500,6 +511,7 @@ def test_worker_synthesis_enters_inference_mode_and_restores_it_on_failure(tmp_p
     (tmp_path / "config.json").write_text(json.dumps({
         "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
     }))
+    _write_qwen_assets(tmp_path)
     active = False
     fail = False
     calls = []
@@ -574,34 +586,36 @@ def test_worker_health_reports_bounded_resolved_runtime():
         thread.join()
 
 
-def test_worker_cli_forwards_codec_device(monkeypatch):
+def test_worker_cli_forwards_codec_device_without_loading(monkeypatch, tmp_path):
     import sys
 
+    import lixity.speech_lifecycle as lifecycle
     import lixity.speech_qwen as worker
 
+    (tmp_path / "config.json").write_text(json.dumps({
+        "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
+    }))
+    _write_qwen_assets(tmp_path)
     calls = []
 
-    def load(path, **kwargs):
-        calls.append((path, kwargs))
-        return SimpleNamespace(runtime_info="synthetic runtime")
+    def serve(loader, **kwargs):
+        calls.append((loader, kwargs))
 
-    def worker_server(render, port, runtime_info):
-        assert runtime_info == render.runtime_info == "synthetic runtime"
-        return server
+    def no_load(*args, **kwargs):
+        pytest.fail("CLI startup must not load the model")
 
-    def serve():
-        raise KeyboardInterrupt
-
-    server = SimpleNamespace(serve_forever=serve, server_close=lambda: calls.append("closed"))
-    monkeypatch.setattr(worker, "load_local_model", load)
-    monkeypatch.setattr(worker, "worker_server", worker_server)
-    monkeypatch.setattr(sys, "argv", ["speech_qwen", "--model", "/synthetic/model", "--device", "cuda",
+    monkeypatch.setattr(worker, "load_local_model", no_load)
+    monkeypatch.setattr(lifecycle, "serve_worker", serve)
+    monkeypatch.setattr(sys, "argv", ["speech_qwen", "--model", str(tmp_path), "--device", "cuda",
                                       "--codec-device", "cpu", "--attention", "eager", "--threads", "6",
-                                      "--codec-chunk-frames", "32"])
+                                      "--codec-chunk-frames", "32", "--idle-timeout-seconds", "123"])
     worker.main()
-    assert calls == [(Path("/synthetic/model"), {"device": "cuda", "codec_device": "cpu", "threads": 6,
-                                               "attention": "eager", "codec_chunk_frames": 32}),
-                     "closed"]
+    loader, options = calls[0]
+    assert loader.func is no_load
+    assert loader.args == (tmp_path,)
+    assert loader.keywords == {"device": "cuda", "codec_device": "cpu", "threads": 6,
+                               "attention": "eager", "codec_chunk_frames": 32}
+    assert options == {"model": QWEN_MODEL, "port": 8769, "idle_timeout_seconds": 123}
 
 
 @pytest.fixture
@@ -611,6 +625,7 @@ def chunk_codec(tmp_path, monkeypatch):
     (tmp_path / "config.json").write_text(json.dumps({
         "tts_model_type": "custom_voice", "tts_model_size": "1b7", "tokenizer_type": "qwen3_tts_tokenizer_12hz",
     }))
+    _write_qwen_assets(tmp_path)
     calls = []
 
     class Decoder:
@@ -764,6 +779,7 @@ def test_voice_design_worker_calls_official_api_with_separate_description_and_di
 
     (tmp_path/'config.json').write_text(json.dumps({'tts_model_type':'voice_design',
         'tts_model_size':'1b7', 'tokenizer_type':'qwen3_tts_tokenizer_12hz'}))
+    _write_qwen_assets(tmp_path)
     calls=[]
     model=SimpleNamespace(get_supported_languages=lambda:list(QWEN_LANGUAGES.values()),
                           generate_voice_design=lambda **kwargs:(calls.append(kwargs) or (['sample'],24000)))
@@ -792,6 +808,7 @@ def test_base_worker_reuses_only_matching_reference_prompt(tmp_path, monkeypatch
 
     (tmp_path / 'config.json').write_text(json.dumps({'tts_model_type':'base',
         'tts_model_size':'1b7', 'tokenizer_type':'qwen3_tts_tokenizer_12hz'}))
+    _write_qwen_assets(tmp_path)
     created, generated = [], []
     def create_prompt(**kwargs):
         created.append(kwargs)
@@ -852,3 +869,38 @@ def test_health_preserves_identity_of_both_worker_variants():
     for model in (QWEN_MODEL, QWEN_DESIGN_MODEL):
         opener=SimpleNamespace(open=lambda *_args, selected=model, **_kwargs: Reply(selected))
         assert worker_health('local', opener=opener)['model'] == model
+
+
+@pytest.mark.parametrize("missing", ["model.safetensors", "tokenizer_config.json", "vocab.json", "merges.txt",
+                                      "generation_config.json", "speech_tokenizer/config.json",
+                                      "speech_tokenizer/preprocessor_config.json", "speech_tokenizer/model.safetensors"])
+def test_worker_cli_rejects_incomplete_assets_before_serving(tmp_path, monkeypatch, missing):
+    import lixity.speech_lifecycle as lifecycle
+    import lixity.speech_qwen as worker
+
+    _write_qwen_assets(tmp_path)
+    (tmp_path / "config.json").write_text(json.dumps({"tts_model_type": "custom_voice", "tts_model_size": "1b7",
+                                                     "tokenizer_type": "qwen3_tts_tokenizer_12hz"}))
+    (tmp_path / missing).unlink()
+    monkeypatch.setattr("sys.argv", ["worker", "--model", str(tmp_path)])
+    monkeypatch.setattr(lifecycle, "serve_worker", lambda *a, **k: pytest.fail("Incomplete assets must not serve"))
+    with pytest.raises(ValueError, match="local Qwen"):
+        worker.main()
+
+
+@pytest.mark.parametrize("subdirectory", ["", "speech_tokenizer"])
+def test_lightweight_asset_validation_supports_local_sharded_weights(tmp_path, subdirectory):
+    from lixity.speech_qwen import validate_local_model
+
+    _write_qwen_assets(tmp_path)
+    (tmp_path / "config.json").write_text(json.dumps({"tts_model_type": "custom_voice", "tts_model_size": "1b7",
+                                                     "tokenizer_type": "qwen3_tts_tokenizer_12hz"}))
+    weights = tmp_path / subdirectory
+    (weights / "model.safetensors").unlink()
+    shard = weights / "model-00001-of-00001.safetensors"
+    shard.write_bytes(b"synthetic checkpoint")
+    (weights / "model.safetensors.index.json").write_text(json.dumps({"weight_map": {"tensor": shard.name}}))
+    assert validate_local_model(tmp_path) == tmp_path
+    shard.unlink()
+    with pytest.raises(ValueError, match="local Qwen"):
+        validate_local_model(tmp_path)

@@ -363,8 +363,16 @@
     else if (worker && worker.state === "ready" && knownModel && cap) {
       args.model = knownModel.name;
       key = worker.model === cap.model ? "match" : "mismatch";
+      if (key === "match" && ["unloaded", "loading", "loaded", "failed"].includes(worker.model_state)) {
+        key = "model_" + (worker.model_state === "loaded" && worker.active ? "active" : worker.model_state);
+      }
     }
-    fields.worker_status.textContent = uiFormat("speech_worker_" + key, args);
+    var message = uiFormat("speech_worker_" + key, args);
+    if (key.startsWith("model_") && Number.isFinite(worker.idle_timeout_seconds) && worker.idle_timeout_seconds >= 0) {
+      var seconds = new Intl.NumberFormat(document.documentElement.lang || "en", {maximumFractionDigits: 20}).format(worker.idle_timeout_seconds);
+      message += " " + uiFormat("speech_worker_idle_policy", {seconds: seconds});
+    }
+    fields.worker_status.textContent = message;
   }
   function updateRuntimeHint() {
     var cap = profileCapability();

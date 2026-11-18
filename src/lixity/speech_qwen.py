@@ -13,7 +13,6 @@ import inspect
 import io
 import json
 import os
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
@@ -24,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .speech_references import SpeechReference
 
-from .log import get_logger, speech_diagnostic_id
+from .log import speech_diagnostic_id
 from .speech_engines import native_endpoint, native_engine
 from .speech_profiles import (
     QWEN_BASE_MODEL,
@@ -127,12 +126,50 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                         server_class=ThreadingHTTPServer)
 
 
-def load_local_model(
+def _require_local_asset(path: Path) -> None:
+    try:
+        if path.is_file():
+            with path.open("rb") as source:
+                if source.read(1):
+                    return
+    except OSError as exc:
+        raise ValueError(f"Unreadable local Qwen asset: {path.name}") from exc
+    raise ValueError(f"Missing or empty local Qwen asset: {path.name}")
+
+
+def _validate_local_weights(directory: Path) -> None:
+    """Check supported local checkpoint layouts without reading tensor data."""
+    for name in ("model.safetensors", "pytorch_model.bin"):
+        if (directory / name).is_file():
+            _require_local_asset(directory / name)
+            return
+    for name in ("model.safetensors.index.json", "pytorch_model.bin.index.json"):
+        index = directory / name
+        if not index.is_file():
+            continue
+        _require_local_asset(index)
+        if index.stat().st_size > 4 * 1024 * 1024:
+            raise ValueError("Oversized local Qwen checkpoint index")
+        metadata = json.loads(index.read_text(encoding="utf-8"))
+        mapping = metadata.get("weight_map") if isinstance(metadata, dict) else None
+        if not isinstance(mapping, dict) or not mapping:
+            raise ValueError("Invalid local Qwen checkpoint index")
+        shards: set[str] = set()
+        for shard in mapping.values():
+            if not isinstance(shard, str) or not shard or Path(shard).is_absolute() or ".." in Path(shard).parts:
+                raise ValueError("Invalid local Qwen checkpoint shard")
+            shards.add(shard)
+        for shard in shards:
+            _require_local_asset(directory / shard)
+        return
+    raise ValueError("Missing local Qwen checkpoint weights")
+
+
+def validate_local_model(
     model_path: Path, *, device: str = "cpu", threads: int = 4, codec_device: str = "model",
-    attention: str = "auto", codec_chunk_frames: int = 300,
-    variant: str = "custom-voice",
-) -> LoadedRenderer:
-    """Load an explicitly selected pinned Qwen architecture from local files."""
+    attention: str = "auto", codec_chunk_frames: int = 300, variant: str = "custom-voice",
+) -> Path:
+    """Validate local assets and options without importing inference dependencies."""
     if variant not in ("custom-voice", "voice-design", "base"):
         raise ValueError("Unknown Qwen model variant")
     if device not in ("cpu", "cuda"):
@@ -148,9 +185,25 @@ def load_local_model(
     model_path = model_path.expanduser().resolve()
     config = json.loads((model_path / "config.json").read_text(encoding="utf-8"))
     expected_type = {"voice-design": "voice_design", "custom-voice": "custom_voice", "base": "base"}[variant]
-    if (config.get("tts_model_type") != expected_type or
+    if (not isinstance(config, dict) or config.get("tts_model_type") != expected_type or
             config.get("tts_model_size") != "1b7" or config.get("tokenizer_type") != "qwen3_tts_tokenizer_12hz"):
         raise ValueError(f"A local Qwen3-TTS-12Hz-1.7B {variant} model is required")
+    for name in ("generation_config.json", "tokenizer_config.json", "vocab.json", "merges.txt",
+                 "speech_tokenizer/config.json", "speech_tokenizer/preprocessor_config.json"):
+        _require_local_asset(model_path / name)
+    _validate_local_weights(model_path)
+    _validate_local_weights(model_path / "speech_tokenizer")
+    return model_path
+
+
+def load_local_model(
+    model_path: Path, *, device: str = "cpu", threads: int = 4, codec_device: str = "model",
+    attention: str = "auto", codec_chunk_frames: int = 300,
+    variant: str = "custom-voice",
+) -> LoadedRenderer:
+    """Load an explicitly selected pinned Qwen architecture from local files."""
+    model_path = validate_local_model(model_path, device=device, threads=threads, codec_device=codec_device,
+                                      attention=attention, codec_chunk_frames=codec_chunk_frames, variant=variant)
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     torch = importlib.import_module("torch")
@@ -270,34 +323,18 @@ def main() -> None:
     parser.add_argument("--threads", type=int, default=4, choices=range(1, 65), metavar="N",
                         help="Torch CPU threads (1..64; default 4)")
     parser.add_argument("--port", type=int, default=8769, choices=[8769])
+    from .speech_lifecycle import add_lifecycle_arguments, serve_worker
+
+    add_lifecycle_arguments(parser)
     args = parser.parse_args()
     options = {"device": args.device, "threads": args.threads, "codec_device": args.codec_device,
                "attention": args.attention, "codec_chunk_frames": args.codec_chunk_frames}
     if args.variant != "custom-voice":
         options["variant"] = args.variant
-    logger = get_logger("speech.worker")
-    started = time.monotonic()
-    logger.info("event=worker_model_load variant=%s device=%s status=started", args.variant, args.device)
-    try:
-        renderer = load_local_model(args.model, **options)
-    except Exception:
-        logger.warning("event=worker_model_load variant=%s device=%s status=failed duration_ms=%d",
-                       args.variant, args.device, int((time.monotonic() - started) * 1000))
-        raise
-    logger.info("event=worker_model_load variant=%s device=%s status=ready duration_ms=%d",
-                args.variant, args.device, int((time.monotonic() - started) * 1000))
-    server_options: dict[str, Any] = {"port": args.port, "runtime_info": renderer.runtime_info}
-    if args.variant == "voice-design":
-        server_options["model"] = QWEN_DESIGN_MODEL
-    elif args.variant == "base":
-        server_options["model"] = QWEN_BASE_MODEL
-    server = worker_server(renderer, **server_options)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    path = validate_local_model(args.model, **options)
+    model = {"custom-voice": QWEN_MODEL, "voice-design": QWEN_DESIGN_MODEL, "base": QWEN_BASE_MODEL}[args.variant]
+    serve_worker(partial(load_local_model, path, **options), model=model, port=args.port,
+                 idle_timeout_seconds=args.idle_timeout_seconds)
 
 
 if __name__ == "__main__":

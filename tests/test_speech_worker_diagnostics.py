@@ -22,13 +22,17 @@ def recorded():
     logger.setLevel(previous_level)
 
 
-def test_worker_main_logs_load_failure_without_untrusted_model_path(recorded, monkeypatch):
-    monkeypatch.setattr("sys.argv", ["worker", "--model", "/private/MODEL_SECRET"])
-    def fail(*_a, **_kw):
-        raise RuntimeError("EXCEPTION_SECRET")
-    monkeypatch.setattr(speech_qwen, "load_local_model", fail)
-    with pytest.raises(RuntimeError):
-        speech_qwen.main()
+def _fail_model_load(path):
+    raise RuntimeError("EXCEPTION_SECRET " + path)
+
+
+def test_lazy_worker_logs_load_failure_without_untrusted_model_path(recorded):
+    from functools import partial
+
+    from lixity.speech_lifecycle import ModelLifecycle
+
+    with ModelLifecycle(partial(_fail_model_load, "/private/MODEL_SECRET")) as lifecycle, pytest.raises(RuntimeError):
+        lifecycle({})
     text = recorded.getvalue()
     assert "event=worker_model_load" in text and "status=failed" in text
     assert "MODEL_SECRET" not in text and "EXCEPTION_SECRET" not in text
