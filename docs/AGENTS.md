@@ -130,7 +130,7 @@ The server exposes 16 deterministic read-only analysis and research tools. Query
 - `lixity_motifs`: Recurring motif and keyword distribution across chapters.
 - `lixity_characters`: Character mentions, co-occurrence matrix, `character_voices`, `character_interactions` (`pairs`, `turn_dominance`), and declared POV chapter-absence gaps.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
-- `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
+- `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
 - `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
@@ -378,7 +378,7 @@ These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 
-<a id="32-style---json-style-reference-schema_version-4"></a>
+<a id="32-style---json-style-reference-schema_version-5"></a>
 
 ### 3.2 `style --json` (style reference, schema_version 5)
 

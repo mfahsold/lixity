@@ -240,7 +240,11 @@
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
     var z = comparison && zFmt.format(comparison[2]);
-    var marker = comparison && Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50));
+    // Position comes from the backend's SSOT colour scale; fall back to the
+    // legacy computation for cached/older payloads without element 5.
+    var marker = comparison && (Number.isFinite(comparison[5])
+      ? comparison[5]
+      : Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50)));
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
       <strong id="analysis-evidence-title">${option.textContent}</strong>
       <button type="button" class="ctl analysis-evidence-close" aria-label=${message("evidence_close")} onClick=${function() {close(true);}}>✕</button>

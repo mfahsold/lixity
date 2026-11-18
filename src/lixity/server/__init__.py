@@ -14,7 +14,7 @@ Module                 Responsibility
 ``routes_research``    Sources, dossiers, claims, evidence, decisions, search
 ``routes_manuscript_research``  Markdown-selection claim links and review
 ``routes_pdf``         Manuscript PDF download composition
-``routes_nda``         Project-owned NDA management
+``routes_nda``         Stateless project-language NDA draft downloads
 ``routes_markers``     Inline author work markers
 ``discovery``          Content-free API index assembly
 ``pdf_context``        Opaque selected-context tokens

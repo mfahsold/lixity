@@ -27,6 +27,7 @@ from ..style_fingerprint import (
     LAYER_PARAGRAPH_ATTR,
     MIN_COMPARABLE_WORDS,
     PARAGRAPH_LAYER_Z_CUTOFF,
+    Z_COLOR_LIMIT,
     FingerprintThresholds,
     StyleFingerprint,
     prepare_paragraph_layers,
@@ -1454,8 +1455,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     if info is not None:
                         value, z = info.value, info.z
                         colour = z_color(info.raw_z)
+                        # Marker position uses the same SSOT scale as the colour;
+                        # shipping it avoids duplicating Z_COLOR_LIMIT in JS.
+                        position = max(0.0, min(100.0, 50.0 + z / Z_COLOR_LIMIT * 50.0))
                         layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}",
-                                              round(z, 2), N(value, 1), info.notable]
+                                              round(z, 2), N(value, 1), info.notable, round(position, 1)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload

@@ -10,7 +10,7 @@ The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below describe 0.8.1; optional
+German coverage prioritized. The workflows below describe 0.8.2; optional
 workers and integrations retain their documented setup requirements.
 
 | Your next task | Start here |

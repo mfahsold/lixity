@@ -315,7 +315,7 @@ For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html).
 
-Choose a task below. These manuals describe the **0.8.1** release. Use
+Choose a task below. These manuals describe the **0.8.2** release. Use
 `lixity --version` and `lixity COMMAND --help` to check your installation; a later
 development checkout can differ from a published package. The
 [installation guide](INSTALLATION.md#cli-current-release) links
@@ -424,7 +424,7 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. This reference describes 0.8.1; inspect
+require a running browser service. This reference describes 0.8.2; inspect
 `lixity --version` and installed `--help` before using the commands.
 
 ## Installation
@@ -2296,7 +2296,7 @@ The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below describe 0.8.1; optional
+German coverage prioritized. The workflows below describe 0.8.2; optional
 workers and integrations retain their documented setup requirements.
 
 | Your next task | Start here |
@@ -8234,7 +8234,7 @@ are no capture groups and the first capture group otherwise. An unmatched
 optional first group contributes no words. Overlapping matches can count words
 more than once in quote-word and turn totals; paragraph shares use their union.
 
-**Since 0.8.2 / `[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
+**`[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
 - **Syllables (`syllables.py`):** `count_it()` strips silent `u` in `que/qui/gue/gui` and merges rising `[iu]` + vowel diphthongs; `count_de()` applies `DE_CLEAN` with an empty-word guard and normalizes `qu -> k`; `count_fr()` adds exceptions for `-ment` mute-verb forms (`FR_MENT_MUTE_VERBS`), `souvent` (`FR_NON_MUTE_ENT`), and `-éC+ent` endings (`FR_PENULTIMATE_E_ACUTE_ENT`); `count_en()` preserves `-Cle(d|s)` syllabic `l` endings (`table`/`bottled`/`handles`).
 - **Sentences (`sentences.py`):** protects spaced multi-part abbreviations (`z. B.`, `d. h.`, `u. a.`, `o. ä.`, `p. ex.`, `d. w. z.`), accented single-letter initials (`É. Zola`), ellipses, and post-quote lowercase dialogue tags (`"Hello." she said`).
 - **Tense spans (`tense.py`):** German `_german_perfect_spans()` extends the bounded clause window to `_PERFECT_MAX_CLAUSE_WORDS = 12` tokens and supports subordinate clause-final backward scans (`..., weil er das Buch gelesen hat`); English `_english_perfect_spans()` consumes `have/has/had + VBN` (regular `-ed` or `_EN_IRREGULAR_PARTICIPLES`) as a single past cue without double-counting the auxiliary.
@@ -9763,7 +9763,7 @@ The server exposes 16 deterministic read-only analysis and research tools. Query
 - `lixity_motifs`: Recurring motif and keyword distribution across chapters.
 - `lixity_characters`: Character mentions, co-occurrence matrix, `character_voices`, `character_interactions` (`pairs`, `turn_dominance`), and declared POV chapter-absence gaps.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
-- `lixity_fingerprint`: Calibrated stylistic baseline against robust median/MAD.
+- `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
 - `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
@@ -10011,7 +10011,7 @@ These mappings do not make excluded inline-code regions drawable.
 `--evidence` requires `--layer`; default schema 2 and the existing
 `paragraph-layer/1` projection remain unchanged.
 
-<a id="32-style---json-style-reference-schema_version-4"></a>
+<a id="32-style---json-style-reference-schema_version-5"></a>
 
 ### 3.2 `style --json` (style reference, schema_version 5)
 

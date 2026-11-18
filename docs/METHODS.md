@@ -932,7 +932,7 @@ are no capture groups and the first capture group otherwise. An unmatched
 optional first group contributes no words. Overlapping matches can count words
 more than once in quote-word and turn totals; paragraph shares use their union.
 
-**Since 0.8.2 / `[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
+**`[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
 - **Syllables (`syllables.py`):** `count_it()` strips silent `u` in `que/qui/gue/gui` and merges rising `[iu]` + vowel diphthongs; `count_de()` applies `DE_CLEAN` with an empty-word guard and normalizes `qu -> k`; `count_fr()` adds exceptions for `-ment` mute-verb forms (`FR_MENT_MUTE_VERBS`), `souvent` (`FR_NON_MUTE_ENT`), and `-éC+ent` endings (`FR_PENULTIMATE_E_ACUTE_ENT`); `count_en()` preserves `-Cle(d|s)` syllabic `l` endings (`table`/`bottled`/`handles`).
 - **Sentences (`sentences.py`):** protects spaced multi-part abbreviations (`z. B.`, `d. h.`, `u. a.`, `o. ä.`, `p. ex.`, `d. w. z.`), accented single-letter initials (`É. Zola`), ellipses, and post-quote lowercase dialogue tags (`"Hello." she said`).
 - **Tense spans (`tense.py`):** German `_german_perfect_spans()` extends the bounded clause window to `_PERFECT_MAX_CLAUSE_WORDS = 12` tokens and supports subordinate clause-final backward scans (`..., weil er das Buch gelesen hat`); English `_english_perfect_spans()` consumes `have/has/had + VBN` (regular `-ed` or `_EN_IRREGULAR_PARTICIPLES`) as a single past cue without double-counting the auxiliary.

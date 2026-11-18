@@ -19,7 +19,7 @@ For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html).
 
-Choose a task below. These manuals describe the **0.8.1** release. Use
+Choose a task below. These manuals describe the **0.8.2** release. Use
 `lixity --version` and `lixity COMMAND --help` to check your installation; a later
 development checkout can differ from a published package. The
 [installation guide](INSTALLATION.md#cli-current-release) links

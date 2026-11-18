@@ -627,8 +627,9 @@ source-file export scope, no remote requests and 1440/320-pixel native/companion
 layouts. Run with a canonical temporary directory when testing project paths:
 `TMPDIR="$PWD/.artifacts" PYTHONPATH=src node tests/browser/dossier-media.cjs`.
 
-Regenerate the synthetic clips from the repository root with FFmpeg and its
-libx264 and libvpx encoders.
+The clips are checked in; no browser suite needs FFmpeg at run time. Regenerate
+them only when intentionally changing the fixture, from the repository root
+with FFmpeg and its libx264 and libvpx encoders.
 
 ```sh
 for format in mp4 webm; do

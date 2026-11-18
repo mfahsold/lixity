@@ -168,6 +168,12 @@ class TestApiFacade(unittest.TestCase):
         self.assertEqual(info["heuristics"]["hd_d_samples"], 0)
         self.assertEqual(info["heuristics"]["hd_d_min_tokens"], 100)
 
+    def test_about_commands_cover_the_installed_cli_registry(self):
+        from lixity.cli import _COMMANDS
+        names = {command["name"] for command in api.about()["commands"]}
+        cli = {name for name, _purpose in _COMMANDS}
+        self.assertEqual(names, cli)
+
     def test_about_discovers_the_pdf_artifact_command(self):
         commands = {command["name"]: command for command in api.about()["commands"]}
         self.assertIn("pdf", commands)

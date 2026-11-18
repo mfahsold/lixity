@@ -1,7 +1,7 @@
 # Product direction and capability boundaries
 
 Reviewed against the development checkout on 2026-11-10; availability updated
-for 0.8.1 on 2026-11-16. This is a maintained product reference, not a release
+for 0.8.2 on 2026-11-16. This is a maintained product reference, not a release
 announcement. Implementation status distinguishes shipped capabilities from
 remaining proposals; no delivery dates are implied. Consult
 [Workspace](WORKSPACE.md), [Editing scope](MANUSCRIPT_EDITING_RFC.md) and

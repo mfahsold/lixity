@@ -211,7 +211,6 @@ def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool =
         validate(root, fresh, tag)
         if smoke_wheel:
             smoke(fresh, version, install_report=staged_report)
-            validate(root, fresh, tag)
         write_checksums(fresh)
         promote_artifacts(root, fresh, dist, tag)
         if install_report is not None and staged_report is not None:

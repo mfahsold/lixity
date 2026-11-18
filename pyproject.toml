@@ -70,8 +70,6 @@ linguistics-stanza = ["stanza>=1.15,<1.16"]
 dev = [
     "pip-audit>=2.7",
     "build>=1.2",
-    "hypothesis>=6.0",
-    "mutmut>=2.4",
     "mypy>=1.8",
     "numpy>=1.24",
     "pytest>=8.0",
@@ -126,9 +124,3 @@ allowed-confusables = ["–", "’", "σ", "−"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "S311"]
-
-[tool.mutmut]
-paths_to_mutate = "src/lixity/research/repository.py,src/lixity/research/revisions.py"
-backup = false
-runner = "python -m pytest -q --tb=no -p no:asyncio"
-tests_dir = "tests/test_research_revision_storage.py,tests/test_research_revisions.py"

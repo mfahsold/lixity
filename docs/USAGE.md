@@ -26,7 +26,7 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. This reference describes 0.8.1; inspect
+require a running browser service. This reference describes 0.8.2; inspect
 `lixity --version` and installed `--help` before using the commands.
 
 ## Installation

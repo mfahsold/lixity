@@ -621,6 +621,50 @@ def about() -> dict[str, Any]:
                 "record_schema_versions": sorted(record_versions),
                 "manifest_schema_versions": Manifest.model_json_schema()["properties"]["schema_version"]["enum"],
             },
+            {
+                "name": "diff", "purpose": "compare two manuscripts or recorded revisions",
+                "output": "text|json",
+            },
+            {
+                "name": "schema", "purpose": "installed metadata (languages, features, thresholds, commands, configuration)",
+                "output": "text|json",
+            },
+            {
+                "name": "mcp", "purpose": "read-only Model Context Protocol server on stdio for AI assistants",
+                "output": "stdio",
+            },
+            {
+                "name": "canvas", "purpose": "export narrative scenes into a JSON Canvas 1.0 storyboard",
+                "output": "files",
+            },
+            {
+                "name": "audio-status", "purpose": "inspect audio profiles and worker readiness",
+                "output": "text|json",
+            },
+            {
+                "name": "audio-microphone", "purpose": "inspect and set hardware microphone gain and list devices",
+                "output": "text|json",
+            },
+            {
+                "name": "audio-calibrate", "purpose": "record one microphone test and suggest a gain adjustment",
+                "output": "text|json",
+            },
+            {
+                "name": "audio-reference", "purpose": "record, create, inspect or generate private voice references",
+                "output": "text|json",
+            },
+            {
+                "name": "audio-import", "purpose": "retain a chapter WAV for an exact manuscript revision",
+                "output": "json",
+            },
+            {
+                "name": "audio-import-transcript", "purpose": "convert external ASR timestamps to a bound transcript",
+                "output": "text|json",
+            },
+            {
+                "name": "audio-direction", "purpose": "inspect and save project-local passage speech direction",
+                "output": "json",
+            },
         ],
         "license": "AGPL-3.0-or-later",
     }
