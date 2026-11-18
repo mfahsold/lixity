@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const {createHash} = require('node:crypto');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -77,6 +78,62 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     try { await run(); results.push({name, passed: true}); }
     catch (error) { results.push({name, passed: false, error: error.message}); }
   }
+  await check('invalid cutoffs disable the plot and explain unavailability without replacing chapter evidence', async () => {
+    for (const threshold of [undefined, 0, -1, '2.5', null, NaN, Infinity]) {
+      for (const width of [320, 1280]) {
+        const invalid = {...payload, threshold, labels: {...payload.labels,
+          invalid_threshold: 'Plot unavailable: invalid cutoff. Use the chapter score table.'}};
+        const encoded = JSON.stringify(invalid).replaceAll('&','&amp;').replaceAll('"','&quot;')
+          .replaceAll('<','&lt;').replaceAll('>','&gt;');
+        const content = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
+        const unavailable = await browser.newPage({viewport: {width, height: 900}});
+        const requests = [];
+        try {
+          unavailable.on('request', request => requests.push(request.url()));
+          await unavailable.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:content}));
+          await unavailable.goto('http://lixity.test/');
+          await unavailable.locator('#style-tab-dimensions').click();
+          const fallback = unavailable.locator('#dim-fallback');
+          assert.equal(await fallback.isVisible(), true, `cutoff ${String(threshold)} at ${width}px`);
+          assert.equal(await fallback.textContent(), invalid.labels.invalid_threshold);
+          assert.equal(await fallback.getAttribute('role'), 'status');
+          assert.equal(await unavailable.locator('#dim-3d-canvas').getAttribute('aria-label'), invalid.labels.invalid_threshold);
+          assert.ok((await unavailable.locator('#dim-3d-canvas').getAttribute('aria-describedby'))
+            .split(/\s+/).includes('dim-fallback'));
+          assert.equal(await unavailable.locator('#dimensions.dim-ready').count(), 0);
+          assert.equal(await unavailable.locator('#dim-3d-view button:enabled, #dim-projection:enabled, #dim-chapter-select:enabled').count(), 0);
+          assert.equal(await unavailable.locator('#dim-next-threshold').isVisible(), false);
+          assert.equal(await unavailable.locator('#dim-scores').isVisible(), true);
+          assert.ok(await unavailable.locator('#dim-scores tbody tr').count() > 0);
+          assert.equal(await unavailable.locator('#dim-read-chapter').getAttribute('href'), '#ch-1');
+          assert.deepEqual(requests, ['http://lixity.test/'], 'Standalone plots must not fetch replacement thresholds');
+          await unavailable.locator('#dim-scores').scrollIntoViewIfNeeded();
+          if (threshold === undefined) {
+            await unavailable.screenshot({path:path.join(artifacts, `invalid-cutoff-${width}.png`)});
+          }
+        } finally { await unavailable.close(); }
+      }
+    }
+  });
+  await check('custom cutoffs preserve backend flags even when coordinates suggest a different classification', async () => {
+    const authoritative = {...payload, threshold: 0.75,
+      points: [{...payload.points[0], flagged:true}, {...payload.points[1], flagged:false}]};
+    const encoded = JSON.stringify(authoritative).replaceAll('&','&amp;').replaceAll('"','&quot;')
+      .replaceAll('<','&lt;').replaceAll('>','&gt;');
+    const content = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
+    const custom = await browser.newPage();
+    try {
+      await custom.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:content}));
+      await custom.goto('http://lixity.test/');
+      await custom.locator('#style-tab-dimensions').click();
+      assert.equal(await custom.locator('#dim-fallback').isVisible(), false);
+      assert.equal(await custom.locator('#dim-selection > p').textContent(), payload.labels.status_flagged);
+      await custom.locator('#dim-chapter-select').selectOption('2');
+      assert.equal(await custom.locator('#dim-selection > p').textContent(), payload.labels.not_flagged);
+      await custom.locator('#dim-next-threshold').click();
+      assert.equal(await custom.locator('#dim-selection').getAttribute('data-chapter'), '1');
+    } finally { await custom.close(); }
+  });
   await check('legend and independent selection for a chapter beyond the cutoff', async () => {
     const legend = page.locator('#dim-legend');
     assert.equal(await legend.isVisible(), true);
@@ -347,18 +404,25 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     assert.equal(await page.locator('.dim-navigation button').count(), 6);
     await page.locator('#dim-ctl-reset').click();
     await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
-    const initial = await page.locator('#dim-3d-canvas').screenshot();
+    async function canvasDigest() {
+      const bitmap = await page.locator('#dim-3d-canvas').evaluate(async canvas => {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return canvas.toDataURL();
+      });
+      return createHash('sha256').update(bitmap).digest('hex');
+    }
+    const initial = await canvasDigest();
     for (const id of ['dim-ctl-left', 'dim-ctl-right', 'dim-ctl-up', 'dim-ctl-down', 'dim-ctl-zoom-in', 'dim-ctl-zoom-out']) {
       const control = page.locator('#' + id);
       assert.ok((await control.textContent()).trim().length > 0);
       await control.focus();
       await page.keyboard.press('Enter');
-      assert.notDeepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, id);
+      assert.notEqual(await canvasDigest(), initial, id);
       await page.locator('#dim-ctl-reset').click();
-      assert.deepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, id + ' reset');
+      assert.equal(await canvasDigest(), initial, id + ' reset');
     }
     await page.locator('#dim-ctl-zoom-in').tap();
-    assert.notDeepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, 'touch zoom');
+    assert.notEqual(await canvasDigest(), initial, 'touch zoom');
     await page.locator('#dim-ctl-reset').click();
   });
   await check('chapter title is text, not executable markup', async () => {

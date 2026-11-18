@@ -82,7 +82,7 @@ def style_dimensions(
             "axes": axes_data,
             "language": language_key if language_key != "generic" else "en",
             "labels": {key: label(labels, value) for key, value in {
-                "dimension": "style_dimensions", "flagged": "dim_flagged", "status_flagged": "flagged",
+                "dimension": "style_dimensions", "flagged": "dim_flagged", "status_flagged": "flagged", "invalid_threshold": "dim_invalid_threshold",
                 "not_flagged": "dim_not_flagged", "zero_variance": "dim_zero_variance",
                 "retained": "dim_retained",
             }.items()},
@@ -111,7 +111,7 @@ def style_dimensions(
         flagged_count = sum(1 for item in points_data if item["flagged"])
         summary_key = "dim_threshold_summary_one" if flagged_count == 1 else "dim_threshold_summary"
         parts.append(f'<div class="dim-threshold-controls"><p class="dim-threshold-summary" id="dim-threshold-summary">{translated(summary_key, count=flagged_count, total=len(points_data))}</p>')
-        parts.append(f'<button type="button" class="ctl dim-ctl" id="dim-next-threshold" aria-describedby="dim-threshold-summary" hidden>{translated("dim_next_threshold")}</button></div>')
+        parts.append(f'<button type="button" class="ctl dim-ctl" id="dim-next-threshold" aria-describedby="dim-threshold-summary" disabled hidden>{translated("dim_next_threshold")}</button></div>')
         if len(axes_data) < 3:
             incomplete_key = "dim_incomplete_axes_one" if len(axes_data) == 1 else "dim_incomplete_axes"
             parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')

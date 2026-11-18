@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {spawnSync} = require('node:child_process');
 const path = require('node:path');
@@ -66,6 +67,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         'Dense analytical panels have a visible manuscript return');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow at ${width}`);
       assert.equal(await page.locator('.panel > table').count(), 0);
+      await openAnalysisSection(page, 'dialogue');
       const panelGaps = await page.locator('.panel').evaluateAll(panels => panels.flatMap(panel => {
         const boxes = Array.from(panel.children).map(child => child.getBoundingClientRect()).filter(box => box.height > 0);
         return boxes.slice(1).map((box, index) => ({panel: panel.id, gap: box.top - boxes[index].bottom}));
@@ -77,6 +79,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       });
       assert.ok(gap >= 12 && gap <= 24, `KPI/chart gap ${gap} at ${width}`);
       await page.mouse.move(0, 0);
+      await openAnalysisSection(page, 'matrix');
       const headings = page.locator('#matrix th');
       assert.equal(await headings.locator('.help[data-help]').count(), await headings.count());
       const sentenceHelp = headings.locator('.help').nth(3);
@@ -105,9 +108,11 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
       }
       if (width <= 390) {
-        await page.locator('#style-tab-bands').click();
         assert.ok(await page.locator('#matrix table').evaluate(table => table.getBoundingClientRect().width >= 700));
+        await openAnalysisSection(page, 'dialogue');
         assert.ok(await page.locator('#dialogue .dist .label').first().evaluate(label => label.getBoundingClientRect().width >= 200));
+        await openAnalysisSection(page, 'style');
+        await page.locator('#style-tab-bands').click();
         assert.ok(await page.locator('.band').first().evaluate(band => band.getBoundingClientRect().width >= 150));
       }
       await page.locator('#tab-view-project').click();
@@ -138,6 +143,9 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         }
         if (selector === '#ch-1' && await page.locator('#workbench-overview-back').isVisible()) {
           await page.locator('#workbench-overview-back').click();
+        }
+        if (selector !== '#controls' && selector !== '#ch-1') {
+          await openAnalysisSection(page, ['#heatmap', '#bands', '#dimensions'].includes(selector) ? 'style' : selector.slice(1));
         }
         if (['#heatmap', '#bands', '#dimensions'].includes(selector)) {
           await page.locator('#style-tab-' + selector.slice(1)).click();

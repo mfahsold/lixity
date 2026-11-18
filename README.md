@@ -16,6 +16,9 @@
 **Read closely. Follow the evidence. Decide what to revise.**
 
 Lixity helps authors read a manuscript alongside its analysis and research.
+The unreleased native analysis overview offers three starting points: review
+passages, compare chapters, or explore patterns, with one analysis section open
+at a time.
 Compare sentence rhythm across chapters, focus on dialogue, and inspect repeated
 words in context. Follow a scene detail to its linked source passages, claims,
 and author decisions, then choose which material to include in a reading copy.

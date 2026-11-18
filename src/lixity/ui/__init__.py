@@ -7,6 +7,13 @@ Everything the single-file dashboard needs lives in this package:
 - ``assets``     – the stylesheet and the micro-interaction script
 """
 
-from .dashboard import render_analysis, render_dashboard
+from .dashboard import render_analysis, render_dashboard, render_prepared_dashboard
+from .render_contracts import (
+           AnalysisIdentity,
+           DashboardContent,
+           DashboardOptions,
+           DashboardRenderInput,
+)
 
-__all__ = ["render_analysis", "render_dashboard"]
+__all__ = ["AnalysisIdentity", "DashboardContent", "DashboardOptions", "DashboardRenderInput",
+           "render_analysis", "render_dashboard", "render_prepared_dashboard"]

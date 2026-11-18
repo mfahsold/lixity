@@ -313,7 +313,6 @@ if (microhint) {
 
 var layer = document.getElementById("style-layer");
 var layerLegend = document.getElementById("layer-legend");
-var layerCutoff = layerLegend ? Number(layerLegend.dataset.cutoff) : Infinity;
 
 function chipLayers(chip) {
   if (!chip._layers) {
@@ -406,7 +405,7 @@ function paintLayerAction(panel, info) {
   if (!actions) return;
   var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview") &&
     !document.body.classList.contains("reader-focus") && (!comparisonToggle || comparisonToggle.checked);
-  var notable = Boolean(shown && info && Math.abs(info[2]) >= layerCutoff);
+  var notable = Boolean(shown && info && info[4] === true);
   if (!actions._metricBase) actions._metricBase = {label: actions.getAttribute("aria-label"), help: actions.dataset.help};
   if (notable) {
     var fullLabel = info[1] + " · " + actions._metricBase.label;
@@ -467,7 +466,7 @@ function applyLayer() {
   allChips.forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
-    var notable = Boolean(info && Math.abs(info[2]) >= layerCutoff);
+    var notable = Boolean(info && info[4] === true);
     if (info && comparing) {
       chip.style.setProperty("--layer-color", info[0]);
       chip.classList.add("has-layer");

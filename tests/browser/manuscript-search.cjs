@@ -102,9 +102,10 @@ print(json.dumps(fixtures))
       assert.equal(await field.isVisible(), true);
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('#analysis-review').isVisible(), true);
-      const sections = page.locator('#analysis-sections [data-section-link]');
-      await sections.first().focus(); await sections.first().press('ArrowRight');
-      assert.equal(await sections.nth(1).evaluate(link => link === document.activeElement), true);
+      const workflows = page.locator('[data-analysis-workflow]');
+      assert.equal(await workflows.count(), 3);
+      await workflows.first().focus(); await page.keyboard.press('Tab');
+      assert.equal(await workflows.nth(1).evaluate(button => button === document.activeElement), true);
       await field.fill('Suchwort');
       await page.waitForFunction(() => document.querySelector('#text-search-status').textContent.length > 0);
       assert.equal(await page.locator('#analysis-review').isVisible(), true,

@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // A fitting chart must not suggest hidden rows; overflowing charts retain every row.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -109,6 +110,7 @@ async function scrollInput(chart, action) {
         assert.equal(await page.locator('h1').textContent(), 'Synthetic scroll review');
         await page.locator('#workbench-overview-open').click();
         for (const panel of ['pacing', 'showing']) {
+          await openAnalysisSection(page, panel);
           const chart = page.locator(`#${panel} .dist.scrollable`);
           assert.equal(await chart.locator('.row').count(), count);
           await chart.scrollIntoViewIfNeeded();

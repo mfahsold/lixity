@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Overview navigation reveals its destination and preserves the manuscript journey.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -97,7 +98,7 @@ async function openOverview(page) {
   await page.mouse.move(0, 0);
   await page.waitForFunction(() => document.getElementById('lixity-tooltip').getAttribute('aria-hidden') === 'true');
   await settle(page);
-  assert.equal(await page.locator('#manuscript-analysis-panels').isVisible(), true);
+  assert.equal(await page.locator('[data-analysis-workflows]').isVisible(), true);
 }
 
 async function finish(page, errors, writes) {
@@ -119,11 +120,10 @@ async function finish(page, errors, writes) {
         try {
           await page.locator('#manuscript-analysis-toggle').click();
           const metric = await page.locator('#style-layer').evaluate(select => {
-            const cutoff = Number(document.getElementById('layer-legend').dataset.cutoff);
             return Array.from(select.options).map(option => ({key: option.value,
               ids: Array.from(document.querySelectorAll('#chapters .chip')).filter(chip => {
                 const info = JSON.parse(chip.dataset.layers || '{}')[option.value];
-                return info && Math.abs(info[2]) >= cutoff;
+                return info && info[4] === true;
               }).map(chip => chip.dataset.target),
             })).find(candidate => candidate.ids.length >= 5);
           });
@@ -186,11 +186,10 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#manuscript-reader-controls #analysis-comparison-enabled').count(), 1);
           assert.equal(await page.locator('#layer-prev').count(), 1);
           const metric = await page.locator('#style-layer').evaluate(select => {
-            const cutoff = Number(document.getElementById('layer-legend').dataset.cutoff);
             return Array.from(select.options).map(option => ({key: option.value,
               ids: Array.from(document.querySelectorAll('#chapters .chip')).filter(chip => {
                 const info = JSON.parse(chip.dataset.layers || '{}')[option.value];
-                return info && Math.abs(info[2]) >= cutoff;
+                return info && info[4] === true;
               }).map(chip => chip.dataset.target),
             })).find(candidate => candidate.ids.length >= 3);
           });
@@ -273,8 +272,8 @@ async function finish(page, errors, writes) {
           await page.locator('#text-search').fill('quiet garden');
           await page.locator('#text-search').press('Enter'); await settle(page);
           await openOverview(page);
-          await page.locator('#analysis-measurements > summary').click();
-          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-heatmap').click();
           const supported = page.locator('#heatmap td.z[data-layer=asl]').last();
           const chapter = await supported.getAttribute('data-chapter');
           await supported.focus(); await page.keyboard.press('Enter'); await settle(page);
@@ -295,7 +294,8 @@ async function finish(page, errors, writes) {
             'A keyboard metric drill keeps focus on its revealed chapter after clearing search');
           assert.equal(new URL(page.url()).hash, '#ch-' + chapter);
           await openOverview(page);
-          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-heatmap').click();
           const unsupported = page.locator('#heatmap td.z[data-layer=""]').last();
           assert.ok(await unsupported.count(), 'There is a chapter-only measurement in the synthetic matrix');
           await unsupported.focus(); await page.keyboard.press('Enter'); await settle(page);
@@ -306,7 +306,8 @@ async function finish(page, errors, writes) {
             'A chapter-only measurement never displays the previous paragraph metric');
           assert.equal(await page.locator('#chapters .metric-notable').count(), 0);
           await openOverview(page);
-          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-dimensions').click();
           const chosen = await page.locator('#dim-chapter-select option').last().getAttribute('value');
           await page.locator('#dim-chapter-select').selectOption(chosen);
           const loading = page.locator('#dimensions .load[data-layer]:not([data-layer=""])').first();
@@ -321,7 +322,8 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#style-layer').inputValue(), key);
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
           await openOverview(page);
-          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-dimensions').click();
           const chapterOnlyLoading = page.locator('#dimensions .load[data-layer=""]').first();
           assert.ok(await chapterOnlyLoading.count(), 'The dimension also exposes measurements without paragraph layers');
           const priorLayer = await page.locator('#style-layer').inputValue();
@@ -337,7 +339,8 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#analysis-metric-context').isVisible(), false);
           assert.equal(await chapterOnlyLoading.evaluate(node => node === document.activeElement), true,
             'Closing restores focus to the exact loading without losing the selected chapter');
-          await page.evaluate(() => revealStyleTarget(document.getElementById('bands')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-bands').click();
           const cutoff = page.locator('#bands .band-outlier[data-metric-feature]').first();
           await cutoff.click();
           assert.equal(await page.locator('#metric-context-chapter').textContent(),
@@ -354,19 +357,17 @@ async function finish(page, errors, writes) {
         const {page, errors, writes} = await createPage(browser, 'en', width);
         try {
           await openOverview(page);
-          await page.locator('#analysis-sections [data-section-link=matrix]').click();
+          await openAnalysisSection(page, 'matrix');
           await settle(page);
           assert.equal(await page.locator('#matrix').isVisible(), true);
-          assert.equal(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),
-            'matrix', 'The final chapter matrix remains current at the bottom of the page');
-          assert.equal(await page.locator('#analysis-sections [data-section-indicator]').count(), 0,
-            'Overview section links do not imply measured progress');
-          assert.equal(await page.locator('#analysis-sections [aria-current=true]').evaluate(node => getComputedStyle(node).textDecorationLine),
-            'underline', 'The current section is underlined');
-          await page.evaluate(() => { document.getElementById('matrix').hidden = true; dispatchEvent(new Event('resize')); });
-          await settle(page);
-          assert.notEqual(await page.locator('#analysis-sections [aria-current=true]').getAttribute('data-section-link'),
-            'matrix', 'A hidden analysis section cannot become the current destination');
+          assert.equal(await page.locator('[data-analysis-section-target=matrix]').getAttribute('aria-pressed'),
+            'true', 'The selected chapter matrix remains identified by its workflow control');
+          assert.equal(await page.locator('[data-analysis-workflows] [data-section-indicator]').count(), 0,
+            'Workflow choices do not imply measured progress');
+          await openAnalysisSection(page, 'flags');
+          assert.equal(await page.locator('#matrix').isVisible(), false,
+            'Choosing a different view conceals the previous comparison panel');
+          assert.equal(await page.locator('[data-analysis-section-target=matrix]').getAttribute('aria-pressed'), 'false');
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });
@@ -375,6 +376,7 @@ async function finish(page, errors, writes) {
         const {page, errors, writes} = await createPage(browser, 'en', width);
         try {
           await openOverview(page);
+          await openAnalysisSection(page, 'flags');
           const flag = page.locator('#flags .flag-row').first(), paragraph = await flag.getAttribute('data-target');
           const read = flag.locator('.triage-read-cell button');
           await read.focus(); await read.press('Enter'); await settle(page);
@@ -382,6 +384,7 @@ async function finish(page, errors, writes) {
           assert.equal(await page.evaluate(() => document.activeElement.id), paragraph,
             'The explicit keyboard reading action focuses the revealed paragraph');
           await openOverview(page);
+          await openAnalysisSection(page, 'matrix');
           const chapter = page.locator('#matrix tbody [data-jump]').last(), target = await chapter.getAttribute('data-jump');
           await chapter.focus(); await chapter.press('Enter'); await settle(page);
           assert.equal(await page.locator(target).isVisible(), true);
@@ -394,6 +397,7 @@ async function finish(page, errors, writes) {
               filter.checked = false;
               filter.dispatchEvent(new Event('change', {bubbles: true}));
             });
+            await openAnalysisSection(page, 'matrix');
             const flagged = page.locator('#matrix tbody tr[data-flags="1"] a[data-flags="1"]').first();
             assert.equal(await flagged.count(), 1, 'The fixture provides a flagged chapter link');
             if (activation === 'click') await flagged.click();
@@ -460,7 +464,9 @@ async function finish(page, errors, writes) {
                 document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('#workbench-overview-open') === node;
             }), true, 'overview navigation stays reachable without scrolling away from the current passage');
             await openOverview(page);
-            await page.locator('#analysis-measurements > summary').click();
+            await openAnalysisSection(page, 'analysis-measurements');
+            const measurements = page.locator('#analysis-measurements');
+            if (await measurements.getAttribute('open') === null) await measurements.locator(':scope > summary').click();
             assert.equal(await page.locator('#style-tab-bands').count(), 1);
             assert.equal(await page.locator('#bands').isVisible(), false);
             const metric = page.locator('.kpi-link[data-jump="#bands"]').first();
@@ -588,32 +594,32 @@ async function finish(page, errors, writes) {
           const reason = page.locator('#review-passage-reason');
           assert.equal(await reason.isVisible(), true);
           assert.equal(await page.locator('[data-review-passage]').getAttribute('aria-describedby'), 'review-passage-reason');
-          const links = await page.locator('#analysis-sections a').evaluateAll(nodes => nodes.map(node => ({
-            box: node.getBoundingClientRect().toJSON(), targetExists: !!document.getElementById(node.dataset.sectionLink),
-          })));
-          assert.ok(links.every(link => link.targetExists));
-          for (let index = 1; index < links.length; index++) {
-            const previous = links[index - 1].box, current = links[index].box;
+          const navigation = page.locator('[data-analysis-workflows]');
+          const entries = navigation.locator('[data-analysis-workflow]');
+          assert.equal(await entries.count(), 3);
+          const boxes = await entries.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
+          for (let index = 1; index < boxes.length; index++) {
+            const previous = boxes[index - 1], current = boxes[index];
             assert.ok(current.y > previous.y ? current.y - previous.bottom >= 4 : current.x - previous.right >= 4,
-              'Section links retain visible spacing instead of touching');
+              'Workflow entries retain visible spacing instead of touching');
           }
           await page.screenshot({path: path.join(artifacts, `${locale}-${width}.png`)});
           if (width === 320) {
-            const navigation = page.locator('#analysis-sections'), sections = navigation.locator('[data-section-link]');
-            await sections.first().focus();
-            for (let index = 1; index < await sections.count(); index++) await page.keyboard.press('ArrowRight');
-            await settle(page);
-            const last = await sections.last().boundingBox(), bounds = await navigation.boundingBox();
-            assert.equal(await sections.last().evaluate(node => node === document.activeElement), true);
+            await entries.first().focus();
+            await page.keyboard.press('Tab'); await page.keyboard.press('Tab');
+            assert.equal(await entries.last().evaluate(node => node === document.activeElement), true,
+              'Workflow choices remain reachable in ordinary keyboard order');
+            const last = await entries.last().boundingBox(), bounds = await navigation.boundingBox();
             assert.ok(last.x >= bounds.x - 1 && last.x + last.width <= bounds.x + bounds.width + 1,
-              'The final wrapping section link remains wholly readable');
+              'The final workflow entry remains wholly readable');
+            await openAnalysisSection(page, 'matrix');
             const matrix = await page.locator('#matrix').boundingBox();
             assert.ok(matrix.y < 900 && matrix.y + matrix.height > 0,
-              'Revealing the focused nav link does not scroll vertically back to the navigation');
+              'The chosen chapter matrix arrives in the viewport');
             await page.screenshot({path: path.join(artifacts, `${locale}-${width}-matrix.png`)});
           }
-          await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
-          await page.evaluate(() => revealStyleTarget(document.getElementById('heatmap')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-heatmap').click();
           const metric = page.locator('#heatmap [data-metric-feature=hd_d]').first();
           const priorMetric = await page.locator('#style-layer').inputValue();
           await metric.focus(); await metric.press('Enter');
@@ -645,7 +651,8 @@ async function finish(page, errors, writes) {
           await page.keyboard.press('Escape');
           assert.equal(await metric.evaluate(node => node === document.activeElement), true);
           assert.equal(await page.locator('#style-layer').inputValue(), priorMetric);
-          await page.evaluate(() => revealStyleTarget(document.getElementById('dimensions')));
+          await openAnalysisSection(page, 'style');
+          await page.locator('#style-tab-dimensions').click();
           await page.locator('#dimensions [data-dimension-loading]').first().click();
           const origin = page.locator('#metric-context-origin');
           assert.equal(await origin.isVisible(), true);

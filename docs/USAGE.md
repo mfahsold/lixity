@@ -797,8 +797,9 @@ Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
-**Available in 0.8.0:** when dimension scores are available, **Start your review → Open
-3D style space** opens this view directly. A dashed ring marks an axis cutoff;
+**Unreleased native navigation:** open **Compare chapters → Style → Feature-rank
+projection** when dimension scores are available. CLI standalone reports retain
+direct section links. A dashed ring marks an axis cutoff;
 a separate solid outer ring marks the selected chapter, including when both
 apply. These cutoff marks include axes hidden in a flat projection and are not
 the FDR selection. The blue–orange comparison scale elsewhere shows signed
@@ -823,6 +824,16 @@ dialogue, curated character presence, scenes, motifs, word-pattern signal groups
 chapter style, paragraph profiles and work markers as data permits. See the
 [workspace manual](WORKSPACE.md) to move from measurements to passages.
 A compatible server provides explicit project actions and marker saves.
+
+**Unreleased native overview:** choose **Review passages**, **Compare chapters**
+or **Explore patterns**. The initial overview shows status and the next passage;
+one selected analysis section is visible at a time. Secondary choices expose
+the existing measurements and methods without replacing their saved state.
+Deep links reveal the corresponding section. Without JavaScript, the complete
+report remains readable. Archived-source reports identify their source-only
+reference and show pinned provenance separately from unverified context.
+If a projection cutoff is missing or invalid, the plot reports unavailability
+and keeps the chapter-value table; it does not substitute a default.
 
 ### `lixity pdf`
 

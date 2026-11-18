@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 // Real held HTTP responses against a disposable synthetic research project.
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
@@ -44,6 +45,7 @@ server.serve_forever()
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(fixture.url);
     await page.locator('#workbench-overview-open').click();
+    await openAnalysisSection(page, 'characters');
     await expect(page.locator('#characters')).toContainText('Character name mentions');
     await expect(page.locator('#characters')).toContainText('Declared POV chapters');
     const figure=page.locator('#characters tbody tr').first();
@@ -51,6 +53,7 @@ server.serve_forever()
     await expect(figure.locator('td').nth(2)).toHaveText('1 / 2');
     await expect(figure.locator('td').nth(6)).toHaveText('2 (50 %)');
     await expect(figure.locator('td').last()).toHaveText('0');
+    await openAnalysisSection(page, 'scenes');
     const overview=page.locator('#scenes .scene-overview');
     await expect(overview.locator('tbody tr')).toHaveCount(2);
     await overview.screenshot({path:path.join(artifacts,`scenes-${width}.png`)});
@@ -65,6 +68,7 @@ server.serve_forever()
       await overview.focus();await page.keyboard.press('ArrowRight');
       await expect.poll(()=>overview.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
       await overview.evaluate(element=>{element.scrollLeft=0;});
+      await openAnalysisSection(page, 'characters');
       const table=page.locator('#characters .table-wrap').first();
       assert.ok((await page.locator('#characters th').first().boundingBox()).width>=50,
         'Character headers must remain readable instead of wrapping into single letters');
@@ -76,6 +80,7 @@ server.serve_forever()
       await expect.poll(()=>table.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
       await table.evaluate(element=>{element.scrollLeft=0;});
     }
+    await openAnalysisSection(page, 'characters');
     await page.locator('#characters').screenshot({path:path.join(artifacts,`characters-${width}.png`)});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     const preview = await page.evaluate(() => {

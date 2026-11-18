@@ -44,6 +44,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "anchor-navigation.cjs",
         "analysis-navigation.cjs",
         "analysis-overview.cjs",
+        "analysis-workflow.cjs",
         "layout.cjs",
         "reader-toolbar.cjs",
         "workbench.cjs",
@@ -110,6 +111,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "analysis-scope.cjs",
         "section-navigation.cjs",
         "analysis-overview.cjs",
+        "analysis-workflow.cjs",
         "contextual-help.cjs",
         "dossier-return.cjs",
         "passage-research.cjs",
@@ -331,6 +333,15 @@ def suites_for_paths(paths: list[str], available: list[str] | None = None) -> li
     return [name for name in names if name in selected]
 
 
+def browser_environment() -> dict[str, str]:
+    """Bound each suite's Node heap unless the caller already chose a limit."""
+    environment = dict(os.environ)
+    options = environment.get("NODE_OPTIONS", "")
+    if not re.search(r"--max[-_]old[-_]space[-_]size(?:=|\s)", options):
+        environment["NODE_OPTIONS"] = (options + " --max-old-space-size=2048").strip()
+    return environment
+
+
 class BrowserEvidence:
     """Persist bounded evidence from reviewed synthetic suites, never project trees.
 
@@ -445,7 +456,7 @@ class BrowserEvidence:
             self._write()
         with tempfile.TemporaryDirectory(prefix="lixity-browser-run-") as directory:
             workspace = Path(directory)
-            environment = {**os.environ, "TMPDIR": directory, "TMP": directory, "TEMP": directory}
+            environment = {**browser_environment(), "TMPDIR": directory, "TMP": directory, "TEMP": directory}
             tail = b""
             total = 0
 
@@ -517,6 +528,7 @@ def run_suite(node: str, name: str, capture: bool) -> tuple[str, float, int, str
         cwd=ROOT,
         check=False,
         capture_output=capture,
+        env=browser_environment(),
         text=True,
     )
     output = ((result.stdout or "") + (result.stderr or "")) if capture else ""

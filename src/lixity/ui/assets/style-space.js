@@ -27,9 +27,21 @@
   var points = Array.isArray(data.points) ? data.points.filter(function(point) {
     return point && [point.x, point.y, point.z].every(Number.isFinite);
   }) : [];
-  var threshold = Number.isFinite(data.threshold) && data.threshold > 0 ? data.threshold : 2.5;
+  var threshold = data.threshold;
   var axes = data.axes || [];
   var labels = data.labels || {};
+  var fallback = document.getElementById("dim-fallback");
+  if (!Number.isFinite(threshold) || threshold <= 0) {
+    var unavailableLabel = labels.invalid_threshold || (fallback ? fallback.textContent : "");
+    if (fallback) {
+      fallback.textContent = unavailableLabel;
+      fallback.hidden = false;
+      fallback.setAttribute("role", "status");
+      canvas.setAttribute("aria-describedby", (canvas.getAttribute("aria-describedby") || "") + " dim-fallback");
+    }
+    if (unavailableLabel) canvas.setAttribute("aria-label", unavailableLabel);
+    return;
+  }
   var scoreFormat = new Intl.NumberFormat(data.language || "en", {
     minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero"
   });
@@ -51,7 +63,6 @@
   // Interactive controls become available only after the plot can render.
   var panel = canvas.closest("#dimensions");
   if (panel) panel.classList.add("dim-ready");
-  var fallback = document.getElementById("dim-fallback");
   if (fallback) fallback.hidden = true;
   document.querySelectorAll("#dim-3d-view button.dim-ctl").forEach(function(button) {
     button.disabled = false;

@@ -3,7 +3,7 @@
 import logging
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any
 
@@ -21,8 +21,10 @@ from .scenes import scene_report_for_display
 from .showing import showing_report
 from .style_fingerprint import (
     FingerprintThresholds,
+    ParagraphLayerData,
     StyleFingerprint,
     lexical_structural_diagnostics,
+    prepare_paragraph_layers,
 )
 from .style_profile import (
     ChapterProfile,
@@ -40,6 +42,7 @@ class DocumentAnalysis:
     chapters: list[ChapterProfile]
     fingerprint: StyleFingerprint
     evidence: dict[int, ParagraphEvidence] | None = None
+    paragraph_layers: ParagraphLayerData = field(default_factory=dict)
 
 
 def paragraph_identity(paragraph: ParagraphProfile | ParagraphText) -> dict[str, Any]:
@@ -105,13 +108,14 @@ def analyze_document(
         evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
         paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
         fingerprint = fingerprint_document(text, config, thresholds, metrics)
+        paragraph_layers = prepare_paragraph_layers(paragraphs)
         duration_ms = int((time.monotonic() - started) * 1000)
         log_event(
             logger, "pipeline_analyze", level=logging.DEBUG, stage="completed",
             chapters=len(chapters), paragraphs=len(paragraphs),
             words=metrics.raw_words, duration_ms=duration_ms,
         )
-        return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence)
+        return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence, paragraph_layers)
     except Exception as exc:
         duration_ms = int((time.monotonic() - started) * 1000)
         log_event(logger, "pipeline_analyze", stage="failed", error=type(exc).__name__, duration_ms=duration_ms)

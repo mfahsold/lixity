@@ -51,6 +51,7 @@ from lixity.style_fingerprint import FingerprintThresholds  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
+from lixity.ui.render_contracts import DashboardContent, DashboardOptions  # noqa: E402
 from scripts.example_project import DEMO_MANUSCRIPT, manuscript_title  # noqa: E402
 from scripts.example_publications import build_publication_examples, build_research_demo  # noqa: E402
 from scripts.stage_pages import screenshot_manifest  # noqa: E402
@@ -185,19 +186,30 @@ def render_research_workspace(research_fixture: dict, **options) -> str:
     if review["current_source_sha256"] != sha256(text.encode("utf-8")).hexdigest():
         raise ValueError("The public demo analysis and research manuscript differ")
     return render_analysis(
-        analysis, resolved, title=options.pop("title", manuscript_title(text)),
-        reader_document=reader_blocks(text, config, analysis.paragraphs),
+        analysis,
+        resolved,
+        title=options.pop("title", manuscript_title(text)),
         flag_min_severity=thresholds.flag_min_severity,
-        scenes=scene_report_for_display(text, config, None, premeasured_chapters=analysis.metrics.chapters),
-        dialogue=dialogue_report(text, config).to_dict(),
-        characters=presence_report(text, ["Mara", "Ivo", "Hansen"], config),
-        pacing=pacing_report(text, config).to_dict(),
-        motifs=motif_report(text, None, config).to_dict(),
-        showing=showing_report(text, config, metrics=analysis.metrics).to_dict(),
-        manuscript_name=options.pop("manuscript_name", "harbour-manuscript.md"), current_language="en",
-        controls=True, research_context_token=RESEARCH_DEMO_CONTEXT,
-        manuscript_pdf_token=RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
-        manuscript_source_sha256=review["current_source_sha256"], **options,
+        content=DashboardContent(
+            reader_document=reader_blocks(text, config, analysis.paragraphs),
+            scenes=scene_report_for_display(
+                text, config, None, premeasured_chapters=analysis.metrics.chapters
+            ),
+            dialogue=dialogue_report(text, config).to_dict(),
+            characters=presence_report(text, ["Mara", "Ivo", "Hansen"], config),
+            pacing=pacing_report(text, config).to_dict(),
+            motifs=motif_report(text, None, config).to_dict(),
+            showing=showing_report(text, config, metrics=analysis.metrics).to_dict(),
+        ),
+        options=DashboardOptions(
+            manuscript_name=options.pop("manuscript_name", "harbour-manuscript.md"),
+            current_language="en",
+            controls=True,
+            research_context_token=RESEARCH_DEMO_CONTEXT,
+            manuscript_pdf_token=RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+            manuscript_source_sha256=review["current_source_sha256"],
+            **options,
+        ),
     )
 
 

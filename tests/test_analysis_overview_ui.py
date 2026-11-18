@@ -75,8 +75,12 @@ class TestAnalysisOverview(unittest.TestCase):
             with self.subTest(controls=controls):
                 html = self.render(controls=controls)
                 route = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
-                self.assertIn('href="#dim-canvas"', route)
-                self.assertIn('data-jump="#dim-canvas"', route)
+                if controls:
+                    self.assertIn('data-analysis-workflow="compare"', route)
+                    self.assertNotIn('href="#dim-canvas"', route)
+                else:
+                    self.assertIn('href="#dim-canvas"', route)
+                    self.assertIn('data-jump="#dim-canvas"', route)
                 fingerprint = copy.deepcopy(analysis.fingerprint)
                 fingerprint.dimensions[0]["scores"] = {}
                 unavailable = render_dashboard(

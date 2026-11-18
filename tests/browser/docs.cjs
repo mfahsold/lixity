@@ -110,7 +110,9 @@ async function showOverview(page) {
   const open = page.locator('#workbench-overview-open');
   if (await open.isVisible()) await open.click();
   await expect(page.locator('#workbench-overview-back')).toBeVisible();
-  await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();
+  await expect(page.locator('[data-analysis-workflow=compare]')).toBeVisible();
+  await page.locator('[data-analysis-workflow=compare]').click();
+  await page.locator('[data-analysis-section-target=style]').click();
 }
 
 async function openValues(page, passage) {
@@ -788,29 +790,14 @@ async function checkDemoCapabilities(page, width) {
     await expect(page.locator('#' + id)).toBeVisible();
     await expect(page.locator('#style-panels > .panel:visible')).toHaveCount(1);
   }
-  const reviewLinks = page.locator('#analysis-review [data-jump]');
-  await expect(reviewLinks).toHaveCount(5);
-  assert.deepEqual(await reviewLinks.evaluateAll(links => links.map(link => link.getAttribute('data-jump'))),
-    ['#heatmap', '#dist', '#dim-canvas', '#scenes', '#characters'], 'The review entry includes the direct style-space, scenes, and characters routes');
-  for (const link of await reviewLinks.all()) {
-    await link.click();
-    const target = await link.getAttribute('data-jump');
-    await expect(page).toHaveURL(new RegExp(target + '$'));
-    await expect(page.locator(target)).toBeVisible();
-    await expect(page.locator(target)).toBeInViewport();
-    if (target === '#dim-canvas') {
-      await expect(page.locator('#style-tab-dimensions')).toHaveAttribute('aria-selected', 'true');
-      await expect(page.locator('#dim-3d-canvas')).toBeVisible();
-      if (width === 320) {
-        await expect.poll(async () => page.locator('#dim-3d-canvas').evaluate(canvas => {
-          const box = canvas.getBoundingClientRect();
-          const toolbar = document.getElementById('manuscript-reader-controls').getBoundingClientRect();
-          const visible = Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, toolbar.bottom, 0));
-          // Allow one CSS pixel for fractional layout/scroll rounding.
-          return visible + 1 >= box.height * 0.8;
-        })).toBe(true);
-      }
-    }
+  await expect(page.locator('[data-analysis-workflow]')).toHaveCount(3);
+  for (const target of ['dist', 'scenes', 'characters', 'style']) {
+    const choice = page.locator(`[data-analysis-section-target="${target}"]`);
+    const workflow = await choice.getAttribute('data-analysis-section-workflow');
+    await page.locator(`[data-analysis-workflow="${workflow}"]`).click();
+    await choice.click();
+    await expect(page.locator('#' + target)).toBeVisible();
+    await expect(page.locator('#' + target)).toBeInViewport();
   }
 
   await page.locator('[data-review-passage]').click();

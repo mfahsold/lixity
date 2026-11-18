@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {openProjectActions} = require('./support/project-actions.cjs');
 const {launchChromium, fullMatrix} = require('../../scripts/browser_tools.cjs');
 // Shared visual roles and interaction states; synthetic data only.
@@ -331,6 +332,7 @@ async function checkScale(page, label) {
             `${theme} pressed paragraph target: ${JSON.stringify(pressed)}`);
         } finally { await app.keyboard.up('Space'); }
         await app.locator('#workbench-overview-open').click();
+        await openAnalysisSection(app, 'style');
         await app.locator('#style-tab-dimensions').click();
         const denseTargets = await app.locator('.dim-ctl:visible').evaluateAll(elements => elements.map(element => {
           const box = element.getBoundingClientRect();

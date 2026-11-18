@@ -9,6 +9,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Organize the native analysis overview into passage review, chapter comparison
+  and pattern exploration, revealing one existing section at a time while
+  retaining deep links, input state and complete no-script reports.
+- Display archived-source analysis scope, unverified context and pinned
+  provenance in HTML as well as JSON. Prepare paragraph-layer cells once in
+  `DocumentAnalysis`; render them through typed content/options contracts.
+  Adapter callers of `render_analysis` must move optional reports into
+  `DashboardContent` and presentation settings into `DashboardOptions`.
+- Retain current render bundles in a bounded cache and disclose missing or
+  invalid projection cutoffs instead of substituting a browser default.
+
 - Correct regularized Mahalanobis distances to use the same standardized midrank
   coordinates as their covariance, including the production path with populated
   z* cells. Earlier mixed-space distances must be recomputed.

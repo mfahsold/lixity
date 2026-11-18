@@ -131,7 +131,15 @@ workspace. Valid directories without a unique manuscript can still open as empty
 workspaces; `--no-project` explicitly starts without project selection.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
-renderers. Narrower profile/fingerprint requests use the same pipeline. Native
+renderers. **Unreleased:** it also prepares paragraph-layer cells, including
+rounded z and the canonical notability decision. The typed `DashboardRenderInput`
+passes these through to `render_prepared_dashboard`; `render_analysis` accepts
+`DashboardContent` for reports and `DashboardOptions` for presentation and host
+capabilities. The low-level `render_dashboard` remains a thin input-preparation
+adapter to this same assembly. A bounded bundle cache retains all current
+presentation combinations instead of evicting the native CSS/JS on every render.
+Backend-owned `AnalysisIdentity` keeps source scope and pinned provenance
+independent of unverified document context and renders them even without scripts. Narrower profile/fingerprint requests use the same pipeline. Native
 and review-site adapters obtain dialogue, pacing, motifs, showing and scenes from
 `pipeline.supplementary_reports`, reusing the supplied analysis measurements.
 Character error policy and reader construction remain at the adapter boundary;

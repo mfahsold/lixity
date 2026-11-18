@@ -1,6 +1,7 @@
 """The browser projection covers structure without extending analysis coverage."""
 
 from lixity import api
+from lixity.ui.render_contracts import DashboardContent, DashboardOptions
 
 
 def test_dashboard_retains_source_structure_outside_profiles():
@@ -31,8 +32,18 @@ def test_implicit_chapter_keeps_public_chapter_target():
     source = '# Title\n\nA quiet garden gives this sentence a place to begin.\n'
     config, resolved = resolve_document_config(source, 'en', project_config={})
     analysis = analyze_document(source, config, FingerprintThresholds())
-    page = render_analysis(analysis, resolved, title='Title', flag_min_severity=2,
-                           controls=True, reader_document=reader_blocks(source, config, analysis.paragraphs))
+    page = render_analysis(
+               analysis,
+               resolved,
+               title='Title',
+               flag_min_severity=2,
+               content=DashboardContent(
+                   reader_document=reader_blocks(source, config, analysis.paragraphs),
+               ),
+               options=DashboardOptions(
+                   controls=True,
+               ),
+           )
     assert '<section class="chapter reader-preface" id="ch-1"' in page
     assert 'id="reader-preface"' in page
     assert '<option value="ch-1">' in page
@@ -61,8 +72,18 @@ def test_reader_dashboard_unifies_inline_evidence_in_measure_dropdown():
     source = '## Chapter 1\n\n"Hello," she said softly, and walked across the quiet room.\n'
     config, resolved = resolve_document_config(source, 'en', project_config={})
     analysis = analyze_document(source, config, FingerprintThresholds())
-    page = render_analysis(analysis, resolved, title='Title', flag_min_severity=2,
-                           controls=True, reader_document=reader_blocks(source, config, analysis.paragraphs))
+    page = render_analysis(
+               analysis,
+               resolved,
+               title='Title',
+               flag_min_severity=2,
+               content=DashboardContent(
+                   reader_document=reader_blocks(source, config, analysis.paragraphs),
+               ),
+               options=DashboardOptions(
+                   controls=True,
+               ),
+           )
     assert 'id="reader-inline-evidence-layers"' not in page
     for layer_key in ("sticky", "dialogue_tag", "echo"):
         assert f'value="{layer_key}"' in page

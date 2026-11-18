@@ -721,3 +721,5 @@ body.chrome-autohidden :is(
 .character-cloud-chip { font-size: calc(0.84rem * var(--cloud-scale, 1)); line-height: 1.25; gap: 0.35rem; }
 .character-cloud-chip.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
 .character-cloud-count { font-size: 0.78em; opacity: 0.82; font-variant-numeric: tabular-nums; }
+
+.analysis-identity code { overflow-wrap: anywhere; }

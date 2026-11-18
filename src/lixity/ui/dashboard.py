@@ -1,7 +1,7 @@
-"""lixity.ui.dashboard – Minimalist, self-contained single-file HTML dashboard.
+"""lixity.ui.dashboard – Self-contained HTML reader and analysis renderer.
 
 Renders an interactive stylometric report combining KPI cards, sentence rhythm bars,
-diverging z-score heatmap, style passport, latent dimensions, chapter map,
+diverging z-score heatmap, style reference, exploratory rank projections, chapter map,
 and editor-visible work markers with floating tooltips.
 """
 
@@ -15,6 +15,8 @@ from typing import Any
 
 from ..diversity import MIN_TOKENS_LD
 from ..language import ResolvedLanguage
+from ..markers import Marker
+from ..models import CorpusMetrics
 from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..site import docs_url
 from ..status import FLAG_MIN_SEVERITY
@@ -26,7 +28,8 @@ from ..style_fingerprint import (
     MIN_COMPARABLE_WORDS,
     PARAGRAPH_LAYER_Z_CUTOFF,
     FingerprintThresholds,
-    layer_stats,
+    StyleFingerprint,
+    prepare_paragraph_layers,
     z_color,
 )
 from ..style_profile import (
@@ -35,6 +38,8 @@ from ..style_profile import (
     flagged_paragraphs,
 )
 from ..workspace_labels import WORKSPACE_LABELS
+from .analysis_identity import render_analysis_identity
+from .analysis_navigation import render_analysis_workflows
 from .components import (
     ANALYSIS_SECTIONS,
     analysis_outline_nav,
@@ -78,6 +83,7 @@ from .narration import (
     render_showing_panel,
 )
 from .project_overview import project_overview
+from .render_contracts import DashboardContent, DashboardOptions, DashboardRenderInput
 from .research_panel import render_research_panel
 from .settings import settings_form
 from .structural import style_structural
@@ -100,6 +106,7 @@ _CSS_FILES = (
     "manuscript-reader.css",
     "decision-review.css",
     "analysis-scope.css",
+    "analysis-navigation.css",
     "section-navigation.css",
     "analysis-evidence.css",
     "reader-publication.css",
@@ -117,6 +124,7 @@ _JS_FILES = (
     "component-layer.js",
     "logging.js",
     "tooltips.js",
+    "analysis-navigation.js",
     "interactions.js",
     "command-palette.js",
     "section-navigation.js",
@@ -159,9 +167,9 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 # workspace controls; classic reports must not ship their dormant editors.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
-    "audio-take.js", "site-publication-settings.js", "research-collections.js", "research-tools.js",
+    "audio-take.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
 ))
-_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css"})
+_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css"})
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -175,7 +183,7 @@ _PUBLICATION_JS_FILES = tuple(
 )
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=16)
 def _bundle(files: tuple[str, ...]) -> str:
     """Join packaged assets on first use; importing the module does no I/O."""
     return "\n".join((_ASSET_DIR / name).read_text(encoding="utf-8") for name in files)
@@ -193,35 +201,32 @@ def render_analysis(
     *,
     title: str,
     flag_min_severity: int,
-    **options: Any,
+    content: DashboardContent | None = None,
+    options: DashboardOptions | None = None,
 ) -> str:
-    """Render one ``analyze_document`` result through the shared wiring.
-
-    Centralises the chapters/paragraphs/metrics/fingerprint/labels/identity
-    arguments every dashboard surface passes; surface-specific options stay in
-    ``options``.
-    """
-    return render_dashboard(
-        analysis.chapters,
-        analysis.paragraphs,
-        metrics=analysis.metrics,
-        fingerprint=analysis.fingerprint,
-        paragraph_evidence=analysis.evidence,
-        title=title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
+    """Render one prepared analysis with typed content and host capabilities."""
+    presentation = replace(
+        options or DashboardOptions(), title=title, labels=resolved.labels,
+        language_name=resolved.name, language_key=resolved.key,
         flag_min_severity=flag_min_severity,
-        **options,
+    )
+    return render_prepared_dashboard(
+        DashboardRenderInput(
+            analysis.chapters, analysis.paragraphs, analysis.paragraph_layers,
+            metrics=analysis.metrics, fingerprint=analysis.fingerprint,
+            paragraph_evidence=analysis.evidence,
+            content=content or DashboardContent(),
+        ),
+        presentation,
     )
 
 
 def render_dashboard(
     chapters: Sequence[ChapterProfile],
     paragraphs: Sequence[ParagraphProfile],
-    metrics: Any | None = None,
-    fingerprint: Any | None = None,
-    markers: Sequence[Any] | None = None,
+    metrics: CorpusMetrics | None = None,
+    fingerprint: StyleFingerprint | None = None,
+    markers: Sequence[Marker] | None = None,
     artifacts: Sequence[Mapping[str, Any]] | None = None,
     status: Sequence[Mapping[str, Any]] | None = None,
     dialogue: Mapping[str, Any] | None = None,
@@ -291,6 +296,109 @@ def render_dashboard(
     ``flag_min_severity`` floors the paragraph flag cut; ``None`` takes the
     resolved value from ``fingerprint.thresholds`` (CLI/API/config aware).
     """
+    return render_prepared_dashboard(
+        DashboardRenderInput(
+            chapters=chapters,
+            paragraphs=paragraphs,
+            metrics=metrics,
+            fingerprint=fingerprint,
+            paragraph_evidence=paragraph_evidence,
+            paragraph_layers=prepare_paragraph_layers(paragraphs),
+            content=DashboardContent(
+                markers=markers,
+                artifacts=artifacts,
+                status=status,
+                dialogue=dialogue,
+                characters=characters,
+                pacing=pacing,
+                motifs=motifs,
+                showing=showing,
+                document_context=document_context,
+                scenes=scenes,
+                reader_document=reader_document,
+            ),
+        ),
+        DashboardOptions(
+            title=title,
+            labels=labels,
+            language_name=language_name,
+            language_key=language_key,
+            tense_available=tense_available,
+            engine_name=engine_name,
+            controls=controls,
+            read_only=read_only,
+            api_base=api_base,
+            manuscript_name=manuscript_name,
+            current_language=current_language,
+            language_options=language_options,
+            flag_min_severity=flag_min_severity,
+            enabled_actions=enabled_actions,
+            debug=debug,
+            nda_project_name=nda_project_name,
+            project_author=project_author,
+            identity_check=identity_check,
+            author_setting_enabled=author_setting_enabled,
+            manuscript_pdf_token=manuscript_pdf_token,
+            research_context_token=research_context_token,
+            publication=publication,
+            publication_error=publication_error,
+            project_token=project_token,
+            manuscript_source_sha256=manuscript_source_sha256,
+            register_settings=register_settings,
+            site_publications=site_publications,
+            site_publication_context_token=site_publication_context_token,
+            project_overview_enabled=project_overview_enabled,
+        ),
+    )
+
+
+def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOptions) -> str:
+    """Render prepared data without deriving statistical measurements."""
+    chapters = data.chapters
+    paragraphs = data.paragraphs
+    metrics = data.metrics
+    fingerprint = data.fingerprint
+    markers = data.content.markers
+    artifacts = data.content.artifacts
+    status = data.content.status
+    dialogue = data.content.dialogue
+    characters = data.content.characters
+    pacing = data.content.pacing
+    motifs = data.content.motifs
+    showing = data.content.showing
+    title = options.title
+    labels = options.labels
+    language_name = options.language_name
+    language_key = options.language_key
+    tense_available = options.tense_available
+    engine_name = options.engine_name
+    controls = options.controls
+    read_only = options.read_only
+    api_base = options.api_base
+    manuscript_name = options.manuscript_name
+    current_language = options.current_language
+    language_options = options.language_options
+    flag_min_severity = options.flag_min_severity
+    document_context = data.content.document_context
+    enabled_actions = options.enabled_actions
+    debug = options.debug
+    scenes = data.content.scenes
+    nda_project_name = options.nda_project_name
+    project_author = options.project_author
+    identity_check = options.identity_check
+    author_setting_enabled = options.author_setting_enabled
+    manuscript_pdf_token = options.manuscript_pdf_token
+    research_context_token = options.research_context_token
+    publication = options.publication
+    publication_error = options.publication_error
+    project_token = options.project_token
+    manuscript_source_sha256 = options.manuscript_source_sha256
+    register_settings = options.register_settings
+    site_publications = options.site_publications
+    site_publication_context_token = options.site_publication_context_token
+    reader_document = data.content.reader_document
+    paragraph_evidence = data.paragraph_evidence
+    project_overview_enabled = options.project_overview_enabled
     esc = html.escape
     allowed_actions = set(enabled_actions) if enabled_actions is not None else None
     can_edit = controls and not read_only
@@ -388,9 +496,7 @@ def render_dashboard(
         and any(float(base.get("sigma") or 0.0) > 0.0 for base in fingerprint.baseline.values())
     )
 
-    layer_data: dict[str, dict[int, tuple[float, float]]] = {
-        layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
-    }
+    layer_data = data.paragraph_layers
 
     def _layer_text(key: str, value: float) -> str:
         field = LAYER_FEATURES[key]
@@ -520,6 +626,7 @@ def render_dashboard(
     if status:
         parts.append(status_strip(labels, status))
     parts.append("<!--dashboard-freshness-->")
+    parts.append(render_analysis_identity(data.content.identity, labels))
 
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
@@ -1028,7 +1135,8 @@ def render_dashboard(
 
     parts.append('<div class="analysis-outline-folder">')
     parts.append('<div class="analysis-outline-layout">')
-    parts.append('<div class="analysis-outline-document" id="analysis-outline-document">')
+    parts.append('<div class="analysis-outline-document" id="analysis-outline-document"'
+                 + (' data-guided-analysis="1"' if controls else '') + '>')
 
     flagged = (
         flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
@@ -1052,9 +1160,10 @@ def render_dashboard(
         parts.append(
             f'<section class="panel" id="analysis-review">'
             f'<div class="analysis-review-head"><h2>{L("review_title")}</h2>'
-            f'<button type="button" class="ctl ctl-sm" id="analysis-review-toggle" '
-            f'aria-expanded="true" aria-controls="analysis-review-body" '
-            f'data-hide-label="{hide_lbl}" data-show-label="{show_lbl}">{hide_lbl}</button></div>'
+            + (f'<button type="button" class="ctl ctl-sm" id="analysis-review-toggle" '
+               f'aria-expanded="true" aria-controls="analysis-review-body" '
+               f'data-hide-label="{hide_lbl}" data-show-label="{show_lbl}">{hide_lbl}</button>'
+               if not controls else "") + '</div>'
         )
         parts.append(
             f'<div id="analysis-review-body"><p class="panel-guide">{manuscript_intro}</p><div class="review-routes">'
@@ -1107,22 +1216,30 @@ def render_dashboard(
                 ("review_style_space", "review_style_space_hint", "review_style_space_action", "dim-canvas")
             )
         active_ids = {sec_id for sec_id, _ in active_sections}
-        for _title_key, hint_key, action_key, target in review_routes:
+        for _title_key, hint_key, action_key, target in ([] if controls else review_routes):
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#{target}" '
                 f'data-help="{L(hint_key)}" data-jump="#{target}">{L(action_key)}</a></article>'
             )
-        if "scenes" in active_ids:
+        if not controls and "scenes" in active_ids:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#scenes" '
                 f'data-help="{L("analysis_nav_help_scenes")}" data-jump="#scenes">{L("panel_scenes")}</a></article>'
             )
-        if "characters" in active_ids:
+        if not controls and "characters" in active_ids:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#characters" '
                 f'data-help="{L("analysis_nav_help_characters")}" data-jump="#characters">{L("panel_characters")}</a></article>'
             )
-        parts.append("</div></div></section>")
+        parts.append("</div>")
+        if controls:
+            workflow_sections = [*active_sections, ("analysis-measurements", "analysis_measurements")]
+            if markers is not None:
+                workflow_sections.append(("markers", "markers"))
+            if fingerprint is not None and fingerprint.register_targets and metrics is not None:
+                workflow_sections.append(("register-targets", "register_title"))
+            parts.append(render_analysis_workflows(workflow_sections, labels))
+        parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
     search_icon = (
@@ -1306,10 +1423,10 @@ def render_dashboard(
                 for key in LAYER_FEATURES:
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
-                        value, z = info
-                        colour = z_color(z)
+                        value, z = info.value, info.z
+                        colour = z_color(info.raw_z)
                         layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}",
-                                              round(z, 2), N(value, 1)]
+                                              round(z, 2), N(value, 1), info.notable]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload
@@ -1893,9 +2010,9 @@ def render_dashboard(
                 dev = fingerprint.deviations.get(c.num, {})
                 if dev:
                     named = ", ".join(
-                        f"{label(labels, label_key)}: z* = {N(z, 1, signed=True)}"
+                        f"{label(labels, label_key)}: z* = {N(deviation_value, 1, signed=True)}"
                         for field_name, label_key, _unit in FEATURES
-                        if (z := dev.get(field_name)) is not None
+                        if (deviation_value := dev.get(field_name)) is not None
                     )
                     parts.append(
                         f'<td class="num" title="{esc(named, quote=True)}"><span class="badge badge-deviation">{len(dev)}</span></td>'

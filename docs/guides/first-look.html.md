@@ -42,7 +42,9 @@ Neutral dotted marks and a book-icon **Research** count identify saved research 
 
 **Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Choosing **None** or turning off either switch persists across toggling Analysis and reloading. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
 
-Expand **Manuscript measurements** for the secondary numbers, then collapse the same summary to return to the compact overview. A linked scene title reveals its detailed **Scene measurements**; you can close both panels again, and returning to the passage keeps your earlier reading context.
+**Unreleased native navigation:** the analysis overview starts with status, the next passage and three choices: **Review passages**, **Compare chapters** and **Explore patterns**. Select a task, then a secondary view; one analysis section is visible at a time. Inputs and disclosure state remain in place when you switch, and direct links reveal their target section.
+
+Under **Explore patterns**, choose **Manuscript measurements** and expand its summary for secondary numbers. A linked scene title reveals its detailed **Scene measurements**. **Back to passage** restores your reading context. Standalone reports retain direct section links and remain readable without JavaScript.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 

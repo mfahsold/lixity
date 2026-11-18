@@ -164,7 +164,8 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertIn('id="license-terms"', html)
         self.assertIn('id="matrix"', html)
         self.assertNotIn('id="controls"', html)
-        self.assertNotIn(source["source_version_id"], html)
+        self.assertIn(source["source_version_id"], html)
+        self.assertIn('data-analysis-scope="source_internal"', html)
         analysis = api.analyze_source(self.project, source["source_id"])
         self.assertEqual(analysis["provenance"]["source_version_id"], source["source_version_id"])
 

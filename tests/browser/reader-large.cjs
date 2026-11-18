@@ -8,7 +8,7 @@ const html = pythonFixture(`
 import json
 from lixity.config import resolve_thresholds
 from lixity.pipeline import analyze_document, resolve_document_config
-from lixity.ui.dashboard import render_analysis
+from lixity.ui import DashboardContent, DashboardOptions, render_analysis
 from lixity.ui.manuscript_document import reader_blocks
 paragraphs = [('Clara walked through the quiet garden and watched the birds beside the fountain. '
                'The morning light crossed the stone path while rain gathered beyond the gate. '
@@ -22,8 +22,9 @@ config, resolved = resolve_document_config(source, 'en', project_config={})
 thresholds = resolve_thresholds(project_config={})
 analysis = analyze_document(source, config, thresholds)
 print(json.dumps(render_analysis(analysis, resolved, title='Synthetic long manuscript',
-    flag_min_severity=thresholds.flag_min_severity, controls=True, enabled_actions=['analyze'],
-    reader_document=reader_blocks(source, config, analysis.paragraphs))))
+    flag_min_severity=thresholds.flag_min_severity,
+    options=DashboardOptions(controls=True, enabled_actions=['analyze']),
+    content=DashboardContent(reader_document=reader_blocks(source, config, analysis.paragraphs)))))
 `, {root});
 
 (async () => {

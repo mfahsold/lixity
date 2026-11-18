@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -872,6 +873,7 @@ server.serve_forever()
     assert.equal(submissions[2].fdr_q, 0.05);
     await page.locator('#tab-view-analysis').click();
     await page.locator('#workbench-overview-open').click();
+    await openAnalysisSection(page, 'style');
     await page.locator('#style-tab-heatmap').click();
     await page.locator('#heatmap-fdr-only').check();
     assert.equal(await page.locator('#heatmap tbody tr:visible').count(), 1);

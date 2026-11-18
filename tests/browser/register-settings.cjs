@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 // Native register settings round-trip, validation and draft preservation.
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
@@ -138,6 +139,7 @@ server.serve_forever()
           await page.locator('[data-view=analysis]').click();
           const overview = page.locator('#workbench-overview-open');
           if (await overview.isVisible()) await overview.click();
+          await openAnalysisSection(page, 'register-targets');
           if (width === 320) {
             const tableScroll = page.locator('#register-targets .table-wrap');
             assert.equal(await tableScroll.getAttribute('tabindex'), '0', 'The comparison scrollport is keyboard reachable');

@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Shared document sections retain semantic destinations and independent scroll roots.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -259,7 +260,7 @@ async function companionOverviewReturn(browser, motion) {
    return {id:anchor.panel.id,top:anchor.top,text:anchor.panel.textContent};
   });
   await page.locator('#workbench-overview-open').click();
-  await page.locator('#analysis-sections [data-section-link]').last().click();
+  await openAnalysisSection(page, 'matrix');
   const held=new Promise(resolve=>{notifyHeld=resolve;hold=true;});
   await page.locator('#workbench-overview-back').click();
   if(action==='off') await page.locator('#manuscript-analysis-toggle').click();
@@ -313,6 +314,8 @@ async function companionOverviewReturn(browser, motion) {
    await page.evaluate(dark=>document.documentElement.dataset.theme=dark?'dark':'light',width===1024||motion==='no-preference');
    await page.locator('#workbench-overview-open').click();
    const analysis=page.locator('#analysis-sections');
+   await expect(analysis).not.toBeVisible();
+   await expect(page.locator('[data-analysis-workflow]')).toHaveCount(3);
    await expect(analysis.locator('[data-section-link]')).toHaveCount(10);
    await expect(analysis.locator('[data-section-indicator]')).toHaveCount(0);
    assert.equal(await analysis.locator('[data-section-link]').evaluateAll(links=>links.every(link=>
@@ -327,23 +330,9 @@ async function companionOverviewReturn(browser, motion) {
      await analysis.locator(`[data-section-link=${target}]`).getAttribute('data-help'));
    }
    if(locale==='de' && width===1440 && motion==='reduce' && !touch) {
-    const link=analysis.locator('[data-section-link=flags]'), tip=page.locator('#lixity-tooltip');
-    const help=await link.getAttribute('data-help');
-    await page.mouse.move(0,0); await link.focus();
-    await expect(tip.locator('.tooltip-copy')).toHaveText(help);
-    await expect(tip).toHaveAttribute('aria-hidden','false');
-    assert.match(await link.getAttribute('aria-describedby'),/\blixity-tooltip\b/);
-    await page.keyboard.press('Escape');
-    await expect(tip).toHaveAttribute('aria-hidden','true');
-    await expect(link).toBeFocused();
-    await link.evaluate(node=>node.blur());
-    await page.mouse.move(0,0); await link.hover();
-    await expect(tip.locator('.tooltip-copy')).toHaveText(help);
-    await expect(tip).toHaveAttribute('aria-hidden','false');
-    await tip.hover();
-    await expect(tip).toHaveAttribute('aria-hidden','false');
-    await page.mouse.move(0,0);
-    await expect(tip).toHaveAttribute('aria-hidden','true');
+    const tip=page.locator('#lixity-tooltip');
+    await openAnalysisSection(page, 'flags');
+    await expect(page.locator('[data-analysis-section-target=flags]')).toHaveAttribute('aria-pressed','true');
     for(const selector of ['#workbench-overview-back','#reader-speech']) {
      // Reader audio belongs to the document toolbar, not the overview.
      if(selector==='#reader-speech') await page.locator('#workbench-overview-back').click();
@@ -358,10 +347,8 @@ async function companionOverviewReturn(browser, motion) {
     }
     await page.locator('#workbench-overview-open').click();
    }
-   await analysis.locator('[data-section-link=matrix]')[touch?'tap':'click']();
-
-   await expect(analysis.locator('[aria-current=true]')).toHaveAttribute('data-section-link','matrix');
-   await expect(analysis.locator('[aria-current=true]')).toHaveCSS('text-decoration-line','underline');
+   await openAnalysisSection(page, 'matrix', {touch});
+   await expect(page.locator('[data-analysis-section-target=matrix]')).toHaveAttribute('aria-pressed','true');
    await page.locator('#workbench-overview-back').click();
    await page.locator('#workspace-reader-toggle').click();
    await expect(page.locator('#workspace-reader-dossier')).toBeEnabled();

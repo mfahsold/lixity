@@ -48,6 +48,7 @@ from .style_fingerprint import (
 )
 from .ui import render_analysis
 from .ui.manuscript_document import reader_blocks
+from .ui.render_contracts import DashboardContent
 from .workspace import resolve_manuscript_target
 
 EXIT_OK = 0
@@ -1930,15 +1931,17 @@ def _cmd_build(args: argparse.Namespace) -> int:
         f"{workspace.slug}_dashboard.html": render_analysis(
             analysis,
             resolved,
-            reader_document=reader_blocks(text, config, analysis.paragraphs),
             title=title,
             flag_min_severity=fp_thresholds.flag_min_severity,
-            motifs=motif_report(text, config=config).to_dict(),
-            scenes=scene_report_for_display(
-                text,
-                config,
-                args._project_config.get("scene_analysis"),
-                premeasured_chapters=metrics.chapters,
+            content=DashboardContent(
+                reader_document=reader_blocks(text, config, analysis.paragraphs),
+                motifs=motif_report(text, config=config).to_dict(),
+                scenes=scene_report_for_display(
+                    text,
+                    config,
+                    args._project_config.get("scene_analysis"),
+                    premeasured_chapters=metrics.chapters,
+                ),
             ),
         ),
     }
@@ -3396,17 +3399,19 @@ def _main(argv: list[str] | None = None) -> int:
     html = render_analysis(
         analysis,
         resolved,
-        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=title,
         flag_min_severity=fp_thresholds.flag_min_severity,
-        scenes=scene_report_for_display(
-            text,
-            config,
-            args._project_config.get("scene_analysis"),
-            premeasured_chapters=metrics.chapters,
+        content=DashboardContent(
+            reader_document=reader_blocks(text, config, analysis.paragraphs),
+            scenes=scene_report_for_display(
+                text,
+                config,
+                args._project_config.get("scene_analysis"),
+                premeasured_chapters=metrics.chapters,
+            ),
+            dialogue=dialogue_report(text, config).to_dict(),
+            characters=character_report,
         ),
-        dialogue=dialogue_report(text, config).to_dict(),
-        characters=character_report,
     )
     output = args.output or "lixity-dashboard.html"
     try:

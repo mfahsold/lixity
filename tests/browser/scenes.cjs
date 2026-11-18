@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 const {spawnSync} = require('node:child_process');
@@ -173,6 +174,7 @@ server.serve_forever()
       await page.goto(server.fixture.url);
       assert.match(await page.title(), /Synthetic scene navigation/);
       await page.locator('#workbench-overview-open').click();
+      await openAnalysisSection(page, 'scenes');
       const catalogue = page.locator('#scenes > .scene-measurements');
       assert.equal(await catalogue.getAttribute('open'), null);
       assert.equal(await page.locator('#scenes .scene-overview tbody tr').count(), 19);

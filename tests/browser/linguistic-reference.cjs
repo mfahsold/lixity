@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Browser plugin unavailable: use the repository's real Chromium/rendering helpers.
 // Default literary gold checks counting, not grammatical classification.
 // Optional installed-model construction checks are not representative language
@@ -327,6 +328,7 @@ async function checkCorpusScope(browser) {
       await page.route('**/*', route => route.fulfill({contentType:'text/html', body:fixture.html}));
       await page.goto('http://localhost/');
       await page.locator('#workbench-overview-open').click();
+      await openAnalysisSection(page, 'analysis-measurements');
       const measurements = page.locator('#analysis-measurements');
       await measurements.locator(':scope > summary').click();
       const scopeTiles = measurements.locator('.kpi-group').first().locator('.kpi');

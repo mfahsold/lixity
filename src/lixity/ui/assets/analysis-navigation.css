@@ -1,0 +1,36 @@
+.analysis-workflow-entries {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
+  margin-block: 1rem;
+}
+.analysis-workflow-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: start;
+  min-width: 0;
+  padding: .85rem;
+  gap: .35rem;
+}
+.analysis-workflow-entry strong,
+.analysis-workflow-entry span { overflow-wrap: anywhere; }
+.analysis-workflow-entry span { font-size: .85em; opacity: .8; font-weight: normal; }
+.analysis-workflow-entry[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
+.analysis-workflow-sections { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
+.analysis-workflow-sections[hidden],
+.analysis-workflows [hidden],
+#analysis-outline-document[data-guided-analysis="1"] #manuscript-analysis-panels > [hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .analysis-workflow-entries { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+}
+
+body:not(.has-guided-analysis) .analysis-workflows { display: none; }
+
+.has-guided-analysis #analysis-sections,
+.has-guided-analysis #analysis-outline-nav { display: none !important; }
+
+.has-guided-analysis .analysis-outline-layout { display: block; }
+.has-guided-analysis .analysis-outline-contents { display: none !important; }

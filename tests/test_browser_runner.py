@@ -493,3 +493,28 @@ def test_invalid_shard_spec_fails_before_starting_suites(browser_runner, bad_sha
     assert result.returncode == 2
     assert "--shard" in result.stderr
     assert "Suite body:" not in result.stdout
+
+
+@pytest.mark.parametrize("configured, expected", [
+    ("", "--max-old-space-size=2048"),
+    ("--trace-warnings", "--trace-warnings --max-old-space-size=2048"),
+    ("--max-old-space-size=1024", "--max-old-space-size=1024"),
+    ("--max_old_space_size 3072", "--max_old_space_size 3072"),
+])
+def test_suite_heap_limit_preserves_explicit_caller_options(monkeypatch, configured, expected):
+    from scripts.run_browser_suites import browser_environment
+
+    monkeypatch.setenv("NODE_OPTIONS", configured)
+    assert browser_environment()["NODE_OPTIONS"] == expected
+
+
+@pytest.mark.parametrize("diagnostics", [False, True])
+def test_heap_limit_reaches_each_suite_process(browser_runner, monkeypatch, tmp_path, diagnostics):
+    monkeypatch.delenv("NODE_OPTIONS", raising=False)
+    arguments = ("--diagnostics", str(tmp_path / "evidence")) if diagnostics else ()
+    result = browser_runner(
+        {"a.cjs": "import os\nprint('suite options: ' + os.environ.get('NODE_OPTIONS', 'missing'))\n"},
+        extra_args=arguments,
+    )
+    assert result.returncode == 0
+    assert "suite options: --max-old-space-size=2048" in result.stdout

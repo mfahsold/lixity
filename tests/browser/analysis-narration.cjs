@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Complete manuscript-order dialogue charts and explained pacing measurements.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -52,6 +53,7 @@ print(json.dumps(documents))
         assert.match(await page.title(), /Synthetic narration coverage/);
         assert.equal(await page.locator('h1').textContent(), 'Synthetic narration coverage');
         await page.locator('#workbench-overview-open').click();
+        await openAnalysisSection(page, 'dialogue');
         const chart = page.locator('#dialogue .dist.scrollable');
         const rows = chart.locator('.row');
         assert.deepEqual(await rows.evaluateAll(items => items.map(item => item.dataset.jump)),
@@ -72,6 +74,7 @@ print(json.dumps(documents))
         await page.keyboard.press('Enter');
         assert.equal(await page.locator('#ch-17').isVisible(), true);
         await page.locator('#workbench-overview-open').click();
+        await openAnalysisSection(page, 'pacing');
         const pacing = page.locator('#pacing');
         assert.ok((await pacing.locator('.panel-guide').textContent()).includes(fixture.unit));
         assert.ok((await pacing.locator('.panel-guide').textContent()).includes(fixture.scale));
@@ -136,6 +139,7 @@ server.serve_forever()
           assert.equal(await page.locator('h1').textContent(), 'Synthetic echo coverage');
           const before = await page.locator('#chapters .ptext-inner > p').allTextContents();
           await page.locator('#workbench-overview-open').click();
+          await openAnalysisSection(page, 'motifs');
           const panel = page.locator('#motifs'), local = panel.locator('.motif-echoes');
           await panel.scrollIntoViewIfNeeded();
           assert.equal(await panel.isVisible(), true, 'An echo-only report has a visible native motifs panel');

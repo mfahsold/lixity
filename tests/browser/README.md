@@ -667,3 +667,8 @@ Large-paste caveat: an exploratory Chromium `keyboard.insertText` run took about
 mount/typing measurements above do not establish acceptable bulk-paste latency.
 Real IME composition, assistive technology and power-loss recovery still require
 separate validation before treating the editor as release-ready.
+
+The suite runner defaults each Node heap to 2048 MiB unless `NODE_OPTIONS`
+already specifies a heap limit. This bounds Node allocations, not total Chromium
+or machine memory. On a memory-constrained development host, run
+`make browser-changed BROWSER_JOBS=1`; avoid concurrent build/browser batches.

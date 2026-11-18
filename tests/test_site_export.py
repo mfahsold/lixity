@@ -486,7 +486,7 @@ def test_review_export_and_native_workspace_share_configured_supplementary_repor
     for adapter in (views, module):
         render = adapter.render_analysis
         def observed(*args, _render=render, **kwargs):
-            projections.append({key: kwargs[key] for key in
+            projections.append({key: getattr(kwargs["content"], key) for key in
                                 ('dialogue', 'pacing', 'motifs', 'showing', 'scenes')})
             return _render(*args, **kwargs)
         monkeypatch.setattr(adapter, 'render_analysis', observed)

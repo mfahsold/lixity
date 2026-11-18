@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Browser plugin unavailable: use the repository's Chromium helpers.
 // A native synthetic project exercises the full decision-column layout.
 const assert = require('node:assert/strict');
@@ -51,6 +52,7 @@ server.serve_forever()
         await expect(page).toHaveTitle(/Lixity/);
         await page.locator('#tab-view-analysis').click();
         await page.locator('#workbench-overview-open').click();
+        await openAnalysisSection(page, 'flags');
         const row = page.locator('#flags .flag-row').first();
         const button = row.locator('.triage-read-cell button');
         await expect(button).toHaveText('Im Manuskript ansehen');

@@ -27,6 +27,7 @@ from ..publication import load_publication
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_analysis
 from ..ui.manuscript_document import reader_blocks
+from ..ui.render_contracts import DashboardContent, DashboardOptions
 from .constants import NATIVE_UI_ACTIONS
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
@@ -200,45 +201,61 @@ def build_server_dashboard(
         },
     ]
 
+    reports = supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis"))
     html_doc = render_analysis(
         analysis,
         resolved,
-        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=doc_title,
         flag_min_severity=resolved_thresholds.flag_min_severity,
-        status=status_items,
-        characters=character_report,
-        **supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis")),
-        markers=markers,
-        artifacts=artifacts,
-        tense_available=bool(resolved.praesens_regex and resolved.praeteritum_regex),
-        controls=controls,
-        api_base=api_base,
-        manuscript_name=manuscript_name,
-        current_language=language,
-        enabled_actions=NATIVE_UI_ACTIONS,
-        nda_project_name=doc_title if source_input else title or (
-            os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""
+        content=DashboardContent(
+            reader_document=reader_blocks(text, config, analysis.paragraphs),
+            status=status_items,
+            characters=character_report,
+            dialogue=reports.get("dialogue"),
+            pacing=reports.get("pacing"),
+            motifs=reports.get("motifs"),
+            showing=reports.get("showing"),
+            scenes=reports.get("scenes"),
+            markers=markers,
+            artifacts=artifacts,
         ),
-        debug=debug,
-        project_author=project_author,
-        identity_check=identity_check,
-        author_setting_enabled=bool(source_input or project_root is not None),
-        project_overview_enabled=bool(source_input or project_root is not None),
-        publication=publication_values,
-        publication_error=publication_error,
-        site_publications=identity_settings.get("site_publications", {}),
-        site_publication_context_token=research_context_token(
-            project_root or (Path(source_input).parent if source_input else None)),
-        register_settings=settings,
-        project_token=settings_token,
-        manuscript_source_sha256=manuscript_source_sha256,
-        manuscript_pdf_token=manuscript_pdf_token(
-            source_input, project_root=project_root, language=language,
-            title=title, thresholds=resolved_thresholds,
-            config_bytes=project_config_bytes,
-        ) if manuscript_readable and not is_empty else "",
-        research_context_token=research_context_token(research_root or project_root),
+        options=DashboardOptions(
+            tense_available=bool(resolved.praesens_regex and resolved.praeteritum_regex),
+            controls=controls,
+            api_base=api_base,
+            manuscript_name=manuscript_name,
+            current_language=language,
+            enabled_actions=NATIVE_UI_ACTIONS,
+            nda_project_name=doc_title
+            if source_input
+            else title
+            or (os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""),
+            debug=debug,
+            project_author=project_author,
+            identity_check=identity_check,
+            author_setting_enabled=bool(source_input or project_root is not None),
+            project_overview_enabled=bool(source_input or project_root is not None),
+            publication=publication_values,
+            publication_error=publication_error,
+            site_publications=identity_settings.get("site_publications", {}),
+            site_publication_context_token=research_context_token(
+                project_root or (Path(source_input).parent if source_input else None)
+            ),
+            register_settings=settings,
+            project_token=settings_token,
+            manuscript_source_sha256=manuscript_source_sha256,
+            manuscript_pdf_token=manuscript_pdf_token(
+                source_input,
+                project_root=project_root,
+                language=language,
+                title=title,
+                thresholds=resolved_thresholds,
+                config_bytes=project_config_bytes,
+            )
+            if manuscript_readable and not is_empty
+            else "",
+            research_context_token=research_context_token(research_root or project_root),
+        ),
     )
 
     if project_settings_token(token_root, source_input, config_bytes=project_config_bytes) != settings_token:

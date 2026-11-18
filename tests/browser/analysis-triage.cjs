@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Real native review decisions are project-local and never manuscript tasks.
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
@@ -40,6 +41,7 @@ server.serve_forever()
     async function overview() {
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();
+      await openAnalysisSection(page, 'flags');
       await page.locator('#flags').scrollIntoViewIfNeeded();
       await rows.first().locator('.triage-read-cell button').scrollIntoViewIfNeeded();
       await expect(rows.first().locator('.triage-read-cell button')).toBeVisible();
@@ -90,6 +92,7 @@ server.serve_forever()
     await expect(page.locator('#triage-progress')).toContainText('1 /');
     for (const width of [1440, 320]) {
       await page.setViewportSize({width,height:950});
+      await openAnalysisSection(page, 'flags');
       await page.locator('#flags').scrollIntoViewIfNeeded();
       if (width === 320) {
         const positions = await rows.first().evaluate(row => ({
@@ -132,6 +135,7 @@ server.serve_forever()
     await page.reload();
     await page.locator('#tab-view-analysis').click();
     await page.locator('#workbench-overview-open').click();
+    await openAnalysisSection(page, 'flags');
     await expect(page.locator('#triage-progress')).toContainText('2 previously saved decisions');
     await expect(page.locator('#triage-progress')).toContainText('for this manuscript');
     await expect(page.locator('#triage-progress')).toContainText('retained');
@@ -139,6 +143,7 @@ server.serve_forever()
     assert.equal(JSON.parse(fs.readFileSync(path.join(server.fixture.project, '.lixity/analysis-review.json'))).decisions.length, 2);
     for (const width of [1440, 320]) {
       await page.setViewportSize({width,height:950});
+      await openAnalysisSection(page, 'flags');
       await page.locator('#flags').scrollIntoViewIfNeeded();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({path:path.join(artifacts,`review-unmatched-${width}.png`)});

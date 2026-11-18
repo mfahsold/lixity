@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Shared workbench journeys preserve document identity across optional tools.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -133,12 +134,12 @@ async function documentState(page) {
       await page.locator('#chapters .ptext').nth(25).scrollIntoViewIfNeeded();
       const passageOrigin = await page.evaluate(() => { const anchor = LixityReader.capture(); return {id: anchor.panel.id, top: anchor.top}; });
       await page.locator('#workbench-overview-open').click();
-      assert.equal(await page.locator('#manuscript-analysis-panels').isVisible(), true);
+      assert.equal(await page.locator('.analysis-workflow-entries').isVisible(), true);
       const overviewHeading = await page.locator('#analysis-review h2').boundingBox();
       assert.ok(overviewHeading.y >= 0 && overviewHeading.y + overviewHeading.height <= 900,
         'Opening the overview from a deep passage starts at its first review heading');
       assert.equal(await page.locator('#workbench-overview-back').isVisible(), true);
-      await page.locator('#analysis-sections [data-section-link]').last().click();
+      await openAnalysisSection(page, 'matrix');
       await page.locator('#workbench-overview-back').click();
       await settle(page);
       assert.ok(Math.abs(await page.locator('#' + passageOrigin.id).evaluate(node => node.getBoundingClientRect().top) - passageOrigin.top) <= 2,
@@ -148,7 +149,7 @@ async function documentState(page) {
       await page.locator('#chapters .ptext').nth(25).scrollIntoViewIfNeeded();
       const offOrigin = await page.evaluate(() => { const anchor = LixityReader.capture(); return {id: anchor.panel.id, top: anchor.top}; });
       await page.locator('#workbench-overview-open').click();
-      await page.locator('#analysis-sections [data-section-link]').last().click();
+      await openAnalysisSection(page, 'matrix');
       assert.equal(await toggle.isVisible(), false, 'Analysis marks are controlled from the document surface');
       await page.locator('#workbench-overview-back').click();
       await toggle.click(); await settle(page);

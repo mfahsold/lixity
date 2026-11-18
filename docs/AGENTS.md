@@ -82,6 +82,10 @@ assumptions; none of these outputs is an objective literary quality score.
 Research sources never enter that baseline automatically. Source analysis
 is `source_internal`; an explicit source–manuscript comparison returns a
 separate lexical/register report, not a recalibrated manuscript fingerprint.
+**Unreleased:** source HTML visibly identifies this scope and unverified
+user-supplied context, with the retained source/version IDs in a provenance
+disclosure. `AnalysisIdentity` carries these backend-owned fields separately
+from descriptive `document_context`; titles and imported context cannot set them.
 
 ## 2. Commands
 
@@ -304,7 +308,9 @@ The body contains `layer`, canonical fingerprint `feature`, canonical English
 paragraph layers: `asl|function|dialogue|filter|modal|nominal|passive`.
 `comparison` identifies `median_mad_robust_z`, all measurable paragraphs within
 each chapter, a minimum of 3, nonzero MAD, `z_decimals: 2` and `notable_abs_z: 1.5`.
-Scores reuse `layer_stats`; notability uses the rounded z, matching the browser.
+Scores and notability are prepared together in Python using `layer_stats` and the
+rounded z. The browser consumes the supplied `notable` boolean; it does not
+reclassify rounded cells.
 
 Each row retains its full-profile zero-based `index`, chapter number/title,
 source line span, words/sentences, raw `value`, rounded `z`, `comparable` and
@@ -1724,9 +1730,17 @@ A custom publication/export adapter is a separate integration, not a native
 workspace upgrade. Missing panels can result from omitted renderer inputs even
 when the installed package is current. Reuse one resolved project configuration
 and `analyze_document(text, config, thresholds, include_evidence=True)` result.
-`render_analysis(result, resolved, ...)` wires its chapters, paragraphs, metrics,
-fingerprint and `paragraph_evidence` together. Pass the shared scene report as
-`scenes`, and use `resolve_character_settings` for names/aliases and declared
+**Unreleased adapter change:** `render_analysis(result, resolved, ...)` wires
+chapters, paragraphs, metrics, fingerprint, `paragraph_evidence` and prepared
+`paragraph_layers` together. Pass optional reports as
+`content=DashboardContent(scenes=scene_report, reader_document=blocks)` and host
+capabilities as `options=DashboardOptions(controls=True, enabled_actions=actions)`.
+Import these types from `lixity.ui`; direct optional keywords on this facade are
+replaced by these explicit objects. The lower-level `render_dashboard` retains
+its named arguments and prepares missing layer inputs before delegating to the
+same renderer. `render_prepared_dashboard(DashboardRenderInput(...), options)`
+requires complete prepared inputs and performs no paragraph statistics.
+Use `resolve_character_settings` for names/aliases and declared
 viewpoints instead of maintaining a second figure list. Reuse `reader_blocks`
 for canonical manuscript structure; do not build another paragraph-offset map.
 

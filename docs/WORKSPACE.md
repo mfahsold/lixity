@@ -147,9 +147,10 @@ then read the passage to decide what the difference means in context.
 1. Open the text and confirm its analysis language in **Project → Settings**.
    Website language preferences do not select a linguistic profile. Applying
    analysis settings rebuilds the dashboard; record the settings used for a comparison.
-2. Open **Analysis overview** and inspect sentence lengths, style measurements
-   or the chapter matrix. Choose a comparison within the supplied text rather
-   than treating its internal reference as a population norm.
+2. Open **Analysis overview**. In the unreleased native navigation, choose
+   **Compare chapters** for the chapter matrix or style measurements, or
+   **Explore patterns** for sentence rhythm. Choose a comparison within the
+   supplied text rather than treating its internal reference as a population norm.
 3. Return to a passage and open its measurement explanation. **Counted text**
    exposes the words or sentences behind the value; **Paragraph comparison**
    describes a separate comparison with the chapter. Read both in context.
@@ -245,9 +246,11 @@ Happy path for an author or lector (no technical setup beyond the local app):
    `Shift+Enter`) or **Back to passage** to stay oriented.
 2. Turn **Analysis On** for exactly one question. Inspect **Counted text** or the
    **Paragraph comparison**, then return to the unmarked passage before deciding.
-3. Start comparisons from **Mit der Prüfung beginnen / Start the review**:
-   passage first, then chapter, rhythm, style-space. Each route lands on the same
-   panels the right-hand **Analyse** nav reaches; the routes are the guided order.
+3. In **Analysis overview**, choose one task: **Review passages**
+   (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
+   **Explore patterns** (**Muster erkunden**). These unreleased native entrypoints
+   replace the exhaustive section list. Pick a secondary view only when needed;
+   the next-passage action remains available above the views.
 4. Follow research beside the text via **Dossiers** or **Explore passage →
    Research for this passage**. Distinguish the exact retained quotation from
    the current dossier record; a changed source never silently updates a saved link.
@@ -260,10 +263,10 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 
 | Goal | Happy path | Other ways that work |
 | --- | --- | --- |
-| Chapter comparison | Review route `Kapitel erkunden` | `Analysis overview` → `Kapitelmatrix`, right-hand outline nav, heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
-| Sentence rhythm & dialogue | Review route `Satzrhythmus öffnen`, `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
-| Tense review | `Analysis On` with `Measure: None` or review badge on paragraph | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
-| Style-space & scenes | Review route `3D-Rangprojektion öffnen` | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
+| Chapter comparison | `Analysis overview` → `Compare chapters` → `Chapter matrix` | Heatmap cell click, KPI tile click, command palette (`Ctrl+K` / `Ctrl+P`) |
+| Sentence rhythm & dialogue | `Analysis overview` → `Explore patterns` → sentence lengths or quoted text; `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
+| Tense review | `Analysis overview` → `Review passages`, or paragraph review badge with `Analysis On` | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
+| Feature-rank projection & scenes | `Compare chapters` → `Style` → projection, or `Explore patterns` → scenes | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
 | Passage values & evidence | Paragraph `…` button → `Explore passage` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
@@ -385,12 +388,15 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-The analysis overview's section links sit in its existing
-header and wrap instead of hiding later sections beyond a horizontal scroll.
-They jump within the overview; the underlined link indicates the current
-section, not a completed review step. **Back to passage** remains the return to
-the manuscript. On short viewports the header scrolls with the content to leave
-room for the measurements.
+**Unreleased native navigation:** the overview starts with status, the next
+passage and three task choices. Selecting **Review passages**, **Compare
+chapters** or **Explore patterns** reveals one existing analysis section.
+Secondary choices switch sections within that task; lists and methods stay
+available on demand. Switching retains inputs and disclosure state. Deep links
+reveal their owning section before navigating, including nested style views.
+**Back to passage** restores the manuscript position and analysis choice.
+CLI standalone reports retain direct section navigation; without JavaScript their
+complete text and tables remain readable.
 
 **? → Help with your first analysis** is a voluntary
 panel in the reader toolbar. It explains the current Analysis Off /
@@ -609,27 +615,27 @@ start collapsed. Missing or unverifiable mappings are stated explicitly. A
 counted cue does not prove a grammatical error, and mixed cues alone do not
 establish a switch from the previous paragraph.
 
-**Start your review → Open passage** opens the first paragraph meeting the
+**Open passage** in the overview opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
-focusing the passage. **Explore chapters** opens available chapter comparisons;
-**Open sentence rhythm** appears when measurable. Other passage/chapter links
-navigate to the corresponding prose. These are review locations, not rankings
-or instructions to revise.
+focusing the passage. Choose **Compare chapters** for chapter comparisons or
+**Explore patterns** for sentence rhythm and other patterns in the unreleased
+native navigation. Passage/chapter links navigate to the corresponding prose.
+These are review locations, not rankings or instructions to revise.
 
-The overview keeps these review routes,
-section navigation and flagged passages visible. Expand **Manuscript
-measurements** for the grouped scope, rhythm, language, vocabulary and style
-values; use the same summary to collapse them. Its open state survives switching
-between the overview and manuscript. Standalone reports start with these values
-expanded, including without JavaScript.
+The native overview keeps only the selected analysis section visible.
+**Review passages** exposes flagged passages and work markers. Under **Explore
+patterns**, choose **Manuscript measurements** for the grouped scope, rhythm,
+language, vocabulary and style values, then expand its summary. Its open state
+survives switching sections or returning to the manuscript. Standalone reports
+start with these values expanded, including without JavaScript.
 
 The flagged-passages heading shows the list count. Use **Read passage** to
 inspect its context; author work markers remain explicit paragraph actions.
 Long flag and scene lists use bounded
 scrolling regions: focus the region and use arrow or page-scrolling keys, or use
 wheel/touch. Wide chapter, character and scene comparisons retain the row identity
-while scrolling sideways. Section-navigation arrow keys keep offscreen labels
-reachable; keyboard passage/chapter drills focus the revealed text. **Back to
+while scrolling sideways. Workflow choices wrap to remain reachable on narrow
+screens; keyboard passage/chapter drills focus the revealed text. **Back to
 passage** retains its earlier passage position, analysis choice and context tool.
 
 <a id="style-area-since-v230"></a>

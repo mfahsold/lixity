@@ -347,6 +347,8 @@ async function main() {
         await captureThrough(capture, '#ch-1', paragraph);
         await save(capture.target, '#ch-1');
       } else if (name.startsWith('dashboard-heatmap')) {
+        await page.locator('[data-analysis-workflow=compare]').click();
+        await page.locator('[data-analysis-section-target=style]').click();
         await page.evaluate(() => {
           const rows = document.querySelectorAll('table.heatmap tbody tr');
           for (let i = 20; i < rows.length; i++) rows[i].remove();
@@ -538,6 +540,7 @@ async function main() {
         await assertReviewConfirmed();
         await page.waitForTimeout(1000);
         await say('Start with the manuscript review overview.');
+        await page.locator('[data-analysis-workflow=review]').click();
         await page.locator('#flags').scrollIntoViewIfNeeded();
         await page.waitForTimeout(900);
         const flagRow = page.locator('#flags [data-marker-kind]').first();
@@ -562,6 +565,8 @@ async function main() {
         await page.waitForTimeout(1300);
         await say('Return to the overview to find passage markers.');
         await page.locator('#workbench-overview-open').click();
+        await page.locator('[data-analysis-workflow=review]').click();
+        await page.locator('[data-analysis-section-target=markers]').click();
         await page.locator('#markers').scrollIntoViewIfNeeded();
         await page.waitForTimeout(1500);
       } else if (flow === 'analysis-review') {
@@ -581,6 +586,8 @@ async function main() {
         await say('Open the analysis overview for chapter comparisons.');
         await page.locator('#workbench-overview-open').click();
         await assertReviewConfirmed();
+        await page.locator('[data-analysis-workflow=compare]').click();
+        await page.locator('[data-analysis-section-target=style]').click();
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
           await say('View chapters in the style dimensions chart.');

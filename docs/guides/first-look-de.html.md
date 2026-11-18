@@ -46,6 +46,10 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären lässt. Dafür sind weder alle Messgrößen noch eine „Korrektur“ nötig. Das kurze Beispiel demonstriert den Arbeitsgang, nicht die statistische Zuverlässigkeit für jedes Manuskript.
 
+**Noch unveröffentlichte Navigation der lokalen App:** Die Analyseübersicht beginnt mit Status, nächster Textstelle und drei Einstiegen: **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Arbeitsweg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar; Eingaben und aufgeklappte Details bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
+
+Unter **Muster erkunden → Manuskript in Zahlen** stehen die zusätzlichen Messwerte hinter einer aufklappbaren Zusammenfassung. **Zurück zur Textstelle** stellt den Lesekontext wieder her. Eigenständige Berichte behalten direkte Abschnittslinks; Text und Tabellen bleiben auch ohne JavaScript lesbar.
+
 ## Hinweise zum Lesen, keine Schreibziele
 
 Lixity zeigt Muster, die du im Zusammenhang prüfen kannst. Eine Wiederholung, eine kurze Satzfolge oder ein Wechsel der Zeitform kann beabsichtigt sein. Die Entscheidung über den Text bleibt bei dir.

@@ -18,6 +18,7 @@ from ..pipeline import analyze_document
 from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
 from ..ui import render_analysis
 from ..ui.manuscript_document import reader_blocks
+from ..ui.render_contracts import AnalysisIdentity, DashboardContent, DashboardOptions
 from .models import Extraction, Passage, Reference, Source, SourceVersion, Tombstone
 from .repository import Repository, ResearchError, Snapshot
 
@@ -174,6 +175,10 @@ def analyze(
         "estimable_features": estimable,
     }
 
+    identity = AnalysisIdentity(
+        scope="source_internal", context_status="user_supplied_unverified",
+        source_id=source.id, source_version_id=version.id,
+    )
     report_dict: dict[str, Any] = {
         "meta": {
             "tool": "lixity",
@@ -191,8 +196,8 @@ def analyze(
             "context": version.context.model_dump(),
         },
         "interpretation": {
-            "scope": "source_internal",
-            "context_status": "user_supplied_unverified",
+            "scope": identity.scope,
+            "context_status": identity.context_status,
             "limitations": limitations,
             "baseline_coverage": baseline_coverage,
         },
@@ -203,17 +208,20 @@ def analyze(
     }
 
     context_for_dashboard = dict(version.context.model_dump())
-    context_for_dashboard["source_version_id"] = version.id
-    context_for_dashboard["source_id"] = source.id
 
     dashboard_html = render_analysis(
         analysis,
         resolved,
-        reader_document=reader_blocks(text, config, analysis.paragraphs),
         title=source.title,
         flag_min_severity=resolved_thresholds.flag_min_severity,
-        document_context=context_for_dashboard,
-        controls=False,
+        content=DashboardContent(
+            reader_document=reader_blocks(text, config, analysis.paragraphs),
+            document_context=context_for_dashboard,
+            identity=identity,
+        ),
+        options=DashboardOptions(
+            controls=False,
+        ),
     )
 
     return SourceAnalysisResult(report_dict, dashboard_html)

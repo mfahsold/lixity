@@ -46,7 +46,7 @@ reports = dict(dialogue=dialogue_report(text, config).to_dict(),
 def render(language, controls):
     return render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, labels=LANGUAGE_PROFILES[language].labels,
-        language_key=language, controls=controls, title="Synthetic analysis overview", **reports)
+        language_key=language, controls=controls, markers=[], title="Synthetic analysis overview", **reports)
 print(json.dumps({"locales": {language: render(language, True) for language in LOCALES}, "standalone": render("en", False),
     "unavailable": {language: render_showing_panel({"chapter_list": [{"chapter_num": 1, "balance": 0.0}]},
         LANGUAGE_PROFILES[language].labels, language) for language in LOCALES},
@@ -92,33 +92,49 @@ async function pinnedIdentity(page, panel, cellIndex) {
         return route.fulfill(route.request().url().includes('/api/')
           ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: html});
       });
+      await page.addInitScript(() => localStorage.setItem('lixity:hide-review-guide', '1'));
       await page.goto('http://lixity.test/');
       assert.equal(await page.title(), 'Synthetic analysis overview – ' +
         (await page.locator('.workspace-shell .product-name').textContent()).trim(),
         'Browser history identifies the manuscript and product without repeating an analysis slogan');
       await page.locator('#workbench-overview-open').click();
-      const navigation = page.locator('#analysis-sections');
-      assert.deepEqual(await navigation.locator('[data-section-link]').evaluateAll(nodes => nodes.map(n => n.dataset.sectionLink)),
-        ['flags','pacing','scenes','dialogue','dist','showing','characters','motifs','style','matrix']);
-      assert.equal(await navigation.locator('svg').count(), 0, 'Overview section links are not a progress timeline');
+      const navigation = page.locator('[data-analysis-workflows]');
+      const entries = navigation.locator('[data-analysis-workflow]');
+      const visiblePanels = () => page.locator('#manuscript-analysis-panels > :visible').count();
+      assert.equal(await entries.count(), 3, 'The overview starts with three editorial workflows');
+      assert.deepEqual(await entries.evaluateAll(nodes => nodes.map(n => n.dataset.analysisWorkflow)),
+        ['review', 'compare', 'explore']);
+      assert.equal(await visiblePanels(), 0, 'The initial overview does not expand every analysis panel');
+      assert.equal(await page.locator('#analysis-sections').isVisible(), false,
+        'The exhaustive section navigation is replaced by the workflow chooser');
+      assert.equal(await page.locator('#analysis-outline-nav').isVisible(), false,
+        'A second exhaustive feature list does not compete with the workflow chooser');
       const orientation = await navigation.evaluate(nav => {
         const bounds = nav.getBoundingClientRect();
-        return {before:!!(nav.compareDocumentPosition(document.getElementById('analysis-review')) & Node.DOCUMENT_POSITION_FOLLOWING),
-          bounds:bounds.toJSON(), width:nav.clientWidth, content:nav.scrollWidth,
-          links:[...nav.querySelectorAll('a')].map(a=>a.getBoundingClientRect().toJSON())};
+        return {bounds:bounds.toJSON(), width:nav.clientWidth, content:nav.scrollWidth,
+          entries:[...nav.querySelectorAll('[data-analysis-workflow]')].map(a=>a.getBoundingClientRect().toJSON())};
       });
-      assert.ok(orientation.before, 'Section choices precede the review callout');
-      assert.equal(await navigation.evaluate(nav=>nav.parentElement.id), 'manuscript-reader-controls',
-        'The same navigation shares the existing measured reader header');
-      assert.ok(orientation.content <= orientation.width + 1, 'All section choices fit without horizontal clipping');
-      assert.ok(orientation.links.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
-        'Every label is wholly visible inside the overview navigation');
-      if (width<=390) assert.ok(new Set(orientation.links.map(rect=>Math.round(rect.top))).size>1, 'Mobile section links wrap');
+      assert.ok(orientation.content <= orientation.width + 1, 'Workflow choices fit without horizontal clipping');
+      assert.ok(orientation.entries.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
+        'Every workflow label is wholly visible');
+      if (width<=390) assert.equal(new Set(orientation.entries.map(rect=>Math.round(rect.top))).size,3,
+        'Mobile workflow entries form a readable single column');
+      async function selectSection(target, scroll = true) {
+        const choice = navigation.locator(`[data-analysis-section-target="${target}"]`);
+        const workflow = await choice.getAttribute('data-analysis-section-workflow');
+        await navigation.locator(`[data-analysis-workflow="${workflow}"]`).click();
+        await choice.click();
+        assert.equal(await visiblePanels(), 1, `${target}: only one major analysis panel is active`);
+        assert.equal(await page.locator(`#${target}`).isVisible(), true, `${target}: selected panel is visible`);
+        assert.equal(await choice.getAttribute('aria-pressed'), 'true');
+        assert.equal(await navigation.locator('[data-analysis-workflow][aria-pressed=true]').count(), 1);
+        if (scroll) await page.locator(`#${target}`).scrollIntoViewIfNeeded();
+      }
       if ((locale === 'en' || locale === 'de') && [1440, 320].includes(width)) {
-        const entry = page.locator('#analysis-review a[data-jump="#dim-canvas"]');
-        assert.equal(await page.locator('#dimensions').isVisible(), false, 'Another style tab starts selected');
-        await entry.click();
-        assert.equal(await page.locator('#dimensions').isVisible(), true, 'The direct route reveals the style space');
+        assert.equal(await page.locator('#dimensions').isVisible(), false, 'Style measurements start concealed');
+        await selectSection('style');
+        await page.locator('#style-tab-dimensions').click();
+        assert.equal(await page.locator('#dimensions').isVisible(), true, 'The comparison workflow reveals the style space');
         assert.equal(await page.locator('#style-tab-dimensions').getAttribute('aria-selected'), 'true');
         for (const [kind, sign] of [['pos', '+'], ['neg', '−']]) {
           const loading = page.locator(`#dimensions .load.${kind}[role=button]`).first();
@@ -132,16 +148,12 @@ async function pinnedIdentity(page, panel, cellIndex) {
           'Returning restores the previous reading choice');
         await page.locator('#workbench-overview-open').click();
       }
-      if (locale === 'en' || locale === 'de') await page.locator('#manuscript-reader-controls').screenshot({
+      if (locale === 'en' || locale === 'de') await navigation.screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
       for (const target of ['flags','pacing','scenes','dialogue','dist','showing','characters','motifs','style','matrix']) {
-        await navigation.locator(`[data-section-link=${target}]`).click();
-        await page.waitForFunction(target=>document.querySelector('#analysis-sections [aria-current=true]')?.dataset.sectionLink===target,target);
-        const destinationNavigation = await navigation.boundingBox();
-        assert.ok(destinationNavigation.y >= -1 && destinationNavigation.y + destinationNavigation.height <= 900,
-          `Overview navigation remains reachable after a section jump: ${JSON.stringify({locale,width,target,bounds:destinationNavigation})}`);
+        await selectSection(target);
       }
-      await navigation.locator('[data-section-link=showing]').click();
+      await selectSection('showing');
       const signalPanel = page.locator('#showing');
       const signalMethod = signalPanel.locator('details.signal-method');
       const signalSummary = signalMethod.locator('summary');
@@ -180,11 +192,11 @@ async function pinnedIdentity(page, panel, cellIndex) {
           await signalPanel.screenshot({path:path.join(artifacts, `signals-${locale}-${width}-dark.png`)});
       }
       await page.emulateMedia({colorScheme:'light'});
-      await navigation.locator('[data-section-link=flags]').click();
+      await selectSection('analysis-measurements');
       const measurements = page.locator('#analysis-measurements');
       assert.equal(await measurements.getAttribute('open'), null, 'Dense measurements initially stay folded');
       assert.equal(await measurements.locator('.kpi').first().isVisible(), false);
-      assert.ok(await page.locator('#flags').isVisible(), 'Flag review remains outside the disclosure');
+      assert.equal(await page.locator('#flags').isVisible(), false, 'The measurement view does not also expand flag review');
       const summary = measurements.locator(':scope > summary');
       assert.ok((await summary.textContent()).trim().length > 0);
       await summary.focus();
@@ -198,6 +210,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await page.keyboard.press('Enter');
       assert.equal(await measurements.evaluate(element => element.open), false);
 
+      await selectSection('flags');
       const flags = page.locator('#flags .flags-wrap');
       assert.equal(await flags.getAttribute('role'), 'region');
       assert.ok(await flags.getAttribute('aria-label'));
@@ -233,10 +246,12 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await page.evaluate(() => document.activeElement.blur());
       if (locale === 'en' || locale === 'de') await page.locator('#flags').screenshot({path: path.join(artifacts, `flags-${locale}-${width}.png`)});
 
+      await selectSection('matrix');
       await pinnedIdentity(page, 'matrix', 1);
       const counts = await page.locator('#matrix tbody tr').evaluateAll(rows => rows.map(row => row.lastElementChild.textContent));
       assert.deepEqual(counts, [...Array(16).fill('0'), '–'], 'Measured zero and unavailable comparisons remain distinct');
       if (locale === 'en' || locale === 'de') await page.locator('#matrix').screenshot({path: path.join(artifacts, `matrix-${locale}-${width}.png`)});
+      await selectSection('characters');
       await pinnedIdentity(page, 'characters', 0);
       const characterHelp = page.locator('#characters th .help[data-help]').last();
       assert.equal(await page.locator('#characters th .help[data-help]').count(), 3);
@@ -254,7 +269,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.equal(await page.locator('#manuscript-reader-controls').evaluate(node=>getComputedStyle(node).position),'static',
           'Short enlarged overview headers scroll naturally instead of covering the content');
         assert.ok(await navigation.evaluate(nav=>nav.scrollWidth<=nav.clientWidth+1), 'Enlarged labels still wrap');
-        await navigation.locator('[data-section-link=matrix]').click();
+        await selectSection('matrix', false);
         assert.ok(await page.locator('#matrix').evaluate(node=>{
           const rect=node.getBoundingClientRect(); return rect.top>=0 && rect.top<innerHeight;
         }), 'A section arrival remains visible at480px height and200% text');
@@ -321,6 +336,6 @@ async function pinnedIdentity(page, panel, cellIndex) {
     }
     assert.deepEqual(errors, []);
     assert.equal(writes, 0, 'Overview browsing performs no writes');
-    console.log(`Analysis overview: native disclosure, complete measurements, long flags, readable anchors, pinned table identity and unavailable values in ${Object.keys(fixtures.locales).length} desktop/mobile locales passed. Screenshots: ${artifacts}`);
+    console.log(`Analysis overview: three workflows, one active panel, native disclosure, complete measurements, long flags, readable anchors, pinned table identity and unavailable values in ${Object.keys(fixtures.locales).length} desktop/mobile locales passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

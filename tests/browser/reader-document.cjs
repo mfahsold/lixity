@@ -71,8 +71,9 @@ print(json.dumps(full_dashboard()))
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();
       assert.equal(await generatedTitle.isVisible(), true, 'Overview retains project context');
-      if (width === 1440) assert.equal(await page.locator('.analysis-outline-contents').isVisible(), true,
-        'Analysis overview retains its desktop navigation');
+      assert.equal(await page.locator('.analysis-outline-contents').isVisible(), false,
+        'The compact workflow chooser replaces the exhaustive destination list');
+      assert.equal(await page.locator('[data-analysis-workflow]:visible').count(), 3);
       await page.locator('#workbench-overview-back').click();
       const returnedBox = await generatedTitle.boundingBox();
       assert.ok(returnedBox && returnedBox.width > 1 && returnedBox.height > 1);

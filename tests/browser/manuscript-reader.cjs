@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Reading keeps one exact manuscript tree; tools appear only on demand.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -350,7 +351,7 @@ async function settleGeometry(page) {
       await page.locator('#filter-flags').uncheck();
       await analysis.click();
       await page.locator('#workbench-overview-open').click();
-      assert.equal(await page.locator('#manuscript-analysis-panels').isVisible(), true,
+      assert.equal(await page.locator('.analysis-workflow-entries').isVisible(), true,
         'Dense comparisons have an explicit overview surface');
       assert.equal(await page.locator('#workbench-overview-back').isVisible(), true);
       assert.deepEqual(await sourceState(page), anchors, 'The overview keeps the canonical manuscript mounted');
@@ -366,6 +367,7 @@ async function settleGeometry(page) {
         const toggle = chapter.locator('[data-chapter-toggle]');
         const selectedLayer = await cell.getAttribute('data-layer');
         await page.locator('#workbench-overview-open').click();
+        await openAnalysisSection(page, 'style');
         if (activation === 'click') await cell.click();
         else { await cell.focus(); await cell.press('Enter'); }
         await page.locator('#metric-context-read').click();

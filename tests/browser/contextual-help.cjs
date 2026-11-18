@@ -362,7 +362,7 @@ async function adjacentToolbarActions(page, locale, width) {
   await expect(tip).toHaveAttribute('aria-hidden', 'false');
   await page.screenshot({path: path.join(artifacts, `${locale}-${width}-toolbar-help.png`)});
   await page.locator('#workbench-overview-open').click({timeout: 2000});
-  await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();
+  await expect(page.locator('.analysis-workflow-entries')).toBeVisible();
   await page.locator('#workbench-overview-back').click(); await settle(page);
   await trigger.focus();
   await expect(tip).toHaveAttribute('aria-hidden', 'false');
@@ -573,7 +573,7 @@ async function nativeControls(page, width, labels) {
   await activate(analysis); await settle(page);
   assert.equal(await analysis.getAttribute('aria-pressed'), 'false');
   await activate(page.locator('#workbench-overview-open')); await settle(page);
-  await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();
+  await expect(page.locator('.analysis-workflow-entries')).toBeVisible();
   await activate(page.locator('#workbench-overview-back')); await settle(page);
   await expect(page.locator('#chapters')).toBeVisible();
   const focus = page.locator('#reader-focus');

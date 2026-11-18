@@ -81,6 +81,7 @@ from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
 from .ui.dashboard import _script_json
 from .ui.manuscript_document import ReaderBlock, reader_blocks
+from .ui.render_contracts import DashboardContent, DashboardOptions
 from .workspace import resolve_manuscript_target
 
 
@@ -436,10 +437,27 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
     def L(key: str) -> str:
         return esc(label(labels, key))
     if sections == ["full"]:
-        page = render_analysis(analysis, resolved, title=title, flag_min_severity=thresholds.flag_min_severity,
-            controls=True, read_only=True, enabled_actions=[], markers=[],
-            reader_document=reader_blocks(capped, analysis_config, analysis.paragraphs),
-            **supplementary_reports(capped, analysis_config, analysis))
+        reports = supplementary_reports(capped, analysis_config, analysis)
+        page = render_analysis(
+            analysis,
+            resolved,
+            title=title,
+            flag_min_severity=thresholds.flag_min_severity,
+            content=DashboardContent(
+                markers=[],
+                reader_document=reader_blocks(capped, analysis_config, analysis.paragraphs),
+                dialogue=reports.get("dialogue"),
+                pacing=reports.get("pacing"),
+                motifs=reports.get("motifs"),
+                showing=reports.get("showing"),
+                scenes=reports.get("scenes"),
+            ),
+            options=DashboardOptions(
+                controls=True,
+                read_only=True,
+                enabled_actions=[],
+            ),
+        )
         envelope = {"schema_version": DATA_SCHEMA, "responses": {}, "resources": {}}
         script = '<script type="application/json" id="lixity-site-data">' + _script_json(envelope) + '</script>\n'
         page = page.replace('<script>', script + '<script>', 1)
@@ -641,16 +659,42 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
                                           include_source_files, files, settings=settings) if snapshot else ({}, {}))
         selection = resolve_character_settings(None, settings)
         author = validate_author_name(settings.get("author_name", ""))
-        document = render_analysis(analysis, resolved, title=display_title,
-            flag_min_severity=effective_thresholds.flag_min_severity, controls=True, read_only=True,
-            reader_document=reader_blocks(text, config, analysis.paragraphs),
-            markers=list_markers(text), manuscript_name=source.name, current_language=resolved.key,
-            project_author=author, identity_check=manuscript_identity_check(text, display_title, author),
-            enabled_actions=["research-reader", "research-manuscript-review"] if snapshot else [],
-            research_context_token=token if snapshot else "", manuscript_pdf_token=token,
-            manuscript_source_sha256=source_hash, project_token=token,
-            characters=presence_report(text, selection.names, config, declared_pov=selection.declared_pov) if selection.names else None,
-            **supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis")))
+        reports = supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis"))
+        document = render_analysis(
+            analysis,
+            resolved,
+            title=display_title,
+            flag_min_severity=effective_thresholds.flag_min_severity,
+            content=DashboardContent(
+                reader_document=reader_blocks(text, config, analysis.paragraphs),
+                markers=list_markers(text),
+                characters=presence_report(
+                    text, selection.names, config, declared_pov=selection.declared_pov
+                )
+                if selection.names
+                else None,
+                dialogue=reports.get("dialogue"),
+                pacing=reports.get("pacing"),
+                motifs=reports.get("motifs"),
+                showing=reports.get("showing"),
+                scenes=reports.get("scenes"),
+            ),
+            options=DashboardOptions(
+                controls=True,
+                read_only=True,
+                manuscript_name=source.name,
+                current_language=resolved.key,
+                project_author=author,
+                identity_check=manuscript_identity_check(text, display_title, author),
+                enabled_actions=["research-reader", "research-manuscript-review"]
+                if snapshot
+                else [],
+                research_context_token=token if snapshot else "",
+                manuscript_pdf_token=token,
+                manuscript_source_sha256=source_hash,
+                project_token=token,
+            ),
+        )
     else:
         from .ui.publication import render_publication
 

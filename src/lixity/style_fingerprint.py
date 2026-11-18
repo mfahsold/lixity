@@ -2354,6 +2354,33 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
     return stats
 
 
+@dataclass(frozen=True)
+class ParagraphLayerCell:
+    """A measured paragraph value and its rounded chapter-local comparison."""
+
+    value: float
+    z: float
+    notable: bool
+    raw_z: float
+
+
+ParagraphLayerData = dict[str, dict[int, ParagraphLayerCell]]
+
+
+def paragraph_layer_cells(paragraphs: Sequence[Any], layer: str) -> dict[int, ParagraphLayerCell]:
+    """Prepare comparable cells; absent cells represent unavailable comparisons."""
+    cells: dict[int, ParagraphLayerCell] = {}
+    for index, (value, score) in layer_stats(paragraphs, layer).items():
+        z = round(score, PARAGRAPH_LAYER_Z_DECIMALS)
+        cells[index] = ParagraphLayerCell(value, z, abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF, score)
+    return cells
+
+
+def prepare_paragraph_layers(paragraphs: Sequence[Any]) -> ParagraphLayerData:
+    """Prepare every statistical paragraph layer at the analysis boundary."""
+    return {layer: paragraph_layer_cells(paragraphs, layer) for layer in LAYER_FEATURES}
+
+
 def paragraph_layer_projection(
     paragraphs: Sequence[Any], layer: str, *, only_notable: bool = False
 ) -> dict[str, Any]:
@@ -2368,20 +2395,21 @@ def paragraph_layer_projection(
         raise ValueError(f"Unknown paragraph layer: {layer}")
     feature = LAYER_FEATURES[layer]
     unit = next((u for f, _l, u in FEATURES if f == feature), FEATURE_UNITS.get("en", {}).get(feature, "per 1,000 words"))
-    stats = layer_stats(paragraphs, layer)
+    cells = paragraph_layer_cells(paragraphs, layer)
     rows: list[dict[str, Any]] = []
     for index, paragraph in enumerate(paragraphs):
         value = getattr(paragraph, LAYER_PARAGRAPH_ATTR[layer], None)
         if paragraph.words <= 0 or not isinstance(value, int | float):
             value = None
-        z = round(stats[index][1], PARAGRAPH_LAYER_Z_DECIMALS) if index in stats else None
+        cell = cells.get(index)
+        z = cell.z if cell is not None else None
         rows.append({
             "index": index, "chapter_num": paragraph.chapter_num,
             "chapter_title": paragraph.chapter_title,
             "start_line": paragraph.start_line, "end_line": paragraph.end_line,
             "words": paragraph.words, "sentences": paragraph.sentences,
             "value": value, "z": z, "comparable": z is not None,
-            "notable": abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF if z is not None else None,
+            "notable": cell.notable if cell is not None else None,
         })
     notable_count = sum(row["notable"] is True for row in rows)
     selected = [row for row in rows if row["notable"] is True] if only_notable else rows
@@ -2395,7 +2423,7 @@ def paragraph_layer_projection(
         },
         "selection": {
             "only_notable": only_notable, "total_count": len(rows),
-            "comparable_count": len(stats), "notable_count": notable_count,
+            "comparable_count": len(cells), "notable_count": notable_count,
             "selected_count": len(selected),
         },
         "paragraphs": selected,

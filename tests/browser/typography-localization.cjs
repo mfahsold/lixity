@@ -1,3 +1,4 @@
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Semantic reading roles must survive the app/Pages cascade and localization.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -209,6 +210,7 @@ async function textRole(locator) {
       await page.goto('http://lixity.test/app/en');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();
+      await openAnalysisSection(page, 'style');
       await page.locator('#style-tab-dimensions').click();
       await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
       await page.evaluate(() => {

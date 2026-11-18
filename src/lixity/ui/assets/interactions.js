@@ -181,6 +181,7 @@ function scrollAndFlash(target, options) {
     });
   }
   if (window.LixityReader && window.LixityReader.cancelRestore) window.LixityReader.cancelRestore();
+  if (window.LixityAnalysisNavigation) window.LixityAnalysisNavigation.reveal(target);
   revealStyleTarget(target);
   revealDisclosures(target);
   revealChapter(target);
