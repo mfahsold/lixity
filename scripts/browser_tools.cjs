@@ -44,7 +44,9 @@ const {chromium, firefox} = require(playwrightModule);
 
 function launchChromium(options = {}) {
   const executablePath = resolveChromium();
-  return chromium.launch({headless: true, ...(executablePath ? {executablePath} : {}), ...options,
+  // The full Chromium channel supports microphone permissions in headless mode.
+  const browserOptions = executablePath ? {executablePath} : {channel: 'chromium'};
+  return chromium.launch({headless: true, ...browserOptions, ...options,
     args: [...(options.args || []), '--mute-audio']});
 }
 

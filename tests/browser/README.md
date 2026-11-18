@@ -143,7 +143,9 @@ The manually dispatched `browser` workflow accepts an optional space-separated
 `rc.yml` gates shard the full suite across four hosted runners on the selected
 commit. The jobs use Microsoft's digest-pinned Playwright Noble image for
 Chromium and its system libraries. Keep the image version and the installed
-Playwright npm version in sync when updating the workflow.
+Playwright npm version in sync when updating the workflow. The shared launcher
+uses the full Chromium headless channel when Playwright supplies the executable,
+so the microphone suite exercises Chromium's permission implementation.
 
 For the equivalent local run, use
 `make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`.
@@ -157,8 +159,8 @@ suite across two successful full-matrix release runs with two workers per shard,
 rounded up to seconds. An unmeasured suite gets 36 seconds, the rounded-up upper
 quartile of those weights. For the 105 suites at adoption, the model puts the
 slowest two-worker shard at 433 seconds, down from 538 seconds for the previous
-assignment using the same weights. Hosted runtime with the new schedule remains
-unmeasured.
+assignment using the same weights. These estimates cover the suite steps and
+exclude runner setup.
 [Release run 43936636750](https://github.com/mfahsold/lixity/actions/runs/43936636750)
 and [release run 43955134184](https://github.com/mfahsold/lixity/actions/runs/43955134184).
 

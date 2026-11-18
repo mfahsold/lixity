@@ -73,6 +73,11 @@ server.serve_forever()
         if (axe) await page.evaluate(fs.readFileSync(axe, 'utf8'));
         async function auditDialog(surface) {
           if (!axe) return;
+          // Opening motion temporarily composites text below its settled contrast.
+          await page.waitForFunction(() => {
+            const dialog = document.querySelector('#modal-speech');
+            return dialog?.open && getComputedStyle(dialog).opacity === '1';
+          });
           const audit = await page.evaluate(async () => {
             const result = await window.axe.run('#modal-speech');
             return {violations: result.violations.map(item => ({id: item.id, nodes: item.nodes.map(node => node.target)})),
