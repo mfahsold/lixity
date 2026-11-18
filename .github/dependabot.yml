@@ -24,3 +24,14 @@ updates:
     labels:
       - "dependencies"
       - "python"
+
+  - package-ecosystem: "npm"
+    directory: "/scripts/editor"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      editor:
+        patterns: ["*"]
+    labels:
+      - "dependencies"

@@ -315,7 +315,7 @@ def test_failed_candidate_preserves_previous_artifacts(
         fresh.mkdir()
         write_artifacts((root, fresh, files))
 
-    def failed_smoke(candidate, version):
+    def failed_smoke(candidate, version, *, install_report):
         assert candidate != dist
         assert version == "0.3.0"
         assert {path.name: path.read_bytes() for path in dist.iterdir()} == before
@@ -342,7 +342,7 @@ def test_failed_candidate_preserves_previous_artifacts(
 
     monkeypatch.setattr(release_script.subprocess, "run", isolated_build)
     monkeypatch.setattr(release_script, "smoke", failed_smoke if failure_stage == "smoke"
-                        else lambda candidate, version: None)
+                        else lambda candidate, version, *, install_report: None)
     if failure_stage in {"copy", "copy interrupt"}:
         monkeypatch.setattr(release_script.shutil, "copy2", failed_copy)
     elif failure_stage in {"promotion", "interrupt"}:
@@ -355,8 +355,9 @@ def test_failed_candidate_preserves_previous_artifacts(
 
 
 def test_build_cli_smokes_candidate_before_replacing_output(
-        release_script, release_tree, monkeypatch):
+        release_script, release_tree, monkeypatch, tmp_path):
     root, dist, files = release_tree
+    report = tmp_path / "install-report.json"
     stale = dist / "lixity-old.whl"
     stale.write_bytes(b"old approved bytes")
 
@@ -365,17 +366,21 @@ def test_build_cli_smokes_candidate_before_replacing_output(
         fresh.mkdir()
         write_artifacts((root, fresh, files))
 
-    def inspect_smoke(candidate, version):
+    def inspect_smoke(candidate, version, *, install_report):
         assert candidate != dist
         assert stale.read_bytes() == b"old approved bytes"
         assert version == release_script.validate(root, candidate, "v0.3.0")
+        assert not report.exists()
+        install_report.write_text('{}', encoding="utf-8")
 
     monkeypatch.setattr(release_script.subprocess, "run", isolated_build)
     monkeypatch.setattr(release_script, "smoke", inspect_smoke)
     monkeypatch.setattr(release_script, "__file__", str(root / "scripts/check_release.py"))
-    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--build", "--smoke", "--dist", str(dist)])
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--build", "--smoke", "--dist", str(dist),
+                                      "--install-report", str(report)])
     release_script.main()
     assert not stale.exists()
+    assert report.read_text(encoding="utf-8") == '{}'
     release_script.verify_checksums(dist, "0.3.0")
 
 

@@ -164,7 +164,7 @@ def render_publication(
         f'<noscript><p>{L("publication_javascript")}</p></noscript></aside></div>',
         '<footer>' + product_details(labels) + '</footer></div>',
         *(('<script type="application/json" id="research-diagram-library">' +
-           _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + '</script>',)
+           _script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + '</script>',)
           if has_diagrams else ()),
         '<script>' + _bundle(_PUBLICATION_JS_FILES + (("speech-player.js", "reader-audio.js") if audio else ())) + '</script></body></html>',
     ])

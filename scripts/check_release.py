@@ -187,7 +187,8 @@ def promote_artifacts(root: Path, fresh: Path, dist: Path, tag: str | None) -> N
             shutil.rmtree(staging)
 
 
-def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool = False) -> None:
+def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool = False,
+          install_report: Path | None = None) -> None:
     """Replace managed outputs only after candidate validation and requested smoke checks."""
     version = source_version(root, tag)
     if dist.is_symlink():
@@ -199,20 +200,25 @@ def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool =
                        and path.name.endswith((".whl", ".tar.gz"))))
            for path in old):
         raise ValueError("artifact output directory contains unmanaged files")
+    if install_report is not None and (not smoke_wheel or install_report.resolve().is_relative_to(dist.resolve())):
+        raise ValueError("install report requires a smoke check and an output path outside dist")
     with tempfile.TemporaryDirectory(prefix="lixity-build-") as directory:
         fresh = Path(directory) / "dist"
+        staged_report = Path(directory) / "install-report.json" if install_report is not None else None
         subprocess.run(  # noqa: S603 - fixed interpreter/build module, no shell
             [sys.executable, "-m", "build", "--outdir", str(fresh)], cwd=root, check=True,
         )
         validate(root, fresh, tag)
         if smoke_wheel:
-            smoke(fresh, version)
+            smoke(fresh, version, install_report=staged_report)
             validate(root, fresh, tag)
         write_checksums(fresh)
         promote_artifacts(root, fresh, dist, tag)
+        if install_report is not None and staged_report is not None:
+            shutil.copyfile(staged_report, install_report)
 
 
-def smoke(dist: Path, version: str) -> None:
+def smoke(dist: Path, version: str, *, install_report: Path | None = None) -> None:
     """Verify a wheel installation outside the checkout in a disposable venv."""
     wheel = next(dist.glob("*.whl")).resolve()
     env = dict(os.environ)
@@ -239,7 +245,10 @@ def smoke(dist: Path, version: str) -> None:
                 raise ValueError(f"installed wheel smoke failed ({label}, exit {exc.returncode}):"
                                  f"\n{detail}") from exc
 
-        run([str(executable), "-m", "pip", "install", str(wheel)], "install wheel")
+        install = [str(executable), "-m", "pip", "install", str(wheel)]
+        if install_report is not None:
+            install.extend(("--report", str(install_report)))
+        run(install, "install wheel")
         run([str(executable), "-m", "pip", "check"], "check dependencies")
         if run([str(cli), "--version"], "CLI version").strip() != f"lixity {version}":
             raise ValueError("installed CLI version differs from release version")
@@ -295,11 +304,15 @@ def main() -> None:
     parser.add_argument("--tag", help="Require the exact v<source-version> tag")
     parser.add_argument("--build", action="store_true", help="Build fresh verified archives")
     parser.add_argument("--smoke", action="store_true", help="Install and smoke-test the wheel")
+    parser.add_argument("--install-report", type=Path,
+                        help="Save pip's smoke-install report outside dist (requires --build --smoke)")
     parser.add_argument("--source-only", action="store_true",
                         help="Check source/tag identity without building or reading artifacts")
     args = parser.parse_args()
     if args.source_only and (args.build or args.smoke):
         parser.error("--source-only cannot build or smoke-test artifacts")
+    if args.install_report is not None and not (args.build and args.smoke):
+        parser.error("--install-report requires --build --smoke")
     root = Path(__file__).resolve().parents[1]
     dist = args.dist.absolute()
     try:
@@ -307,7 +320,7 @@ def main() -> None:
             print(f"release source verified: {source_version(root, args.tag)}")
             return
         if args.build:
-            build(root, dist, args.tag, smoke_wheel=args.smoke)
+            build(root, dist, args.tag, smoke_wheel=args.smoke, install_report=args.install_report)
         version = validate(root, dist, args.tag)
         verify_checksums(dist, version)
         if args.smoke and not args.build:

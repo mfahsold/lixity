@@ -195,6 +195,35 @@ def _script_json(value: Any) -> str:
             .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e"))
 
 
+def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | None, language_key: str) -> str:
+    L, N, P = panel_formatters(labels, language_key)
+    available = metrics.tokens > 0 and metrics.total_sentences > 0
+    asl = N(metrics.asl, 2) if available else "–"
+    asw = N(metrics.asw, 2) if metrics.tokens else "–"
+    syllables = L("readability_syllables")
+    if metrics._readability_syllables is not None:
+        syllables += f" {N(metrics._readability_syllables, 0)}"
+    long_count = metrics._readability_long_words
+    long_words = "–" if long_count is None else N(long_count, 0)
+    if long_count is not None and metrics.tokens:
+        long_words += f" ({P(long_count / metrics.tokens * 100.0)})"
+    variant = html.escape(metrics.flesch_variant or "Flesch")
+    return (
+        '<div class="readability" id="readability-measurements">'
+        f'<h3>{L("readability_formulas")}</h3>'
+        f'<p class="hint">{L("readability_tokens")} {N(metrics.tokens, 0)} · '
+        f'{L("readability_sentences")} {N(metrics.total_sentences, 0)} · {asl} {L("readability_asl")}</p>'
+        '<dl>'
+        f'<div><dt>{help_term(labels, "flesch", variant)}</dt>'
+        f'<dd><b>{N(metrics.flesch_de, 1) if available else "–"}</b>'
+        f'<span>{syllables} · {asw} {L("readability_per_word")}</span></dd></div>'
+        f'<div><dt>{help_term(labels, "lix", "LIX")}</dt>'
+        f'<dd><b>{N(metrics.lix, 1) if available else "–"}</b>'
+        f'<span>{L("readability_long_words")} {long_words}</span></dd></div>'
+        '</dl></div>'
+    )
+
+
 def render_analysis(
     analysis: DocumentAnalysis,
     resolved: ResolvedLanguage,
@@ -1596,20 +1625,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     )
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
-        language_tiles.append(
-            kpi(
-                N(metrics.flesch_de, 1) if has_tokens else "–",
-                help_term(labels, "flesch", esc(metrics.flesch_variant or "Flesch")),
-                jump="#bands",
-            )
-        )
-        language_tiles.append(
-            kpi(
-                N(metrics.lix, 1) if has_tokens else "–",
-                help_term(labels, "lix", "LIX"),
-                jump="#bands",
-            )
-        )
         mtld_value = (
             N(metrics.mtld, 1)
             if (has_tokens and getattr(metrics, "mtld", None) is not None)
@@ -1703,7 +1718,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         else ""
     )
     language_narrative = (
-        f"{P(metrics.dialog_ratio) if getattr(metrics, 'dialog_ratio', None) is not None else '–'} {L('dialogue')} · {esc(metrics.flesch_variant or 'Flesch')} {N(metrics.flesch_de, 1) if getattr(metrics, 'flesch_de', None) is not None else '–'} · LIX {N(metrics.lix, 1) if getattr(metrics, 'lix', None) is not None else '–'}"
+        f"{P(metrics.dialog_ratio)} {L('dialogue')}"
         if (metrics is not None and metrics.tokens)
         else ""
     )
@@ -1743,6 +1758,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append('<div class="kpi-row">')
         parts.extend(tiles)
         parts.append("</div>")
+        if caption_key == "group_language" and metrics is not None:
+            parts.append(_readability_formulas(metrics, labels, language_key))
         if extra and extra[0]:
             parts.append(
                 f'<div class="kpi-drawer" id="kpi-lexis-drawer">'
@@ -2069,7 +2086,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             ("<footer></footer>" if controls else
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             ('<script type="application/json" id="research-diagram-library">'
-             + _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + "</script>" if controls else ""),
+             + _script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + "</script>" if controls else ""),
             f"<script>{_bundle((_JS_FILES if controls else _REPORT_JS_FILES) + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",

@@ -345,9 +345,36 @@ There is no corresponding universal MAD ceiling at three, four or five values:
 so its largest unadjusted score grows with M. No normal-tail calibration is
 inferred from these examples. Permuting chapter labels alone preserves the
 unordered values and their same-sample outlier scores; it does not calibrate
-this selection procedure. Any future resampling design needs a specified null,
-appropriate exchangeability/symmetry assumptions and separate operating-error
-validation, including ordered chapters, ties and heterogeneous chapter sizes.
+this selection procedure.
+
+A candidate to evaluate is a conditional test of a **complete null** for
+additive features, initially long-word share. Divide prose into nonoverlapping
+blocks and specify strata before looking at contrasts. Blocks within a stratum
+must be jointly exchangeable across their chapter slots under the null, for
+example in synthetic corpora generated with equally long blocks of the same
+register. Permute whole blocks only among slots with the same stratum and token
+count, keeping chapter positions, chapter sizes and within-block dependence.
+Recompute a prespecified statistic such as the maximum absolute studentized
+chapter contrast against the pooled share. Keep ties in the upper tail and
+enumerate small assignment spaces. For $B$ independent uniform draws from the
+permutation group, use $(1 + \#\{T_b \ge T_\mathrm{obs}\})/(B+1)$.
+[Hemerik and Goeman (2018)](https://pmc.ncbi.nlm.nih.gov/articles/PMC6405018/).
+
+Before using such a test, specify the inference target, eligible features,
+block construction, nuisance strata and minimum attainable tail probability.
+At a nominal 5% rejection threshold, for example, 9,999 draws yield 0.0001
+tail-probability resolution and about 0.0022 Monte Carlo standard error near
+5%. Enumerate toy cases to check ties and tail probabilities. Use at least
+10,000 independently generated corpora per validation scenario if the target
+is about half a percentage point of 95% binomial precision near 5%. Report
+empirical rejection rates with intervals, power against prespecified shifts,
+and the proportion of cases too sparse to test. Include short and uneven
+chapters, ties, shared feature dependence, missing measurements, and ordered
+drift or cross-block serial dependence as assumption-violation stress tests.
+A complete-null maximum test addresses the rate of any false rejection under
+that null. Cell-level FDR or strong family-wise control would require their
+own justification and validation under partial nulls.
+[Rempala and Yang (2013)](https://pmc.ncbi.nlm.nih.gov/articles/PMC3873102/).
 
 ## 4a. Effect sizes (magnitude, not just significance)
 
@@ -630,6 +657,13 @@ explicit unavailable sentinel, not a readability score. The coefficients above m
 correct formula dispatch is not empirical validation on every manuscript. **LIX** uses the
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
+
+Under Manuscript measurements, the report places both heuristic formulas beside
+the analyzed word-token count, detected sentence count, and ASL. The Flesch
+variant shows ASW and the estimated syllable total. LIX shows the long-word
+count and its share of analyzed tokens. The analyzer retains the two raw totals
+for live rendering. Serialized metrics omit those totals, so reports rendered
+from serialized metrics can show the available formula values and counts only.
 
 The Spanish syllable estimate counts orthographic vowel nuclei: standalone
 closed vowels (`i`, `u`) count, open/unstressed-closed combinations and distinct

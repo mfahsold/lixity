@@ -562,7 +562,9 @@ languages.
 Readability coefficient tests verify the declared formulas, not their original
 calibration or reader comprehension. Amstad's original coefficient page and
 calibration protocol have not been verified here. Scores may fall outside 0–100
-and are not comparable across language formulas. [German PALME research
+and are not comparable across language formulas. The dashboard shows the inputs
+beside the heuristic results, including the estimated status of syllable counts.
+[German PALME research
 (2026)](https://aclanthology.org/2026.bea-1.6/) separates controlled detector tests
 from graded-reader evaluation; its results do not validate Lixity's regex cues.
 

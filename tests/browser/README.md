@@ -141,9 +141,29 @@ the full suite before a release after fixing a failure.
 The manually dispatched `browser` workflow accepts an optional space-separated
 `suites` input for focused GitHub-runner debugging (`--jobs 3`). Release and
 `rc.yml` gates shard the full suite across four hosted runners
-(`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`,
-where `--shard INDEX/TOTAL` distributes `_SLOW_SUITES_ORDER` round-robin) on
-the tagged commit. Passing `--diagnostics NEW_DIR` (or `LIXITY_BROWSER_DIAGNOSTICS`)
+(`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`)
+on the selected commit. `--shard INDEX/TOTAL` assigns suites in descending
+estimated duration to the shard with the lowest estimated workload. Each shard
+queues its longest suites first. All four shards together run every suite once.
+Use `--list --shard INDEX/TOTAL` to inspect a shard's assignments.
+
+The weights in `scripts/run_browser_suites.py` use the slower wall time for each
+suite across two successful full-matrix release runs with two workers per shard,
+rounded up to seconds. An unmeasured suite gets 36 seconds, the rounded-up upper
+quartile of those weights. For the 105 suites at adoption, the model puts the
+slowest two-worker shard at 433 seconds, down from 538 seconds for the previous
+assignment using the same weights. Hosted runtime with the new schedule remains
+unmeasured.
+[Release run 43936636750](https://github.com/mfahsold/lixity/actions/runs/43936636750)
+and [release run 43955134184](https://github.com/mfahsold/lixity/actions/runs/43955134184).
+
+To refresh the weights, download `browser-evidence-*` from comparable successful
+full-matrix runs. Use `suites[].seconds` from all four passing `results.json`
+manifests in each run. Update the table, the source run IDs and the upper-quartile
+fallback, then run `pytest tests/test_browser_runner.py -W error -q` in the dev
+environment to check coverage and estimated balance.
+
+Passing `--diagnostics NEW_DIR` (or `LIXITY_BROWSER_DIAGNOSTICS`)
 writes an incremental `results.json` manifest, `<= 128 KiB` role-sanitized
 synthetic log tails per process, and at most 4 runner-owned PNG captures
 (`<= 2 MiB` each, `64 MiB` total) from failed processes only; `--summary DIAGNOSTICS_DIR`
@@ -171,7 +191,7 @@ The five slowest completed suites are reported immediately before the summary;
 `--durations N` changes that count and `--durations 0` disables it. Durations are
 wall times, including contention from other workers, not isolated benchmarks.
 Compare equivalent selections and worker counts before changing coverage. This
-report neither skips suites nor adds timing caches to the release lifecycle.
+report reflects the current run. Shard selection uses the versioned weights.
 
 Before starting suites, the runner executes the support directory's Node tests.
 These check disposable-server startup, malformed readiness data, early exits,

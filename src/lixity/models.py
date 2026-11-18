@@ -6,7 +6,7 @@ chapter metrics, tense profiles, and synchronization reports.
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
 from .sentences import LONG_SENTENCE_MAX, MEDIUM_SENTENCE_MAX, SHORT_SENTENCE_MAX
 from .status import SCHEMA_VERSION_ANALYZE
@@ -375,6 +375,10 @@ class CorpusMetrics(BaseModel):
     """
     Holistic quantitative and stylometric metrics of the manuscript.
     """
+
+    # Exact input totals from the live analyzer, outside the JSON contract.
+    _readability_syllables: int | None = PrivateAttr(default=None)
+    _readability_long_words: int | None = PrivateAttr(default=None)
 
     raw_words: int = Field(description="Total word count including appendix and directories.")
     clean_words: int = Field(description="Cleaned word count of pure narrative prose.")

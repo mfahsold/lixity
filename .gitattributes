@@ -1,7 +1,9 @@
 # The reviewed demo audio pins the manuscript's exact SHA-256 on every platform.
 samples/first-look.md -text
-# Preserve exact pinned upstream bytes, including whitespace in template literals.
-src/lixity/ui/assets/vendor/mermaid-tiny-12.2.0.min.js whitespace=-blank-at-eol
+# Preserve audited vendored bytes across platforms and whitespace in Mermaid template literals.
+src/lixity/ui/assets/vendor/* -text
+src/lixity/ui/assets/vendor/mermaid-tiny-12.3.0.min.js whitespace=-blank-at-eol
+scripts/editor/bundle-inputs.json text eol=lf
 # Distributed upstream files retain their CRLF line endings.
 src/lixity/ui/assets/vendor/leaflet-1.9.4.css whitespace=cr-at-eol
 src/lixity/ui/assets/vendor/leaflet.LICENSE whitespace=cr-at-eol

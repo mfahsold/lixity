@@ -202,7 +202,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await summary.focus();
       await page.keyboard.press('Enter');
       assert.equal(await measurements.evaluate(element => element.open), true);
-      assert.ok(await measurements.locator('.kpi').count() >= 20, 'All grouped measurements remain available');
+      const readability = measurements.locator('#readability-measurements');
+      assert.ok(await readability.isVisible(), 'Readability formulas appear when measurements open');
+      assert.deepEqual(await readability.locator('dt').allTextContents(), ['Flesch Reading Ease', 'LIX'],
+        'Each formula appears once and retains its measured formula name in every interface locale');
+      const clipped = await readability.locator('h3, p, dl, dl > div, dt, dd').evaluateAll(nodes =>
+        nodes.filter(node => node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
+      assert.deepEqual(clipped, [], `${locale}/${width}: localized readability labels fit the available width`);
+      if (locale === 'de' && [1440, 320].includes(width))
+        await readability.screenshot({path:path.join(artifacts, `readability-${locale}-${width}.png`)});
       await page.locator('#workbench-overview-back').click();
       await page.locator('#workbench-overview-open').click();
       assert.equal(await measurements.evaluate(element => element.open), true, 'Returning preserves the native disclosure state');
@@ -282,6 +290,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
     await report.goto('http://lixity.test/');
     assert.equal(await report.locator('#analysis-measurements').getAttribute('open'), '');
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
+    assert.ok(await report.locator('#readability-measurements').isVisible(), 'Standalone reports show formula inputs without JavaScript');
     assert.equal(await report.locator('#analysis-sections a').count(),10);
     assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
     for (const selector of [

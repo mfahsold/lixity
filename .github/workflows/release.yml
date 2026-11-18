@@ -20,8 +20,6 @@ jobs:
     uses: ./.github/workflows/tests.yml
 
   browser_checks:
-    # Avoid starting the longer browser run when the source gate has failed.
-    needs: source_checks
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -35,8 +33,14 @@ jobs:
     with:
       scope: full
 
+  dependency_checks:
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/dependencies.yml
+
   publish:
-    needs: [source_checks, browser_checks, native_checks]
+    needs: [source_checks, browser_checks, native_checks, dependency_checks]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -73,7 +77,21 @@ jobs:
         if: steps.release_state.outputs.state != 'published'
         run: |
           python -m pip install build
-          python scripts/check_release.py --build --smoke --tag "$RELEASE_TAG"
+          python scripts/check_release.py --build --smoke --tag "$RELEASE_TAG" \
+            --install-report "$RUNNER_TEMP/lixity-pip-report.json"
+      - name: Generate the SBOM for the verified release artifacts
+        if: steps.release_state.outputs.state != 'published'
+        run: |
+          python scripts/dependency_inventory.py sbom \
+            --python-report "$RUNNER_TEMP/lixity-pip-report.json" --dist dist \
+            --source-sha "$GITHUB_SHA" --output "$RUNNER_TEMP/lixity-release.cdx.json"
+      - name: Save the release SBOM as workflow evidence
+        if: steps.release_state.outputs.state != 'published'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-sbom-${{ github.ref_name }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lixity-release.cdx.json
+          if-no-files-found: error
       - name: Attest the new release artifacts
         if: steps.release_state.outputs.state != 'published'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4

@@ -16,7 +16,6 @@ jobs:
     uses: ./.github/workflows/tests.yml
 
   browser_checks:
-    needs: source_checks
     permissions:
       contents: read
     uses: ./.github/workflows/browser.yml
@@ -28,8 +27,13 @@ jobs:
     with:
       scope: full
 
+  dependency_checks:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/dependencies.yml
+
   ready:
-    needs: [source_checks, browser_checks, native_checks]
+    needs: [source_checks, browser_checks, native_checks, dependency_checks]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -38,4 +42,4 @@ jobs:
           RC_SHA: ${{ github.sha }}
         run: |
           printf 'Release candidate qualified for %s.\n' "$RC_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf 'Source (Python 3.10 + 3.12 + wheel smoke), 4-shard Chromium browser, and Windows/macOS native gates passed.\n' >> "$GITHUB_STEP_SUMMARY"
+          printf 'Source (Python 3.10 + 3.12 + wheel smoke), 4-shard Chromium browser, Windows/macOS native and dependency gates passed.\n' >> "$GITHUB_STEP_SUMMARY"

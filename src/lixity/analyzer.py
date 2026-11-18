@@ -611,15 +611,14 @@ class CorpusAnalyzer:
         total_syllables = sum(self.count_syllables(t) * count for t, count in freqs.items())
         asw = total_syllables / n_tokens if n_tokens else 0.0
         lw_min = self.long_word_min()
+        long_words = sum(1 for t in tokens if len(t) > lw_min)
         if n_tokens == 0 or stats.total == 0:
             flesch_de = 0.0
             flesch_variant = self.readability(0.0, 0.0)[1]
             lix = 0.0
         else:
             flesch_de, flesch_variant = self.readability(stats.asl, asw)
-            long_words = sum(1 for t in tokens if len(t) > lw_min)
-            pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
-            lix = stats.asl + pct_long_words
+            lix = stats.asl + (long_words / n_tokens) * 100.0
 
         # 6. Dialogue ratio
         dialog_matches = quotation_texts(self._dialogue_re, prose_main)
@@ -667,7 +666,7 @@ class CorpusAnalyzer:
                 Counter(c_lower), freqs, len(c_lower), n_tokens
             )
 
-        return CorpusMetrics(
+        metrics = CorpusMetrics(
             raw_words=raw_words,
             clean_words=clean_words,
             raw_chars=raw_chars,
@@ -716,6 +715,9 @@ class CorpusAnalyzer:
             mattr=mattr_value(lower_tokens),
             maas_a2=maas_a2_value(n_tokens, v_types),
         )
+        metrics._readability_syllables = total_syllables
+        metrics._readability_long_words = long_words
+        return metrics
 
     def analyze_file(self, filepath: str) -> CorpusMetrics:
         """

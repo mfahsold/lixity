@@ -102,20 +102,14 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
 GitHub's `tests`, `browser` and `research-platforms` workflows can be dispatched
-manually. Pull requests targeting `main` also run `tests` automatically;
-ordinary branch pushes do not run these suites, and browser/platform checks
-remain manual outside tagged releases.
-Tagged releases reuse `tests` and `browser` on the exact release commit before
-publication. The browser gate starts only after the source gate passes; a failed
-source gate therefore does not consume a browser runner, at the cost of a longer
-successful release. The `tests` workflow runs Ruff, strict `mypy` and the full Python
-suite with warnings treated as errors, Poppler and FFmpeg on Linux/Python 3.10
-(the minimum supported interpreter) and 3.12 in parallel. Both interpreter jobs
-must pass before the release browser gate starts; a failure does not cancel the
-other interpreter's checks. These are source checks, separate from the installed
-wheel smoke check used when building release artifacts. The development extra includes
-NumPy for the optional Base speech-worker tests; the analysis engine does not
-depend on it. Run relevant supported interpreters
+manually. Pull requests targeting `main` also run `tests` automatically.
+Tagged releases and release candidates run the source, browser, native platform
+and dependency checks concurrently on the selected commit. The `tests` workflow
+runs Ruff, strict `mypy`, the full Python suite with warnings treated as errors,
+and a wheel smoke check on Linux/Python 3.10 and 3.12. The two interpreter jobs
+run independently with Poppler and FFmpeg available. The development extra
+includes NumPy for audio fixtures and independent numerical tests. Run relevant
+supported interpreters
 locally. Filesystem, process-lifecycle, packaging and native-tool changes also
 need Windows/macOS evidence, either on those systems or from a deliberately
 dispatched `research-platforms` run. A Linux pass does not establish equivalent
@@ -283,11 +277,13 @@ Preparation does not commit, tag, push or publish. Follow this four-phase releas
    clear those overrides so Git and `gh` use the authenticated OS keyring (`env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS`).
 2. **Pre-release local gates, `rc-gate`, & tag push**:
    After reviewing the changes and obtaining release authorization, run
-   `make release-check RELEASE_TAG=vX.Y.Z`, `make docs-check`, `make workflow-check`
-   and `make browser-full` for UI-affecting releases. Before creating a public
+   `make release-check RELEASE_TAG=vX.Y.Z` and `make workflow-check`, plus
+   `make browser-full` for UI-affecting releases. The release check covers the
+   documentation tests and generated files. Before creating a public
    `v*` tag, optionally run `make rc-gate` (`rc.yml`) on `main` to qualify
    Python `3.10`/`3.12` source + wheel smoke, the 4-shard Chromium browser matrix
-   and Windows/macOS `scope: full` on the candidate commit without touching tags.
+   and Windows/macOS `scope: full`, plus dependency checks, on the candidate
+   commit without touching tags.
    Then push the reviewed commit to `main` and its matching annotated `vX.Y.Z`
    tag. The tag must resolve to the reviewed commit: compare `git rev-parse HEAD`
    with `git rev-parse 'vX.Y.Z^{commit}'` locally, then verify the remote tag
@@ -299,9 +295,18 @@ Preparation does not commit, tag, push or publish. Follow this four-phase releas
    across Python 3.10 and 3.12, including isolated wheel build + smoke),
    4-shard Chromium browser (`browser.yml`) and full native
    (`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
-   checks on the exact tagged commit; any failure or cancellation blocks publication.
+   checks on the exact tagged commit, along with the dependency gate. These
+   run concurrently in both release and RC workflows. Publication waits for
+   all of them to pass.
+   The Linux source jobs use four pytest workers by default. Compare full-suite
+   timing on the same commit with the `tests` workflow's `pytest_workers`
+   dispatch input (`0` for serial, `2` or `4` for parallel). In a four-core local
+   comparison of the same suite, the three modes took 128, 66 and 39 seconds.
    When unpublished, it then builds, verifies and smoke-installs artifacts from that
-   commit, attests them for `gh attestation verify`, attaches them to a draft release,
+   commit. It records the actual smoke-install resolution and shipped browser
+   components in a CycloneDX workflow artifact tied to the source commit and
+   archive digests. It then attests the release archives for `gh attestation
+   verify`, attaches them to a draft release,
    verifies the draft manifest, digests and attestations via `scripts/release_channels.py verify-draft`,
    publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
    of an already published tag, `scripts/release_channels.py recover` retrieves and

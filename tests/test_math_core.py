@@ -18,6 +18,8 @@ from collections import Counter
 from decimal import Decimal, localcontext
 from typing import ClassVar
 
+import pytest
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
@@ -498,6 +500,26 @@ class TestJacobiEigendecomposition(unittest.TestCase):
                     for j, right in enumerate(eigenvectors):
                         self.assertAlmostEqual(sum(a * b for a, b in zip(left, right, strict=True)),
                                                1.0 if i == j else 0.0, places=9)
+
+    def test_eigenpairs_against_numpy_oracle(self):
+        np = pytest.importorskip("numpy")
+        matrices = {
+            "correlation": [[1.0, 0.4, 0.1, -0.2], [0.4, 1.0, 0.3, 0.1],
+                            [0.1, 0.3, 1.0, -0.4], [-0.2, 0.1, -0.4, 1.0]],
+            "rank deficient": [[1.0, 2.0, -1.0], [2.0, 4.0, -2.0], [-1.0, -2.0, 1.0]],
+            "indefinite with repeated eigenvalues": [[0.0, -1.0, -1.0],
+                                                      [-1.0, 0.0, -1.0], [-1.0, -1.0, 0.0]],
+        }
+        for name, matrix in matrices.items():
+            with self.subTest(matrix=name):
+                eigenvalues, eigenvectors = jacobi_eigh(matrix)
+                a = np.asarray(matrix)
+                vectors = np.asarray(eigenvectors).T
+                tolerance = 2e-12 * max(1.0, np.linalg.norm(a, ord=np.inf))
+                np.testing.assert_allclose(eigenvalues, np.linalg.eigvalsh(a)[::-1], rtol=0, atol=tolerance)
+                # Residuals and orthogonality permit any valid basis in a repeated eigenspace.
+                np.testing.assert_allclose(a @ vectors - vectors * eigenvalues, 0.0, rtol=0, atol=tolerance)
+                np.testing.assert_allclose(vectors.T @ vectors, np.eye(len(a)), rtol=0, atol=2e-12)
 
 
 class TestContinuityAndRobustExtensions(unittest.TestCase):

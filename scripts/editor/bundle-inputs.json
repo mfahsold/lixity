@@ -1,0 +1,26 @@
+{
+  "sha256": "e0d3ea1138aac36d1b090bd6268deb8d21f292ff225997253d955b09a8372e0f",
+  "packages": {
+    "node_modules/@codemirror/autocomplete": "6.20.4",
+    "node_modules/@codemirror/commands": "6.11.1",
+    "node_modules/@codemirror/lang-css": "6.3.1",
+    "node_modules/@codemirror/lang-html": "6.4.12",
+    "node_modules/@codemirror/lang-javascript": "6.2.5",
+    "node_modules/@codemirror/lang-markdown": "6.5.2",
+    "node_modules/@codemirror/language": "6.13.1",
+    "node_modules/@codemirror/search": "6.7.2",
+    "node_modules/@codemirror/state": "6.7.6",
+    "node_modules/@codemirror/view": "6.43.15",
+    "node_modules/@lezer/common": "1.5.5",
+    "node_modules/@lezer/css": "1.3.9",
+    "node_modules/@lezer/highlight": "1.2.5",
+    "node_modules/@lezer/html": "1.3.13",
+    "node_modules/@lezer/javascript": "1.5.6",
+    "node_modules/@lezer/lr": "1.4.12",
+    "node_modules/@lezer/markdown": "1.8.1",
+    "node_modules/@marijn/find-cluster-break": "1.0.4",
+    "node_modules/crelt": "1.0.7",
+    "node_modules/style-mod": "4.1.4",
+    "node_modules/w3c-keyname": "2.2.8"
+  }
+}

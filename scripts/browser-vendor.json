@@ -1,0 +1,59 @@
+[
+  {
+    "name": "preact",
+    "version": "10.29.8",
+    "license": "MIT",
+    "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==",
+    "files": {
+      "preact-10.29.8.min.js": "c160c2c7ffbf5dc9a19a139fed20b2a89a4f177bc2f5f4de3848260012baba92",
+      "preact.LICENSE": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
+    }
+  },
+  {
+    "name": "htm",
+    "version": "3.1.1",
+    "license": "Apache-2.0",
+    "integrity": "sha512-983Vyg8NwUE7JkZ6NmOqpCZ+sh1bKv2iYTlUkzlWmA5JD2acKoxd4KVxbMmxX/85mtfdnDmTFoNKcg5DGAvxNQ==",
+    "files": {
+      "htm-3.1.1.umd.js": "7a31776e04bd4afde0d4308177d26f377716fcf7e4bd70be590746d6aa594f08",
+      "htm.LICENSE": "740725f7252e750af735d0028cc534970772f513331e9f68150fede8fb3ce00f"
+    }
+  },
+  {
+    "name": "leaflet",
+    "version": "1.9.4",
+    "license": "BSD-2-Clause",
+    "integrity": "sha512-nxS1ynzJOmOlHp+iL3FyWqK89GtNL8U8rvlMOsQdTTssxZwCXh8N2NB3GDQOL+YR3XnWyZAxwQixURb+FA74PA==",
+    "files": {
+      "leaflet-1.9.4.min.js": "dc71f8a6880bc3ca1bd9fa8dc5f1af48c702dc510b0a78240a07c5feed7ce935",
+      "leaflet-1.9.4.css": "652db25ba73a950c59e63c6fd4c974fc6920a9f2f95ff5bbb7ad4a017ce78743",
+      "leaflet.LICENSE": "53e8dc25862014e4324741ca18fbe3611e11d42ef69f59f86ea8c5389647d4cb"
+    }
+  },
+  {
+    "name": "photoswipe",
+    "version": "5.4.4",
+    "license": "MIT",
+    "integrity": "sha512-WNFHoKrkZNnvFFhbHL93WDkW3ifwVOXSW3w1UuZZelSmgXpIGiZSNlZJq37rR8YejqME2rHs9EhH9ZvlvFH2NA==",
+    "files": {
+      "photoswipe-5.4.4.umd.min.js": "ba86fd2dadb31acd8e488540fedb5037c598bf86c63a2a804d5025271af6a323",
+      "photoswipe-5.4.4.css": "3916557e85d57a6861ff211e72287bbae2ccc66ee2b453a7a915ba85723c90c5",
+      "photoswipe.LICENSE": "2c223af0b21d32240087ee189eb70fd315907b6ade8b561e24265baccd6a98e7"
+    }
+  },
+  {
+    "name": "@mermaid-js/tiny",
+    "version": "12.3.0",
+    "license": "MIT",
+    "integrity": "sha512-90BO2kQvmQWj9YjBX2IsLHCw61rN69dPTn5wFfDu+b9aT7qtzfzTA3wpKWeaRAKK85refSo9How5EOeY39DWfA==",
+    "files": {
+      "mermaid-tiny-12.3.0.min.js": "c41f5236091b83f524c4940f97a16b2b14a76f21ff84aea4fd6b66421d8a2a9a",
+      "mermaid.LICENSE": "ec9fb67dcb25eccc416ed56e1aab819222c805a2a4bfe4cb19e7556bf2ffde80"
+    },
+    "advisory_aliases": ["mermaid"],
+    "embedded": [
+      {"name": "dompurify", "version": "3.4.17", "notice": "@license DOMPurify {version} |"},
+      {"name": "lodash-es", "version": "4.18.1", "notice": "lodash/lodash#{version} -o"}
+    ]
+  }
+]

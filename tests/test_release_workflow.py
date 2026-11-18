@@ -15,6 +15,12 @@ except ModuleNotFoundError:  # Python 3.10
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
+RELEASE_GATES = {
+    "source_checks": "tests.yml",
+    "browser_checks": "browser.yml",
+    "native_checks": "research-platforms.yml",
+    "dependency_checks": "dependencies.yml",
+}
 
 
 def workflow(name):
@@ -29,11 +35,11 @@ def job(source, name):
 
 def test_release_reuses_source_browser_and_native_checks_for_tag_pushes():
     source = workflow("release.yml")
-    for job_name, filename in (("source_checks", "tests.yml"), ("browser_checks", "browser.yml"),
-                               ("native_checks", "research-platforms.yml")):
+    for job_name, filename in RELEASE_GATES.items():
         gate = job(source, job_name)
         assert "if: github.event_name == 'push'" in gate
         assert f"uses: ./.github/workflows/{filename}" in gate
+        assert "needs:" not in gate
         assert "continue-on-error" not in gate
         assert re.search(r"(?m)^      contents: read$", gate)
         called = workflow(filename)
@@ -41,7 +47,7 @@ def test_release_reuses_source_browser_and_native_checks_for_tag_pushes():
         assert re.search(r"(?m)^  workflow_call:\s*$", called)
         assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", called)
     published = job(source, "publish")
-    assert re.search(r"(?m)^    needs: \[source_checks, browser_checks, native_checks\]\s*$", published)
+    assert f"needs: [{', '.join(RELEASE_GATES)}]" in published
     assert "if: github.event_name == 'push'" in published
     assert "always()" not in published and "continue-on-error" not in published
     assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", published)
@@ -56,7 +62,7 @@ def test_source_gate_runs_full_suite_on_minimum_supported_python():
     assert versions, "Source checks need an explicit supported-interpreter matrix"
     assert {minimum.group(1), "3.12"} <= set(ast.literal_eval(versions.group(1)))
     assert "python-version: ${{ matrix.python-version }}" in gate
-    assert "python -m pytest -W error -q -p no:asyncio" in gate
+    assert 'python -m pytest -W error -q -p no:asyncio -n "$PYTEST_WORKERS"' in gate
     assert "continue-on-error" not in gate
 
 
@@ -141,19 +147,13 @@ def test_source_gate_runs_wheel_smoke_on_each_python_matrix_version():
 def test_release_candidate_workflow_qualifies_source_browser_and_native_before_tagging():
     source = workflow("rc.yml")
     assert "workflow_dispatch:" in source
-    for job_name, filename in (("source_checks", "tests.yml"), ("browser_checks", "browser.yml"),
-                               ("native_checks", "research-platforms.yml")):
+    for job_name, filename in RELEASE_GATES.items():
         gate = job(source, job_name)
         assert f"uses: ./.github/workflows/{filename}" in gate
+        assert "needs:" not in gate
     assert "scope: full" in job(source, "native_checks")
     ready = job(source, "ready")
-    assert "needs: [source_checks, browser_checks, native_checks]" in ready
-
-
-def test_release_skips_browser_gate_when_source_checks_fail():
-    browser = job(workflow("release.yml"), "browser_checks")
-    assert re.search(r"(?m)^    needs: source_checks\s*$", browser)
-    assert "always()" not in browser and "continue-on-error" not in browser
+    assert f"needs: [{', '.join(RELEASE_GATES)}]" in ready
 
 
 def test_release_checks_install_synthetic_audio_prerequisites():

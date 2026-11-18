@@ -464,27 +464,42 @@ def test_ci_summary_reports_unknown_results_when_manifest_is_missing_or_invalid(
     assert "Suite body:" not in result.stdout
 
 
-def test_shard_selection_partitions_all_suites_disjointly_and_balances_slow_suites(browser_runner):
-    codes = {
-        "settings.cjs": 0,
-        "visual-consistency.cjs": 0,
-        "scroll-regions.cjs": 0,
-        "research.cjs": 0,
-        "alpha.cjs": 0,
-        "beta.cjs": 0,
-    }
-    seen = []
-    for shard in ("1/3", "2/3", "3/3"):
-        result = browser_runner(codes, extra_args=("--list", "--shard", shard))
+def test_shard_selection_balances_estimated_duration_instead_of_suite_count(monkeypatch):
+    from scripts import run_browser_suites as runner
+
+    weights = {"long.cjs": 10, "medium.cjs": 6, "short.cjs": 5}
+    monkeypatch.setattr(runner, "_FULL_SUITE_SECONDS", weights)
+    monkeypatch.setattr(runner, "_UNMEASURED_SUITE_SECONDS", 2)
+    names = ["unknown-b.cjs", *weights, "unknown-a.cjs"]
+    assert runner.select_shard(names, "1/3") == ["long.cjs"]
+    assert runner.select_shard(names, "2/3") == ["medium.cjs", "unknown-b.cjs"]
+    assert runner.select_shard(names, "3/3") == ["short.cjs", "unknown-a.cjs"]
+
+
+def test_full_selection_has_balanced_disjoint_shards_and_stable_order():
+    from scripts.run_browser_suites import estimate_suite_seconds, select_shard, suite_names
+
+    all_names = suite_names()
+    workloads = []
+    selected = []
+    for index in range(1, 5):
+        spec = f"{index}/4"
+        shard = select_shard(all_names, spec)
+        assert shard == select_shard(list(reversed(all_names)), spec)
+        selected.extend(shard)
+        weights = [estimate_suite_seconds(name) for name in shard]
+        assert weights == sorted(weights, reverse=True)
+        workloads.append(sum(weights))
+    assert sorted(selected) == sorted(all_names)
+    assert max(workloads) - min(workloads) <= 0.02 * sum(workloads) / len(workloads)
+
+
+def test_shard_selection_distributes_unmeasured_suites_and_allows_empty_shards(browser_runner):
+    suites = {"beta.cjs": 0, "alpha.cjs": 0}
+    for shard, expected in (("1/3", "alpha.cjs"), ("2/3", "beta.cjs"), ("3/3", "")):
+        result = browser_runner(suites, extra_args=("--list", "--shard", shard))
         assert result.returncode == 0, result.stderr
-        items = result.stdout.strip().splitlines()
-        assert len(items) == 2
-        seen.extend(items)
-    assert sorted(seen) == sorted(codes)
-    # Slowest suites should be distributed one per shard across the first round.
-    first_shard = browser_runner(codes, extra_args=("--list", "--shard", "1/3")).stdout.strip().splitlines()
-    assert first_shard[0] == "settings.cjs"
-    assert first_shard[1] == "research.cjs"
+        assert result.stdout.strip() == expected
 
 
 @pytest.mark.parametrize("bad_shard", ["0/4", "5/4", "abc", "1/0"])

@@ -9,6 +9,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Run source, browser and platform release checks concurrently. Use four
+  pytest workers on Linux CI, and balance full browser shards with measured
+  suite timings while keeping the publication checks on the tagged commit.
+- Track editor npm updates, verify the checked-in editor bundle against its
+  lockfile, and audit Python, editor and separately vendored dependencies.
+  Generate a CycloneDX inventory from the verified release and its smoke install.
+- Update the vendored Mermaid Tiny diagrams to 12.3.0, including the upstream
+  DOMPurify 3.4.17 update. Retain the classic bundle and offline rendering.
+- Show Flesch and LIX together with the counts used by their formulas in
+  Measurements. Verify the rank projection eigensolver against a separate
+  numerical implementation in development tests.
+
 - Load native Qwen, Coqui/OpenVoice and Toucan models only for synthesis, using
   one shared spawned-process lifecycle. Release the child after a configurable
   idle interval (default 300 seconds after completion), protect active jobs and

@@ -2,7 +2,8 @@
   "name": "lixity-editor-build",
   "private": true,
   "scripts": {
-    "build": "esbuild editor.js --bundle --minify --format=iife --global-name=LixityCodeMirror --outfile=../../src/lixity/ui/assets/vendor/codemirror-editor.js --legal-comments=linked && node licenses.cjs"
+    "build": "node build.cjs",
+    "check": "node build.cjs --check"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",

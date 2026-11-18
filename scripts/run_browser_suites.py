@@ -674,36 +674,162 @@ _SLOW_SUITES_ORDER = (
 )
 
 
+# Full-matrix wall times from GitHub release runs 43936636750 and 43955134184
+# (two workers per shard). Each weight is the slower observation, rounded up.
+_FULL_SUITE_SECONDS = {
+    "analysis-evidence.cjs": 150,
+    "analysis-narration.cjs": 42,
+    "analysis-navigation.cjs": 95,
+    "analysis-overview.cjs": 66,
+    "analysis-scope.cjs": 15,
+    "analysis-triage-layout.cjs": 6,
+    "analysis-triage.cjs": 6,
+    "anchor-navigation.cjs": 24,
+    "audio-chapter-import.cjs": 6,
+    "audio-export.cjs": 17,
+    "audio-loading.cjs": 5,
+    "audio-microphone.cjs": 5,
+    "audio-permission.cjs": 12,
+    "audio-phonetics.cjs": 11,
+    "audio-player.cjs": 3,
+    "audio-profile-delete.cjs": 3,
+    "audio-pronunciations.cjs": 7,
+    "audio-recording-diagnostics.cjs": 7,
+    "audio-references.cjs": 52,
+    "audio-studio.cjs": 21,
+    "audio-take-studio.cjs": 6,
+    "audio-take.cjs": 1,
+    "claim-evidence-actions.cjs": 53,
+    "command-palette.cjs": 1,
+    "contextual-help.cjs": 110,
+    "debug.cjs": 9,
+    "decision-acknowledgement.cjs": 29,
+    "decision-review.cjs": 43,
+    "docs.cjs": 258,
+    "dossier-claims.cjs": 49,
+    "dossier-collections.cjs": 23,
+    "dossier-document.cjs": 6,
+    "dossier-geography.cjs": 31,
+    "dossier-images.cjs": 31,
+    "dossier-media.cjs": 6,
+    "dossier-return.cjs": 39,
+    "dossier-workflows.cjs": 13,
+    "editor-features.cjs": 6,
+    "editor-navigation.cjs": 4,
+    "home-tour.cjs": 30,
+    "layout.cjs": 22,
+    "linguistic-reference.cjs": 52,
+    "list-filters.cjs": 33,
+    "manuscript-editor.cjs": 10,
+    "manuscript-links-native.cjs": 12,
+    "manuscript-links.cjs": 54,
+    "manuscript-pdf.cjs": 36,
+    "manuscript-reader.cjs": 62,
+    "manuscript-search.cjs": 32,
+    "manuscript-selection.cjs": 5,
+    "markdown-editor.cjs": 1,
+    "metric-overlays.cjs": 64,
+    "minimal-workflows.cjs": 20,
+    "nda-draft.cjs": 21,
+    "overlay-layout.cjs": 24,
+    "pages-analytics.cjs": 18,
+    "pages-language.cjs": 8,
+    "paragraph-feedback.cjs": 14,
+    "passage-research.cjs": 58,
+    "project-controls.cjs": 55,
+    "project-history.cjs": 20,
+    "project-structure.cjs": 19,
+    "project-switch-native.cjs": 11,
+    "publication-settings.cjs": 8,
+    "read-only-site-data.cjs": 14,
+    "read-only-site.cjs": 41,
+    "reader-audio.cjs": 5,
+    "reader-document.cjs": 3,
+    "reader-feedback.cjs": 24,
+    "reader-large.cjs": 13,
+    "reader-publication-native.cjs": 22,
+    "reader-publication.cjs": 17,
+    "reader-toolbar.cjs": 43,
+    "register-settings.cjs": 18,
+    "research-chronology.cjs": 25,
+    "research-import.cjs": 4,
+    "research-navigation.cjs": 31,
+    "research-presentation.cjs": 113,
+    "research-selection.cjs": 29,
+    "research-status.cjs": 4,
+    "research-tools.cjs": 12,
+    "research.cjs": 75,
+    "scenes.cjs": 35,
+    "scroll-regions.cjs": 82,
+    "section-navigation.cjs": 98,
+    "settings.cjs": 204,
+    "setup-guide.cjs": 18,
+    "site-preflight.cjs": 34,
+    "site-publication-settings.cjs": 16,
+    "structural-coverage.cjs": 6,
+    "style-space.cjs": 33,
+    "teleprompter-context.cjs": 4,
+    "teleprompter-plan.cjs": 2,
+    "teleprompter-scroll.cjs": 2,
+    "teleprompter-take.cjs": 4,
+    "tense-thresholds.cjs": 11,
+    "tooltips-dialog.cjs": 2,
+    "tooltips.cjs": 19,
+    "typography-localization.cjs": 15,
+    "ui-usability.cjs": 10,
+    "visual-consistency.cjs": 321,
+    "workbench-transitions.cjs": 16,
+    "workbench.cjs": 12,
+    "workspace-reader.cjs": 29,
+}
+# Round up the upper quartile so new suites receive a conservative estimate.
+_UNMEASURED_SUITE_SECONDS = 36
+
+
 def ordered_suites(names: list[str]) -> list[str]:
     """Order slowest known suites first to avoid tail-latency bottlenecks."""
     priority = {suite: idx for idx, suite in enumerate(_SLOW_SUITES_ORDER)}
     return sorted(names, key=lambda n: (priority.get(n, len(_SLOW_SUITES_ORDER)), n))
 
 
+def estimate_suite_seconds(name: str) -> int:
+    """Return the full-matrix scheduling weight in seconds."""
+    return _FULL_SUITE_SECONDS.get(name, _UNMEASURED_SUITE_SECONDS)
+
+
 def select_shard(names: list[str], spec: str) -> list[str]:
-    """Deterministically partition suites across N shards (1-based INDEX/TOTAL)."""
+    """Assign the longest suites first to the shard with the least estimated work."""
     match = re.fullmatch(r"([1-9]\d*)/([1-9]\d*)", spec.strip())
     if match is None:
         raise ValueError("--shard must be INDEX/TOTAL (for example 1/4)")
     index, total = int(match.group(1)), int(match.group(2))
     if index > total:
         raise ValueError("--shard INDEX must be <= TOTAL")
-    return ordered_suites(names)[index - 1 :: total]
+    if index > len(names):
+        return []
+
+    active_shards = range(min(total, len(names)))
+    shards: list[list[str]] = [[] for _ in active_shards]
+    workloads = [0 for _ in active_shards]
+    for name in sorted(names, key=lambda name: (-estimate_suite_seconds(name), name)):
+        shard = min(active_shards, key=lambda i: (workloads[i], len(shards[i]), i))
+        shards[shard].append(name)
+        workloads[shard] += estimate_suite_seconds(name)
+    return shards[index - 1]
 
 
 def run_parallel(
     node: str, names: list[str], jobs: int, durations: int = 5,
     evidence: BrowserEvidence | None = None,
 ) -> int:
-    """Run independent suites in parallel (longest-first) and report atomically per suite."""
-    ordered = ordered_suites(names)
-    print(f"Running {len(ordered)} suites with {jobs} parallel workers.", flush=True)
+    """Queue independent suites in scheduled order and report atomically per suite."""
+    print(f"Running {len(names)} suites with {jobs} parallel workers.", flush=True)
     started = time.monotonic()
     failures: list[tuple[str, int]] = []
     timings: list[tuple[str, float]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         execute = evidence.run_suite if evidence else run_suite
-        futures = [pool.submit(execute, node, name, True) for name in ordered]
+        futures = [pool.submit(execute, node, name, True) for name in names]
         for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
             name, seconds, code, output = future.result()
             timings.append((name, seconds))
@@ -758,7 +884,7 @@ def main() -> int:
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
     parser.add_argument(
         "--shard", metavar="INDEX/TOTAL",
-        help="Run deterministic round-robin shard INDEX of TOTAL (1-based, e.g. 1/4)",
+        help="Run duration-balanced shard INDEX of TOTAL (1-based, e.g. 1/4)",
     )
     parser.add_argument(
         "--durations", type=int, default=5, metavar="N",
@@ -862,7 +988,8 @@ def main() -> int:
     if arguments.jobs > 1:
         jobs = min(arguments.jobs, len(names))
         if jobs > 1:
-            code = run_parallel(node, names, jobs, arguments.durations, evidence)
+            parallel_names = names if arguments.shard else ordered_suites(names)
+            code = run_parallel(node, parallel_names, jobs, arguments.durations, evidence)
             if evidence:
                 evidence.finish(code)
             return code

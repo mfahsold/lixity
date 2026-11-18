@@ -4,7 +4,7 @@ import copy
 import re
 import unittest
 
-from lixity.models import CorpusConfig
+from lixity.models import CorpusConfig, CorpusMetrics
 from lixity.pipeline import analyze_document
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
@@ -56,11 +56,35 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIn("<summary>", contents)
         for metric in ("ASL", "Flesch", "LIX", "TTR", "Guiraud R", "HD-D", "MTLD", "MATTR", "Maas a²"):
             self.assertIn(metric, contents)
-        self.assertGreaterEqual(contents.count('class="kpi '), 20)
         self.assertIn('id="flags"', html[disclosure.end():])
         self.assertIn('id="matrix"', html[disclosure.end():])
         flags = html.split('id="flags"', 1)[1].split("</h2>", 1)[0]
         self.assertIn('class="badge"', flags)
+
+    def test_readability_formulas_show_counted_inputs_once(self):
+        text = "## Overwhelming chapter title\n\nA garden rests. A gardener works."
+        analysis = analyze_document(text, CorpusConfig(language="en"), FingerprintThresholds())
+        html = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics)
+        measurements = html.split('id="analysis-measurements"', 1)[1].split("</details>", 1)[0]
+        self.assertEqual(measurements.count("Flesch Reading Ease"), 1)
+        self.assertEqual(measurements.count("LIX"), 1)
+        self.assertIn("Readability formulas (heuristic)", measurements)
+        self.assertIn("Analyzed word tokens 6 · Sentences 2 · 3.00 words per sentence", measurements)
+        flesch, lix = measurements.split('>LIX</span>', 1)
+        self.assertIn("<b>76.9</b>", flesch)
+        self.assertIn("Estimated syllables 9 · 1.50 per word", flesch)
+        self.assertIn("<b>19.7</b>", lix)
+        self.assertIn("Long words (&gt;6 characters) 1 (16.7%)", lix)
+
+        # Older payloads still render their formula values and known inputs.
+        restored = CorpusMetrics.model_validate(analysis.metrics.model_dump())
+        legacy_html = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=restored)
+        legacy = legacy_html.split('id="analysis-measurements"', 1)[1].split("</details>", 1)[0]
+        self.assertIn("<b>76.9</b>", legacy)
+        self.assertIn("<b>19.7</b>", legacy)
+        self.assertIn("Estimated syllables · 1.50 per word", legacy)
+        self.assertNotIn("Estimated syllables 9", legacy)
+        self.assertNotIn("Long words (&gt;6 characters) 1", legacy)
 
     def test_standalone_report_keeps_measurements_open(self):
         html = self.render(controls=False)
