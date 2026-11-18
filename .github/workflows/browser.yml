@@ -14,7 +14,8 @@ permissions:
   contents: read
 jobs:
   browser:
-    runs-on: ubuntu-latest
+    # Keep the runner on the supported LTS for Playwright 1.59.1.
+    runs-on: ubuntu-24.04
     # Sharded across four hosted runners (2 workers each) for full runs; focused
     # manual dispatches run in one shard.
     timeout-minutes: 30

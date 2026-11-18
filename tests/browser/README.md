@@ -142,7 +142,9 @@ The manually dispatched `browser` workflow accepts an optional space-separated
 `suites` input for focused GitHub-runner debugging (`--jobs 3`). Release and
 `rc.yml` gates shard the full suite across four hosted runners
 (`make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`)
-on the selected commit. `--shard INDEX/TOTAL` assigns suites in descending
+on the selected commit. The browser workflow uses Ubuntu 24.04 with Playwright
+1.59.1. Review the runner image when upgrading Playwright.
+`--shard INDEX/TOTAL` assigns suites in descending
 estimated duration to the shard with the lowest estimated workload. Each shard
 queues its longest suites first. All four shards together run every suite once.
 Use `--list --shard INDEX/TOTAL` to inspect a shard's assignments.
