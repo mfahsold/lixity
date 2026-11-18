@@ -123,6 +123,8 @@ server.serve_forever()
         await page.locator('#speech-provider_model').fill('synthetic-model');
         await page.locator('#speech-provider_voice').fill('synthetic-voice');
         await page.locator('#speech-provider_language').fill('en');
+        // Render the provider's canonical WAV at its native speed.
+        await page.locator('#speech-speed').fill('1.0');
         await page.locator('#modal-speech').screenshot({path: path.join(folder, 'provider.png')});
         await page.locator('[data-speech-action=save]').click();
         await page.waitForFunction(() => !document.querySelector('#modal-speech')?.open);
