@@ -10,6 +10,29 @@
 .research-tabs > button[data-rtab="sources"] {
   margin-inline-start: var(--space-1);
 }
+.research-pane-navigation {
+  position: sticky;
+  top: calc(var(--workbench-return-height, 0px) + var(--space-2));
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
+  backdrop-filter: blur(var(--glass-blur-sm, 8px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+}
+.research-pane-navigation > .ctl { flex: 0 0 auto; white-space: nowrap; }
+.research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; }
+[data-research-nav-section] { scroll-margin-top: calc(var(--workbench-return-height, 0px) + 5rem); }
 .research-section-card {
   background: var(--surface-alt);
   border: 1px solid var(--line);

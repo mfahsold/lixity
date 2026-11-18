@@ -43,6 +43,14 @@ def test_research_tabs_have_localized_tooltips(language):
         assert tab.get("data-help") == expected_help
         assert tab.get("title") == labels[f"research_tab_{key}"]
 
+    assert 'data-research-nav-section' in html
+    assert 'id="research-editorial-review-section"' in html
+    assert 'id="research-manuscript-review-section"' in html
+    assert 'id="research-manuscript-terms-section"' in html
+    assert 'id="research-dossier-list-section"' in html
+    assert labels["research_panel_navigation"]
+    assert labels["research_panel_start"]
+
 
 @pytest.mark.parametrize("language", ["en", "de", "fr", "es", "it", "pt", "nl"])
 def test_workspace_view_tabs_have_localized_tooltips(language):

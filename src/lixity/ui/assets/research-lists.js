@@ -2,8 +2,10 @@
 // Split of the former research.js; _JS_FILES concatenates the parts in
 // the original order, so load-time behaviour is unchanged.
 var RESEARCH_LIST_PAGE_SIZE = 40;
+var RESEARCH_DOSSIER_PAGE_SIZE = 12;
 var researchWindowState = {
   sources: {items: [], limit: RESEARCH_LIST_PAGE_SIZE},
+  dossiers: {items: [], limit: RESEARCH_DOSSIER_PAGE_SIZE},
   claims: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"},
   decisions: {items: [], limit: RESEARCH_LIST_PAGE_SIZE, filter: "all"}
 };
@@ -108,14 +110,17 @@ function filterResearchList(kind) {
   // Keep a query and its focus available when the last record disappears.
   input.hidden = Boolean(state && state.count === 0 && !normalized && document.activeElement !== input);
   syncResearchTagCloud(kind, query);
-  if (kind === "sources" && researchWindowState.sources.items.length) {
-    var allItems = researchWindowState.sources.items;
-    var limit = researchWindowState.sources.limit || RESEARCH_LIST_PAGE_SIZE;
+  if ((kind === "sources" || kind === "dossiers") && researchWindowState[kind].items.length) {
+    var windowKind = researchWindowState[kind];
+    var windowPageSize = kind === "dossiers" ? RESEARCH_DOSSIER_PAGE_SIZE : RESEARCH_LIST_PAGE_SIZE;
+    windowKind.limit = windowKind.limit || windowPageSize;
+    var allItems = windowKind.items;
+    var limit = windowKind.limit;
     if (allItems.length <= limit) {
       // All items fit in the current window: ensure all are rendered once and
       // filter in-place via `card.hidden` so open details/DOM state survive.
       if (list.querySelectorAll(".research-card").length !== allItems.length) {
-        renderWindowedResearchList("sources", list, allItems, null);
+        renderWindowedResearchList(kind, list, allItems, null);
       }
       var domCards = list.querySelectorAll(".research-card[data-filter-text]");
       var domMatches = 0;
@@ -131,7 +136,7 @@ function filterResearchList(kind) {
     var matched = normalized
       ? allItems.filter(function(item) { return item.filterText && item.filterText.includes(normalized); })
       : allItems;
-    renderWindowedResearchList("sources", list, matched, null);
+    renderWindowedResearchList(kind, list, matched, null);
     list.querySelectorAll(".research-card[data-filter-text]").forEach(function(card) {
       card.hidden = false;
     });
@@ -156,7 +161,10 @@ document.addEventListener("input", function(event) {
     researchWindowState.sources.limit = RESEARCH_LIST_PAGE_SIZE;
     filterResearchList("sources");
   }
-  if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
+  if (event.target.id === "r-filter-dossiers") {
+    researchWindowState.dossiers.limit = RESEARCH_DOSSIER_PAGE_SIZE;
+    filterResearchList("dossiers");
+  }
 });
 
 document.addEventListener("focusout", function(event) {
@@ -169,8 +177,8 @@ document.addEventListener("click", function(event) {
   if (showMore) {
     var moreKind = showMore.dataset.researchShowMore;
     if (researchWindowState[moreKind]) {
-      researchWindowState[moreKind].limit += RESEARCH_LIST_PAGE_SIZE;
-      if (moreKind === "sources") filterResearchList("sources");
+      researchWindowState[moreKind].limit += moreKind === "dossiers" ? RESEARCH_DOSSIER_PAGE_SIZE : RESEARCH_LIST_PAGE_SIZE;
+      if (moreKind === "sources" || moreKind === "dossiers") filterResearchList(moreKind);
       else if (moreKind === "claims") renderResearchClaimCards();
       else if (moreKind === "decisions") renderResearchDecisionCards();
     }
@@ -183,7 +191,9 @@ document.addEventListener("click", function(event) {
     if (cloudInput) {
       var tagVal = cloudTag.dataset.cloudTag;
       cloudInput.value = cloudInput.value.trim().toLowerCase() === tagVal.toLowerCase() ? "" : tagVal;
-      if (researchWindowState[cloudKind]) researchWindowState[cloudKind].limit = RESEARCH_LIST_PAGE_SIZE;
+      if (researchWindowState[cloudKind]) {
+        researchWindowState[cloudKind].limit = cloudKind === "dossiers" ? RESEARCH_DOSSIER_PAGE_SIZE : RESEARCH_LIST_PAGE_SIZE;
+      }
       filterResearchList(cloudKind);
     }
     return;
@@ -195,7 +205,9 @@ document.addEventListener("click", function(event) {
     var input = document.getElementById("r-filter-" + kind);
     if (input) {
       input.value = filterTag.dataset.filterTag;
-      if (researchWindowState[kind]) researchWindowState[kind].limit = RESEARCH_LIST_PAGE_SIZE;
+      if (researchWindowState[kind]) {
+        researchWindowState[kind].limit = kind === "dossiers" ? RESEARCH_DOSSIER_PAGE_SIZE : RESEARCH_LIST_PAGE_SIZE;
+      }
       filterResearchList(kind);
     }
     return;
@@ -343,18 +355,20 @@ function renderResearchDossiersView(data) {
     colNote.textContent = unavailableCount ? uiCountFormat("research_dossier_collection_unavailable", unavailableCount) : "";
   }
   if (!dossiers.length) {
+    researchWindowState.dossiers = {items: [], limit: RESEARCH_DOSSIER_PAGE_SIZE};
     renderResearchTagCloud("dossiers", []);
-    LixityResearchCards.render(listHost, {message: uiLabel("research_no_dossiers")});
+    renderWindowedResearchList("dossiers", listHost, [], uiLabel("research_no_dossiers"));
     filterResearchList("dossiers");
     return;
   }
   renderResearchTagCloud("dossiers", visibleDossiers);
   if (!visibleDossiers.length) {
-    LixityResearchCards.render(listHost, {message: uiLabel("research_dossier_collection_empty")});
+    researchWindowState.dossiers = {items: [], limit: RESEARCH_DOSSIER_PAGE_SIZE};
+    renderWindowedResearchList("dossiers", listHost, [], uiLabel("research_dossier_collection_empty"));
     filterResearchList("dossiers");
     return;
   }
-  LixityResearchCards.render(listHost, {items: visibleDossiers.map(function(d) {
+  researchWindowState.dossiers.items = visibleDossiers.map(function(d) {
     var badges = d.review_needed
       ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed_hint")}]
       : [];
@@ -378,6 +392,7 @@ function renderResearchDossiersView(data) {
       key: JSON.stringify(d),
       id: d.id,
       title: d.title,
+      compact: true,
       badges: badges,
       metaRight: metaRight,
       excerpt: d.excerpt,
@@ -389,7 +404,8 @@ function renderResearchDossiersView(data) {
       revision: "dossier",
       filterText: [d.title, d.id, d.excerpt].concat(d.tags || [], d.sections || []).join(" ").toLowerCase(),
     };
-  })});
+  });
+  researchWindowState.dossiers.limit = RESEARCH_DOSSIER_PAGE_SIZE;
   filterResearchList("dossiers");
 }
 
@@ -415,8 +431,8 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   if (!acceptResearchList("dossiers", reading) || !acceptResearchContext(context, reading.data)) return;
   var data = reading.data;
   if (!data.ok || !Array.isArray(data.dossiers)) {
-    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
-    filterResearchList("dossiers");
+    researchWindowState.dossiers = {items: [], limit: RESEARCH_DOSSIER_PAGE_SIZE};
+    renderWindowedResearchList("dossiers", listHost, [], data.message || uiLabel("research_load_dossiers_failed"));
     return;
   }
   var dossiers = data.dossiers;

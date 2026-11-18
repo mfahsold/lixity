@@ -9,6 +9,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Keep long research views navigable with sticky in-panel section jumps,
+  compact review disclosures and paginated dossier lists. Dossier cards retain
+  details and actions while limiting long excerpts, tags and section previews.
 - Add an explicit `mlx-audio` speech profile for Apple Silicon and a bounded
   `audio-transcribe` command. The recommended local defaults use an 8-bit
   Qwen3-TTS 0.6B model for German synthesis and Parakeet TDT v3 for transcription;

@@ -251,8 +251,11 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
       var sections = (candidate.sections && candidate.sections.length)
         ? candidate.sections
         : ((candidate.dossier_id && outlines[candidate.dossier_id]) || []);
-      return '<div class="research-card" data-review-candidate-decision="' + escapeHtml(candidate.decision_id) + '" data-review-candidate-dossier="' + escapeHtml(candidate.dossier_id || "") + '"><strong>' + escapeHtml(candidate.title) + '</strong>' +
-        (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
+      var expanded = Boolean(typeof reviewFilter !== "undefined" && reviewFilter) || report.candidates.length <= 2;
+      var summary = '<summary><span class="research-review-candidate-title">' + escapeHtml(candidate.title) + '</span>' +
+        (candidate.dossier_title ? '<span class="ctl-note research-review-candidate-dossier">' + escapeHtml(candidate.dossier_title) + '</span>' : '') +
+        '<span class="research-badge badge-warning">' + escapeHtml(uiLabel("research_review_needed")) + '</span></summary>';
+      var body = (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
         '<p class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", {revision: candidate.decision_revision})) + ' · ' +
         escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(candidate.decision_created_at) + '</p>' +
         (candidate.dossier_created_at ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
@@ -269,7 +272,10 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
           acknowledgement: candidate.acknowledgement, flags: candidate.flags}) +
         researchDecisionAcknowledgement({decisionId: candidate.decision_id, decisionRevision: candidate.decision_revision,
           dossierId: candidate.dossier_id, dossierRevision: candidate.current_revision, snapshot: report.snapshot,
-          acknowledgement: candidate.acknowledgement, flags: candidate.flags}) + '</div>';
+          acknowledgement: candidate.acknowledgement, flags: candidate.flags});
+      return '<details class="research-card research-review-candidate" data-review-candidate-decision="' +
+        escapeHtml(candidate.decision_id) + '" data-review-candidate-dossier="' + escapeHtml(candidate.dossier_id || "") + '"' +
+        (expanded ? ' open' : '') + '>' + summary + '<div class="research-review-candidate-body">' + body + '</div></details>';
     }).join("");
   if (!preserve) { host.innerHTML = rendered; return; }
   var focused = document.activeElement;

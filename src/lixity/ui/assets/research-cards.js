@@ -89,7 +89,7 @@
   function Card(props) {
     var item = props.item;
     var filterAttr = item.filterText ? {"data-filter-text": item.filterText} : {};
-    return html`<div class="research-card" ...${filterAttr}>
+    return html`<div class=${item.compact ? "research-card research-card-compact" : "research-card"} ...${filterAttr}>
       <div class="research-card-header">
         <span class="research-card-title">${item.title}</span>
         ${(item.badges || []).map(function (badge, index) {

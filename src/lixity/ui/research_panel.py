@@ -252,7 +252,8 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(pane("dossiers"))
-    parts.append('<details class="research-composer" id="r-dos-composer" data-requires-write>')
+    parts.append('<details class="research-composer" id="r-dos-composer" data-requires-write '
+                 'data-research-nav-section data-research-nav-label="research_dossier_heading">')
     parts.append(
         f'<summary data-help="{L("help_research_dossier")}">{L("research_dossier_heading")}</summary><div class="ctl-group research-composer-body">'
     )
@@ -325,7 +326,8 @@ def render_research_panel(
     parts.append("</div>")
     parts.append("</div>")
     parts.append("</details>")
-    parts.append('<details class="research-composer" id="r-dos-drafts-box" data-requires-write data-requires-live>')
+    parts.append('<details class="research-composer" id="r-dos-drafts-box" data-requires-write data-requires-live '
+                 'data-research-nav-section data-research-nav-label="research_dossier_draft_heading">')
     parts.append(
         f'<summary data-help="{L("research_dossier_draft_help")}">{L("research_dossier_draft_heading")}</summary><div class="ctl-group research-composer-body">'
     )
@@ -351,7 +353,8 @@ def render_research_panel(
     parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')
     parts.append("</div>")
     parts.append(
-        '<details class="research-details mb-2" id="r-dos-collection-manage" data-requires-write>'
+        '<details class="research-details mb-2" id="r-dos-collection-manage" data-requires-write '
+        'data-research-nav-section data-research-nav-label="research_dossier_collection_manage">'
     )
     parts.append(
         f'<summary>{L("research_dossier_collection_manage")}</summary><div class="ctl-group research-composer-body research-collection-editor">'
@@ -399,6 +402,9 @@ def render_research_panel(
     )
     parts.append("</div>")
     parts.append("</div></details>")
+    parts.append('<section id="research-dossier-list-section" data-research-nav-section '
+                 'data-research-nav-label="research_tab_dossiers">')
+    parts.append(f'<h3 class="section-heading">{L("research_tab_dossiers")}</h3>')
     parts.append(
         f'<input class="ctl full-width mb-2" type="search" id="r-filter-dossiers" '
         f'aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" '
@@ -409,7 +415,8 @@ def render_research_panel(
     parts.append(
         f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>'
     )
-    parts.append("</div>")
+    parts.append('<div class="row mt-2" id="research-dossiers-more" hidden></div>')
+    parts.append("</section></div>")
 
     # Tab Pane: Claims & Evidence Links
     parts.append(pane("claims"))
@@ -700,6 +707,8 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(pane("review"))
+    parts.append('<section id="research-editorial-review-section" data-research-nav-section '
+                 'data-research-nav-label="research_editorial_heading">')
     parts.append(f'<h3 class="section-heading">{L("research_editorial_heading")}</h3>')
     parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
     parts.append(
@@ -708,7 +717,9 @@ def render_research_panel(
     )
     parts.append(f'<button type="button" class="ctl mb-2" id="research-review-all" hidden>{L("research_review_all")}</button>')
     parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
-    parts.append('<section id="research-manuscript-review-section" hidden>')
+    parts.append('</section>')
+    parts.append('<section id="research-manuscript-review-section" data-research-nav-section '
+                 'data-research-nav-label="research_review_links_section" hidden>')
     parts.append(f'<h3 class="section-heading">{L("research_review_links_section")}</h3>')
     parts.append(f'<p class="ctl-note">{L("manuscript_link_review_help")}</p>')
     parts.append(
@@ -716,7 +727,8 @@ def render_research_panel(
     )
     parts.append("</section>")
     parts.append(
-        '<details class="research-details mt-2" id="research-manuscript-terms-section" hidden>'
+        '<details class="research-details mt-2" id="research-manuscript-terms-section" '
+        'data-research-nav-section data-research-nav-label="manuscript_terms_heading" hidden>'
     )
     parts.append(f"<summary>{L('manuscript_terms_heading')}</summary>")
     parts.append(f'<p class="ctl-note">{L("manuscript_terms_help")}</p>')

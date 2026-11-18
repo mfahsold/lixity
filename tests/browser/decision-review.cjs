@@ -117,7 +117,9 @@ server.serve_forever()
       await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.other_decision}"]`)).toHaveCount(0);
       await page.locator('#research-review-all').click();
       await expect(page.locator('#research-editorial-review')).toContainText('Synthetic unlinked decision');
-      await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.other_decision}"]`)).toBeVisible();
+      const allCandidate = page.locator(`#research-editorial-review > [data-review-candidate-decision="${server.fixture.other_decision}"]`);
+      await allCandidate.locator(':scope > summary').click();
+      await expect(allCandidate.locator(`[data-decision-ack-decision="${server.fixture.other_decision}"]`)).toBeVisible();
       await page.locator('[data-rtab=decisions]').click();
       const decisionReview = page.locator(`[data-research-review-decision="${server.fixture.decision}"]`);
       await decisionReview.click();
@@ -131,6 +133,7 @@ server.serve_forever()
       await page.locator('#r-decision-rationale').fill('Preserve this synthetic rationale draft.');
       await page.locator('[data-rtab=review]').click();
       const card = page.locator('#research-editorial-review > .research-card').filter({has: page.locator('[data-decision-ack-decision="' + server.fixture.decision + '"]')});
+      if (await card.getAttribute('open') === null) await card.locator(':scope > summary').click();
       // Without the comparison action a reader must switch through separate viewers.
       const comparison = card.locator('[data-decision-review]');
       await expect(comparison).toHaveCount(1);
@@ -176,13 +179,17 @@ server.serve_forever()
           await page.locator('#r-review-refresh').click();
           await expect(comparison).not.toHaveAttribute('open', '');
         };
-        const openComparison = async () => comparison.locator(':scope > summary').click();
+        const openComparison = async () => {
+          if (await card.getAttribute('open') === null) await card.locator(':scope > summary').click();
+          if (await comparison.getAttribute('open') === null) await comparison.locator(':scope > summary').click();
+        };
         // Exact historical routes reuse the existing revision viewer.
         await comparison.locator('[data-decision-review-earlier] [data-research-history=dossier]').click();
         await expect(page.locator('#research-revision-history-detail')).toContainText('The original synthetic garden gate was blue.');
         await expect(page.locator('#research-revision-history-detail')).not.toContainText('The revised synthetic garden gate is green.');
         await page.keyboard.press('Escape');
         const other = page.locator('#research-editorial-review > .research-card').filter({has: page.locator('[data-decision-ack-decision="' + server.fixture.other_decision + '"]')});
+        if (await other.getAttribute('open') === null) await other.locator(':scope > summary').click();
         await other.locator('[data-decision-review] > summary').click();
         await expect(other.locator('[data-decision-review]')).toContainText(labels.research_decision_review_no_assessment);
         await expect(other.locator('[data-decision-review-earlier]')).toHaveCount(0);

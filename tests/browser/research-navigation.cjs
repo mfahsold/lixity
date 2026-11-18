@@ -108,6 +108,14 @@ async function assertDesktopGeometry(page, context) {
         await expect(trigger).toHaveAttribute('aria-expanded', 'true');
         await expect(page.locator('#research-tool-host')).toBeVisible();
         await expect(page.locator('#rtab-'+key)).toBeVisible();
+        if (key === 'review') {
+          await page.evaluate(() => {
+            document.getElementById('research-manuscript-review-section').hidden = false;
+            document.getElementById('research-manuscript-terms-section').hidden = false;
+          });
+          await expect(page.locator('#rtab-review > .research-pane-navigation')).toBeVisible();
+          await expect(page.locator('#rtab-review > .research-pane-navigation button')).toHaveCount(4);
+        }
         await expect(page.locator('#rtab-dossiers')).toBeVisible();
         await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
         await page.locator('#research-tool-close').click();
@@ -146,6 +154,24 @@ async function assertDesktopGeometry(page, context) {
       }
       await page.locator('[data-rtab=dossiers]').click();
       await expect(page.locator('#rtab-dossiers')).toBeVisible();
+      await page.evaluate(() => {
+        const renderSynthetic = renderResearchDossiersView;
+        renderResearchDossiersView = function(data) {
+          if (data && Array.isArray(data.dossiers) && data.dossiers.length) renderSynthetic(data);
+        };
+        renderResearchDossiersView({dossiers: Array.from({length: 13}, function(_, index) {
+          return {id: 'synthetic-dossier-' + index, title: 'Synthetic dossier ' + index,
+            excerpt: 'Synthetic excerpt ' + index, sections: [], tags: ['synthetic'],
+            collections: [], evidence_count: 0, revision: 1, review_needed: false};
+        }), collections: [], unassigned_dossier_ids: []});
+      });
+      await expect(page.locator('#research-dossiers-list .research-card:visible')).toHaveCount(12);
+      const showMore = page.locator('#research-dossiers-more [data-research-show-more=dossiers]');
+      await expect(showMore).toBeVisible();
+      await expect(showMore).not.toHaveText(/research_show_more/);
+      await showMore.evaluate(button => button.click());
+      await expect(page.locator('#research-dossiers-list .research-card:visible')).toHaveCount(13);
+      await expect(page.locator('#research-dossiers-more')).toBeHidden();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(writes, [], 'Research view navigation does not save or retain data');
       assert.deepEqual(errors, []);

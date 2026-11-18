@@ -203,6 +203,84 @@ async function initResearchUI(freshRead) {
   update();
 })();
 
+(function initResearchPaneNavigation() {
+  var manager = document.getElementById("research-manager");
+  if (!manager) return;
+  var serial = 0;
+
+  function visible(node) { return node && !node.hidden && node.getClientRects().length; }
+  function targetLabel(node) {
+    var value = node.dataset.researchNavLabel;
+    if (value) return uiLabel(value);
+    var heading = node.querySelector(":scope > h2, :scope > h3, :scope > summary");
+    return heading ? heading.textContent.trim() : node.id;
+  }
+  function destination(node, pane) {
+    if (node.tagName === "DETAILS") node.open = true;
+    node.scrollIntoView({block: "start", inline: "nearest"});
+    var focusTarget = node.querySelector(":scope > summary, :scope > h2, :scope > h3, [tabindex='-1']");
+    if (focusTarget) {
+      if (!focusTarget.hasAttribute("tabindex")) focusTarget.setAttribute("tabindex", "-1");
+      focusTarget.focus({preventScroll: true});
+    }
+    window.requestAnimationFrame(function() { pane.dataset.researchNavCurrent = node.id; });
+  }
+  function render(pane) {
+    var existing = pane.querySelector(":scope > .research-pane-navigation");
+    if (existing) existing.remove();
+    if (!visible(pane)) return;
+    var targets = Array.from(pane.querySelectorAll(":scope > [data-research-nav-section], :scope > details[id]")).filter(visible);
+    targets = targets.filter(function(target, index) { return targets.indexOf(target) === index; });
+    if (targets.length < 2) return;
+    var nav = document.createElement("nav");
+    nav.className = "research-pane-navigation";
+    nav.setAttribute("aria-label", uiLabel("research_panel_navigation"));
+    var start = document.createElement("button");
+    start.type = "button"; start.className = "ctl ctl-icon"; start.textContent = "\u2191";
+    start.title = uiLabel("research_panel_start");
+    start.setAttribute("aria-label", uiLabel("research_panel_start"));
+    start.addEventListener("click", function() {
+      pane.scrollIntoView({block: "start", inline: "nearest"});
+      pane.focus({preventScroll: true});
+    });
+    nav.appendChild(start);
+    targets.forEach(function(target, index) {
+      if (!target.id) target.id = pane.id + "-section-" + (index + 1);
+      var button = document.createElement("button");
+      button.type = "button"; button.className = "ctl ctl-sm"; button.textContent = targetLabel(target);
+      button.setAttribute("aria-controls", target.id);
+      button.addEventListener("click", function() { destination(target, pane); });
+      nav.appendChild(button);
+    });
+    pane.prepend(nav);
+  }
+  function refresh() {
+    var current = ++serial;
+    window.requestAnimationFrame(function() {
+      if (current !== serial) return;
+      manager.querySelectorAll(".research-tab-pane, .research-tool-pane").forEach(render);
+    });
+  }
+  manager.querySelectorAll(".research-tab-pane, .research-tool-pane").forEach(function(pane) {
+    new MutationObserver(function(mutations) {
+      var navigationOnly = mutations.every(function(mutation) {
+        return mutation.type === "childList" &&
+          Array.from(mutation.addedNodes).concat(Array.from(mutation.removedNodes)).every(function(node) {
+          return node.nodeType === 1 && node.classList.contains("research-pane-navigation");
+        });
+      });
+      if (!navigationOnly) refresh();
+    }).observe(pane, {childList: true, subtree: true, attributes: true,
+      attributeFilter: ["hidden", "style", "open"]});
+  });
+  manager.addEventListener("click", function(event) {
+    if (event.target.closest("[data-rtab]")) window.setTimeout(refresh, 0);
+  });
+  window.addEventListener("resize", refresh, {passive: true});
+  refresh();
+  window.LixityResearchPaneNavigation = {refresh: refresh};
+})();
+
 // Display an existing tab without reading or replacing its draft/detail DOM.
 // Ordinary tab actions below still refresh their records explicitly.
 function showResearchTab(tabBtn) {

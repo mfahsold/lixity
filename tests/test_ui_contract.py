@@ -364,7 +364,7 @@ class TestJsDomContract(unittest.TestCase):
     def test_review_tab_hosts_manuscript_link_section(self):
         """The Review tab owns the manuscript-link review surface."""
         html = _full_dashboard()
-        self.assertIn('<section id="research-manuscript-review-section" hidden>', html)
+        self.assertRegex(html, r'<section id="research-manuscript-review-section"[^>]* hidden[^>]*>')
         self.assertIn('id="research-manuscript-review"', html)
         self.assertIn('id="research-editorial-review"', html)
 

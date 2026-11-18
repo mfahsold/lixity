@@ -1355,6 +1355,13 @@ anchors while scrolling. */
 /* Research records styled as clean, structured cards within the workspace. */
 .research-record-list { display: flex; flex-direction: column; gap: 0.75rem; }
 .research-card { display: flex; flex-direction: column; gap: var(--space-2); }
+details.research-review-candidate { display: block; padding: .75rem .85rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.research-review-candidate > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-1) var(--space-2); cursor: pointer; }
+.research-review-candidate-title { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
+.research-review-candidate-dossier { grid-column: 1; min-width: 0; overflow-wrap: anywhere; }
+.research-review-candidate > summary > .research-badge { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.research-review-candidate-body { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); }
+.research-review-candidate-body > :is(p, ul, details, button) { margin-block: 0; }
 .research-card > .research-claim-scope { margin-bottom: 0; align-self: flex-start; }
 .research-card > .research-tags { margin-top: 0; }
 .research-card > .research-zotero-link { margin-block: 0; align-self: flex-start; }
@@ -1368,6 +1375,18 @@ anchors while scrolling. */
 .research-zotero-results > #r-zotero-more { justify-self: start; }
 .research-record-list > .research-card { contain: layout style; margin: 0; padding: 0.85rem 1.15rem; border: 1px solid var(--line); border-radius: var(--radius-sm, 6px); background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .research-record-list > .research-card:hover { border-color: var(--line-strong, #888); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.research-record-list > .research-card-compact { gap: var(--space-1); padding: .7rem .85rem; }
+.research-card-compact > .research-excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.research-card-compact > .research-dossier-sections,
+.research-card-compact > .research-tags { display: none; }
+.research-card-compact > .research-details { margin-top: 0; }
+.research-card-compact > .research-card-actions { margin-top: 0; padding-top: .35rem; }
 .research-card:focus-within { border-color: var(--line-strong); box-shadow: 0 0 0 2px var(--accent-light, rgba(0, 0, 0, 0.08)); }
 .research-card-header { gap: var(--space-2) var(--space-3); display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
 .research-card-title { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: var(--weight-semibold); font-size: var(--text-control); }

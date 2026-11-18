@@ -389,6 +389,7 @@
       var dossierId = card.dataset.reviewCandidateDossier;
       card.hidden = Boolean(reviewFilter && ((reviewFilter.dossierId && reviewFilter.dossierId !== dossierId) ||
         (reviewFilter.decisionId && reviewFilter.decisionId !== decisionId)));
+      if (reviewFilter && !card.hidden && card.tagName === "DETAILS") card.open = true;
     });
   }
   new MutationObserver(applyReviewFilter).observe(document.getElementById("research-editorial-review"), {childList: true});

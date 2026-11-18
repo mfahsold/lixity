@@ -357,11 +357,14 @@
       currentGroup.rows.push(row);
     });
     var autoExpandClean = rows.length <= 12;
+    var attentionOpened = false;
     groups.forEach(function(group) {
+      var expandAttention = group.hasAttention && !attentionOpened;
+      if (expandAttention) attentionOpened = true;
       var details = document.createElement("details");
       details.className = "research-details mb-2";
       details.dataset.manuscriptChapterGroup = "";
-      details.open = autoExpandClean || group.hasAttention;
+      details.open = autoExpandClean || expandAttention;
       var summary = document.createElement("summary");
       var heading = element("h3", group.title);
       heading.dataset.manuscriptCurrentChapter = "";
