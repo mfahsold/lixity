@@ -28,13 +28,13 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from lixity import __version__
 from lixity.api import dashboard
 from lixity.pdf_export import compose_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from scripts.check_release import source_version  # noqa: E402
 from scripts.example_publications import (  # noqa: E402
     LICENSE_URL,
     SITE,
@@ -55,6 +55,22 @@ from scripts.example_publications import (  # noqa: E402
 #: identity, terminology, localized diagnostics, contextual hints, association
 #: review, dossier collections, glassmorphism, table components, lexical grounding, teleprompter, Lucide icon set, command palette, backlinks, pane ribbons and modern UI transitions.
 MAX_PAGE_BYTES = 1_950_000  # Shared fields, readable reference labels, Lucide icons, command palette, search bar, interactive pills, unified pane ribbons, and research windowing.
+DEMO_PAGE_BUDGETS: dict[str, int] = {
+    "docs/demo/report.html": 7_500_000,
+    "docs/demo/reader/index.html": 1_750_000,
+    "docs/demo/companion/index.html": 1_750_000,
+}
+
+
+def check_demo_budgets(root: Path) -> None:
+    """Ensure the generated public demo artifacts stay within their size budgets."""
+    for relative, budget in DEMO_PAGE_BUDGETS.items():
+        page = root / relative
+        size = page.stat().st_size
+        if size > budget:
+            raise SystemExit(
+                f"{page} ({size:,} bytes) exceeds the published demo size budget ({budget:,} bytes)"
+            )
 
 
 @dataclass(frozen=True)
@@ -142,11 +158,12 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
         about=(example.title, example.author),
     )
     report = report.replace("</head>", head + "</head>", 1)
+    version = source_version(root)
     notice = _notice(
         f"Public-domain example: {example.title}",
         [
             (
-                f"<strong>Development checkout, base version {__version__}.</strong> The dashboard shows "
+                f"<strong>Development checkout, base version {version}.</strong> The dashboard shows "
                 f"the first {example.chapters} chapters of {example.title} "
                 f"({example.author}); the complete work is available as a "
                 f'<a href="{example.slug}-report.pdf">PDF analysis report</a>.'
@@ -193,6 +210,7 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
 
 def _task_build_demo(root: Path) -> list[tuple[Path, str]]:
     demo = build_demo(root)
+    check_demo_budgets(root)
     items: list[tuple[Path, str]] = [
         (demo, f"{demo.stat().st_size:,} bytes"),
         (root / "LICENSE", ""),

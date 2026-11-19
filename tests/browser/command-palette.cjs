@@ -1,7 +1,7 @@
 // Browser regression test for Obsidian-style Command Palette and Focus Mode
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const { launchChromium } = require('../../scripts/browser_tools.cjs');
+const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs');
 
 (async () => {
   const browser = await launchChromium();
@@ -72,31 +72,31 @@ const { launchChromium } = require('../../scripts/browser_tools.cjs');
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), false, 'Escape closes dialog');
 
-  // 7. Test Ctrl+P shortcut opens palette
-  await page.keyboard.press('Control+p');
-  assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Ctrl+P shortcut opens palette');
+  // 7. Test Mod+P shortcut opens palette
+  await page.keyboard.press(modShortcut('p'));
+  assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Mod+P shortcut opens palette');
 
   // 8. Close with Escape again
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), false);
 
-  // 9. Test Ctrl+K shortcut opens palette
-  await page.keyboard.press('Control+k');
-  assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Ctrl+K shortcut opens palette');
+  // 9. Test Mod+K shortcut opens palette
+  await page.keyboard.press(modShortcut('k'));
+  assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Mod+K shortcut opens palette');
   await page.keyboard.press('Escape');
 
   // 10. Test command execution reaches real DOM targets
-  await page.keyboard.press('Control+k');
+  await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Dialoge');
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#style-layer').inputValue(), 'dialogue', 'Dialogue command selects real #style-layer option');
 
-  await page.keyboard.press('Control+k');
+  await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Suchmaske');
   await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'r-search-query', 'Research search command focuses #r-search-query');
 
-  await page.keyboard.press('Control+k');
+  await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Neues Forschungs-Dossier');
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#r-dos-composer').evaluate(el => el.open), true, 'New dossier command opens #r-dos-composer');

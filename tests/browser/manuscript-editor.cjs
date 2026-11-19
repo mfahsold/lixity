@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {spawn} = require('node:child_process');
-const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
 
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-editor-'));
@@ -48,7 +48,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
+    await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type('New sentence.');
     await Promise.all([page.waitForNavigation(), page.locator('#manuscript-close').click()]);
     await page.locator('#chapters').waitFor();
@@ -61,7 +61,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').click();
     await page.keyboard.type(' Temp.');
-    await page.keyboard.press('Control+z');
+    await page.keyboard.press(modShortcut('z'));
     assert.doesNotMatch(await page.locator('.cm-content').innerText(), /Temp\./, 'Undo reverts typed text in Write mode');
     fs.writeFileSync(source, '# External\n\nChanged elsewhere.\n');
     await page.keyboard.type('My retained draft.');
@@ -79,14 +79,14 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     const response = page.waitForResponse(url => url.url().includes('manuscript-edit?recovery='));
     await page.locator('#manuscript-recover').click();
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
+    await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type('Concurrent typing.');
     releaseRecovery(); await response;
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.match(await page.locator('.cm-content').innerText(), /Concurrent typing/, 'Delayed recovery must not replace newer typing');
     assert.doesNotMatch(await page.locator('.cm-content').innerText(), /My retained draft/);
     await page.unroute('**/manuscript-edit?recovery=*');
-    await page.keyboard.press('Control+z');
+    await page.keyboard.press(modShortcut('z'));
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
     await page.locator('#manuscript-recover').click();
     await page.waitForFunction(() => document.querySelector('.cm-content').innerText.includes('My retained draft'));
@@ -104,7 +104,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
     await page.setViewportSize({width: 1440, height: 900});
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
+    await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type(' Read cycle.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
     assert.equal(await page.locator('#manuscript-analysis-freshness').isVisible(), true, 'The original workspace must label its stale analysis after editing');
@@ -117,7 +117,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
+    await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type(' Cursor kept.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
     await page.screenshot({path: path.join(root, 'reading-desktop.png')});
@@ -151,6 +151,24 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     console.log('Editor flow passed. Screenshots: ' + root);
   } finally {
     if (browser) await browser.close();
-    server.stdin.end();
+    const closed = new Promise(resolve => server.once('close', resolve));
+    if (server.stdin && !server.stdin.destroyed) server.stdin.end();
+    if (server.exitCode === null && server.signalCode === null) {
+      let timer;
+      try {
+        await Promise.race([
+          closed,
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Editor server shutdown timed out')), 3000);
+          }),
+        ]);
+      } catch {
+        server.kill('SIGKILL');
+        await Promise.race([closed, new Promise(resolve => setTimeout(resolve, 3000))]);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    fs.rmSync(root, {recursive: true, force: true});
   }
 })().catch(error => {console.error(error); process.exitCode = 1;});

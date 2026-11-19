@@ -19,8 +19,8 @@ and use synthetic native projects. They run in the analysis browser group.
 
 Run after installing the Python development environment and Playwright with
 Chromium. Install `axe-core` as well to run the audio direction accessibility
-audit. `make browser-tools` installs the pinned Playwright 1.65.1, Chromium and
-axe-core 4.14.1 into `$HOME/.local/share/lixity/browser-tools/`, outside the
+audit. `make browser-tools` installs the pinned Playwright 1.59.1, Chromium and
+axe-core 4.13.0 into `$HOME/.local/share/lixity/browser-tools/`, outside the
 product and repository dependency trees. The shared launcher discovers that
 location automatically. Override `BROWSER_TOOLS_DIR`, `PLAYWRIGHT_VERSION` or
 `AXE_CORE_VERSION` only while deliberately testing a tooling update.

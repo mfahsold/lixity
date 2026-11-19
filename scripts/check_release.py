@@ -39,10 +39,28 @@ def check_metadata(contents: bytes, version: str) -> None:
         raise ValueError(f"artifact metadata must declare Name: lixity and Version: {version}")
 
 
+def _package_data_patterns(root: Path) -> tuple[str, ...]:
+    pyproject = root / "pyproject.toml"
+    if pyproject.is_file():
+        try:
+            try:
+                import tomllib
+            except ModuleNotFoundError:  # Python 3.10
+                import tomli as tomllib
+            config = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+            patterns = config.get("tool", {}).get("setuptools", {}).get("package-data", {}).get("lixity")
+            if isinstance(patterns, list) and all(isinstance(item, str) for item in patterns):
+                return tuple(patterns)
+        except ModuleNotFoundError:
+            pass
+    return ("py.typed", "locales/*.json", "ui/assets/*", "ui/assets/vendor/*")
+
+
 def package_files(root: Path) -> dict[str, bytes]:
     source = root / "src/lixity"
     files = set(source.rglob("*.py")) | {source / "py.typed"}
-    files.update(path for path in (source / "ui/assets").rglob("*") if path.is_file())
+    for pattern in _package_data_patterns(root):
+        files.update(path for path in source.glob(pattern) if path.is_file())
     return {"lixity/" + path.relative_to(source).as_posix(): path.read_bytes() for path in files}
 
 

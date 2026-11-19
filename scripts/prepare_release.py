@@ -93,13 +93,31 @@ def update_changelog(version: str, *, release_date: str | None = None) -> None:
 
 
 def run_sync() -> None:
-    from sync_docs import check_or_sync_files, get_version
-    version = get_version()
-    drift = check_or_sync_files(version, check_only=False)
-    if drift:
-        print(f"[OK] Synchronized version pins in {len(drift)} files: {', '.join(drift)}")
+    from build_guide_markdown import build as build_guides
+    from build_llms_full import build as build_llms
+    from build_public_site import build as build_site
+    from check_release import source_version
+    from sync_docs import check_or_sync_files
+
+    version = source_version(ROOT)
+    drift = check_or_sync_files(version, check_only=False, root=ROOT)
+    site_pages = build_site(check_only=False, root=ROOT)
+    llms_files = build_llms(check_only=False, root=ROOT)
+    guide_files = build_guides(check_only=False, root=ROOT)
+    updated = [*drift, *site_pages, *llms_files, *guide_files]
+    if updated:
+        print(f"[OK] Synchronized documentation in {len(updated)} files: {', '.join(updated)}")
     else:
-        print("[OK] Version pins already synchronized.")
+        print("[OK] Documentation already synchronized.")
+
+    remaining = [
+        *check_or_sync_files(version, check_only=True, root=ROOT),
+        *build_site(check_only=True, root=ROOT),
+        *build_llms(check_only=True, root=ROOT),
+        *build_guides(check_only=True, root=ROOT),
+    ]
+    if remaining:
+        raise RuntimeError(f"Generated documentation remains out of sync: {', '.join(remaining)}")
 
 
 def preparation_snapshot(version: str) -> dict[Path, bytes | None]:
@@ -151,7 +169,7 @@ def main() -> int:
         run_sync()
         print("\nNext steps:")
         print(f"  1. Review and refine docs/releases/v{version_str}.md")
-        print("  2. If UI changed: make examples && make docs-sync")
+        print("  2. If UI or examples changed: make examples && make docs-sync")
         print(f"  3. Validate release: make release-check RELEASE_TAG=v{version_str}")
         print(f"  4. Commit and tag: git tag -a v{version_str} -m 'Release v{version_str}'")
         return 0

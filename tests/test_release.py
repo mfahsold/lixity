@@ -28,10 +28,12 @@ def release_script():
 def release_tree(tmp_path):
     source = tmp_path / "src/lixity"
     (source / "ui/assets").mkdir(parents=True)
+    (source / "locales").mkdir(parents=True)
     files = {
         "_version.py": b'__version__ = "0.3.0"\n',
         "__init__.py": b"from ._version import __version__\n",
         "py.typed": b"",
+        "locales/en.json": b'{"hello": "Hello"}\n',
         "ui/assets/dashboard.css": b"body { color: black; }\n",
     }
     for name, contents in files.items():
@@ -157,8 +159,9 @@ def test_tag_must_exactly_match_source(release_script, release_tree, tag):
 
 @pytest.mark.parametrize("kwargs", [
     {"wheel_version": "0.3.00"}, {"sdist_version": "3.0.1"},
-    {"changed": "ui/assets/dashboard.css"}, {"duplicate": True},
-    {"sdist_changed": "ui/assets/dashboard.css"},
+    {"changed": "ui/assets/dashboard.css"}, {"changed": "locales/en.json"},
+    {"duplicate": True},
+    {"sdist_changed": "ui/assets/dashboard.css"}, {"sdist_changed": "locales/en.json"},
 ])
 def test_metadata_and_packaged_ui_must_match_source(release_script, release_tree, kwargs):
     write_artifacts(release_tree, **kwargs)
@@ -454,3 +457,32 @@ def test_every_ui_asset_file_is_covered_by_package_data() -> None:
     files = [path for path in (package / "ui" / "assets").rglob("*") if path.is_file()]
     missing = sorted(str(path.relative_to(package)) for path in files if path.resolve() not in covered)
     assert missing == [], f"UI assets missing from package-data: {missing}"
+
+
+def test_every_locale_file_is_covered_by_package_data_manifest_and_release_check(release_script) -> None:
+    """Shipped workspace locales must match pyproject.toml package-data, MANIFEST.in, and check_release."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+
+    root = Path(__file__).resolve().parents[1]
+    config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = config["tool"]["setuptools"]["package-data"]["lixity"]
+    package = root / "src" / "lixity"
+    covered = set()
+    for pattern in patterns:
+        covered.update(path.resolve() for path in package.glob(pattern) if path.is_file())
+    locales = sorted((package / "locales").glob("*.json"))
+    assert locales, "Expected workspace locale JSON files under src/lixity/locales/"
+    missing = sorted(str(path.relative_to(package)) for path in locales if path.resolve() not in covered)
+    assert missing == [], f"Locale files missing from package-data: {missing}"
+
+    manifest = (root / "MANIFEST.in").read_text(encoding="utf-8").splitlines()
+    assert "include src/lixity/locales/*.json" in [line.strip() for line in manifest]
+
+    expected = release_script.package_files(root)
+    for path in locales:
+        key = "lixity/" + path.relative_to(package).as_posix()
+        assert key in expected, f"{key} missing from check_release.package_files()"
+        assert expected[key] == path.read_bytes()

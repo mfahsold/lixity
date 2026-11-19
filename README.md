@@ -33,7 +33,7 @@ export clean PDFs or self-contained reading websites.
 [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html) to
 paste or test a classic directly in your browser, or inspect the read-only
 [Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html) (six
-fictional harbour chapters with linked case notes; fixed snapshot of 0.8.1).
+fictional harbour chapters with linked case notes; fixed snapshot of 0.8.2).
 Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
 [Methods & limits](https://mfahsold.github.io/lixity/METHODS.md) ·

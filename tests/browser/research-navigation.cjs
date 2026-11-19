@@ -44,6 +44,47 @@ async function assertDesktopGeometry(page, context) {
   }
 }
 
+async function assertPaneRibbon(page, context, width) {
+  await page.locator('[data-view=project]').click();
+  const ribbon = page.locator('#view-pane-project .pane-ribbon');
+  await expect(ribbon).toBeVisible();
+  for (const id of ['settings-project-details', 'settings-analysis', 'settings-registers', 'settings-publication']) {
+    await expect(page.locator('#' + id)).toHaveAttribute('data-ribbon-section', '');
+  }
+  if (width === 320) {
+    await expect(ribbon).toHaveAttribute('data-ribbon-compact', 'true');
+    const firstBtn = ribbon.locator('[data-ribbon-target="#settings-project-details"]');
+    const labelHidden = await firstBtn.locator('.pane-ribbon-label').evaluate(
+      el => getComputedStyle(el).display === 'none'
+    );
+    assert.equal(labelHidden, true, `${context}: compact ribbon hides button text labels`);
+    await firstBtn.focus();
+    const tooltip = page.locator('#lixity-tooltip');
+    await expect(tooltip).toHaveClass(/visible/);
+    await expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+    const tipText = (await tooltip.textContent() || '').trim();
+    assert.ok(tipText.length > 0, `${context}: collapsed icon-only ribbon button shows tooltip text`);
+    const tipBox = await tooltip.boundingBox();
+    assert.ok(tipBox && tipBox.x >= 0 && tipBox.x + tipBox.width <= width + 1,
+      `${context}: collapsed ribbon button tooltip fits within viewport`);
+    await page.keyboard.press('Escape');
+    await expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+  }
+  const overflow = await ribbon.evaluate(el => ({
+    ribbonOverflow: el.scrollWidth > el.clientWidth + 1,
+    pageOverflow: document.documentElement.scrollWidth > innerWidth,
+  }));
+  assert.deepEqual(overflow, {ribbonOverflow: false, pageOverflow: false},
+    `${context}: .pane-ribbon has zero horizontal overflow`);
+  const publication = page.locator('#settings-publication');
+  assert.equal(await publication.evaluate(el => el.open), false,
+    `${context}: publication <details> starts collapsed before ribbon jump`);
+  const pubTrigger = ribbon.locator('[data-ribbon-target="#settings-publication"]');
+  await pubTrigger.click();
+  await expect(publication).toHaveAttribute('open', '');
+  await expect(pubTrigger).toHaveAttribute('aria-current', 'location');
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
@@ -208,6 +249,9 @@ async function assertDesktopGeometry(page, context) {
         assert.deepEqual(writes, [], 'Desktop geometry navigation never saves research');
         assert.deepEqual(errors, []);
       }
+      await assertPaneRibbon(page, `${locale}/${width}/${colorScheme}`, width);
+      assert.deepEqual(writes, [], 'Pane ribbon navigation never saves research');
+      assert.deepEqual(errors, []);
       await page.close();
     }
     console.log('Research navigation: named tab/panel relationships, manual keyboard selection, visible mobile overflow and no writes passed in seven locales at1440/320 light/dark; DE/EN desktop navigation, utilities and claim toolbar stay on one row without clipping at1024/1280/1920/2560. '+artifacts);

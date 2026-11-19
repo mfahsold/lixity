@@ -12,9 +12,13 @@ Run this script after changing any bundled document; ``make docs-check`` and
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
+
+try:
+    from check_release import source_version
+except ModuleNotFoundError:
+    from scripts.check_release import source_version
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs" / "llms-full.txt"
@@ -36,23 +40,20 @@ SOURCES: tuple[Path, ...] = (
 SEPARATOR = "\n" + "=" * 79 + "\n"
 
 
-def get_version() -> str:
+def get_version(root: Path | None = None) -> str:
     """Read the product version from its single source of truth."""
-    version_file = ROOT / "src" / "lixity" / "_version.py"
-    match = re.search(r'__version__\s*=\s*"([^"]+)"', version_file.read_text(encoding="utf-8"))
-    if not match:
-        raise ValueError("Cannot find __version__ in src/lixity/_version.py")
-    return match.group(1)
+    return source_version(ROOT if root is None else root)
 
 
-def build_bundle() -> str:
+def build_bundle(root: Path | None = None) -> str:
     """Return the deterministic bundle text for the current source tree."""
+    base = ROOT if root is None else root
     header = (
         "# Lixity - operational reference bundle\n"
         "\n"
         "> Generated file for AI agents and offline reading. Do not edit it by hand:\n"
         "> run `python scripts/build_llms_full.py` after changing a bundled document.\n"
-        f"> The individually published files remain authoritative. Product version {get_version()}.\n"
+        f"> The individually published files remain authoritative. Product version {get_version(base)}.\n"
         "\n"
         "Lixity is open source under AGPL-3.0-or-later; writing for any purpose is\n"
         "covered. A separate written commercial license exists only for closed-source\n"
@@ -67,11 +68,25 @@ def build_bundle() -> str:
     )
     sections: list[str] = []
     for relative in SOURCES:
-        path = ROOT / relative
+        path = base / relative
         text = path.read_text(encoding="utf-8").rstrip("\n")
         source_url = f"https://github.com/mfahsold/lixity/blob/main/{relative.as_posix()}"
         sections.append(f"## {relative.as_posix()}\n\nSource: {source_url}\n\n{text}\n")
     return header + SEPARATOR.join(["", *sections])
+
+
+def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
+    """Generate ``docs/llms-full.txt``; return changed or outdated relative paths."""
+    base = ROOT if root is None else root
+    output = OUTPUT if root is None else base / "docs" / "llms-full.txt"
+    expected = build_bundle(base)
+    current = output.read_text(encoding="utf-8") if output.is_file() else ""
+    if current == expected:
+        return []
+    rel = str(output.relative_to(base))
+    if not check_only:
+        output.write_text(expected, encoding="utf-8")
+    return [rel]
 
 
 def main() -> int:
@@ -81,10 +96,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    expected = build_bundle()
+    outdated = build(check_only=args.check)
     if args.check:
-        current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.is_file() else ""
-        if current != expected:
+        if outdated:
             print(
                 f"{OUTPUT.relative_to(ROOT)} is outdated; run 'python scripts/build_llms_full.py'",
                 file=sys.stderr,
@@ -93,8 +107,8 @@ def main() -> int:
         print(f"{OUTPUT.relative_to(ROOT)} is up to date.")
         return 0
 
-    OUTPUT.write_text(expected, encoding="utf-8")
-    print(f"Wrote {OUTPUT.relative_to(ROOT)} ({len(expected):,} characters).")
+    expected_len = len(OUTPUT.read_text(encoding="utf-8"))
+    print(f"Wrote {OUTPUT.relative_to(ROOT)} ({expected_len:,} characters).")
     return 0
 
 

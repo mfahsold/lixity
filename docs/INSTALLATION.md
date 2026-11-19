@@ -62,7 +62,7 @@ installer. No AppImage, DEB, RPM or bundled desktop installer is published here.
 
 The next packaging work targets **Linux first**, with an isolated, supported
 runtime and explicit install, upgrade, rollback and removal checks. Python 3.12
-is the agreed minimum for the next development baseline; the 0.8.1
+is the agreed minimum for the next development baseline; the 0.8.2
 package still declares Python 3.10+. A future installer must preserve project
 files and retained research, and restart only the service it owns. Optional
 speech and OCR environments remain separate from the basic application.

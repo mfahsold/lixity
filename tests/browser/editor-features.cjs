@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {spawn} = require('node:child_process');
-const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-editor-features-'));
   const source = path.join(root, 'book.md');
@@ -29,7 +29,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     assert.equal(fs.readFileSync(source,'utf8'),original,'One undo restores replace-all');
     await page.locator('.cm-search button[name=close]').click();
     fs.writeFileSync(source,'# External\n\nSomeone else’s text.\n');
-    await page.locator('.cm-content').click(); await page.keyboard.press('Control+End'); await page.keyboard.type(' My draft.');
+    await page.locator('.cm-content').click(); await page.keyboard.press(modShortcut('End')); await page.keyboard.type(' My draft.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='conflict');
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();

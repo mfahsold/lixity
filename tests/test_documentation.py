@@ -562,3 +562,25 @@ class TestDocumentation(unittest.TestCase):
                 if not resolved.exists():
                     broken.append((str(md_file.relative_to(ROOT)), target))
         self.assertEqual(broken, [], f"Broken relative markdown links found: {broken}")
+
+    def test_demo_artifacts_fit_their_size_budgets(self):
+        import tempfile
+
+        from build_examples import DEMO_PAGE_BUDGETS, MAX_PAGE_BYTES, check_demo_budgets
+
+        check_demo_budgets(ROOT)
+        for slug in ("effi-briest", "pride-and-prejudice"):
+            self.assertLessEqual((ROOT / f"docs/examples/{slug}.html").stat().st_size, MAX_PAGE_BYTES)
+
+        with tempfile.TemporaryDirectory() as directory:
+            temp_root = Path(directory)
+            for relative in DEMO_PAGE_BUDGETS:
+                target = temp_root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"ok")
+            check_demo_budgets(temp_root)
+            first_rel, first_budget = next(iter(DEMO_PAGE_BUDGETS.items()))
+            (temp_root / first_rel).write_bytes(b"x" * (first_budget + 1))
+            with self.assertRaises(SystemExit) as failure:
+                check_demo_budgets(temp_root)
+            self.assertIn("exceeds the published demo size budget", str(failure.exception))

@@ -3,10 +3,14 @@
 import argparse
 import html
 import json
-import re
 import struct
 from pathlib import Path
 from string import Template
+
+try:
+    from check_release import source_version
+except ModuleNotFoundError:
+    from scripts.check_release import source_version
 
 ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = {'en': 'English', 'de': 'Deutsch', 'fr': 'Français', 'es': 'Español',
@@ -22,14 +26,15 @@ def page_url(language: str) -> str:
     return BASE if language == 'en' else BASE + page_path(language)
 
 
-def render_pages() -> dict[str, str]:
+def render_pages(root: Path | None = None) -> dict[str, str]:
     """Require complete translations rather than silently shipping English fallback."""
-    dictionaries = {lang: json.loads((ROOT / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
+    base = ROOT if root is None else root
+    dictionaries = {lang: json.loads((base / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
                     for lang in LANGUAGES}
-    tour = json.loads((ROOT / 'docs/videos/product-tour-timing.json').read_text(encoding='utf-8'))
-    template = Template((ROOT / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
-    footer = Template((ROOT / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
-    version = re.search(r'__version__ = "([^"]+)"', (ROOT / 'src/lixity/_version.py').read_text(encoding="utf-8")).group(1)
+    tour = json.loads((base / 'docs/videos/product-tour-timing.json').read_text(encoding='utf-8'))
+    template = Template((base / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
+    footer = Template((base / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
+    version = source_version(base)
     image_dimensions = {}
     for key, filename in {
         'image': 'dashboard-light.png',
@@ -38,7 +43,7 @@ def render_pages() -> dict[str, str]:
         'research_timeline': 'dashboard-research-timeline.png',
         'editorial': 'dashboard-editorial.png',
     }.items():
-        width, height = struct.unpack('>II', (ROOT / 'docs/screenshots' / filename).read_bytes()[16:24])
+        width, height = struct.unpack('>II', (base / 'docs/screenshots' / filename).read_bytes()[16:24])
         image_dimensions[key + '_width'] = str(width)
         image_dimensions[key + '_height'] = str(height)
     results = {}
@@ -95,19 +100,26 @@ def render_pages() -> dict[str, str]:
     return results
 
 
+def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
+    """Render all localized homepages; return changed or stale page names."""
+    base = ROOT if root is None else root
+    stale: list[str] = []
+    for name, text in render_pages(base).items():
+        target = base / 'docs' / name
+        current = target.read_text(encoding="utf-8") if target.exists() else ""
+        if current != text:
+            stale.append(name)
+            if not check_only:
+                target.write_text(text, encoding="utf-8")
+    return stale
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    stale = []
-    for name, text in render_pages().items():
-        target = ROOT / 'docs' / name
-        if args.check:
-            if not target.exists() or target.read_text(encoding="utf-8") != text:
-                stale.append(name)
-        else:
-            target.write_text(text, encoding="utf-8")
-    if stale:
+    stale = build(check_only=args.check)
+    if args.check and stale:
         print('Stale public pages; run make docs-sync: ' + ', '.join(stale))
         return 1
     print('Public introductions: seven complete languages.')

@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {spawn} = require('node:child_process');
-const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
 
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-navigation-'));
@@ -33,7 +33,7 @@ const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs
     await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
     await page.locator('.cm-content').click();
-    await page.keyboard.press('Control+End');
+    await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type(' Consolidated close edit.');
     await Promise.all([page.waitForNavigation(), page.locator('#manuscript-close').click()]);
     await page.locator('#chapters').waitFor();

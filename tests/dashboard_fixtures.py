@@ -38,14 +38,41 @@ SAMPLE = (
 )
 
 
-def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_evidence: bool = False, language_key: str | None = None) -> str:
+_DEFAULT_SAMPLE = SAMPLE
+_DEFAULT_RENDER_DASHBOARD = render_dashboard
+_DEFAULT_CACHE: dict[tuple[tuple[str, ...] | None, bool, str | None], str] = {}
+
+
+def full_dashboard(
+    enabled_actions: tuple[str, ...] | None = None,
+    *,
+    include_evidence: bool = False,
+    language_key: str | None = None,
+    sample_text: str = SAMPLE,
+    append_text: str = "",
+    **render_overrides: object,
+) -> str:
+    use_cache = (
+        sample_text is _DEFAULT_SAMPLE
+        and SAMPLE == _DEFAULT_SAMPLE
+        and not append_text
+        and not render_overrides
+        and render_dashboard is _DEFAULT_RENDER_DASHBOARD
+    )
+    cache_key = (enabled_actions, include_evidence, language_key)
+    if use_cache and cache_key in _DEFAULT_CACHE:
+        return _DEFAULT_CACHE[cache_key]
+
+    base_sample = SAMPLE if sample_text is _DEFAULT_SAMPLE else sample_text
     # Three complete, varying chapters exercise the optional rank-space panel.
-    complete = SAMPLE.replace(
+    complete = base_sample.replace(
         "## Kap 2",
         "Ich schaue hinaus. Vor dem Fenster ziehen dunkle Wolken vorbei. " * 3 + "\n\n## Kap 2",
     )
     complete += "\n" + "Im Zimmer wartet eine Frau neben dem Fenster. " * 8
     complete += "\n\n## Kap 3\n\n" + "Der Morgen beginnt. Regen fällt auf die Straße. " * 15
+    if append_text:
+        complete += append_text
     text, _marker = add_marker(complete, kind="todo", note="Prüfen", target_line=3)
     config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
     evidence = {} if include_evidence else None
@@ -59,22 +86,25 @@ def full_dashboard(enabled_actions: tuple[str, ...] | None = None, *, include_ev
     from lixity.pacing import pacing_report
     from lixity.showing import showing_report
 
-    return render_dashboard(
-        chapters,
-        paragraphs,
-        paragraph_evidence=evidence,
-        metrics=metrics,
-        fingerprint=fingerprint,
-        markers=list_markers(text),
-        artifacts=[{"name": "buch.pdf", "size_kb": 1200.0, "href": "buch.pdf", "pages": 184}],
-        dialogue=dialogue_report(text, config).to_dict(),
-        characters=presence_report(text, ["Ich"], config),
-        pacing=pacing_report(text, config).to_dict(),
-        motifs=motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
-        showing=showing_report(text, config, metrics=metrics).to_dict(),
-        title="Testroman",
+    render_kwargs: dict[str, object] = {
+        "paragraph_evidence": evidence,
+        "metrics": metrics,
+        "fingerprint": fingerprint,
+        "markers": list_markers(text),
+        "artifacts": [{"name": "buch.pdf", "size_kb": 1200.0, "href": "buch.pdf", "pages": 184}],
+        "dialogue": dialogue_report(text, config).to_dict(),
+        "characters": presence_report(text, ["Ich"], config),
+        "pacing": pacing_report(text, config).to_dict(),
+        "motifs": motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
+        "showing": showing_report(text, config, metrics=metrics).to_dict(),
+        "title": "Testroman",
         **({"language_key": language_key, "labels": resolve_language(CorpusConfig(language=language_key)).labels}
            if language_key is not None else {}),
-        controls=True,
+        "controls": True,
         **({"enabled_actions": enabled_actions} if enabled_actions is not None else {}),
-    )
+    }
+    render_kwargs.update(render_overrides)
+    result = render_dashboard(chapters, paragraphs, **render_kwargs)  # type: ignore[arg-type]
+    if use_cache:
+        _DEFAULT_CACHE[cache_key] = result
+    return result

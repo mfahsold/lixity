@@ -62,3 +62,43 @@ def test_sync_failure_lists_edits_already_made(
     assert "README.md" in error
     assert "not rolled back" in error
     assert readme.read_text() == "partially synchronized pin\n"
+
+
+def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatch, capsys):
+    root = prepare_script.ROOT
+    (root / "scripts").mkdir(exist_ok=True)
+    calls: list[tuple[str, bool, Path | None]] = []
+
+    def make_module(name, fn_name, *, check_result=None):
+        import types
+        mod = types.ModuleType(name)
+        def fn(*args, check_only=False, root=None, **_kwargs):
+            calls.append((name, check_only, root))
+            if check_only and check_result is not None:
+                return list(check_result)
+            return []
+        setattr(mod, fn_name, fn)
+        return mod
+
+    monkeypatch.setitem(sys.modules, "check_release", type("M", (), {"source_version": staticmethod(lambda r: "0.3.0")})())
+    monkeypatch.setitem(sys.modules, "sync_docs", make_module("sync_docs", "check_or_sync_files"))
+    monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build"))
+    monkeypatch.setitem(sys.modules, "build_llms_full", make_module("build_llms_full", "build"))
+    monkeypatch.setitem(sys.modules, "build_guide_markdown", make_module("build_guide_markdown", "build"))
+
+    prepare_script.run_sync()
+    assert "Documentation already synchronized" in capsys.readouterr().out
+    assert calls == [
+        ("sync_docs", False, root),
+        ("build_public_site", False, root),
+        ("build_llms_full", False, root),
+        ("build_guide_markdown", False, root),
+        ("sync_docs", True, root),
+        ("build_public_site", True, root),
+        ("build_llms_full", True, root),
+        ("build_guide_markdown", True, root),
+    ]
+
+    monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build", check_result=["index.html"]))
+    with pytest.raises(RuntimeError, match=r"index\.html"):
+        prepare_script.run_sync()

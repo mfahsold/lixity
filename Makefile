@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -10,8 +10,8 @@ PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}')
 BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
-PLAYWRIGHT_VERSION ?= 1.65.1
-AXE_CORE_VERSION ?= 4.14.1
+PLAYWRIGHT_VERSION ?= 1.59.1
+AXE_CORE_VERSION ?= 4.13.0
 PYTEST_ARGS ?= -n auto
 
 help: ## Show this help
@@ -47,10 +47,10 @@ browser-full: ## Run every browser suite with the full locale/theme/pointer matr
 	LIXITY_BROWSER_FULL=1 $(SCRIPT_PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS) $(BROWSER_ARGS)
 
 lint: ## Ruff lint (src, tests, scripts)
-	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts
+	RUFF_CACHE_DIR=$(RUFF_CACHE) "$(VPY)" -m ruff check src tests scripts
 
 typecheck: ## mypy --strict on the package
-	MYPY_CACHE_DIR=$(MYPY_CACHE) $(VENV)/bin/mypy --strict src
+	MYPY_CACHE_DIR=$(MYPY_CACHE) "$(VPY)" -m mypy --strict src
 
 workflow-check: ## Lint GitHub workflows (needs actionlint; override ACTIONLINT for its path)
 	"$(ACTIONLINT)" .github/workflows/*.yml
@@ -119,9 +119,11 @@ docs-sync: ## Synchronize documentation version references to match __version__
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main
 
-clean: ## Remove caches and build artifacts
-	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \
-	  .ruff_cache htmlcov .coverage
+clean-caches: ## Remove tool and test caches without deleting dist/
+	rm -rf $(PYTEST_CACHE) $(MYPY_CACHE) $(RUFF_CACHE) htmlcov .coverage
+
+clean: clean-caches ## Remove caches and build artifacts
+	rm -rf build dist *.egg-info src/*.egg-info
 
 LIXITY_PORT ?= 8765
 

@@ -218,15 +218,18 @@ def _walk(node: Node):
             yield from _walk(child)
 
 
-def build(check_only: bool = False) -> list[str]:
+def build(check_only: bool = False, *, root: Path | None = None) -> list[str]:
     """Generate all alternates; return outdated file names in check mode."""
+    base = ROOT if root is None else root
+    guides = GUIDES if root is None else base / "docs" / "guides"
+    blog = BLOG if root is None else base / "docs" / "blog"
     outdated: list[str] = []
-    for path in sorted([*GUIDES.glob("*.html"), *BLOG.glob("*.html")]):
+    for path in sorted([*guides.glob("*.html"), *blog.glob("*.html")]):
         target = path.with_suffix(path.suffix + ".md")
         content = guide_markdown(path)
         current = target.read_text(encoding="utf-8") if target.is_file() else ""
         if current != content:
-            outdated.append(str(target.relative_to(ROOT / "docs")))
+            outdated.append(str(target.relative_to(base / "docs")))
             if not check_only:
                 target.write_text(content, encoding="utf-8")
     return outdated

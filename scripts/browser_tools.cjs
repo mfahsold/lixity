@@ -70,4 +70,8 @@ function launchFirefox(options = {}) {
 const fullMatrix = process.env.LIXITY_BROWSER_FULL === '1';
 const browserLocales = fullMatrix ? ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl'] : ['en', 'de'];
 
-module.exports = {launchChromium, launchFirefox, playwrightModule, fullMatrix, browserLocales};
+function modShortcut(key) {
+  return `ControlOrMeta+${key}`;
+}
+
+module.exports = {launchChromium, launchFirefox, playwrightModule, fullMatrix, browserLocales, modShortcut};
