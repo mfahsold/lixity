@@ -735,13 +735,14 @@ box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .45)), 0 1px
 opacity: 0;
 transform: translateY(2px);
 visibility: hidden;
-left: 0;
-top: 0;
-transition: opacity .15s cubic-bezier(0.16, 1, 0.3, 1), transform .15s cubic-bezier(0.16, 1, 0.3, 1), visibility .15s cubic-bezier(0.16, 1, 0.3, 1);
+left: -9999px;
+top: -9999px;
+transition: opacity .12s cubic-bezier(0.16, 1, 0.3, 1), transform .12s cubic-bezier(0.16, 1, 0.3, 1);
 white-space: normal;
 text-transform: none;
 letter-spacing: normal;
 font-weight: 400;
+&.measuring { visibility: hidden !important; opacity: 0 !important; transition: none !important; }
 &.visible { opacity: 1; transform: translateY(0); visibility: visible; pointer-events: auto; }
 }
 .tooltip-heading {

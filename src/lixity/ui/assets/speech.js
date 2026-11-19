@@ -20,12 +20,6 @@
   var importedTake = null, takeTokens = null, takeImportSequence = 0;
   var recordingPending = false, recordingSequence = 0, takeUrl = null, takeTranscript = "", voiceSaving = false, takeValid = false;
   function label(key) { return uiLabel("speech_" + key); }
-  function optionalLabel(key, enFallback, deFallback) {
-    var text = label(key);
-    if (text && text !== "speech_" + key) return text;
-    var lang = (document.documentElement.lang || "en").toLowerCase();
-    return deFallback && lang.indexOf("de") === 0 ? deFallback : enFallback;
-  }
   function recordingFeedback(state, message, stateLabel) {
     if (!fields.recState) return;
     fields.recState.dataset.state = state;
@@ -890,7 +884,7 @@
         fields.audio.play().catch(function(error) { status(error.message); });
       });
     } else {
-      node("em", span, "", optionalLabel("no_voice_yet", "No author voice recorded yet", "Noch keine Autorenstimme hinterlegt"));
+      node("em", span, "", label("no_voice_yet"));
     }
   }
   function renderReferenceList(refs) {
@@ -920,7 +914,7 @@
       if (isCurrent) {
         node("span", actions, "badge", "✓ " + label("active_voice"));
       } else {
-        var useBtn = node("button", actions, "ctl", optionalLabel("use_as_active", "Use as active voice", "Als aktive Stimme verwenden"));
+        var useBtn = node("button", actions, "ctl", label("use_as_active"));
         useBtn.type = "button";
         useBtn.addEventListener("click", async function() {
           var curProf = settings && settings.selected && settings.profiles[settings.selected];
@@ -1248,10 +1242,10 @@
     close.setAttribute("aria-keyshortcuts", "Escape");
     var tabsBar = node("div", card, "modal-tabs");
     tabsBar.setAttribute("role", "tablist");
-    var tabVoice = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_voice", "Author's voice", "Autorenstimme"));
-    var tabProfiles = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_profiles", "Voice profiles", "Stimmprofile"));
-    var tabReader = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_reader", "Listen & direct", "Hörprobe & Regie"));
-    var tabMic = node("button", tabsBar, "modal-tab-btn", optionalLabel("tab_microphone", "Mic & levels", "Mikrofon & Pegel"));
+    var tabVoice = node("button", tabsBar, "modal-tab-btn", label("tab_voice"));
+    var tabProfiles = node("button", tabsBar, "modal-tab-btn", label("tab_profiles"));
+    var tabReader = node("button", tabsBar, "modal-tab-btn", label("tab_reader"));
+    var tabMic = node("button", tabsBar, "modal-tab-btn", label("tab_microphone"));
     tabVoice.type = tabProfiles.type = tabReader.type = tabMic.type = "button";
     tabVoice.addEventListener("click", function() { switchMode("reference"); });
     tabProfiles.addEventListener("click", function() { switchMode("profiles"); });
@@ -1276,7 +1270,7 @@
     fields.reference_section = node("div", content, "author-voice-studio");
     fields.reference_section.hidden = true;
     var introCard = node("div", fields.reference_section, "voice-studio-intro");
-    node("p", introCard, "ctl-note", optionalLabel("record_author_intro", "Record a 15–25 second sample to serve as the voice clone reference for this book.", "Nimm eine 15–25-sekündige Sprachprobe auf. Sie dient als Stimmreferenz für den KI-Sprecher dieses Buchs."));
+    node("p", introCard, "ctl-note", label("record_author_intro"));
     fields.active_voice_badge = node("div", fields.reference_section, "voice-active-card");
     var textCard = node("div", fields.reference_section, "voice-reading-card");
     var textHeader = node("div", textCard, "voice-reading-header");
@@ -1330,7 +1324,7 @@
     fields.promptControls.forEach(function(el) { el.dataset.help = label("transcript_help"); });
     updatePromptText();
     var recControls = node("div", fields.reference_section, "voice-record-controls");
-    fields.recBtn = node("button", recControls, "ctl voice-rec-btn", optionalLabel("record_start", "Start recording", "Aufnahme starten"));
+    fields.recBtn = node("button", recControls, "ctl voice-rec-btn", label("record_start"));
     fields.recBtn.type = "button"; addHelp(fields.recBtn, "record_start");
     fields.recTimer = node("span", recControls, "voice-rec-timer", "00:00");
     fields.recTimer.hidden = true;
@@ -1359,7 +1353,7 @@
     fields.takeExports = node("div", fields.takeCard, "row"); fields.takeExports.hidden = true;
     button(fields.takeExports, "take_download_wav", function() { exportVoiceTake("wav"); });
     button(fields.takeExports, "take_download_json", function() { exportVoiceTake("json"); });
-    fields.saveVoiceBtn = node("button", fields.takeCard, "ctl primary voice-save-btn", optionalLabel("record_save", "Save as author voice for this book", "Als Autorenstimme für dieses Buch speichern"));
+    fields.saveVoiceBtn = node("button", fields.takeCard, "ctl primary voice-save-btn", label("record_save"));
     fields.saveVoiceBtn.type = "button"; addHelp(fields.saveVoiceBtn, "record_save");
     fields.recBtn.addEventListener("click", function() {
       if (!isRecordingVoice) startVoiceRecording();
@@ -1367,10 +1361,10 @@
     });
     fields.saveVoiceBtn.addEventListener("click", saveVoiceTake);
     var librarySec = node("details", fields.reference_section, "settings-section voice-library-section");
-    node("summary", librarySec, "", optionalLabel("choose_from_library", "Saved takes in this project", "Gespeicherte Aufnahmen in diesem Projekt"));
+    node("summary", librarySec, "", label("choose_from_library"));
     fields.reference_list = node("div", librarySec, "voice-reference-list");
     var uploadSec = node("details", fields.reference_section, "settings-section voice-upload-section");
-    node("summary", uploadSec, "", optionalLabel("upload_wav", "Or upload studio WAV", "Oder Studio-WAV hochladen"));
+    node("summary", uploadSec, "", label("upload_wav"));
     var uploadFile = field(uploadSec, "upload_voice_file", "file");
     uploadFile.accept = ".wav";
     var uploadTranscript = field(uploadSec, "upload_voice_transcript", "textarea");
@@ -1577,9 +1571,8 @@
       if (microphoneBusy || !microphoneState || !fields.microphone_device.value) return;
       var sequence = openSequence, mixer = microphoneMixer(), dev = fields.microphone_device.value;
       microphoneBusy = true; microphoneControls(); fields.microphone_calib_result.replaceChildren();
-      var prepNote = node("p", fields.microphone_calib_result, "ctl-note",
-        optionalLabel("microphone_calib_prep", "4s lead-in… Then 3× pop, 2× clap, 1× speak.", "4s Vorlauf… Danach 3× POPP, 2× Klatschen, 1× Sprechen."));
-      status(optionalLabel("microphone_calib_running", "Calibrating microphone level…", "Kalibriere Mikrofonpegel…"));
+      var prepNote = node("p", fields.microphone_calib_result, "ctl-note", label("microphone_calib_prep"));
+      status(label("microphone_calib_running"));
       try {
         // Measure the selected device at its current level. The calibration API's
         // optional gain targets its default mixer, which may be another card.
@@ -1593,13 +1586,12 @@
           if (cal.verdict === "too_hot") vBadge.classList.add("badge-fail");
           else if (cal.verdict === "calibrated") vBadge.classList.add("badge-pass");
           else vBadge.classList.add("badge-warn");
-          var snrLabel = optionalLabel("microphone_calib_snr", "SNR", "Rauschabstand (SNR)");
+          var snrLabel = label("microphone_calib_snr");
           node("p", card, "", "Peak: " + (cal.peak_dbfs >= 0 ? "+" : "") + cal.peak_dbfs.toFixed(1) + " dBFS · Clipping: " + cal.clipping_samples + " · " + snrLabel + ": " + cal.snr_db.toFixed(1) + " dB");
           // Recommendations currently use the backend's default card/Mic gain.
           if (mixer && mixer.max <= 100 && String(mixer.card) === "1" && mixer.control === "Mic" && Number.isInteger(cal.recommended_gain) &&
               cal.recommended_gain >= mixer.min && cal.recommended_gain <= mixer.max && cal.recommended_gain !== microphoneState.current_gain) {
-            var applyGainText = optionalLabel("microphone_calib_apply_gain", "Apply recommended gain {gain}", "Empfohlenen Gain {gain} anwenden")
-              .replace("{gain}", String(cal.recommended_gain));
+            var applyGainText = uiFormat("speech_microphone_calib_apply_gain", {gain: cal.recommended_gain});
             var recBtn = node("button", card, "ctl", applyGainText);
             recBtn.type = "button";
             recBtn.addEventListener("click", function() {
@@ -1607,7 +1599,7 @@
               fields.microphone_set_btn.click();
             });
           }
-          status(optionalLabel("microphone_calib_done", "Calibration complete.", "Kalibrierung abgeschlossen."));
+          status(label("microphone_calib_done"));
         }
       } catch (err) { if (sequence === openSequence && dialog.open) status(err.message); }
       finally { if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); } }

@@ -186,6 +186,19 @@ _PUBLICATION_JS_FILES = tuple(
 )
 
 
+_PROJECT_RIBBON_SPEC: tuple[tuple[str, str, str, str | None], ...] = (
+    ("project-overview", "project_nav_structure", "archive", "overview"),
+    ("settings-project-details", "project_nav_details", "pen-line", None),
+    ("settings-analysis", "project_nav_analysis", "sliders", None),
+    ("settings-registers", "project_nav_registers", "list-ordered", None),
+    ("settings-publication", "project_nav_publication", "book-open", None),
+    ("settings-site-publications", "project_nav_site", "share-2", None),
+    ("project-audio-settings", "project_nav_audio", "mic", "writable"),
+    ("project-results", "project_nav_results", "download", "results"),
+    ("nda-draft", "project_nav_nda", "file-text", "nda"),
+)
+
+
 @lru_cache(maxsize=16)
 def _bundle(files: tuple[str, ...]) -> str:
     """Join packaged assets on first use; importing the module does no I/O."""
@@ -782,19 +795,17 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append(f"<h2>{L('workspace_project')}</h2>")
         results_available = action_enabled("export") or any(
             action_enabled(action) for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild"))
+        ribbon_gates = {
+            None: True,
+            "overview": show_project_overview,
+            "writable": not read_only,
+            "results": results_available,
+            "nda": allowed_actions is not None and "nda-draft" in allowed_actions,
+        }
         parts.append(pane_ribbon(labels, "project_panel_navigation", [
-            item for item in (
-                ("project-overview", "project_nav_structure", "archive") if show_project_overview else None,
-                ("settings-project-details", "project_nav_details", "pen-line"),
-                ("settings-analysis", "project_nav_analysis", "sliders"),
-                ("settings-registers", "project_nav_registers", "list-ordered"),
-                ("settings-publication", "project_nav_publication", "book-open"),
-                ("settings-site-publications", "project_nav_site", "share-2"),
-                ("project-audio-settings", "project_nav_audio", "mic") if not read_only else None,
-                ("project-results", "project_nav_results", "download") if results_available else None,
-                ("nda-draft", "project_nav_nda", "file-text")
-                if allowed_actions is not None and "nda-draft" in allowed_actions else None,
-            ) if item is not None
+            (target, key, icon)
+            for target, key, icon, gate in _PROJECT_RIBBON_SPEC
+            if ribbon_gates[gate]
         ]))
         if show_project_overview:
             parts.append(project_overview(labels, research_navigation=bool(

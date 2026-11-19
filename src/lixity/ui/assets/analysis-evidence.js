@@ -194,8 +194,7 @@
         top = Math.max(12, Math.min(innerHeight - bounds.height - 12, rect.top - 12));
       }
     }
-    host.style.left = Math.max(8, Math.min(maxRight, left)) + "px";
-    host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
+    LixityComponents.placeClampedOverlay(host, left, top, {bounds: bounds, gutter: 8});
   }
   function scrollPosition(containers, trigger) {
     if (trigger) containers = Array.from(new Set(containers.concat(passageScrollContainers(trigger))));

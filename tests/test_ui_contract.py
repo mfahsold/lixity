@@ -1115,6 +1115,10 @@ class TestShowDontTellComponents(unittest.TestCase):
             self.assertNotIn("<svg", source, f"{filename} should use ui_icon() instead of inline <svg>")
         speech_js = (UI_DIR / "assets" / "speech.js").read_text(encoding="utf-8")
         self.assertNotIn("<svg", speech_js)
+        self.assertNotIn("optionalLabel", speech_js)
+        nav_css = (UI_DIR / "assets" / "research-navigation.css").read_text(encoding="utf-8")
+        self.assertIn("[data-ribbon-section]", nav_css)
+        self.assertNotIn("#settings-project-details", nav_css)
 
         research_py = (UI_DIR / "research_panel.py").read_text(encoding="utf-8")
         used_nav_icons = re.findall(r'data-research-nav-icon="([a-z0-9-]+)"', research_py)
@@ -1145,6 +1149,9 @@ class TestShowDontTellComponents(unittest.TestCase):
                 "project_nav_audio_help", "project_nav_results_help", "project_nav_nda_help",
                 "nda_draft_preview_help", "nda_draft_pdf_help", "nda_draft_text_help",
                 "settings_reset_thresholds_help",
+                "speech_microphone_calib_prep", "speech_microphone_calib_running",
+                "speech_microphone_calib_snr", "speech_microphone_calib_apply_gain",
+                "speech_microphone_calib_done",
             ):
                 self.assertTrue(loc.get(key) and loc[key] != key, f"{locale}.{key} missing")
 

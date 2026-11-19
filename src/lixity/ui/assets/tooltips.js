@@ -147,6 +147,8 @@
     var samePointer = fromPointer && pointerHelp && activeEl === el;
     if (activeEl && activeEl !== el) hide();
     activeEl = el;
+    tip.classList.remove("visible");
+    tip.classList.add("measuring");
     if (fromPointer) { if (!samePointer) pointerAnchor(el); }
     else pointerHelp = false;
     // Keep help in the native dialog's top layer when its control is inside one.
@@ -196,11 +198,13 @@
       copy.textContent = text;
       copy.hidden = !text || !text.trim();
     }
+    warmUntil = Date.now() + 1000;
+    LixityComponents.measureOverlay(tip, function() { updatePos(el); });
+    if (activeEl !== el) return;
+    tip.classList.remove("measuring");
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
-    warmUntil = Date.now() + 1000;
-    updatePos(el);
-    if (activeEl) textObserver.observe(el, {attributes: true,
+    textObserver.observe(el, {attributes: true,
       attributeFilter: ["title", "data-tip", "data-help", "aria-label", "aria-keyshortcuts"]});
   }
 
@@ -216,14 +220,14 @@
     }
     activeEl = null;
     pointerHelp = false;
-    tip.style.left = "";
-    tip.style.top = "";
+    tip.classList.remove("visible", "measuring");
     tip.setAttribute("aria-hidden", "true");
-    tip.classList.remove("visible");
+    tip.style.left = "-9999px";
+    tip.style.top = "-9999px";
   }
 
   function updatePos(el) {
-    if (!el || !tip.classList.contains("visible")) return;
+    if (!el || (!tip.classList.contains("visible") && !tip.classList.contains("measuring"))) return;
     var rect = el.getBoundingClientRect();
     if (!el.isConnected || !el.getClientRects().length ||
         getComputedStyle(el).visibility !== "visible" ||
@@ -290,7 +294,7 @@
       anchorTop = Math.max(rect.top, rect.top + pointerOffsetY - 14);
       anchorBottom = Math.min(rect.bottom, rect.top + pointerOffsetY + 16);
     }
-    var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, .pane-ribbon, .research-pane-navigation, [role=toolbar]";
+    var toolbarSelector = LixityComponents.TOOLBAR_SELECTOR;
     var toolbar = el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {
       var bar = toolbar.getBoundingClientRect();

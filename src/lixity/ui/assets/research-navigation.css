@@ -63,7 +63,7 @@
   color: var(--fg);
 }
 [data-research-nav-section],
-#view-pane-project :is(#project-overview, #settings-project-details, #settings-analysis, #settings-registers, #settings-publication, #settings-site-publications, #project-audio-settings, #project-results, #nda-draft) {
+[data-ribbon-section] {
   scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--pane-ribbon-height, 3.5rem) + var(--space-4));
 }
 .research-section-card {

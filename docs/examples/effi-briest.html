@@ -1590,13 +1590,14 @@ box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .45)), 0 1px
 opacity: 0;
 transform: translateY(2px);
 visibility: hidden;
-left: 0;
-top: 0;
-transition: opacity .15s cubic-bezier(0.16, 1, 0.3, 1), transform .15s cubic-bezier(0.16, 1, 0.3, 1), visibility .15s cubic-bezier(0.16, 1, 0.3, 1);
+left: -9999px;
+top: -9999px;
+transition: opacity .12s cubic-bezier(0.16, 1, 0.3, 1), transform .12s cubic-bezier(0.16, 1, 0.3, 1);
 white-space: normal;
 text-transform: none;
 letter-spacing: normal;
 font-weight: 400;
+&.measuring { visibility: hidden !important; opacity: 0 !important; transition: none !important; }
 &.visible { opacity: 1; transform: translateY(0); visibility: visible; pointer-events: auto; }
 }
 .tooltip-heading {
@@ -2849,7 +2850,7 @@ div.pswp__img--placeholder,
   color: var(--fg);
 }
 [data-research-nav-section],
-#view-pane-project :is(#project-overview, #settings-project-details, #settings-analysis, #settings-registers, #settings-publication, #settings-site-publications, #project-audio-settings, #project-results, #nda-draft) {
+[data-ribbon-section] {
   scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--pane-ribbon-height, 3.5rem) + var(--space-4));
 }
 .research-section-card {
@@ -5592,7 +5593,27 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 // components (see _JS_FILES in lixity/ui/dashboard.py).
 (function () {
   "use strict";
+  var SHARED_CHROME_SELECTOR = [
+    "#manuscript-reader-controls",
+    ".manuscript-reading .toolbar",
+    ".manuscript-editor-toolbar",
+    "#manuscript-reading .manuscript-reading-bar",
+    ".teleprompter-toolbar",
+    ".pane-ribbon",
+    ".research-pane-navigation"
+  ].join(", ");
+  var SHARED_TOOLBAR_SELECTOR = [
+    ".manuscript-reader-controls",
+    ".toolbar",
+    ".selection-toolbar",
+    ".pane-ribbon",
+    ".research-pane-navigation",
+    "[role=toolbar]"
+  ].join(", ");
+
   window.LixityComponents = {
+    CHROME_SELECTOR: SHARED_CHROME_SELECTOR,
+    TOOLBAR_SELECTOR: SHARED_TOOLBAR_SELECTOR,
     html: htm.bind(preact.h),
     icon: function (name, options) {
       var markup = window.LixityIcons && typeof window.LixityIcons.render === "function"
@@ -5641,6 +5662,35 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       space = space || this.overlaySpace(node);
       node.style.left = (left - space.left) + "px";
       node.style.top = (top - space.top) + "px";
+    },
+    placeClampedOverlay: function (node, left, top, options) {
+      var opts = options || {};
+      var gutter = typeof opts.gutter === "number" ? opts.gutter : 8;
+      var bounds = opts.bounds || node.getBoundingClientRect();
+      var space = opts.space || this.overlaySpace(node);
+      var maxLeft = Math.max(gutter, window.innerWidth - bounds.width - gutter);
+      var maxTop = Math.max(gutter, window.innerHeight - bounds.height - gutter);
+      this.placeOverlay(
+        node,
+        Math.max(gutter, Math.min(maxLeft, left)),
+        Math.max(gutter, Math.min(maxTop, top)),
+        space
+      );
+    },
+    // Keep floating overlays hidden with transitions suppressed while computing
+    // viewport coordinates so the first painted frame never flashes at (0, 0).
+    measureOverlay: function (node, fn) {
+      var prevVisibility = node.style.visibility;
+      var prevTransition = node.style.transition;
+      node.style.transition = "none";
+      node.style.visibility = "hidden";
+      try {
+        return fn();
+      } finally {
+        node.style.visibility = prevVisibility;
+        void node.offsetWidth;
+        node.style.transition = prevTransition;
+      }
     },
     mount: function (host, vnode) {
       if (!host.__lixityMounted) {
@@ -5769,15 +5819,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
   // Anchors auto-hide behavior across reader, editor, saved-revision reader, and teleprompter
   // toolbars without shifting document layout or breaking keyboard focus (:focus-within).
   (function initLixityChrome() {
-    var CHROME_SELECTOR = [
-      "#manuscript-reader-controls",
-      ".manuscript-reading .toolbar",
-      ".manuscript-editor-toolbar",
-      "#manuscript-reading .manuscript-reading-bar",
-      ".teleprompter-toolbar",
-      ".pane-ribbon",
-      ".research-pane-navigation"
-    ].join(", ");
+    var CHROME_SELECTOR = SHARED_CHROME_SELECTOR;
     var IDLE_MS = 3500;
     var DOWN_DELTA_THRESHOLD = 36;
     var UP_DELTA_THRESHOLD = -16;
@@ -6032,6 +6074,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
             return;
           }
           var target = document.querySelector(sel);
+          if (target) target.setAttribute("data-ribbon-section", "");
           btn.hidden = !target || target.hidden;
         });
       });
@@ -6398,6 +6441,8 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     var samePointer = fromPointer && pointerHelp && activeEl === el;
     if (activeEl && activeEl !== el) hide();
     activeEl = el;
+    tip.classList.remove("visible");
+    tip.classList.add("measuring");
     if (fromPointer) { if (!samePointer) pointerAnchor(el); }
     else pointerHelp = false;
     // Keep help in the native dialog's top layer when its control is inside one.
@@ -6447,11 +6492,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       copy.textContent = text;
       copy.hidden = !text || !text.trim();
     }
+    warmUntil = Date.now() + 1000;
+    LixityComponents.measureOverlay(tip, function() { updatePos(el); });
+    if (activeEl !== el) return;
+    tip.classList.remove("measuring");
     tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
-    warmUntil = Date.now() + 1000;
-    updatePos(el);
-    if (activeEl) textObserver.observe(el, {attributes: true,
+    textObserver.observe(el, {attributes: true,
       attributeFilter: ["title", "data-tip", "data-help", "aria-label", "aria-keyshortcuts"]});
   }
 
@@ -6467,14 +6514,14 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     }
     activeEl = null;
     pointerHelp = false;
-    tip.style.left = "";
-    tip.style.top = "";
+    tip.classList.remove("visible", "measuring");
     tip.setAttribute("aria-hidden", "true");
-    tip.classList.remove("visible");
+    tip.style.left = "-9999px";
+    tip.style.top = "-9999px";
   }
 
   function updatePos(el) {
-    if (!el || !tip.classList.contains("visible")) return;
+    if (!el || (!tip.classList.contains("visible") && !tip.classList.contains("measuring"))) return;
     var rect = el.getBoundingClientRect();
     if (!el.isConnected || !el.getClientRects().length ||
         getComputedStyle(el).visibility !== "visible" ||
@@ -6541,7 +6588,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       anchorTop = Math.max(rect.top, rect.top + pointerOffsetY - 14);
       anchorBottom = Math.min(rect.bottom, rect.top + pointerOffsetY + 16);
     }
-    var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, .pane-ribbon, .research-pane-navigation, [role=toolbar]";
+    var toolbarSelector = LixityComponents.TOOLBAR_SELECTOR;
     var toolbar = el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {
       var bar = toolbar.getBoundingClientRect();
@@ -21450,8 +21497,7 @@ window.LixityManuscriptLinks = {
         top = Math.max(12, Math.min(innerHeight - bounds.height - 12, rect.top - 12));
       }
     }
-    host.style.left = Math.max(8, Math.min(maxRight, left)) + "px";
-    host.style.top = Math.max(8, Math.min(innerHeight - bounds.height - 8, top)) + "px";
+    LixityComponents.placeClampedOverlay(host, left, top, {bounds: bounds, gutter: 8});
   }
   function scrollPosition(containers, trigger) {
     if (trigger) containers = Array.from(new Set(containers.concat(passageScrollContainers(trigger))));

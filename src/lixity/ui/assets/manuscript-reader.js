@@ -897,20 +897,20 @@
     return range.cloneRange();
   }
   function place(node, x, y, anchor) {
-    node.hidden = false; node.style.left = "0px"; node.style.top = "0px";
-    var rect = node.getBoundingClientRect();
-    if (anchor) {
-      var trigger = anchor.getBoundingClientRect();
-      var below = Math.max(0, innerHeight - trigger.bottom - 12), above = Math.max(0, trigger.top - 12);
-      var useBelow = below >= rect.height || below >= above;
-      node.style.maxHeight = (useBelow ? below : above) + "px";
-      rect = node.getBoundingClientRect();
-      x = trigger.left; y = useBelow ? trigger.bottom + 4 : trigger.top - rect.height - 4;
-    }
-    LixityComponents.placeOverlay(node,
-      Math.max(8, Math.min(x, innerWidth - rect.width - 8)),
-      Math.max(8, Math.min(y, innerHeight - rect.height - 8)));
-    node._readerScroll = [window.scrollX, window.scrollY];
+    LixityComponents.measureOverlay(node, function() {
+      node.hidden = false; node.style.left = "0px"; node.style.top = "0px";
+      var rect = node.getBoundingClientRect();
+      if (anchor) {
+        var trigger = anchor.getBoundingClientRect();
+        var below = Math.max(0, innerHeight - trigger.bottom - 12), above = Math.max(0, trigger.top - 12);
+        var useBelow = below >= rect.height || below >= above;
+        node.style.maxHeight = (useBelow ? below : above) + "px";
+        rect = node.getBoundingClientRect();
+        x = trigger.left; y = useBelow ? trigger.bottom + 4 : trigger.top - rect.height - 4;
+      }
+      LixityComponents.placeClampedOverlay(node, x, y, {bounds: rect, gutter: 8});
+      node._readerScroll = [window.scrollX, window.scrollY];
+    });
   }
   function actionButton(action, label, menuItem) {
     var button = document.createElement("button"); button.type = "button";

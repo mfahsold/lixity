@@ -17,7 +17,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead of showing horizontal scrollbars when horizontal space is tight,
   wire `data-help`/`title` tooltips across ribbon pills, Research tools, and
   Project settings/audio/NDA controls (`tooltips.js`, `speech.js`,
-  `settings.py`), add the sticky auto-hiding `.pane-ribbon` jump bar with top
+  `settings.py`), eliminate the top-left flash/jump in `tooltips.js` and
+  floating reader overlays via `LixityComponents.measureOverlay()` and
+  `placeClampedOverlay()`, centralize shared toolbar/chrome selectors and
+  `data-ribbon-section` attributes (`component-layer.js`,
+  `research-navigation.css`), replace hardcoded EN/DE fallback strings in
+  `speech.js` with full seven-locale entries, extract `_PROJECT_RIBBON_SPEC`
+  in `dashboard.py`, add the sticky auto-hiding `.pane-ribbon` jump bar with top
   button and dynamic `scroll-margin-top` to the Project view, and align
   `#manuscript-reader-controls` and `.toolbar` onto the same translucent
   surface and `LixityChrome` auto-hide pipeline.

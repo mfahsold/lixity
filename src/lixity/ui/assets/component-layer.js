@@ -10,7 +10,27 @@
 // components (see _JS_FILES in lixity/ui/dashboard.py).
 (function () {
   "use strict";
+  var SHARED_CHROME_SELECTOR = [
+    "#manuscript-reader-controls",
+    ".manuscript-reading .toolbar",
+    ".manuscript-editor-toolbar",
+    "#manuscript-reading .manuscript-reading-bar",
+    ".teleprompter-toolbar",
+    ".pane-ribbon",
+    ".research-pane-navigation"
+  ].join(", ");
+  var SHARED_TOOLBAR_SELECTOR = [
+    ".manuscript-reader-controls",
+    ".toolbar",
+    ".selection-toolbar",
+    ".pane-ribbon",
+    ".research-pane-navigation",
+    "[role=toolbar]"
+  ].join(", ");
+
   window.LixityComponents = {
+    CHROME_SELECTOR: SHARED_CHROME_SELECTOR,
+    TOOLBAR_SELECTOR: SHARED_TOOLBAR_SELECTOR,
     html: htm.bind(preact.h),
     icon: function (name, options) {
       var markup = window.LixityIcons && typeof window.LixityIcons.render === "function"
@@ -59,6 +79,35 @@
       space = space || this.overlaySpace(node);
       node.style.left = (left - space.left) + "px";
       node.style.top = (top - space.top) + "px";
+    },
+    placeClampedOverlay: function (node, left, top, options) {
+      var opts = options || {};
+      var gutter = typeof opts.gutter === "number" ? opts.gutter : 8;
+      var bounds = opts.bounds || node.getBoundingClientRect();
+      var space = opts.space || this.overlaySpace(node);
+      var maxLeft = Math.max(gutter, window.innerWidth - bounds.width - gutter);
+      var maxTop = Math.max(gutter, window.innerHeight - bounds.height - gutter);
+      this.placeOverlay(
+        node,
+        Math.max(gutter, Math.min(maxLeft, left)),
+        Math.max(gutter, Math.min(maxTop, top)),
+        space
+      );
+    },
+    // Keep floating overlays hidden with transitions suppressed while computing
+    // viewport coordinates so the first painted frame never flashes at (0, 0).
+    measureOverlay: function (node, fn) {
+      var prevVisibility = node.style.visibility;
+      var prevTransition = node.style.transition;
+      node.style.transition = "none";
+      node.style.visibility = "hidden";
+      try {
+        return fn();
+      } finally {
+        node.style.visibility = prevVisibility;
+        void node.offsetWidth;
+        node.style.transition = prevTransition;
+      }
     },
     mount: function (host, vnode) {
       if (!host.__lixityMounted) {
@@ -187,15 +236,7 @@
   // Anchors auto-hide behavior across reader, editor, saved-revision reader, and teleprompter
   // toolbars without shifting document layout or breaking keyboard focus (:focus-within).
   (function initLixityChrome() {
-    var CHROME_SELECTOR = [
-      "#manuscript-reader-controls",
-      ".manuscript-reading .toolbar",
-      ".manuscript-editor-toolbar",
-      "#manuscript-reading .manuscript-reading-bar",
-      ".teleprompter-toolbar",
-      ".pane-ribbon",
-      ".research-pane-navigation"
-    ].join(", ");
+    var CHROME_SELECTOR = SHARED_CHROME_SELECTOR;
     var IDLE_MS = 3500;
     var DOWN_DELTA_THRESHOLD = 36;
     var UP_DELTA_THRESHOLD = -16;
@@ -450,6 +491,7 @@
             return;
           }
           var target = document.querySelector(sel);
+          if (target) target.setAttribute("data-ribbon-section", "");
           btn.hidden = !target || target.hidden;
         });
       });
