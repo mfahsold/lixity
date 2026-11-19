@@ -474,3 +474,70 @@ def test_flags_count_migration_from_not_null_zero_to_nullable(tmp_path):
     delta = editor.delta()
     assert delta["current"]["flags_count"] is None
     assert delta["deltas"]["flags_count"] is None
+
+
+def test_recovery_db_enforces_wal_trusted_schema_and_skips_read_ddl(tmp_path, monkeypatch):
+    import sqlite3
+    from contextlib import closing
+
+    editor, _source = store(tmp_path, b"## Chapter 1\n\nThe river was quiet.\n")
+    opened = editor.open()
+    save(editor, opened, "## Chapter 1\n\nThe river was loud.\n", "1" * 32)
+    db_path = editor.directory / "recovery.sqlite3"
+    with closing(sqlite3.connect(db_path)) as conn:
+        assert str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower() == "wal"
+        assert int(conn.execute("PRAGMA user_version").fetchone()[0]) >= 1
+
+    fresh = ManuscriptStore(tmp_path, editor.source)
+    opened_conns = []
+    real_connect = sqlite3.connect
+
+    class SpyConnection:
+        def __init__(self, inner):
+            self._inner = inner
+            self.statements = []
+            self.commits = 0
+
+        def execute(self, sql, *args, **kwargs):
+            self.statements.append(sql)
+            return self._inner.execute(sql, *args, **kwargs)
+
+        def commit(self):
+            self.commits += 1
+            return self._inner.commit()
+
+        def close(self):
+            return self._inner.close()
+
+        def __setattr__(self, name, value):
+            if name in ("_inner", "statements", "commits"):
+                super().__setattr__(name, value)
+            else:
+                setattr(self._inner, name, value)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+        def __enter__(self):
+            self._inner.__enter__()
+            return self
+
+        def __exit__(self, *args):
+            return self._inner.__exit__(*args)
+
+    def tracking_connect(*args, **kwargs):
+        spy = SpyConnection(real_connect(*args, **kwargs))
+        opened_conns.append(spy)
+        return spy
+
+    monkeypatch.setattr("lixity.manuscript_editing.sqlite3.connect", tracking_connect)
+    assert fresh.open()["recovery"] != []
+    assert len(fresh.timeline()) == 2
+    assert fresh.delta()["has_baseline"] is True
+    assert fresh._recorded_revision(opened["revision"]) is not None
+    # One connection per read call (including one shared connection in delta())
+    assert len(opened_conns) == 4
+    for spy in opened_conns:
+        assert "PRAGMA trusted_schema=OFF" in spy.statements
+        assert spy.commits == 0
+        assert not any(stmt.lstrip().startswith(("CREATE ", "ALTER ", "DROP ")) for stmt in spy.statements)

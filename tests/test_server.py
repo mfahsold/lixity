@@ -2091,3 +2091,92 @@ class TestLixityServer(unittest.TestCase):
                     self.assertEqual(status, 200)
                     ingest_item.assert_called_once()
                     self.assertEqual(ingest_item.call_args.kwargs["item_key"], "ABCDEFGH")
+
+    def test_security_hardening_html_artifact_csp_sec_fetch_site_and_ingest_containment(self):
+        from lixity.research import api as research_api
+        from lixity.server.runtime import _LoopbackHTTPServer
+        from tests.support import make_handler
+
+        self.assertTrue(_LoopbackHTTPServer.daemon_threads)
+
+        with tempfile.TemporaryDirectory() as artifact_dir:
+            root = Path(artifact_dir).resolve()
+            manuscript = root / "draft.md"
+            manuscript.write_text("# Draft\n\nSynthetic text.\n", encoding="utf-8")
+            exports_root = root / "exports"
+            exports_root.mkdir()
+            (exports_root / "sample-report.html").write_text(
+                "<html><script>alert(1)</script></html>", encoding="utf-8"
+            )
+            with LoopbackServer(make_handler(root, source_input=manuscript)) as artifact_server:
+                res = artifact_server.request("/artifact/sample-report.html")
+                self.assertEqual(res.status, 200)
+                self.assertEqual(
+                    res.headers.get("content-security-policy"), "sandbox; default-src 'none'"
+                )
+                cross = artifact_server.request(
+                    "/artifact/sample-report.html", headers={"Sec-Fetch-Site": "cross-site"}
+                )
+                self.assertEqual(cross.status, 403)
+                # Verify accept-time socket timeout is configured on _LoopbackHTTPServer
+                with socket.create_connection(("127.0.0.1", artifact_server.port), timeout=5) as probe:
+                    probe.sendall(b"GET /api HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n")
+                    self.assertIn(b"200", probe.recv(128))
+
+        for method, path in (("GET", "/api"), ("GET", "/api/runtime"), ("POST", "/api/analyze")):
+            status, _, _ = self.make_request(
+                path,
+                method=method,
+                body="{}" if method == "POST" else None,
+                headers={
+                    "Sec-Fetch-Site": "cross-site",
+                    **({"Content-Type": "application/json"} if method == "POST" else {}),
+                },
+            )
+            self.assertEqual(status, 403)
+
+        with tempfile.TemporaryDirectory() as td, tempfile.TemporaryDirectory() as outside:
+            outside_file = Path(outside) / "secret.txt"
+            outside_file.write_text("Outside secret text.", encoding="utf-8")
+            inside_file = Path(td) / "inside.txt"
+            inside_file.write_text("Inside synthetic text.", encoding="utf-8")
+            linked_file = Path(td) / "linked.txt"
+            linked_file.symlink_to(outside_file)
+            orig_rdir = LixityServerHandler.research_dir
+            try:
+                LixityServerHandler.research_dir = td
+                research_api.init(td, title="Containment Test", language="en")
+
+                # Invalid base64 padding/chars must be rejected with validate=True
+                status_b64, _, _ = self.make_request(
+                    "/api/research-ingest",
+                    method="POST",
+                    body=json.dumps({
+                        "content_base64": "not!valid!base64",
+                        "filename": "bad.pdf",
+                        "allow_retention": True,
+                    }),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status_b64, 400)
+
+                # Outside-project file path and symlink must be rejected
+                for bad_path in (str(outside_file), str(linked_file), "../outside.txt"):
+                    status_bad, _, _ = self.make_request(
+                        "/api/research-ingest",
+                        method="POST",
+                        body=json.dumps({"file": bad_path, "allow_retention": True}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status_bad, 400)
+
+                # Contained regular file inside project succeeds
+                status_ok, body_ok, _ = self.make_request(
+                    "/api/research-ingest",
+                    method="POST",
+                    body=json.dumps({"file": "inside.txt", "allow_retention": True}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status_ok, 200, body_ok)
+            finally:
+                LixityServerHandler.research_dir = orig_rdir

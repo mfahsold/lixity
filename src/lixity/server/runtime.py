@@ -24,7 +24,13 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
     """Bind the validated local address without an unnecessary reverse-DNS lookup."""
 
     allow_reuse_address = True
+    daemon_threads = True
     workspaces: WorkspaceRegistry
+
+    def get_request(self) -> tuple[socket.socket, Any]:
+        request, client_address = super().get_request()
+        request.settimeout(15.0)
+        return request, client_address
 
     def server_close(self) -> None:
         manager = getattr(self, "speech_jobs", None)

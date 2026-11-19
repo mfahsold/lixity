@@ -475,3 +475,17 @@ class TestZotero(unittest.TestCase):
             data_att = json.loads(out_att.getvalue())
             self.assertEqual(data_att["schema_version"], "research-zotero-batch-ingest-local/1")
             self.assertEqual(data_att["total"], 2)
+
+    def test_file_url_rejects_symlink_attachments(self):
+        symlink = self.root / "linked.txt"
+        symlink.symlink_to(self.file)
+
+        def response(path):
+            if path.endswith("/file/view/url"):
+                return symlink.as_uri().encode(), "test-instance"
+            return self.response(path)
+
+        before = Repository(self.project).snapshot().digest
+        with patch.object(zotero, "_request", side_effect=response), self.assertRaises(ResearchError):
+            zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR", allow_retention=True)
+        self.assertEqual(Repository(self.project).snapshot().digest, before)

@@ -289,3 +289,78 @@ def test_simultaneous_starts_share_one_owned_child(tmp_path, monkeypatch):
             break
         finally:
             app.control("stop", {})
+
+
+def test_ready_record_writes_port_and_reclaims_orphan_after_crash(tmp_path, monkeypatch):
+    import lixity.service as service
+
+    app = manager(tmp_path, free_port())
+    token = secrets.token_hex(32)
+    service._write_json(
+        app.runtime_file,
+        {
+            "schema_version": "lixity-service-runtime/1",
+            "port": app.port,
+            "token": token,
+            "pid": None,
+            "birth": None,
+            "backend": "process",
+            "unit": None,
+            "ready": False,
+            "version": __version__,
+        },
+    )
+    monkeypatch.setenv("LIXITY_SERVICE_RECORD", str(app.runtime_file))
+    monkeypatch.setattr(service.signal, "signal", lambda *_: None)
+    worker = service.ManagedServe(token, app.port)
+    worker.ready()
+    ready = json.loads(app.ready_file.read_text(encoding="utf-8"))
+    assert ready["port"] == app.port
+
+    # Simulate unclean crash removing runtime_file and making pid/birth stale
+    app.runtime_file.unlink()
+    ready["pid"] = 999999
+    ready["birth"] = "stale-birth"
+    service._write_json(app.ready_file, ready)
+    monkeypatch.setattr(service, "_port_open", lambda *_: False)
+    assert app.control("stop", {})["ok"]
+    assert not app.ready_file.exists()
+
+
+def test_service_start_warns_on_version_mismatch_and_handles_dim_score_threshold(tmp_path, monkeypatch):
+    import argparse
+
+    import lixity.service as service
+
+    app = manager(tmp_path, free_port())
+    monkeypatch.setattr(
+        app,
+        "_status",
+        lambda *_a, **_kw: {
+            "schema_version": "lixity-service-local/1",
+            "ok": True,
+            "state": "running",
+            "url": f"http://127.0.0.1:{app.port}/",
+            "pid": 12345,
+            "backend": "process",
+            "installed_version": __version__,
+            "running_version": "0.0.1",
+            "log": str(app.log_file),
+            "message": "Lixity is running",
+        },
+    )
+    started = app.control("start", {})
+    assert started["ok"] and started["state"] == "running"
+    assert "0.0.1" in started["warning"]
+    assert "restart" in started["message"]
+
+    parser = argparse.ArgumentParser()
+    service.configure(parser)
+    parsed = parser.parse_args(["start", "--dim-threshold", "2.75"])
+    assert parsed.dim_score_threshold == 2.75
+    resolved = service.resolve_settings(app.port, {"dim_score_threshold": 2.75}, None)
+    assert resolved["dim_score_threshold"] == 2.75
+    assert "--dim-threshold=2.75" in service.worker_argv(resolved, "a" * 64)
+    legacy = service.resolve_settings(app.port, {"dim_threshold": 2.25}, None)
+    assert legacy["dim_score_threshold"] == 2.25
+    assert "--dim-threshold=2.25" in service.worker_argv({"port": app.port, "host": "127.0.0.1", "dim_threshold": 2.25}, "a" * 64)

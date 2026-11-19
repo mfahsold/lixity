@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode, urlsplit
 
+from ..io import FileUtils
 from . import api
 from .images import IMAGE_TYPES
 from .models import Source, SourceContext, SourceVersion, Tombstone
@@ -239,15 +240,19 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
         raise ResearchError("Zotero attachment must resolve to a local file URL")
     from urllib.request import url2pathname
     path = Path(url2pathname(parsed.path))
-    if not path.is_absolute() or not path.is_file():
+    if not path.is_absolute():
         raise ResearchError("Zotero attachment is not an available local regular file; download it in Zotero first")
     is_pdf = media_type == "application/pdf"
     maximum = api.MAX_PDF_BYTES if is_pdf else api.MAX_IMAGE_BYTES if media_type in IMAGE_TYPES else api.MAX_SOURCE_BYTES
     if progress_callback:
         progress_callback("zotero-read", f"Reading attachment {path.name}...")
-    with path.open("rb") as stream:
-        content = stream.read(maximum + 1)
-    if not content or len(content) > maximum:
+    try:
+        content, _ = FileUtils.read_bounded_regular_bytes(
+            path, maximum=maximum, nofollow=True, verify_stable=True
+        )
+    except OSError as exc:
+        raise ResearchError("Zotero attachment is not an available local regular file or exceeds the PDF/text/image ingestion size limit") from exc
+    if not content:
         raise ResearchError("Zotero attachment is empty or exceeds the PDF/text/image ingestion size limit")
     if migration and existing and digest(content) != existing["sha256"]:
         raise ResearchError("Migration binding requires exact original attachment bytes")

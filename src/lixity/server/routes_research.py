@@ -12,14 +12,18 @@ import binascii
 import contextlib
 import os
 import re
+import stat
 import tempfile
 from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.parse import parse_qs, urlparse
 
+from ..io import FileUtils
 from ..research import api as research_api
-from ..research.limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES
-from ..research.repository import ResearchConflictError, ResearchError
+from ..research.limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES, MAX_SOURCE_BYTES
+from ..research.media import MEDIA_TYPES
+from ..research.models import Reference, Source, SourceVersion
+from ..research.repository import Repository, ResearchConflictError, ResearchError
 from ._base import ResponseMixin
 from .pdf_context import manuscript_pdf_token, research_context_token
 
@@ -44,9 +48,8 @@ class ResearchRoutesMixin(ResponseMixin):
         return True
 
     def _handle_research_timeline(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         if len(query.get("dossier_id", [])) > 1:
@@ -58,9 +61,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_manuscript_dossier_drafts(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         manuscript = self.source_input
         if not manuscript:
@@ -86,9 +88,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_dossier_from_manuscript(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         manuscript = payload.get("manuscript") or self.source_input
         if not manuscript:
@@ -116,9 +117,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_claim_relations(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         retracted = query.get("include_retracted", ["false"])
@@ -133,9 +133,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_claim_relation_add(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         allowed = {"project_id", "research_token", "expected_snapshot", "from_claim_id", "to_claim_id",
                    "from_claim_revision", "to_claim_revision", "relation", "rationale", "actor"}
@@ -160,15 +159,12 @@ class ResearchRoutesMixin(ResponseMixin):
                 actor=payload.get("actor", "local-author"),
             )
             self._json({"ok": True, **data})
-        except ResearchConflictError as exc:
-            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._research_error(exc)
 
     def _handle_research_images(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         dossier_id = query.get("dossier_id", [None])[0]
@@ -194,47 +190,118 @@ class ResearchRoutesMixin(ResponseMixin):
     def _handle_research_media(self) -> None:
         self._handle_research_image(media=True)
 
-    def _handle_research_image(self, *, media: bool = False) -> None:
-        if not self._same_origin() or self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
-            self._json({"ok": False, "message": "Cross-origin image request forbidden"}, 403)
+    def _stream_media_range(
+        self,
+        root: Path,
+        *,
+        project_id: str,
+        source_id: str,
+        version_id: str,
+        requested: str,
+    ) -> None:
+        repository = Repository(root)
+        snapshot = repository.snapshot()
+        if project_id != snapshot.project.id:
+            raise ResearchError("Image project does not match the selected research project")
+        try:
+            source = snapshot.get(Reference(id=source_id), Source)
+            version = snapshot.get(Reference(id=version_id), SourceVersion)
+        except ValueError as exc:
+            raise ResearchError(str(exc)) from None
+        if version.source_ref.id != source.id:
+            raise ResearchError("Image source version does not belong to the requested source")
+        if version.blob.media_type not in MEDIA_TYPES:
+            raise ResearchError("Requested source version is not retained PDF/video media")
+        length = version.blob.byte_length
+        if type(length) is not int or not 0 <= length <= MAX_PDF_BYTES:
+            raise ResearchError("Invalid research blob length")
+        blob_path = repository.safe(repository.data / "blobs" / version.blob.sha256)
+        headers: dict[str, str] = {
+            "Cross-Origin-Resource-Policy": "same-origin",
+            "Accept-Ranges": "bytes",
+        }
+        if version.blob.media_type == "application/pdf":
+            headers["Content-Disposition"] = 'attachment; filename="document.pdf"'
+            headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
+        matched = re.fullmatch(r"bytes=(\d{0,12})-(\d{0,12})", requested)
+        if not matched or not any(matched.groups()):
+            self._send(
+                416,
+                b"",
+                version.blob.media_type,
+                headers={**headers, "Content-Range": f"bytes */{length}"},
+            )
             return
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        first, last = matched.groups()
+        start = int(first) if first else max(0, length - int(last))
+        end = min(length - 1, int(last)) if first and last else length - 1
+        if start >= length or start > end or (not first and int(last) == 0):
+            self._send(
+                416,
+                b"",
+                version.blob.media_type,
+                headers={**headers, "Content-Range": f"bytes */{length}"},
+            )
+            return
+        flags = (
+            os.O_RDONLY
+            | getattr(os, "O_NONBLOCK", 0)
+            | getattr(os, "O_BINARY", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        fd = os.open(blob_path, flags)
+        descriptor: int | None = fd
+        try:
+            opened = os.fstat(fd)
+            if not stat.S_ISREG(opened.st_mode) or opened.st_size != length:
+                raise ResearchError("Research blob length mismatch")
+            with os.fdopen(fd, "rb") as stream:
+                descriptor = None
+                stream.seek(start)
+                headers["Content-Range"] = f"bytes {start}-{end}/{length}"
+                self._send_stream(
+                    206,
+                    stream,
+                    end - start + 1,
+                    version.blob.media_type,
+                    headers=headers,
+                )
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def _handle_research_image(self, *, media: bool = False) -> None:
+        if not self._require_same_origin("Cross-origin image request forbidden"):
+            return
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         if any(len(query.get(name, [])) != 1 for name in ("project_id", "source_id", "version_id")):
             self._json({"ok": False, "message": "An explicit project, source and version are required"}, 400)
             return
         try:
+            requested = self.headers.get("Range") if media else None
+            if media and requested:
+                self._stream_media_range(
+                    root,
+                    project_id=query["project_id"][0],
+                    source_id=query["source_id"][0],
+                    version_id=query["version_id"][0],
+                    requested=requested,
+                )
+                return
             read = research_api.read_media if media else research_api.read_image
             result = read(root, project_id=query["project_id"][0],
                                               source_id=query["source_id"][0], version_id=query["version_id"][0])
             content = result["content"]
             headers = {"Cross-Origin-Resource-Policy": "same-origin"}
-            code = 200
             if media:
                 headers["Accept-Ranges"] = "bytes"
                 if result["media_type"] == "application/pdf":
                     headers["Content-Disposition"] = 'attachment; filename="document.pdf"'
                     headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
-                requested = self.headers.get("Range")
-                if requested:
-                    matched = re.fullmatch(r"bytes=(\d{0,12})-(\d{0,12})", requested)
-                    length = len(content)
-                    if not matched or not any(matched.groups()):
-                        self._send(416, b"", result["media_type"], headers={**headers, "Content-Range": f"bytes */{length}"})
-                        return
-                    first, last = matched.groups()
-                    start = int(first) if first else max(0, length - int(last))
-                    end = min(length - 1, int(last)) if first and last else length - 1
-                    if start >= length or start > end or (not first and int(last) == 0):
-                        self._send(416, b"", result["media_type"], headers={**headers, "Content-Range": f"bytes */{length}"})
-                        return
-                    headers["Content-Range"] = f"bytes {start}-{end}/{length}"
-                    content = content[start:end + 1]
-                    code = 206
-            self._send(code, content, result["media_type"], headers=headers)
+            self._send(200, content, result["media_type"], headers=headers)
         except (ResearchError, OSError, ValueError) as exc:
             self._log.warning("Retained media read stage=failed error=%s", type(exc).__name__)
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -254,10 +321,9 @@ class ResearchRoutesMixin(ResponseMixin):
     def _handle_research_image_write(self, payload: dict[str, Any], *, attach: bool, media: bool = False) -> None:
         category = "Media" if media else "Image"
         self._log.info("%s capture stage=request attach=%s", category, attach)
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
+        root = self._require_research_root()
+        if root is None:
             self._log.warning("%s capture stage=rejected reason=research_unavailable", category)
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
         try:
             from ..research.repository import Repository
@@ -302,12 +368,12 @@ class ResearchRoutesMixin(ResponseMixin):
                                                    expected_snapshot=payload.get("expected_snapshot"), **common)
             self._log.info("%s capture stage=saved attach=%s bytes=%d", category, attach, len(content))
             self._json({"ok": True, **result})
-        except ResearchConflictError as exc:
-            self._log.warning("%s capture stage=conflict attach=%s", category, attach)
-            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
-            self._log.warning("%s capture stage=failed attach=%s error=%s errno=%s",
-                              category, attach, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
+            if isinstance(exc, ResearchConflictError):
+                self._log.warning("%s capture stage=conflict attach=%s", category, attach)
+            else:
+                self._log.warning("%s capture stage=failed attach=%s error=%s errno=%s",
+                                  category, attach, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
             self._research_error(exc)
 
     def _handle_zotero_status(self) -> None:
@@ -342,9 +408,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 500)
 
     def _handle_research_sources(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         source_id = parse_qs(urlparse(self.path).query).get("id", [None])[0]
         try:
@@ -378,9 +443,8 @@ class ResearchRoutesMixin(ResponseMixin):
         self._read_research_dossiers(query)
 
     def _read_research_dossiers(self, query: dict[str, list[str]]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         dossier_id = query.get("id", [None])[0]
         try:
@@ -403,9 +467,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_claims(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         dossier_id = None
         claim_id = None
@@ -423,9 +486,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_decisions(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         try:
             data = research_api.list_decisions(root)
@@ -434,9 +496,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_matrix(self) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         fmt = query.get("format", ["json"])[0].lower()
@@ -463,9 +524,8 @@ class ResearchRoutesMixin(ResponseMixin):
         self._handle_research_editorial_read(decision=False)
 
     def _handle_research_decision_acknowledge(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         required_text = ("decision_id", "dossier_id", "expected_snapshot", "status")
         required_revisions = ("expected_decision_revision", "expected_dossier_revision")
@@ -479,15 +539,12 @@ class ResearchRoutesMixin(ResponseMixin):
                 expected_dossier_revision=payload["expected_dossier_revision"], status=payload["status"],
                 note=payload.get("note"), actor=payload.get("actor", "local-author"))
             self._json({"ok": True, **result})
-        except ResearchConflictError as error:
-            self._json({"ok": False, "message": str(error)}, 409)
         except (ResearchError, OSError, ValueError) as error:
             self._research_error(error)
 
     def _handle_research_editorial_read(self, *, decision: bool) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         decision_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
         if decision and not decision_id:
@@ -501,9 +558,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(error)}, 400)
 
     def _handle_research_record_read(self, *, history: bool) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         kind = query.get("kind", [""])[0]
@@ -529,9 +585,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_record_prepare(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         kind, record_id = payload.get("kind"), payload.get("id")
         changes, base_revision = payload.get("changes"), payload.get("base_revision")
@@ -564,9 +619,8 @@ class ResearchRoutesMixin(ResponseMixin):
         self._handle_research_revision_batch(payload, apply=True)
 
     def _handle_research_revision_batch(self, payload: dict[str, Any], *, apply: bool) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         operations = payload.get("operations")
         actor = payload.get("actor", "local-author")
@@ -585,15 +639,12 @@ class ResearchRoutesMixin(ResponseMixin):
             else:
                 result = research_api.prepare_record_revisions(root, operations, actor=actor)
             self._json({"ok": True, **result})
-        except ResearchConflictError as exc:
-            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
             self._research_error(exc)
 
     def _handle_research_record_revise(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         kind = payload.get("kind")
         record_id = payload.get("id")
@@ -635,8 +686,6 @@ class ResearchRoutesMixin(ResponseMixin):
                 actor=actor,
             )
             self._json({"ok": True, **result})
-        except ResearchConflictError as exc:
-            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
             self._research_error(exc)
 
@@ -651,10 +700,37 @@ class ResearchRoutesMixin(ResponseMixin):
         except (ResearchError, OSError, ValueError) as exc:
             self._research_error(exc)
 
+    @staticmethod
+    def _resolve_contained_ingest_file(root: Path, raw_file: Any) -> Path:
+        if not isinstance(raw_file, str) or not raw_file.strip() or "\0" in raw_file:
+            raise ResearchError("Invalid source file path")
+        base_root = root.resolve(strict=True)
+        requested = Path(raw_file)
+        candidate = requested if requested.is_absolute() else (base_root / requested)
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError as exc:
+            raise ResearchError("Source file is missing or outside the research project") from exc
+        if not resolved.is_relative_to(base_root):
+            raise ResearchError("Source file path must stay inside the research project")
+        if requested.is_symlink() or candidate.is_symlink():
+            raise ResearchError("Source file path must not be a symbolic link")
+        current = base_root
+        for part in resolved.relative_to(base_root).parts:
+            current = current / part
+            if current.is_symlink():
+                raise ResearchError("Source file path must not traverse symbolic links")
+        if not requested.is_absolute():
+            current = base_root
+            for part in requested.parts:
+                current = current / part
+                if current.is_symlink():
+                    raise ResearchError("Source file path must not traverse symbolic links")
+        return resolved
+
     def _handle_research_ingest(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         if payload.get("allow_retention") is not True:
             self._json({"ok": False, "message": "Explicit retention permission is required (allow_retention: true)"}, 400)
@@ -664,7 +740,8 @@ class ResearchRoutesMixin(ResponseMixin):
         content_base64 = payload.get("content_base64")
         filename = str(payload.get("filename") or "").strip()
         file_path = payload.get("file")
-        title = payload.get("title") or (Path(filename).name if filename else (Path(str(file_path)).name if file_path else "Untitled Source"))
+        file_name_for_title = Path(file_path).name if isinstance(file_path, str) and file_path.strip() else ""
+        title = payload.get("title") or (Path(filename).name if filename else (file_name_for_title or "Untitled Source"))
         language = payload.get("language") or None
         raw_tags = payload.get("tags")
         tags: list[str] = []
@@ -680,6 +757,10 @@ class ResearchRoutesMixin(ResponseMixin):
                 context=context, origin_url=payload.get("origin_url"),
             )
 
+        def safe_suffix(name: str, default: str) -> str:
+            suffix = Path(name).suffix.lower() if name else ""
+            return suffix if re.fullmatch(r"\.[a-z0-9]{1,10}", suffix) else default
+
         def ingest_bytes(data: bytes, suffix: str) -> dict[str, Any]:
             with tempfile.NamedTemporaryFile("wb", suffix=suffix, delete=False) as upload:
                 upload.write(data)
@@ -692,26 +773,37 @@ class ResearchRoutesMixin(ResponseMixin):
 
         try:
             if content_base64 is not None:
+                if not isinstance(content_base64, str):
+                    self._json({"ok": False, "message": "Invalid base64 payload"}, 400)
+                    return
                 try:
-                    raw_bytes = base64.b64decode(content_base64)
+                    raw_bytes = base64.b64decode(content_base64, validate=True)
                 except (ValueError, binascii.Error) as exc:
                     self._json({"ok": False, "message": f"Invalid base64 payload: {exc}"}, 400)
                     return
                 if not raw_bytes:
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
-                ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".pdf"
-                res = ingest_bytes(raw_bytes, ext)
+                res = ingest_bytes(raw_bytes, safe_suffix(filename, ".pdf"))
             elif content is not None:
                 if not isinstance(content, str) or not content.strip():
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
-                ext = (
-                    Path(filename).suffix.lower() if filename and Path(filename).suffix else ".txt"
+                res = ingest_bytes(content.encode("utf-8"), safe_suffix(filename, ".txt"))
+            elif file_path is not None:
+                resolved = self._resolve_contained_ingest_file(root, file_path)
+                suffix = resolved.suffix.lower()
+                maximum = (
+                    MAX_PDF_BYTES
+                    if suffix in {".pdf", ".mp4", ".webm"}
+                    else MAX_IMAGE_BYTES
+                    if suffix in {".png", ".jpg", ".jpeg"}
+                    else MAX_SOURCE_BYTES
                 )
-                res = ingest_bytes(content.encode("utf-8"), ext)
-            elif file_path:
-                res = ingest_file(str(file_path))
+                raw_bytes, _ = FileUtils.read_bounded_regular_bytes(
+                    resolved, maximum=maximum, nofollow=True, verify_stable=True
+                )
+                res = ingest_bytes(raw_bytes, safe_suffix(resolved.name, ".txt"))
             else:
                 self._json(
                     {
@@ -789,9 +881,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._research_error(exc)
 
     def _handle_research_search(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         query = str(payload.get("query") or "").strip()
         if not query:
@@ -806,9 +897,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_dossier(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         action = payload.get("action")
         if action in ("save_collection", "delete_collection", "set_collections"):
@@ -862,9 +952,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._research_error(exc)
 
     def _handle_research_compare(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+        root = self._require_research_root()
+        if root is None:
             return
         source_id = str(payload.get("source_id") or "").strip()
         if not source_id:
@@ -883,9 +972,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_claim_add(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         title = str(payload.get("title") or "").strip()
         statement = str(payload.get("statement") or "").strip()
@@ -925,9 +1013,8 @@ class ResearchRoutesMixin(ResponseMixin):
             self._research_error(exc)
 
     def _handle_research_evidence_link(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         claim_id = str(payload.get("claim_id") or "").strip()
         passage_id = str(payload.get("passage_id") or "").strip()
@@ -950,15 +1037,12 @@ class ResearchRoutesMixin(ResponseMixin):
                 expected_project_id=payload.get("project_id"),
             )
             self._json({"ok": True, "message": "Evidence linked", **res})
-        except ResearchConflictError as exc:
-            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
             self._research_error(exc)
 
     def _handle_research_decision_add(self, payload: dict[str, Any]) -> None:
-        root = self.get_research_root()
-        if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+        root = self._require_research_root(missing_status=400)
+        if root is None:
             return
         title = str(payload.get("title") or "").strip()
         rationale = str(payload.get("rationale") or "").strip()

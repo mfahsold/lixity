@@ -13,8 +13,7 @@ from ._base import ResponseMixin
 class EditingRoutesMixin(ResponseMixin):
     def _handle_editor_view(self) -> None:
         """Render the existing workspace only for an acknowledged source revision."""
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         try:
             query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
@@ -56,8 +55,7 @@ class EditingRoutesMixin(ResponseMixin):
         return ManuscriptStore(Path(self.workspace_root), Path(self.source_input), language=language)
 
     def _handle_editor_open(self) -> None:
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         try:
             with self._workspace_lock:
@@ -96,8 +94,7 @@ class EditingRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_editor_timeline(self) -> None:
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         try:
             with self._workspace_lock:
@@ -112,8 +109,7 @@ class EditingRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_editor_delta(self) -> None:
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         try:
             with self._workspace_lock:

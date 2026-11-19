@@ -101,29 +101,17 @@ class ManuscriptStore:
         self.document = _digest((str(self.root) + "\0" + str(self.source)).encode())
         self.directory = self.root / ".lixity" / "editing"
         self.language = language or "en"
+        self._schema_ready = False
 
     def _read(self) -> bytes:
         if self.source.is_symlink() or not self.source.resolve(strict=True).is_relative_to(self.root):
             raise ValueError("Manuscript path changed")
-        if self.source.stat().st_size > MAX_TEXT_BYTES:
-            raise ValueError("Manuscript exceeds the 4 MiB editing limit")
-        return FileUtils._read_regular_bytes(str(self.source))
+        return FileUtils.read_bounded_regular_bytes(
+            self.source, maximum=MAX_TEXT_BYTES, nofollow=True
+        )[0]
 
-    def _database(self) -> sqlite3.Connection:
-        if self.directory.parent.is_symlink() or self.directory.is_symlink():
-            raise ValueError("Recovery directory must not be a symlink")
-        self.directory.parent.mkdir(mode=0o700, exist_ok=True)
-        self.directory.mkdir(mode=0o700, exist_ok=True)
-        path = self.directory / "recovery.sqlite3"
-        if path.is_symlink():
-            raise ValueError("Recovery database must not be a symlink")
-        if not path.exists():
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            os.close(fd)
-        db = sqlite3.connect(path)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA busy_timeout=5000")
-        db.execute("PRAGMA synchronous=FULL")
+    def _initialize_schema(self, db: sqlite3.Connection) -> None:
+        db.execute("PRAGMA journal_mode=WAL")
         db.execute("CREATE TABLE IF NOT EXISTS recovery (document TEXT, id TEXT, kind TEXT, content BLOB, created REAL, PRIMARY KEY(document,id))")
         db.execute("CREATE INDEX IF NOT EXISTS idx_recovery_doc_created ON recovery (document, kind, created DESC)")
         db.execute("CREATE TABLE IF NOT EXISTS receipts (document TEXT, id TEXT, request TEXT, response TEXT, created REAL, PRIMARY KEY(document,id))")
@@ -167,8 +155,41 @@ class ManuscriptStore:
             db.execute("DROP TABLE manuscript_revisions")
             db.execute("ALTER TABLE manuscript_revisions_new RENAME TO manuscript_revisions")
         db.execute("CREATE INDEX IF NOT EXISTS idx_manuscript_revisions_doc_created ON manuscript_revisions (document, created_at DESC)")
+        db.execute("PRAGMA user_version=1")
         db.commit()
-        return db
+
+    def _database(self, *, ensure_schema: bool = True) -> sqlite3.Connection:
+        if self.directory.parent.is_symlink() or self.directory.is_symlink():
+            raise ValueError("Recovery directory must not be a symlink")
+        self.directory.parent.mkdir(mode=0o700, exist_ok=True)
+        self.directory.mkdir(mode=0o700, exist_ok=True)
+        path = self.directory / "recovery.sqlite3"
+        if path.is_symlink():
+            raise ValueError("Recovery database must not be a symlink")
+        created = not path.exists()
+        if created:
+            self._schema_ready = False
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            os.close(fd)
+        db = sqlite3.connect(path)
+        try:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA trusted_schema=OFF")
+            db.execute("PRAGMA busy_timeout=5000")
+            db.execute("PRAGMA synchronous=FULL")
+            if not self._schema_ready:
+                if not created and not ensure_schema:
+                    version = int(db.execute("PRAGMA user_version").fetchone()[0])
+                    journal_mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+                    if version >= 1 and journal_mode == "wal":
+                        self._schema_ready = True
+                        return db
+                self._initialize_schema(db)
+                self._schema_ready = True
+            return db
+        except BaseException:
+            db.close()
+            raise
 
     def analyze_snapshot(self, text: str) -> dict[str, Any]:
         """Compute deterministic offline stylometric metrics for a manuscript snapshot."""
@@ -249,8 +270,8 @@ class ManuscriptStore:
             data = self._read()
             text, _, _ = _decode(data)
             recovery: list[dict[str, Any]] = []
-            if self.directory.exists():
-                with closing(self._database()) as db:
+            if (self.directory / "recovery.sqlite3").exists():
+                with closing(self._database(ensure_schema=False)) as db:
                     recovery = [{"id": row["id"], "kind": row["kind"], "created": row["created"]}
                                 for row in db.execute("SELECT id,kind,created FROM recovery WHERE document=? ORDER BY created DESC", (self.document,))]
             log_event(logger, "manuscript_open", level=logging.DEBUG, bytes=len(data), recovery=len(recovery))
@@ -262,7 +283,7 @@ class ManuscriptStore:
             raise ValueError("Invalid recovery identifier")
         if not (self.directory / "recovery.sqlite3").exists():
             raise ValueError("Recovery entry is unavailable")
-        with self._lock(), closing(self._database()) as db:
+        with self._lock(), closing(self._database(ensure_schema=False)) as db:
             row = db.execute("SELECT content,kind FROM recovery WHERE document=? AND id=?", (self.document, identifier)).fetchone()
             if row is None:
                 raise ValueError("Recovery entry is unavailable")
@@ -414,32 +435,38 @@ class ManuscriptStore:
             "chapter_metrics": json.loads(str(row["chapter_metrics"])),
         }
 
+    def _timeline_rows(self, db: sqlite3.Connection, bounded: int) -> list[dict[str, Any]]:
+        rows = db.execute(
+            "SELECT revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
+            "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
+            "flags_count, chapter_metrics "
+            "FROM manuscript_revisions WHERE document=? "
+            "ORDER BY created_at DESC, revision DESC LIMIT ?",
+            (self.document, bounded),
+        ).fetchall()
+        return [self._row_to_revision(row) for row in reversed(rows)]
+
+    def _recorded_revision_from_db(self, db: sqlite3.Connection, revision: str) -> dict[str, Any] | None:
+        row = db.execute(
+            "SELECT * FROM manuscript_revisions WHERE document=? AND revision=?",
+            (self.document, revision),
+        ).fetchone()
+        return self._row_to_revision(row) if row is not None else None
+
     def timeline(self, limit: int = 30) -> list[dict[str, Any]]:
         """Return unique content snapshots by first recording time (oldest to newest)."""
         bounded = max(1, min(int(limit), 200))
         if not (self.directory / "recovery.sqlite3").exists():
             return []
-        with self._lock(), closing(self._database()) as db:
-            rows = db.execute(
-                "SELECT revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
-                "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
-                "flags_count, chapter_metrics "
-                "FROM manuscript_revisions WHERE document=? "
-                "ORDER BY created_at DESC, revision DESC LIMIT ?",
-                (self.document, bounded),
-            ).fetchall()
-        return [self._row_to_revision(row) for row in reversed(rows)]
+        with self._lock(), closing(self._database(ensure_schema=False)) as db:
+            return self._timeline_rows(db, bounded)
 
     def _recorded_revision(self, revision: str) -> dict[str, Any] | None:
         """Resolve an immutable measurement independently of the timeline window."""
         if not (self.directory / "recovery.sqlite3").exists():
             return None
-        with closing(self._database()) as db:
-            row = db.execute(
-                "SELECT * FROM manuscript_revisions WHERE document=? AND revision=?",
-                (self.document, revision),
-            ).fetchone()
-        return self._row_to_revision(row) if row is not None else None
+        with self._lock(), closing(self._database(ensure_schema=False)) as db:
+            return self._recorded_revision_from_db(db, revision)
 
     def delta(self, base_revision: str | None = None, target_revision: str | None = None) -> dict[str, Any]:
         """Compare retained measurements or the captured current source, never interpolating."""
@@ -448,25 +475,41 @@ class ManuscriptStore:
         if target_revision is not None and not _ID.fullmatch(target_revision):
             raise ValueError("Invalid target revision identifier")
         with self._lock():
-            history = self.timeline(limit=100)
-            by_rev = {item["revision"]: item for item in history}
-            if target_revision is not None:
-                target = by_rev.get(target_revision) or self._recorded_revision(target_revision)
-                if target is None:
-                    raise ValueError("Target revision not found in manuscript history")
+            db_exists = (self.directory / "recovery.sqlite3").exists()
+            if db_exists:
+                with closing(self._database(ensure_schema=False)) as db:
+                    history = self._timeline_rows(db, 100)
+                    by_rev = {item["revision"]: item for item in history}
+                    if target_revision is not None:
+                        target = by_rev.get(target_revision) or self._recorded_revision_from_db(db, target_revision)
+                        if target is None:
+                            raise ValueError("Target revision not found in manuscript history")
+                    else:
+                        source = self._read()
+                        text, _, _ = _decode(source)
+                        revision = _digest(source)
+                        target = by_rev.get(revision) or self._recorded_revision_from_db(db, revision)
+                        if target is None:
+                            target = self.analyze_snapshot(text)
+                            target["revision"] = revision
+                            target["created_at"] = None
+                    base: dict[str, Any] | None = None
+                    if base_revision is not None:
+                        base = by_rev.get(base_revision) or self._recorded_revision_from_db(db, base_revision)
+                        if base is None:
+                            raise ValueError("Base revision not found in manuscript history")
             else:
+                history = []
+                if target_revision is not None:
+                    raise ValueError("Target revision not found in manuscript history")
                 source = self._read()
                 text, _, _ = _decode(source)
                 revision = _digest(source)
-                target = by_rev.get(revision) or self._recorded_revision(revision)
-                if target is None:
-                    target = self.analyze_snapshot(text)
-                    target["revision"] = revision
-                    target["created_at"] = None
-            base: dict[str, Any] | None = None
-            if base_revision is not None:
-                base = by_rev.get(base_revision) or self._recorded_revision(base_revision)
-                if base is None:
+                target = self.analyze_snapshot(text)
+                target["revision"] = revision
+                target["created_at"] = None
+                base = None
+                if base_revision is not None:
                     raise ValueError("Base revision not found in manuscript history")
         if (base_revision is None and len(history) >= 2 and target in history
                 and (target_revision is not None or target["revision"] == history[-1]["revision"])):

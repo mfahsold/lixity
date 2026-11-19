@@ -1,17 +1,23 @@
 """Explicit transcription through a local MLX-Audio-compatible service."""
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import mimetypes
 import secrets
-import stat
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .speech_providers import REQUEST_TIMEOUT_SECONDS, no_redirect_opener, speech_endpoint
+from .io import FileUtils
+from .speech_providers import (
+    REQUEST_TIMEOUT_SECONDS,
+    no_redirect_opener,
+    speech_endpoint,
+    validate_resolved_endpoint,
+)
 
 SCHEMA = "lixity-audio-transcription/1"
 DEFAULT_MODEL = "mlx-community/parakeet-tdt-0.6b-v3"
@@ -27,16 +33,19 @@ def transcription_endpoint(base_url: str) -> str:
 
 def _read_audio(path: str | Path) -> tuple[Path, bytes, str]:
     requested = Path(path).expanduser()
-    if requested.is_symlink():
-        raise ValueError("Audio transcription input must not be a symlink")
-    source = requested.resolve(strict=True)
-    info = source.stat()
-    if not stat.S_ISREG(info.st_mode) or info.st_size <= 0 or info.st_size > MAX_AUDIO_BYTES:
+    try:
+        data, _info = FileUtils.read_bounded_regular_bytes(
+            requested, maximum=MAX_AUDIO_BYTES, nofollow=True, verify_stable=True
+        )
+    except OSError as exc:
+        if exc.errno == errno.ELOOP or "symlink" in str(exc).lower():
+            raise ValueError("Audio transcription input must not be a symlink") from exc
+        if "changed" in str(exc).lower():
+            raise ValueError("Audio changed while it was being read") from exc
+        raise ValueError("Audio transcription requires a nonempty regular file within the size limit") from exc
+    if not data or len(data) > MAX_AUDIO_BYTES:
         raise ValueError("Audio transcription requires a nonempty regular file within the size limit")
-    data = source.read_bytes()
-    if len(data) != info.st_size or len(data) > MAX_AUDIO_BYTES:
-        raise ValueError("Audio changed while it was being read")
-    return source, data, hashlib.sha256(data).hexdigest()
+    return requested.resolve(strict=True), data, hashlib.sha256(data).hexdigest()
 
 
 def _multipart(audio: Path, data: bytes, *, model: str, language: str | None) -> tuple[bytes, str]:
@@ -114,10 +123,16 @@ def transcribe_audio(
         or any(ord(character) < 32 for character in language)
     ):
         raise ValueError("Transcription language must be a short bounded code")
+    endpoint = transcription_endpoint(base_url)
+    try:
+        validate_resolved_endpoint(endpoint)
+    except OSError:
+        if opener is None:
+            raise RuntimeError("Transcription provider request failed or returned an invalid response") from None
     source, data, digest = _read_audio(audio_path)
     payload, boundary = _multipart(source, data, model=model, language=language)
     request = urllib.request.Request(  # noqa: S310 - explicit validated service URL
-        transcription_endpoint(base_url),
+        endpoint,
         data=payload,
         headers={
             "Content-Type": f"multipart/form-data; boundary={boundary}",

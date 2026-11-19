@@ -10,10 +10,15 @@ import json
 import secrets
 from collections.abc import Mapping
 from html import escape
-from typing import Any
+from pathlib import Path
+from typing import Any, BinaryIO
 
 from ..log import get_logger
-from ..research.repository import ResearchCleanupError, ResearchPublicationError
+from ..research.repository import (
+    ResearchCleanupError,
+    ResearchConflictError,
+    ResearchPublicationError,
+)
 from ..ui.components import status_strip
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome, WorkspaceState
@@ -58,13 +63,13 @@ class ResponseMixin(WorkspaceState):
         """
         self._log.debug(message)
 
-    def _send(
-        self, code: int, body: bytes, content_type: str, *, headers: Mapping[str, str] | None = None
-    ) -> bool:
+    def _write_response_headers(
+        self, code: int, content_length: int, content_type: str, *, headers: Mapping[str, str] | None = None
+    ) -> None:
         extra = dict(headers or {})
         self.send_response(code)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(content_length))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
@@ -79,6 +84,11 @@ class ResponseMixin(WorkspaceState):
         )
         for name, value in extra.items():
             self.send_header(name, value)
+
+    def _send(
+        self, code: int, body: bytes, content_type: str, *, headers: Mapping[str, str] | None = None
+    ) -> bool:
+        self._write_response_headers(code, len(body), content_type, headers=headers)
         try:
             self.end_headers()
             self.wfile.write(body)
@@ -88,6 +98,33 @@ class ResponseMixin(WorkspaceState):
             # errors out of route processing handlers, which might retry as 500.
             self.close_connection = True
             self._log.warning("Client disconnected while sending HTTP %d response", code)
+            return False
+
+    def _send_stream(
+        self,
+        code: int,
+        stream: BinaryIO,
+        byte_count: int,
+        content_type: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+        chunk_size: int = 65536,
+    ) -> bool:
+        self._write_response_headers(code, byte_count, content_type, headers=headers)
+        try:
+            self.end_headers()
+            remaining = byte_count
+            while remaining > 0:
+                chunk = stream.read(min(chunk_size, remaining))
+                if not chunk:
+                    self.close_connection = True
+                    return False
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
+            return True
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            self.close_connection = True
+            self._log.warning("Client disconnected while streaming HTTP %d response", code)
             return False
 
     def _send_dashboard_shell(
@@ -168,23 +205,43 @@ class ResponseMixin(WorkspaceState):
         )
 
     def _research_error(self, error: Exception, code: int = 400, *, message: str | None = None) -> None:
-        """Preserve publication/cleanup recovery messages as server failures."""
-        if isinstance(error, (ResearchPublicationError, ResearchCleanupError)):
+        """Preserve conflict as 409 and publication/cleanup recovery messages as 500."""
+        if isinstance(error, ResearchConflictError):
+            code = 409
+        elif isinstance(error, (ResearchPublicationError, ResearchCleanupError)):
             code = 500
         self._json({"ok": False, "message": str(error) if message is None else message}, code)
 
+    def _require_research_root(self, *, missing_status: int = 404) -> Path | None:
+        """Return the initialized research root or respond with the expected 4xx status."""
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, missing_status)
+            return None
+        return root
+
     def _same_origin(self) -> bool:
-        """True when the request carries no Origin, or one matching its own Host.
+        """True when Sec-Fetch-Site and Origin are consistent with same-origin access.
 
         A missing Origin is accepted because non-browser clients (the CLI, the
-        Task Scheduler launcher) do not send one; the loopback-only bind and the
-        Host check are what constrain reachability.
+        Task Scheduler launcher) do not send one; the loopback-only bind,
+        Sec-Fetch-Site check, and Host check constrain reachability.
         """
+        sec_fetch_site = self.headers.get("Sec-Fetch-Site")
+        if sec_fetch_site is not None and sec_fetch_site.strip().lower() not in ("same-origin", "none"):
+            return False
         origin = self.headers.get("Origin")
         if origin is None:
             return True
         host = self.headers.get("Host", "")
         return origin in (f"http://{host}", f"https://{host}")
+
+    def _require_same_origin(self, message: str = "Cross-origin request forbidden") -> bool:
+        """Reject cross-origin or cross-site requests with HTTP 403."""
+        if self._same_origin():
+            return True
+        self._json({"ok": False, "message": message}, 403)
+        return False
 
     def _server_port(self) -> int:
         return int(getattr(self.server, "server_port", DEFAULT_PORT))

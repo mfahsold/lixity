@@ -10,6 +10,7 @@ import ipaddress
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import urllib.error
@@ -28,11 +29,31 @@ MAX_REQUEST_BYTES = 32768
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 REQUEST_TIMEOUT_SECONDS = 300
 _LOCAL_NETWORKS = tuple(ipaddress.ip_network(network) for network in (
-    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "fc00::/7", "fe80::/10",
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7",
 ))
 
 
-def speech_endpoint(base_url: str) -> str:
+def _validate_ip_address(
+    address: ipaddress.IPv4Address | ipaddress.IPv6Address,
+    *,
+    scheme: str,
+    allow_link_local: bool,
+    error: str,
+) -> None:
+    unwrapped = getattr(address, "ipv4_mapped", None) or address
+    if unwrapped.is_multicast or unwrapped.is_unspecified:
+        raise ValueError(error)
+    if unwrapped.is_link_local and not allow_link_local:
+        raise ValueError(error)
+    if scheme == "http" and not (
+        unwrapped.is_loopback
+        or any(unwrapped in network for network in _LOCAL_NETWORKS)
+        or (allow_link_local and unwrapped.is_link_local)
+    ):
+        raise ValueError(error)
+
+
+def speech_endpoint(base_url: str, *, allow_link_local: bool = False) -> str:
     """Validate an explicit base URL and derive its standard speech endpoint."""
     error = "Speech base URL requires HTTPS or a local HTTP address, without credentials, query or fragment"
     if not base_url or any(char.isspace() or ord(char) < 32 for char in base_url) or "\\" in base_url:
@@ -47,17 +68,49 @@ def speech_endpoint(base_url: str) -> str:
             or parsed.password is not None or parsed.query or parsed.fragment or "?" in base_url
             or "#" in base_url or (port is not None and not 1 <= port <= 65535)):
         raise ValueError(error)
-    if parsed.scheme == "http" and host.lower() != "localhost":
-        try:
-            address = ipaddress.ip_address(host)
-        except ValueError:
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        if parsed.scheme == "http" and host.lower() != "localhost":
             raise ValueError(error) from None
-        if not (address.is_loopback or any(address in network for network in _LOCAL_NETWORKS)):
-            raise ValueError(error)
+    else:
+        _validate_ip_address(
+            address, scheme=parsed.scheme, allow_link_local=allow_link_local, error=error
+        )
     path = parsed.path.rstrip("/")
     if not path.endswith("/audio/speech"):
         path += "/audio/speech" if path.endswith("/v1") else "/v1/audio/speech"
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def validate_resolved_endpoint(endpoint: str, *, allow_link_local: bool = False) -> None:
+    """Reject resolved IP addresses in link-local, multicast, or unspecified ranges."""
+    error = "Speech endpoint resolved to a disallowed network address"
+    parsed = urllib.parse.urlsplit(endpoint)
+    host = parsed.hostname
+    if not host:
+        raise ValueError(error)
+    address: ipaddress.IPv4Address | ipaddress.IPv6Address | None
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        address = None
+    if address is not None:
+        _validate_ip_address(
+            address, scheme=parsed.scheme, allow_link_local=allow_link_local, error=error
+        )
+        return
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    for *_prefix, sockaddr in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):
+        raw_ip = str(sockaddr[0]).split("%", 1)[0]
+        resolved = ipaddress.ip_address(raw_ip)
+        unwrapped = getattr(resolved, "ipv4_mapped", None) or resolved
+        if unwrapped.is_multicast or unwrapped.is_unspecified:
+            raise ValueError(error)
+        if unwrapped.is_link_local and not allow_link_local:
+            raise ValueError(error)
+        if parsed.scheme == "http" and host.lower() == "localhost" and not unwrapped.is_loopback:
+            raise ValueError("Speech localhost endpoint must resolve to a loopback address")
 
 
 def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
@@ -254,6 +307,11 @@ def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None,
         if not key or any(ord(char) < 33 or ord(char) > 126 for char in key):
             raise ValueError("Speech API key environment variable is missing or invalid")
         headers["Authorization"] = "Bearer " + key
+    try:
+        validate_resolved_endpoint(endpoint)
+    except OSError:
+        if opener is None:
+            raise RuntimeError("Speech provider request failed or returned an invalid response") from None
     request = urllib.request.Request(endpoint, data=payload, headers=headers)  # noqa: S310 - explicit validated provider configuration
     client = no_redirect_opener(opener)
     try:

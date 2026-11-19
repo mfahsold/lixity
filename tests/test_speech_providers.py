@@ -410,3 +410,54 @@ def test_zonos_worker_request_parser_enforces_pin_allowlist_and_symlinks(tmp_pat
         _parse_request(json.dumps({
             'model': ALLOWED_MODEL, 'input': 'Hi', 'output_path': str(output), 'ref_audio': str(symlink),
         }))
+
+
+@pytest.mark.parametrize('url', [
+    'http://169.254.169.254/latest/meta-data',
+    'https://169.254.169.254/v1',
+    'http://[fe80::1]:8000/v1',
+    'https://[fe80::1]/v1',
+    'https://[::ffff:169.254.169.254]/v1',
+    'https://0.0.0.0/v1',
+    'https://224.0.0.1/v1',
+])
+def test_speech_endpoint_rejects_link_local_multicast_and_unspecified_ips(url):
+    from lixity.speech_providers import speech_endpoint
+
+    with pytest.raises(ValueError):
+        speech_endpoint(url)
+
+
+def test_speech_endpoint_allows_link_local_only_when_explicitly_opted_in():
+    from lixity.speech_providers import speech_endpoint
+
+    assert speech_endpoint('http://169.254.1.2:8000', allow_link_local=True) == 'http://169.254.1.2:8000/v1/audio/speech'
+
+
+@pytest.mark.parametrize('resolved_ip', ['169.254.169.254', '224.0.0.1', '0.' + '0.0.0', 'fe80::1', '::ffff:169.254.169.254'])
+def test_resolved_endpoint_rejects_disallowed_dns_targets(monkeypatch, resolved_ip):
+    import socket
+
+    from lixity.speech_providers import validate_resolved_endpoint
+
+    monkeypatch.setattr(
+        socket,
+        'getaddrinfo',
+        lambda *_args, **_kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (resolved_ip, 443))],
+    )
+    with pytest.raises(ValueError, match='disallowed'):
+        validate_resolved_endpoint('https://speech.example/v1/audio/speech')
+
+
+def test_resolved_localhost_http_rejects_dns_rebinding_to_non_loopback(monkeypatch):
+    import socket
+
+    from lixity.speech_providers import validate_resolved_endpoint
+
+    monkeypatch.setattr(
+        socket,
+        'getaddrinfo',
+        lambda *_args, **_kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('93.184.216.34', 8000))],
+    )
+    with pytest.raises(ValueError, match='loopback'):
+        validate_resolved_endpoint('http://localhost:8000/v1/audio/speech')

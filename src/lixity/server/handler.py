@@ -196,8 +196,7 @@ class LixityServerHandler(
             self._serve_artifact(path[len("/artifact/"):])
             return
 
-        if path in ("/api/project-paths", "/api/project-structure") and not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if (path == "/api" or path.startswith("/api/")) and not self._require_same_origin():
             return
         handler_name = self.GET_ROUTES.get(path)
         if handler_name is not None:
@@ -232,8 +231,7 @@ class LixityServerHandler(
 
     def _handle_runtime(self) -> None:
         """Observe the app and actual audio workers without exposing manuscript bindings."""
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         registry = getattr(self.server, "workspaces", None)
         manager = self._speech_manager()
@@ -296,8 +294,7 @@ class LixityServerHandler(
         if tokens is not None and (len(tokens) != 1 or not tokens[0]):
             self._json({"ok": False, "message": "Choose one current project context token"}, 400)
             return
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
         with self._workspace_lock:
             selected_root = self.get_author_project_root()
@@ -340,7 +337,12 @@ class LixityServerHandler(
                     self._json({"ok": False, "message": "Project context changed; reopen the project view"}, 409)
                     return
         ctype = MIME_TYPES.get(target.suffix.lower(), "application/octet-stream")
-        self._send(200, content, ctype)
+        headers = (
+            {"Content-Security-Policy": "sandbox; default-src 'none'"}
+            if target.suffix.lower() == ".html"
+            else None
+        )
+        self._send(200, content, ctype, headers=headers)
 
     def do_POST(self) -> None:
         registry = getattr(self.server, "workspaces", None)
@@ -357,8 +359,7 @@ class LixityServerHandler(
         if not self._trusted_host():
             self._reject_untrusted_host()
             return
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+        if not self._require_same_origin():
             return
 
         action = path[len("/api/"):].strip("/")

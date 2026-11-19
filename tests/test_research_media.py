@@ -221,3 +221,27 @@ def test_video_checkpoint_is_resumable_without_text_records(project, filename, c
     assert resumed["complete"] and resumed["succeeded"] == 1
     assert len(api.list_sources(project)["sources"]) == 1
     assert api.audit(project)["ok"]
+
+
+def test_media_range_requests_stream_without_full_blob_read(project, media):
+    project_id = Repository(project).snapshot().project.id
+    values = {
+        "project_id": project_id,
+        "filename": media[0],
+        "allow_retention": True,
+        "content_base64": base64.b64encode(media[1]).decode(),
+    }
+    with LoopbackServer(make_handler(project, research_dir=project)) as server:
+        captured = server.request("/api/research-media-ingest", payload=values)
+        assert captured.status == 200
+        result = json.loads(captured.body)
+        url = "/api/research/media?" + urlencode({
+            "project_id": project_id,
+            "source_id": result["source_id"],
+            "version_id": result["source_version_id"],
+        })
+        with patch.object(Repository, "read_blob", side_effect=AssertionError("Range must stream instead of loading full blob")):
+            sliced = server.request(url, headers={"Range": "bytes=1-4"})
+            assert sliced.status == 206 and sliced.body == media[1][1:5]
+            invalid = server.request(url, headers={"Range": "bytes=999999-"})
+            assert invalid.status == 416

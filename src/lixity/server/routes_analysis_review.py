@@ -33,8 +33,7 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
         return True
 
     def _handle_analysis_review(self) -> None:
-        if not self._same_origin():
-            self._json({"ok": False, "message": "Cross-origin review forbidden"}, 403)
+        if not self._require_same_origin("Cross-origin review forbidden"):
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         if set(query) != {"project_token"} or len(query["project_token"]) != 1:
@@ -53,7 +52,7 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
                 self._json({"ok": True, **result})
             except (OSError, ValueError, RuntimeError) as error:
                 self._log.warning("Analysis review stage=read_failed error=%s", type(error).__name__)
-                self._json({"ok": False, "message": str(error)}, 409 if isinstance(error, ResearchConflictError) else 400)
+                self._research_error(error)
 
     def _handle_analysis_review_save(self, payload: dict[str, Any]) -> None:
         try:
@@ -76,4 +75,4 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
                 self._json({"ok": True, **result})
             except (OSError, ValueError, RuntimeError) as error:
                 self._log.warning("Analysis review stage=save_failed error=%s", type(error).__name__)
-                self._json({"ok": False, "message": str(error)}, 409 if isinstance(error, ResearchConflictError) else 400)
+                self._research_error(error)

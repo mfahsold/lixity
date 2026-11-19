@@ -13,6 +13,7 @@ import base64
 import contextlib
 import errno
 import json
+import logging
 import os
 import re
 import secrets
@@ -45,7 +46,7 @@ _OPTIONS = (
     "fdr_q",
     "fdr_method",
     "min_chapters",
-    "dim_threshold",
+    "dim_score_threshold",
     "flag_min_severity",
 )
 _CHILDREN: dict[int, subprocess.Popen[bytes]] = {}
@@ -86,9 +87,14 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
         for key in ("min_chapters", "flag_min_severity")
     ):
         raise ServiceError("Startup chapter/severity values must be integers")
-    for key in ("z_mild", "z_strong", "fdr_q", "dim_threshold"):
+    for key in ("z_mild", "z_strong", "fdr_q", "dim_score_threshold", "dim_threshold"):
         if settings.get(key) is not None and type(settings[key]) not in (int, float):
             raise ServiceError("Startup thresholds must be numbers")
+    dim_score = settings.get("dim_score_threshold")
+    dim_alias = settings.get("dim_threshold")
+    if dim_score is not None and dim_alias is not None and dim_score != dim_alias:
+        raise ServiceError("Conflicting dim_score_threshold values")
+    effective_dim = dim_score if dim_score is not None else dim_alias
     threshold_keys = (
         "z_mild",
         "z_strong",
@@ -96,6 +102,7 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
         "fdr_method",
         "min_chapters",
         "flag_min_severity",
+        "dim_score_threshold",
         "dim_threshold",
     )
     if any(settings.get(key) is not None for key in threshold_keys):
@@ -109,7 +116,7 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
             fdr_method=settings.get("fdr_method"),
             min_chapters=settings.get("min_chapters"),
             flag_min_severity=settings.get("flag_min_severity"),
-            dim_score_threshold=settings.get("dim_threshold"),
+            dim_score_threshold=effective_dim,
         )
 
 
@@ -200,14 +207,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
         help="Machine-readable result; status exits 0 for known state, even stopped, and 1 for unknown",
     )
     defaults = THRESHOLD_DEFAULTS
-    for flag, key, help_text in (
-        ("z-mild", "z_mild", "Notable |z*| threshold; finite, >= 0; no greater than --z-strong"),
-        ("z-strong", "z_strong", "Strong |z*| threshold; finite, >= --z-mild"),
-        ("fdr-q", "fdr_q", "Nominal FDR q; finite, 0 < q < 1"),
-        ("dim-threshold", "dim_score_threshold", "Per-axis cutoff in standardized midrank PCA space; finite, > 0"),
+    for flag, key, dest, help_text in (
+        ("z-mild", "z_mild", "z_mild", "Notable |z*| threshold; finite, >= 0; no greater than --z-strong"),
+        ("z-strong", "z_strong", "z_strong", "Strong |z*| threshold; finite, >= --z-mild"),
+        ("fdr-q", "fdr_q", "fdr_q", "Nominal FDR q; finite, 0 < q < 1"),
+        ("dim-threshold", "dim_score_threshold", "dim_score_threshold", "Per-axis cutoff in standardized midrank PCA space; finite, > 0"),
     ):
         thresholds.add_argument(
-            "--" + flag, type=float,
+            "--" + flag, dest=dest, type=float,
             help=f"{help_text} (built-in default: {defaults[key]})",
         )
     thresholds.add_argument(
@@ -258,9 +265,20 @@ def resolve_settings(
     new_project = overrides.get("project")
     previous_project = settings.get("project")
     settings["port"] = port
+    if "dim_threshold" in settings:
+        legacy_dim = settings.pop("dim_threshold")
+        if settings.get("dim_score_threshold") is None and legacy_dim is not None:
+            settings["dim_score_threshold"] = legacy_dim
     for key in ("host", "project", *_OPTIONS):
         if overrides.get(key) is not None:
             settings[key] = overrides[key]
+    if overrides.get("dim_threshold") is not None:
+        if (
+            overrides.get("dim_score_threshold") is not None
+            and overrides["dim_score_threshold"] != overrides["dim_threshold"]
+        ):
+            raise ServiceError("Conflicting dim_score_threshold overrides")
+        settings["dim_score_threshold"] = overrides["dim_threshold"]
     if overrides.get("no_project"):
         if overrides.get("project") is not None:
             raise ServiceError("Choose a project or --no-project, not both")
@@ -297,11 +315,15 @@ def worker_argv(settings: Mapping[str, Any], token: str) -> list[str]:
         argv.append("--no-project")
     for key in _OPTIONS:
         value = settings.get(key)
+        if key == "dim_score_threshold" and value is None:
+            value = settings.get("dim_threshold")
         if key == "open_browser" or value is None:
             continue
         if key == "debug":
             if value:
                 argv.append("--debug")
+        elif key == "dim_score_threshold":
+            argv.append(f"--dim-threshold={value}")
         else:
             argv.append(f"--{key.replace('_', '-')}={value}")
     argv.append("--_service-token=" + token)
@@ -1123,6 +1145,28 @@ class ServiceManager:
                 raise ServiceError("Explicit startup project path does not exist")
         status = self._status(self._settings() or settings)
         if status["state"] in ("running", "starting", "busy"):
+            running_version = status.get("running_version")
+            if (
+                status["state"] in ("running", "starting")
+                and running_version
+                and running_version != __version__
+            ):
+                warning = (
+                    f"Running Lixity service version {running_version} differs from installed "
+                    f"version {__version__}; run 'lixity service restart' to upgrade"
+                )
+                status = {
+                    **status,
+                    "warning": warning,
+                    "message": f"{status['message']} ({warning})",
+                }
+                log_event(
+                    logger,
+                    "service_version_mismatch",
+                    level=logging.WARNING,
+                    running_version=running_version,
+                    installed_version=__version__,
+                )
             return status, None
         previous = _runtime_record(self.runtime_file, self.port)
         if previous:
@@ -1187,8 +1231,8 @@ class ServiceManager:
             os.O_CREAT | os.O_WRONLY | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0),
             0o600,
         )
-        os.close(log_fd)
         if use_systemd:
+            os.close(log_fd)
             executable = shutil.which("systemd-run")
             if executable is None:
                 raise ServiceError("The systemd-run executable disappeared before launch")
@@ -1227,7 +1271,12 @@ class ServiceManager:
                 )
             pid = self._unit_pid(record)
         else:
-            with self.log_file.open("ab") as log:
+            try:
+                log_stream = os.fdopen(log_fd, "ab")
+            except BaseException:
+                os.close(log_fd)
+                raise
+            with log_stream as log:
                 options: dict[str, Any] = {"start_new_session": True}
                 if sys.platform == "win32":
                     options = {
@@ -1344,6 +1393,7 @@ class ManagedServe:
                 path,
                 {
                     "schema_version": "lixity-service-ready/1",
+                    "port": self.port,
                     "token": self.token,
                     "pid": self.pid,
                     "birth": self.birth,

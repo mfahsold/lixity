@@ -5,6 +5,7 @@ with atomic replacement to prevent partial writes.
 """
 
 import contextlib
+import errno
 import hashlib
 import os
 import stat
@@ -172,27 +173,65 @@ class FileUtils:
         return text.replace("\r\n", "\n").replace("\r", "\n"), hashlib.sha256(content).hexdigest()
 
     @staticmethod
-    def _read_regular_bytes(filepath: str) -> bytes:
-        """Reject special nodes before and after opening, without blocking on a FIFO."""
-        expected = os.stat(filepath)
+    def read_bounded_regular_bytes(
+        path: str | os.PathLike[str],
+        *,
+        maximum: int | None = None,
+        nofollow: bool = True,
+        verify_stable: bool = False,
+    ) -> tuple[bytes, os.stat_result]:
+        """Read a regular file safely with optional size bound, symlink rejection, and stability checks."""
+        if maximum is not None and maximum < 0:
+            raise ValueError("maximum must be non-negative")
+        filepath = os.fspath(path)
+        stat_fn = os.lstat if nofollow else os.stat
+        expected = stat_fn(filepath)
+        if nofollow and stat.S_ISLNK(expected.st_mode):
+            raise OSError(errno.ELOOP, "Source must not be a symlink", filepath)
         if not stat.S_ISREG(expected.st_mode):
-            raise OSError("Text source must be a regular file")
-        opened = os.open(filepath, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) |
-                         getattr(os, "O_BINARY", 0))
+            raise OSError("Source must be a regular file")
+        if maximum is not None and expected.st_size > maximum:
+            raise OSError("Source exceeds the maximum byte limit")
+        flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+        if nofollow:
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+        opened = os.open(filepath, flags)
         descriptor: int | None = opened
         try:
             actual = os.fstat(opened)
             if (not stat.S_ISREG(actual.st_mode)
                     or (actual.st_dev, actual.st_ino) != (expected.st_dev, expected.st_ino)):
-                raise OSError("Text source changed or is not a regular file")
+                raise OSError("Source changed or is not a regular file")
+            if maximum is not None and actual.st_size > maximum:
+                raise OSError("Source exceeds the maximum byte limit")
             stream = os.fdopen(opened, "rb")
             descriptor = None
             with stream:
-                content: bytes = stream.read()
-                return content
+                content: bytes = stream.read() if maximum is None else stream.read(maximum + 1)
+                if maximum is not None and len(content) > maximum:
+                    raise OSError("Source exceeds the maximum byte limit")
+                if verify_stable:
+                    after = os.fstat(stream.fileno())
+                    if len(content) != actual.st_size or any(
+                        getattr(actual, field) != getattr(after, field)
+                        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                    ):
+                        raise OSError("Source changed while reading")
+                    final = stat_fn(filepath)
+                    if any(
+                        getattr(after, field) != getattr(final, field)
+                        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                    ):
+                        raise OSError("Source changed while reading")
+                return content, actual
         finally:
             if descriptor is not None:
                 os.close(descriptor)
+
+    @staticmethod
+    def _read_regular_bytes(filepath: str) -> bytes:
+        """Reject special nodes before and after opening, without blocking on a FIFO."""
+        return FileUtils.read_bounded_regular_bytes(filepath, nofollow=False)[0]
 
     @staticmethod
     def ensure_dir(dirpath: str) -> None:
