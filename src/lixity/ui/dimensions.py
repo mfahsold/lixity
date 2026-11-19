@@ -1,16 +1,22 @@
 """Reusable style-dimension panel and its canvas data contract."""
 
-import json
 import math
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
-from ..format import num as format_num
 from ..format import pct as format_pct
 from ..format import precise_num
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint, dimension_loading_poles
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label, loading_bars, toggle_button
+from .components import (
+    attr_json,
+    esc,
+    help_term,
+    label,
+    loading_bars,
+    panel_formatters,
+    toggle_button,
+)
 
 
 def style_dimensions(
@@ -19,11 +25,13 @@ def style_dimensions(
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
 ) -> str:
+    _L, _N, _ = panel_formatters(labels, language_key)
+
     def translated(key: str, **fields: Any) -> str:
-        return esc(label(labels, key).format(**fields))
+        return esc(label(labels, key).format(**fields)) if fields else _L(key)
 
     def number(value: float, decimals: int = 2, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed=signed)
+        return _N(value, decimals, signed)
 
     parts = ['<section class="panel" id="dimensions">',
              f"<h2>{help_term(labels, 'dimensions', translated('style_dimensions'))}</h2>"]
@@ -116,7 +124,7 @@ def style_dimensions(
             incomplete_key = "dim_incomplete_axes_one" if len(axes_data) == 1 else "dim_incomplete_axes"
             parts.append(f'<p class="dim-legend-note" id="dim-incomplete-axes">{translated(incomplete_key, count=len(axes_data))}</p>')
         missing_axes_description = " dim-incomplete-axes" if len(axes_data) < 3 else ""
-        parts.append(f'<div class="dim-canvas-wrap" id="dim-canvas"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{esc(json.dumps(payload, ensure_ascii=False))}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
+        parts.append(f'<div class="dim-canvas-wrap" id="dim-canvas"><canvas id="dim-3d-canvas" width="800" height="440" role="img" aria-label="{translated("dim_3d_title")}" aria-describedby="dim-legend dim-legend-note dim-scores-caption{missing_axes_description}" data-dim3d="{attr_json(payload)}"></canvas><div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div></div>')
         parts.append('<div class="dim-3d-actions dim-display-options">')
         for control_id, key, pressed in (
             ("dim-ctl-traj", "dim_ctl_trajectory", True),

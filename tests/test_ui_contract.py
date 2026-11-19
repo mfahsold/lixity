@@ -1156,5 +1156,146 @@ class TestShowDontTellComponents(unittest.TestCase):
                 self.assertTrue(loc.get(key) and loc[key] != key, f"{locale}.{key} missing")
 
 
+class TestUiConsolidationAndSecurityContracts(unittest.TestCase):
+    """Regression contracts for UI XSS fixes, locale completeness, and Python/CSS consolidation."""
+
+    def test_js_security_and_observer_contracts(self):
+        assets = UI_DIR / "assets"
+        component_layer = (assets / "component-layer.js").read_text(encoding="utf-8")
+        research_core = (assets / "research-core.js").read_text(encoding="utf-8")
+        dossier_images = (assets / "dossier-images.js").read_text(encoding="utf-8")
+        research_content = (assets / "research-content.js").read_text(encoding="utf-8")
+        dossier_geography = (assets / "dossier-geography.js").read_text(encoding="utf-8")
+        interactions = (assets / "interactions.js").read_text(encoding="utf-8")
+
+        # Component layer exports shared escaping, status, label, download, and JSON helpers.
+        for symbol in ("escapeHtml", "escapeAttr", "setStatus", "scopedLabel", "downloadBlob", "jsonApi"):
+            self.assertIn(f"{symbol}:", component_layer)
+        self.assertIn("window.LixityLabels", component_layer)
+
+        # Pure string escaping in research-core.js (no DOM allocation, escapes quotes).
+        escape_fn = re.search(r"function escapeHtml\(str\)\s*\{(.*?)\n\}", research_core, re.S)
+        self.assertIsNotNone(escape_fn)
+        self.assertNotIn("createElement", escape_fn[1])
+        self.assertIn("&quot;", component_layer)
+        self.assertIn("&#39;", component_layer)
+
+        # dossier-images.js uses replacement functions so $$/$& never corrupt figure HTML.
+        restore_fn = re.search(r"function restoreMarkdown\([^)]*\)\s*\{(.*?)\n  \}", dossier_images, re.S)
+        self.assertIsNotNone(restore_fn)
+        self.assertIn("function() { return figureHtml; }", restore_fn[1])
+
+        # research-content.js rejects protocol-relative // links and defaults missing lang to "en".
+        self.assertIn(r"/^(https?:\/\/|\/(?!\/)|#)/i", research_content)
+        self.assertNotIn('|| "de"', research_content)
+        self.assertNotIn('|| "de"', interactions)
+
+        # dossier-geography.js scopes MutationObserver off documentElement and uses rAF throttling.
+        self.assertNotIn("observe(document.documentElement", dossier_geography)
+        self.assertIn("requestAnimationFrame", dossier_geography)
+
+    def test_ui_labels_payload_and_multilocale_surfaces(self):
+        from lixity.ui.research_panel import render_research_panel
+
+        required_js_keys = (
+            "open",
+            "sources",
+            "status_freshness",
+            "research_filter_placeholder",
+            "research_filter_all",
+            "research_filter_select",
+            "research_evidence_draft_preserved",
+            "research_source_compare_parsing",
+            "cmd_aria_label",
+            "editor_write",
+            "reader_backlinks_heading",
+            "review_toggle_hide",
+            "review_toggle_show",
+            "alert_title_note",
+        )
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks("## Opening\n\nA bird crosses the garden.\n")
+        )
+        paragraphs[0].severity = 2
+        chapters[0].flagged = 1
+
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                labels = get_language_profile(language).labels
+                rendered = render_dashboard(
+                    chapters, paragraphs, controls=True, labels=labels, language_key=language
+                )
+                attr = re.search(r'data-ui-labels="([^"]*)"', rendered)
+                self.assertIsNotNone(attr)
+                payload = json.loads(unescape(attr[1]))
+                for key in required_js_keys:
+                    self.assertIn(key, payload)
+                    self.assertTrue(payload[key] and payload[key] != key, f"{language}.{key}")
+
+                # Review guide uses localized intro and passage candidate strings across all 7 locales.
+                review = rendered.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
+                self.assertIn(f"1 {labels['review_manuscript_intro'].split()[1]}", unescape(review))
+
+                # Research template presets are localized rather than hardcoded German.
+                research_html = unescape(render_research_panel(labels))
+                self.assertIn(labels["research_tpl_character_body"], research_html)
+                self.assertIn(labels["research_decision_tpl_character_body"], research_html)
+
+        # Hardcoded German fallbacks and 2-language switches are removed from JS assets.
+        assets = UI_DIR / "assets"
+        for filename in ("research-lists.js", "manuscript-reader.js", "teleprompter.js", "manuscript-editor.js"):
+            content = (assets / filename).read_text(encoding="utf-8")
+            self.assertNotIn('startsWith("de")', content, filename)
+        self.assertNotIn('|| "Öffnen"', (assets / "research-tools.js").read_text(encoding="utf-8"))
+        self.assertNotIn('|| "Quelle"', (assets / "research-tools.js").read_text(encoding="utf-8"))
+
+    def test_shared_python_helpers_and_css_tokens(self):
+        from lixity.ui.components import (
+            FAVICON_DATA_URI,
+            artifacts_panel,
+            attr_json,
+            help_badge,
+            modal_shell,
+            script_json,
+        )
+
+        self.assertTrue(FAVICON_DATA_URI.startswith("data:image/svg+xml;base64,"))
+        self.assertEqual(script_json({"a": "</script>"}), '{"a":"\\u003c/script\\u003e"}')
+        self.assertEqual(attr_json({"k": 'a"b'}), '{&quot;k&quot;:&quot;a\\&quot;b&quot;}')
+        self.assertIn('data-help="tip &amp; note"', help_badge("tip & note", "Help"))
+        shell = modal_shell("m-id", "m-title", "Title", "<div>Body</div>", close_label="Close")
+        self.assertIn('id="m-id"', shell)
+        self.assertIn('aria-labelledby="m-title"', shell)
+        self.assertIn("data-close-modal", shell)
+
+        panel = artifacts_panel(
+            [{"name": "book.pdf", "size_kb": 12, "pages": 4, "href": "book.pdf"}],
+            WORKSPACE_LABELS["en"],
+            "en",
+        )
+        self.assertIn('class="artifacts"', panel)
+        self.assertIn(WORKSPACE_LABELS["en"].get("open", "Open"), panel)
+
+        tokens_css = (UI_DIR / "assets" / "design-tokens.css").read_text(encoding="utf-8")
+        for token in (
+            "--dur-fast",
+            "--ease-out",
+            "--weight-normal",
+            "--weight-medium",
+            "--weight-bold",
+            "--flag-strong",
+            "--line-tight",
+            "--glass-blur-lg",
+            "--sticky-clearance",
+            "--z-tooltip",
+        ):
+            self.assertIn(f"{token}:", tokens_css)
+
+        for name in ("components.css", "dashboard.css", "manuscript-reader.css", "analysis-evidence.css", "project-overview.css"):
+            css = (UI_DIR / "assets" / name).read_text(encoding="utf-8")
+            for retired_var in ("--radius-md", "--radius-full", "--fg-muted", "--surface-sunken"):
+                self.assertNotIn(retired_var, css, f"{name} still uses {retired_var}")
+
+
 if __name__ == "__main__":
     unittest.main()

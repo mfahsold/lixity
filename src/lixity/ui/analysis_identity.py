@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from html import escape
 
-from .components import label
+from .components import panel_label
 from .render_contracts import AnalysisIdentity
 
 
@@ -11,8 +11,7 @@ def render_analysis_identity(identity: AnalysisIdentity, labels: Mapping[str, st
     if identity.scope != "source_internal":
         return ""
 
-    def text(key: str) -> str:
-        return escape(label(labels, key))
+    text = panel_label(labels)
 
     return (
         '<aside class="panel analysis-identity" id="analysis-identity" role="note" '

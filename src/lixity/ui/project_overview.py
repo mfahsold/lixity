@@ -1,6 +1,5 @@
 """Native-only shell for explicit, read-only project structure inspection."""
 
-import json
 from collections.abc import Mapping
 
 from ..workspace_labels import (
@@ -8,14 +7,14 @@ from ..workspace_labels import (
     PROJECT_STRUCTURE_ROLE_LABELS,
     PROJECT_STRUCTURE_STATE_LABELS,
 )
-from .components import esc, label
+from .components import esc, label, script_json
 
 
 def project_overview(labels: Mapping[str, str] | None = None, *, research_navigation: bool = False) -> str:
     """Render an empty overview; project paths are requested only on activation."""
     keys = {"roles": PROJECT_STRUCTURE_ROLE_LABELS, "states": PROJECT_STRUCTURE_STATE_LABELS,
             "issues": PROJECT_STRUCTURE_ISSUE_LABELS}
-    payload = json.dumps(keys, ensure_ascii=True).replace("<", "\\u003c")
+    payload = script_json(keys, ensure_ascii=True)
     return (
         '<section class="project-overview" id="project-overview" aria-labelledby="project-overview-title" '
         f'data-research-navigation="{str(research_navigation).lower()}">'

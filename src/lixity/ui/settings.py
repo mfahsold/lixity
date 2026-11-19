@@ -1,6 +1,5 @@
 """Shared, accessible settings form with locale-independent HTML values."""
 
-import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -9,7 +8,52 @@ from ..publication import PUBLICATION_FIELDS
 from ..registers import REGISTER_PROFILE_TEMPLATES
 from ..site import docs_url
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, THRESHOLD_PRESETS, FingerprintThresholds
-from .components import checkbox_field, esc, help_term, label
+from .components import (
+    attr_json,
+    checkbox_field,
+    esc,
+    help_badge,
+    help_term,
+    label,
+    panel_label,
+)
+
+
+def _segmented_select(
+    *,
+    select_id: str,
+    label_text: str,
+    help_text: str,
+    default_value: str,
+    described_by: str,
+    options: Sequence[tuple[str, str, str, bool]],
+    extra_select_attrs: str = "",
+    note_html: str = "",
+    data_help_on_select: bool = True,
+) -> str:
+    """Render a native <select> paired with a synchronized .settings-seg-group."""
+    esc_label = esc(label_text)
+    badge = help_badge(help_text, label_text)
+    help_attr = f' data-help="{esc(help_text, quote=True)}"' if data_help_on_select else ""
+    extra = f" {extra_select_attrs.strip()}" if extra_select_attrs.strip() else ""
+    option_html = "".join(
+        f'<option value="{esc(val)}"{" selected" if selected else ""}>{esc(opt_label)}</option>'
+        for val, opt_label, _pill_label, selected in options
+    )
+    pill_html = "".join(
+        f'<button type="button" class="ctl ctl-sm" data-value="{esc(val)}" '
+        f'aria-pressed="{"true" if selected else "false"}">{esc(pill_label)}</button>'
+        for val, _opt_label, pill_label, selected in options
+    )
+    return (
+        '<div class="setting-field">'
+        f'<label for="{esc(select_id)}">{esc_label} {badge}</label>'
+        f'<select class="ctl" id="{esc(select_id)}" data-default="{esc(default_value)}"'
+        f'{extra}{help_attr} aria-describedby="{esc(described_by)}">{option_html}</select>'
+        f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
+        f'data-sync-select="{esc(select_id)}">{pill_html}</div>'
+        f'{note_html}</div>'
+    )
 
 
 def settings_form(
@@ -30,15 +74,14 @@ def settings_form(
     site_publication_context_token: str = "",
     language_key: str | None = None,
 ) -> str:
-    def translated(key: str) -> str:
-        return esc(label(labels, key))
+    translated = panel_label(labels)
 
     defaults = FingerprintThresholds()
     publication_values: dict[str, str | bool] = {"enabled": (publication or {}).get("enabled") is True}
     publication_values.update({field.key: value if isinstance(value, str) else ""
                               for field in PUBLICATION_FIELDS
                               for value in [(publication or {}).get(field.key, "")]})
-    initial_publication = esc(json.dumps(publication_values, ensure_ascii=False, sort_keys=True))
+    initial_publication = attr_json(publication_values, sort_keys=True)
     project_save_hint = (f'<p class="ctl-note" id="settings-project-save-help">{translated("settings_project_save_hint")}</p>'
                          if author_setting_enabled else "")
     parts = [
@@ -162,32 +205,29 @@ def settings_form(
         for preset in (*FingerprintThresholds.presets, "custom")
     )
     active_preset = thresholds.preset_name()
-    presets_json = esc(json.dumps(
+    presets_json = attr_json(
         {name: dict(values) for name, values in THRESHOLD_PRESETS.items()},
-        ensure_ascii=False, sort_keys=True,
-    ))
+        sort_keys=True,
+    )
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
         f'<summary data-help="{translated("settings_thresholds_hint")}">{translated("settings_thresholds_optional")}</summary>',
         f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
         '<div class="settings-grid">',
-        '<div class="setting-field">',
-        f'<label for="set-threshold-preset">{translated("settings_preset_label")} '
-        f'<span class="help" data-help="{translated("settings_preset_hint")}" tabindex="0" aria-label="{translated("settings_preset_label")}">?</span></label>',
-        f'<select class="ctl" id="set-threshold-preset" data-default="balanced" '
-        f'data-presets="{presets_json}" aria-describedby="set-threshold-preset-help settings-scope-help">',
-        *(
-            f'<option value="{key}"{" selected" if key == active_preset else ""}>{translated(label_key)}</option>'
-            for key, label_key in preset_choices
+        _segmented_select(
+            select_id="set-threshold-preset",
+            label_text=label(labels, "settings_preset_label"),
+            help_text=label(labels, "settings_preset_hint"),
+            default_value="balanced",
+            described_by="set-threshold-preset-help settings-scope-help",
+            extra_select_attrs=f'data-presets="{presets_json}"',
+            options=[
+                (key, label(labels, label_key), label(labels, label_key), key == active_preset)
+                for key, label_key in preset_choices
+            ],
+            note_html=f'<p class="ctl-note" id="set-threshold-preset-help" hidden>{translated("settings_preset_hint")}</p>',
+            data_help_on_select=False,
         ),
-        '</select>',
-        f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("settings_preset_label")}" data-sync-select="set-threshold-preset">',
-        *(
-            f'<button type="button" class="ctl ctl-sm" data-value="{key}" aria-pressed="{"true" if key == active_preset else "false"}">{translated(label_key)}</button>'
-            for key, label_key in preset_choices
-        ),
-        '</div>',
-        f'<p class="ctl-note" id="set-threshold-preset-help" hidden>{translated("settings_preset_hint")}</p></div>',
     ])
     fields = (
         ("z_mild", "set-z-mild"),
@@ -214,7 +254,7 @@ def settings_form(
         default_note = esc(label(labels, "settings_default")).replace("{value}", str(default))
         parts.append(
             f'<div class="setting-field"><label for="{control_id}">{translated(key)} '
-            f'<span class="help" data-help="{esc(help_text, quote=True)}" tabindex="0" aria-label="{translated(key)}">?</span></label>'
+            f'{help_badge(help_text, label(labels, key))}</label>'
             f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
             f'{" ".join(constraints)} required '
             f'data-default="{default!r}" data-help="{esc(help_text, quote=True)}" aria-describedby="{control_id}-help settings-scope-help"/>'
@@ -225,46 +265,41 @@ def settings_form(
             default_method = defaults.fdr_method.lower()
             method_default = esc(label(labels, "settings_default")).replace(
                 "{value}", "Benjamini–Hochberg" if default_method == "bh" else "Benjamini–Yekutieli")
-            fdr_help = esc(label(labels, "help_fdr"), quote=True)
             parts.append(
-                f'<div class="setting-field"><label for="set-fdr-method">{translated("settings_fdr_method")} '
-                f'<span class="help" data-help="{fdr_help}" tabindex="0" aria-label="{translated("settings_fdr_method")}">?</span></label>'
-                f'<select class="ctl" id="set-fdr-method" data-default="{default_method}" '
-                f'data-help="{fdr_help}" aria-describedby="set-fdr-method-help settings-scope-help">'
-                f'<option value="bh"{" selected" if method == "bh" else ""}>Benjamini–Hochberg</option>'
-                f'<option value="by"{" selected" if method == "by" else ""}>Benjamini–Yekutieli</option>'
-                f'</select>'
-                f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("settings_fdr_method")}" data-sync-select="set-fdr-method">'
-                f'<button type="button" class="ctl ctl-sm" data-value="bh" aria-pressed="{"true" if method == "bh" else "false"}">Benjamini–Hochberg</button>'
-                f'<button type="button" class="ctl ctl-sm" data-value="by" aria-pressed="{"true" if method == "by" else "false"}">Benjamini–Yekutieli</button>'
-                f'</div><p class="ctl-note" id="set-fdr-method-help">{method_default}</p></div>'
+                _segmented_select(
+                    select_id="set-fdr-method",
+                    label_text=label(labels, "settings_fdr_method"),
+                    help_text=label(labels, "help_fdr"),
+                    default_value=default_method,
+                    described_by="set-fdr-method-help settings-scope-help",
+                    options=[
+                        ("bh", "Benjamini–Hochberg", "Benjamini–Hochberg", method == "bh"),
+                        ("by", "Benjamini–Yekutieli", "Benjamini–Yekutieli", method == "by"),
+                    ],
+                    note_html=f'<p class="ctl-note" id="set-fdr-method-help">{method_default}</p>',
+                )
             )
-    parts.extend([
-        '<div class="setting-field">',
-        f'<label for="set-flag-min-sev">{translated("flag_min_severity")} '
-        f'<span class="help" data-help="{translated("help_flag_min_severity")}" tabindex="0" aria-label="{translated("flag_min_severity")}">?</span></label>',
-        '<select class="ctl" id="set-flag-min-sev" data-default="2" '
-        f'data-help="{translated("help_flag_min_severity")}" aria-describedby="flag-severity-help settings-scope-help">',
-    ])
-    for severity in (1, 2, 3):
-        selected = " selected" if severity == thresholds.flag_min_severity else ""
-        marker = f' · {translated("settings_default_short")}' if severity == 2 else ""
-        parts.append(
-            f'<option value="{severity}"{selected}>{translated(f"severity_{severity}")} ≥ {severity}{marker}</option>'
-        )
-    parts.append('</select>')
     parts.append(
-        f'<div class="chip-row settings-seg-group" role="group" aria-label="{translated("flag_min_severity")}" data-sync-select="set-flag-min-sev">'
-    )
-    for severity in (1, 2, 3):
-        pressed = "true" if severity == thresholds.flag_min_severity else "false"
-        parts.append(
-            f'<button type="button" class="ctl ctl-sm" data-value="{severity}" aria-pressed="{pressed}">'
-            f'{translated(f"severity_{severity}")} ≥ {severity}</button>'
+        _segmented_select(
+            select_id="set-flag-min-sev",
+            label_text=label(labels, "flag_min_severity"),
+            help_text=label(labels, "help_flag_min_severity"),
+            default_value="2",
+            described_by="flag-severity-help settings-scope-help",
+            options=[
+                (
+                    str(severity),
+                    f'{label(labels, f"severity_{severity}")} ≥ {severity}'
+                    + (f' · {label(labels, "settings_default_short")}' if severity == 2 else ""),
+                    f'{label(labels, f"severity_{severity}")} ≥ {severity}',
+                    severity == thresholds.flag_min_severity,
+                )
+                for severity in (1, 2, 3)
+            ],
+            note_html=f'<p class="ctl-note" id="flag-severity-help" hidden>{translated("help_flag_min_severity")}</p>',
         )
+    )
     parts.extend([
-        '</div>',
-        f'<p class="ctl-note" id="flag-severity-help" hidden>{translated("help_flag_min_severity")}</p></div>',
         '</div>',
         '<div class="settings-actions">',
         f'<button type="button" class="ctl" id="settings-reset" title="{translated("reset_thresholds")}" data-help="{translated("settings_reset_thresholds_help")}">{translated("reset_thresholds")}</button>',
@@ -312,8 +347,8 @@ def site_publication_editor(
         f'<p class="panel-guide">{esc(terms["publication_editor_hint"])}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(terms["publication_editor_unavailable"])}</p>')
         + '<fieldset class="site-publication-editor" id="site-publication-editor" '
-        f'data-initial="{esc(json.dumps(profiles, ensure_ascii=False))}" '
-        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-context-token="{esc(context_token)}"'
+        f'data-initial="{attr_json(profiles)}" '
+        f'data-labels="{attr_json(terms)}" data-context-token="{esc(context_token)}"'
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(terms["publication_editor_title"])}</legend>'
         '<p class="ctl-status" data-site-publication-status role="status" aria-live="polite"></p>'
@@ -346,9 +381,9 @@ def register_editor(
         f'<p class="panel-guide">{register_help}</p>'
         f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
-        + f'<fieldset class="register-editor" id="register-editor" data-initial="{esc(json.dumps(initial, ensure_ascii=False))}" '
-        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-features="{esc(json.dumps(features, ensure_ascii=False))}" '
-        f'data-templates="{esc(json.dumps(REGISTER_PROFILE_TEMPLATES, ensure_ascii=False))}"'
+        + f'<fieldset class="register-editor" id="register-editor" data-initial="{attr_json(initial)}" '
+        f'data-labels="{attr_json(terms)}" data-features="{attr_json(features)}" '
+        f'data-templates="{attr_json(REGISTER_PROFILE_TEMPLATES)}"'
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(label(labels, "register_title"))}</legend>'
         '<div data-register-profiles></div>'

@@ -43,8 +43,10 @@ from .analysis_identity import render_analysis_identity
 from .analysis_navigation import render_analysis_workflows
 from .components import (
     ANALYSIS_SECTIONS,
+    FAVICON_DATA_URI,
     analysis_outline_nav,
-    artifact_href,
+    artifacts_panel,
+    attr_json,
     chapter_link,
     checkbox_field,
     help_term,
@@ -58,6 +60,7 @@ from .components import (
     panel_start,
     product_details,
     project_header,
+    script_json,
     section_nav,
     status_strip,
     tense_class,
@@ -205,10 +208,7 @@ def _bundle(files: tuple[str, ...]) -> str:
     return "\n".join((_ASSET_DIR / name).read_text(encoding="utf-8") for name in files)
 
 
-def _script_json(value: Any) -> str:
-    """Keep JSON data inside an inert HTML script's raw-text boundary."""
-    return (json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-            .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e"))
+_script_json = script_json
 
 
 def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | None, language_key: str) -> str:
@@ -498,6 +498,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     "ctx_original_language",
                     "ctx_is_translation",
                     "ctx_provenance_note",
+                    "open",
                     "ctx_yes",
                     "ctx_no",
                 )
@@ -572,7 +573,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'<html lang="{html_lang}">',
         "<head>",
         '<meta charset="utf-8"/>',
-        '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>',
+        f'<link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {esc(engine_name)}</title>",
@@ -926,28 +927,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
         # Generated files belong to the Results step, directly under the actions.
         if artifacts and not show_project_overview:
-            parts.append('<section class="panel">')
-            parts.append(f"<h2>{help_term(labels, 'artifacts', L('generated_files'))}</h2>")
-            parts.append('<div class="artifacts">')
-            for art in artifacts:
-                name = esc(str(art.get("name", "")))
-                meta_bits = []
-                if art.get("size_kb") is not None:
-                    meta_bits.append(f"{N(art['size_kb'], 0)} KB")
-                if art.get("pages"):
-                    meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
-                meta = " · ".join(meta_bits)
-                href = artifact_href(art.get("href"))
-                link = (
-                    f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
-                    if href
-                    else ""
-                )
-                parts.append(
-                    f'<div class="artifact"><span class="name">{name}</span>'
-                    f'<span class="meta">{esc(meta)}</span>{link}</div>'
-                )
-            parts.append("</div></section>")
+            parts.append(artifacts_panel(artifacts, labels, language_key, title_key="generated_files"))
         parts.append("</section>")
 
         if allowed_actions is not None and "nda-draft" in allowed_actions:
@@ -1200,19 +1180,15 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         else []
     )
     if has_chapters:
-        is_de = (current_language or language_key) == "de"
-        hide_lbl = "Ausblenden" if is_de else "Hide"
-        show_lbl = "Einblenden" if is_de else "Show"
-        if is_de:
-            manuscript_intro = (
-                f"{len(chapters)} Kapitel · {total_words:,} Wörter · "
-                f"{len(flagged)} auffällige Absätze im Manuskript."
-            ).replace(",", ".")
-        else:
-            manuscript_intro = (
-                f"{len(chapters)} chapters · {total_words:,} words · "
-                f"{len(flagged)} flagged paragraphs in this manuscript."
+        hide_lbl = L("review_toggle_hide")
+        show_lbl = L("review_toggle_show")
+        manuscript_intro = esc(
+            label(labels, "review_manuscript_intro").format(
+                chapters=len(chapters),
+                words=N(total_words, 0),
+                flagged=len(flagged),
             )
+        )
         parts.append(
             f'<section class="panel" id="analysis-review">'
             f'<div class="analysis-review-head"><h2>{L("review_title")}</h2>'
@@ -1233,10 +1209,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
             first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
             if candidates:
-                reason_text = (
-                    f"Kap. {first.chapter_num}, Z. {first.start_line} (Stufe {first.severity}, {first.words} Wörter)"
-                    if is_de
-                    else f"Ch. {first.chapter_num}, line {first.start_line} (level {first.severity}, {first.words} words)"
+                reason_text = esc(
+                    label(labels, "review_passage_candidate").format(
+                        chapter=first.chapter_num,
+                        line=first.start_line,
+                        severity=first.severity,
+                        words=first.words,
+                    )
                 )
             else:
                 reason_text = L("review_passage_unflagged")
@@ -1466,7 +1445,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                         layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}",
                                               round(z, 2), N(value, 1), info.notable, round(position, 1)]
                 layer_attr = (
-                    f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
+                    f" data-layers='{attr_json(layer_payload)}'"
                     if layer_payload
                     else ""
                 )
@@ -2064,28 +2043,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     # --- Publications (for standalone non-interactive reports) ------------
     if not controls and artifacts:
-        parts.append('<section class="panel">')
-        parts.append(f"<h2>{help_term(labels, 'artifacts', L('artifacts'))}</h2>")
-        parts.append('<div class="artifacts">')
-        for art in artifacts:
-            name = esc(str(art.get("name", "")))
-            meta_bits = []
-            if art.get("size_kb") is not None:
-                meta_bits.append(f"{N(art['size_kb'], 0)} KB")
-            if art.get("pages"):
-                meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
-            meta = " · ".join(meta_bits)
-            href = artifact_href(art.get("href"))
-            link = (
-                f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
-                if href
-                else ""
-            )
-            parts.append(
-                f'<div class="artifact"><span class="name">{name}</span>'
-                f'<span class="meta">{esc(meta)}</span>{link}</div>'
-            )
-        parts.append("</div></section>")
+        parts.append(artifacts_panel(artifacts, labels, language_key, title_key="artifacts"))
 
     if controls:
         parts.append(license_terms(labels))

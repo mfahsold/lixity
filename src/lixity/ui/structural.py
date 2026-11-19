@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from ..format import num as format_num
 from ..status import ContractKeys
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label
+from .components import esc, help_term, label, panel_formatters
 from .heatmap import FEATURE_HELP_KEYS as _FEATURE_HELP
 
 
@@ -28,11 +27,10 @@ def style_structural(
     if diag is None:
         return ""
 
-    def translated(key: str) -> str:
-        return esc(label(labels, key))
+    translated, _N, _ = panel_formatters(labels, language_key)
 
     def N(value: float, decimals: int = 2, signed: bool = False) -> str:
-        return format_num(value, language_key, decimals, signed)
+        return _N(value, decimals, signed)
 
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}

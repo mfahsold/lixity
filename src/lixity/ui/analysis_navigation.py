@@ -1,10 +1,9 @@
 """Editorial workflow entrypoints for the native analysis overview."""
 
-import json
 from collections.abc import Mapping, Sequence
 from html import escape
 
-from .components import label
+from .components import attr_json, label
 
 _WORKFLOW_SECTIONS = {
     "review": ("flags", "markers"),
@@ -32,7 +31,7 @@ def render_analysis_workflows(
         key: [section for section in sections if section in available]
         for key, sections in _WORKFLOW_SECTIONS.items()
     }
-    payload = escape(json.dumps(groups, separators=(",", ":")), quote=True)
+    payload = attr_json(groups)
     parts = [
         f'<div class="analysis-workflows" data-analysis-workflows="{payload}">',
         '<div class="analysis-workflow-entries">',

@@ -594,25 +594,8 @@ document.addEventListener("lixity:workbench-change", function() {
   });
   syncOutlierNavigation();
 });
-async function jsonApi(url, options, responseType) {
-  var t0 = performance.now();
-  try {
-    var response = await fetch(url, options);
-    var data;
-    if (response.ok && responseType === "markdown") {
-      if (!/^text\/(markdown|plain)\b/i.test(response.headers.get("Content-Type") || "")) {
-        throw new Error(uiLabel("research_matrix_failed"));
-      }
-      data = {ok: true, text: await response.text()};
-    } else data = await response.json();
-    if (!data || typeof data !== "object" || Array.isArray(data)) data = {ok: false};
-    if (!response.ok) data.ok = false;
-    data.http_status = response.status;
-    LixityLog.api(options && options.method || "GET", url, performance.now() - t0, response.status, data);
-    return data;
-  } catch (error) {
-    return {ok: false, message: String(error), http_status: 0};
-  }
+function jsonApi(url, options, responseType) {
+  return window.LixityComponents.jsonApi(url, options, responseType);
 }
 
 function markerApi(payload) {
@@ -734,22 +717,7 @@ function reportSiteExport(stage, details) {
     if (window.LixityLog) window.LixityLog.warn("Export receipt could not reach the application");
   });
 }
-var UI_LABELS = {};
-try { UI_LABELS = JSON.parse(document.body.dataset.uiLabels || "{}"); } catch (_) { UI_LABELS = {}; }
-function uiLabel(key) { return UI_LABELS[key] || key; }
-function uiFormat(key, values) {
-  return uiLabel(key).replace(/\{([a-z_]+)\}/g, function(match, name) {
-    return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match;
-  });
-}
-function uiCountFormat(key, count, values) {
-  // A count of one picks the "<key>_one" row when the pack provides it.
-  var singular = key + "_one";
-  var chosen = count === 1 && Object.prototype.hasOwnProperty.call(UI_LABELS, singular) ? singular : key;
-  var payload = values || {};
-  if (!Object.prototype.hasOwnProperty.call(payload, "count")) payload.count = count;
-  return uiFormat(chosen, payload);
-}
+var UI_LABELS = window.LixityLabels ? window.LixityLabels.all() : {};
 document.addEventListener("lixity:reader-ready", function initAnalysisGuide() {
   var guide = document.getElementById("reader-analysis-guide");
   var status = document.getElementById("reader-analysis-guide-state");
@@ -881,14 +849,7 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
       }
       var blob = await response.blob();
       if ((await blob.slice(0, 5).text()) !== "%PDF-") throw new Error("Manuscript PDF unavailable");
-      var url = URL.createObjectURL(blob);
-      var download = document.createElement("a");
-      download.href = url;
-      download.download = "manuscript-" + selected + ".pdf";
-      document.body.appendChild(download);
-      download.click();
-      download.remove();
-      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      window.LixityComponents.downloadBlob(blob, "manuscript-" + selected + ".pdf", 1000);
       message("manuscript_pdf_success", false);
     } catch (_) {
       message("manuscript_pdf_error", true);
@@ -1150,10 +1111,7 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
       }
       stage = "download_start";
       failureKey = "site_export_download_error";
-      var url = URL.createObjectURL(blob), download = document.createElement("a");
-      download.href = url; download.download = "lixity-reading-website.zip";
-      document.body.appendChild(download); download.click(); download.remove();
-      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      window.LixityComponents.downloadBlob(blob, "lixity-reading-website.zip", 1000);
       reportExport(exportId, "download_started");
       message("site_export_success");
     } catch (error) {
@@ -1237,14 +1195,7 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
         previewWrap.hidden = false;
         message("nda_draft_ready", false);
       } else {
-        var url = URL.createObjectURL(await response.blob());
-        var download = document.createElement("a");
-        download.href = url;
-        download.download = format === "pdf" ? "nda.pdf" : "nda.txt";
-        document.body.appendChild(download);
-        download.click();
-        download.remove();
-        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+        window.LixityComponents.downloadBlob(await response.blob(), format === "pdf" ? "nda.pdf" : "nda.txt", 1000);
         message("nda_draft_downloaded", false);
       }
     } catch (_) {

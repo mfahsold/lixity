@@ -33,6 +33,7 @@
   --mixed-ink: light-dark(#604f7e, #c9b7e7);
   --neutral: light-dark(#d8dee6, #2c323d);
   --flag: light-dark(#c0392b, #f87171);
+  --flag-strong: light-dark(#dc2626, #f87171);
   --flag-light: light-dark(#fce8e6, #450a0a);
   --action-bg: #2949cc;
   --action-hover: #203ba6;
@@ -50,6 +51,8 @@
   --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
   --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
   --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease-out: var(--ease);
+  --dur-fast: 140ms;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
@@ -64,8 +67,12 @@
   --text-subhead: 1.125rem;
   --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
   --text-display: clamp(2.1rem, 4vw, 3.35rem);
+  --weight-normal: 400;
+  --weight-medium: 500;
   --weight-semibold: 600;
   --weight-strong: 650;
+  --weight-bold: 700;
+  --line-tight: 1.4;
   --line-body: 1.6;
   --line-compact: 1.5;
   --line-control: 1.35;
@@ -88,6 +95,12 @@
   --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
   --glass-blur: 12px;
   --glass-blur-sm: 8px;
+  --glass-blur-lg: 16px;
+  --z-sticky: 14;
+  --z-popover: 220;
+  --z-modal: 1000;
+  --z-tooltip: 10000;
+  --sticky-clearance: 4.5rem;
 
   /* Editorial & status markers */
   --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);

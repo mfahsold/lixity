@@ -203,7 +203,7 @@
     var sharedChipsHtml = topShared.slice(0, 25).map(function(w) {
       var sc = w.source_count !== undefined ? w.source_count : "?";
       var mc = w.manuscript_count !== undefined ? w.manuscript_count : "?";
-      var tip = escapeHtml(w.word) + ': ' + w.total_count + 'x (' + escapeHtml(uiLabel("sources") || "Quelle") + ': ' + sc + 'x, ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ': ' + mc + 'x) · ' + escapeHtml(uiLabel("research_term_click_help"));
+      var tip = escapeHtml(w.word) + ': ' + w.total_count + 'x (' + escapeHtml(uiLabel("sources")) + ': ' + sc + 'x, ' + escapeHtml(uiLabel("workspace_analysis")) + ': ' + mc + 'x) · ' + escapeHtml(uiLabel("research_term_click_help"));
       return '<button type="button" class="grounding-chip" data-term-search="' + escapeHtml(w.word) + '" data-help="' + tip + '" title="' + escapeHtml(w.word) + '">' +
         '<span>' + escapeHtml(w.word) + '</span>' +
         '<span class="grounding-badge-count">' + w.total_count + '</span>' +
@@ -214,7 +214,7 @@
     var keyTermsHtml = sourceKeyTerms.slice(0, 25).map(function(k) {
       var sc = k.source_count !== undefined ? k.source_count : "?";
       var mc = k.manuscript_count !== undefined ? k.manuscript_count : "?";
-      var tip = escapeHtml(k.word) + ' (Dunning-G² ' + k.g2 + '): ' + escapeHtml(uiLabel("sources") || "Quelle") + ' ' + sc + 'x vs ' + escapeHtml(uiLabel("workspace_analysis") || "Manuskript") + ' ' + mc + 'x · ' + escapeHtml(uiLabel("research_term_click_help"));
+      var tip = escapeHtml(k.word) + ' (Dunning-G² ' + k.g2 + '): ' + escapeHtml(uiLabel("sources")) + ' ' + sc + 'x vs ' + escapeHtml(uiLabel("workspace_analysis")) + ' ' + mc + 'x · ' + escapeHtml(uiLabel("research_term_click_help"));
       return '<button type="button" class="grounding-chip keyness" data-term-search="' + escapeHtml(k.word) + '" data-help="' + tip + '" title="' + escapeHtml(k.word) + '">' +
         '<span>' + escapeHtml(k.word) + '</span>' +
         '<span class="grounding-badge-count">G² ' + k.g2 + '</span>' +
@@ -255,7 +255,7 @@
         '</td>' +
         '<td>' + (topTermsList || '<span class="muted-note">–</span>') + '</td>' +
         '<td class="num-right">' +
-          '<button type="button" class="ctl grounding-jump-btn" data-jump-chapter="' + c.chapter + '" title="' + escapeHtml(uiLabel("research_jump_chapter")) + '" data-help="' + escapeHtml(uiLabel("research_jump_chapter")) + '">↗ ' + escapeHtml(uiLabel("open") || "Öffnen") + '</button>' +
+          '<button type="button" class="ctl grounding-jump-btn" data-jump-chapter="' + c.chapter + '" title="' + escapeHtml(uiLabel("research_jump_chapter")) + '" data-help="' + escapeHtml(uiLabel("research_jump_chapter")) + '">↗ ' + escapeHtml(uiLabel("open")) + '</button>' +
         '</td>' +
       '</tr>';
     }).join("");

@@ -11,11 +11,8 @@
   var mediaSequence = 0;
   var state = {generation: 0, pending: false, bytes: null, url: null, current: null, review: null};
   var dialog, form;
-  function label(key) {
-    var shared = {close: "modal_close", cancel: "modal_cancel", permission: "research_retention", source_title: "research_source_title"};
-    return uiLabel(shared[key] || "image_" + key);
-  }
-  function safe(value) { return escapeHtml(String(value == null ? "" : value)).replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  var label = window.LixityComponents.scopedLabel("image_", {close: "modal_close", cancel: "modal_cancel", permission: "research_retention", source_title: "research_source_title"});
+  function safe(value) { return window.LixityComponents.escapeAttr(value); }
   function limits() {
     try { return JSON.parse(document.body.dataset.imageLimits || "{}"); } catch (_) { return {}; }
   }
@@ -195,7 +192,8 @@
   function restoreMarkdown(html, prepared) {
     prepared.html.forEach(function(figureHtml, index) {
       var token = prepared.token + index + "END";
-      html = html.replace("<p>" + token + "</p>", figureHtml).replace(token, figureHtml);
+      html = html.replace("<p>" + token + "</p>", function() { return figureHtml; })
+        .replace(token, function() { return figureHtml; });
     });
     return html;
   }

@@ -7,17 +7,15 @@
   const chapters = document.getElementById('chapters');
   if (!controls || !chapters) return;
   const language = (document.documentElement.lang || 'en').split('-')[0];
-  const translations = {
-    en: ['Write', 'Read and refresh', 'Undo', 'Redo', 'Saving…', 'Saved locally', 'Unsaved — retry', 'Conflict — draft retained', 'Recovery', 'Load as draft', 'Download draft', 'Save this draft', 'Remove recovery copy', 'Manuscript', 'Earlier analysis is outdated while editing.', 'Recovery loaded for review. Save explicitly to apply.', 'Choose a recovery copy', 'Loading…'],
-    de: ['Schreiben', 'Lesen und aktualisieren', 'Rückgängig', 'Wiederholen', 'Speichert…', 'Lokal gespeichert', 'Ungespeichert — erneut versuchen', 'Konflikt — Entwurf gesichert', 'Wiederherstellung', 'Als Entwurf laden', 'Entwurf herunterladen', 'Diesen Entwurf speichern', 'Sicherung entfernen', 'Manuskript', 'Die bisherige Analyse ist während der Bearbeitung veraltet.', 'Sicherung zur Prüfung geladen. Zum Übernehmen ausdrücklich speichern.', 'Sicherung auswählen', 'Lädt…'],
-    fr: ['Écrire', 'Lire et actualiser', 'Annuler', 'Rétablir', 'Enregistrement…', 'Enregistré localement', 'Non enregistré — réessayer', 'Conflit — brouillon conservé', 'Récupération', 'Charger un brouillon', 'Télécharger le brouillon', 'Enregistrer ce brouillon', 'Supprimer la copie', 'Manuscrit', 'L’analyse précédente est obsolète pendant la modification.', 'Copie chargée pour révision. Enregistrez pour appliquer.', 'Choisir une copie', 'Chargement…'],
-    es: ['Escribir', 'Leer y actualizar', 'Deshacer', 'Rehacer', 'Guardando…', 'Guardado localmente', 'Sin guardar — reintentar', 'Conflicto — borrador conservado', 'Recuperación', 'Cargar borrador', 'Descargar borrador', 'Guardar este borrador', 'Eliminar copia', 'Manuscrito', 'El análisis anterior está desactualizado durante la edición.', 'Copia cargada para revisar. Guarda para aplicar.', 'Elegir copia', 'Cargando…'],
-    it: ['Scrivi', 'Leggi e aggiorna', 'Annulla', 'Ripeti', 'Salvataggio…', 'Salvato localmente', 'Non salvato — riprova', 'Conflitto — bozza conservata', 'Recupero', 'Carica bozza', 'Scarica bozza', 'Salva questa bozza', 'Elimina copia', 'Manoscritto', 'L’analisi precedente non è aggiornata durante la modifica.', 'Copia caricata per revisione. Salva per applicare.', 'Scegli una copia', 'Caricamento…'],
-    pt: ['Escrever', 'Ler e atualizar', 'Desfazer', 'Refazer', 'A guardar…', 'Guardado localmente', 'Não guardado — tentar novamente', 'Conflito — rascunho preservado', 'Recuperação', 'Carregar rascunho', 'Transferir rascunho', 'Guardar este rascunho', 'Eliminar cópia', 'Manuscrito', 'A análise anterior está desatualizada durante a edição.', 'Cópia carregada para revisão. Guarde para aplicar.', 'Escolher cópia', 'A carregar…'],
-    nl: ['Schrijven', 'Lezen en vernieuwen', 'Ongedaan maken', 'Opnieuw', 'Opslaan…', 'Lokaal opgeslagen', 'Niet opgeslagen — opnieuw proberen', 'Conflict — concept bewaard', 'Herstel', 'Concept laden', 'Concept downloaden', 'Dit concept opslaan', 'Kopie verwijderen', 'Manuscript', 'De eerdere analyse is tijdens het bewerken verouderd.', 'Kopie geladen ter controle. Sla expliciet op om toe te passen.', 'Kies een kopie', 'Laden…'],
-  };
-  const words = translations[language] || translations.en;
-  const text = i => words[i];
+  const L = key => (typeof window.uiLabel === 'function' ? window.uiLabel(key) : key);
+  const words = [
+    'editor_write', 'editor_read_refresh', 'editor_undo', 'editor_redo',
+    'editor_saving', 'editor_saved_locally', 'editor_unsaved_retry', 'editor_conflict_retained',
+    'editor_recovery', 'editor_load_draft', 'editor_download_draft', 'editor_save_draft',
+    'editor_discard_recovery', 'editor_manuscript', 'editor_analysis_outdated',
+    'editor_recovery_loaded', 'editor_choose_recovery', 'editor_loading',
+  ];
+  const text = i => L(words[i]);
   function button(label, id, action, help, opts) {
     opts = opts || {};
     const b = document.createElement('button');
@@ -54,16 +52,7 @@
   }
   let editor, snapshot, dirty = false, paused = false, inflight = false, pending = null, timer, maximum, loading = false;
   let loaded = false, generation = 0, openingLine = 1, lastState = '';
-  const closeLabels = {
-    en: ['Close writing', 'Return to reading. The editor keeps undo history; unsaved work is saved automatically, a conflict keeps your draft.'],
-    de: ['Schreiben schließen', 'Zurück zum Lesen. Der Editor behält den Verlauf; ungespeicherte Arbeit wird automatisch gesichert, ein Konflikt behält deinen Entwurf.'],
-    fr: ['Quitter l’écriture', 'Retour à la lecture. L’historique est conservé ; le travail est enregistré automatiquement, un conflit garde le brouillon.'],
-    es: ['Cerrar escritura', 'Volver a la lectura. Se conserva el historial; el trabajo se guarda automáticamente, un conflicto conserva el borrador.'],
-    it: ['Chiudi scrittura', 'Torna alla lettura. La cronologia è conservata; il lavoro è salvato automaticamente, un conflitto conserva la bozza.'],
-    pt: ['Fechar escrita', 'Voltar à leitura. O histórico é mantido; o trabalho é guardado automaticamente, um conflito mantém o rascunho.'],
-    nl: ['Schrijven sluiten', 'Terug naar lezen. De geschiedenis blijft bewaard; werk wordt automatisch opgeslagen, een conflict behoudt het concept.'],
-  };
-  const closeWords = closeLabels[language] || closeLabels.en;
+  const closeWords = [L('editor_close_writing'), L('editor_close_writing_help')];
   const openButton = button(text(0), 'manuscript-write', open, null, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
   const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1], {icon: 'book-open', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
   closeButton.hidden = true;
@@ -80,16 +69,7 @@
   const contextGroup = document.createElement('div'); contextGroup.className = 'editor-tool-group editor-group-context';
   const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
   tools.append(historyGroup, formatGroup, versionsGroup, contextGroup, statusGroup);
-  const fmtLabels = {
-    en: ['Chapter heading (## )', 'Bold (**text**, Ctrl+B)', 'Italic (*text*, Ctrl+I)', 'Scene break (---)'],
-    de: ['Kapitelüberschrift (## )', 'Fett (**Text**, Strg+B)', 'Kursiv (*Text*, Strg+I)', 'Szenentrenner (---)'],
-    fr: ['Titre de chapitre (## )', 'Gras (**texte**, Ctrl+B)', 'Italique (*texte*, Ctrl+I)', 'Saut de scène (---)'],
-    es: ['Título de capítulo (## )', 'Negrita (**texto**, Ctrl+B)', 'Cursiva (*texto*, Ctrl+I)', 'Salto de escena (---)'],
-    it: ['Titolo capitolo (## )', 'Grassetto (**testo**, Ctrl+B)', 'Corsivo (*testo*, Ctrl+I)', 'Stacco di scena (---)'],
-    pt: ['Título de capítulo (## )', 'Negrito (**texto**, Ctrl+B)', 'Itálico (*texto*, Ctrl+I)', 'Quebra de cena (---)'],
-    nl: ['Hoofdstukkop (## )', 'Vet (**tekst**, Ctrl+B)', 'Cursief (*tekst*, Ctrl+I)', 'Scène-overgang (---)'],
-  };
-  const fmtWords = fmtLabels[language] || fmtLabels.en;
+  const fmtWords = ['editor_fmt_h2', 'editor_fmt_bold', 'editor_fmt_italic', 'editor_fmt_break'].map(L);
   const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl editor-fmt-btn'});
   const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B'});
   const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I'});
@@ -100,16 +80,11 @@
   document.body.prepend(freshness);
   const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
-  const pulseLabels = {
-    en: ['words', 'today', 'ASL', 'Dialogue', 'revisions', 'Session evolution', 'Baseline recorded — save an edit to see deltas.', 'Entropy', 'Sticky', 'Indirect/1k'],
-    de: ['Wörter', 'heute', 'ASL', 'Dialog', 'Fassungen', 'Sitzungsverlauf', 'Basis erfasst — nach der nächsten Speicherung erscheinen Deltas.', 'Entropie', 'Klebend', 'Indirekt/1k'],
-    fr: ['mots', 'aujourd’hui', 'LMP', 'Dialogue', 'révisions', 'Évolution de session', 'Base enregistrée — enregistrez une modification pour voir les écarts.', 'Entropie', 'Collant', 'Indirect/1k'],
-    es: ['palabras', 'hoy', 'LMO', 'Diálogo', 'revisiones', 'Evolución de sesión', 'Base registrada — guarda un cambio para ver las diferencias.', 'Entropía', 'Pegajosa', 'Indirecto/1k'],
-    it: ['parole', 'oggi', 'LMF', 'Dialogo', 'revisioni', 'Andamento sessione', 'Base registrata — salva una modifica per vedere i delta.', 'Entropia', 'Appiccicosa', 'Indiretto/1k'],
-    pt: ['palavras', 'hoje', 'CMF', 'Diálogo', 'revisões', 'Evolução da sessão', 'Base registada — guarde uma edição para ver os deltas.', 'Entropia', 'Pegajosa', 'Indireto/1k'],
-    nl: ['woorden', 'vandaag', 'GZL', 'Dialoog', 'revisies', 'Sessie-evolutie', 'Basis vastgelegd — sla een wijziging op om delta’s te zien.', 'Entropie', 'Plakkerig', 'Indirect/1k'],
-  };
-  const pulseWords = pulseLabels[language] || pulseLabels.en;
+  const pulseWords = [
+    'editor_pulse_words', 'editor_pulse_today', 'editor_pulse_asl', 'editor_pulse_dialogue',
+    'editor_pulse_revisions', 'editor_pulse_title', 'editor_pulse_baseline',
+    'editor_pulse_entropy', 'editor_pulse_sticky', 'editor_pulse_indirect',
+  ].map(L);
   const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
   const pulseBtn = document.createElement('button'); pulseBtn.type = 'button'; pulseBtn.id = 'manuscript-session-pulse'; pulseBtn.className = 'ctl manuscript-pulse-btn';
   pulseBtn.setAttribute('aria-expanded', 'false');
@@ -126,36 +101,21 @@
   const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
   historyGroup.append(undoBtn, redoBtn);
   statusGroup.append(status, retry, closeButton);
-  const readingLabels = {
-    en: ['Back to writing', 'Reading saved revision', 'Could not open this revision. Return to writing and retry.', 'Source changed while reading. Your editor text is preserved; review before saving.'],
-    de: ['Zurück zum Schreiben', 'Gespeicherte Fassung lesen', 'Diese Fassung konnte nicht geöffnet werden. Zum Schreiben zurückkehren und erneut versuchen.', 'Die Quelle wurde beim Lesen geändert. Dein Editorinhalt bleibt erhalten; vor dem Speichern prüfen.'],
-    fr: ['Retour à l’écriture', 'Lecture de la version enregistrée', 'Impossible d’ouvrir cette version. Revenez à l’écriture et réessayez.', 'La source a changé pendant la lecture. Le texte de l’éditeur est conservé ; vérifiez avant d’enregistrer.'],
-    es: ['Volver a escribir', 'Leer la versión guardada', 'No se pudo abrir esta versión. Vuelve a escribir e inténtalo de nuevo.', 'La fuente cambió durante la lectura. El texto del editor se conserva; revísalo antes de guardar.'],
-    it: ['Torna alla scrittura', 'Lettura della versione salvata', 'Impossibile aprire questa versione. Torna alla scrittura e riprova.', 'La fonte è cambiata durante la lettura. Il testo dell’editor è conservato; verifica prima di salvare.'],
-    pt: ['Voltar à escrita', 'Ler a versão guardada', 'Não foi possível abrir esta versão. Volte à escrita e tente novamente.', 'A fonte mudou durante a leitura. O texto do editor foi preservado; reveja antes de guardar.'],
-    nl: ['Terug naar schrijven', 'Opgeslagen versie lezen', 'Deze versie kon niet worden geopend. Ga terug naar schrijven en probeer opnieuw.', 'De bron is tijdens het lezen gewijzigd. Je editortekst is bewaard; controleer voor het opslaan.'],
-  };
-  const readingWords = readingLabels[language] || readingLabels.en;
+  const readingWords = [
+    'editor_reading_back', 'editor_reading_title', 'editor_reading_error', 'editor_reading_source_changed',
+  ].map(L);
   const reading = document.createElement('dialog'); reading.id = 'manuscript-reading';
   reading.setAttribute('aria-label', readingWords[1]);
   const readingBar = document.createElement('div'); readingBar.className = 'manuscript-edit-tools manuscript-reading-bar';
   const readingStatus = document.createElement('span'); readingStatus.id = 'manuscript-reading-status'; readingStatus.setAttribute('role', 'status');
-  const reviewLabels = {en:'Review research links', de:'Recherchebezüge prüfen', fr:'Vérifier les liens de recherche', es:'Revisar vínculos de investigación', it:'Verifica i collegamenti di ricerca', pt:'Rever ligações de pesquisa', nl:'Onderzoeksverwijzingen controleren'};
-  const reviewLinks = button(reviewLabels[language] || reviewLabels.en, 'manuscript-review-links', () => {
+  const reviewLinks = button(L('editor_review_links'), 'manuscript-review-links', () => {
     const bridge = frame && frame.contentWindow && frame.contentWindow.LixityManuscriptLinks;
     if (bridge && bridge.review) bridge.review(null);
   }, null, {icon: 'link'});
   reviewLinks.hidden = true;
-  const exitLabels = {
-    en: ['Discard unsaved research work and return to writing?', 'Research is still saving. Wait before returning.', 'This selection cannot be mapped exactly to the source. Your writing position is unchanged.'],
-    de: ['Ungespeicherte Recherche verwerfen und zum Schreiben zurückkehren?', 'Die Recherche wird noch gespeichert. Bitte warten.', 'Diese Auswahl lässt sich nicht exakt der Quelle zuordnen. Die Schreibposition bleibt erhalten.'],
-    fr: ['Abandonner la recherche non enregistrée et revenir à l’écriture ?', 'La recherche est en cours d’enregistrement. Patientez.', 'Cette sélection ne correspond pas exactement à la source. La position reste inchangée.'],
-    es: ['¿Descartar la investigación sin guardar y volver a escribir?', 'La investigación se está guardando. Espera.', 'No se puede ubicar esta selección exactamente en la fuente. La posición no cambia.'],
-    it: ['Scartare la ricerca non salvata e tornare alla scrittura?', 'Salvataggio della ricerca in corso. Attendi.', 'La selezione non corrisponde esattamente alla fonte. La posizione non cambia.'],
-    pt: ['Descartar a pesquisa não guardada e voltar à escrita?', 'A pesquisa está a ser guardada. Aguarde.', 'Não é possível localizar exatamente esta seleção na fonte. A posição mantém-se.'],
-    nl: ['Niet opgeslagen onderzoek verwerpen en terug naar schrijven?', 'Onderzoek wordt nog opgeslagen. Wacht even.', 'Deze selectie is niet exact terug te vinden in de bron. De schrijfpositie blijft behouden.'],
-  };
-  const exitWords = exitLabels[language] || exitLabels.en;
+  const exitWords = [
+    'editor_exit_discard_research', 'editor_exit_research_saving', 'editor_exit_selection_unmapped',
+  ].map(L);
   function closeReading() {
     const drafts = frame && frame.contentWindow && frame.contentWindow.LixityResearchDrafts;
     if (drafts && drafts.busy()) {readingStatus.textContent = exitWords[1]; return;}
@@ -290,16 +250,11 @@
   }
   recovery.addEventListener('change', syncRecoveryActions);
   syncRecoveryActions();
-  const comparisonLabels = {
-    en:['Find / replace','Compare versions','Last acknowledged text','Current file','Draft to review','Use as draft','Cancel','Review the text before saving. Using it as a draft does not write the manuscript.','The document changed. Reload before comparing.'],
-    de:['Suchen / Ersetzen','Fassungen vergleichen','Zuletzt bestätigter Text','Aktuelle Datei','Entwurf zur Prüfung','Als Entwurf übernehmen','Abbrechen','Prüfe den Text vor dem Speichern. Die Übernahme als Entwurf schreibt das Manuskript noch nicht.','Das Dokument hat sich geändert. Vor dem Vergleich neu laden.'],
-    fr:['Rechercher / remplacer','Comparer les versions','Dernier texte confirmé','Fichier actuel','Brouillon à vérifier','Utiliser comme brouillon','Annuler','Vérifiez avant d’enregistrer. Utiliser le brouillon ne modifie pas encore le manuscrit.','Le document a changé. Rechargez avant de comparer.'],
-    es:['Buscar / reemplazar','Comparar versiones','Último texto confirmado','Archivo actual','Borrador para revisar','Usar como borrador','Cancelar','Revisa antes de guardar. Usar el borrador todavía no modifica el manuscrito.','El documento ha cambiado. Recarga antes de comparar.'],
-    it:['Cerca / sostituisci','Confronta versioni','Ultimo testo confermato','File attuale','Bozza da verificare','Usa come bozza','Annulla','Verifica prima di salvare. Usare la bozza non modifica ancora il manoscritto.','Il documento è cambiato. Ricarica prima del confronto.'],
-    pt:['Procurar / substituir','Comparar versões','Último texto confirmado','Ficheiro atual','Rascunho a rever','Usar como rascunho','Cancelar','Revê antes de guardar. Usar o rascunho ainda não altera o manuscrito.','O documento mudou. Recarrega antes de comparar.'],
-    nl:['Zoeken / vervangen','Versies vergelijken','Laatst bevestigde tekst','Huidig bestand','Concept ter controle','Als concept gebruiken','Annuleren','Controleer voor het opslaan. Het concept gebruiken wijzigt het manuscript nog niet.','Het document is veranderd. Herlaad voor het vergelijken.'],
-  };
-  const comparisonWords = comparisonLabels[language] || comparisonLabels.en;
+  const comparisonWords = [
+    'editor_find_replace', 'editor_compare_versions', 'editor_compare_base',
+    'editor_compare_current', 'editor_compare_draft', 'editor_compare_use_draft',
+    'editor_compare_cancel', 'editor_compare_note', 'editor_compare_changed',
+  ].map(L);
   const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: 'Control+F'});
   historyGroup.append(searchBtn);
   const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.className = 'lixity-modal'; comparison.setAttribute('closedby', 'any'); comparison.setAttribute('aria-label', comparisonWords[1]);
@@ -318,10 +273,9 @@
     label.append(identity,summary,field); comparisonGrid.append(label); return {field,identity,summary};
   });
   let comparisonSnapshot = null, comparisonLoading = false, comparisonOriginal = '';
-  const discardComparison = {en:'Discard changes to this comparison draft?',de:'Änderungen an diesem Vergleichsentwurf verwerfen?',fr:'Abandonner les modifications de ce brouillon ?',es:'¿Descartar los cambios de este borrador?',it:'Scartare le modifiche a questa bozza?',pt:'Descartar as alterações deste rascunho?',nl:'Wijzigingen aan dit concept verwerpen?'};
   const comparisonDirty = () => comparison.open && comparisonFields[2].field.value !== comparisonOriginal;
   function closeComparison() {
-    if (!comparisonDirty() || confirm(discardComparison[language] || discardComparison.en)) comparison.close();
+    if (!comparisonDirty() || confirm(L('editor_compare_discard_confirm'))) comparison.close();
   }
   comparisonClose.addEventListener('click', closeComparison);
   comparison.addEventListener('cancel', event => {event.preventDefault(); closeComparison();});
@@ -659,7 +613,12 @@
   }
   function download() {
     if (!editor) return;
-    const url = URL.createObjectURL(new Blob([editor.text()], {type: 'text/markdown;charset=utf-8'}));
+    const blob = new Blob([editor.text()], {type: 'text/markdown;charset=utf-8'});
+    if (window.LixityComponents && typeof window.LixityComponents.downloadBlob === 'function') {
+      window.LixityComponents.downloadBlob(blob, 'manuscript-draft.md', 1000);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'manuscript-draft.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function refreshRecovery() {

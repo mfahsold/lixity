@@ -59,7 +59,8 @@
   display: grid; gap: .55rem; width: 16rem; max-width: calc(100vw - 2rem);
   padding: 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--glass-blur-lg, 16px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg, 16px));
   -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--shadow-modal); font-size: var(--text-small);
   max-height: calc(100dvh - 1rem); overflow: auto; overscroll-behavior: contain;
@@ -190,7 +191,7 @@
 }
 .reader-evidence-toggle, .reader-comparison-toggle {
   display: inline-flex; gap: .45rem; align-items: center; min-height: 32px;
-  padding: .2rem .65rem; border-radius: var(--radius-full, 9999px);
+  padding: .2rem .65rem; border-radius: var(--radius-pill);
   border: 1px solid var(--line); background: var(--surface);
   font-size: var(--text-note); color: var(--fg-secondary);
   cursor: pointer; user-select: none; transition: background .15s ease, border-color .15s ease, color .15s ease;

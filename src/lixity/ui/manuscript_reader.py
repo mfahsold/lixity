@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from html import escape
 
 from ..style_profile import ChapterProfile
-from .components import label, ui_icon
+from .components import panel_label, ui_icon
 from .manuscript_document import ReaderBlock
 
 INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
@@ -12,8 +12,7 @@ INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
 
 def inline_evidence_controls(labels: Mapping[str, str] | None) -> str:
     """Render inline evidence layer toggle chips for the reader analysis bar."""
-    def text(key: str) -> str:
-        return escape(label(labels, key), quote=True)
+    text = panel_label(labels)
 
     chips = "".join(
         f'<button type="button" class="ctl reader-evidence-chip" '
@@ -38,8 +37,7 @@ def reading_controls(
     overview_navigation: str = "",
 ) -> str:
     """Render progressive-enhancement controls; no second manuscript copy."""
-    def text(key: str) -> str:
-        return escape(label(labels, key), quote=True)
+    text = panel_label(labels)
 
     options = "".join(
         f'<option value="ch-{chapter.num}">{chapter.num}. {escape(chapter.title)}</option>'

@@ -35,7 +35,7 @@
 }
 .analysis-evidence-card {
   position: fixed;
-  z-index: 220;
+  z-index: var(--z-popover, 220);
   box-sizing: border-box;
   width: min(23rem, calc(100vw - 16px));
   max-height: min(30rem, calc(100dvh - 16px));
@@ -43,18 +43,18 @@
   overscroll-behavior: contain;
   padding: var(--space-2) var(--space-3) var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--fg);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
   font: var(--text-control)/var(--line-compact) var(--font);
   overflow-wrap: anywhere;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(var(--glass-blur-sm));
 }
 .analysis-evidence-card[hidden] { display: none; }
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-2); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0; }
+.analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-2); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
 .analysis-evidence-heading strong { min-width: 0; }
 .analysis-evidence-card p { margin: var(--space-1) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }

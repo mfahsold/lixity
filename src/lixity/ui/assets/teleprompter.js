@@ -39,12 +39,8 @@
   var activeDossierKey = null, dossierSequence = 0;
   var spokenParagraphs = new WeakMap();
 
-  function label(key, fallback) {
-    if (typeof window.uiLabel === "function") {
-      var l = window.uiLabel(key);
-      if (l && !l.startsWith("teleprompter_") && !l.startsWith("reading_")) return l;
-    }
-    return fallback || key;
+  function label(key) {
+    return typeof window.uiLabel === "function" ? window.uiLabel(key) : key;
   }
 
   function fetchApi(path, options) {
@@ -86,11 +82,11 @@
     var view = {state:"loading", project:null, token:selected.project_token, invalidated:false,
       current:function() { return !view.invalidated && current() && researchContextToken() === researchToken; }};
     researchView = view;
-    dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…");
+    dossierNote("loading", "teleprompter_images_loading");
     researchApiGet("research/status", undefined, true).then(function(state) {
       if (!view.current()) return;
       if (!state.ok) throw new Error("Research status unavailable");
-      if (!state.initialized) { view.state = "empty"; dossierNote("empty", "research_not_initialized", "Recherche ist nicht eingerichtet."); return; }
+      if (!state.initialized) { view.state = "empty"; dossierNote("empty", "research_not_initialized"); return; }
       var binding = "project_token=" + encodeURIComponent(selected.project_token);
       return Promise.all([researchApiGet("research/manuscript-review?" + binding), researchApiGet("research/dossiers?" + binding)]).then(function(results) {
         if (!view.current()) return;
@@ -116,7 +112,7 @@
     modal.hidden = true;
     modal.setAttribute("role", "dialog");
     modal.setAttribute("aria-modal", "true");
-    modal.setAttribute("aria-label", label("reading_teleprompter", "Teleprompter"));
+    modal.setAttribute("aria-label", label("reading_teleprompter"));
 
     recordStatusAnnouncer = document.createElement("div");
     recordStatusAnnouncer.id = "teleprompter-record-status";
@@ -138,12 +134,16 @@
     brand.className = "teleprompter-brand";
     var brandIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("teleprompter", { size: 15 }) : "";
-    brand.innerHTML = brandIcon + ' <strong class="teleprompter-title-text">' + label("reading_teleprompter", "Teleprompter") + "</strong>";
+    brand.innerHTML = brandIcon;
+    var brandTitle = document.createElement("strong");
+    brandTitle.className = "teleprompter-title-text";
+    brandTitle.textContent = label("reading_teleprompter");
+    brand.append(" ", brandTitle);
     leftGroup.appendChild(brand);
 
     chapterSelect = document.createElement("select");
     chapterSelect.className = "teleprompter-select";
-    chapterSelect.setAttribute("aria-label", label("reading_chapter", "Kapitel"));
+    chapterSelect.setAttribute("aria-label", label("reading_chapter"));
     chapterSelect.addEventListener("change", function() {
       var targetId = chapterSelect.value;
       if (!targetId) return;
@@ -161,9 +161,12 @@
     playBtn = document.createElement("button");
     playBtn.type = "button";
     playBtn.className = "teleprompter-btn teleprompter-btn-primary";
-    playBtn.innerHTML = '▶ <span class="teleprompter-btn-label">' + label("teleprompter_play", "Lauf starten") + "</span>";
-    playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
-    playBtn.title = label("teleprompter_play", "Lauf starten") + " (Leertaste)";
+    var playSpan = document.createElement("span");
+    playSpan.className = "teleprompter-btn-label";
+    playSpan.textContent = label("teleprompter_play");
+    playBtn.append("▶ ", playSpan);
+    playBtn.setAttribute("aria-label", label("teleprompter_play"));
+    playBtn.title = label("teleprompter_play");
     playBtn.addEventListener("click", togglePlay);
     centerGroup.appendChild(playBtn);
 
@@ -176,8 +179,8 @@
     speedSlider.max = "240";
     speedSlider.value = String(wordsPerMinute);
     speedSlider.step = "5";
-    speedSlider.setAttribute("aria-label", label("teleprompter_speed", "Tempo"));
-    speedSlider.title = label("teleprompter_speed", "Tempo");
+    speedSlider.setAttribute("aria-label", label("teleprompter_speed"));
+    speedSlider.title = label("teleprompter_speed");
     speedSlider.addEventListener("input", function() {
       wordsPerMinute = parseInt(speedSlider.value, 10);
       speedVal.textContent = wordsPerMinute + " WPM";
@@ -198,8 +201,8 @@
     sizeMinus.type = "button";
     sizeMinus.className = "teleprompter-btn";
     sizeMinus.textContent = "A−";
-    sizeMinus.title = label("reading_smaller", "Schrift verkleinern");
-    sizeMinus.setAttribute("aria-label", label("reading_smaller", "Schrift verkleinern"));
+    sizeMinus.title = label("reading_smaller");
+    sizeMinus.setAttribute("aria-label", label("reading_smaller"));
     sizeMinus.addEventListener("click", function() {
       fontSize = Math.max(20, fontSize - 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -210,8 +213,8 @@
     sizePlus.type = "button";
     sizePlus.className = "teleprompter-btn";
     sizePlus.textContent = "A+";
-    sizePlus.title = label("reading_larger", "Schrift vergrößern");
-    sizePlus.setAttribute("aria-label", label("reading_larger", "Schrift vergrößern"));
+    sizePlus.title = label("reading_larger");
+    sizePlus.setAttribute("aria-label", label("reading_larger"));
     sizePlus.addEventListener("click", function() {
       fontSize = Math.min(56, fontSize + 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -230,9 +233,13 @@
     sidebarToggleBtn.className = "teleprompter-btn teleprompter-dossier-toggle";
     var dossierIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("panel-right", { size: 15 }) : "";
-    sidebarToggleBtn.innerHTML = dossierIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_dossiers", "Dossiers") + "</span>";
-    sidebarToggleBtn.title = label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder") + " (D)";
-    sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder"));
+    sidebarToggleBtn.innerHTML = dossierIcon;
+    var sidebarBtnSpan = document.createElement("span");
+    sidebarBtnSpan.className = "teleprompter-btn-label";
+    sidebarBtnSpan.textContent = label("teleprompter_dossiers");
+    sidebarToggleBtn.append(" ", sidebarBtnSpan);
+    sidebarToggleBtn.title = label("teleprompter_dossier_context") + " (D)";
+    sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context"));
     sidebarToggleBtn.setAttribute("aria-pressed", "false");
     sidebarToggleBtn.addEventListener("click", function() {
       if (sidebar) {
@@ -248,17 +255,21 @@
     recordBtn.className = "teleprompter-btn teleprompter-btn-record";
     var micIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("mic", { size: 15 }) : "";
-    recordBtn.innerHTML = micIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
-    recordBtn.title = label("teleprompter_record_hint", "Lese-Take aufnehmen") + " (R)";
-    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
+    recordBtn.innerHTML = micIcon;
+    var recordBtnSpan = document.createElement("span");
+    recordBtnSpan.className = "teleprompter-btn-label";
+    recordBtnSpan.textContent = label("teleprompter_record_take");
+    recordBtn.append(" ", recordBtnSpan);
+    recordBtn.title = label("teleprompter_record_hint") + " (R)";
+    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint"));
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
     takeImportBtn = document.createElement("button"); takeImportBtn.type = "button";
     var folderIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("folder-open", { size: 15 }) : "📂";
     takeImportBtn.className = "teleprompter-btn"; takeImportBtn.innerHTML = folderIcon;
-    takeImportBtn.setAttribute("aria-label", label("teleprompter_take_import", "WAV + JSON importieren"));
-    takeImportBtn.title = label("teleprompter_take_import", "WAV + JSON importieren");
+    takeImportBtn.setAttribute("aria-label", label("teleprompter_take_import"));
+    takeImportBtn.title = label("teleprompter_take_import");
     takeImportBtn.addEventListener("click", function() { takeFiles.click(); });
     rightGroup.appendChild(takeImportBtn);
     takeFiles = document.createElement("input"); takeFiles.type = "file"; takeFiles.multiple = true;
@@ -269,8 +280,8 @@
     closeBtn.type = "button";
     closeBtn.className = "teleprompter-btn teleprompter-btn-close";
     closeBtn.innerHTML = '<span aria-hidden="true">✕</span>';
-    closeBtn.title = label("modal_close", "Schließen") + " (Esc)";
-    closeBtn.setAttribute("aria-label", label("modal_close", "Schließen") + " (Esc)");
+    closeBtn.title = label("modal_close") + " (Esc)";
+    closeBtn.setAttribute("aria-label", label("modal_close") + " (Esc)");
     closeBtn.addEventListener("click", closeTeleprompter);
     rightGroup.appendChild(closeBtn);
 
@@ -304,15 +315,15 @@
     var sidebarHeader = document.createElement("div");
     sidebarHeader.className = "teleprompter-sidebar-header";
     var sidebarTitle = document.createElement("span");
-    sidebarTitle.textContent = "🏛 " + label("teleprompter_dossier_context", "Historischer Kontext & Dossier-Bilder");
+    sidebarTitle.textContent = "🏛 " + label("teleprompter_dossier_context");
     sidebarHeader.appendChild(sidebarTitle);
 
     var sidebarClose = document.createElement("button");
     sidebarClose.type = "button";
     sidebarClose.className = "teleprompter-btn teleprompter-btn-close";
     sidebarClose.innerHTML = '<span aria-hidden="true">✕</span>';
-    sidebarClose.title = label("modal_close", "Schließen");
-    sidebarClose.setAttribute("aria-label", label("modal_close", "Schließen"));
+    sidebarClose.title = label("modal_close");
+    sidebarClose.setAttribute("aria-label", label("modal_close"));
     sidebarClose.addEventListener("click", function() {
       sidebar.classList.remove("is-open");
       if (sidebarToggleBtn) {
@@ -473,14 +484,14 @@
     }
   }
 
-  function dossierNote(state, key, fallback) {
+  function dossierNote(state, key) {
     if (!sidebarContent) return;
     sidebarContent.replaceChildren(); sidebarContent.dataset.state = state;
     var note = document.createElement("p"); note.className = "teleprompter-sidebar-empty";
-    note.textContent = label(key, fallback); sidebarContent.appendChild(note);
+    note.textContent = label(key); sidebarContent.appendChild(note);
   }
   function dossierFailure() {
-    dossierNote("failed", "teleprompter_images_failed", "Dossierbilder sind nicht verfügbar. Öffne den Teleprompter erneut, um es noch einmal zu versuchen.");
+    dossierNote("failed", "teleprompter_images_failed");
   }
   function updateDossierSidebar(paragraphNode, force) {
     if (!sidebarContent || !paragraphNode) return;
@@ -496,10 +507,10 @@
     paragraphNode.classList.add("is-active");
 
     var view = researchView, request = ++dossierSequence;
-    if (!view) { dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft."); return; }
+    if (!view) { dossierNote("empty", "teleprompter_no_images"); return; }
     if (!view.current() || view.state === "failed") { dossierFailure(); return; }
-    if (view.state === "loading") { dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…"); return; }
-    if (view.state === "empty") { dossierNote("empty", "research_not_initialized", "Recherche ist nicht eingerichtet."); return; }
+    if (view.state === "loading") { dossierNote("loading", "teleprompter_images_loading"); return; }
+    if (view.state === "empty") { dossierNote("empty", "research_not_initialized"); return; }
     var references = [], suggested = false;
     try {
       // The backend owns exact-anchor matching and historical claim/dossier pins.
@@ -527,8 +538,8 @@
         suggested = references.length > 0;
       }
     } catch (_) { dossierFailure(); return; }
-    if (!references.length) { dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft."); return; }
-    dossierNote("loading", "teleprompter_images_loading", "Dossierbilder werden geladen…");
+    if (!references.length) { dossierNote("empty", "teleprompter_no_images"); return; }
+    dossierNote("loading", "teleprompter_images_loading");
     Promise.all(references.map(function(pin) {
       var identity = pin.id + ":" + pin.revision;
       if (!dossierReads.has(identity)) {
@@ -548,14 +559,14 @@
       sidebarContent.replaceChildren(); sidebarContent.dataset.state = suggested ? "suggested" : "ready";
       if (suggested) {
         var note = document.createElement("p"); note.className = "ctl-note";
-        note.textContent = label("teleprompter_images_suggested", "Vorschlag anhand von Dossiertitel oder Schlagworten"); sidebarContent.appendChild(note);
+        note.textContent = label("teleprompter_images_suggested"); sidebarContent.appendChild(note);
       }
       var shown = new Set();
       details.forEach(function(detail) { detail.images.forEach(function(image) {
         var identity = image.source_id + ":" + image.source_version_id;
         if (!shown.has(identity) && (!suggested || shown.size < 2) && renderDossierCard(detail, image)) shown.add(identity);
       }); });
-      if (!shown.size) dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
+      if (!shown.size) dossierNote("empty", "teleprompter_no_images");
     }).catch(function() { if (request === dossierSequence && view.current()) dossierFailure(); });
   }
 
@@ -625,16 +636,22 @@
     isPlaying = !isPlaying;
     if (isPlaying) {
       playBtn.classList.add("is-active");
-      playBtn.innerHTML = '⏸ <span class="teleprompter-btn-label">' + label("teleprompter_pause", "Pause") + "</span>";
-      playBtn.setAttribute("aria-label", label("teleprompter_pause", "Pause"));
-      playBtn.title = label("teleprompter_pause", "Pause") + " (Leertaste)";
+      var pauseSpan = document.createElement("span");
+      pauseSpan.className = "teleprompter-btn-label";
+      pauseSpan.textContent = label("teleprompter_pause");
+      playBtn.replaceChildren("⏸ ", pauseSpan);
+      playBtn.setAttribute("aria-label", label("teleprompter_pause"));
+      playBtn.title = label("teleprompter_pause");
       lastTimestamp = 0;
       animFrameId = requestAnimationFrame(scrollLoop);
     } else {
       playBtn.classList.remove("is-active");
-      playBtn.innerHTML = '▶ <span class="teleprompter-btn-label">' + label("teleprompter_play", "Lauf starten") + "</span>";
-      playBtn.setAttribute("aria-label", label("teleprompter_play", "Lauf starten"));
-      playBtn.title = label("teleprompter_play", "Lauf starten") + " (Leertaste)";
+      var resumeSpan = document.createElement("span");
+      resumeSpan.className = "teleprompter-btn-label";
+      resumeSpan.textContent = label("teleprompter_play");
+      playBtn.replaceChildren("▶ ", resumeSpan);
+      playBtn.setAttribute("aria-label", label("teleprompter_play"));
+      playBtn.title = label("teleprompter_play");
       if (animFrameId) cancelAnimationFrame(animFrameId);
     }
   }
@@ -648,9 +665,9 @@
   var pcmCaptureSequence = 0;
   var pcmCaptureContext = null;
 
-  function recordingState(state, key, fallback) {
+  function recordingState(state, key) {
     recordStatusAnnouncer.dataset.state = state;
-    recordStatusAnnouncer.textContent = label(key, fallback);
+    recordStatusAnnouncer.textContent = label(key);
     recordStatusAnnouncer.hidden = false;
   }
   function resetCapture() {
@@ -663,19 +680,21 @@
     recordBtn.classList.remove("is-active"); recordBtn.removeAttribute("aria-busy");
     var micIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("mic", { size: 15 }) : "";
-    recordBtn.innerHTML = micIcon + ' <span class="teleprompter-btn-label">' + label("teleprompter_record_take", "Take aufnehmen") + "</span>";
-    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint", "Lese-Take aufnehmen"));
+    recordBtn.innerHTML = micIcon;
+    var recLabel = document.createElement("span");
+    recLabel.className = "teleprompter-btn-label";
+    recLabel.textContent = label("teleprompter_record_take");
+    recordBtn.append(" ", recLabel);
+    recordBtn.setAttribute("aria-label", label("teleprompter_record_hint"));
     takeImportBtn.disabled = false;
   }
   function captureFailed(error) {
     resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
     if (error && error.name === "ContextChangedError") {
-      recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt."); return;
+      recordingState("failed", "teleprompter_take_context"); return;
     }
     var denied = error && ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error.name);
-    recordingState("failed", denied ? "teleprompter_take_denied" : "teleprompter_take_failed", denied ?
-      "Mikrofon gesperrt. Erlaube den Mikrofonzugriff in den Website-Berechtigungen des Browsers und starte erneut." :
-      "Die Mikrofonaufnahme konnte nicht starten. Prüfe das Aufnahmegerät und versuche es erneut.");
+    recordingState("failed", denied ? "teleprompter_take_denied" : "teleprompter_take_failed");
   }
   async function startAudioCapture() {
     pcmRecordedChunks = []; pcmTotalSamples = 0; ++takeSequence; pcmCaptureContext = selectedContext();
@@ -689,7 +708,7 @@
         var error = new Error("Recording context changed"); error.name = "ContextChangedError"; throw error;
       }
     }
-    recordingState("pending", "teleprompter_take_pending", "Mikrofonfreigabe wird angefragt. Erlaube den Zugriff im Browser; erneut klicken bricht ab.");
+    recordingState("pending", "teleprompter_take_pending");
     recordBtn.setAttribute("aria-busy", "true");
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AudioCtxClass) throw new Error("Microphone unavailable");
@@ -708,13 +727,13 @@
         var copy = new Float32Array(input.subarray(0, remaining));
         if (copy.length) { pcmRecordedChunks.push(copy); pcmTotalSamples += copy.length; }
         if (copy.length < input.length) {
-          toggleRecording(); recordingState("ready", "teleprompter_take_limit", "Aufnahme am Dateilimit beendet. Der Take kann exportiert werden.");
+          toggleRecording(); recordingState("ready", "teleprompter_take_limit");
         }
       };
       pcmSourceNode.connect(pcmProcessorNode); pcmProcessorNode.connect(context.destination);
       recordBtn.removeAttribute("aria-busy"); recordBtn.classList.add("is-active");
-      recordBtn.setAttribute("aria-label", label("teleprompter_recording", "Aufnahme läuft…"));
-      recordingState("running", "teleprompter_take_running", "Mikrofonaufnahme läuft. Erneut klicken beendet den Take.");
+      recordBtn.setAttribute("aria-label", label("teleprompter_recording"));
+      recordingState("running", "teleprompter_take_running");
       recordStartTime = Date.now();
       function tick() { var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
         recordBtn.textContent = "⏹ " + String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0"); }
@@ -725,7 +744,7 @@
   function stopAudioCapture() {
     var sampleRate = pcmAudioContext && pcmAudioContext.sampleRate, chunks = pcmRecordedChunks, count = pcmTotalSamples;
     resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
-    recordingState("idle", "teleprompter_take_stopped", "Aufnahme beendet.");
+    recordingState("idle", "teleprompter_take_stopped");
     if (count) {
       try {
         var blob = new Blob([window.LixityAudioTake.encodeWav(chunks, count, sampleRate)], {type:"audio/wav"});
@@ -740,13 +759,13 @@
       var value = await pending;
       if (sequence !== takeSequence) return;
       if (!captured && (modal.hidden || view !== contextSequence || JSON.stringify(context) !== JSON.stringify(selectedContext()))) {
-        if (!modal.hidden) recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt.");
+        if (!modal.hidden) recordingState("failed", "teleprompter_take_context");
         return;
       }
       renderTake(value, context);
-      recordingState("ready", "teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
+      recordingState("ready", "teleprompter_take_ready");
     } catch (_) {
-      if (sequence === takeSequence) recordingState("failed", "teleprompter_take_import_failed", "WAV und JSON passen nicht zusammen oder sind ungültig. Der bisherige Take bleibt erhalten.");
+      if (sequence === takeSequence) recordingState("failed", "teleprompter_take_import_failed");
     } finally { if (sequence === takeSequence) { recordBtn.disabled = false; takeImportBtn.disabled = false; } }
   }
   function importTakeFiles() {
@@ -755,7 +774,7 @@
     var wav = files.filter(function(file) { return /\.wav$/i.test(file.name); });
     var json = files.filter(function(file) { return /\.json$/i.test(file.name); });
     if (files.length !== 2 || wav.length !== 1 || json.length !== 1) {
-      recordingState("failed", "teleprompter_take_import_failed", "Wähle die zusammengehörigen WAV- und JSON-Dateien. Der bisherige Take bleibt erhalten."); return;
+      recordingState("failed", "teleprompter_take_import_failed"); return;
     }
     acceptTake(window.LixityAudioTake.importFiles(wav[0], json[0]), selectedContext());
   }
@@ -769,18 +788,18 @@
     if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
     currentTake = value; takeContext = context; lastRecordedBlobUrl = URL.createObjectURL(value.blob);
     takeCard = document.createElement("section"); takeCard.className = "teleprompter-dossier-card teleprompter-take-card";
-    var title = document.createElement("strong"); title.textContent = label("teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)"); takeCard.appendChild(title);
+    var title = document.createElement("strong"); title.textContent = label("teleprompter_take_ready"); takeCard.appendChild(title);
     var audio = document.createElement("audio"); audio.controls = true; audio.src = lastRecordedBlobUrl; takeCard.appendChild(audio);
     if (typeof window.createSpeechPlayer === "function") takePlayer = window.createSpeechPlayer(audio, {
       label:function(key) { return label("speech_" + key); },
-      onError:function() { recordingState("failed", "teleprompter_take_play_failed", "Die Aufnahme kann nicht abgespielt werden."); }
+      onError:function() { recordingState("failed", "teleprompter_take_play_failed"); }
     });
-    var description = document.createElement("p"); description.textContent = label("teleprompter_take_help", "Trage die tatsächlich gesprochenen Wörter ein. Der Lesetext ist kein bestätigtes Transkript. WAV und JSON werden getrennt heruntergeladen."); takeCard.appendChild(description);
-    var field = document.createElement("label"); field.className = "setting-field"; field.textContent = label("teleprompter_take_transcript", "Gesprochener Text");
+    var description = document.createElement("p"); description.textContent = label("teleprompter_take_help"); takeCard.appendChild(description);
+    var field = document.createElement("label"); field.className = "setting-field"; field.textContent = label("teleprompter_take_transcript");
     var text = document.createElement("textarea"); text.className = "ctl"; text.rows = 3; text.maxLength = 100000; text.value = currentTake.transcript; field.appendChild(text); takeCard.appendChild(field);
     var confirmation = document.createElement("label"); confirmation.className = "teleprompter-take-confirm";
     var checked = document.createElement("input"); checked.type = "checkbox"; checked.checked = currentTake.transcript_status === "confirmed";
-    confirmation.appendChild(checked); confirmation.appendChild(document.createTextNode(label("teleprompter_take_confirm", "Transkript stimmt mit der Aufnahme überein"))); takeCard.appendChild(confirmation);
+    confirmation.appendChild(checked); confirmation.appendChild(document.createTextNode(label("teleprompter_take_confirm"))); takeCard.appendChild(confirmation);
     function update(edited) {
       var previousInvalid = text.getAttribute("aria-invalid") === "true";
       if (edited) checked.checked = false;
@@ -788,10 +807,10 @@
       var invalid = false;
       try { currentTake = window.LixityAudioTake.withTranscript(currentTake, text.value, checked.checked ? "confirmed" : text.value.trim() ? "draft" : "missing"); }
       catch (_) { invalid = true; checked.checked = false;
-        recordingState("failed", "teleprompter_take_export_failed", "Der Take konnte nicht exportiert werden. Prüfe das Transkript."); }
+        recordingState("failed", "teleprompter_take_export_failed"); }
       takeCard.querySelectorAll('[data-take-download="json"], [data-take-studio]').forEach(function(button) { button.disabled = invalid; });
       text.setAttribute("aria-invalid", String(invalid));
-      if (!invalid && previousInvalid) recordingState("ready", "teleprompter_take_ready", "Aufnahme abgeschlossen (WAV)");
+      if (!invalid && previousInvalid) recordingState("ready", "teleprompter_take_ready");
     }
     text.addEventListener("input", function() { update(true); }); checked.addEventListener("change", function() { update(false); });
     var actions = document.createElement("div"); actions.className = "row"; takeCard.appendChild(actions);
@@ -799,15 +818,15 @@
       var button = document.createElement("button"); button.type = "button"; button.className = "teleprompter-btn";
       button.dataset.takeDownload = kind; button.textContent = kind.toUpperCase();
       button.addEventListener("click", function() { window.LixityAudioTake.download(currentTake, kind).catch(function() {
-        recordingState("failed", "teleprompter_take_export_failed", "Der Take konnte nicht exportiert werden. Prüfe das Transkript.");
+        recordingState("failed", "teleprompter_take_export_failed");
       }); }); actions.appendChild(button);
     });
     var studio = document.createElement("button"); studio.type = "button"; studio.className = "teleprompter-voice-studio-link"; studio.dataset.takeStudio = "";
-    studio.textContent = label("teleprompter_open_studio", "Zum Autorenstimmen-Studio →");
+    studio.textContent = label("teleprompter_open_studio");
     studio.addEventListener("click", function() {
       if (document.body.dataset.speechCapable !== "true") return;
       if (JSON.stringify(takeContext) !== JSON.stringify(selectedContext())) {
-        recordingState("failed", "teleprompter_take_context", "Das Projekt hat sich geändert. Exportiere den Take und importiere ihn im gewünschten Projekt."); return;
+        recordingState("failed", "teleprompter_take_context"); return;
       }
       var detail = {mode:"reference", take:currentTake, context:takeContext}; closeTeleprompter();
       document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {detail:detail}));
@@ -827,7 +846,7 @@
     planStatus.hidden = true; planStatus.textContent = ""; delete planStatus.dataset.state;
     speechData = null; researchDossiers = null; passageContexts = null; researchView = null; activeParagraphSha = null;
     activeDossierKey = null; ++dossierSequence; dossierReads = new Map();
-    dossierNote("empty", "teleprompter_no_images", "Keine Dossier-Bilder mit dieser Passage verknüpft.");
+    dossierNote("empty", "teleprompter_no_images");
     if (sidebar) sidebar.classList.remove("is-open");
     if (sidebarToggleBtn) {
       sidebarToggleBtn.classList.remove("is-active");

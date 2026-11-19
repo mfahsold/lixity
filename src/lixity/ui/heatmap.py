@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -20,6 +19,7 @@ from ..style_fingerprint import (
     z_color,
 )
 from .components import (
+    attr_json,
     band_chart,
     chapter_link,
     checkbox_field,
@@ -93,14 +93,13 @@ def render_metric_context(
                 for z in [fingerprint.z_scores.get(chapter.num, {}).get(field)]
             },
         }
-    payload = esc(json.dumps(
+    payload = attr_json(
         {
             "features": features,
             "chapters": chapter_data,
             "labels": {"loading": label(labels, "dim_loading"), "poles": label(labels, "dim_poles")},
-        },
-        ensure_ascii=False, separators=(",", ":")
-    ))
+        }
+    )
     return (
         f'<dialog class="lixity-modal" id="analysis-metric-context" closedby="any" '
         f'aria-labelledby="metric-context-title" data-metric-context="{payload}">'

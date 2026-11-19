@@ -641,7 +641,6 @@
   }
 
   function renderPassageBacklinks(panel, container) {
-    var isDe = (document.documentElement.lang || "en").startsWith("de");
     var backlinksWrap = document.createElement("div");
     backlinksWrap.className = "reader-backlinks-panel";
 
@@ -649,7 +648,11 @@
     header.className = "reader-backlinks-header";
     var iconSvg = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("link") : "";
-    header.innerHTML = (iconSvg || "") + " <span>" + (isDe ? "Verknüpfungen & Kontext" : "Linked Context & Backlinks") + "</span>";
+    header.innerHTML = iconSvg || "";
+    var headerText = document.createElement("span");
+    headerText.textContent = uiLabel("reader_backlinks_heading");
+    header.appendChild(document.createTextNode(" "));
+    header.appendChild(headerText);
     backlinksWrap.appendChild(header);
 
     // 1. Research dossier & evidence link card
@@ -662,13 +665,16 @@
     rTitle.className = "reader-backlink-title";
     var rIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("book-open") : "";
-    rTitle.innerHTML = (rIcon || "") + " <span>" + (isDe ? "Historischer Beleg / Dossier" : "Historical Evidence / Dossier") + "</span>";
+    rTitle.innerHTML = rIcon || "";
+    var rTitleText = document.createElement("span");
+    rTitleText.textContent = uiLabel("reader_backlinks_dossier_title");
+    rTitle.appendChild(document.createTextNode(" "));
+    rTitle.appendChild(rTitleText);
 
     var rSnippet = document.createElement("span");
     rSnippet.className = "reader-backlink-snippet";
     var textPreview = panel.textContent ? panel.textContent.trim().slice(0, 90) + "…" : "";
-    rSnippet.textContent = isDe ? ("Passage mit Dossiers, Zitaten und Belegen abgleichen: " + textPreview) :
-      ("Link passage with research claims and citations: " + textPreview);
+    rSnippet.textContent = uiFormat("reader_backlinks_dossier_hint", {preview: textPreview});
 
     researchCard.appendChild(rTitle);
     researchCard.appendChild(rSnippet);
@@ -701,12 +707,15 @@
     aTitle.className = "reader-backlink-title";
     var aIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("mic") : "";
-    aTitle.innerHTML = (aIcon || "") + " <span>" + (isDe ? "Regieanweisungen & Teleprompter" : "Vocal Directions & Teleprompter") + "</span>";
+    aTitle.innerHTML = aIcon || "";
+    var aTitleText = document.createElement("span");
+    aTitleText.textContent = uiLabel("reader_backlinks_audio_title");
+    aTitle.appendChild(document.createTextNode(" "));
+    aTitle.appendChild(aTitleText);
 
     var aSnippet = document.createElement("span");
     aSnippet.className = "reader-backlink-snippet";
-    aSnippet.textContent = isDe ? "Sprechtempo, Pausen, Betonungen oder Aussprache (IPA) anpassen" :
-      "Inspect pacing, vocal cues and phonetic pronunciation";
+    aSnippet.textContent = uiLabel("reader_backlinks_audio_hint");
 
     audioCard.appendChild(aTitle);
     audioCard.appendChild(aSnippet);

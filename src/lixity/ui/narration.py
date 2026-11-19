@@ -39,11 +39,13 @@ def render_scenes_panel(
     if not scenes.get("items") and not scenes.get("planned_items"):
         return ""
 
+    _L, _N, _ = panel_formatters(labels, language_key)
+
     def L(key: str) -> str:
-        return esc(label(labels, key).replace("{min_tokens}", str(MIN_TOKENS_LD)))
+        return esc(label(labels, key).replace("{min_tokens}", str(MIN_TOKENS_LD))) if key == "scene_support" else _L(key)
 
     def N(value: Any) -> str:
-        return "—" if value is None else format_num(value, language_key, 2)
+        return "—" if value is None else _N(value, 2)
 
     parts = [panel_start("scenes", labels, "panel_scenes"),
              f'<p class="hint">{L("scene_guidance")}</p>',

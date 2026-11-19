@@ -10,6 +10,26 @@
   var activeCommands = [];
   var lastFocusedElement = null;
 
+  var STANDALONE_DE = {
+    cmd_cat_views: "Ansicht",
+    cmd_cat_analysis: "Analyse",
+    cmd_cat_research: "Recherche",
+    cmd_cat_audio: "Audio & Sprache",
+    cmd_cat_export: "Export",
+    cmd_metric_dialogue_title: "Dialoge & Redeanteile hervorheben",
+    cmd_research_search_title: "Recherche-Suchmaske öffnen",
+    cmd_research_new_dossier_title: "Neues Forschungs-Dossier anlegen"
+  };
+
+  function cmdText(key, enFallback) {
+    if (typeof window.uiLabel === "function") {
+      var translated = window.uiLabel(key);
+      if (translated && translated !== key) return translated;
+    }
+    var lang = (document.documentElement.lang || "en").split("-")[0].toLowerCase();
+    return (lang === "de" && STANDALONE_DE[key]) || enFallback || key;
+  }
+
   function icon(name) {
     if (window.LixityIcons && typeof window.LixityIcons.create === "function") {
       return window.LixityIcons.create(name, "command-icon");
@@ -28,9 +48,9 @@
     }
   }
 
-  function buildAnalysisLayerCommands(isDe, workbench) {
+  function buildAnalysisLayerCommands(workbench) {
     var styleLayer = document.getElementById("style-layer");
-    var analysisCat = isDe ? "Analyse" : "Analysis";
+    var analysisCat = cmdText("cmd_cat_analysis", "Analysis");
     if (styleLayer && styleLayer.options && styleLayer.options.length > 1) {
       var layerCommands = [];
       Array.prototype.slice.call(styleLayer.options).forEach(function (opt) {
@@ -40,13 +60,13 @@
         var parent = opt.parentElement;
         var groupLabel = (parent && parent.tagName === "OPTGROUP" && parent.label) ? parent.label.trim() : "";
         var valHints = {
-          dialogue: isDe ? "Dialoge, Sprecherwechsel & Redeanteile" : "Dialogue turns & spoken share",
-          asl: isDe ? "Satzlänge & Rhythmus" : "Sentence length & rhythm",
-          tense: isDe ? "Tempus-Marker & Zeitformen" : "Grammatical tense & shifts"
+          dialogue: cmdText("cmd_layer_dialogue_hint", "Dialogue turns & spoken share"),
+          asl: cmdText("cmd_layer_asl_hint", "Sentence length & rhythm"),
+          tense: cmdText("cmd_layer_tense_hint", "Grammatical tense & shifts")
         };
         var subtitle = valHints[val]
           ? (groupLabel ? (groupLabel + " · " + valHints[val]) : valHints[val])
-          : (groupLabel || (isDe ? "Analyse-Ebene im Manuskript umschalten" : "Toggle analysis layer in manuscript"));
+          : (groupLabel || cmdText("cmd_layer_toggle_sub", "Toggle analysis layer in manuscript"));
         layerCommands.push({
           id: val ? ("layer-" + val) : "layer-off",
           category: groupLabel ? (analysisCat + ": " + groupLabel) : analysisCat,
@@ -64,31 +84,31 @@
       {
         id: "metric-asl",
         category: analysisCat,
-        title: isDe ? "Satzlänge & Rhythmus (ASL) hervorheben" : "Highlight Sentence Length & Rhythm",
-        subtitle: isDe ? "Mittlere Satzlänge und Variationskoeffizient" : "Average sentence length and rhythm",
+        title: cmdText("cmd_metric_asl_title", "Highlight Sentence Length & Rhythm"),
+        subtitle: cmdText("cmd_metric_asl_sub", "Average sentence length and rhythm"),
         icon: "sigma",
         action: function () { activateAnalysisLayer("asl", workbench); }
       },
       {
         id: "metric-dialogue",
         category: analysisCat,
-        title: isDe ? "Dialoge & Redeanteile hervorheben" : "Highlight Dialogue & Direct Speech",
-        subtitle: isDe ? "Sprecherwechsel, Redeanteil und Dialoge" : "Dialogue turns and spoken share",
+        title: cmdText("cmd_metric_dialogue_title", "Highlight Dialogue & Direct Speech"),
+        subtitle: cmdText("cmd_metric_dialogue_sub", "Dialogue turns and spoken share"),
         icon: "quote",
         action: function () { activateAnalysisLayer("dialogue", workbench); }
       },
       {
         id: "metric-tense",
         category: analysisCat,
-        title: isDe ? "Tempus-Marker hervorheben" : "Highlight Grammatical Tense",
-        subtitle: isDe ? "Dominantes Tempus, Mischungen und Wechsel" : "Dominant tense, switches and mix",
+        title: cmdText("cmd_metric_tense_title", "Highlight Grammatical Tense"),
+        subtitle: cmdText("cmd_metric_tense_sub", "Dominant tense, switches and mix"),
         icon: "tag",
         action: function () { activateAnalysisLayer("", workbench); }
       }
     ];
   }
 
-  function buildChapterCommands(isDe, workbench) {
+  function buildChapterCommands(workbench) {
     var chapterSelect = document.getElementById("reader-chapter");
     if (!chapterSelect || !chapterSelect.options) return [];
     var chapterCommands = [];
@@ -98,9 +118,9 @@
       var chTitle = (opt.textContent || "").trim() || chId;
       chapterCommands.push({
         id: "chapter-" + chId,
-        category: isDe ? "Kapitel" : "Chapters",
-        title: (isDe ? "Zu Kapitel springen: " : "Jump to Chapter: ") + chTitle,
-        subtitle: isDe ? "Im Manuskript-Leser öffnen" : "Open in manuscript reader",
+        category: cmdText("cmd_cat_chapters", "Chapters"),
+        title: cmdText("cmd_chapter_jump_prefix", "Jump to Chapter:") + " " + chTitle,
+        subtitle: cmdText("cmd_chapter_jump_sub", "Open in manuscript reader"),
         icon: "book-open",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("analysis");
@@ -120,16 +140,20 @@
   }
 
   function getCommands() {
-    var isDe = (document.documentElement.lang || "en").startsWith("de");
     var workbench = window.LixityWorkbench;
     var state = workbench && typeof workbench.state === "function" ? workbench.state() : {};
+    var catViews = cmdText("cmd_cat_views", "Views");
+    var catAnalysis = cmdText("cmd_cat_analysis", "Analysis");
+    var catResearch = cmdText("cmd_cat_research", "Research");
+    var catAudio = cmdText("cmd_cat_audio", "Audio & Speech");
+    var catExport = cmdText("cmd_cat_export", "Export");
     var commands = [
       // View switches
       {
         id: "view-analysis",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Zur Manuskript-Analyse wechseln" : "Switch to Manuscript Analysis",
-        subtitle: isDe ? "Text, Metriken und Lektorat" : "Text, metrics and editing",
+        category: catViews,
+        title: cmdText("cmd_view_analysis_title", "Switch to Manuscript Analysis"),
+        subtitle: cmdText("cmd_view_analysis_sub", "Text, metrics and editing"),
         icon: "file-text",
         action: function () {
           if (typeof switchActiveView === "function") {
@@ -143,9 +167,9 @@
       },
       {
         id: "view-research",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Zum Recherche-Arbeitsbereich wechseln" : "Switch to Research Workspace",
-        subtitle: isDe ? "Dossiers, Quellen, Zeitstrahl und Karten" : "Dossiers, sources, timeline and maps",
+        category: catViews,
+        title: cmdText("cmd_view_research_title", "Switch to Research Workspace"),
+        subtitle: cmdText("cmd_view_research_sub", "Dossiers, sources, timeline and maps"),
         icon: "archive",
         action: function () {
           if (typeof switchActiveView === "function") {
@@ -159,9 +183,9 @@
       },
       {
         id: "view-project",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Zu den Projekteinstellungen wechseln" : "Switch to Project Settings",
-        subtitle: isDe ? "Konfiguration, Autorenziele und Register" : "Configuration, targets and registers",
+        category: catViews,
+        title: cmdText("cmd_view_project_title", "Switch to Project Settings"),
+        subtitle: cmdText("cmd_view_project_sub", "Configuration, targets and registers"),
         icon: "settings",
         action: function () {
           if (typeof switchActiveView === "function") {
@@ -175,9 +199,9 @@
       },
       {
         id: "toggle-focus-mode",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Fokus-Modus umschalten (F)" : "Toggle Focus Mode (F)",
-        subtitle: isDe ? "Ablenkungsfreies Lesen ohne Seitenleisten" : "Distraction-free reading without chrome",
+        category: catViews,
+        title: cmdText("cmd_toggle_focus_title", "Toggle Focus Mode (F)"),
+        subtitle: cmdText("cmd_toggle_focus_sub", "Distraction-free reading without chrome"),
         shortcut: "F",
         icon: "eye",
         action: function () {
@@ -191,9 +215,9 @@
       },
       {
         id: "toggle-theme",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Dunkel-/Hell-Modus umschalten" : "Toggle Dark/Light Mode",
-        subtitle: isDe ? "Farbschema des Arbeitsbereichs anpassen" : "Switch workspace color scheme",
+        category: catViews,
+        title: cmdText("cmd_toggle_theme_title", "Toggle Dark/Light Mode"),
+        subtitle: cmdText("cmd_toggle_theme_sub", "Switch workspace color scheme"),
         icon: "lightbulb",
         action: function () {
           var themeBtn = document.querySelector("#theme-toggle, [data-theme-toggle]");
@@ -210,9 +234,9 @@
     if (document.querySelector("#manuscript-write") || document.querySelector("#manuscript-close")) {
       commands.push({
         id: "toggle-manuscript-write",
-        category: isDe ? "Ansicht" : "Views",
-        title: isDe ? "Schreiben / Lesen umschalten" : "Toggle Write / Read Mode",
-        subtitle: isDe ? "Zwischen Manuskript-Editor und Lesemodus wechseln" : "Switch between manuscript editor and reading view",
+        category: catViews,
+        title: cmdText("cmd_toggle_write_title", "Toggle Write / Read Mode"),
+        subtitle: cmdText("cmd_toggle_write_sub", "Switch between manuscript editor and reading view"),
         icon: "edit",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("analysis");
@@ -227,12 +251,12 @@
       });
     }
 
-    commands = commands.concat(buildAnalysisLayerCommands(isDe, workbench), [
+    commands = commands.concat(buildAnalysisLayerCommands(workbench), [
       {
         id: "metric-pacing",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Pacing & Szenen-Spannungsbögen anzeigen" : "Show Pacing & Scene Tension",
-        subtitle: isDe ? "Szenenlängen, Staccato-Anteile und Hooks" : "Scene lengths, staccato and hook cues",
+        category: catAnalysis,
+        title: cmdText("cmd_metric_pacing_title", "Show Pacing & Scene Tension"),
+        subtitle: cmdText("cmd_metric_pacing_sub", "Scene lengths, staccato and hook cues"),
         icon: "layout",
         action: function () {
           var target = document.getElementById("pacing");
@@ -245,9 +269,9 @@
       },
       {
         id: "metric-style-space",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Stilraum-Vergleich öffnen" : "Open Style Space Comparison",
-        subtitle: isDe ? "Kapitel im multidimensionalen Stilraum vergleichen" : "Inspect chapter distances in style space",
+        category: catAnalysis,
+        title: cmdText("cmd_metric_style_space_title", "Open Style Space Comparison"),
+        subtitle: cmdText("cmd_metric_style_space_sub", "Inspect chapter distances in style space"),
         icon: "sliders",
         action: function () {
           var target = document.getElementById("style");
@@ -256,9 +280,9 @@
       },
       {
         id: "metric-scenes",
-        category: isDe ? "Analyse" : "Analysis",
-        title: isDe ? "Szenen & Register-Register öffnen" : "Open Scenes & Registers",
-        subtitle: isDe ? "Szenen-Register und Soll-Vorgaben vergleichen" : "Compare scene registers against project targets",
+        category: catAnalysis,
+        title: cmdText("cmd_metric_scenes_title", "Open Scenes & Registers"),
+        subtitle: cmdText("cmd_metric_scenes_sub", "Compare scene registers against project targets"),
         icon: "table",
         action: function () {
           var target = document.getElementById("scenes");
@@ -269,9 +293,9 @@
       // Research
       {
         id: "research-search",
-        category: isDe ? "Recherche" : "Research",
-        title: isDe ? "Recherche-Suchmaske öffnen" : "Open Research Search",
-        subtitle: isDe ? "Quellen, Belege und Dossiers nach Begriffen durchsuchen" : "Search sources, citations and dossiers",
+        category: catResearch,
+        title: cmdText("cmd_research_search_title", "Open Research Search"),
+        subtitle: cmdText("cmd_research_search_sub", "Search sources, citations and dossiers"),
         shortcut: "S",
         icon: "search",
         action: function () {
@@ -289,9 +313,9 @@
       },
       {
         id: "research-new-dossier",
-        category: isDe ? "Recherche" : "Research",
-        title: isDe ? "Neues Forschungs-Dossier anlegen" : "Create New Research Dossier",
-        subtitle: isDe ? "Neues Notizblatt mit Markdown & Belegen verfassen" : "Draft new dossier note with citations",
+        category: catResearch,
+        title: cmdText("cmd_research_new_dossier_title", "Create New Research Dossier"),
+        subtitle: cmdText("cmd_research_new_dossier_sub", "Draft new dossier note with citations"),
         icon: "edit",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("research");
@@ -312,9 +336,9 @@
       },
       {
         id: "research-timeline",
-        category: isDe ? "Recherche" : "Research",
-        title: isDe ? "Chronologie & Zeitstrahl öffnen" : "Open Chronology & Timeline",
-        subtitle: isDe ? "Ereignisse, Behauptungen und Belege auf der Zeitachse" : "Inspect claims and events over time",
+        category: catResearch,
+        title: cmdText("cmd_research_timeline_title", "Open Chronology & Timeline"),
+        subtitle: cmdText("cmd_research_timeline_sub", "Inspect claims and events over time"),
         icon: "list-ordered",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("research");
@@ -331,9 +355,9 @@
       },
       {
         id: "research-canvas",
-        category: isDe ? "Recherche" : "Research",
-        title: isDe ? "Visuelle Beziehungen (JSON Canvas)" : "Visual Relations (JSON Canvas)",
-        subtitle: isDe ? "Dossiers und Belege als Obsidian Canvas Board" : "Export dossiers and claims as JSON Canvas",
+        category: catResearch,
+        title: cmdText("cmd_research_canvas_title", "Visual Relations (JSON Canvas)"),
+        subtitle: cmdText("cmd_research_canvas_sub", "Export dossiers and claims as JSON Canvas"),
         icon: "share-2",
         action: function () {
           if (window.LixityResearch && typeof window.LixityResearch.exportCanvas === "function") {
@@ -347,9 +371,9 @@
       // Audio & Speech
       {
         id: "audio-teleprompter",
-        category: isDe ? "Audio & Sprache" : "Audio & Speech",
-        title: isDe ? "Teleprompter öffnen (P)" : "Open Teleprompter (P)",
-        subtitle: isDe ? "Flüssiges Mitlesen mit Sprechtempo, Phonetik und Regie" : "Live pacing with vocal cues and phonetics",
+        category: catAudio,
+        title: cmdText("cmd_audio_teleprompter_title", "Open Teleprompter (P)"),
+        subtitle: cmdText("cmd_audio_teleprompter_sub", "Live pacing with vocal cues and phonetics"),
         shortcut: "P",
         icon: "mic",
         action: function () {
@@ -363,9 +387,9 @@
       },
       {
         id: "audio-studio",
-        category: isDe ? "Audio & Sprache" : "Audio & Speech",
-        title: isDe ? "Audio Studio & Aufnahme öffnen" : "Open Audio Studio & Recording",
-        subtitle: isDe ? "Kapitel einsprechen, Takes verwalten und Synthese prüfen" : "Record chapter takes and inspect speech",
+        category: catAudio,
+        title: cmdText("cmd_audio_studio_title", "Open Audio Studio & Recording"),
+        subtitle: cmdText("cmd_audio_studio_sub", "Record chapter takes and inspect speech"),
         icon: "play",
         action: function () {
           var studioBtn = document.querySelector("#audio-studio-trigger, [data-action='audio-studio'], #reader-speech");
@@ -376,9 +400,9 @@
       // Exports
       {
         id: "export-pdf",
-        category: isDe ? "Export" : "Export",
-        title: isDe ? "Manuskript als PDF exportieren" : "Export Manuscript as PDF",
-        subtitle: isDe ? "Druckfertiger Buchsatz oder Lektoratsbericht" : "Print-ready typeset or editorial report",
+        category: catExport,
+        title: cmdText("cmd_export_pdf_title", "Export Manuscript as PDF"),
+        subtitle: cmdText("cmd_export_pdf_sub", "Print-ready typeset or editorial report"),
         icon: "download",
         action: function () {
           var pdfBtn = document.querySelector("#export-pdf-trigger, button[data-export='pdf'], [data-action='export-pdf']");
@@ -398,9 +422,9 @@
       },
       {
         id: "export-storyboard-canvas",
-        category: isDe ? "Export" : "Export",
-        title: isDe ? "Szenen-Storyboard als JSON Canvas exportieren" : "Export Scenes as JSON Canvas",
-        subtitle: isDe ? "Visuelles Storyboard für Obsidian Canvas (.canvas)" : "Visual storyboard for Obsidian Canvas",
+        category: catExport,
+        title: cmdText("cmd_export_storyboard_title", "Export Scenes as JSON Canvas"),
+        subtitle: cmdText("cmd_export_storyboard_sub", "Visual storyboard for Obsidian Canvas"),
         icon: "share-2",
         action: function () {
           var link = document.createElement("a");
@@ -411,15 +435,14 @@
       }
     ]);
 
-    return commands.concat(buildChapterCommands(isDe, workbench));
+    return commands.concat(buildChapterCommands(workbench));
   }
 
   function createPaletteDOM() {
-    var isDe = (document.documentElement.lang || "en").startsWith("de");
     var dialog = document.createElement("dialog");
     dialog.id = "command-palette-dialog";
     dialog.className = "command-palette-dialog";
-    dialog.setAttribute("aria-label", isDe ? "Befehlspalette" : "Command Palette");
+    dialog.setAttribute("aria-label", cmdText("cmd_aria_label", "Command Palette"));
 
     var wrap = document.createElement("div");
     wrap.className = "command-palette-wrap";
@@ -436,7 +459,7 @@
     input.id = "command-palette-search";
     input.className = "command-palette-input";
     input.type = "text";
-    input.placeholder = isDe ? "Befehl eingeben oder suchen..." : "Type a command or search...";
+    input.placeholder = cmdText("cmd_placeholder", "Type a command or search...");
     input.autocomplete = "off";
     input.spellcheck = false;
 
@@ -457,11 +480,13 @@
     // Footer
     var footer = document.createElement("div");
     footer.className = "command-palette-footer";
-    footer.innerHTML = `
-      <span class="command-palette-hint"><kbd>↑</kbd><kbd>↓</kbd> ${isDe ? "Navigieren" : "Navigate"}</span>
-      <span class="command-palette-hint"><kbd>↵</kbd> ${isDe ? "Ausführen" : "Run"}</span>
-      <span class="command-palette-hint"><kbd>Esc</kbd> ${isDe ? "Schließen" : "Close"}</span>
-    `;
+    var escapeHtml = window.LixityComponents && window.LixityComponents.escapeHtml
+      ? window.LixityComponents.escapeHtml
+      : function (v) { return String(v); };
+    footer.innerHTML =
+      '<span class="command-palette-hint"><kbd>↑</kbd><kbd>↓</kbd> ' + escapeHtml(cmdText("cmd_hint_navigate", "Navigate")) + '</span>' +
+      '<span class="command-palette-hint"><kbd>↵</kbd> ' + escapeHtml(cmdText("cmd_hint_run", "Run")) + '</span>' +
+      '<span class="command-palette-hint"><kbd>Esc</kbd> ' + escapeHtml(cmdText("cmd_hint_close", "Close")) + '</span>';
 
     wrap.appendChild(header);
     wrap.appendChild(results);
@@ -535,10 +560,9 @@
     if (components && typeof components.html === "function" && typeof components.mount === "function") {
       var html = components.html;
       if (activeCommands.length === 0) {
-        var isDeEmpty = (document.documentElement.lang || "en").startsWith("de");
         components.mount(
           resultsList,
-          html`<li class="command-palette-empty">${isDeEmpty ? "Keine passenden Befehle gefunden." : "No matching commands found."}</li>`
+          html`<li class="command-palette-empty">${cmdText("cmd_empty", "No matching commands found.")}</li>`
         );
         return;
       }
@@ -575,10 +599,9 @@
     resultsList.replaceChildren();
 
     if (activeCommands.length === 0) {
-      var isDe = (document.documentElement.lang || "en").startsWith("de");
       var emptyLi = document.createElement("li");
       emptyLi.className = "command-palette-empty";
-      emptyLi.textContent = isDe ? "Keine passenden Befehle gefunden." : "No matching commands found.";
+      emptyLi.textContent = cmdText("cmd_empty", "No matching commands found.");
       resultsList.appendChild(emptyLi);
       return;
     }

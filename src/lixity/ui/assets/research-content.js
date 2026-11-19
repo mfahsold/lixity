@@ -317,23 +317,11 @@ function formatMathFormula(latex, isDisplay, isInner) {
 function renderAlertBox(type, content, inlineParser, folded, titleOverride) {
   var alertType = type.toUpperCase();
   var typeLower = alertType.toLowerCase();
-  var titleMap = {
-    NOTE: {de: "Hinweis", en: "Note", fr: "Remarque", es: "Nota", it: "Nota", pt: "Nota", nl: "Opmerking"},
-    INFO: {de: "Info", en: "Info", fr: "Info", es: "Información", it: "Info", pt: "Info", nl: "Info"},
-    TIP: {de: "Tipp", en: "Tip", fr: "Conseil", es: "Consejo", it: "Consiglio", pt: "Dica", nl: "Tip"},
-    IMPORTANT: {de: "Wichtig", en: "Important", fr: "Important", es: "Importante", it: "Importante", pt: "Importante", nl: "Belangrijk"},
-    WARNING: {de: "Warnung", en: "Warning", fr: "Avertissement", es: "Advertencia", it: "Avviso", pt: "Aviso", nl: "Waarschuwing"},
-    CAUTION: {de: "Achtung", en: "Caution", fr: "Attention", es: "Atención", it: "Attenzione", pt: "Atenção", nl: "Let op"},
-    SUCCESS: {de: "Erfolg", en: "Success", fr: "Succès", es: "Éxito", it: "Successo", pt: "Sucesso", nl: "Succes"},
-    QUESTION: {de: "Frage", en: "Question", fr: "Question", es: "Pregunta", it: "Domanda", pt: "Pergunta", nl: "Vraag"},
-    FAQ: {de: "FAQ", en: "FAQ", fr: "FAQ", es: "FAQ", it: "FAQ", pt: "FAQ", nl: "FAQ"},
-    QUOTE: {de: "Zitat", en: "Quote", fr: "Citation", es: "Cita", it: "Citazione", pt: "Citação", nl: "Citaat"},
-    BUG: {de: "Fehler", en: "Bug", fr: "Bogue", es: "Error", it: "Bug", pt: "Bug", nl: "Fout"},
-    EXAMPLE: {de: "Beispiel", en: "Example", fr: "Exemple", es: "Ejemplo", it: "Esempio", pt: "Exemplo", nl: "Voorbeeld"}
-  };
-  var lang = (window.LixitySite && window.LixitySite.language) || "de";
-  var titles = titleMap[alertType] || {de: alertType, en: alertType};
-  var defaultTitle = titles[lang] || titles.de || titles.en;
+  var lang = (window.LixitySite && window.LixitySite.language) || (document.documentElement.lang || "en").split("-")[0] || "en";
+  var titleKey = "alert_title_" + typeLower;
+  var localizedTitle = typeof uiLabel === "function" ? uiLabel(titleKey) : titleKey;
+  var defaultTitle = localizedTitle && localizedTitle !== titleKey ? localizedTitle : alertType;
+  void lang;
 
   var iconKey = {
     NOTE: "info", INFO: "info", TIP: "lightbulb", IMPORTANT: "alert-circle",
@@ -469,7 +457,7 @@ function renderSafeMarkdown(rawText, dossierContext) {
       if (/^(javascript|data|vbscript):/i.test(cleanUrl)) {
         return protect(visibleLabel + ' (' + cleanUrl + ')');
       }
-      if (/^(https?:\/\/|\/|#)/i.test(cleanUrl)) {
+      if (/^(https?:\/\/|\/(?!\/)|#)/i.test(cleanUrl)) {
         return protect('<a href="' + cleanUrl.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener noreferrer nofollow">' + visibleLabel + '</a>');
       }
       return protect(visibleLabel + ' (' + cleanUrl + ')');

@@ -419,9 +419,22 @@
     // Stop requests before a navigation handler can resize a hidden map.
     if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(function(state) { stopTiles(state, true); });
   }, true);
-  var checkingMaps = false;
+  var checkingMaps = false, mapFrame = 0;
+  var observedContainers = new WeakSet();
+  var observerConfig = {subtree: true, childList: true, attributes: true,
+    attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]};
+  var mapMutationObserver = new MutationObserver(scheduleMaps);
+  function observeHostContainer(node) {
+    if (!node || observedContainers.has(node)) return;
+    observedContainers.add(node);
+    mapMutationObserver.observe(node, observerConfig);
+  }
+  ["research-manager", "publication-entries", "modal-research-revision", "workspace-reader"].forEach(function(id) {
+    observeHostContainer(document.getElementById(id));
+  });
   function refreshMaps() {
     checkingMaps = false;
+    mapFrame = 0;
     maps.forEach(function(state) {
       if (!visible(state.root) || !state.host.isConnected || state.host !== state.root.querySelector(".geography-map") ||
           state.context !== mapContext()) stopMap(state);
@@ -431,6 +444,9 @@
       if (!root.isConnected) { if (visibilityObserver) visibilityObserver.unobserve(root); observed.delete(root); }
     });
     document.querySelectorAll(".dossier-geography[data-geo-geometries]").forEach(function(root) {
+      if (!root.closest("#research-manager, #publication-entries, #modal-research-revision, #workspace-reader")) {
+        observeHostContainer(root);
+      }
       if (!root.querySelector("[data-geo-map]")) return;
       if (!observed.has(root)) { observed.add(root); if (visibilityObserver) visibilityObserver.observe(root); }
       if (root.dataset.geoContext !== mapContext() || !preference(root).map || !viewed(root)) return;
@@ -442,11 +458,13 @@
   function scheduleMaps() {
     if (checkingMaps) return;
     checkingMaps = true;
-    queueMicrotask(refreshMaps);
+    var raf = typeof window.requestAnimationFrame === "function" ? window.requestAnimationFrame : function(cb) { return setTimeout(cb, 16); };
+    mapFrame = raf(refreshMaps);
   }
   var visibilityObserver = window.IntersectionObserver ? new IntersectionObserver(scheduleMaps) : null;
-  new MutationObserver(scheduleMaps).observe(document.documentElement, {subtree: true, childList: true, attributes: true,
-    attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]});
+  document.addEventListener("toggle", scheduleMaps, true);
+  document.addEventListener("lixity:viewchange", scheduleMaps);
+  document.addEventListener("lixity:workbench-change", scheduleMaps);
   document.addEventListener("scroll", scheduleMaps, true);
   window.addEventListener("resize", scheduleMaps);
   document.addEventListener("visibilitychange", function() {

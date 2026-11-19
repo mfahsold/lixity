@@ -32,7 +32,7 @@ function renderWindowedResearchList(kind, listHost, items, emptyMessage) {
       btn.type = "button";
       btn.className = "ctl ctl-sm";
       btn.dataset.researchShowMore = kind;
-      btn.textContent = (uiLabel("research_show_more") || "Show more") + " (+" + remaining + ")";
+      btn.textContent = uiLabel("research_show_more") + " (+" + remaining + ")";
       moreHost.replaceChildren(btn);
       moreHost.hidden = false;
     } else {
@@ -300,7 +300,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
       title: s.title,
       metaRight: [{
         text: mediaOrPassages + " · " + sizeKb,
-        title: uiLabel("research_tab_sources_help") || "Gespeicherte Quellenkopie"
+        title: uiLabel("research_tab_sources_help")
       }],
       tags: s.tags || [],
       tagsInteractive: true,
@@ -536,7 +536,6 @@ function researchTimelineStrip(rows) {
 }
 
 function researchTimelineEntry(entry, compactMode) {
-  var isDe = (document.documentElement.lang || "").toLowerCase().startsWith("de");
   var scale = researchTimelineScale(entry);
   var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
   var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
@@ -550,9 +549,9 @@ function researchTimelineEntry(entry, compactMode) {
     '<h4>' + escapeHtml(entry.title) + '</h4>' +
     (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
     '<p class="research-timeline-statement"' +
-      (longStatement ? ' data-full-statement="' + escapeHtml(fullText).replace(/"/g, "&quot;") + '" data-short-statement="' + escapeHtml(shortText).replace(/"/g, "&quot;") + '"' : '') +
+      (longStatement ? ' data-full-statement="' + escapeHtml(fullText) + '" data-short-statement="' + escapeHtml(shortText) + '"' : '') +
       '>' + escapeHtml(shortText) + '</p>' +
-    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">' + escapeHtml(isDe ? "Mehr lesen" : "Read more") + '</button>' : '') +
+    (longStatement ? '<button type="button" class="ctl ctl-sm" data-timeline-expand aria-expanded="false">' + escapeHtml(uiLabel("research_timeline_read_more")) + '</button>' : '') +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
     (entry.reason ? '<p class="research-timeline-reason">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
@@ -571,9 +570,8 @@ function researchTimelineEraKey(entry) {
 }
 
 function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows) {
-  var isDe = (document.documentElement.lang || "").toLowerCase().startsWith("de");
   var eraLabels = {
-    all: isDe ? "Alle" : "All",
+    all: uiLabel("research_filter_all"),
     pre1945: "≤ 1945",
     "1946_1999": "1946–1999",
     "2000_2024": "2000–2024",
@@ -610,9 +608,9 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
     var controlsHtml = datedRows.length > 6 ? (
       '<div class="research-timeline-controls">' +
         '<input type="search" class="ctl" id="r-timeline-filter" value="' + escapeHtml(filterText) + '" placeholder="' +
-          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern…" : "Filter timeline…")) + '" aria-label="' +
-          escapeHtml(uiLabel("research_filter_placeholder") || (isDe ? "Zeitleiste filtern" : "Filter timeline")) + '"/>' +
-        '<div class="chip-row" role="group" aria-label="' + escapeHtml(isDe ? "Zeitabschnitte" : "Eras") + '">' +
+          escapeHtml(uiLabel("research_filter_placeholder")) + '" aria-label="' +
+          escapeHtml(uiLabel("research_filter_placeholder")) + '"/>' +
+        '<div class="chip-row" role="group" aria-label="' + escapeHtml(uiLabel("research_timeline_eras")) + '">' +
           eraOrder.map(function(k) {
             var pressed = activeEra === k;
             return '<button type="button" class="ctl ctl-sm" data-timeline-era="' + k + '" aria-pressed="' + pressed + '">' +
@@ -632,7 +630,7 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
       (capped.length ? '<ol class="research-timeline research-timeline-dated">' +
         capped.map(function(r) { return researchTimelineEntry(r, compactCards); }).join("") + '</ol>' +
         (remaining > 0 ? '<p class="mt-2"><button type="button" class="ctl ctl-sm" id="r-timeline-more">' +
-          escapeHtml((isDe ? "Mehr anzeigen" : "Show more") + " (+" + remaining + ")") + '</button></p>' : '') :
+          escapeHtml(uiLabel("research_show_more") + " (+" + remaining + ")") + '</button></p>' : '') :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
       '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
       (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
@@ -678,7 +676,7 @@ function researchTimelineRenderInteractive(timelineHost, datedRows, unplacedRows
         var expanded = btn.getAttribute("aria-expanded") === "true";
         stmt.textContent = expanded ? (stmt.dataset.shortStatement || "") : (stmt.dataset.fullStatement || "");
         btn.setAttribute("aria-expanded", String(!expanded));
-        btn.textContent = expanded ? (isDe ? "Mehr lesen" : "Read more") : (isDe ? "Weniger" : "Less");
+        btn.textContent = uiLabel(expanded ? "research_timeline_read_more" : "research_timeline_read_less");
       });
     });
     timelineHost.querySelectorAll(".research-timeline-strip-row").forEach(function(link) {
@@ -844,7 +842,7 @@ function renderResearchClaimFilterPills() {
     counts[conf] += 1;
   });
   var options = [
-    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "all", label: uiLabel("research_filter_all"), count: items.length},
     {value: "evidenced", label: uiLabel("research_confidence_evidenced"), count: counts.evidenced},
     {value: "disputed", label: uiLabel("research_confidence_disputed"), count: counts.disputed},
     {value: "hypothetical", label: uiLabel("research_confidence_hypothetical"), count: counts.hypothetical}
@@ -981,7 +979,7 @@ function renderResearchDecisionFilterPills() {
     else noDevCount += 1;
   });
   var options = [
-    {value: "all", label: uiLabel("research_filter_all") || "All", count: items.length},
+    {value: "all", label: uiLabel("research_filter_all"), count: items.length},
     {value: "deviation", label: uiLabel("research_deliberate_deviation"), count: devCount},
     {value: "no_deviation", label: uiLabel("research_no_deviation_recorded"), count: noDevCount}
   ];
@@ -1127,7 +1125,7 @@ function ensureSearchableSelect(selectId) {
   search.type = "search";
   search.className = "ctl ctl-sm mb-1";
   search.id = select.id + "-search";
-  search.placeholder = uiLabel("research_filter_select") || "Filter options…";
+  search.placeholder = uiLabel("research_filter_select");
   search.setAttribute("aria-label", search.placeholder);
   search.dataset.selectSearchFor = select.id;
   search.hidden = true;

@@ -5,8 +5,16 @@ from typing import Any
 
 from ..site_contracts import SiteAudio
 from ..workspace_labels import workspace_labels_for
-from .components import esc, label, product_details
-from .dashboard import _PUBLICATION_JS_FILES, _REPORT_CSS_FILES, _bundle, _script_json
+from .components import (
+    FAVICON_DATA_URI,
+    attr_json,
+    esc,
+    label,
+    panel_label,
+    product_details,
+    script_json,
+)
+from .dashboard import _PUBLICATION_JS_FILES, _REPORT_CSS_FILES, _bundle
 from .manuscript_document import ReaderBlock, reader_block_html
 
 
@@ -25,8 +33,7 @@ def render_publication(
         raise ValueError("A curated publication mode is required")
     if publication["mode"] == "companion" and reader_document:
         raise ValueError("Companion websites must not contain manuscript blocks")
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
     def chapter(number: int) -> str:
         return esc(label(labels, "publication_chapter").format(number=number))
     cap = publication["max_chapter"]
@@ -78,10 +85,10 @@ def render_publication(
     parts = [
         '<!DOCTYPE html>', f'<html lang="{esc(language)}"><head><meta charset="utf-8"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
-        '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>', f'<title>{title} · Lixity</title>',
+        f'<link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}"/>', f'<title>{title} · Lixity</title>',
         f'<style>{_bundle(_REPORT_CSS_FILES + (("speech-player.css",) if audio else ()))}</style></head>',
-        f'<body class="lixity-report publication-site manuscript-reading" data-read-only="true" '
-        f'data-ui-labels="{esc(_script_json(ui_labels))}">',
+        '<body class="lixity-report publication-site manuscript-reading" data-read-only="true" '
+        f'data-ui-labels="{attr_json(ui_labels)}">',
         f'<a class="skip-link" href="#publication-context">{L("publication_context")}</a>',
         '<div class="page" id="reader-publication">',
         f'<header class="publication-header"><h1>{title}</h1><p>{L("publication_read_only")}</p></header>',
@@ -164,7 +171,7 @@ def render_publication(
         f'<noscript><p>{L("publication_javascript")}</p></noscript></aside></div>',
         '<footer>' + product_details(labels) + '</footer></div>',
         *(('<script type="application/json" id="research-diagram-library">' +
-           _script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + '</script>',)
+           script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + '</script>',)
           if has_diagrams else ()),
         '<script>' + _bundle(_PUBLICATION_JS_FILES + (("speech-player.js", "reader-audio.js") if audio else ())) + '</script></body></html>',
     ])

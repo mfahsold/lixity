@@ -502,7 +502,7 @@ function sortTableByColumn(th) {
     if (isNum) {
       cmp = numA - numB;
     } else {
-      var lang = document.documentElement.lang || "de";
+      var lang = document.documentElement.lang || "en";
       cmp = valA.localeCompare(valB, lang, { numeric: true, sensitivity: "base" });
     }
     return newDirection === "ascending" ? cmp : -cmp;

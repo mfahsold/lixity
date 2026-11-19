@@ -46,11 +46,16 @@ function researchReferenceLabel(kind, ref, envelope) {
 }
 
 function researchStatus(message, ok) {
+  var text = ok === "loading" ? (message || uiLabel("research_loading")) : message;
+  if (typeof window !== "undefined" && window.LixityComponents && typeof window.LixityComponents.setStatus === "function") {
+    window.LixityComponents.setStatus("research-status-bar", text, ok, {prefix: true});
+    return;
+  }
   var el = document.getElementById("research-status-bar");
   if (!el) return;
   if (ok === "loading") {
     el.className = "ctl-status loading";
-    el.textContent = message || uiLabel("research_loading");
+    el.textContent = text;
   } else if (!message) {
     el.className = "ctl-status";
     el.textContent = "";
@@ -174,8 +179,14 @@ function researchBoundPayload(payload) {
 }
 
 function escapeHtml(str) {
-  var div = document.createElement("div");
-  div.textContent = str || "";
-  return div.innerHTML;
+  if (typeof window !== "undefined" && window.LixityComponents && typeof window.LixityComponents.escapeHtml === "function") {
+    return window.LixityComponents.escapeHtml(str);
+  }
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 

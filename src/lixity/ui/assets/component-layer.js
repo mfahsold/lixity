@@ -28,9 +28,123 @@
     "[role=toolbar]"
   ].join(", ");
 
+  var _cachedLabelsRaw = null;
+  var _cachedLabelsMap = {};
+  function readUiLabels() {
+    var raw = (typeof document !== "undefined" && document.body && document.body.dataset)
+      ? (document.body.dataset.uiLabels || "")
+      : "";
+    if (raw !== _cachedLabelsRaw) {
+      _cachedLabelsRaw = raw;
+      try { _cachedLabelsMap = raw ? JSON.parse(raw) : {}; } catch (_) { _cachedLabelsMap = {}; }
+    }
+    return _cachedLabelsMap;
+  }
+  function _uiLabel(key) {
+    var map = readUiLabels();
+    return Object.prototype.hasOwnProperty.call(map, key) && map[key] ? map[key] : key;
+  }
+  function _uiFormat(key, values) {
+    var template = typeof window.uiLabel === "function" ? window.uiLabel(key) : _uiLabel(key);
+    return String(template).replace(/\{([a-z_]+)\}/g, function (match, name) {
+      return values && Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match;
+    });
+  }
+  function _uiCountFormat(key, count, values) {
+    var map = readUiLabels();
+    var singular = key + "_one";
+    var chosen = count === 1 && Object.prototype.hasOwnProperty.call(map, singular) ? singular : key;
+    var payload = Object.assign({}, values || {});
+    if (!Object.prototype.hasOwnProperty.call(payload, "count")) payload.count = count;
+    return _uiFormat(chosen, payload);
+  }
+  window.LixityLabels = {
+    get: _uiLabel,
+    format: _uiFormat,
+    countFormat: _uiCountFormat,
+    all: readUiLabels
+  };
+  if (typeof window.uiLabel !== "function") window.uiLabel = _uiLabel;
+  if (typeof window.uiFormat !== "function") window.uiFormat = _uiFormat;
+  if (typeof window.uiCountFormat !== "function") window.uiCountFormat = _uiCountFormat;
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   window.LixityComponents = {
     CHROME_SELECTOR: SHARED_CHROME_SELECTOR,
     TOOLBAR_SELECTOR: SHARED_TOOLBAR_SELECTOR,
+    escapeHtml: escapeHtml,
+    escapeAttr: escapeHtml,
+    uiLabel: _uiLabel,
+    uiFormat: _uiFormat,
+    uiCountFormat: _uiCountFormat,
+    scopedLabel: function (prefix, aliases) {
+      return function (key) {
+        var mapped = aliases && Object.prototype.hasOwnProperty.call(aliases, key) ? aliases[key] : null;
+        var resolvedKey = mapped || (prefix ? prefix + key : key);
+        return typeof window.uiLabel === "function" ? window.uiLabel(resolvedKey) : _uiLabel(resolvedKey);
+      };
+    },
+    setStatus: function (elOrId, message, state, options) {
+      var el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+      if (!el) return null;
+      var opts = options || {};
+      var baseClass = opts.baseClass || "ctl-status";
+      var text = message == null ? "" : String(message);
+      if (state === "loading") {
+        el.className = baseClass + " loading";
+        el.textContent = text;
+      } else if (!text && !state) {
+        el.className = baseClass;
+        el.textContent = "";
+      } else {
+        var cls = state === true ? "ok" : state === false ? "err" : (state || "");
+        el.className = baseClass + (cls ? " " + cls : "");
+        var prefix = opts.prefix && cls === "ok" ? "✓ " : (opts.prefix && cls === "err" ? "✗ " : "");
+        el.textContent = text ? (prefix + text) : "";
+      }
+      return el;
+    },
+    downloadBlob: function (blob, filename, revokeMs) {
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      if (filename) link.download = filename;
+      link.click();
+      setTimeout(function () { URL.revokeObjectURL(url); }, typeof revokeMs === "number" ? revokeMs : 1500);
+      return url;
+    },
+    jsonApi: async function (url, options, responseType) {
+      var t0 = performance.now();
+      try {
+        var response = await fetch(url, options);
+        var data;
+        if (response.ok && responseType === "markdown") {
+          if (!/^text\/(markdown|plain)\b/i.test(response.headers.get("Content-Type") || "")) {
+            throw new Error(window.uiLabel("research_matrix_failed"));
+          }
+          data = { ok: true, text: await response.text() };
+        } else {
+          data = await response.json();
+        }
+        if (!data || typeof data !== "object" || Array.isArray(data)) data = { ok: false };
+        if (!response.ok) data.ok = false;
+        data.http_status = response.status;
+        if (window.LixityLog && typeof window.LixityLog.api === "function") {
+          window.LixityLog.api((options && options.method) || "GET", url, performance.now() - t0, response.status, data);
+        }
+        return data;
+      } catch (error) {
+        return { ok: false, message: String(error), http_status: 0 };
+      }
+    },
     html: htm.bind(preact.h),
     icon: function (name, options) {
       var markup = window.LixityIcons && typeof window.LixityIcons.render === "function"

@@ -268,10 +268,10 @@ def render_research_panel(
             L("research_dossier_templates"),
             "r-dos-body",
             [
-                (L("research_tpl_character"), "figur", "## Rolle & Motivation\n\n## Beziehungen & Konflikte\n\n## Wichtige Szenen\n"),
-                (L("research_tpl_place"), "ort", "## Ort & Atmosphäre\n\n## Historischer / realer Hintergrund\n\n## Relevante Szenen\n"),
-                (L("research_tpl_scene"), "szene", "## Ausgangslage & Ziel\n\n## Wendepunkt & Ergebnis\n\n## Offene Prüfpunkte\n"),
-                (L("research_tpl_fact"), "recherche", "## Kernaussage / Fakt\n\n## Quellen & Belege\n\n## Auswirkung auf das Manuskript\n"),
+                (label(labels, "research_tpl_character"), label(labels, "research_tpl_character_tag"), label(labels, "research_tpl_character_body")),
+                (label(labels, "research_tpl_place"), label(labels, "research_tpl_place_tag"), label(labels, "research_tpl_place_body")),
+                (label(labels, "research_tpl_scene"), label(labels, "research_tpl_scene_tag"), label(labels, "research_tpl_scene_body")),
+                (label(labels, "research_tpl_fact"), label(labels, "research_tpl_fact_tag"), label(labels, "research_tpl_fact_body")),
             ],
             tag_input_id="r-dos-tags",
         )
@@ -639,9 +639,9 @@ def render_research_panel(
             L("research_dossier_templates"),
             "r-decision-rationale",
             [
-                (L("research_tpl_character"), "", "## Begründung (Figur)\n\n## Auswirkung auf Kapitel / Szenen\n"),
-                (L("research_tpl_scene"), "", "## Begründung (Handlung / Timing)\n\n## Betroffene Textstellen\n"),
-                (L("research_tpl_fact"), "", "## Begründung (Recherche / Fakt)\n\n## Quellenbezug\n"),
+                (label(labels, "research_tpl_character"), "", label(labels, "research_decision_tpl_character_body")),
+                (label(labels, "research_tpl_scene"), "", label(labels, "research_decision_tpl_scene_body")),
+                (label(labels, "research_tpl_fact"), "", label(labels, "research_decision_tpl_fact_body")),
             ],
         )
     )

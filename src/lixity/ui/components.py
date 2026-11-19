@@ -10,6 +10,7 @@ standard library.
 from __future__ import annotations
 
 import html
+import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from functools import lru_cache
@@ -57,6 +58,102 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
 def esc(value: object, quote: bool = True) -> str:
     """HTML-escapes any value (single helper for the whole UI)."""
     return html.escape(str(value), quote=quote)
+
+
+FAVICON_DATA_URI = (
+    "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+"
+    "PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0i"
+    "NC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0"
+    "PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0i"
+    "MS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIg"
+    "ZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0i"
+    "I2M5ZDRmZiIvPjwvc3ZnPg=="
+)
+
+
+def script_json(value: Any, *, ensure_ascii: bool = False) -> str:
+    """Keep JSON data inside an inert HTML script's raw-text boundary."""
+    return (
+        json.dumps(value, ensure_ascii=ensure_ascii, separators=(",", ":"))
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
+def attr_json(value: Any, *, sort_keys: bool = False) -> str:
+    """Encode JSON safely for an HTML attribute value."""
+    return esc(json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=sort_keys), quote=True)
+
+
+def help_badge(help_text: str, aria_label: str) -> str:
+    """Render an accessible inline ? help badge."""
+    return (
+        f'<span class="help" data-help="{esc(help_text, quote=True)}" '
+        f'tabindex="0" aria-label="{esc(aria_label, quote=True)}">?</span>'
+    )
+
+
+def modal_shell(
+    modal_id: str,
+    title_id: str,
+    title_html: str,
+    body_html: str,
+    *,
+    close_label: str,
+    footer_html: str = "",
+    extra_attrs: str = "",
+    title_tag: str = "h3",
+    close_attrs: str = "data-close-modal",
+) -> str:
+    """Render the shared <dialog class="lixity-modal"> shell."""
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    close_attr_str = f" {close_attrs.strip()}" if close_attrs.strip() else ""
+    return (
+        f'<dialog class="lixity-modal" id="{esc(modal_id, quote=True)}"{attrs} '
+        f'closedby="any" aria-labelledby="{esc(title_id, quote=True)}">'
+        '<div class="modal-card"><div class="modal-header">'
+        f'<{title_tag} id="{esc(title_id, quote=True)}">{title_html}</{title_tag}>'
+        f'<button type="button" class="modal-close"{close_attr_str} '
+        f'aria-label="{esc(close_label, quote=True)}" title="{esc(close_label, quote=True)}" '
+        'aria-keyshortcuts="Escape">✕</button>'
+        f'</div>{body_html}{footer_html}</div></dialog>'
+    )
+
+
+def artifacts_panel(
+    artifacts: Sequence[Mapping[str, Any]],
+    labels: Mapping[str, str] | None,
+    language_key: str,
+    *,
+    title_key: str = "artifacts",
+) -> str:
+    """Render the generated output / publication artifact list panel."""
+    L, N, _ = panel_formatters(labels, language_key)
+    rows: list[str] = []
+    for art in artifacts:
+        name = esc(str(art.get("name", "")))
+        meta_bits: list[str] = []
+        if art.get("size_kb") is not None:
+            meta_bits.append(f"{N(art['size_kb'], 0)} KB")
+        if art.get("pages"):
+            meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
+        meta = " · ".join(meta_bits)
+        href = artifact_href(art.get("href"))
+        link = (
+            f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
+            if href
+            else ""
+        )
+        rows.append(
+            f'<div class="artifact"><span class="name">{name}</span>'
+            f'<span class="meta">{esc(meta)}</span>{link}</div>'
+        )
+    return (
+        '<section class="panel">'
+        f'<h2>{help_term(labels, "artifacts", L(title_key))}</h2>'
+        f'<div class="artifacts">{"".join(rows)}</div></section>'
+    )
 
 
 @lru_cache(maxsize=1)
@@ -224,8 +321,7 @@ def manuscript_pdf_controls(
     labels: Mapping[str, str] | None, *, api_base: str, project_token: str, available: bool,
 ) -> str:
     """The single native PDF form, placed with the global project commands."""
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    L = panel_label(labels)
     from ..pdf_export import PDF_LAYOUTS
 
     disabled = "" if available else " disabled"
