@@ -15,69 +15,39 @@
 
 **Read closely. Follow the evidence. Decide what to revise.**
 
-Lixity helps authors read a manuscript alongside its analysis and research.
-The unreleased native analysis overview offers three starting points: review
-passages, compare chapters, or explore patterns, with one analysis section open
-at a time.
-Compare sentence rhythm across chapters, focus on dialogue, and inspect repeated
-words in context. Follow a scene detail to its linked source passages, claims,
-and author decisions, then choose which material to include in a reading copy.
-Editors and linguistic researchers can inspect the same measurements through
-the browser app, CLI, and Python API, which share one deterministic engine.
+Lixity keeps manuscript prose, stylometric signals, and scene research in one
+offline workspace. Compare chapter rhythms, inspect dialogue and repeated words
+in context, trace scene details to versioned sources and author decisions, and
+export clean PDFs or self-contained reading websites.
 
-- **Return from a measurement to the prose:** compare chapters, inspect a
-  marked passage, and read the counted words and sentences before deciding
-  whether a difference matters. Signals support review; they do not grade
-  literary quality.
-- **Keep research traceable:** sources, claims, and author decisions have
-  distinct roles. Evidence links retain the exact versions you cited, so you can
-  revisit the basis for a scene detail as your interpretation changes. A retained
-  source does not establish that a claim is true.
-- **Analyze locally:** the built-in engine runs offline without telemetry, a
-  required cloud account, or automatic prose rewriting. Optional map basemaps
-  and configured speech providers use network connections; a connected AI
-  client's data handling is separate from Lixity's local engine. Choose the
-  material to include when exporting a reading copy.
+- **Return from signal to prose:** jump from any chapter outlier or marked
+  passage straight to the counted words and sentences. Signals support human
+  review; they never grade literary quality or rewrite prose.
+- **Keep research traceable:** sources, claims, and author decisions stay
+  distinct and retain the exact linked versions across edits.
+- **Local-first by default:** analysis, editing (native editor with undo,
+  autosave, and recovery), and exports run offline without accounts or
+  telemetry. Supports `.md`, `.txt`, and `.docx` import.
 
-**Manuscript editing is included in 0.8.1.** The native editor provides
-multi-level undo, local autosave, conflict detection and recovery, and
-search/replace. Switching between writing and reading re-analyzes the saved
-revision while preserving the undo stack and editing buffer. Research links
-remain reviewable across text revisions; saved evidence is never silently
-rewritten. The public demo remains read-only.
-See [editing scope and limits](https://mfahsold.github.io/lixity/WORKSPACE.md#write-a-manuscript-unreleased).
+**Try without installing:** open the
+[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html) to
+paste or test a classic directly in your browser, or inspect the read-only
+[Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html) (six
+fictional harbour chapters with linked case notes; fixed snapshot of 0.8.1).
+Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
+[Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
+[Methods & limits](https://mfahsold.github.io/lixity/METHODS.md) ·
+[Stability](https://mfahsold.github.io/lixity/STABILITY.md).
 
-Lixity provides localized workspaces across seven languages ([Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
-[English](https://mfahsold.github.io/lixity/) · [Français](https://mfahsold.github.io/lixity/index-fr.html) ·
-[Español](https://mfahsold.github.io/lixity/index-es.html) · [Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
-[Português](https://mfahsold.github.io/lixity/index-pt.html) · [Nederlands](https://mfahsold.github.io/lixity/index-nl.html)),
-while technical developer contracts remain in English. German and English offer the deepest heuristic resources;
-see [language coverage and limits](https://mfahsold.github.io/lixity/LOCALIZATION.md).
-
-**Explore patterns. Return to the text. Make your own interpretation.**
-Measurements illuminate differences; they do not grade literary quality or tell
-you how to write. Built-in analysis works offline. The engine accepts Markdown
-or plain text. The app can also preview and convert a Word/DOCX file when
-importing a copy; export Scrivener projects to a supported format first.
-
-[Explore the demo workspace](https://mfahsold.github.io/lixity/demo/report.html) ·
-[Read the example novel](https://mfahsold.github.io/lixity/demo/reader/index.html) ·
-[English tour](https://mfahsold.github.io/lixity/guides/first-look.html) ·
-[Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
-[Install](https://mfahsold.github.io/lixity/guides/installation.html)
-
-**Start without installing:** open the demo, inspect one marked passage, then
-return to the scene and decide whether you would keep it.
-
-The public demo follows six invented English harbour chapters and their linked
-case notes. It needs no account or manuscript upload. It is a fixed, read-only
-copy: importing, recording, changing settings and saving require the local app.
-The demo is a fixed snapshot of the 0.8.1 workspace. Install the matching release
-for native writing, imports and saved project changes.
-
-For linguistic work, follow the [browser workflow](https://mfahsold.github.io/lixity/WORKSPACE.md#explore-language-in-the-browser)
-or the [reproducible CLI workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis),
-then read the [formulas](https://mfahsold.github.io/lixity/METHODS.md) and [interpretation limits](https://mfahsold.github.io/lixity/STABILITY.md).
+**Seven interface languages:**
+[Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
+[English](https://mfahsold.github.io/lixity/) ·
+[Français](https://mfahsold.github.io/lixity/index-fr.html) ·
+[Español](https://mfahsold.github.io/lixity/index-es.html) ·
+[Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
+[Português](https://mfahsold.github.io/lixity/index-pt.html) ·
+[Nederlands](https://mfahsold.github.io/lixity/index-nl.html)
+([language coverage](https://mfahsold.github.io/lixity/LOCALIZATION.md)).
 
 ## What can you do with Lixity?
 

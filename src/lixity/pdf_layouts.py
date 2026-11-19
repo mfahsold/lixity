@@ -61,8 +61,10 @@ class FontUnavailable(PdfError):
 
 
 # A reading face first: EB Garamond and Linux Libertine are set for book work,
-# Liberation Serif carries Times metrics, and DejaVu Serif is the last resort
-# because it is wide and reads more like a screen face than a printed page.
+# Liberation Serif carries Times metrics, and DejaVu Serif is the open-license
+# fallback. Standard macOS/Windows TrueType faces sit strictly after open fonts
+# so local desktop users can export PDFs out of the box while hosts with open
+# book fonts always prefer those.
 _SERIF = (
     "EBGaramond12-Regular.ttf",
     "Garamond12.ttf",
@@ -74,6 +76,10 @@ _SERIF = (
     "NotoSerif-Regular.ttf",
     "FreeSerif.ttf",
     "Tinos-Regular.ttf",
+    "Georgia.ttf",
+    "georgia.ttf",
+    "Times New Roman.ttf",
+    "times.ttf",
 )
 _SERIF_BOLD = (
     "EBGaramond12-Bold.ttf",
@@ -84,16 +90,22 @@ _SERIF_BOLD = (
     "NotoSerif-Bold.ttf",
     "FreeSerifBold.ttf",
     "Tinos-Bold.ttf",
+    "Georgia Bold.ttf",
+    "georgiab.ttf",
+    "Times New Roman Bold.ttf",
+    "timesbd.ttf",
 )
 _SERIF_ITALIC = (
     "EBGaramond12-Italic.ttf", "LinuxLibertine-Italic.ttf", "CharisSIL-Italic.ttf",
     "GentiumPlus-Italic.ttf", "LiberationSerif-Italic.ttf", "DejaVuSerif-Italic.ttf",
     "NotoSerif-Italic.ttf", "FreeSerifItalic.ttf", "Tinos-Italic.ttf",
+    "Georgia Italic.ttf", "georgiai.ttf", "Times New Roman Italic.ttf", "timesi.ttf",
 )
 _SERIF_BOLD_ITALIC = (
     "EBGaramond12-BoldItalic.ttf", "LinuxLibertine-BoldItalic.ttf", "CharisSIL-BoldItalic.ttf",
     "LiberationSerif-BoldItalic.ttf", "DejaVuSerif-BoldItalic.ttf",
     "NotoSerif-BoldItalic.ttf", "FreeSerifBoldItalic.ttf", "Tinos-BoldItalic.ttf",
+    "Georgia Bold Italic.ttf", "georgiaz.ttf", "Times New Roman Bold Italic.ttf", "timesbi.ttf",
 )
 _SANS = (
     # DejaVu Sans includes the mathematical symbols emitted by analysis reports.
@@ -102,6 +114,10 @@ _SANS = (
     "LiberationSans-Regular.ttf",
     "Arimo-Regular.ttf",
     "FreeSans.ttf",
+    "Arial.ttf",
+    "arial.ttf",
+    "calibri.ttf",
+    "segoeui.ttf",
 )
 _SANS_BOLD = (
     "DejaVuSans-Bold.ttf",
@@ -109,6 +125,10 @@ _SANS_BOLD = (
     "LiberationSans-Bold.ttf",
     "Arimo-Bold.ttf",
     "FreeSansBold.ttf",
+    "Arial Bold.ttf",
+    "arialbd.ttf",
+    "calibrib.ttf",
+    "segoeuib.ttf",
 )
 _MONO = (
     "DejaVuSansMono.ttf",
@@ -117,6 +137,9 @@ _MONO = (
     "FreeMono.ttf",
     "UbuntuMono-R.ttf",
     "Cousine-Regular.ttf",
+    "Courier New.ttf",
+    "cour.ttf",
+    "consola.ttf",
 )
 
 _ROLE_FONTS = {
@@ -130,6 +153,9 @@ _ROLE_FONTS = {
 }
 
 _SEARCH_ROOTS = (
+    "~/.local/share/fonts",
+    "~/Library/Fonts",
+    "~/AppData/Local/Microsoft/Windows/Fonts",
     "/usr/share/fonts",
     "/usr/local/share/fonts",
     "/usr/share/fonts/truetype",
@@ -169,9 +195,10 @@ def _installed_fonts() -> dict[str, str]:
 
     index: dict[str, str] = {}
     for root in _SEARCH_ROOTS:
-        if not Path(root).is_dir():
+        root_path = Path(root).expanduser()
+        if not root_path.is_dir():
             continue
-        for base, _, files in os.walk(root):
+        for base, _, files in os.walk(root_path):
             for name in files:
                 if name.lower().endswith((".ttf", ".ttc")) and name not in index:
                     index[name] = str(Path(base) / name)

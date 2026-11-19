@@ -83,7 +83,7 @@
 
 .language-suggestion:not([hidden]) { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem 1.25rem; padding: .5rem max(1.25rem, calc((100vw - 82rem) / 2)); background: var(--surface); border-bottom: 1px solid var(--line); }
 .language-suggestion p { flex: 1 1 20rem; margin: 0; }
-.language-suggestion .ctl { white-space: normal; min-height: 2.25rem; }
+.language-suggestion .ctl { white-space: normal; }
 
 /* The recording stays whole; localized text is rendered at page resolution. */
 .product-tour { scroll-margin-top: 1rem; padding-bottom: 0; border-radius: var(--radius-lg); }

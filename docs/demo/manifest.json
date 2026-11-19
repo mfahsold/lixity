@@ -18,7 +18,7 @@
     "research": true,
     "source_files": true
   },
-  "created_at": "2026-11-18T14:38:14.701082+00:00",
+  "created_at": "2026-11-19T10:41:08.435172+00:00",
   "disclosures": [
     "Contains manuscript prose, analysis and work-marker notes.",
     "Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted.",
@@ -74,8 +74,8 @@
       "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
     },
     "report.html": {
-      "byte_length": 6511595,
-      "sha256": "5b68ef8735d422d8631166b4d84d4b5c991d43b2de29301decd9bbc94414f4dd"
+      "byte_length": 6520432,
+      "sha256": "674407b5a7156c239cd01b4ee485e34562099fb3e3fae79c329af853d23f28d2"
     },
     "research.html": {
       "byte_length": 490,
@@ -94,12 +94,12 @@
       "sha256": "6901b58ff53d6092920e08473e3b86c8ec642f25bdfac8421ba4617f5376ecfd"
     },
     "warehouse-4-report.pdf": {
-      "byte_length": 66692,
-      "sha256": "d7a4905ce9fce2dfdf05643220a70d50e2beeb9ee18d759bcb9557b7bafa5398"
+      "byte_length": 66687,
+      "sha256": "0791a938909189f0cddd3747565968861ad1ae5e9b3c02793427ad61913b7b61"
     },
     "warehouse-4-sheet.pdf": {
-      "byte_length": 55426,
-      "sha256": "47ad0f31f5f2afa7537ccc81749e4a7b1ad2cccbee3db1aad2cd69b274fe5925"
+      "byte_length": 55423,
+      "sha256": "19d48772d7caaac50f6292024183ded2bd33e6d878fb19bf90dde384e07b1f5e"
     }
   },
   "manuscript": {
@@ -109,14 +109,14 @@
   "mode": "review",
   "product_version": "0.8.2",
   "project": {
-    "id": "urn:uuid:7d913bd8-344b-4492-babf-b10b28db774b",
+    "id": "urn:uuid:9ac00312-5c08-4185-a56d-597cae7477b6",
     "language": "en",
     "title": "The Crate at Warehouse 4"
   },
   "research": {
     "included": true,
     "revision_count": 59,
-    "snapshot": "d791f165d6d139200090bb184fe9d8251e86b1faffb01a0a9fa5aba047e47c43"
+    "snapshot": "dde2cb0ef50037bbb6f56342789c785aa583d998690ac508ba0b747cfffdadf7"
   },
   "schema_version": "lixity-read-only-site/1"
 }

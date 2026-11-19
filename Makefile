@@ -3,11 +3,12 @@
 PYTHON ?= python3
 VENV ?= .venv
 VPY := $(VENV)/bin/python
+SCRIPT_PYTHON := $(if $(wildcard $(VPY)),$(VPY),$(PYTHON))
 RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
-BROWSER_JOBS ?= $(shell nproc 2>/dev/null | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}' || echo 4)
+BROWSER_JOBS ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}')
 BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
 PLAYWRIGHT_VERSION ?= 1.65.1
 AXE_CORE_VERSION ?= 4.14.1
@@ -37,13 +38,13 @@ browser-tools: ## Install isolated versioned Playwright, Chromium and axe-core
 	PLAYWRIGHT_BROWSERS_PATH="$(BROWSER_TOOLS_DIR)/browsers" "$(BROWSER_TOOLS_DIR)/node_modules/.bin/playwright" install chromium
 
 browser: ## Run the everyday browser checks (needs Node and Playwright)
-	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs $(BROWSER_JOBS)
+	$(SCRIPT_PYTHON) scripts/run_browser_suites.py --group fast --jobs $(BROWSER_JOBS)
 
 browser-changed: ## Run only the browser suites for modified paths (safe fallback to full)
-	$(PYTHON) scripts/run_browser_suites.py --changed --jobs $(BROWSER_JOBS)
+	$(SCRIPT_PYTHON) scripts/run_browser_suites.py --changed --jobs $(BROWSER_JOBS)
 
 browser-full: ## Run every browser suite with the full locale/theme/pointer matrix before a release
-	LIXITY_BROWSER_FULL=1 $(PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS) $(BROWSER_ARGS)
+	LIXITY_BROWSER_FULL=1 $(SCRIPT_PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS) $(BROWSER_ARGS)
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts
@@ -73,17 +74,17 @@ release-check: ## Validate the tag first, then test once, check generated docs, 
 
 release-prepare: ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
 	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
-	$(PYTHON) scripts/prepare_release.py "$(VERSION)"
+	$(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)"
 
 github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
-	$(PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
+	$(SCRIPT_PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
 
 rc-gate: ## Trigger pre-tag release-candidate qualification on main (source, sharded browser, Windows/macOS)
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml --ref main
 
 release-verify: ## Verify published GitHub Release, attestations, PyPI byte identity, live Pages and Zenodo status (RELEASE_TAG=vX.Y.Z)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
-	$(PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo
+	$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
@@ -96,24 +97,24 @@ examples: ## Regenerate the published example reports and their PDFs
 	PYTHONPATH=src $(VPY) scripts/build_examples.py
 
 brand-assets: ## Regenerate multi-size/multi-format brand icons and favicon from docs/assets/mark.svg
-	$(PYTHON) scripts/build_brand_assets.py
+	$(SCRIPT_PYTHON) scripts/build_brand_assets.py
 
 media: brand-assets screenshots videos examples ## Regenerate all brand assets, screenshots, videos and published examples
 
 docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
-	$(PYTHON) scripts/sync_docs.py --check
-	$(PYTHON) scripts/build_llms_full.py --check
-	$(PYTHON) scripts/build_guide_markdown.py --check
-	$(PYTHON) scripts/build_public_site.py --check
+	$(SCRIPT_PYTHON) scripts/sync_docs.py --check
+	$(SCRIPT_PYTHON) scripts/build_llms_full.py --check
+	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py --check
+	$(SCRIPT_PYTHON) scripts/build_public_site.py --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
 	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
 
 docs-sync: ## Synchronize documentation version references to match __version__
-	$(PYTHON) scripts/sync_docs.py
-	$(PYTHON) scripts/build_llms_full.py
-	$(PYTHON) scripts/build_guide_markdown.py
-	$(PYTHON) scripts/build_public_site.py
+	$(SCRIPT_PYTHON) scripts/sync_docs.py
+	$(SCRIPT_PYTHON) scripts/build_llms_full.py
+	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py
+	$(SCRIPT_PYTHON) scripts/build_public_site.py
 
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main

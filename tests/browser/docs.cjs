@@ -530,9 +530,13 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('[data-rtab=review]').click();
   await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
   await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
-  const decisionComparison = page.locator('#research-editorial-review .research-card')
-    .filter({has: page.getByText('Keep the inspection at dawn', {exact: true})})
-    .locator('[data-decision-review]');
+  const decisionCard = page.locator('#research-editorial-review .research-card')
+    .filter({has: page.getByText('Keep the inspection at dawn', {exact: true})});
+  await expect(decisionCard).toHaveCount(1);
+  if ((await decisionCard.getAttribute('open')) === null) {
+    await decisionCard.locator(':scope > summary').click();
+  }
+  const decisionComparison = decisionCard.locator('[data-decision-review]');
   await expect(decisionComparison).toHaveCount(1);
   await decisionComparison.locator(':scope > summary').click();
   await expect(decisionComparison.locator('.research-decision-review-grid')).toBeVisible();

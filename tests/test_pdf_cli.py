@@ -9,13 +9,24 @@ from pathlib import Path
 from lixity.cli import main
 from lixity.io import FileUtils
 from lixity.pdf_layouts import NORM_COLUMNS, NORM_LINES
-from tests.test_pdf_export import _character_count, _composed_pages
+from tests.test_pdf_export import (
+    BOLD as _BOLD,
+)
+from tests.test_pdf_export import (
+    HAVE_FONTS,
+    _character_count,
+    _composed_pages,
+)
+from tests.test_pdf_export import (
+    MONO as _MONO,
+)
+from tests.test_pdf_export import (
+    SERIF as _SERIF,
+)
 
-FONTS = Path("/usr/share/fonts/truetype/dejavu")
-SERIF = str(FONTS / "DejaVuSerif.ttf")
-BOLD = str(FONTS / "DejaVuSerif-Bold.ttf")
-MONO = str(FONTS / "DejaVuSansMono.ttf")
-HAVE_FONTS = all(Path(path).is_file() for path in (SERIF, BOLD, MONO))
+SERIF = str(_SERIF)
+BOLD = str(_BOLD)
+MONO = str(_MONO)
 
 MANUSCRIPT = (
     "# Harbour Story\n\n"

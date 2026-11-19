@@ -354,6 +354,34 @@ def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
         raise RuntimeError("FFmpeg timed out while creating audio") from None
 
 
+def _synthesize_segment(
+    text: str,
+    profile: AudioProfile,
+    *,
+    target: str,
+    references: Mapping[str, SpeechReference] | None,
+) -> bytes:
+    """Dispatch one uncached segment to its configured synthesis adapter."""
+    from .speech_profiles import profile_uses_reference
+
+    reference = (references or {}).get(profile.reference_id) if profile_uses_reference(profile) else None
+    if profile.engine in EXTERNAL_ENGINES:
+        from .speech_providers import synthesize_external
+
+        return synthesize_external(text, profile, reference=reference)
+    if profile.engine == "f5-tts":
+        from .speech_f5 import synthesize_f5
+
+        return synthesize_f5(text, profile, target=target, reference=reference)
+    if profile.engine == "ims-toucan":
+        from .speech_toucan import synthesize_toucan
+
+        return synthesize_toucan(text, profile, target=target, reference=reference)
+    from .speech_qwen import synthesize_qwen
+
+    return synthesize_qwen(text, profile, target=target, reference=reference)
+
+
 @_observe_speech_render
 def render_speech_audio(
     manuscript_path: str | Path,
@@ -398,7 +426,8 @@ def render_speech_audio(
         raise ValueError("No spoken text in the selected chapter")
     for cue in cues:
         AudioProfile.model_validate(cue.profile.model_dump())
-    from .speech_engines import NATIVE_ENGINES, native_endpoint, native_engine
+    from .speech_engines import NATIVE_ENGINES, native_endpoint
+    from .speech_profiles import mlx_audio_uses_model_speed, profile_uses_reference
 
     for cue in cues:
         if cue.text and cue.profile.engine not in EXTERNAL_ENGINES:
@@ -408,16 +437,11 @@ def render_speech_audio(
     if target != "local" and any(cue.text and cue.profile.engine in EXTERNAL_ENGINES for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
-    for reference_id in {cue.profile.reference_id for cue in cues
-                         if cue.text and ((cue.profile.engine not in EXTERNAL_ENGINES
-                                           and native_engine(cue.profile.engine).reference_required)
-                                          or (cue.profile.engine == "mlx-audio"
-                                              and cue.profile.voice == "reference"))}:
+    for reference_id in {cue.profile.reference_id for cue in cues if cue.text and profile_uses_reference(cue.profile)}:
         reference = (references or {}).get(reference_id)
         if reference is None or reference.id != reference_id:
             raise ValueError("A verified reference is required for every reference voice profile")
         validate_reference(reference)
-    from .speech_profiles import mlx_audio_uses_model_speed
 
     needs_tempo = any(cue.text and cue.profile.speed != 1.0
                       and not mlx_audio_uses_model_speed(cue.profile) for cue in cues)
@@ -484,7 +508,6 @@ def render_speech_audio(
                     write_frames(bytes(int(rate * cue.pause_after) * 2))
                     continue
                 effective = cue.profile
-                from .speech_qwen import synthesize_qwen
 
                 instruction_changed = _changed_value(previous_profile.instructions if previous_profile else None,
                                                      effective.instructions)
@@ -499,27 +522,7 @@ def render_speech_audio(
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
                                            "hit" if data is not None else "miss")
                     if data is None:
-                        if effective.engine in EXTERNAL_ENGINES:
-                            from .speech_providers import synthesize_external
-
-                            reference = ((references or {}).get(effective.reference_id)
-                                         if effective.voice == "reference" else None)
-                            data = synthesize_external(cue.text, effective, reference=reference)
-                        elif effective.engine == "f5-tts":
-                            from .speech_f5 import synthesize_f5
-
-                            data = synthesize_f5(cue.text, effective, target=target,
-                                                 reference=(references or {})[effective.reference_id])
-                        elif effective.engine == "ims-toucan":
-                            from .speech_toucan import synthesize_toucan
-
-                            data = synthesize_toucan(cue.text, effective, target=target,
-                                                     reference=(references or {})[effective.reference_id])
-                        else:
-                            data = (synthesize_qwen(cue.text, effective, target=target,
-                                                   reference=(references or {})[effective.reference_id])
-                                    if native_engine(effective.engine).reference_required else
-                                    synthesize_qwen(cue.text, effective, target=target))
+                        data = _synthesize_segment(cue.text, effective, target=target, references=references)
                         params, frames = _read_pcm(data)
                         if params != (1, 2, rate):
                             raise ValueError("Unexpected synthesized audio format")

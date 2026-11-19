@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 from .io import FileUtils
 from .research.repository import Repository
-from .speech_profiles import EXTERNAL_ENGINES
 from .speech_qwen import MAX_BASE_REQUEST_BYTES, MAX_REFERENCE_BYTES, _decode_reference
 
 _SCHEMA = "lixity-audio-reference/1"
@@ -93,12 +92,9 @@ def load_reference(project: str | Path, reference_id: str) -> SpeechReference:
 
 def references_for_plan(project: str | Path, plan: list[SpeechSegment]) -> dict[str, SpeechReference]:
     """Snapshot each distinct explicit reference needed by a plan."""
-    from .speech_engines import native_engine
+    from .speech_profiles import profile_uses_reference
 
-    ids = {row.profile.reference_id for row in plan if row.text
-           and ((row.profile.engine not in EXTERNAL_ENGINES
-                 and native_engine(row.profile.engine).reference_required)
-                or (row.profile.engine == "mlx-audio" and row.profile.voice == "reference"))}
+    ids = {row.profile.reference_id for row in plan if row.text and profile_uses_reference(row.profile)}
     return {reference_id: load_reference(project, reference_id) for reference_id in sorted(ids)}
 
 

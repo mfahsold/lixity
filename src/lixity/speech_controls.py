@@ -11,6 +11,7 @@ import unicodedata
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from functools import lru_cache
+from types import MappingProxyType
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
@@ -79,19 +80,26 @@ _TOUCAN_SUPPORT = SpeechControlSupport(
 )
 
 
+_ENGINE_SUPPORT: Mapping[str, SpeechControlSupport] = MappingProxyType({
+    "qwen3": _QWEN_SUPPORT,
+    "qwen3-design": _QWEN_SUPPORT,
+    "qwen3-base": _QWEN_BASE_SUPPORT,
+    "coqui": _QWEN_BASE_SUPPORT,
+    "coqui-reference": _QWEN_BASE_SUPPORT,
+    "f5-tts": _QWEN_BASE_SUPPORT,
+    "ims-toucan": _TOUCAN_SUPPORT,
+    "mlx-audio": _QWEN_BASE_SUPPORT,
+})
+
+
 def speech_control_support(engine: str, *, supports_instructions: bool = False) -> SpeechControlSupport:
     """Describe the actual Lixity adapter, not the model's theoretical features."""
     if engine == "openai-compatible":
         return _QWEN_SUPPORT if supports_instructions else _QWEN_BASE_SUPPORT
-    if engine == "mlx-audio":
-        return _QWEN_BASE_SUPPORT
-    if engine == "ims-toucan":
-        return _TOUCAN_SUPPORT
-    if engine in ("qwen3-base", "coqui", "coqui-reference", "f5-tts"):
-        return _QWEN_BASE_SUPPORT
-    if engine not in ("qwen3", "qwen3-design"):
-        raise ValueError("Unknown speech engine")
-    return _QWEN_SUPPORT
+    try:
+        return _ENGINE_SUPPORT[engine]
+    except KeyError:
+        raise ValueError("Unknown speech engine") from None
 
 
 def validate_pronunciation_keys(substitutions: Mapping[str, str], *, case_sensitive: bool = True) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shutil
 import subprocess
@@ -25,14 +26,30 @@ from lixity.pdf_layouts import (
     resolve_fonts,
 )
 
-FONTS = Path("/usr/share/fonts/truetype/dejavu")
-SERIF = FONTS / "DejaVuSerif.ttf"
-BOLD = FONTS / "DejaVuSerif-Bold.ttf"
-MONO = FONTS / "DejaVuSansMono.ttf"
+
+def _default_test_fonts() -> dict[str, Path] | None:
+    try:
+        resolved = resolve_fonts({}, required=("text", "heading", "mono", "sans"))
+    except FontUnavailable:
+        return None
+    fonts = {role: Path(path) for role, path in resolved.items()}
+    for role in ("italic", "bold_italic"):
+        with contextlib.suppress(FontUnavailable):
+            fonts[role] = Path(resolve_fonts({}, required=(role,))[role])
+    return fonts
+
+
+_RESOLVED = _default_test_fonts()
+SERIF = _RESOLVED["text"] if _RESOLVED else Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf")
+BOLD = _RESOLVED["heading"] if _RESOLVED else Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf")
+MONO = _RESOLVED["mono"] if _RESOLVED else Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")
+SANS = _RESOLVED["sans"] if _RESOLVED else Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+ITALIC = _RESOLVED.get("italic") if _RESOLVED else None
+BOLD_ITALIC = _RESOLVED.get("bold_italic") if _RESOLVED else None
 
 CHOSEN = FontChoice(serif=str(SERIF), serif_bold=str(BOLD), mono=str(MONO))
-HAVE_FONTS = SERIF.is_file() and BOLD.is_file() and MONO.is_file()
-needs_fonts = unittest.skipUnless(HAVE_FONTS, "requires the DejaVu font family")
+HAVE_FONTS = _RESOLVED is not None
+needs_fonts = unittest.skipUnless(HAVE_FONTS, "requires usable host TrueType fonts")
 
 
 class SubsetFontTest(unittest.TestCase):
@@ -130,6 +147,28 @@ class FontResolutionTest(unittest.TestCase):
         self.assertIn("LIXITY_PDF_FONT_TEXT", message)
         self.assertIn(".ttf", message)
 
+    def test_open_license_fonts_win_over_os_fallbacks(self):
+        import os
+
+        import lixity.pdf_layouts as layouts
+
+        environment = {k: v for k, v in os.environ.items() if not k.startswith("LIXITY_PDF_FONT_")}
+        fake_index = {
+            "Georgia.ttf": "/System/Library/Fonts/Supplemental/Georgia.ttf",
+            "Georgia Bold.ttf": "/System/Library/Fonts/Supplemental/Georgia Bold.ttf",
+            "Arial.ttf": "/System/Library/Fonts/Supplemental/Arial.ttf",
+            "Arial Bold.ttf": "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+            "Courier New.ttf": "/System/Library/Fonts/Supplemental/Courier New.ttf",
+            "LiberationSerif-Regular.ttf": "/Users/test/Library/Fonts/LiberationSerif-Regular.ttf",
+        }
+        with (unittest.mock.patch.dict(os.environ, environment, clear=True),
+              unittest.mock.patch.object(layouts, "_installed_fonts", lambda: fake_index)):
+            resolved = resolve_fonts({})
+        self.assertEqual(resolved["text"], fake_index["LiberationSerif-Regular.ttf"])
+        self.assertEqual(resolved["heading"], fake_index["Georgia Bold.ttf"])
+        self.assertEqual(resolved["sans"], fake_index["Arial.ttf"])
+        self.assertEqual(resolved["mono"], fake_index["Courier New.ttf"])
+
 
 class LineBreakingTest(unittest.TestCase):
     @needs_fonts
@@ -216,7 +255,7 @@ class ComposedDocumentTest(unittest.TestCase):
     def test_long_text_paginates(self):
         fonts = FontSet({"text": str(SERIF)})
         document = Document(fonts)
-        document.add(Block("Ein Absatz. " * 400, role="text", size=11))
+        document.add(Block("Ein Absatz. " * 600, role="text", size=11))
         self.assertGreater(len(document.render()), 0)
         pages = document._compose()
         self.assertGreater(len(pages), 1)
@@ -352,7 +391,7 @@ class TypesettingTest(unittest.TestCase):
         self.assertEqual([line.text for line in lines], ["Kapitel 1"])
 
     def test_last_line_still_obeys_the_measure(self):
-        lines = self._lines("Wiesen Wiesen", size=11.0, measure=70.0)
+        lines = self._lines("Wiesen Wiesen", size=11.0, measure=55.0)
         self.assertEqual([line.text for line in lines], ["Wiesen", "Wiesen"])
         self.assertTrue(all(line.slack >= 0 for line in lines))
 
@@ -526,12 +565,8 @@ def test_semantic_pdf_round_trip_keeps_rich_text_and_embeds_real_styles(tmp_path
     from lixity.pdf_layouts import editor_pdf
 
     renderer = {"book": book_pdf, "editor": editor_pdf, "sheet": manuscript_pdf}[mode]
-    italic = next((path for path in (FONTS / "DejaVuSerif-Italic.ttf",
-                                    FONTS.parent / "liberation/LiberationSerif-Italic.ttf")
-                   if path.is_file()), None)
-    bold_italic = next((path for path in (FONTS / "DejaVuSerif-BoldItalic.ttf",
-                                         FONTS.parent / "liberation/LiberationSerif-BoldItalic.ttf")
-                        if path.is_file()), None)
+    italic = ITALIC
+    bold_italic = BOLD_ITALIC
     if italic is None or bold_italic is None:
         pytest.skip("requires real italic and bold italic TrueType fonts")
     choice = FontChoice(serif=str(SERIF), serif_bold=str(BOLD), mono=str(MONO),
@@ -564,13 +599,13 @@ def test_semantic_pdf_round_trip_keeps_rich_text_and_embeds_real_styles(tmp_path
         assert expected in prose
     assert re.search(r"(?:^|\n)\s*(?:\d+\s+)?\*\s*\*\s*\*\s*(?:\n|$)", extracted.stdout)
     if mode == "sheet":
-        assert "DejaVuSansMono" in embedded.stdout
-        assert "DejaVuSerif" not in embedded.stdout
+        assert any(token in embedded.stdout for token in ("Mono", "Courier", "Consola"))
+        assert "Serif" not in embedded.stdout
     else:
-        assert "Serif-Italic" in embedded.stdout
-        assert "Serif-BoldItalic" in embedded.stdout
-        assert "DejaVuSerif-Bold" in embedded.stdout
-        assert "DejaVuSansMono" in embedded.stdout
+        assert "Italic" in embedded.stdout
+        assert any(token in embedded.stdout for token in ("BoldItalic", "Bold-Italic"))
+        assert "Bold" in embedded.stdout
+        assert any(token in embedded.stdout for token in ("Mono", "Courier", "Consola"))
 
 
 @needs_fonts

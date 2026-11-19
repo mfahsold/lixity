@@ -351,3 +351,14 @@ def test_external_render_diagnostics_do_not_record_endpoint_voice_model_or_key(t
             plan=[SpeechSegment('Private synthetic prose.', selected, 0, 0, None)])
         assert 'requested_engine=openai-compatible' in caplog.text
         assert all(value not in caplog.text for value in (url, 'private-voice', 'private-model', 'synthetic-secret', 'Private synthetic prose.'))
+
+
+def test_zonos_cache_distinguishes_reference_id_and_model_speed(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+
+    cache = SpeechSegmentCache(tmp_path / 'cache')
+    ref_a = AudioProfile(engine='mlx-audio', language='de', voice='reference', reference_id='a' * 64, speed=1.0)
+    ref_b = AudioProfile(engine='mlx-audio', language='de', voice='reference', reference_id='b' * 64, speed=1.0)
+    ref_a_fast = AudioProfile(engine='mlx-audio', language='de', voice='reference', reference_id='a' * 64, speed=1.2)
+    keys = {cache._paths('Synthetischer Satz.', profile)[0] for profile in (ref_a, ref_b, ref_a_fast)}
+    assert len(keys) == 3

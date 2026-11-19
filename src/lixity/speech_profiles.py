@@ -98,6 +98,17 @@ def mlx_audio_uses_model_speed(profile: AudioProfile) -> bool:
     return profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL
 
 
+def profile_uses_reference(profile: AudioProfile) -> bool:
+    """Return whether this profile requires a verified project voice reference."""
+    if profile.engine == "mlx-audio":
+        return profile.voice == "reference"
+    if profile.engine in EXTERNAL_ENGINES:
+        return False
+    from .speech_engines import native_engine
+
+    return native_engine(profile.engine).reference_required
+
+
 def _text(value: str, *, empty: bool = False) -> str:
     if (not empty and not value.strip()) or value != value.strip():
         raise ValueError("Audio text must be nonempty and have no surrounding whitespace")

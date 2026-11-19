@@ -22,13 +22,9 @@ from lixity.pdf_font import (
     subset_font,
 )
 from lixity.pdf_layouts import FontChoice, FontUnavailable, book_pdf, manuscript_pdf, report_pdf
-from tests.test_pdf_export import BOLD, HAVE_FONTS, MONO, SERIF
+from tests.test_pdf_export import BOLD, HAVE_FONTS, ITALIC, MONO, SANS, SERIF
 
-SANS = SERIF.parent / "DejaVuSans.ttf"
-ITALIC = SERIF.parent / "DejaVuSerif-Italic.ttf"
-if not ITALIC.is_file():
-    ITALIC = Path("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf")
-pytestmark = pytest.mark.skipif(not HAVE_FONTS, reason="requires the DejaVu font family")
+pytestmark = pytest.mark.skipif(not HAVE_FONTS, reason="requires usable host TrueType fonts")
 
 
 def tables(data: bytes) -> dict[bytes, bytes]:
@@ -225,10 +221,10 @@ def test_pdf_font_descriptor_uses_real_subset_name_and_correct_style_flags():
     descriptors = re.findall(rb"/FontName /(\S+) /Flags (\d+)", data)
     assert len(descriptors) == 2
     for name, flags in descriptors:
-        assert re.fullmatch(rb"[A-Z]{6}\+DejaVu\S+", name)
+        assert re.fullmatch(rb"[A-Z]{6}\+[A-Za-z0-9_-]+", name)
         assert not int(flags) & 64
         assert bool(int(flags) & 4) != bool(int(flags) & 32)
-        if b"Mono" in name:
+        if any(token in name for token in (b"Mono", b"Courier", b"Consola")):
             assert int(flags) & 1
 
 

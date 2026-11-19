@@ -94,6 +94,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def no_redirect_opener(opener: Any = None) -> Any:
+    """Return an explicit opener or a direct no-proxy, no-redirect client."""
+    return opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+
 def _validate_wav_container(data: bytes) -> None:
     """Reject incomplete RIFF/chunks before a decoder can salvage partial audio."""
     if len(data) < 12 or not (data[:4] == b"RIFF" and data[8:12] == b"WAVE"):
@@ -238,7 +243,7 @@ def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None,
             raise ValueError("Speech API key environment variable is missing or invalid")
         headers["Authorization"] = "Bearer " + key
     request = urllib.request.Request(endpoint, data=payload, headers=headers)  # noqa: S310 - explicit validated provider configuration
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    client = no_redirect_opener(opener)
     try:
         with client.open(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             if response.status != 200:

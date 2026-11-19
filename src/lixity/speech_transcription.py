@@ -11,20 +11,13 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .speech_providers import REQUEST_TIMEOUT_SECONDS, speech_endpoint
+from .speech_providers import REQUEST_TIMEOUT_SECONDS, no_redirect_opener, speech_endpoint
 
 SCHEMA = "lixity-audio-transcription/1"
 DEFAULT_MODEL = "mlx-community/parakeet-tdt-0.6b-v3"
 DEFAULT_BASE_URL = "http://127.0.0.1:8000/v1"
 MAX_AUDIO_BYTES = 200 * 1024 * 1024
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(
-        self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str,
-    ) -> None:
-        return None
 
 
 def transcription_endpoint(base_url: str) -> str:
@@ -131,7 +124,7 @@ def transcribe_audio(
             "Accept": "application/json",
         },
     )
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    client = no_redirect_opener(opener)
     try:
         with client.open(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             if response.status != 200 or response.headers.get_content_type() not in (

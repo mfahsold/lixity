@@ -9,6 +9,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Resolve user-installed font directories (`~/.local/share/fonts`,
+  `~/Library/Fonts`, `~/AppData/Local/Microsoft/Windows/Fonts`) and fall back to
+  standard macOS/Windows TrueType system faces strictly after open-license book
+  fonts so PDF export works out of the box across platforms while preferring
+  open-license typography when available.
+- Consolidate speech reference checks (`profile_uses_reference`), control
+  support lookup, direction conflict validation, no-redirect HTTP openers, and
+  segment dispatch across the speech pipeline; bind ZONOS3 `reference_id` and
+  model `speed` in the segment cache key so cloned voices and tempo changes
+  never collide in cache.
+- Prefer `.venv/bin/python` when present for `Makefile` browser, docs and
+  release helper targets so macOS hosts with older system Python stay compatible.
 - Keep long research views navigable with sticky in-panel section jumps,
   compact review disclosures and paginated dossier lists. Dossier cards retain
   details and actions while limiting long excerpts, tags and section previews.

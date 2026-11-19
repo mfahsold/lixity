@@ -10,7 +10,12 @@ from typing import Any
 
 from .io import FileUtils
 from .speech_engines import native_engine
-from .speech_profiles import EXTERNAL_ENGINES, AudioProfile
+from .speech_profiles import (
+    EXTERNAL_ENGINES,
+    AudioProfile,
+    mlx_audio_uses_model_speed,
+    profile_uses_reference,
+)
 from .speech_qwen import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
@@ -52,15 +57,17 @@ class SpeechSegmentCache:
             request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url),
                            adapter=ADAPTER_ID if profile.engine == "openai-compatible" else "lixity-mlx-audio/1",
                            api_key_env=profile.api_key_env or "")
+            if mlx_audio_uses_model_speed(profile):
+                request["speed"] = profile.speed
         else:
             if profile.engine == "qwen3-design":
                 request["voice_description"] = profile.voice_description
-            if native_engine(profile.engine).reference_required:
-                request["reference_id"] = profile.reference_id
             if profile.engine == "ims-toucan":
                 request["adapter"] = "lixity-toucan/1"
                 request["phonemes"] = profile.phonemes
                 request["prosody"] = profile.prosody.model_dump()
+        if profile_uses_reference(profile):
+            request["reference_id"] = profile.reference_id
         key = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         audio, metadata = self.directory / (key + ".wav"), self.directory / (key + ".json")
         if audio.is_symlink() or metadata.is_symlink():

@@ -108,6 +108,22 @@ class CoquiDirectionConflict(ValueError):
         )
 
 
+def _require_direction_support(profile: AudioProfile, instructions: str) -> None:
+    """Reject free-text delivery instructions on engines that cannot interpret them."""
+    if not instructions:
+        return
+    if profile.engine == 'mlx-audio':
+        raise MLXDirectionConflict()
+    if profile.engine in ('coqui', 'coqui-reference'):
+        raise CoquiDirectionConflict()
+    if profile.engine in ('qwen3-base', 'f5-tts'):
+        raise BaseDirectionConflict()
+    if profile.engine == 'ims-toucan':
+        raise ValueError(
+            'IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction'
+        )
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, allow_inf_nan=False, hide_input_in_errors=True)
 
@@ -292,14 +308,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             selected = effective_profile(selected)
             if not same_narrator(profile, selected):
                 raise NarratorConflict()
-            if not for_export and selected.engine == 'mlx-audio' and d.instructions:
-                raise MLXDirectionConflict()
-            if not for_export and selected.engine in ('coqui', 'coqui-reference') and d.instructions:
-                raise CoquiDirectionConflict()
-            if not for_export and selected.engine in ('qwen3-base', 'f5-tts') and d.instructions:
-                raise BaseDirectionConflict()
-            if not for_export and selected.engine == 'ims-toucan' and (selected.instructions or d.instructions):
-                raise ValueError('IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction')
+            if not for_export:
+                _require_direction_support(selected, d.instructions or selected.instructions)
             if d.prosody.model_dump():
                 if selected.engine != 'ims-toucan':
                     if not for_export:
@@ -327,8 +337,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             chunks.append((cue.text[cursor:], profile, 0.0, None, None, profile.instructions))
         chunk_start = 0
         for index, (raw_content, effective, before, after, direction, instructions) in enumerate(chunks):
-            if not for_export and effective.engine == 'ims-toucan' and effective.instructions:
-                raise ValueError('IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction')
+            if not for_export:
+                _require_direction_support(effective, effective.instructions)
             content = raw_content
             matching = audio_settings.pronunciation_matching if audio_settings else None
             content = apply_pronunciation(content, effective.pronunciations,
