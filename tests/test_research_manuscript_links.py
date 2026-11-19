@@ -1404,3 +1404,36 @@ def test_source_path_accepts_parent_symlink_and_rejects_escaping_symlinks(tmp_pa
     with pytest.raises(ResearchError, match="remain inside"):
         resolve_project_manuscript_path(repo, alias_parent / "book" / ".." / "outside.md")
 
+
+def test_reconcile_manuscript_links_accepts_new_quote_in_single_batch_commit(manuscript_archive):
+    project, manuscript, _claim, _dossier = manuscript_archive
+    saved = save_link(manuscript_archive)
+    manuscript.write_text(
+        "## Chapter One\n\nThe room closed at midnight.\n",
+        encoding="utf-8",
+    )
+    reviewed = api.review_manuscript_links(project, manuscript)
+    row = reviewed["links"][0]
+    assert row["anchor_state"] == "changed"
+    result = api.reconcile_manuscript_links(
+        project,
+        manuscript,
+        [
+            {
+                "link_id": saved["link_id"],
+                "revision": row["revision"],
+                "new_quote": "The room closed at midnight.",
+                "line": 3,
+                "reason": "Re-anchor to revised prose in batch",
+            }
+        ],
+        expected_source_sha256=reviewed["current_source_sha256"],
+        expected_project_id=reviewed["project_id"],
+        expected_snapshot=reviewed["snapshot"],
+    )
+    assert len(result["accepted"]) == 1 and not result["skipped"]
+    after = api.review_manuscript_links(project, manuscript)
+    assert after["review_needed_count"] == 0
+    assert after["links"][0]["anchor_state"] == "resolved"
+    assert after["links"][0]["anchor"]["quote"] == "The room closed at midnight."
+

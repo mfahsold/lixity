@@ -23,7 +23,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `site_export.prepare_site` on hosts with symlinked parent directories (such as
   macOS `/var` -> `/private/var`) so legitimate project manuscripts and
   contained internal aliases resolve cleanly while escaping symlinks remain
-  rejected.
+  rejected, and allow `research.manuscript.reconcile_manuscript_links` candidate
+  rows to supply `new_quote`, `line`, and `reason` so revised (`changed`) quotes
+  reconcile in a single batch commit.
 - Move the seven-language workspace label catalog out of the 14.8k-line Python
   module into packaged JSON files (`src/lixity/locales/*.json`) loaded lazily
   per locale with `orjson` (`workspace_labels_for`), adopt PEP 562 lazy exports

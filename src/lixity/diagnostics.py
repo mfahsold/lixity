@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import DEFAULT_PORT
 from .service import service_status
+from .status import DEFAULT_PORT
 
 DOCTOR_SCHEMA = "lixity-doctor/1"
 

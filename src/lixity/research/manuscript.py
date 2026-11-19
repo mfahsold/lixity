@@ -1048,7 +1048,10 @@ def reconcile_manuscript_links(
                 if accept_claim_updates and row.get("claim_changed")
                 else None
             )
-            if move_this and paragraphs is None:
+            new_quote = row.get("new_quote")
+            line = row.get("line")
+            need_paragraphs = move_this or new_quote is not None
+            if need_paragraphs and paragraphs is None:
                 paragraphs = _paragraphs(text, repository, language, project_config)
             revised, _claim = _prepare_reanchored_link(
                 snapshot,
@@ -1056,9 +1059,11 @@ def reconcile_manuscript_links(
                 relative=relative,
                 source_sha256=source_sha256,
                 expected_revision=row["revision"],
-                paragraphs=paragraphs if move_this else None,
+                paragraphs=paragraphs if need_paragraphs else None,
                 actor=actor,
-                reason=reason,
+                reason=row.get("reason") if row.get("reason") is not None else reason,
+                new_quote=new_quote,
+                line=line,
                 new_claim_revision=claim_revision,
                 accept_moved=move_this,
             )
