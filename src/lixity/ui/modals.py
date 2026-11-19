@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..language import LANGUAGE_CHOICES, LANGUAGE_PROFILES
-from .components import checkbox_field, esc, help_term, panel_label
+from .components import checkbox_field, esc, help_term, panel_label, ui_icon
 
 
 def render_project_modals(
@@ -120,7 +120,7 @@ def render_project_modals(
     parts.append('        <input type="file" id="import-file-input" accept=".md,.markdown,.txt,.docx" hidden />')
     parts.append(f'        <button type="button" class="file-dropzone" id="import-dropzone" autofocus aria-label="{L("wizard_drop_aria")}">')
     parts.append('          <span class="dropzone-icon">')
-    parts.append('            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="12" y2="12"></line><line x1="15" y1="15" x2="12" y2="12"></line></svg>')
+    parts.append(f'            {ui_icon("file-up", size=34)}')
     parts.append('          </span>')
     parts.append('          <span class="dropzone-text">')
     parts.append(f'            <strong>{L("wizard_drop_main")}</strong>')

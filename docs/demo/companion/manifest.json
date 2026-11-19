@@ -7,7 +7,7 @@
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-11-19T10:41:08.818982+00:00",
+  "created_at": "2026-11-19T15:55:41.032753+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
@@ -29,8 +29,8 @@
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
     "index.html": {
-      "byte_length": 1402300,
-      "sha256": "3872f9679d732fa8510b6be6b51c26cb0dd6e07e302254e53fecf92e8d603432"
+      "byte_length": 1409426,
+      "sha256": "a5f3b1f09896b3de6b527f88d41a0578c96c057fd1b26bab9d6f842613a14f8a"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -67,13 +67,13 @@
   "mode": "companion",
   "product_version": "0.8.2",
   "project": {
-    "id": "urn:uuid:9ac00312-5c08-4185-a56d-597cae7477b6",
+    "id": "urn:uuid:3efa6b42-69a5-4d2a-8c4c-19635fac0ebf",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
   "publication": {
     "entry_count": 5,
-    "identity": "a4ef9bcf843bf84ea750e3256e6c201c0b8f8e1315bf367384478d4e27ed01ee",
+    "identity": "7f9d01d838e03eef7b301c1a4b2eb8c627488965488034be563ef7d2bc09462e",
     "max_chapter": 3,
     "profile": "readers"
   },

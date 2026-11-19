@@ -1186,7 +1186,8 @@ their document layout. The same native shell is used by the public demo. */
 .lixity-workspace .workspace-shell .project-header h1 { font-family: var(--font); font-size: 1.125rem; font-weight: var(--weight-semibold); line-height: 1.45; letter-spacing: 0; }
 .lixity-workspace .workspace-shell .sub { font-size: var(--text-small); }
 .lixity-workspace .kpi:hover { transform: none; box-shadow: none; }
-.lixity-workspace .toolbar { gap: .65rem 1rem; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.lixity-workspace .toolbar { gap: .65rem 1rem; }
+body.lixity-workspace:not(.manuscript-reading) .toolbar { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
 #workspace-navigation-content { display: contents; }
 #workspace-navigation-content[hidden] { display: none; }
 .workspace-shell-header { display: flex; align-items: center; min-width: 0; }

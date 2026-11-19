@@ -9,6 +9,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Harmonize workspace action ribbons across Manuscript, Research, and Project:
+  centralize Lucide icon rendering (`ui_icon()` parsing `assets/icons.js`,
+  eliminating duplicate inline SVGs across Python/JS views), shorten localized
+  Research/Project jump pill labels (`research_nav_*`, `project_nav_*`) with
+  icons, add the sticky auto-hiding `.pane-ribbon` jump bar (`pane_ribbon()`,
+  `initPaneRibbons`) with top button and dynamic `scroll-margin-top` to the
+  Project view, and align `#manuscript-reader-controls` and `.toolbar` onto the
+  same translucent glassmorphic surface and `LixityChrome` auto-hide pipeline.
 - Centralize subprocess environment allowlisting in `lixity.io.sanitized_subprocess_env`
   and apply it across FFmpeg (`speech.py`, `audio_audit.py`), ZONOS3 workers
   (`speech_providers.py`), ALSA/PipeWire audio capture tools (`speech_record.py`,

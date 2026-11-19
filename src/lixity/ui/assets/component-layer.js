@@ -192,7 +192,9 @@
       ".manuscript-reading .toolbar",
       ".manuscript-editor-toolbar",
       "#manuscript-reading .manuscript-reading-bar",
-      ".teleprompter-toolbar"
+      ".teleprompter-toolbar",
+      ".pane-ribbon",
+      ".research-pane-navigation"
     ].join(", ");
     var IDLE_MS = 3500;
     var DOWN_DELTA_THRESHOLD = 36;
@@ -328,7 +330,7 @@
         ? document
         : target;
       var currentTop = getScrollTop(target);
-      var prevTop = lastScrollTops.has(key) ? lastScrollTops.get(key) : currentTop;
+      var prevTop = lastScrollTops.has(key) ? lastScrollTops.get(key) : (key === document ? 0 : currentTop);
       var delta = currentTop - prevTop;
       lastScrollTops.set(key, currentTop);
 
@@ -404,5 +406,79 @@
       resetTimer: scheduleIdle,
       refresh: function () { applyState(hidden); }
     };
+  })();
+
+  // Shared Project/Pane jump ribbon handler: keeps hidden targets synchronized,
+  // scales scroll-margin-top with ribbon geometry, opens collapsed <details>,
+  // and moves keyboard focus cleanly without shifting prose.
+  (function initPaneRibbons() {
+    if (typeof document === "undefined") return;
+    function syncRibbons() {
+      var maxHeight = 0;
+      document.querySelectorAll(".pane-ribbon").forEach(function (ribbon) {
+        if (ribbon.offsetParent !== null) {
+          maxHeight = Math.max(maxHeight, ribbon.getBoundingClientRect().height || 0);
+        }
+        ribbon.querySelectorAll("[data-ribbon-target]").forEach(function (btn) {
+          var sel = btn.getAttribute("data-ribbon-target");
+          if (!sel || sel === "#controls") {
+            btn.hidden = false;
+            return;
+          }
+          var target = document.querySelector(sel);
+          btn.hidden = !target || target.hidden;
+        });
+      });
+      if (maxHeight > 0 && document.documentElement) {
+        document.documentElement.style.setProperty("--pane-ribbon-height", Math.ceil(maxHeight) + "px");
+      }
+    }
+
+    document.addEventListener("click", function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest(".pane-ribbon [data-ribbon-target]") : null;
+      if (!btn) return;
+      var ribbon = btn.closest(".pane-ribbon");
+      var sel = btn.getAttribute("data-ribbon-target");
+      var target = sel ? document.querySelector(sel) : null;
+      if (!target) return;
+      if (window.LixityChrome && typeof window.LixityChrome.show === "function") {
+        window.LixityChrome.show();
+      }
+      if (target.tagName === "DETAILS") target.open = true;
+      if (ribbon) {
+        ribbon.querySelectorAll("[aria-current='location']").forEach(function (b) {
+          b.removeAttribute("aria-current");
+        });
+        if (sel !== "#controls") btn.setAttribute("aria-current", "location");
+        var ribbonHeight = ribbon.getBoundingClientRect().height || 0;
+        if (ribbonHeight > 0 && document.documentElement) {
+          document.documentElement.style.setProperty("--pane-ribbon-height", Math.ceil(ribbonHeight) + "px");
+        }
+      }
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start", inline: "nearest" });
+      var focusTarget = sel === "#controls"
+        ? target.querySelector(":scope > h2, :scope > summary") || target
+        : target.querySelector(":scope > summary, :scope > legend, :scope > h2, :scope > h3, :scope > h4, [tabindex='-1']") || target;
+      if (focusTarget) {
+        if (!focusTarget.hasAttribute("tabindex") && !focusTarget.matches("a, button, input, select, textarea, summary")) {
+          focusTarget.setAttribute("tabindex", "-1");
+        }
+        focusTarget.focus({ preventScroll: true });
+      }
+    });
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", syncRibbons);
+    } else {
+      syncRibbons();
+    }
+    window.addEventListener("resize", syncRibbons);
+    document.addEventListener("lixity:viewchange", function () {
+      window.requestAnimationFrame(syncRibbons);
+    });
+    document.addEventListener("lixity:workbench-change", function () {
+      window.requestAnimationFrame(syncRibbons);
+    });
   })();
 })();

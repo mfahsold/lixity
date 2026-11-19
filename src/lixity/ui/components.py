@@ -10,7 +10,10 @@ standard library.
 from __future__ import annotations
 
 import html
+import re
 from collections.abc import Callable, Mapping, Sequence
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -54,6 +57,52 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
 def esc(value: object, quote: bool = True) -> str:
     """HTML-escapes any value (single helper for the whole UI)."""
     return html.escape(str(value), quote=quote)
+
+
+@lru_cache(maxsize=1)
+def _icon_paths() -> dict[str, str]:
+    """Read the one icon registry, ``assets/icons.js`` (Lucide subset), not a copy."""
+    source = (Path(__file__).parent / "assets" / "icons.js").read_text(encoding="utf-8")
+    return dict(re.findall(r'^\s*"([a-z0-9-]+)":\s*\'((?:[^\'\\]|\\.)*)\'', source, re.MULTILINE))
+
+
+def ui_icon(name: str, *, size: int = 16, css_class: str = "", label_text: str = "") -> str:
+    """Server-render a registry icon with the markup ``LixityIcons.svg`` produces.
+
+    Unknown names raise: a typo must not silently show a generic info icon.
+    """
+    inner = _icon_paths()[name]
+    cls = "lixity-icon" + (f" {esc(css_class)}" if css_class else "")
+    aria = f'role="img" aria-label="{esc(label_text)}"' if label_text else 'aria-hidden="true"'
+    return (
+        f'<svg class="{cls}" viewBox="0 0 24 24" width="{size}" height="{size}" fill="none" '
+        'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" '
+        f'stroke-linejoin="round" {aria}>{inner}</svg>'
+    )
+
+
+def pane_ribbon(
+    labels: Mapping[str, str] | None, aria_key: str, items: Sequence[tuple[str, str, str]],
+    *, css_class: str = "", start_target: str = "#controls",
+) -> str:
+    """Sticky, auto-hiding jump ribbon shared by the Project view (``items``:
+    target element id, label key, icon name). Research builds the same shape in JS."""
+    start = (
+        f'<button type="button" class="ctl ctl-icon" data-ribbon-target="{esc(start_target)}" '
+        f'title="{esc(label(labels, "research_panel_start"))}" '
+        f'aria-label="{esc(label(labels, "research_panel_start"))}">'
+        f'{ui_icon("arrow-up", size=15)}</button>'
+    ) if start_target else ""
+    buttons = "".join(
+        f'<button type="button" class="ctl ctl-sm" data-ribbon-target="#{esc(target)}" '
+        f'aria-controls="{esc(target)}">{ui_icon(icon, size=15)}'
+        f'<span class="pane-ribbon-label">{esc(label(labels, key))}</span></button>'
+        for target, key, icon in items
+    )
+    return (
+        f'<nav class="pane-ribbon{(" " + esc(css_class)) if css_class else ""}" '
+        f'aria-label="{esc(label(labels, aria_key))}">{start}{buttons}</nav>'
+    ) if items else ""
 
 
 def chapter_link(chapter: int, text: object, *, flags: bool = False, css_class: str = "") -> str:

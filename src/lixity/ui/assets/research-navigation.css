@@ -10,6 +10,7 @@
 .research-tabs > button[data-rtab="sources"] {
   margin-inline-start: var(--space-1);
 }
+.pane-ribbon,
 .research-pane-navigation {
   position: sticky;
   top: calc(var(--workbench-return-height, 0px) + var(--space-2));
@@ -30,9 +31,29 @@
   backdrop-filter: blur(var(--glass-blur-sm, 8px));
   -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
 }
-.research-pane-navigation > .ctl { flex: 0 0 auto; white-space: nowrap; }
-.research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; }
-[data-research-nav-section] { scroll-margin-top: calc(var(--workbench-return-height, 0px) + 5rem); }
+.pane-ribbon > .ctl,
+.research-pane-navigation > .ctl {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+}
+.pane-ribbon > .ctl[hidden],
+.research-pane-navigation > .ctl[hidden] { display: none; }
+.pane-ribbon .ctl-icon,
+.research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; padding-inline: 0; }
+.pane-ribbon > .ctl[aria-current="location"],
+.research-pane-navigation > .ctl[aria-current="location"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: var(--fg);
+}
+[data-research-nav-section],
+#view-pane-project :is(#project-overview, #settings-project-details, #settings-analysis, #settings-registers, #settings-publication, #settings-site-publications, #project-audio-settings, #project-results, #nda-draft) {
+  scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--pane-ribbon-height, 3.5rem) + var(--space-4));
+}
 .research-section-card {
   background: var(--surface-alt);
   border: 1px solid var(--line);

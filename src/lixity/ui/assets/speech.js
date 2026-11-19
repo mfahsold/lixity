@@ -1894,7 +1894,7 @@
     var readerSpeech = existingSpeech || button(toolbar, "reader_title", function() { open("reader"); });
     readerSpeech.id = "reader-speech";
     readerSpeech.className = "ctl reader-compact-control";
-    var audioSvg = '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>';
+    var audioSvg = window.LixityIcons ? window.LixityIcons.svg("headphones", { size: 16, strokeWidth: 1.85 }) : "";
     readerSpeech.innerHTML = '<span class="reader-control-icon" aria-hidden="true">' + audioSvg + '</span> <span class="reader-control-label">' + label("reader_title") + '</span>';
     readerSpeech.title = label("reader_title");
     readerSpeech.dataset.help = label(canRender ? "reader_help" : "reader_help_plan");

@@ -53,8 +53,8 @@ from scripts.example_publications import (  # noqa: E402
 #: cut further instead of shipping a multi-megabyte HTML document. The shared
 #: chapter inspection, media, export, review, literal-code handling, research
 #: identity, terminology, localized diagnostics, contextual hints, association
-#: review, dossier collections, glassmorphism, table components, lexical grounding, teleprompter, Lucide icon set, command palette, backlinks and modern UI transitions.
-MAX_PAGE_BYTES = 1_900_000  # Shared fields, readable reference labels, Lucide icons, command palette, search bar, interactive pills, and research windowing.
+#: review, dossier collections, glassmorphism, table components, lexical grounding, teleprompter, Lucide icon set, command palette, backlinks, pane ribbons and modern UI transitions.
+MAX_PAGE_BYTES = 1_950_000  # Shared fields, readable reference labels, Lucide icons, command palette, search bar, interactive pills, unified pane ribbons, and research windowing.
 
 
 @dataclass(frozen=True)

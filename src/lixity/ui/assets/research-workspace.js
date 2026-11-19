@@ -236,7 +236,9 @@ async function initResearchUI(freshRead) {
     nav.className = "research-pane-navigation";
     nav.setAttribute("aria-label", uiLabel("research_panel_navigation"));
     var start = document.createElement("button");
-    start.type = "button"; start.className = "ctl ctl-icon"; start.textContent = "\u2191";
+    start.type = "button"; start.className = "ctl ctl-icon";
+    if (window.LixityIcons) start.innerHTML = window.LixityIcons.svg("arrow-up", {size: 15});
+    else start.textContent = "\u2191";
     start.title = uiLabel("research_panel_start");
     start.setAttribute("aria-label", uiLabel("research_panel_start"));
     start.addEventListener("click", function() {
@@ -247,9 +249,20 @@ async function initResearchUI(freshRead) {
     targets.forEach(function(target, index) {
       if (!target.id) target.id = pane.id + "-section-" + (index + 1);
       var button = document.createElement("button");
-      button.type = "button"; button.className = "ctl ctl-sm"; button.textContent = targetLabel(target);
+      button.type = "button"; button.className = "ctl ctl-sm";
+      var iconName = target.dataset.researchNavIcon;
+      if (iconName && window.LixityIcons) {
+        button.innerHTML = window.LixityIcons.svg(iconName, {size: 15}) + '<span class="pane-ribbon-label"></span>';
+        button.querySelector(".pane-ribbon-label").textContent = targetLabel(target);
+      } else {
+        button.textContent = targetLabel(target);
+      }
       button.setAttribute("aria-controls", target.id);
-      button.addEventListener("click", function() { destination(target, pane); });
+      button.addEventListener("click", function() {
+        nav.querySelectorAll("[aria-current='location']").forEach(function(b) { b.removeAttribute("aria-current"); });
+        button.setAttribute("aria-current", "location");
+        destination(target, pane);
+      });
       nav.appendChild(button);
     });
     pane.prepend(nav);

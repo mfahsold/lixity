@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from html import escape
 
 from ..style_profile import ChapterProfile
-from .components import label
+from .components import label, ui_icon
 from .manuscript_document import ReaderBlock
 
 INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
@@ -58,35 +58,12 @@ def reading_controls(
             options = "".join(choices)
         if not reader_document[0].is_chapter and source_chapters:
             options = f'<option value="reader-preface">{text("reading_view")}</option>' + options
-    focus_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>'
-        '<path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>'
-    )
-    teleprompter_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 8h8"/>'
-        '<path d="m8 12 2 1.5L8 15"/><path d="M12 13.5h4"/></svg>'
-    )
-    overview_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/>'
-        '<rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>'
-    )
-    direct_speech_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
-        '<path d="M9 9h.01"/><path d="M15 9h.01"/><path d="M9 12h6"/></svg>'
-    )
-    help_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>'
-    )
+    focus_icon = ui_icon("maximize-2")
+    teleprompter_icon = ui_icon("teleprompter")
+    overview_icon = ui_icon("layout-grid")
+    direct_speech_icon = ui_icon("message-square")
+    help_icon = ui_icon("help-circle")
+    appearance_icon = ui_icon("type")
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
@@ -95,7 +72,7 @@ def reading_controls(
         f'<option value="">{text("reading_chapter")}…</option>{options}</select>'
         '<details class="reader-settings" id="reader-settings" name="reader-settings">'
         f'<summary class="ctl reader-compact-control" aria-label="{text("reading_appearance")}" title="{text("reading_appearance")}">'
-        '<span class="reader-control-icon" aria-hidden="true">Aa</span>'
+        f'<span class="reader-control-icon" aria-hidden="true">{appearance_icon}</span>'
         f'<span class="reader-control-label">{text("reading_appearance")}</span></summary><div class="reader-settings-body">'
         f'<div class="reader-size-controls" role="group" aria-label="{text("reading_size")}">'
         f'<button class="ctl" type="button" id="reader-text-smaller" aria-label="{text("reading_smaller")}">A−</button>'

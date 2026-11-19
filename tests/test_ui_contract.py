@@ -1098,6 +1098,46 @@ class TestShowDontTellComponents(unittest.TestCase):
         self.assertIn('class="badge badge-jump"', html)
         self.assertIn('data-jump="#ch-', html)
 
+    def test_single_source_icons_and_harmonized_pane_ribbons(self):
+        from lixity.ui.components import _icon_paths, ui_icon
+
+        registry = _icon_paths()
+        icons_js = (UI_DIR / "assets" / "icons.js").read_text(encoding="utf-8")
+        self.assertGreater(len(registry), 30)
+        for name in ("arrow-up", "panel-left", "file-up", "headphones", "message-square", "pen-line", "sparkles", "archive"):
+            self.assertIn(name, registry)
+            self.assertIn(f'"{name}":', icons_js)
+            svg = ui_icon(name, size=15)
+            self.assertIn('class="lixity-icon"', svg)
+
+        for filename in ("dashboard.py", "modals.py", "manuscript_reader.py"):
+            source = (UI_DIR / filename).read_text(encoding="utf-8")
+            self.assertNotIn("<svg", source, f"{filename} should use ui_icon() instead of inline <svg>")
+        speech_js = (UI_DIR / "assets" / "speech.js").read_text(encoding="utf-8")
+        self.assertNotIn("<svg", speech_js)
+
+        research_py = (UI_DIR / "research_panel.py").read_text(encoding="utf-8")
+        used_nav_icons = re.findall(r'data-research-nav-icon="([a-z0-9-]+)"', research_py)
+        self.assertEqual(len(used_nav_icons), 7)
+        for name in used_nav_icons:
+            self.assertIn(name, registry)
+
+        rendered = render_dashboard([], [], controls=True, project_overview_enabled=True, language_key="de", labels=WORKSPACE_LABELS["de"])
+        self.assertIn('<nav class="pane-ribbon"', rendered)
+        self.assertIn('data-ribbon-target="#controls"', rendered)
+        self.assertIn('data-ribbon-target="#settings-project-details"', rendered)
+
+        for locale in LANGUAGES:
+            loc = WORKSPACE_LABELS[locale]
+            for key in (
+                "research_nav_new_dossier", "research_nav_draft_dossier", "research_nav_collections",
+                "research_nav_dossiers", "research_nav_editorial", "research_nav_links", "research_nav_terms",
+                "project_nav_structure", "project_nav_details", "project_nav_analysis", "project_nav_registers",
+                "project_nav_publication", "project_nav_site", "project_nav_audio", "project_nav_results",
+                "project_nav_nda",
+            ):
+                self.assertTrue(loc.get(key) and loc[key] != key, f"{locale}.{key} missing")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -683,7 +683,9 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   .manuscript-reading .toolbar,
   .manuscript-editor-toolbar,
   #manuscript-reading .manuscript-reading-bar,
-  .teleprompter-toolbar
+  .teleprompter-toolbar,
+  .pane-ribbon,
+  .research-pane-navigation
 ) {
   transition:
     opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -696,7 +698,9 @@ body.chrome-autohidden :is(
   .manuscript-reading .toolbar,
   .manuscript-editor-toolbar,
   #manuscript-reading .manuscript-reading-bar,
-  .teleprompter-toolbar
+  .teleprompter-toolbar,
+  .pane-ribbon,
+  .research-pane-navigation
 ):not(:focus-within) {
   opacity: 0;
   box-shadow: none !important;
@@ -709,7 +713,9 @@ body.chrome-autohidden :is(
     .manuscript-reading .toolbar,
     .manuscript-editor-toolbar,
     #manuscript-reading .manuscript-reading-bar,
-    .teleprompter-toolbar
+    .teleprompter-toolbar,
+    .pane-ribbon,
+    .research-pane-navigation
   ) {
     transition: none;
   }

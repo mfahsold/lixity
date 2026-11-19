@@ -53,6 +53,7 @@ from .components import (
     license_terms,
     line_label,
     manuscript_pdf_controls,
+    pane_ribbon,
     panel_formatters,
     panel_start,
     product_details,
@@ -61,6 +62,7 @@ from .components import (
     status_strip,
     tense_class,
     tense_label,
+    ui_icon,
 )
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
@@ -583,9 +585,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
            f'<button type="button" class="ctl workspace-navigation-toggle" id="workspace-navigation-toggle" '
            f'aria-label="{L("navigation_collapse")}" aria-controls="workspace-navigation-content" aria-expanded="true" '
            f'title="{L("navigation_collapse")}">'
-           '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" '
-           'stroke-width="1.5" aria-hidden="true" focusable="false">'
-           '<rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/></svg></button>',
+           f'{ui_icon("panel-left", size=20)}</button>',
            f'<span class="product-name">{esc(engine_name)}</span></div>') if controls else ()),
     ]
 
@@ -780,6 +780,22 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
+        results_available = action_enabled("export") or any(
+            action_enabled(action) for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild"))
+        parts.append(pane_ribbon(labels, "project_panel_navigation", [
+            item for item in (
+                ("project-overview", "project_nav_structure", "archive") if show_project_overview else None,
+                ("settings-project-details", "project_nav_details", "pen-line"),
+                ("settings-analysis", "project_nav_analysis", "sliders"),
+                ("settings-registers", "project_nav_registers", "list-ordered"),
+                ("settings-publication", "project_nav_publication", "book-open"),
+                ("settings-site-publications", "project_nav_site", "share-2"),
+                ("project-audio-settings", "project_nav_audio", "mic") if not read_only else None,
+                ("project-results", "project_nav_results", "download") if results_available else None,
+                ("nda-draft", "project_nav_nda", "file-text")
+                if allowed_actions is not None and "nda-draft" in allowed_actions else None,
+            ) if item is not None
+        ]))
         if show_project_overview:
             parts.append(project_overview(labels, research_navigation=bool(
                 research_context_token and research_context_token == site_publication_context_token)))
@@ -855,7 +871,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         if action_enabled("export") or visible_actions:
             # The heading belongs to the results group. Keeping both in one
             # element preserves the separator rule between adjacent groups.
-            parts.append('<div class="ctl-group">')
+            parts.append('<div class="ctl-group" id="project-results">')
             parts.append(f'<h3 class="section-heading">{L("settings_results")}</h3>')
             action_heading = (
                 f"{L('export')} · {L('run_analysis')}"
@@ -987,12 +1003,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     reader_controls = ""
     if controls and has_reading:
-        dossier_icon = (
-            '<svg class="lixity-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" '
-            'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-            '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M14 3v18"/>'
-            '<path d="M17 8h1"/><path d="M17 12h1"/></svg>'
-        )
+        dossier_icon = ui_icon("panel-right", size=15)
         reader_controls = (
             '<div class="reader-controls">'
             '<button type="button" class="ctl reader-compact-control" id="workspace-reader-toggle" '
@@ -1272,26 +1283,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
-    search_icon = (
-        '<svg class="lixity-icon search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" '
-        'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
-    )
-    prev_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
-        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="m18 15-6-6-6 6"/></svg>'
-    )
-    next_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
-        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="m6 9 6 6 6-6"/></svg>'
-    )
-    clear_icon = (
-        '<svg class="lixity-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" '
-        'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '<path d="M18 6 6 18M6 6l12 12"/></svg>'
-    )
+    search_icon = ui_icon("search", size=14, css_class="search-icon")
+    prev_icon = ui_icon("chevron-up", size=12)
+    next_icon = ui_icon("chevron-down", size=12)
+    clear_icon = ui_icon("x", size=12)
     parts.append('<div class="toolbar">')
     parts.append('<span class="text-search-group">')
     parts.append(
@@ -1322,12 +1317,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     )
     parts.append("</span>")
     if controls and research_context_token:
-        terms_icon = (
-            '<svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" '
-            'stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-            '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/>'
-            '<circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>'
-        )
+        terms_icon = ui_icon("tag")
         parts.append(
             f'<button type="button" class="ctl reader-compact-control reader-terms-btn" id="research-reader-terms" '
             f'aria-label="{L("manuscript_terms_heading")}" title="{L("manuscript_terms_heading")}" '

@@ -2,11 +2,12 @@
 .manuscript-reader-controls {
   container: reader-tools / inline-size;
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
-  align-items: center; gap: .45rem; padding: .45rem var(--space-2);
+  align-items: center; gap: .4rem; padding: .35rem .5rem;
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
   /* Fixed settings panels must escape this bounded toolbar scrollport. */
-  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
@@ -150,11 +151,6 @@
   padding: 0 .45rem;
   border: none;
   border-radius: 0;
-}
-.reader-outlier-navigation .ctl:focus-visible { outline-offset: -3px; }
-@media (pointer: coarse) {
-  .reader-outlier-navigation, .reader-analysis-controls select, .reader-evidence-toggle, .reader-comparison-toggle, #paragraph-filter-reset { min-height: 2.75rem; height: auto; }
-}
   background: transparent;
   color: var(--fg);
   font-size: .85rem;
@@ -164,6 +160,10 @@
   justify-content: center;
   cursor: pointer;
   transition: background .15s ease, color .15s ease;
+}
+.reader-outlier-navigation .ctl:focus-visible { outline-offset: -3px; }
+@media (pointer: coarse) {
+  .reader-outlier-navigation, .reader-analysis-controls select, .reader-evidence-toggle, .reader-comparison-toggle, #paragraph-filter-reset { min-height: 2.75rem; height: auto; }
 }
 .reader-outlier-navigation .ctl:hover:not(:disabled) {
   background: var(--surface-hover);
@@ -228,13 +228,8 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .toolbar > .toolbar-note,
 .manuscript-reading .reader-controls .ctl-note { display: none !important; }
 .manuscript-reading:not(.workbench-overview) .analysis-outline-layout { display: block; }
-.manuscript-reading #manuscript-reader-controls:not([hidden]) {
-  border-bottom: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
 .manuscript-reading .toolbar {
-  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px));
+  position: sticky; top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + var(--space-2));
   z-index: 11;
   display: flex;
   align-items: center;
@@ -243,13 +238,12 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
   padding: .35rem var(--space-3);
   max-width: 100%;
   margin-inline: 0;
-  background: color-mix(in srgb, var(--surface) 95%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  backdrop-filter: blur(var(--glass-blur-sm, 8px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
   border: 1px solid var(--line);
-  border-top: 1px solid var(--line);
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .manuscript-reading .reader-controls { flex-basis: auto; }
 .manuscript-reading .text-search-group { flex: 1 1 auto; max-width: 100%; min-width: 0; }
