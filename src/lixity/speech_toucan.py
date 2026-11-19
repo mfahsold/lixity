@@ -18,7 +18,12 @@ from typing import Any
 
 from .speech_controls import phoneme_spans
 from .speech_engines import TOUCAN_MODEL
-from .speech_lifecycle import add_lifecycle_arguments, serve_worker
+from .speech_lifecycle import (
+    add_lifecycle_arguments,
+    serve_worker,
+    set_offline_hf_env,
+    validate_worker_compute,
+)
 from .speech_profiles import AudioProfile
 from .speech_references import SpeechReference
 from .speech_worker import SAMPLE_RATE, _decode_reference, synthesize_native
@@ -101,10 +106,7 @@ def _local_files(directory: Path, names: tuple[str, ...]) -> Path:
 def _validate_assets(source_dir: Path, model_dir: Path, speaker_dir: Path, *, device: str = "cpu",
                   threads: int = 4) -> tuple[Path, Path, Path]:
     """Validate local settings without importing the optional inference stack."""
-    if type(threads) is not int or not 1 <= threads <= 64:
-        raise ValueError("Threads must be between 1 and 64")
-    if device not in ("cpu", "cuda"):
-        raise ValueError("Device must be cpu or cuda")
+    validate_worker_compute(device, threads)
     source = _local_files(source_dir, ("Modules/ToucanTTS/InferenceToucanTTS.py",
                                       "Modules/Vocoder/HiFiGAN_Generator.py",
                                       "Preprocessing/TextFrontend.py", "Preprocessing/multilinguality/iso_lookup.json"))
@@ -117,9 +119,7 @@ def load_renderer(source_dir: Path, model_dir: Path, speaker_dir: Path, *, devic
                   threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
     """Load only supplied checkpoints; never request missing model resources."""
     source, model, speaker = _validate_assets(source_dir, model_dir, speaker_dir, device=device, threads=threads)
-    os.environ["HF_HUB_OFFLINE"] = "1"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    os.environ["HF_DATASETS_OFFLINE"] = "1"
+    set_offline_hf_env(datasets=True)
     os.environ.setdefault("MPLBACKEND", "Agg")
     sys.path.insert(0, str(source))
     return _load_runtime(model, speaker, device=device, threads=threads)

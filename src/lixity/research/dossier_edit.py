@@ -1,7 +1,6 @@
 """Bounded, explicit Markdown drafts of authored dossiers; never a source store."""
 
 import json
-import math
 import os
 import re
 import tempfile
@@ -13,6 +12,7 @@ from uuid import uuid4
 
 from pydantic import Field, field_validator
 
+from ..config import load_strict_json
 from .limits import MAX_RESEARCH_OBJECT_BYTES
 from .models import Dossier, Identifier, StrictModel
 from .repository import Repository, ResearchError, sync_directory
@@ -60,26 +60,6 @@ def _body_bytes(body: str) -> bytes:
     return content
 
 
-def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    value: dict[str, Any] = {}
-    for key, item in pairs:
-        if key in value:
-            raise ValueError("Duplicate dossier edit header key")
-        value[key] = item
-    return value
-
-
-def _finite_json(value: str) -> None:
-    raise ValueError(f"Nonfinite dossier edit header value: {value}")
-
-
-def _json_float(value: str) -> float:
-    number = float(value)
-    if not math.isfinite(number):
-        raise ValueError("Dossier edit header number exceeds finite range")
-    return number
-
-
 def encode_dossier_edit(record: Dossier) -> str:
     """Export identities and editable metadata, followed by the exact body."""
     _body_bytes(record.body)
@@ -111,8 +91,7 @@ def decode_dossier_edit(text: str) -> dict[str, Any]:
     try:
         if "-->" in raw or "<!--" in raw:
             raise ValueError("Escape comment delimiters in dossier metadata")
-        values = json.loads(raw, object_pairs_hook=_unique_object, parse_constant=_finite_json,
-                            parse_float=_json_float)
+        values = load_strict_json(raw, context="dossier edit header")
         header = _EditHeader.model_validate(values)
     except (ValueError, RecursionError) as exc:
         raise ResearchError("Invalid dossier edit header; preserve exported identities and fields") from exc

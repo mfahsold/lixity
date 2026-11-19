@@ -12,7 +12,6 @@ import importlib
 import inspect
 import io
 import json
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
 
 from .log import speech_diagnostic_id
 from .speech_engines import native_endpoint, native_engine
+from .speech_lifecycle import set_offline_hf_env, validate_worker_compute
 from .speech_profiles import (
     QWEN_BASE_MODEL,
     QWEN_DESIGN_MODEL,
@@ -76,9 +76,8 @@ class WorkerRuntime:
     codec_chunk_frames: int = 300
 
     def __post_init__(self) -> None:
-        if (self.device not in ("cpu", "cuda")
-                or self.dtype not in ("float32", "float16", "bfloat16")
-                or type(self.threads) is not int or not 1 <= self.threads <= 64
+        validate_worker_compute(self.device, self.threads, prefix="Qwen")
+        if (self.dtype not in ("float32", "float16", "bfloat16")
                 or self.attention not in ("eager", "sdpa")
                 or self.codec_device not in ("cpu", "cuda")
                 or type(self.codec_chunk_frames) is not int or not 16 <= self.codec_chunk_frames <= 300):
@@ -172,16 +171,13 @@ def validate_local_model(
     """Validate local assets and options without importing inference dependencies."""
     if variant not in ("custom-voice", "voice-design", "base"):
         raise ValueError("Unknown Qwen model variant")
-    if device not in ("cpu", "cuda"):
-        raise ValueError("Qwen device must be cpu or cuda")
+    validate_worker_compute(device, threads, prefix="Qwen")
     if codec_device not in ("cpu", "model"):
         raise ValueError("Qwen codec device must be cpu or model")
     if attention not in ("auto", "eager", "sdpa"):
         raise ValueError("Qwen attention must be auto, eager or sdpa")
     if type(codec_chunk_frames) is not int or not 16 <= codec_chunk_frames <= 300:
         raise ValueError("Qwen codec chunk frames must be an integer between 16 and 300")
-    if type(threads) is not int or not 1 <= threads <= 64:
-        raise ValueError("Qwen threads must be an integer between 1 and 64")
     model_path = model_path.expanduser().resolve()
     config = json.loads((model_path / "config.json").read_text(encoding="utf-8"))
     expected_type = {"voice-design": "voice_design", "custom-voice": "custom_voice", "base": "base"}[variant]
@@ -204,8 +200,7 @@ def load_local_model(
     """Load an explicitly selected pinned Qwen architecture from local files."""
     model_path = validate_local_model(model_path, device=device, threads=threads, codec_device=codec_device,
                                       attention=attention, codec_chunk_frames=codec_chunk_frames, variant=variant)
-    os.environ["HF_HUB_OFFLINE"] = "1"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    set_offline_hf_env()
     torch = importlib.import_module("torch")
     if device == "cuda":
         if not torch.cuda.is_available():

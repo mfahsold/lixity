@@ -330,6 +330,7 @@ def _extract_pdf_with_backend(
                     capture_output=True,
                     text=True,
                     check=False,
+                    env=_ocr_tool_env(),
                     timeout=worker_timeout(),
                 )
                 if proc.returncode == 0:
@@ -491,6 +492,7 @@ def probe_ocr_worker(worker_cmd: str, timeout: int = 15) -> dict[str, Any]:
                 capture_output=True,
                 text=True,
                 check=False,
+                env=_ocr_tool_env(),
                 timeout=timeout,
             )
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 1)

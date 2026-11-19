@@ -15,11 +15,17 @@ import math
 import os
 import re
 import stat
+import sys
 import warnings
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - exercised on Python 3.10 in CI
+    import tomli as tomllib
 
 from .io import FileUtils
 from .models import CorpusConfig
@@ -97,11 +103,37 @@ def _same_toml(left: Any, right: Any) -> bool:
     return (isinstance(left, float) and math.isnan(left) and math.isnan(right)) or bool(left == right)
 
 
-def _parse_project_toml(content: str) -> dict[str, Any]:
+def load_strict_json(raw: str | bytes, *, context: str = "JSON") -> Any:
+    """Parse JSON while rejecting duplicate keys, non-finite constants and float overflow."""
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError(f"Duplicate key in {context}")
+            result[key] = item
+        return result
+
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"Nonfinite number in {context}: {value}")
+
+    def finite_float(value: str) -> float:
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError(f"Number exceeds finite range in {context}")
+        return number
+
     try:
-        import tomllib
-    except ModuleNotFoundError:  # pragma: no cover - Python 3.10
-        import tomli as tomllib
+        return json.loads(
+            raw,
+            object_pairs_hook=unique_object,
+            parse_constant=reject_constant,
+            parse_float=finite_float,
+        )
+    except (UnicodeError, json.JSONDecodeError, RecursionError) as exc:
+        raise ValueError(f"Malformed {context}") from exc
+
+
+def _parse_project_toml(content: str) -> dict[str, Any]:
     try:
         return dict(tomllib.loads(content))
     except tomllib.TOMLDecodeError as exc:
@@ -121,14 +153,16 @@ def project_config_snapshot(
     except FileNotFoundError:
         return None, b""
     if not stat.S_ISREG(info.st_mode):
-        raise ValueError("Project config must be a regular nonsymlink file")
+        raise ValueError("Project configuration must be a regular nonsymlink file")
     # NONBLOCK also protects a POSIX regular-file→FIFO race; NOFOLLOW refuses a
     # replacement symlink where supported. fstat checks the opened node again.
     flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(path, flags)
     with os.fdopen(descriptor, "rb") as stream:
         opened = os.fstat(stream.fileno())
-        if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+        if not stat.S_ISREG(opened.st_mode):
+            raise ValueError("Project configuration must be a regular nonsymlink file")
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
             raise ValueError("Project config changed while reading; nothing was changed")
         content = stream.read() if maximum_bytes is None else stream.read(maximum_bytes + 1)
         if maximum_bytes is not None and len(content) > maximum_bytes:
@@ -323,10 +357,6 @@ def save_project_author(project_root: str | Path | None, author_name: object) ->
 
 def _load_toml(path: Path, *, text: str | None = None) -> dict[str, Any]:
     try:
-        import tomllib
-    except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10 in CI
-        import tomli as tomllib
-    try:
         if text is None:
             with path.open("rb") as fh:
                 data = tomllib.load(fh)
@@ -418,23 +448,12 @@ def read_explicit_project_config(
             warnings.simplefilter("error", UserWarning)
             for name in ("pyproject.toml", "lixity.toml"):
                 path = Path(directory) / name
-                if maximum_bytes is not None:
-                    identity, content = project_config_snapshot(path, maximum_bytes=maximum_bytes)
-                    if identity is not None:
-                        # Match FileUtils.read_file's universal-newline semantics.
-                        text = content.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
-                        settings.update(_load_toml(path, text=text))
-                    continue
-                try:
-                    info = path.lstat()
-                except FileNotFoundError:
-                    continue
-                if stat.S_ISLNK(info.st_mode):
-                    info = path.stat()
-                if not stat.S_ISREG(info.st_mode):
-                    raise ValueError(f"Project configuration must be a regular file: {path}")
-                settings.update(_load_toml(path, text=FileUtils.read_file(str(path))))
-    except (UserWarning, OSError) as exc:
+                identity, content = project_config_snapshot(path, maximum_bytes=maximum_bytes)
+                if identity is not None:
+                    # Match FileUtils.read_file's universal-newline semantics.
+                    text = content.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+                    settings.update(_load_toml(path, text=text))
+    except (UserWarning, OSError, UnicodeDecodeError) as exc:
         raise ValueError(f"Could not resolve project configuration: {exc}") from exc
     return {key: value for key, value in settings.items() if key in TOOL_KEYS}
 
@@ -608,16 +627,7 @@ def resolve_thresholds(
     from .style_fingerprint import THRESHOLD_PRESETS
     from .style_fingerprint import FingerprintThresholds as _FT
 
-    defaults = _FT()
-    values: dict[str, Any] = {
-        "z_mild": defaults.z_mild,
-        "z_strong": defaults.z_strong,
-        "fdr_q": defaults.fdr_q,
-        "fdr_method": defaults.fdr_method,
-        "min_chapters": defaults.min_chapters,
-        "dim_score_threshold": defaults.dim_score_threshold,
-        "flag_min_severity": defaults.flag_min_severity,
-    }
+    values: dict[str, Any] = asdict(_FT())
     if project_config is not None:
         values.update(apply_config_to_thresholds(dict(project_config)))
     elif use_project_config:

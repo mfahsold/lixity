@@ -32,6 +32,31 @@ Renderer = Callable[[dict[str, Any]], bytes]
 Loader = Callable[[], Renderer]
 
 
+def validate_worker_compute(
+    device: str = "cpu",
+    threads: int = 4,
+    *,
+    prefix: str | None = None,
+) -> None:
+    """Validate bounded compute device and CPU thread count for native speech workers."""
+    if device not in ("cpu", "cuda"):
+        raise ValueError(f"{prefix} device must be cpu or cuda" if prefix else "Device must be cpu or cuda")
+    if type(threads) is not int or not 1 <= threads <= 64:
+        raise ValueError(
+            f"{prefix} threads must be an integer between 1 and 64"
+            if prefix
+            else "Threads must be between 1 and 64"
+        )
+
+
+def set_offline_hf_env(*, datasets: bool = False) -> None:
+    """Pin Hugging Face / Transformers clients to offline mode before model imports."""
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    if datasets:
+        os.environ["HF_DATASETS_OFFLINE"] = "1"
+
+
 def _idle_timeout(value: float) -> float:
     if isinstance(value, bool) or not math.isfinite(value) or not 0 <= value <= MAX_IDLE_TIMEOUT_SECONDS:
         raise ValueError(f"Idle timeout must be between 0 and {MAX_IDLE_TIMEOUT_SECONDS:g} seconds")

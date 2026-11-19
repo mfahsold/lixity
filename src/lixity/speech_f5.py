@@ -12,6 +12,7 @@ from typing import Any
 
 from .speech_engines import F5_MODEL as F5_MODEL
 from .speech_engines import native_endpoint, native_engine
+from .speech_lifecycle import validate_worker_compute
 from .speech_profiles import AudioProfile
 from .speech_references import SpeechReference
 
@@ -37,10 +38,7 @@ def synthesize_f5(text: str, profile: AudioProfile, *, target: str = "local", op
 
 def load_renderer(model_dir: Path, *, device: str = "cpu", threads: int = 4) -> Callable[[dict[str, Any]], bytes]:
     """Reject the retired loader explicitly, before any optional import or download."""
-    if type(threads) is not int or not 1 <= threads <= 64:
-        raise ValueError("Threads must be between 1 and 64")
-    if device not in ("cpu", "cuda"):
-        raise ValueError("Device must be cpu or cuda")
+    validate_worker_compute(device, threads)
     model_dir = model_dir.expanduser().resolve(strict=True)
     if not any(path.is_file() for suffix in ("*.safetensors", "*.pt") for path in model_dir.glob(suffix)):
         raise ValueError("F5-TTS model directory requires a .safetensors or .pt checkpoint file")

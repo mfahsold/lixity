@@ -16,7 +16,12 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
-from .speech_lifecycle import add_lifecycle_arguments, serve_worker
+from .speech_lifecycle import (
+    add_lifecycle_arguments,
+    serve_worker,
+    set_offline_hf_env,
+    validate_worker_compute,
+)
 from .speech_profiles import COQUI_MODEL, COQUI_REFERENCE_MODEL
 from .speech_worker import SAMPLE_RATE, _decode_reference
 
@@ -35,8 +40,7 @@ def unexpected_discards(discarded: list[str]) -> str:
 
 def _validate_assets(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> tuple[Path, Path | None]:
     """Validate local settings without importing the optional inference stack."""
-    if type(threads) is not int or not 1 <= threads <= 64:
-        raise ValueError("Threads must be between 1 and 64")
+    validate_worker_compute(threads=threads)
     model_dir = model_dir.expanduser().resolve(strict=True)
     model_file, config_file = model_dir / "model_file.pth", model_dir / "config.json"
     if not model_file.is_file() or not config_file.is_file():
@@ -52,8 +56,7 @@ def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads
     """Load local checkpoints and return a serialized-worker renderer."""
     model_dir, converter_dir = _validate_assets(model_dir, converter_dir, threads=threads)
     model_file, config_file = model_dir / "model_file.pth", model_dir / "config.json"
-    os.environ["HF_HUB_OFFLINE"] = "1"
-    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    set_offline_hf_env()
     os.environ.setdefault("NUMBA_CPU_NAME", "generic")
     torch = importlib.import_module("torch")
     torch.set_num_threads(threads)

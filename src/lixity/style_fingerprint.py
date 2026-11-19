@@ -55,6 +55,7 @@ from .status import (
     PASSPORT_LABEL_TRENDING,
     SCHEMA_VERSION_STYLE,
     STRUCTURAL_DIAGNOSTICS_KEY,
+    THRESHOLD_DEFAULTS,
     ContractKeys,
 )
 from .status import (
@@ -65,26 +66,26 @@ from .status import (
 )
 from .workspace_labels import workspace_labels_for
 
-# Descriptive, register-neutral features: (model field, label key, unit).
+# Descriptive, register-neutral feature specs: (model field, label key).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
 # only the deviation from the text's own centre is measured.
-FEATURES: tuple[tuple[str, str, str], ...] = (
-    ("asl", "feat_asl", "words per sentence"),
-    ("staccato_pct", "feat_staccato", "% of sentences"),
-    ("kaskade_pct", "feat_kaskade", "% of sentences"),
-    ("sentence_cv", "feat_cv", "coefficient"),
-    ("dialog_pct", "feat_dialog", "% of words"),
-    ("function_word_pct", "feat_function", "% of words"),
-    ("filter_density", "feat_filter", "per 1,000 words"),
-    ("modal_density", "feat_modal", "per 1,000 words"),
-    ("passive_density", "feat_passive", "per 1,000 words"),
-    ("nominalization_density", "feat_nominal", "per 1,000 words"),
-    ("adjective_density", "feat_adjective", "per 1,000 words"),
-    ("long_word_pct", "feat_long_words", "% of words"),
-    ("start_entropy", "feat_start_entropy", "bit"),
-    ("first_person_start_rate", "feat_ich_start", "% of sentences"),
-    ("guiraud_r", "feat_guiraud", "index"),
-    ("hd_d", "feat_hd_d", "index (0–1)"),
+_FEATURE_SPECS: tuple[tuple[str, str], ...] = (
+    ("asl", "feat_asl"),
+    ("staccato_pct", "feat_staccato"),
+    ("kaskade_pct", "feat_kaskade"),
+    ("sentence_cv", "feat_cv"),
+    ("dialog_pct", "feat_dialog"),
+    ("function_word_pct", "feat_function"),
+    ("filter_density", "feat_filter"),
+    ("modal_density", "feat_modal"),
+    ("passive_density", "feat_passive"),
+    ("nominalization_density", "feat_nominal"),
+    ("adjective_density", "feat_adjective"),
+    ("long_word_pct", "feat_long_words"),
+    ("start_entropy", "feat_start_entropy"),
+    ("first_person_start_rate", "feat_ich_start"),
+    ("guiraud_r", "feat_guiraud"),
+    ("hd_d", "feat_hd_d"),
 )
 
 #: Chapters below this word count get no feature comparisons at all: rates,
@@ -245,6 +246,11 @@ FEATURE_UNITS: dict[str, dict[str, str]] = {
     },
 }
 
+FEATURES: tuple[tuple[str, str, str], ...] = tuple(
+    (field_name, label_key, FEATURE_UNITS["en"][field_name])
+    for field_name, label_key in _FEATURE_SPECS
+)
+
 FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
 
 #: Features whose natural domain is non-negative (rates, shares, densities, lengths).
@@ -301,15 +307,13 @@ class ThresholdInputPolicy:
             raise ValueError(f"{name} must be {relation} {self.maximum}")
 
 
+_BALANCED_PRESET: Mapping[str, Any] = MappingProxyType({
+    key: THRESHOLD_DEFAULTS[key]
+    for key in ("z_mild", "z_strong", "fdr_q", "fdr_method", "dim_score_threshold", "flag_min_severity")
+})
+
 THRESHOLD_PRESETS: Mapping[str, Mapping[str, Any]] = MappingProxyType({
-    "balanced": MappingProxyType({
-        "z_mild": 2.5,
-        "z_strong": 3.5,
-        "fdr_q": DEFAULT_FDR_Q,
-        "fdr_method": "bh",
-        "dim_score_threshold": DIM_SCORE_THRESHOLD,
-        "flag_min_severity": 2,
-    }),
+    "balanced": _BALANCED_PRESET,
     "developmental": MappingProxyType({
         "z_mild": 3.0,
         "z_strong": 4.0,
@@ -327,12 +331,8 @@ THRESHOLD_PRESETS: Mapping[str, Mapping[str, Any]] = MappingProxyType({
         "flag_min_severity": 1,
     }),
     "conservative_by": MappingProxyType({
-        "z_mild": 2.5,
-        "z_strong": 3.5,
-        "fdr_q": DEFAULT_FDR_Q,
+        **_BALANCED_PRESET,
         "fdr_method": "by",
-        "dim_score_threshold": DIM_SCORE_THRESHOLD,
-        "flag_min_severity": 2,
     }),
 })
 

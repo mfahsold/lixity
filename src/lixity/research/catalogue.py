@@ -58,7 +58,7 @@ def current_versions(snapshot: Snapshot) -> set[str]:
     return {version.id for version in latest.values()}
 
 
-def reindex(repository: Repository) -> dict[str, Any]:
+def _reindex_snapshot(repository: Repository) -> tuple[dict[str, Any], Snapshot, set[str], set[str]]:
     with repository.locked():
         snapshot = repository.snapshot()
         unavailable = _unavailable_ids(snapshot)
@@ -96,7 +96,13 @@ def reindex(repository: Repository) -> dict[str, Any]:
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
-        return {"schema_version": "research-index-local/1", "snapshot": snapshot.digest, "passages": count}
+        summary = {"schema_version": "research-index-local/1", "snapshot": snapshot.digest, "passages": count}
+        return summary, snapshot, unavailable, selected
+
+
+def reindex(repository: Repository) -> dict[str, Any]:
+    summary, _, _, _ = _reindex_snapshot(repository)
+    return summary
 
 
 def search(
@@ -114,92 +120,94 @@ def search(
         raise ResearchError("Search limit must be an integer from 1 to 100")
     if not isinstance(scope, str) or scope not in SEARCH_SCOPES:
         raise ResearchError("Search scope must be sources, dossiers, claims, decisions or all")
-    snapshot = repository.snapshot()
-    unavailable = _unavailable_ids(snapshot)
-    selected = current_versions(snapshot)
     path = repository.safe(repository.cache / "catalogue.sqlite3")
-    if ensure_fresh:
-        needs_reindex = not path.is_file()
-        if not needs_reindex:
-            try:
-                with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as conn:
-                    conn.execute("PRAGMA trusted_schema=OFF")
-                    meta = conn.execute("SELECT snapshot FROM metadata").fetchall()
-                    if meta != [(snapshot.digest,)]:
-                        needs_reindex = True
-            except sqlite3.Error:
-                needs_reindex = True
-        if needs_reindex:
-            reindex(repository)
-            return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
-
     if not path.is_file():
-        # Distinguish "never built" from "unusable". Without this the missing
-        # file surfaces as sqlite's "unable to open database file", which the
-        # handler below reports as an FTS5 problem the user cannot act on.
-        raise ResearchError("Search index not built; run research reindex")
+        if not ensure_fresh:
+            # Distinguish "never built" from "unusable". Without this the missing
+            # file surfaces as sqlite's "unable to open database file", which the
+            # handler below reports as an FTS5 problem the user cannot act on.
+            raise ResearchError("Search index not built; run research reindex")
+        _, snapshot, unavailable, selected = _reindex_snapshot(repository)
+        refreshed = True
+    else:
+        snapshot = repository.snapshot()
+        unavailable = _unavailable_ids(snapshot)
+        selected = current_versions(snapshot)
 
     terms = re.findall(r"[^\W_]+", query, re.UNICODE)
     expression = " AND ".join('"' + term + '"' for term in terms)
     hits: list[dict[str, Any]] = []
-    warnings: list[str] = ["Search index was refreshed to current project snapshot"] if refreshed else []
-    try:
-        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as connection:
-            connection.row_factory = sqlite3.Row
-            connection.execute("PRAGMA trusted_schema=OFF")
-            metadata = connection.execute("SELECT snapshot FROM metadata").fetchall()
-            if [row["snapshot"] for row in metadata] != [snapshot.digest]:
-                if ensure_fresh:
-                    reindex(repository)
-                    return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
-                raise ResearchError("Search index is stale; run research reindex")
-            if scope != "sources":
-                rows = connection.execute(
-                    "SELECT record_id, revision, kind, bm25(documents, 0, 0, 0, 4, 1) AS rank FROM documents "
-                    "WHERE documents MATCH ? AND (? IS NULL OR kind = ?) "
-                    "ORDER BY rank, record_id LIMIT ?",
-                    (expression, SEARCH_SCOPES[scope], SEARCH_SCOPES[scope], limit),
-                ).fetchall() if expression else []
-                for row in rows:
-                    identifier, revision, kind, rank = row["record_id"], row["revision"], row["kind"], row["rank"]
-                    record = snapshot.records.get(identifier)
-                    if (not isinstance(record, (Passage, Dossier, Claim, Decision))
-                            or record.revision != revision or record.kind != kind or record.id in unavailable):
-                        raise ResearchError("Invalid index reference; run research reindex")
-                    if isinstance(record, Passage):
+    for _attempt in range(2):
+        warnings: list[str] = ["Search index was refreshed to current project snapshot"] if refreshed else []
+        needs_refresh = False
+        try:
+            with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as connection:
+                connection.row_factory = sqlite3.Row
+                connection.execute("PRAGMA trusted_schema=OFF")
+                metadata = connection.execute("SELECT snapshot FROM metadata").fetchall()
+                if [row["snapshot"] for row in metadata] != [snapshot.digest]:
+                    if ensure_fresh and not refreshed:
+                        needs_refresh = True
+                    else:
+                        raise ResearchError("Search index is stale; run research reindex")
+                if not needs_refresh:
+                    if scope != "sources":
+                        rows = connection.execute(
+                            "SELECT record_id, revision, kind, bm25(documents, 0, 0, 0, 4, 1) AS rank FROM documents "
+                            "WHERE documents MATCH ? AND (? IS NULL OR kind = ?) "
+                            "ORDER BY rank, record_id LIMIT ?",
+                            (expression, SEARCH_SCOPES[scope], SEARCH_SCOPES[scope], limit),
+                        ).fetchall() if expression else []
+                        for row in rows:
+                            identifier, revision, kind, rank = row["record_id"], row["revision"], row["kind"], row["rank"]
+                            record = snapshot.records.get(identifier)
+                            if (not isinstance(record, (Passage, Dossier, Claim, Decision))
+                                    or record.revision != revision or record.kind != kind or record.id in unavailable):
+                                raise ResearchError("Invalid index reference; run research reindex")
+                            if isinstance(record, Passage):
+                                extraction = snapshot.get(record.extraction_ref, Extraction)
+                                if extraction.source_version_ref.id not in selected:
+                                    raise ResearchError("Obsolete source in search index; run research reindex")
+                                hit = repository.citation(snapshot, record)
+                            else:
+                                hit = {"record_id": record.id, "revision": record.revision,
+                                       "title": record.title, "excerpt": excerpt(authored_text(record), terms)}
+                                if isinstance(record, Claim):
+                                    hit["confidence"] = record.confidence
+                                elif isinstance(record, Decision):
+                                    hit["deviation_from_fact"] = record.deviation_from_fact
+                            hit.update({"kind": kind, "rank_score": rank, "score_type": "fts5_bm25", "route": "lexical"})
+                            hits.append(hit)
+                        return {"schema_version": "research-search-local/2", "project_id": snapshot.project.id,
+                                "snapshot": snapshot.digest, "mode": "lexical", "scope": scope,
+                                "hits": hits, "completeness": "complete", "warnings": warnings}
+                    rows = connection.execute(
+                        "SELECT passage_id, bm25(passages) AS rank FROM passages WHERE passages MATCH ? ORDER BY rank, passage_id LIMIT ?",
+                        (expression, limit),
+                    ).fetchall() if expression else []
+                    for row in rows:
+                        identifier, rank = row["passage_id"], row["rank"]
+                        record = snapshot.records.get(identifier)
+                        if not isinstance(record, Passage):
+                            raise ResearchError("Invalid index reference; run research reindex")
                         extraction = snapshot.get(record.extraction_ref, Extraction)
                         if extraction.source_version_ref.id not in selected:
                             raise ResearchError("Obsolete source in search index; run research reindex")
-                        hit = repository.citation(snapshot, record)
-                    else:
-                        hit = {"record_id": record.id, "revision": record.revision,
-                               "title": record.title, "excerpt": excerpt(authored_text(record), terms)}
-                        if isinstance(record, Claim):
-                            hit["confidence"] = record.confidence
-                        elif isinstance(record, Decision):
-                            hit["deviation_from_fact"] = record.deviation_from_fact
-                    hit.update({"kind": kind, "rank_score": rank, "score_type": "fts5_bm25", "route": "lexical"})
-                    hits.append(hit)
-                return {"schema_version": "research-search-local/2", "project_id": snapshot.project.id,
-                        "snapshot": snapshot.digest, "mode": "lexical", "scope": scope,
-                        "hits": hits, "completeness": "complete", "warnings": warnings}
-            rows = connection.execute(
-                "SELECT passage_id, bm25(passages) AS rank FROM passages WHERE passages MATCH ? ORDER BY rank, passage_id LIMIT ?",
-                (expression, limit),
-            ).fetchall() if expression else []
-            for row in rows:
-                identifier, rank = row["passage_id"], row["rank"]
-                record = snapshot.records.get(identifier)
-                if not isinstance(record, Passage):
-                    raise ResearchError("Invalid index reference; run research reindex")
-                extraction = snapshot.get(record.extraction_ref, Extraction)
-                if extraction.source_version_ref.id not in selected:
-                    raise ResearchError("Obsolete source in search index; run research reindex")
-                citation = repository.citation(snapshot, record)
-                citation.update({"rank_score": rank, "score_type": "fts5_bm25", "route": "lexical"})
-                hits.append(citation)
-    except sqlite3.Error as exc:
-        raise ResearchError(f"Search index unavailable at {path}: {exc}; check storage and run research reindex") from exc
+                        citation = repository.citation(snapshot, record)
+                        citation.update({"rank_score": rank, "score_type": "fts5_bm25", "route": "lexical"})
+                        hits.append(citation)
+                    break
+        except sqlite3.Error as exc:
+            if ensure_fresh and not refreshed:
+                needs_refresh = True
+            else:
+                raise ResearchError(f"Search index unavailable at {path}: {exc}; check storage and run research reindex") from exc
+        if needs_refresh:
+            _, snapshot, unavailable, selected = _reindex_snapshot(repository)
+            refreshed = True
+            hits.clear()
+            continue
+        break
     if scope == "sources" and not hits:
         warnings.append("No source passage matches found; try --scope all to search dossiers, claims, and decisions.")
     return {"schema_version": "research-search-local/1", "project_id": snapshot.project.id,

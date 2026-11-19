@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import array
 import hashlib
-import json
 import math
 import os
 import re
@@ -27,6 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
 from unicodedata import normalize
 
+from .config import load_strict_json
 from .language import LANGUAGE_PROFILES, compile_word_pattern
 
 if TYPE_CHECKING:
@@ -63,29 +63,13 @@ def _input(path: str | Path, maximum: int) -> Iterator[BinaryIO]:
         yield stream
 
 
-def _json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate JSON field in audio audit input")
-        result[key] = value
-    return result
-
-
-def _nonfinite_json(_value: str) -> None:
-    raise ValueError("Audio audit JSON numbers must be finite")
-
-
 def load_audit_json(path: str | Path) -> dict[str, Any]:
     """Read a bounded JSON object without retaining it or accepting duplicate keys."""
     with _input(path, MAX_JSON_BYTES) as stream:
         raw = stream.read(MAX_JSON_BYTES + 1)
     if len(raw) > MAX_JSON_BYTES:
         raise ValueError("Audio audit JSON exceeds the size limit")
-    try:
-        value = json.loads(raw, object_pairs_hook=_json_pairs, parse_constant=_nonfinite_json)
-    except (UnicodeError, json.JSONDecodeError, RecursionError) as exc:
-        raise ValueError("Malformed audio audit JSON") from exc
+    value = load_strict_json(raw, context="audio audit JSON")
     if not isinstance(value, dict):
         raise ValueError("Audio audit JSON must be an object")
     return value
