@@ -113,19 +113,19 @@ def test_invalid_root_config_is_an_error_not_an_english_or_generic_fallback(comp
 
 
 def test_unreadable_root_config_fails_explicitly(comparison, monkeypatch):
-    from lixity.io import FileUtils
+    import lixity.config as config_mod
 
     project, _, _ = comparison
     path = project / "lixity.toml"
     path.write_text('language = "de"\n', encoding="utf-8")
-    read = FileUtils.read_file
+    real_snapshot = config_mod.project_config_snapshot
 
-    def unreadable(filepath, encoding="utf-8"):
-        if str(filepath) == str(path):
+    def unreadable(target, *, maximum_bytes=None):
+        if str(target) == str(path):
             raise PermissionError("Synthetic denied project configuration")
-        return read(filepath, encoding)
+        return real_snapshot(target, maximum_bytes=maximum_bytes)
 
-    monkeypatch.setattr(FileUtils, "read_file", unreadable)
+    monkeypatch.setattr(config_mod, "project_config_snapshot", unreadable)
     status, output, errors = compare(comparison)
     assert status == 1 and output == ""
     assert "Could not resolve project configuration" in errors

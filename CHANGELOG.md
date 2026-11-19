@@ -9,6 +9,48 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Harden file I/O, HTTP boundaries, SSRF protections, recovery database, and
+  service lifecycle: add `FileUtils.read_bounded_regular_bytes` (`O_NONBLOCK` /
+  `O_NOFOLLOW` + `fstat` checks) and reuse it in `speech_transcription` and
+  `research/zotero`; enforce `Content-Security-Policy: sandbox; default-src 'none'`
+  on HTML export previews in `_serve_artifact`; unify `_require_same_origin()`
+  (`Sec-Fetch-Site`) across `/api/*` and `/artifact/*`; map
+  `ResearchConflictError -> 409` in `ResponseMixin._research_error`; stream
+  `Range` media responses, validate base64 strictly, and enforce project-root
+  containment on `POST /api/research-ingest`; enable `daemon_threads` and
+  accept-time timeouts in `_LoopbackHTTPServer`; reject link-local
+  `169.254.0.0/16` and validate resolved endpoint IPs in `speech_providers`;
+  enable `PRAGMA trusted_schema=OFF` and `PRAGMA journal_mode=WAL` with cached
+  schema setup and connection reuse in `manuscript_editing`; keep `log_fd` open
+  via `os.fdopen`, write `"port"` in `ManagedServe.ready()`, and warn on
+  running/package version mismatch in `service`.
+- Consolidate backend configuration, strict JSON, and subprocess helpers: share
+  `load_strict_json()` in `config.py` across `audio_audit` and
+  `research/dossier_edit`, align `read_explicit_project_config` on nonsymlink
+  `project_config_snapshot`, derive `THRESHOLD_PRESETS["balanced"]` and
+  `FEATURES` English units from `status.THRESHOLD_DEFAULTS` and
+  `FEATURE_UNITS["en"]`, extract `_run_audio_tool` (`speech_record`) and
+  `validate_worker_compute` / `set_offline_hf_env` (`speech_lifecycle`), pass
+  `env=_ocr_tool_env()` on external OCR worker calls, and remove redundant
+  recursive snapshot/DB opens in `research/catalogue.search`.
+- Consolidate UI security, seven-language localization, shared helpers, and
+  design tokens: fix `escapeHtml` attribute escaping, function-based
+  `dossier-images.js` replacement, protocol-relative link rejection, and
+  scoped `MutationObserver` throttling in `dossier-geography.js`; add 151
+  missing locale keys across all seven `src/lixity/locales/*.json` catalogs
+  and replace inline EN/DE fallbacks across command palette, editor,
+  teleprompter, research lists/tools/filters, and reader backlinks; extract
+  `modal_shell()`, `artifacts_panel()`, `help_badge()`, `script_json()`,
+  `attr_json()`, and `FAVICON_DATA_URI` in `components.py`, `LixityLabels` /
+  shared modal/download/fetch helpers in `component-layer.js`, and normalize CSS
+  token references.
+- Fix release packaging parity and cross-platform browser harnesses: include
+  `src/lixity/locales/*.json` in `MANIFEST.in` and `check_release.package_files()`,
+  wire full docs/public-site sync into `prepare_release.py`, share
+  `check_release.source_version()` across doc generators, add demo artifact byte
+  budgets in `build_examples.py`, add `ControlOrMeta+` and portable `<select>`
+  navigation across Playwright suites plus `.pane-ribbon` browser coverage, and
+  parameterize/cache `tests/dashboard_fixtures.full_dashboard`.
 - Harmonize workspace action ribbons across Manuscript, Research, and Project:
   centralize Lucide icon rendering (`ui_icon()` parsing `assets/icons.js`,
   eliminating duplicate inline SVGs across Python/JS views), shorten localized

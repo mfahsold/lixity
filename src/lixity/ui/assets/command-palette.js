@@ -17,6 +17,9 @@
     cmd_cat_audio: "Audio & Sprache",
     cmd_cat_export: "Export",
     cmd_metric_dialogue_title: "Dialoge & Redeanteile hervorheben",
+    cmd_layer_dialogue_hint: "Dialoge, Sprecherwechsel & Redeanteile",
+    cmd_layer_asl_hint: "Satzlänge & Lesefluss",
+    cmd_layer_tense_hint: "Grammatisches Tempus & Wechsel",
     cmd_research_search_title: "Recherche-Suchmaske öffnen",
     cmd_research_new_dossier_title: "Neues Forschungs-Dossier anlegen"
   };
