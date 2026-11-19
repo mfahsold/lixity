@@ -615,7 +615,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '<details class="workspace-actions" id="project-actions" data-requires-write'
             + ("" if has_reading else " open") + ">"
         )
-        parts.append(f'<summary>{L("project_actions")}</summary>')
+        parts.append(f'<summary title="{L("project_actions")}" data-help="{L("project_actions_help")}">{L("project_actions")}</summary>')
         parts.append(
             f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">'
         )
@@ -886,7 +886,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             if action_enabled("export"):
                 parts.append(
                     f'<select class="ctl" id="fmt" aria-label="{esc(L("export"))}" '
-                    f'title="{esc(label(labels, "help_format"))}">'
+                    f'title="{esc(label(labels, "help_format"))}" '
+                    f'data-help="{esc(label(labels, "help_format"))}">'
                     f'<option value="all">{L("format_all")}</option>'
                     f'<option value="a4">A4</option>'
                     f'<option value="taschenbuch">{L("format_paperback")}</option>'
@@ -960,7 +961,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 )
                 if input_type == "textarea":
                     parts.append(
-                        f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2"></textarea>'
+                        f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2" data-help="{L("nda_draft_hint")}"></textarea>'
                     )
                 else:
                     value_attr = (
@@ -968,18 +969,21 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     )
                     parts.append(
                         f'<input class="ctl" type="{input_type}" id="{field_id}" '
-                        f'name="{field}"{value_attr} required/>'
+                        f'name="{field}"{value_attr} data-help="{L("nda_draft_hint")}" required/>'
                     )
                 parts.append("</div>")
             parts.append('</div><div class="row">')
             parts.append(
-                f'<button type="submit" class="ctl primary" id="nda-preview-btn" disabled>{L("nda_draft_preview")}</button>'
+                f'<button type="submit" class="ctl primary" id="nda-preview-btn" '
+                f'title="{L("nda_draft_preview")}" data-help="{L("nda_draft_preview_help")}" disabled>{L("nda_draft_preview")}</button>'
             )
             parts.append(
-                f'<button type="button" class="ctl" id="nda-pdf-btn" disabled>{L("nda_draft_pdf")}</button>'
+                f'<button type="button" class="ctl" id="nda-pdf-btn" '
+                f'title="{L("nda_draft_pdf")}" data-help="{L("nda_draft_pdf_help")}" disabled>{L("nda_draft_pdf")}</button>'
             )
             parts.append(
-                f'<button type="button" class="ctl" id="nda-text-btn" disabled>{L("nda_draft_text")}</button>'
+                f'<button type="button" class="ctl" id="nda-text-btn" '
+                f'title="{L("nda_draft_text")}" data-help="{L("nda_draft_text_help")}" disabled>{L("nda_draft_text")}</button>'
             )
             parts.append(
                 '</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>'
@@ -1020,23 +1024,23 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<div id="workspace-context-panel" class="workspace-context-panel" hidden>'
             '<div class="context-tool-tabs" role="group">'
-            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_passage_context")}</button>'
-            f'<button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" {"" if reader_enabled else "hidden"}>{L("reader_title")}</button></div>'
+            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false" data-help="{L("reading_help_evidence_style")}">{L("reading_passage_context")}</button>'
+            f'<button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" data-help="{L("reader_hint")}" {"" if reader_enabled else "hidden"}>{L("reader_title")}</button></div>'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'
             '<div class="workspace-reader-head">'
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
-            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}" aria-keyshortcuts="Escape">✕</button>'
+            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}" title="{esc(L("modal_close"), quote=True)}" data-help="{esc(L("modal_close"), quote=True)}" aria-keyshortcuts="Escape">✕</button>'
             "</div>"
             '<div class="row workspace-reader-controls" id="workspace-reader-collection-field" hidden>'
             '<div class="setting-field grow">'
             f'<label for="workspace-reader-collection">{L("research_dossier_collection")}</label>'
-            f'<select class="ctl" id="workspace-reader-collection"><option value="all">{L("research_dossier_collection_all")}</option></select></div></div>'
+            f'<select class="ctl" id="workspace-reader-collection" data-help="{L("research_filter_collection_help")}"><option value="all">{L("research_dossier_collection_all")}</option></select></div></div>'
             '<div class="row workspace-reader-controls">'
             '<div class="setting-field grow">'
             f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'
-            f'<select class="ctl" id="workspace-reader-dossier"><option value="">{L("reader_choose")}</option></select></div>'
-            f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button></div>'
+            f'<select class="ctl" id="workspace-reader-dossier" data-help="{L("reader_hint")}"><option value="">{L("reader_choose")}</option></select></div>'
+            f'<button type="button" class="ctl" id="workspace-reader-refresh" title="{L("reader_refresh")}" data-help="{L("reader_hint")}">{L("reader_refresh")}</button></div>'
             '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
             '<div id="workspace-reader-body"></div></aside></div>'
             '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '

@@ -2802,13 +2802,12 @@ div.pswp__img--placeholder,
   z-index: 9;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: var(--space-1);
   max-width: 100%;
   margin: 0 0 var(--space-3);
   padding: var(--space-2);
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scrollbar-width: thin;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
@@ -2824,6 +2823,19 @@ div.pswp__img--placeholder,
   align-items: center;
   justify-content: center;
   gap: .35rem;
+}
+.pane-ribbon[data-ribbon-compact="true"] .pane-ribbon-label,
+.research-pane-navigation[data-ribbon-compact="true"] .pane-ribbon-label {
+  display: none;
+}
+.pane-ribbon[data-ribbon-compact="true"] > .ctl,
+.research-pane-navigation[data-ribbon-compact="true"] > .ctl {
+  min-inline-size: 2.25rem;
+  padding-inline: .55rem;
+}
+.pane-ribbon[data-ribbon-wrap="true"],
+.research-pane-navigation[data-ribbon-wrap="true"] {
+  flex-wrap: wrap;
 }
 .pane-ribbon > .ctl[hidden],
 .research-pane-navigation > .ctl[hidden] { display: none; }

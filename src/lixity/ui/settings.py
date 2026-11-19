@@ -56,11 +56,12 @@ def settings_form(
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
         f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
-        f'aria-describedby="set-title-help"/>',
+        f'data-help="{translated("settings_title_hint")}" aria-describedby="set-title-help"/>',
         f'<p id="set-title-help">{translated("settings_title_hint")}</p></div>',
         f'<div class="setting-field"><label for="set-author-name">{translated("project_author_name")}</label>',
         f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
         f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
+        f'data-help="{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}" '
         f'data-author-setting-enabled="{str(author_setting_enabled).lower()}"'
         f'{" disabled" if not author_setting_enabled else ""}/>',
         f'<p id="set-author-name-help">{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}</p></div></div>',
@@ -68,7 +69,7 @@ def settings_form(
     if identity_check is not None:
         parts.extend([
             '<details class="settings-advanced" id="settings-identity">',
-            f'<summary id="project-identity-title">{translated("project_identity_title")}</summary>',
+            f'<summary id="project-identity-title" data-help="{translated("project_identity_hint")}">{translated("project_identity_title")}</summary>',
             '<section id="project-identity-check" aria-labelledby="project-identity-title">',
             f'<p class="ctl-note">{translated("project_identity_hint")}</p>',
             '<dl class="research-revision-readonly">',
@@ -115,7 +116,7 @@ def settings_form(
         f'<legend>{translated("settings_analysis")}</legend>',
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("settings_language"))}</label>',
-        '<select class="ctl" id="set-language" aria-describedby="set-language-help settings-scope-help">',
+        f'<select class="ctl" id="set-language" data-help="{translated("settings_language_hint")}" aria-describedby="set-language-help settings-scope-help">',
     ])
     for code, name in language_options:
         selected = " selected" if code == current_language else ""
@@ -126,14 +127,15 @@ def settings_form(
     ])
     disabled = "" if author_setting_enabled else " disabled"
     checked = " checked" if publication_values["enabled"] else ""
+    pub_help = translated("publication_hint" if author_setting_enabled else "publication_unavailable")
     publication_parts = [
         '<details class="settings-advanced publication-settings" id="settings-publication">',
-        f'<summary>{translated("publication_title")}</summary>',
-        f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
+        f'<summary data-help="{pub_help}">{translated("publication_title")}</summary>',
+        f'<p class="panel-guide">{pub_help}</p>',
         '<p class="ctl-note"><a href="' + docs_url("guides/research-pdf.html#publication") + '" '
         f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
         checkbox_field(
-            f'<input type="checkbox" id="set-publication-enabled" '
+            f'<input type="checkbox" id="set-publication-enabled" data-help="{pub_help}" '
             f'data-publication-key="enabled"{checked}{disabled}/>',
             translated("publication_enabled"),
         ),
@@ -166,7 +168,7 @@ def settings_form(
     ))
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
-        f'<summary>{translated("settings_thresholds_optional")}</summary>',
+        f'<summary data-help="{translated("settings_thresholds_hint")}">{translated("settings_thresholds_optional")}</summary>',
         f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
         '<div class="settings-grid">',
         '<div class="setting-field">',
@@ -265,10 +267,11 @@ def settings_form(
         f'<p class="ctl-note" id="flag-severity-help" hidden>{translated("help_flag_min_severity")}</p></div>',
         '</div>',
         '<div class="settings-actions">',
-        f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
+        f'<button type="button" class="ctl" id="settings-reset" title="{translated("reset_thresholds")}" data-help="{translated("settings_reset_thresholds_help")}">{translated("reset_thresholds")}</button>',
         '</div></details>',
         checkbox_field(
             '<input type="checkbox" id="set-save-analysis-defaults" '
+            f'data-help="{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}" '
             'aria-describedby="save-analysis-defaults-help"'
             f'{"" if author_setting_enabled and project_token else " disabled"}/>',
             translated("settings_save_analysis_defaults"),
@@ -283,7 +286,7 @@ def settings_form(
                                 editable=author_setting_enabled and bool(project_token),
                                 context_token=site_publication_context_token),
         '<div class="settings-actions">',
-        f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
+        f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings" title="{translated("apply")}" data-help="{translated("settings_apply_hint")}">{translated("apply")}</button>',
         f'<span class="ctl-note">{translated("settings_apply_hint")}</span>',
         f'<span hidden id="settings-order-error">{translated("threshold_order")}</span>',
         '</div></form>',
@@ -305,7 +308,7 @@ def site_publication_editor(
     terms["remove_recent_project"] = label(labels, "remove_recent_project")
     return (
         '<details class="settings-advanced" id="settings-site-publications">'
-        f'<summary id="settings-site-publications-summary">{esc(terms["publication_editor_title"])}</summary>'
+        f'<summary id="settings-site-publications-summary" data-help="{esc(terms["publication_editor_hint"])}">{esc(terms["publication_editor_title"])}</summary>'
         f'<p class="panel-guide">{esc(terms["publication_editor_hint"])}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(terms["publication_editor_unavailable"])}</p>')
         + '<fieldset class="site-publication-editor" id="site-publication-editor" '
@@ -316,7 +319,7 @@ def site_publication_editor(
         '<p class="ctl-status" data-site-publication-status role="status" aria-live="polite"></p>'
         f'<button type="button" class="ctl" data-site-publication-retry hidden>{esc(terms["publication_editor_retry"])}</button>'
         '<div data-site-publication-profiles></div>'
-        f'<button type="button" class="ctl" data-site-publication-add-profile>{esc(terms["publication_editor_add_profile"])}</button>'
+        f'<button type="button" class="ctl" data-site-publication-add-profile data-help="{esc(terms["publication_editor_hint"])}">{esc(terms["publication_editor_add_profile"])}</button>'
         '</fieldset></details>'
     )
 
@@ -336,10 +339,11 @@ def register_editor(
         f'<option value="{esc(name)}">{esc(label(labels, "register_template_" + name))}</option>'
         for name in REGISTER_PROFILE_TEMPLATES
     )
+    register_help = esc(label(labels, "register_hint"))
     return (
         '<details class="settings-advanced" id="settings-registers">'
-        f'<summary id="settings-registers-summary">{esc(label(labels, "register_title"))}</summary>'
-        f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>'
+        f'<summary id="settings-registers-summary" data-help="{register_help}">{esc(label(labels, "register_title"))}</summary>'
+        f'<p class="panel-guide">{register_help}</p>'
         f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
         + f'<fieldset class="register-editor" id="register-editor" data-initial="{esc(json.dumps(initial, ensure_ascii=False))}" '
@@ -351,15 +355,15 @@ def register_editor(
         '<div class="settings-grid register-template-controls">'
         '<div class="setting-field">'
         f'<label for="register-template-select">{esc(label(labels, "register_template_label"))}</label>'
-        f'<select class="ctl" id="register-template-select" data-register-template-select>{template_options}</select>'
+        f'<select class="ctl" id="register-template-select" data-register-template-select data-help="{esc(label(labels, "register_scope_hint"))}">{template_options}</select>'
         '</div></div>'
         '<div class="settings-actions">'
-        f'<button type="button" class="ctl" data-register-add-profile>{esc(label(labels, "register_add_profile"))}</button>'
-        f'<button type="button" class="ctl" data-register-add-template>{esc(label(labels, "register_template_apply"))}</button>'
+        f'<button type="button" class="ctl" data-register-add-profile data-help="{register_help}">{esc(label(labels, "register_add_profile"))}</button>'
+        f'<button type="button" class="ctl" data-register-add-template data-help="{register_help}">{esc(label(labels, "register_template_apply"))}</button>'
         '</div>'
         f'<h4>{esc(label(labels, "register_assignments"))}</h4>'
         f'<p class="ctl-note">{esc(label(labels, "register_selector_hint"))}</p>'
         '<div data-register-assignments></div>'
-        f'<button type="button" class="ctl" data-register-add-assignment>{esc(label(labels, "register_add_assignment"))}</button>'
+        f'<button type="button" class="ctl" data-register-add-assignment data-help="{esc(label(labels, "register_selector_hint"))}">{esc(label(labels, "register_add_assignment"))}</button>'
         '</fieldset></details>'
     )

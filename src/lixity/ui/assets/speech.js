@@ -195,6 +195,7 @@
   function status(message) { fields.status.textContent = message || ""; fields.status.hidden = !message; }
   function addHelp(el, key) {
     var aliases = {engine:"service_help", voice:"voice_hint", voice_description:"design_hint", reference_id:"reference_hint",
+      record_author_title:"reference_hint", profiles_title:"profile_help", output_title:"export_hint", microphone_title:"microphone_help",
       speed:"speed_hint", pronunciations:"pronunciation_hint", pronunciation_term:"pronunciation_hint", pronunciation_spoken:"pronunciation_hint",
       direction_instructions:"direction_hint", instructions:"direction_hint", audit_audio:"audit_hint", audit_transcript:"audit_hint",
       export_scope:"export_hint", direction_plan:"export_hint", worker_refresh:"service_help", profile:"profile_help",

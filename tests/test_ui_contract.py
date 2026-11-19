@@ -1126,15 +1126,25 @@ class TestShowDontTellComponents(unittest.TestCase):
         self.assertIn('<nav class="pane-ribbon"', rendered)
         self.assertIn('data-ribbon-target="#controls"', rendered)
         self.assertIn('data-ribbon-target="#settings-project-details"', rendered)
+        self.assertIn(f'data-help="{WORKSPACE_LABELS["de"]["project_nav_details_help"]}"', rendered)
+        self.assertIn(f'data-help="{WORKSPACE_LABELS["de"]["research_tools_search_help"]}"', rendered)
+        self.assertIn(f'data-help="{WORKSPACE_LABELS["de"]["settings_reset_thresholds_help"]}"', rendered)
 
         for locale in LANGUAGES:
             loc = WORKSPACE_LABELS[locale]
             for key in (
                 "research_nav_new_dossier", "research_nav_draft_dossier", "research_nav_collections",
                 "research_nav_dossiers", "research_nav_editorial", "research_nav_links", "research_nav_terms",
+                "research_review_links_help", "research_tools_search_help", "research_tools_review_help",
+                "research_tools_close_help", "project_actions_help",
                 "project_nav_structure", "project_nav_details", "project_nav_analysis", "project_nav_registers",
                 "project_nav_publication", "project_nav_site", "project_nav_audio", "project_nav_results",
                 "project_nav_nda",
+                "project_nav_structure_help", "project_nav_details_help", "project_nav_analysis_help",
+                "project_nav_registers_help", "project_nav_publication_help", "project_nav_site_help",
+                "project_nav_audio_help", "project_nav_results_help", "project_nav_nda_help",
+                "nda_draft_preview_help", "nda_draft_pdf_help", "nda_draft_text_help",
+                "settings_reset_thresholds_help",
             ):
                 self.assertTrue(loc.get(key) and loc[key] != key, f"{locale}.{key} missing")
 

@@ -59,7 +59,7 @@
 
   function visibleControlText(el) {
     if (!el || !el.matches("button, a, summary")) return "";
-    var labelNode = el.querySelector(".reader-control-label, .editor-tool-label, .teleprompter-btn-label");
+    var labelNode = el.querySelector(".reader-control-label, .editor-tool-label, .teleprompter-btn-label, .pane-ribbon-label");
     if (labelNode) {
       if (labelNode.hidden || getComputedStyle(labelNode).display === "none" || getComputedStyle(labelNode).visibility === "hidden") {
         return "";
@@ -290,7 +290,7 @@
       anchorTop = Math.max(rect.top, rect.top + pointerOffsetY - 14);
       anchorBottom = Math.min(rect.bottom, rect.top + pointerOffsetY + 16);
     }
-    var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, [role=toolbar]";
+    var toolbarSelector = ".manuscript-reader-controls, .toolbar, .selection-toolbar, .pane-ribbon, .research-pane-navigation, [role=toolbar]";
     var toolbar = el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {
       var bar = toolbar.getBoundingClientRect();

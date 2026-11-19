@@ -82,23 +82,30 @@ def ui_icon(name: str, *, size: int = 16, css_class: str = "", label_text: str =
 
 
 def pane_ribbon(
-    labels: Mapping[str, str] | None, aria_key: str, items: Sequence[tuple[str, str, str]],
+    labels: Mapping[str, str] | None, aria_key: str,
+    items: Sequence[tuple[str, str, str] | tuple[str, str, str, str]],
     *, css_class: str = "", start_target: str = "#controls",
 ) -> str:
     """Sticky, auto-hiding jump ribbon shared by the Project view (``items``:
-    target element id, label key, icon name). Research builds the same shape in JS."""
+    target element id, label key, icon name[, help key]). Research builds the same shape in JS."""
+    start_label = esc(label(labels, "research_panel_start"))
     start = (
         f'<button type="button" class="ctl ctl-icon" data-ribbon-target="{esc(start_target)}" '
-        f'title="{esc(label(labels, "research_panel_start"))}" '
-        f'aria-label="{esc(label(labels, "research_panel_start"))}">'
+        f'title="{start_label}" aria-label="{start_label}" data-help="{start_label}">'
         f'{ui_icon("arrow-up", size=15)}</button>'
     ) if start_target else ""
-    buttons = "".join(
-        f'<button type="button" class="ctl ctl-sm" data-ribbon-target="#{esc(target)}" '
-        f'aria-controls="{esc(target)}">{ui_icon(icon, size=15)}'
-        f'<span class="pane-ribbon-label">{esc(label(labels, key))}</span></button>'
-        for target, key, icon in items
-    )
+    button_parts: list[str] = []
+    for item in items:
+        target, key, icon = item[0], item[1], item[2]
+        help_key = item[3] if len(item) > 3 else f"{key}_help"
+        text = esc(label(labels, key))
+        help_text = esc(label(labels, help_key)) if labels and help_key in labels else text
+        button_parts.append(
+            f'<button type="button" class="ctl ctl-sm" data-ribbon-target="#{esc(target)}" '
+            f'aria-controls="{esc(target)}" title="{text}" aria-label="{text}" data-help="{help_text}">'
+            f'{ui_icon(icon, size=15)}<span class="pane-ribbon-label">{text}</span></button>'
+        )
+    buttons = "".join(button_parts)
     return (
         f'<nav class="pane-ribbon{(" " + esc(css_class)) if css_class else ""}" '
         f'aria-label="{esc(label(labels, aria_key))}">{start}{buttons}</nav>'

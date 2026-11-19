@@ -409,16 +409,40 @@
   })();
 
   // Shared Project/Pane jump ribbon handler: keeps hidden targets synchronized,
+  // collapses labels to icon-only cleanly when text overflows horizontally,
   // scales scroll-margin-top with ribbon geometry, opens collapsed <details>,
   // and moves keyboard focus cleanly without shifting prose.
   (function initPaneRibbons() {
     if (typeof document === "undefined") return;
-    function syncRibbons() {
+    var observed = new WeakSet();
+
+    function syncRibbonDensity(targetRibbon) {
+      var list = targetRibbon ? [targetRibbon] : Array.from(document.querySelectorAll(".pane-ribbon, .research-pane-navigation"));
       var maxHeight = 0;
-      document.querySelectorAll(".pane-ribbon").forEach(function (ribbon) {
-        if (ribbon.offsetParent !== null) {
-          maxHeight = Math.max(maxHeight, ribbon.getBoundingClientRect().height || 0);
+      list.forEach(function (ribbon) {
+        if (!ribbon || !ribbon.isConnected) return;
+        if (typeof ResizeObserver === "function" && !observed.has(ribbon)) {
+          observed.add(ribbon);
+          new ResizeObserver(function () { syncRibbonDensity(ribbon); }).observe(ribbon);
         }
+        if (ribbon.offsetParent === null) return;
+        delete ribbon.dataset.ribbonCompact;
+        delete ribbon.dataset.ribbonWrap;
+        if (ribbon.scrollWidth > ribbon.clientWidth + 1) {
+          ribbon.dataset.ribbonCompact = "true";
+          if (ribbon.scrollWidth > ribbon.clientWidth + 1) {
+            ribbon.dataset.ribbonWrap = "true";
+          }
+        }
+        maxHeight = Math.max(maxHeight, ribbon.getBoundingClientRect().height || 0);
+      });
+      if (maxHeight > 0 && document.documentElement) {
+        document.documentElement.style.setProperty("--pane-ribbon-height", Math.ceil(maxHeight) + "px");
+      }
+    }
+
+    function syncRibbons() {
+      document.querySelectorAll(".pane-ribbon").forEach(function (ribbon) {
         ribbon.querySelectorAll("[data-ribbon-target]").forEach(function (btn) {
           var sel = btn.getAttribute("data-ribbon-target");
           if (!sel || sel === "#controls") {
@@ -429,10 +453,10 @@
           btn.hidden = !target || target.hidden;
         });
       });
-      if (maxHeight > 0 && document.documentElement) {
-        document.documentElement.style.setProperty("--pane-ribbon-height", Math.ceil(maxHeight) + "px");
-      }
+      syncRibbonDensity();
     }
+
+    window.LixityRibbonDensity = { sync: syncRibbonDensity };
 
     document.addEventListener("click", function (event) {
       var btn = event.target && event.target.closest ? event.target.closest(".pane-ribbon [data-ribbon-target]") : null;

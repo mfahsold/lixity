@@ -240,6 +240,7 @@ async function initResearchUI(freshRead) {
     if (window.LixityIcons) start.innerHTML = window.LixityIcons.svg("arrow-up", {size: 15});
     else start.textContent = "\u2191";
     start.title = uiLabel("research_panel_start");
+    start.dataset.help = uiLabel("research_panel_start");
     start.setAttribute("aria-label", uiLabel("research_panel_start"));
     start.addEventListener("click", function() {
       pane.scrollIntoView({block: "start", inline: "nearest"});
@@ -250,13 +251,18 @@ async function initResearchUI(freshRead) {
       if (!target.id) target.id = pane.id + "-section-" + (index + 1);
       var button = document.createElement("button");
       button.type = "button"; button.className = "ctl ctl-sm";
+      var labelText = targetLabel(target);
       var iconName = target.dataset.researchNavIcon;
       if (iconName && window.LixityIcons) {
         button.innerHTML = window.LixityIcons.svg(iconName, {size: 15}) + '<span class="pane-ribbon-label"></span>';
-        button.querySelector(".pane-ribbon-label").textContent = targetLabel(target);
+        button.querySelector(".pane-ribbon-label").textContent = labelText;
       } else {
-        button.textContent = targetLabel(target);
+        button.textContent = labelText;
       }
+      button.title = labelText;
+      button.setAttribute("aria-label", labelText);
+      var helpKey = target.dataset.researchNavHelp;
+      button.dataset.help = helpKey ? uiLabel(helpKey) : labelText;
       button.setAttribute("aria-controls", target.id);
       button.addEventListener("click", function() {
         nav.querySelectorAll("[aria-current='location']").forEach(function(b) { b.removeAttribute("aria-current"); });
@@ -266,6 +272,7 @@ async function initResearchUI(freshRead) {
       nav.appendChild(button);
     });
     pane.prepend(nav);
+    if (window.LixityRibbonDensity) window.LixityRibbonDensity.sync(nav);
   }
   function refresh() {
     var current = ++serial;
