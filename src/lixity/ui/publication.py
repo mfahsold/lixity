@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..site_contracts import SiteAudio
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from .components import esc, label, product_details
 from .dashboard import _PUBLICATION_JS_FILES, _REPORT_CSS_FILES, _bundle, _script_json
 from .manuscript_document import ReaderBlock, reader_block_html
@@ -51,7 +51,7 @@ def render_publication(
         raise ValueError("Reader audio must remain within the manuscript chapter cap")
     language = language_key if language_key not in {"generic", "auto"} else "en"
     title = esc(publication["title"])
-    ui_labels = {**WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"]), **(labels or {})}
+    ui_labels = {**workspace_labels_for(language), **(labels or {})}
     # A keyword is deliberately conservative: false positives retain the library.
     # Inspect every prepared entry, including content revealed after later chapters.
     has_diagrams = any("mermaid" in text.casefold() for text in (

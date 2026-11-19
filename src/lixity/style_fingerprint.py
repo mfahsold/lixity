@@ -39,6 +39,9 @@ from .math_core import (
 from .models import CorpusConfig
 from .registers import resolve_chapter_registers, validate_register_settings
 from .status import (
+    LAYER_FEATURES as LAYER_FEATURES,
+)
+from .status import (
     PASSPORT_LABEL_SEGMENTED,
     PASSPORT_LABEL_SHIFTED,
     PASSPORT_LABEL_STRUCTURAL,
@@ -47,7 +50,7 @@ from .status import (
     STRUCTURAL_DIAGNOSTICS_KEY,
     ContractKeys,
 )
-from .workspace_labels import WORKSPACE_LABELS
+from .workspace_labels import workspace_labels_for
 
 # Descriptive, register-neutral features: (model field, label key, unit).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
@@ -236,16 +239,6 @@ NON_NEGATIVE_FEATURES: frozenset[str] = frozenset(FEATURE_FIELDS)
 
 # Paragraph-level overlay layers for the chapter strips (chip bottom edge).
 # Values are the fingerprint/chapter field names (FEATURES / deviations).
-LAYER_FEATURES: dict[str, str] = {
-    "asl": "asl",
-    "function": "function_word_pct",
-    "dialogue": "dialog_pct",
-    "filter": "filter_density",
-    "sensory": "sensory_density",
-    "modal": "modal_density",
-    "nominal": "nominalization_density",
-    "passive": "passive_density",
-}
 # ParagraphProfile attribute per layer key (dialogue/nominal use shorter names).
 LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "asl": "asl",
@@ -1478,8 +1471,8 @@ class StyleFingerprint:
             notes["rounding_sensitive"] = text("selection_pair_rounding")
         if info["register_excluded_chapters"]:
             notes["register_exemptions"] = (labels or {}).get(
-                "analysis_scope_exemption", WORKSPACE_LABELS.get(
-                    language_key, WORKSPACE_LABELS["en"])["analysis_scope_exemption"])
+                "analysis_scope_exemption",
+                workspace_labels_for(language_key)["analysis_scope_exemption"])
         return notes
 
     @classmethod

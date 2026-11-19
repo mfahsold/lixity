@@ -181,6 +181,19 @@ def _uses_zonos_direct_worker(profile: AudioProfile) -> bool:
             and speech_endpoint(profile.base_url) == speech_endpoint(MLX_AUDIO_BASE_URL))
 
 
+_ZONOS_ALLOWED_ENV = (
+    "HOME", "PATH", "LANG", "LC_ALL", "TMPDIR", "HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME",
+)
+
+
+def _zonos_worker_env() -> dict[str, str]:
+    """Build a minimal offline environment so ambient secrets never reach MLX."""
+    env = {key: os.environ[key] for key in _ZONOS_ALLOWED_ENV if key in os.environ}
+    env["HF_HUB_OFFLINE"] = "1"
+    env["TRANSFORMERS_OFFLINE"] = "1"
+    return env
+
+
 def _synthesize_zonos_direct(text: str, profile: AudioProfile,
                              reference: SpeechReference | None) -> bytes:
     from .speech_references import validate_reference
@@ -196,6 +209,7 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
         raise ValueError("A preset ZONOS3 voice cannot use a local reference")
     request_data = external_speech_request(text, profile)
     with tempfile.TemporaryDirectory(prefix="lixity-zonos-") as directory:
+        os.chmod(directory, 0o700)
         output = Path(directory) / "speech.wav"
         worker_request = dict(request_data)
         worker_request.pop("response_format", None)
@@ -207,9 +221,10 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
         result = subprocess.run(  # noqa: S603 - fixed isolated runtime and package worker
             [str(runtime), str(Path(__file__).with_name("speech_mlx_zonos.py"))],
             input=json.dumps(worker_request, ensure_ascii=False).encode("utf-8"),
+            env=_zonos_worker_env(),
             capture_output=True, timeout=REQUEST_TIMEOUT_SECONDS, check=False,
         )
-        if result.returncode != 0 or not output.is_file():
+        if result.returncode != 0 or output.is_symlink() or not output.is_file():
             raise RuntimeError("Local ZONOS3 synthesis failed")
         with output.open("rb") as stream:
             data = stream.read(MAX_RESPONSE_BYTES + 1)

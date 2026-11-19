@@ -38,7 +38,7 @@ from ..style_profile import (
     ParagraphProfile,
     flagged_paragraphs,
 )
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from .analysis_identity import render_analysis_identity
 from .analysis_navigation import render_analysis_workflows
 from .components import (
@@ -458,7 +458,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             {
                 key: label(labels, key)
                 for key in (
-                    *WORKSPACE_LABELS["en"],
+                    *workspace_labels_for("en"),
                     "severity_0",
                     "severity_1",
                     "severity_2",

@@ -342,11 +342,22 @@ def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
     return output.getvalue()
 
 
+_FFMPEG_ALLOWED_ENV = ("PATH", "HOME", "TMPDIR", "SYSTEMROOT", "TEMP", "TMP")
+
+
+def _ffmpeg_env() -> dict[str, str]:
+    """Pass only minimal execution variables to FFmpeg, never ambient secrets."""
+    env = {key: os.environ[key] for key in _FFMPEG_ALLOWED_ENV if key in os.environ}
+    env["LC_ALL"] = "C"
+    return env
+
+
 def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
-    """Bound each FFmpeg operation without exposing captured text on timeout."""
+    """Bound each FFmpeg operation without exposing captured text or secrets."""
     try:
         return subprocess.run(  # noqa: S603 - resolved executable and explicit arguments
             command, capture_output=True, check=False, timeout=SUBPROCESS_TIMEOUT_SECONDS,
+            env=_ffmpeg_env(),
         )
     except subprocess.TimeoutExpired:
         # run() kills and waits for the direct child before raising. The caller's

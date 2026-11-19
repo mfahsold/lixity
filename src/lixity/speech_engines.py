@@ -12,6 +12,7 @@ COQUI_MODEL = "coqui/tts_models/de/thorsten/vits"
 COQUI_REFERENCE_MODEL = "coqui/tts_models/de/thorsten/vits+openvoice-v2"
 F5_MODEL = "SWivid/F5-TTS"
 TOUCAN_MODEL = "Flux9665/ToucanTTS"
+EXTERNAL_ENGINES = ("openai-compatible", "mlx-audio")
 
 
 @dataclass(frozen=True)

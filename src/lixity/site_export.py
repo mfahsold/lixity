@@ -409,7 +409,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
     """Build analysis from selected chapters only; no project metadata or comments."""
     from .ui.components import esc, label
     from .ui.dashboard import _REPORT_CSS_FILES, _bundle
-    from .workspace_labels import WORKSPACE_LABELS
+    from .workspace_labels import workspace_labels_for
 
     selected = split_chapters(text, config)[:cap]
     # Reconstruct the disclosed chapter bodies before analysis. Never derive a
@@ -433,7 +433,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
     })
     thresholds = resolve_thresholds(project_config={})
     analysis = analyze_document(capped, analysis_config, thresholds, include_evidence=sections == ["full"])
-    labels = {**WORKSPACE_LABELS.get(resolved.key, WORKSPACE_LABELS["en"]), **resolved.labels}
+    labels = {**workspace_labels_for(resolved.key), **resolved.labels}
     def L(key: str) -> str:
         return esc(label(labels, key))
     if sections == ["full"]:

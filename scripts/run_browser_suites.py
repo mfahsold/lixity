@@ -263,6 +263,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/dashboard.py", ("full",)),
     ("src/lixity/ui/components.py", ("full",)),
     ("src/lixity/workspace_labels.py", ("full",)),
+    ("src/lixity/locales/*", ("full",)),
 )
 
 

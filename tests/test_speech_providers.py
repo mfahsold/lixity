@@ -362,3 +362,51 @@ def test_zonos_cache_distinguishes_reference_id_and_model_speed(tmp_path):
     ref_a_fast = AudioProfile(engine='mlx-audio', language='de', voice='reference', reference_id='a' * 64, speed=1.2)
     keys = {cache._paths('Synthetischer Satz.', profile)[0] for profile in (ref_a, ref_b, ref_a_fast)}
     assert len(keys) == 3
+
+
+def test_zonos_and_ffmpeg_subprocess_envs_strip_ambient_secrets(monkeypatch):
+    from lixity.speech import _ffmpeg_env
+    from lixity.speech_providers import _zonos_worker_env
+
+    monkeypatch.setenv('OPENAI_API_KEY', 'sk-synthetic-secret')
+    monkeypatch.setenv('HF_TOKEN', 'hf_synthetic_secret')
+    monkeypatch.setenv('GH_TOKEN', 'ghp_synthetic_secret')
+    zonos_env = _zonos_worker_env()
+    ffmpeg_env = _ffmpeg_env()
+    for secret_key in ('OPENAI_API_KEY', 'HF_TOKEN', 'GH_TOKEN'):
+        assert secret_key not in zonos_env
+        assert secret_key not in ffmpeg_env
+    assert zonos_env['HF_HUB_OFFLINE'] == '1'
+    assert zonos_env['TRANSFORMERS_OFFLINE'] == '1'
+    assert ffmpeg_env['LC_ALL'] == 'C'
+
+
+def test_zonos_worker_request_parser_enforces_pin_allowlist_and_symlinks(tmp_path):
+    from lixity.speech_mlx_zonos import ALLOWED_MODEL, MAX_STDIN_BYTES, _parse_request
+
+    output = tmp_path / 'out.wav'
+    text, path, kwargs = _parse_request(json.dumps({
+        'model': ALLOWED_MODEL, 'input': 'Hallo Welt.', 'output_path': str(output),
+        'lang_code': 'de', 'speed': 1.1, 'temperature': 0.0, 'voice': 'liesel',
+    }))
+    assert text == 'Hallo Welt.' and path == output and kwargs['lang_code'] == 'de'
+
+    with pytest.raises(ValueError, match='pinned local ZONOS3-Mini'):
+        _parse_request(json.dumps({'model': 'evil/model', 'input': 'Hi', 'output_path': str(output)}))
+    with pytest.raises(ValueError, match='Unsupported ZONOS3 worker parameters'):
+        _parse_request(json.dumps({
+            'model': ALLOWED_MODEL, 'input': 'Hi', 'output_path': str(output), 'trust_remote_code': True,
+        }))
+    with pytest.raises(ValueError, match='byte limit'):
+        _parse_request(' ' * (MAX_STDIN_BYTES + 1))
+
+    real_file = tmp_path / 'real.wav'
+    real_file.write_bytes(b'RIFF')
+    symlink = tmp_path / 'link.wav'
+    symlink.symlink_to(real_file)
+    with pytest.raises(ValueError, match='non-symlink'):
+        _parse_request(json.dumps({'model': ALLOWED_MODEL, 'input': 'Hi', 'output_path': str(symlink)}))
+    with pytest.raises(ValueError, match='regular file'):
+        _parse_request(json.dumps({
+            'model': ALLOWED_MODEL, 'input': 'Hi', 'output_path': str(output), 'ref_audio': str(symlink),
+        }))

@@ -8,7 +8,7 @@ from secrets import token_hex
 from threading import RLock
 from typing import TYPE_CHECKING, Any
 
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 
 if TYPE_CHECKING:
     from .handler import LixityServerHandler
@@ -89,7 +89,7 @@ class WorkspaceRegistry:
                 found = self._contexts.get(scoped[1])
             if found is None:
                 if method == 'GET' and (scoped[2] or '/') == '/':
-                    labels = WORKSPACE_LABELS.get(request.language, WORKSPACE_LABELS['en'])
+                    labels = workspace_labels_for(request.language)
                     body = ('<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
                             '<title>Lixity</title><main><h1>Lixity</h1><p>' + escape(labels['runtime_scope_note']) +
                             '</p><a href="/">' + escape(labels['runtime_workspaces']) + '</a></main></html>')

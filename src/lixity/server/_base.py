@@ -15,7 +15,7 @@ from typing import Any
 from ..log import get_logger
 from ..research.repository import ResearchCleanupError, ResearchPublicationError
 from ..ui.components import status_strip
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome, WorkspaceState
 from .constants import DEFAULT_PORT
 
@@ -108,7 +108,7 @@ class ResponseMixin(WorkspaceState):
             RefreshOutcome.REFRESH_FAILED: "status_refresh_failed",
         }
         if freshness in notice_keys:
-            labels = WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"])
+            labels = workspace_labels_for(language)
             notice = status_strip(labels, [{
                 "key": "freshness", "state": "warn", "detail": labels[notice_keys[freshness]],
             }])

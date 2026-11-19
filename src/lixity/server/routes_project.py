@@ -30,7 +30,7 @@ from ..research import api as research_api
 from ..research.repository import Repository, ResearchError
 from ..speech_profiles import requires_audio_migration
 from ..workspace import resolve_project_target
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
 from .pdf_context import project_settings_token
@@ -348,7 +348,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
                 return
         elif not manuscript_file.exists():
-            template_labels = WORKSPACE_LABELS.get(lang, WORKSPACE_LABELS["en"])
+            template_labels = workspace_labels_for(lang)
             if template_key == "three_act":
                 sections = [(f"template_act_{act}", f"template_act_{act}_body") for act in ("one", "two", "three")]
             elif template_key == "research":

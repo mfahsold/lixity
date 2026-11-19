@@ -1,4 +1,5 @@
 """Lixity – command line: corpus analysis, style profile, style reference and dashboard."""
+from __future__ import annotations
 
 import argparse
 import math
@@ -9,51 +10,46 @@ from collections.abc import Callable, Mapping
 from contextlib import redirect_stdout
 from io import StringIO
 from time import monotonic as _monotonic
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
-from rich import box
-from rich.console import Console
-from rich.table import Table
 
 from . import __version__
-from .analyzer import CorpusAnalyzer
-from .config import (
+from .cli_texts import CLI_TEXTS as CLI_TEXTS
+from .cli_texts import _lang, _m
+from .io import FileUtils
+from .site import docs_url
+from .speech_engines import EXTERNAL_ENGINES, NATIVE_ENGINES, native_engine
+from .status import (
     DEFAULT_HOST,
     DEFAULT_PORT,
-    load_project_config,
-    read_explicit_project_config,
-    resolve_thresholds,
-)
-from .formatters import ReportFormatter
-from .io import FileUtils
-from .language import ResolvedLanguage
-from .models import SCHEMA_VERSION, CorpusConfig
-from .paragraph_evidence import ParagraphEvidence
-from .pipeline import (
-    analyze_document,
-    fingerprint_document,
-    profile_document,
-    resolve_document_config,
-)
-from .project_identity import project_title
-from .scenes import scene_report_for_display
-from .site import docs_url
-from .speech_engines import NATIVE_ENGINES, native_engine
-from .speech_profiles import EXTERNAL_ENGINES
-from .status import SCHEMA_VERSION_STYLE
-from .style_fingerprint import (
     LAYER_FEATURES,
-    FingerprintThresholds,
-    paragraph_layer_projection,
+    SCHEMA_VERSION_ANALYZE,
+    SCHEMA_VERSION_STYLE,
 )
-from .ui import render_analysis
-from .ui.manuscript_document import reader_blocks
-from .ui.render_contracts import DashboardContent
-from .workspace import resolve_manuscript_target
 
+if TYPE_CHECKING:
+    from .language import ResolvedLanguage
+    from .models import CorpusConfig
+    from .style_fingerprint import FingerprintThresholds
+
+SCHEMA_VERSION = SCHEMA_VERSION_ANALYZE
 EXIT_OK = 0
 EXIT_ERROR = 1
+
+
+def load_project_config(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Lazy wrapper kept on lixity.cli for direct callers and test monkeypatches."""
+    from .config import load_project_config as _load
+
+    return _load(*args, **kwargs)
+
+
+def read_explicit_project_config(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    """Lazy wrapper kept on lixity.cli for direct callers and test monkeypatches."""
+    from .config import read_explicit_project_config as _read
+
+    return _read(*args, **kwargs)
 
 
 def _audio_progress() -> Callable[[int, int], None]:
@@ -86,6 +82,8 @@ def _audio_progress() -> Callable[[int, int], None]:
 
 
 def _document_title(args: argparse.Namespace, manuscript: str, text: str) -> str:
+    from .project_identity import project_title
+
     return project_title(manuscript, text, args._project_config)
 
 
@@ -97,6 +95,8 @@ def _thresholds_from_args(
     Precedence: CLI flag > project config (``[tool.lixity]`` / ``lixity.toml``) >
     built-in default — shared builder ``config.resolve_thresholds``.
     """
+    from .config import resolve_thresholds
+
     return resolve_thresholds(
         project_config=config,
         preset=getattr(args, "preset", None),
@@ -122,357 +122,11 @@ _META = {
     "schema_version": SCHEMA_VERSION,
 }
 
-# User-facing CLI messages: English is the engine default, German via
-# LIXITY_LANG=de.
-CLI_TEXTS: dict[str, dict[str, str]] = {
-    "en": {
-        "audio_status_project": "Project",
-        "audio_status_selected": "Selected profile",
-        "audio_status_unavailable": "Profile unavailable",
-        "audio_status_match": "model match",
-        "audio_status_comparison": "Comparison model",
-        "audio_status_unknown": "unknown",
-        "audio_status_yes": "yes",
-        "audio_status_no": "no",
-        "audio_status_design_hint": "VoiceDesign generates each section independently, so the voice may vary even with the same description. Different direction can also affect the voice. Compare short listening samples. Base can use a reference, but does not accept free-form direction.",
-        "audio_status_base_hint": "Base reuses a voice reference but does not guarantee identical delivery; free-form direction is unsupported. Compare short listening samples.",
-        "audio_no_direction_help": "Ignore saved passage direction; profile, pronunciation, speed and default pauses remain",
-        "audio_instructions_help": "Free-form delivery instructions where supported; export-only for IMS-Toucan, unsupported by Base",
-        "audio_engine_help": "qwen3: preset voices; qwen3-design: described voice; qwen3-base: saved reference; coqui: Thorsten; coqui-reference: converted reference voice; f5-tts: Flow-Matching reference voice; ims-toucan: reference voice with phonetics and structured prosody. Worker must match",
-        "audio_voice_help": "CustomVoice presets: {voices}. Qwen lists no German-native preset; audition pronunciation. Reference engines use reference; VoiceDesign uses design",
-        "audio_base_reference_required": "Reference engines need a saved reference: create one with 'lixity audio-reference create' and pass --reference-id ID",
-        "audio_base_instructions_inherited": "Reference engines (qwen3-base, coqui-reference, f5-tts) cannot use the selected profile's delivery instructions; pass --instructions '' to clear them for this run or select a reference profile. --no-direction only excludes passage directions",
-        "audio_base_instructions_explicit": "Reference engines (qwen3-base, coqui-reference, f5-tts) do not support delivery instructions; pass --instructions '' or select another model",
-        "audio_design_description_required": "VoiceDesign needs a voice description: pass --voice-description TEXT or select a VoiceDesign profile",
-        "audio_custom_voice_required": "CustomVoice needs a preset voice: pass --voice with a supported preset or select a CustomVoice profile",
-        "audio_reference_wrong_engine": "--reference-id is only supported by reference engines; select --engine qwen3-base, coqui-reference, f5-tts or ims-toucan, or omit the reference",
-        "audio_reference_create_inputs": "audio-reference create needs --audio and --transcript-file",
-        "audio_reference_inspect_input": "audio-reference inspect needs --reference-id",
-        "audio_read_help": "VoiceDesign generates segments independently; a voice description and direction can affect the perceived voice. For a consistent narrator, compare short --preview samples with fewer role-specific directions. Base reuses an explicit voice reference, but does not accept free-form direction; neither option guarantees continuity. --no-direction ignores saved passage direction only: the selected profile, pronunciation rules, tempo and default pauses remain active. Models and matching local workers are installed separately.",
-        "audio_direction_help": "With VoiceDesign, role-specific instructions may change the perceived voice between independently generated segments. Use short listening previews; Base does not support free-form direction. Pauses and explicit saved profile choices remain separate.",
-        "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
-        "layer_notable": 'Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.',
-        "layer_counts": '{total_count} total · {comparable_count} comparable · {notable_count} notable · {selected_count} shown',
-        "layer_unavailable": 'comparison unavailable',
-        "layer_local": 'local z {z}',
-        "layer_flag": 'notable',
-        "layer_empty": 'No paragraphs selected. This is not a finding that the text has no issues.',
-        "layer_empty_source": 'No paragraphs available.',
-        "layer_empty_cutoff": 'No comparable paragraph reaches the selected cutoff.',
-        "layer_short": 'Chapters with fewer than 3 measurable paragraphs: {count}',
-        "layer_constant": 'Chapters with MAD = 0: {count}',
-        "layer_unmeasured": 'Chapters without measurable values: {count}',
-        "layer_full": 'Full evidence: {command}',
-        "layer_evidence": 'Evidence: {status} · {mapped}/{count} {unit} mapped{reason}',
-        "layer_available": 'available',
-        "layer_partial": 'partial',
-        "layer_missing": 'unavailable',
-        "layer_sentence": 'sentences',
-        "layer_word": 'word cues',
-        "layer_pattern": 'pattern matches',
-        "layer_dialogue": 'quoted words',
-        "layer_words": 'words',
-        "layer_more": 'further spans; use --json for all offsets',
-        "about_title": "lixity {version} – quantitative text linguistics & stylometry",
-        "about_languages": "Languages: {languages}",
-        "about_features": "Features ({count}):",
-        "about_heuristics": (
-            "Heuristics: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
-            "min_chapters={min_chapters}, dimensions={n_dimensions}, "
-            "min_words={min_comparable_words}, min_sentences={min_comparable_sentences}"
-        ),
-        "about_commands": "Commands:",
-        "about_license": "License: {license}",
-        'doctor_cli_version': 'CLI version',
-        'doctor_distribution_version': 'Package metadata',
-        'doctor_module_path': 'Imported module',
-        'doctor_interpreter': 'Python interpreter',
-        'doctor_service': 'Service state',
-        'doctor_unknown': 'Unavailable',
-        'doctor_ok': 'Installation checks passed.',
-        'doctor_invalid_service_port': 'Service port must be an integer between 1 and 65535.',
-        'doctor_service_version_unavailable': 'The running service version is unavailable. Inspect its installation before deciding whether to restart it.',
-        'doctor_distribution_version_mismatch': 'Imported Lixity and package metadata have different versions. Reinstall Lixity in the intended environment.',
-        'doctor_distribution_metadata_unavailable': 'Package metadata is unavailable. Repair the installation before relying on its version.',
-        'doctor_service_inspection_unavailable': 'Service state could not be verified. Inspect service status before restarting it.',
-        'doctor_service_version_mismatch': 'The running service uses another version. Restart it after updating the installation.',
-        "err_prefix": "[error]",
-        "err_shell": "Unknown shell: {shell} (bash|zsh)",
-        "err_file": "File not readable: {file} ({exc})",
-        "err_build_target": (
-            "Cannot write to the exports folder {dir}: {exc}. Exports need a writable "
-            "folder – read-only mounts and sandboxes block builds; use --dry-run to "
-            "preview changes without writing."
-        ),
-        "build_workspace": "Workspace: {root}",
-        "build_manuscript": "Manuscript: {file} (language: {language})",
-        "state_written": "written",
-        "state_unchanged": "unchanged",
-        "build_dry_run": ("Dry run: {changed} to write, {unchanged} unchanged – no files changed."),
-        "build_done": "Done: {changed} written, {unchanged} unchanged.",
-        "dashboard_written": "Dashboard written: {output}",
-        "site_export_done": "Read-only website exported. Review included content before sharing.",
-        "dashboard_unchanged": "Dashboard unchanged: {output}",
-        "pdf_written": "PDF written: {output}",
-        "pdf_unchanged": "PDF unchanged: {output}",
-        "speech_written": "Audio written: {output}",
-        "err_no_names": "No figure names selected (use --name, --names or project characters settings).",
-        "dlg_metric": "Quotation measurement",
-        "dlg_value": "Value",
-        "dlg_turns": "Quoted spans",
-        "dlg_dialogue_pct": "Quoted-word share",
-        "dlg_avg_turn": "Mean quoted-span length (words)",
-        "dlg_median_turn": "Median quoted-span length (words)",
-        "dlg_longest_turn": "Longest quoted span (words)",
-        "dlg_turns_per_1000": "Quoted spans per 1,000 words",
-        "dlg_paragraph_pct": "Paragraphs with quoted text",
-        "dlg_short_turn_pct": "Short spans (<= 12 words)",
-        "dlg_long_turns": "Long spans (>= 80 words)",
-        "dlg_voice_contrast": "ASL contrast (quotes - narration)",
-        "dlg_chapter": "Ch.",
-        "dlg_title": "Title",
-        "chr_name": "Figure",
-        "chr_mentions": "Mentions",
-        "chr_chapters": "Chapters with mentions",
-        "chr_span": "Chapter span",
-        "chr_gap": "Internal gap",
-        "chr_share": "Mention coverage",
-        "chr_pov": "Declared POV chapters",
-        "pac_metric": "Pacing metric",
-        "pac_value": "Value",
-        "pac_chapters": "Chapters",
-        "pac_scenes": "Scenes",
-        "pac_avg_scene": "Average scene (words)",
-        "pac_hook_mean": "Mean ending cues per chapter ending",
-        "pac_cohesion": "Adjacent sentence overlap",
-        "pac_monotony": "Repeated sentence starts (>= 3)",
-        "pac_fastest": "Chapter with shortest sentences (mean)",
-        "pac_slowest": "Chapter with longest sentences (mean)",
-        "pac_chapter": "Ch.",
-        "pac_title": "Title",
-        "pac_asl": "ASL",
-        "pac_sparkline": "Curve",
-        "pac_dialogue": "Quoted words",
-        "pac_hook": "Hook",
-        "pac_no_breaks": (
-            "No explicit scene dividers found — scenes = chapters "
-            "(scene structure is uninformative)."
-        ),
-        "err_motif_spec": "Invalid motif (expected NAME=REGEX): {spec}",
-        "mot_name": "Motif",
-        "mot_mentions": "Mentions",
-        "mot_density": "Per 1,000 words",
-        "mot_span": "Chapter span",
-        "mot_gap": "Longest gap",
-        "mot_top_words": "Most frequent content words:",
-        "mot_phrase": "Repeated phrase",
-        "mot_count": "Count",
-        "mot_chapters": "Chapters",
-        "show_metric": "Signal-group comparison",
-        "show_value": "Value",
-        "show_chapters": "Chapters",
-        "show_tell_z": "Word-pattern cues (mean z)",
-        "show_show_z": "Quotes / short sentences (mean z)",
-        "show_balance": "Difference (second - first)",
-        "show_sensory": "Sensory density",
-        "show_immersion": "Immersion ratio",
-        "show_most_telling": "Lowest difference: chapters",
-        "show_most_showing": "Highest difference: chapters",
-        "show_chapter": "Ch.",
-        "show_title": "Title",
-    },
-    "de": {
-        "audio_status_project": "Projekt",
-        "audio_status_selected": "Gewähltes Profil",
-        "audio_status_unavailable": "Profil nicht verfügbar",
-        "audio_status_match": "Modell passt",
-        "audio_status_comparison": "Vergleichsmodell",
-        "audio_status_unknown": "unbekannt",
-        "audio_status_yes": "ja",
-        "audio_status_no": "nein",
-        "audio_status_design_hint": "VoiceDesign erzeugt Abschnitte einzeln; die Stimme kann trotz gleicher Beschreibung variieren. Unterschiedliche Regie kann den Klang zusätzlich beeinflussen. Kurze Hörproben vergleichen. Base nutzt eine Referenz, unterstützt aber keine freie Regie.",
-        "audio_status_base_hint": "Base nutzt eine Stimmreferenz, garantiert aber keine gleichbleibende Darbietung; freie Regie wird nicht unterstützt. Kurze Hörproben vergleichen.",
-        "audio_no_direction_help": "Gespeicherte Passagenregie ignorieren; Profil, Aussprache, Tempo und Standardpausen bleiben aktiv",
-        "audio_instructions_help": "Freie Regie bei unterstützten Modellen; bei IMS-Toucan nur im Export, bei Base nicht unterstützt",
-        "audio_engine_help": "qwen3: feste Stimmen; qwen3-design: beschriebene Stimme; qwen3-base: Referenz; coqui: Thorsten; coqui-reference: Thorsten mit Referenzstimme; f5-tts: Flow-Matching Referenzstimme; ims-toucan: Referenzstimme mit Lautschrift und strukturierter Regie. Worker muss zum Modell passen",
-        "audio_voice_help": "CustomVoice-Stimmen: {voices}. Qwen nennt keine deutschsprachige Mutterstimme; Aussprache anhören. Referenzmodelle verwenden reference, VoiceDesign design",
-        "audio_base_reference_required": "Referenz-Engines benötigen eine gespeicherte Referenz: mit 'lixity audio-reference create' anlegen und --reference-id ID angeben",
-        "audio_base_instructions_inherited": "Referenz-Engines (qwen3-base, coqui-reference, f5-tts) unterstützen die Regieanweisung des gewählten Profils nicht; für diesen Lauf --instructions '' angeben oder ein Referenzprofil wählen. --no-direction schaltet nur die Passagenregie aus",
-        "audio_base_instructions_explicit": "Referenz-Engines (qwen3-base, coqui-reference, f5-tts) unterstützen keine Regieanweisungen; --instructions '' angeben oder ein anderes Modell wählen",
-        "audio_design_description_required": "VoiceDesign benötigt eine Stimmbeschreibung: --voice-description TEXT angeben oder ein VoiceDesign-Profil wählen",
-        "audio_custom_voice_required": "CustomVoice benötigt eine feste Stimme: mit --voice eine unterstützte Stimme angeben oder ein CustomVoice-Profil wählen",
-        "audio_reference_wrong_engine": "--reference-id wird nur von Referenz-Engines unterstützt; --engine qwen3-base, coqui-reference, f5-tts oder ims-toucan wählen oder die Referenz weglassen",
-        "audio_reference_create_inputs": "audio-reference create benötigt --audio und --transcript-file",
-        "audio_reference_inspect_input": "audio-reference inspect benötigt --reference-id",
-        "audio_read_help": "VoiceDesign erzeugt Abschnitte einzeln; Stimmbeschreibung und Regie können die wahrgenommene Stimme beeinflussen. Für eine einheitliche Erzählstimme kurze --preview-Hörproben mit weniger rollenspezifischer Regie vergleichen. Base verwendet eine ausdrückliche Stimmreferenz, unterstützt aber keine freie Regie; beide Wege garantieren keine Stimmkonstanz. --no-direction ignoriert nur gespeicherte Passagenregie: Profil, Ausspracheregeln, Tempo und Standardpausen bleiben aktiv. Modelle und passende lokale Worker werden separat installiert.",
-        "audio_direction_help": "Bei VoiceDesign können rollenspezifische Anweisungen die wahrgenommene Stimme zwischen einzeln erzeugten Abschnitten verändern. Kurze Hörproben vergleichen; Base unterstützt keine freie Regie. Pausen und ausdrücklich gespeicherte Profilzuweisungen bleiben getrennt.",
-        "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
-        "layer_notable": 'Auffällig: |round(z, 2)| >= {cutoff}; beschreibende Heuristik zur menschlichen Prüfung.',
-        "layer_counts": '{total_count} gesamt · {comparable_count} vergleichbar · {notable_count} auffällig · {selected_count} angezeigt',
-        "layer_unavailable": 'Vergleich nicht verfügbar',
-        "layer_local": 'lokaler z-Wert {z}',
-        "layer_flag": 'auffällig',
-        "layer_empty": 'Keine Absätze ausgewählt. Das bedeutet nicht, dass der Text keine Probleme enthält.',
-        "layer_empty_source": 'Keine Absätze vorhanden.',
-        "layer_empty_cutoff": 'Kein vergleichbarer Absatz erreicht den gewählten Schwellenwert.',
-        "layer_short": 'Kapitel mit weniger als 3 messbaren Absätzen: {count}',
-        "layer_constant": 'Kapitel mit MAD = 0: {count}',
-        "layer_unmeasured": 'Kapitel ohne messbare Werte: {count}',
-        "layer_full": 'Vollständige Belege: {command}',
-        "layer_evidence": 'Belege: {status} · {mapped}/{count} {unit} zugeordnet{reason}',
-        "layer_available": 'verfügbar',
-        "layer_partial": 'teilweise',
-        "layer_missing": 'nicht verfügbar',
-        "layer_sentence": 'Sätze',
-        "layer_word": 'Wortbelege',
-        "layer_pattern": 'Mustertreffer',
-        "layer_dialogue": 'Wörter in Anführungszeichen',
-        "layer_words": 'Wörter',
-        "layer_more": 'weitere Bereiche; --json zeigt alle Positionen',
-        "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
-        "about_languages": "Sprachen: {languages}",
-        "about_features": "Merkmale ({count}):",
-        "about_heuristics": (
-            "Heuristiken: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
-            "min_chapters={min_chapters}, Dimensionen={n_dimensions}, "
-            "min_words={min_comparable_words}, min_sentences={min_comparable_sentences}"
-        ),
-        "about_commands": "Kommandos:",
-        "about_license": "Lizenz: {license}",
-        'doctor_cli_version': 'CLI-Version',
-        'doctor_distribution_version': 'Paketmetadaten',
-        'doctor_module_path': 'Importiertes Modul',
-        'doctor_interpreter': 'Python-Interpreter',
-        'doctor_service': 'Dienststatus',
-        'doctor_unknown': 'Nicht verfügbar',
-        'doctor_ok': 'Installationsprüfung erfolgreich.',
-        'doctor_invalid_service_port': 'Der Dienstport muss eine ganze Zahl zwischen 1 und 65535 sein.',
-        'doctor_service_version_unavailable': 'Die Version des laufenden Dienstes ist nicht verfügbar. Prüfe seine Installation vor einem möglichen Neustart.',
-        'doctor_distribution_version_mismatch': 'Importiertes Lixity und Paketmetadaten haben unterschiedliche Versionen. Installiere Lixity in der gewünschten Umgebung neu.',
-        'doctor_distribution_metadata_unavailable': 'Paketmetadaten sind nicht verfügbar. Repariere die Installation, bevor du dich auf deren Versionsangabe verlässt.',
-        'doctor_service_inspection_unavailable': 'Der Dienststatus konnte nicht geprüft werden. Prüfe service status vor einem Neustart.',
-        'doctor_service_version_mismatch': 'Der laufende Dienst verwendet eine andere Version. Starte ihn nach dem Aktualisieren der Installation neu.',
-        "err_prefix": "[Fehler]",
-        "err_shell": "Unbekannte Shell: {shell} (bash|zsh)",
-        "err_file": "Datei nicht lesbar: {file} ({exc})",
-        "err_build_target": (
-            "Der Export-Ordner {dir} ist nicht beschreibbar: {exc}. Exporte brauchen "
-            "einen beschreibbaren Ordner – schreibgeschützte Mounts und Sandboxes "
-            "blockieren Builds; mit --dry-run vorab prüfen."
-        ),
-        "build_workspace": "Workspace: {root}",
-        "build_manuscript": "Manuskript: {file} (Sprache: {language})",
-        "state_written": "geschrieben",
-        "state_unchanged": "unverändert",
-        "build_dry_run": (
-            "Dry-Run: {changed} zu schreiben, {unchanged} unverändert – keine Dateien geändert."
-        ),
-        "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert.",
-        "dashboard_written": "Dashboard geschrieben: {output}",
-        "site_export_done": "Website-Lesekopie exportiert. Prüfe die enthaltenen Inhalte vor der Weitergabe.",
-        "dashboard_unchanged": "Dashboard unverändert: {output}",
-        "pdf_written": "PDF geschrieben: {output}",
-        "pdf_unchanged": "PDF unverändert: {output}",
-        "speech_written": "Audio geschrieben: {output}",
-        "err_no_names": "Keine Figurennamen ausgewählt (--name, --names oder characters in der Projektkonfiguration).",
-        "dlg_metric": "Text in Anführungszeichen",
-        "dlg_value": "Wert",
-        "dlg_turns": "Zitatabschnitte",
-        "dlg_dialogue_pct": "Anteil zitierter Wörter",
-        "dlg_avg_turn": "Mittlere Zitatlänge (Wörter)",
-        "dlg_median_turn": "Mediane Zitatlänge (Wörter)",
-        "dlg_longest_turn": "Längster Zitatabschnitt (Wörter)",
-        "dlg_turns_per_1000": "Zitatabschnitte je 1.000 Wörter",
-        "dlg_paragraph_pct": "Absätze mit zitiertem Text",
-        "dlg_short_turn_pct": "Kurze Zitate (<= 12 Wörter)",
-        "dlg_long_turns": "Lange Zitate (>= 80 Wörter)",
-        "dlg_voice_contrast": "ASL-Abstand (Zitate - Erzähltext)",
-        "dlg_chapter": "Kap.",
-        "dlg_title": "Titel",
-        "chr_name": "Figur",
-        "chr_mentions": "Erwähnungen",
-        "chr_chapters": "Kapitel mit Nennung",
-        "chr_span": "Kapitelspanne",
-        "chr_gap": "Interne Lücke",
-        "chr_share": "Nennungsanteil",
-        "chr_pov": "Deklarierte Perspektivkapitel",
-        "pac_metric": "Pacing-Metrik",
-        "pac_value": "Wert",
-        "pac_chapters": "Kapitel",
-        "pac_scenes": "Szenen",
-        "pac_avg_scene": "Ø Szene (Wörter)",
-        "pac_hook_mean": "Ø Schlussmerkmale je Kapitelende",
-        "pac_cohesion": "Wortbrücke Folgesätze",
-        "pac_monotony": "Gleiche Satzanfänge (>= 3)",
-        "pac_fastest": "Kapitel mit kürzesten Sätzen (Mittelwert)",
-        "pac_slowest": "Kapitel mit längsten Sätzen (Mittelwert)",
-        "pac_chapter": "Kap.",
-        "pac_title": "Titel",
-        "pac_asl": "ASL",
-        "pac_sparkline": "Kurve",
-        "pac_dialogue": "Zitierte Wörter",
-        "pac_hook": "Haken",
-        "pac_no_breaks": (
-            "Keine expliziten Szenentrenner gefunden — Szenen = Kapitel "
-            "(Szenenstruktur ohne Aussagekraft)."
-        ),
-        "err_motif_spec": "Ungültiges Motiv (erwartet NAME=REGEX): {spec}",
-        "mot_name": "Motiv",
-        "mot_mentions": "Treffer",
-        "mot_density": "Je 1.000 Wörter",
-        "mot_span": "Kapitelspanne",
-        "mot_gap": "Größte Lücke",
-        "mot_top_words": "Häufigste Inhaltswörter:",
-        "mot_phrase": "Wiederholte Phrase",
-        "mot_count": "Anzahl",
-        "mot_chapters": "Kapitel",
-        "show_metric": "Signalgruppen im Vergleich",
-        "show_value": "Wert",
-        "show_chapters": "Kapitel",
-        "show_tell_z": "Wortmuster (Ø z)",
-        "show_show_z": "Zitate / kurze Sätze (Ø z)",
-        "show_balance": "Differenz (zweite - erste Gruppe)",
-        "show_sensory": "Sensorik (Ø Dichte)",
-        "show_immersion": "Immersion (Ø Quotient)",
-        "show_most_telling": "Niedrigste Differenz: Kapitel",
-        "show_most_showing": "Höchste Differenz: Kapitel",
-        "show_chapter": "Kap.",
-        "show_title": "Titel",
-    },
-}
-
-
-def _lang() -> str:
-    value = os.environ.get("LIXITY_LANG", "en").strip().lower()
-    return value if value in CLI_TEXTS else "en"
-
-
-def _m(key: str, **fmt: object) -> str:
-    pack = CLI_TEXTS[_lang()]
-    text = pack.get(key) or CLI_TEXTS["en"].get(key, key)
-    return text.format(**fmt) if fmt else text
-
-
 def _completion_scripts() -> tuple[str, str]:
     """Bash and Zsh scripts with live command and research-action lists."""
-    from .research.cli import command_metadata
+    from .cli_completions import build_completion_scripts
 
-    research_actions = " ".join(name for command in command_metadata()
-                                for name in (command["name"], *command.get("aliases", [])))
-    names = " ".join(name for name, _help in _COMMANDS)
-    descriptors = "\n".join(f"    '{name}:{help_text}'" for name, help_text in _COMMANDS)
-    sections = " ".join(_ABOUT_SECTIONS)
-    bash = _BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names).replace(
-        "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    ).replace("__LIXITY_ABOUT_SECTIONS__", sections).replace(
-        "__LIXITY_PARAGRAPH_LAYERS__", " ".join(LAYER_FEATURES)
-    )
-    zsh = _ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors).replace(
-        "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    ).replace("__LIXITY_ABOUT_SECTIONS__", sections).replace(
-        "__LIXITY_PARAGRAPH_LAYERS__", " ".join(LAYER_FEATURES)
-    )
-    return bash, zsh
+    return build_completion_scripts(_COMMANDS, _ABOUT_SECTIONS)
 
 
 #: Top-level commands: name and help text drive the parser and both emitted
@@ -521,578 +175,6 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
 )
 
 _ABOUT_SECTIONS = ("languages", "features", "heuristics", "commands", "configuration")
-
-_BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
-#   lixity completion bash > /etc/bash_completion.d/lixity   # system
-#   lixity completion bash > ~/.local/share/bash-completion/completions/lixity
-_lixity_complete() {
-    local cur prev
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="__LIXITY_COMMANDS__"
-    local opts="--help --version --project --language --json --output -o --dry-run --names --motif --phrases --name"
-    local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
-    if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "$cmds --help --version" -- "$cur") )
-        return 0
-    fi
-    case "${COMP_WORDS[1]}" in
-        project-backup)
-            case "$prev" in
-                --project|--output) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --manuscript|--settings|--attachment) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --manuscript --settings --attachment --output" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        project-restore)
-            case "$prev" in
-                --from|--to) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "--help --from --to" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        read-aloud|audio-export-plan)
-            case "$prev" in
-                --language) COMPREPLY=( $(compgen -W "zh en ja ko de fr ru pt es it" -- "$cur") ) ;;
-                --speech-target) COMPREPLY=( $(compgen -W "local jetson" -- "$cur") ) ;;
-                --voice) COMPREPLY=( $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten" -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio" -- "$cur") ) ;;
-                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --profile|--instructions|--voice-description|--reference-id|--chapter|--preview-line|--speed|--base-url|--model|--api-key-env) ;;
-                *)
-                    COMPREPLY=( $(compgen -W "--help --project -o --output --chapter --language --profile --engine --instructions --voice --voice-description --reference-id --speed --speech-target --no-audio-cache --fresh-audio --keep-markers --plan-only --ssml --timeline --base-url --model --api-key-env --supports-instructions --no-direction --preview --preview-line --progress" -- "$cur") )
-                    COMPREPLY+=( $(compgen -f -- "$cur") )
-                    ;;
-            esac
-            return 0
-            ;;
-        audio-inspect|audio-verify)
-            case "$prev" in
-                --plan|--transcript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --language) COMPREPLY=( $(compgen -W "en de fr es it pt nl generic" -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "--help --plan --transcript --language --json" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-transcribe)
-            case "$prev" in
-                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --base-url|--model|--language) ;;
-                *) COMPREPLY=( $(compgen -W "--help -o --output --base-url --model --language" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-import-transcript)
-            case "$prev" in
-                -o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --language) COMPREPLY=( $(compgen -W "en de fr es it pt nl generic" -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "--help -o --output --model --language" -- "$cur") ); COMPREPLY+=( $(compgen -f -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-status)
-            case "$prev" in
-                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --engine) COMPREPLY=( $(compgen -W "qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio" -- "$cur") ) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --engine --json" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-microphone)
-            case "$prev" in
-                --gain|--card|--control|--device) ;;
-                *) COMPREPLY=( $(compgen -W "status set devices calibrate --help --gain --card --control --device --json" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-calibrate)
-            case "$prev" in
-                --gain|--duration|--countdown|--device) ;;
-                *) COMPREPLY=( $(compgen -W "--help --gain --duration --countdown --device --json" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-reference)
-            case "$prev" in
-                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --audio|--transcript-file|-o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --language) COMPREPLY=( $(compgen -W "de en" -- "$cur") ) ;;
-                --variant) COMPREPLY=( $(compgen -W "phonetic short" -- "$cur") ) ;;
-                --gain|--duration|--device|--transcript|--reference-id|--voice-description) ;;
-                *) COMPREPLY=( $(compgen -W "create inspect record generate calibration-text --help --project --audio --transcript-file --transcript --reference-id --duration --gain --device --calibration-text --variant --language --voice-description -o --output" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-direction)
-            case "$prev" in
-                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --input|--manuscript) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --id|--replace-id|--expected-source|--expected-settings|--expected-direction|--chapter|--line|--instruction|--profile-id|--pause-before|--pause-after|--start|--end) ;;
-                *) COMPREPLY=( $(compgen -W "inspect add save remove --help --project --manuscript --input --id --replace-id --expected-source --expected-settings --expected-direction --chapter --line --instruction --profile-id --pause-before --pause-after --start --end" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-        audio-migrate)
-            case "$prev" in
-                --project) COMPREPLY=( $(compgen -d -- "$cur") ) ;;
-                --backup) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
-                --replace)
-                    if [[ $cur == *=* ]]; then
-                        local candidate replacement="${cur%%=*}="
-                        for candidate in $(compgen -W "Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee" -- "${cur#*=}"); do
-                            COMPREPLY+=( "$replacement$candidate" )
-                        done
-                    fi
-                    ;;
-                --instructions|--expected-snapshot) ;;
-                *) COMPREPLY=( $(compgen -W "--help --project --to-schema-3 --to-schema-4 --to-schema-5 --replace --instructions --apply --backup --expected-snapshot" -- "$cur") ) ;;
-            esac
-            return 0
-            ;;
-    esac
-    case "$prev" in
-        service)
-            COMPREPLY=( $(compgen -W "start stop restart status" -- "$cur") )
-            return 0
-            ;;
-        research)
-            COMPREPLY=( $(compgen -W "__LIXITY_RESEARCH_COMMANDS__" -- "$cur") )
-            return 0
-            ;;
-        --project|--research-project|--research-dir)
-            COMPREPLY=( $(compgen -d -- "$cur") )
-            return 0
-            ;;
-        --file|--manuscript)
-            COMPREPLY=( $(compgen -f -- "$cur") )
-            return 0
-            ;;
-        --language)
-            COMPREPLY=( $(compgen -W "auto de en fr es it pt nl generic" -- "$cur") )
-            return 0
-            ;;
-        --layer)
-            if [[ ${COMP_WORDS[1]} == profile ]]; then
-                COMPREPLY=( $(compgen -W "__LIXITY_PARAGRAPH_LAYERS__" -- "$cur") )
-                return 0
-            fi
-            ;;
-        --section)
-            if [[ ${COMP_WORDS[1]} == about || ${COMP_WORDS[1]} == schema ]]; then
-                COMPREPLY=( $(compgen -W "__LIXITY_ABOUT_SECTIONS__" -- "$cur") )
-                return 0
-            fi
-            ;;
-        --fdr-method)
-            COMPREPLY=( $(compgen -W "bh by" -- "$cur") )
-            return 0
-            ;;
-        --backend)
-            COMPREPLY=( $(compgen -W "auto process systemd" -- "$cur") )
-            return 0
-            ;;
-        --flag-min-severity)
-            COMPREPLY=( $(compgen -W "1 2 3" -- "$cur") )
-            return 0
-            ;;
-        -o|--output)
-            COMPREPLY=( $(compgen -f -- "$cur") )
-            return 0
-            ;;
-        completion)
-            COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") )
-            return 0
-            ;;
-    esac
-    if [[ ${COMP_WORDS[1]} == about || ${COMP_WORDS[1]} == schema ]]; then
-        COMPREPLY=( $(compgen -W "--json --section --help" -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == doctor ]]; then
-        COMPREPLY=( $(compgen -W "--json --port --help" -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == research ]]; then
-        COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == project ]]; then
-        COMPREPLY=( $(compgen -W "--help --project --json" -- "$cur") )
-        COMPREPLY+=( $(compgen -d -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == analysis-review ]]; then
-        COMPREPLY=( $(compgen -W "--help --project --manuscript --language --tense-model --tense-scope --json --observation --status --expected-source-sha256 --expected-analysis-sha256 --expected-review-sha256" -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == scenes ]]; then
-        COMPREPLY=( $(compgen -W "--help --project --language --json --chapter --scene --latest" -- "$cur") )
-        COMPREPLY+=( $(compgen -f -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == export-site ]]; then
-        if [[ $prev == --analysis ]]; then COMPREPLY=( $(compgen -W "chapters language full all" -- "$cur") ); return 0; fi
-        COMPREPLY=( $(compgen -W "--help --project --language --json -o --output --include-research --include-source-files --mode --publication-profile --max-chapter --analysis --include-audio" -- "$cur") )
-        COMPREPLY+=( $(compgen -f -- "$cur") )
-        return 0
-    fi
-    if [[ ${COMP_WORDS[1]} == profile ]]; then
-        COMPREPLY=( $(compgen -W "$opts $style_opts --layer --only-notable --evidence" -- "$cur") )
-        COMPREPLY+=( $(compgen -f -- "$cur") )
-        return 0
-    fi
-    COMPREPLY=( $(compgen -W "$opts $style_opts" -- "$cur") )
-    COMPREPLY+=( $(compgen -f -- "$cur") )
-}
-complete -F _lixity_complete lixity
-"""
-
-_ZSH_COMPLETION = """#compdef lixity
-# zsh completion for lixity – place in a directory of $fpath
-#   lixity completion zsh > "${fpath[1]}/_lixity"
-_lixity_style_flags=(
-  '--z-mild[Notable |z*| threshold]:threshold:'
-  '--z-strong[Strong |z*| threshold]:threshold:'
-  '--fdr-q[FDR q]:q:'
-  '--fdr-method[FDR method]:method:(bh by)'
-  '--min-chapters[Minimum chapters for baseline]:count:'
-  '--dim-threshold[Dimension score threshold]:threshold:'
-  '--flag-min-severity[Minimum severity]:severity:(1 2 3)'
-)
-_lixity() {
-  local -a cmds
-  cmds=(
-__LIXITY_ZSH_COMMANDS__
-  )
-  _arguments -C \
-    '--version[Print version and exit]' \
-    '1: :->command' \
-    '*:: :->args'
-  case $state in
-    command)
-      _describe -t commands 'lixity command' cmds
-      ;;
-    args)
-      case $words[1] in
-        read-aloud|audio-export-plan)
-          _arguments \
-            '1:manuscript:_files' \
-            '--help[Help]' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '-o[Audio WAV or MP3 output]:file:_files' \
-            '--output[Audio WAV or MP3 output]:file:_files' \
-            '--chapter[Canonical chapter number]:chapter:' \
-            '--language[Qwen speech language]:language:(zh en ja ko de fr ru pt es it)' \
-            '--profile[Saved narrator profile]:profile:' \
-            '--instructions[Delivery instructions where supported, otherwise export-only]:text:' \
-            '--engine[Speech model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio)' \
-            '--voice[Speech voice]:voice:(Vivian Serena Uncle_Fu Dylan Eric Ryan Aiden Ono_Anna Sohee design reference thorsten)' \
-            '--voice-description[VoiceDesign description]:text:' \
-            '--reference-id[Saved project reference]:id:' \
-            '--speed[Postprocessing tempo factor]:speed:' \
-            '--speech-target[Execution target]:target:(local jetson)' \
-            '--ssml[Export SSML without synthesis]' \
-            '--timeline[Export lossless JSON timeline without synthesis]' \
-            '--base-url[Explicit provider URL]:url:' \
-            '--model[External model identifier]:model:' \
-            '--api-key-env[Credential environment variable name]:name:' \
-            '--supports-instructions[Provider supports free-text instructions]' \
-            '--plan-only[Inspect the effective speech plan without synthesis]' \
-            '--no-direction[Explicitly ignore saved passage direction]' \
-            '--preview[Preview the first spoken paragraph]' \
-            '--preview-line[Preview paragraph at source line]:line:' \
-            '--progress[Report progress to stderr]' \
-            '--no-audio-cache[Do not read or retain reusable audio segments]' \
-            '--fresh-audio[Recompute completed audio segments]' \
-            '--keep-markers[Read editorial markers aloud]'
-          ;;
-        audio-inspect|audio-verify)
-          _arguments \
-            '1:audio:_files' \
-            '--help[Help]' \
-            '--plan[Exported direction timeline]:file:_files' \
-            '--transcript[Timestamped transcript]:file:_files' \
-            '--language[Explicit analysis language]:language:(en de fr es it pt nl generic)' \
-            '--json[JSON output]'
-          ;;
-        audio-transcribe)
-          _arguments \
-            '1:audio:_files' \
-            '--help[Help]' \
-            '-o[Transcription JSON output]:file:_files' \
-            '--output[Transcription JSON output]:file:_files' \
-            '--base-url[MLX-Audio base URL]:url:' \
-            '--model[Transcription model]:model:' \
-            '--language[Transcription language]:language:'
-          ;;
-        audio-status)
-          _arguments \
-            '--help[Help]' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--engine[Compare a model variant]:engine:(qwen3 qwen3-design qwen3-base coqui coqui-reference f5-tts ims-toucan openai-compatible mlx-audio)' \
-            '--json[Machine-readable status]'
-          ;;
-        audio-microphone)
-          _arguments \
-            '1:action:(status set devices calibrate)' \
-            '--help[Help]' \
-            '--gain[ALSA capture gain 0-50]:gain:' \
-            '--card[ALSA card index or id]:card:' \
-            '--control[ALSA mixer control]:control:' \
-            '--device[Hardware capture device]:device:' \
-            '--json[Machine-readable microphone status]'
-          ;;
-        audio-calibrate)
-          _arguments \
-            '--help[Help]' \
-            '--gain[ALSA capture gain 0-50]:gain:' \
-            '--duration[Calibration burst length in seconds]:duration:' \
-            '--countdown[Countdown delay in seconds]:seconds:' \
-            '--device[Hardware capture device]:device:' \
-            '--json[Machine-readable calibration report]'
-          ;;
-        audio-reference)
-          _arguments \
-            '1:action:(create inspect record generate calibration-text)' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--audio[Reference WAV]:file:_files' \
-            '--transcript-file[Exact UTF-8 transcript]:file:_files' \
-            '--transcript[Exact inline transcript]:text:' \
-            '--reference-id[Saved reference identity]' \
-            '--duration[Record length in seconds]:duration:' \
-            '--gain[ALSA capture gain 0-50]:gain:' \
-            '--device[Capture device]:device:' \
-            '--calibration-text[Record standard calibration text]' \
-            '--variant[Calibration text variant]:variant:(phonetic short)' \
-            '--language[Language code]:language:(de en)' \
-            '--voice-description[Voice description for synthetic generation]:text:' \
-            '-o[Save raw recorded WAV]:file:_files' \
-            '--output[Save raw recorded WAV]:file:_files'
-          ;;
-        audio-direction)
-          _arguments \
-            '1:action:(inspect add save remove)' \
-            '--help[Help]' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--manuscript[Selected manuscript]:file:_files' \
-            '--input[Direction JSON file]:file:_files' \
-            '--id[Observed direction ID]:id:' \
-            '--replace-id[Original range ID for bounds edits]:id:' \
-            '--expected-source[Observed manuscript hash]:sha256:' \
-            '--expected-settings[Observed settings hash]:sha256:' \
-            '--expected-direction[Observed direction state hash]:sha256:' \
-            '--chapter[Chapter number]:number:' \
-            '--line[Source line]:number:' \
-            '--instruction[Delivery instruction]:text:' \
-            '--profile-id[Saved voice profile]:id:' \
-            '--pause-before[Pause before in seconds]:seconds:' \
-            '--pause-after[Pause after in seconds]:seconds:' \
-            '--start[Spoken code-point start offset]:offset:' \
-            '--end[Spoken code-point end offset]:offset:'
-          ;;
-        audio-migrate)
-          _arguments \
-            '--help[Help]' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--to-schema-3[Prepare audio schema upgrade for Coqui]' \
-            '--to-schema-4[Prepare audio schema upgrade for external providers]' \
-            '--to-schema-5[Prepare audio schema upgrade for phonetics and prosody]' \
-            '*--replace[Explicit PROFILE=VOICE replacement]:profile=preset:' \
-            '*--instructions[Explicit PROFILE=TEXT delivery]:profile=text:' \
-            '--apply[Apply the reviewed candidate]' \
-            '--backup[New backup ZIP outside the project]:file:_files' \
-            '--expected-snapshot[Reviewed preview snapshot token]:sha256:'
-          ;;
-        research)
-          _arguments \
-            '1:action:(__LIXITY_RESEARCH_COMMANDS__)' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--file[UTF-8 source]:file:_files' \
-            '--manuscript[Path to manuscript file]:file:_files' \
-            '--title[Source or project title]:title:' \
-            '--language[Language]:language:(en de fr es it pt nl generic)' \
-            '--actor[Local actor]:actor:' \
-            '--source-id[Source identifier]:id:' \
-            '--version-id[Explicit source version identifier]:id:' \
-            '--reason[Reason for action]:reason:' \
-            '--allow-retention[Confirm local retention permission]' \
-            '--dry-run[Preview without writing]' \
-            '--context[Source criticism context JSON file]:file:_files' \
-            '--thresholds[Analysis thresholds]:thresholds:' \
-            '--query[Literal search words]:query:' \
-            '--limit[Maximum hits]:limit:' \
-            '--passage[Immutable passage ID]:id:'
-          ;;
-        completion)
-          _values 'shell' bash zsh sh
-          ;;
-        project-backup)
-          _arguments \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--manuscript[Selected project-relative manuscript]:file:_files' \
-            '*--settings[Selected root settings file]:file:_files' \
-            '*--attachment[Selected project-relative attachment]:file:_files' \
-            '--output[New bundle directory]:directory:_files -/' \
-            '--help[Help]'
-          ;;
-        project-restore)
-          _arguments \
-            '--from[Verified project bundle]:directory:_files -/' \
-            '--to[New project directory]:directory:_files -/' \
-            '--help[Help]'
-          ;;
-        project)
-          _arguments '1:project directory:_files -/' \\
-            '--project[Explicit project root]:directory:_files -/' '--json[JSON inspection]' '--help[Help]'
-          ;;
-        analysis-review)
-          _arguments \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--manuscript[Selected manuscript]:file:_files' \
-            '--language[Analysis language]:language:(en de fr es it pt nl generic auto)' \
-            '--tense-model[Installed local syntax model]:model:' \
-            '--tense-scope[Grammatical tense scope]:scope:(all narration)' \
-            '--json[Versioned observations and state]' \
-            '--observation[Reviewed observation identity]:sha256:' \
-            '--status[Author assertion]:status:(kept changed later)' \
-            '--expected-source-sha256[Reviewed manuscript digest]:sha256:' \
-            '--expected-analysis-sha256[Reviewed analysis digest]:sha256:' \
-            '--expected-review-sha256[Reviewed decision digest]:sha256:' \
-            '--help[Help]'
-          ;;
-        doctor)
-          _arguments '--json[JSON diagnostics]' '--port[Service port]:port:' '--help[Help]'
-          ;;
-        about|schema)
-          _arguments '--json[JSON output]' '--help[Help]' \
-            '--section[One metadata section as JSON]:section:(__LIXITY_ABOUT_SECTIONS__)'
-          ;;
-        scenes)
-          _arguments \
-            '1:manuscript:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--help[Help]' \
-            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--json[Scene JSON with selection scope]' \
-            '--chapter[Canonical chapter number]:chapter:' \
-            '(--latest)--scene[Exact measured or planned scene ID]:scene:' \
-            '(--scene)--latest[Last measured scene in document order]'
-          ;;
-        profile)
-          _arguments \
-            '1:manuscript:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--help[Help]' \
-            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--json[JSON output]' \
-            '--layer[Paragraph metric]:layer:(__LIXITY_PARAGRAPH_LAYERS__)' \
-            '--only-notable[With a layer, select notable paragraphs after comparison]' \
-            '--evidence[With a layer, show exact counted passage evidence]' \
-            '-o[output file]:file:_files' \
-            '--output[output file]:file:_files' \
-            "${_lixity_style_flags[@]}"
-          ;;
-        serve)
-          _arguments \
-            '1:path:_files' \
-            '--host[Bind address]:host:' \
-            '--port[Port]:port:' \
-            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--title[Dashboard title]:title:' \
-            '--open[Open in browser]' \
-            '--no-project[Start without preloading a project]' \
-            '--research-project[Explicit research project root]:directory:_files -/' \
-            "${_lixity_style_flags[@]}"
-          ;;
-        export-site)
-          _arguments \
-            '1:manuscript:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--mode[Reading format]:mode:(review reader companion)' \
-            '--publication-profile[Root-local reading profile]:name:' \
-            '--max-chapter[Omit content after this chapter]:chapter:' \
-            '*--analysis[Optional reader analysis]:section:(chapters language full all)' \
-            '--include-audio[Reader: include saved current chapter audio]' \
-            '--include-research[Include authored history and cited excerpts]' \
-            '--include-source-files[Also include original source files and full text]' \
-            '--json[Print the export manifest]' \
-            '--help[Help]' \
-            '-o[New website directory]:directory:_files -/' \
-            '--output[New website directory]:directory:_files -/'
-          ;;
-        service)
-          _arguments \
-            '1:action:(start stop restart status)' \
-            '2:project:_files' \
-            '--port[Port]:port:' \
-            '--host[Loopback host]:host:(127.0.0.1 localhost)' \
-            '--no-project[Start an empty workspace]' \
-            '--open[Open browser]' \
-            '--backend[Runtime backend]:backend:(auto process systemd)' \
-            '--json[Machine-readable lifecycle result]' \
-            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--title[Project title]:title:' \
-            '--research-project[Explicit research root]:directory:_files -/' \
-            '--debug[Enable diagnostics]' \
-            "${_lixity_style_flags[@]}"
-          ;;
-        build)
-          _arguments \
-            '1:file:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--dry-run[Show planned artifacts only]' \
-            "${_lixity_style_flags[@]}"
-          ;;
-        motifs)
-          _arguments \
-            '1:file:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--motif[NAME=REGEX]' \
-            '--phrases[Phrase size]:n:' \
-            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--json[JSON output]'
-          ;;
-        characters)
-          _arguments \
-            '1:file:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--name[Figure name or alias]' \
-            '--names[Comma-separated names]:names:' \
-            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--json[JSON output]'
-          ;;
-        dashboard)
-          _arguments \
-            '1:file:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--names[Character names]:names:' \
-            '-o[output file]:file:_files' \
-            '--output[output file]:file:_files' \
-            "${_lixity_style_flags[@]}"
-          ;;
-        *)
-          _arguments \
-            '1:file:_files' \
-            '--project[Explicit project root]:directory:_files -/' \
-            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-            '--json[JSON output]' \
-            '-o[output file]:file:_files' \
-            '--output[output file]:file:_files' \
-            "${_lixity_style_flags[@]}"
-          ;;
-      esac
-      ;;
-  esac
-}
-_lixity "$@"
-"""
-
 
 def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
     payload = {"meta": {**_META, "language": language_key}}
@@ -1229,6 +311,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     from .dialogue import dialogue_report
+    from .pipeline import resolve_document_config
 
     config, resolved = resolve_document_config(
         text, args.language, project_config=args._project_config
@@ -1238,6 +321,10 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
     if args.json:
         print(_json(_meta_payload(resolved.key, dialogue=report.to_dict()), indent=True))
         return EXIT_OK
+
+    from rich import box
+    from rich.console import Console
+    from rich.table import Table
 
     con = Console()
     summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
@@ -1322,6 +409,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
 def _cmd_characters(args: argparse.Namespace) -> int:
     """Curated name mentions and declared POV as a Rich table or JSON."""
     from .characters import presence_report, resolve_character_settings
+    from .pipeline import resolve_document_config
 
     names: list[str] = list(args.name or [])
     if args.names is not None:
@@ -1346,6 +434,10 @@ def _cmd_characters(args: argparse.Namespace) -> int:
     if args.json:
         print(_json(_meta_payload(resolved.key, **report), indent=True))
         return EXIT_OK
+
+    from rich import box
+    from rich.console import Console
+    from rich.table import Table
 
     con = Console()
     table = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
@@ -1390,6 +482,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
 
     from .corridors import evaluate_genre_corridor, pacing_corridor_observation
     from .pacing import pacing_report
+    from .pipeline import resolve_document_config
 
     config, resolved = resolve_document_config(
         text, args.language, project_config=args._project_config
@@ -1408,6 +501,10 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
             extra["genre_corridor"] = corridor_data
         print(_json(_meta_payload(resolved.key, **extra), indent=True))
         return EXIT_OK
+
+    from rich import box
+    from rich.console import Console
+    from rich.table import Table
 
     con = Console()
     summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
@@ -1505,6 +602,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     from .motifs import motif_report
+    from .pipeline import resolve_document_config
 
     try:
         config, resolved = resolve_document_config(
@@ -1519,6 +617,10 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
     if args.json:
         print(_json(_meta_payload(resolved.key, **report.to_dict()), indent=True))
         return EXIT_OK
+
+    from rich import box
+    from rich.console import Console
+    from rich.table import Table
 
     con = Console()
     if report.motifs:
@@ -1579,6 +681,7 @@ def _cmd_showing(args: argparse.Namespace) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
+    from .pipeline import resolve_document_config
     from .showing import showing_report
 
     config, resolved = resolve_document_config(
@@ -1590,9 +693,13 @@ def _cmd_showing(args: argparse.Namespace) -> int:
         print(_json(_meta_payload(resolved.key, showing=report.to_dict()), indent=True))
         return EXIT_OK
 
-    def signed(value: "float | None") -> str:
+    def signed(value: float | None) -> str:
         # Below the comparability floor no z-score is derived; keep it visible.
         return "–" if value is None else f"{value:+.2f}"
+
+    from rich import box
+    from rich.console import Console
+    from rich.table import Table
 
     con = Console()
     summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
@@ -1910,7 +1017,13 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
 
 def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
+    from .formatters import ReportFormatter
     from .motifs import motif_report
+    from .pipeline import analyze_document, resolve_document_config
+    from .scenes import scene_report_for_display
+    from .ui import render_analysis
+    from .ui.manuscript_document import reader_blocks
+    from .ui.render_contracts import DashboardContent
 
     workspace = args._workspace
 
@@ -2020,7 +1133,7 @@ def _cmd_project(args: argparse.Namespace) -> int:
         PROJECT_STRUCTURE_ISSUE_LABELS,
         PROJECT_STRUCTURE_ROLE_LABELS,
         PROJECT_STRUCTURE_STATE_LABELS,
-        WORKSPACE_LABELS,
+        workspace_labels_for,
     )
 
     try:
@@ -2031,7 +1144,7 @@ def _cmd_project(args: argparse.Namespace) -> int:
     if args.json:
         print(_json(result, indent=True))
     else:
-        labels = WORKSPACE_LABELS[_lang()]
+        labels = workspace_labels_for(_lang())
         def text(key: str) -> str:
             return labels.get(key, key)
         print(text("project_structure_title"))
@@ -2098,6 +1211,8 @@ def _select_scenes(report: dict[str, Any], args: argparse.Namespace) -> dict[str
 
 def _threshold_number(key: str) -> Callable[[str], float]:
     def parse(raw: str) -> float:
+        from .style_fingerprint import FingerprintThresholds
+
         try:
             value = float(raw)
             FingerprintThresholds.numeric_inputs[key].validate(key, value)
@@ -2110,6 +1225,8 @@ def _threshold_number(key: str) -> Callable[[str], float]:
 
 def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
     """Use the backend's defaults and bounds for CLI help and scalar validation."""
+    from .style_fingerprint import FingerprintThresholds
+
     defaults = FingerprintThresholds()
     parser.add_argument(
         "--preset", choices=FingerprintThresholds.presets, default=None,
@@ -2171,6 +1288,11 @@ def _cmd_analysis_report(
     args: argparse.Namespace, text: str, config: CorpusConfig, resolved: ResolvedLanguage,
 ) -> int:
     """Render the shared document analysis reports without choosing a destination."""
+    from .analyzer import CorpusAnalyzer
+    from .formatters import ReportFormatter
+    from .paragraph_evidence import ParagraphEvidence
+    from .pipeline import fingerprint_document, profile_document
+    from .style_fingerprint import paragraph_layer_projection
     if args.command == "scenes":
         from .api import scenes
 
@@ -2301,8 +1423,13 @@ def _cmd_analysis_report(
     raise ValueError("Unknown textual analysis report")
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    """Build help and grammar without loading a project or dispatching commands."""
+def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
+    """Build help and grammar without loading a project or dispatching commands.
+
+    When ``only_command`` names one registered command (or ``"__top__"`` for
+    top-level help), sibling subcommands still register their name, group and
+    summary for help formatting, while skipping their heavy option imports.
+    """
     from .cli_help import AUDIO_OPTION_HELP, GroupedHelpFormatter, finish_command_help
 
     parser = argparse.ArgumentParser(
@@ -2323,14 +1450,19 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND", title="Commands")
-    from .research.cli import configure as configure_research
-    from .service import configure as configure_service
 
     for name, help_text in _COMMANDS:
+        if only_command is not None and name != only_command:
+            sub.add_parser(name, help=help_text, description=help_text)
+            continue
         if name == "research":
+            from .research.cli import configure as configure_research
+
             configure_research(sub.add_parser(name, help=help_text))
             continue
         if name == "service":
+            from .service import configure as configure_service
+
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
@@ -2778,7 +1910,18 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _main(argv: list[str] | None = None) -> int:
-    parser = _build_parser()
+    raw_argv = sys.argv[1:] if argv is None else list(argv)
+    if raw_argv in (["--version"], ["-V"]):
+        print(f"lixity {__version__}")
+        raise SystemExit(EXIT_OK)
+    command_names = {name for name, _help in _COMMANDS}
+    if raw_argv in (["--help"], ["-h"], []):
+        only_command: str | None = "__top__"
+    elif raw_argv and raw_argv[0] in command_names:
+        only_command = raw_argv[0]
+    else:
+        only_command = None
+    parser = _build_parser(only_command=only_command)
     args = parser.parse_args(argv)
     if args.command in ("project-backup", "project-restore"):
         from . import project_backup
@@ -3301,6 +2444,8 @@ def _main(argv: list[str] | None = None) -> int:
     else:
         explicit_file = args.file
         try:
+            from .workspace import resolve_manuscript_target
+
             workspace = resolve_manuscript_target(
                 explicit_file, project=args.project,
                 allow_discovery=args.command in ("scenes", "build", "read-aloud"),
@@ -3414,6 +2559,8 @@ def _main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
 
     try:
+        from .pipeline import resolve_document_config
+
         config, resolved = resolve_document_config(
             text, args.language, project_config=args._project_config
         )
@@ -3424,11 +2571,17 @@ def _main(argv: list[str] | None = None) -> int:
     if args.command in ("scenes", "canvas", "analyze", "profile", "style"):
         return _run_text_report(args, lambda: _cmd_analysis_report(args, text, config, resolved))
 
+    from .characters import presence_report, resolve_character_settings
+    from .dialogue import dialogue_report
+    from .pipeline import analyze_document
+    from .scenes import scene_report_for_display
+    from .ui import render_analysis
+    from .ui.manuscript_document import reader_blocks
+    from .ui.render_contracts import DashboardContent
+
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
     metrics = analysis.metrics
-    from .characters import presence_report, resolve_character_settings
-    from .dialogue import dialogue_report
 
     try:
         raw_names = getattr(args, "names", None)

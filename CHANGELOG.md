@@ -9,6 +9,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Move the seven-language workspace label catalog out of the 14.8k-line Python
+  module into packaged JSON files (`src/lixity/locales/*.json`) loaded lazily
+  per locale with `orjson` (`workspace_labels_for`), adopt PEP 562 lazy exports
+  in `lixity.__init__`, extract `cli_texts.py` and `cli_completions.py` from
+  `cli.py`, and build only the invoked subcommand parser on CLI startup.
+- Harden isolated audio subprocesses: strip ambient environment secrets and
+  enforce `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` for the ZONOS3 worker,
+  restrict `speech_mlx_zonos.py` to its pinned model, bounded stdin, allowlisted
+  generation arguments and non-symlink paths, and sanitize FFmpeg subprocess
+  environments. Group speech engine capabilities into `recommended`, `advanced`
+  and `retired` tiers while keeping existing saved profiles intact.
 - Resolve user-installed font directories (`~/.local/share/fonts`,
   `~/Library/Fonts`, `~/AppData/Local/Microsoft/Windows/Fonts`) and fall back to
   standard macOS/Windows TrueType system faces strictly after open-license book

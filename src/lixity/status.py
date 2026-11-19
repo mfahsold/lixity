@@ -172,3 +172,20 @@ class ManuscriptFlag(str, Enum):
     ANCHOR_ADJUSTED = "anchor_adjusted"
     ANCHOR_AMBIGUOUS = "anchor_ambiguous"
     ANCHOR_CHANGED = "anchor_changed"
+
+
+#: Local dashboard bind defaults shared by CLI, config and server.
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8765
+
+#: Paragraph layer CLI/UI keys mapped to chapter-level style feature names.
+LAYER_FEATURES: dict[str, str] = {
+    "asl": "asl",
+    "function": "function_word_pct",
+    "dialogue": "dialog_pct",
+    "filter": "filter_density",
+    "sensory": "sensory_density",
+    "modal": "modal_density",
+    "nominal": "nominalization_density",
+    "passive": "passive_density",
+}

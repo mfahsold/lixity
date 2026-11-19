@@ -45,7 +45,7 @@ from ..speech_profiles import (
 )
 from ..speech_references import read_reference_input, references_for_plan, references_unchanged
 from ..speech_status import native_worker_inventory
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
 
@@ -258,7 +258,7 @@ class SpeechRoutesMixin(ResponseMixin):
         key = ("speech_base_direction_conflict" if isinstance(exc, BaseDirectionConflict) else
                "speech_coqui_direction_conflict" if isinstance(exc, CoquiDirectionConflict) else
                "speech_narrator_conflict" if isinstance(exc, NarratorConflict) else None)
-        message = WORKSPACE_LABELS.get(self.language, WORKSPACE_LABELS["en"])[key] if key else str(exc)
+        message = workspace_labels_for(self.language)[key] if key else str(exc)
         self._json({"ok": False, "message": message}, code)
 
     @classmethod

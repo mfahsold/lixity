@@ -28,16 +28,11 @@ from .publication import (
     publication_configuration_schema,
     validate_metadata_text,
 )
+from .status import DEFAULT_HOST as DEFAULT_HOST
+from .status import DEFAULT_PORT as DEFAULT_PORT
 
 if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
-
-#: Default loopback endpoint of the local dashboard service. Shared by the
-#: ``serve``/``service`` CLI entry points and the server package; it lives in
-#: this light module because the CLI must not import the server package just
-#: to know its own default.
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
 PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "manuscript", "audio")

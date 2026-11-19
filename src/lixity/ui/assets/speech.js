@@ -1745,7 +1745,9 @@
         cap.voices[lastPreset] && cap.voices[lastPreset].languages.includes(fields.language.value) ? lastPreset :
         (matchingVoices[0] && matchingVoices[0][0]) || "";
       options(fields.voice, [], voice);
-      fields.speed.value = String(cap.speed.default);
+      if (!fields.speed.value || (fields.engine.value === "mlx-audio" && Number(fields.speed.value) === 1)) {
+        fields.speed.value = String(cap.speed.default);
+      }
       if (fields.engine.value === "mlx-audio") {
         fields.base_url.value = cap.default_base_url || fields.base_url.value;
         fields.provider_model.value = cap.model || fields.provider_model.value;

@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator, model_validator
 
-from .workspace_labels import WORKSPACE_LABELS
+from .workspace_labels import workspace_labels_for
 
 
 @dataclass(frozen=True)
@@ -159,7 +159,7 @@ def publication_imprint(
         return None
 
     def translated(key: str) -> str:
-        return labels.get(key, WORKSPACE_LABELS["en"].get(key, key))
+        return labels.get(key, workspace_labels_for("en").get(key, key))
 
     paragraphs = []
     for role in ("publisher", "printer"):

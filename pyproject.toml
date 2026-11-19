@@ -98,7 +98,7 @@ version = { attr = "lixity._version.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-lixity = ["py.typed", "ui/assets/*", "ui/assets/vendor/*"]
+lixity = ["py.typed", "locales/*.json", "ui/assets/*", "ui/assets/vendor/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

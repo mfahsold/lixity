@@ -159,7 +159,7 @@ class FontResolutionTest(unittest.TestCase):
             "Arial.ttf": "/System/Library/Fonts/Supplemental/Arial.ttf",
             "Arial Bold.ttf": "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
             "Courier New.ttf": "/System/Library/Fonts/Supplemental/Courier New.ttf",
-            "LiberationSerif-Regular.ttf": "/Users/test/Library/Fonts/LiberationSerif-Regular.ttf",
+            "LiberationSerif-Regular.ttf": "/Users/you/Library/Fonts/LiberationSerif-Regular.ttf",
         }
         with (unittest.mock.patch.dict(os.environ, environment, clear=True),
               unittest.mock.patch.object(layouts, "_installed_fonts", lambda: fake_index)):

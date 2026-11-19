@@ -14,7 +14,7 @@ from .pipeline import analyze_document, resolve_document_config
 from .project_identity import project_title
 from .publication import load_publication, publication_imprint
 from .style_fingerprint import FingerprintThresholds
-from .workspace_labels import WORKSPACE_LABELS
+from .workspace_labels import workspace_labels_for
 
 PDF_LAYOUTS = ("editor", "book", "sheet", "report", "document")
 
@@ -74,7 +74,7 @@ def compose_pdf(
         return book_pdf(title=document_title, author=document_author, draft_notice=document_draft,
                         chapters=sections, choice=choice, metadata=metadata,
                         front_matter=publication_imprint(
-                            publication, WORKSPACE_LABELS.get(resolved.key, WORKSPACE_LABELS["en"]),
+                            publication, workspace_labels_for(resolved.key),
                         ) if publication else None)
     if layout == "editor":
         return editor_pdf(title=document_title, author=document_author, draft_notice=document_draft,

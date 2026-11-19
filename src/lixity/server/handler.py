@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..speech_status import native_worker_inventory
-from ..workspace_labels import WORKSPACE_LABELS
+from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome
 from .constants import (
     MAX_ARTIFACT_BYTES,
@@ -266,7 +266,7 @@ class LixityServerHandler(
             self.refresh(strict_source=True)
         except (OSError, ValueError, RuntimeError, UserWarning):
             language = self.dashboard_info.get("language_key", self.language)
-            labels = WORKSPACE_LABELS.get(language, WORKSPACE_LABELS["en"])
+            labels = workspace_labels_for(language)
             self._json({"ok": False, "message": labels["status_refresh_error"]}, 500)
             return
         action = self.path.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]

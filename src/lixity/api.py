@@ -658,6 +658,10 @@ def about() -> dict[str, Any]:
                 "output": "json",
             },
             {
+                "name": "audio-transcribe", "purpose": "transcribe audio through an explicit local MLX-Audio service",
+                "output": "json",
+            },
+            {
                 "name": "audio-import-transcript", "purpose": "convert external ASR timestamps to a bound transcript",
                 "output": "text|json",
             },
