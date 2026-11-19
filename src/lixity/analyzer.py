@@ -391,6 +391,19 @@ class CorpusAnalyzer:
         def _pct(count: int) -> float:
             return (count / total * 100.0) if total else 0.0
 
+        distribution = SentenceDistribution(
+            short_count=short,
+            short_pct=_pct(short),
+            medium_count=medium,
+            medium_pct=_pct(medium),
+            long_count=long_,
+            long_pct=_pct(long_),
+            complex_count=complex_,
+            complex_pct=_pct(complex_),
+        )
+        distribution._word_bounds = (
+            self.config.short_sentence_max, self.config.medium_sentence_max, self.config.long_sentence_max,
+        )
         return SentenceStats(
             total=total,
             asl=asl,
@@ -398,16 +411,7 @@ class CorpusAnalyzer:
             median_exact=median_exact,
             std=std,
             cv=(std / asl) if asl else 0.0,
-            distribution=SentenceDistribution(
-                short_count=short,
-                short_pct=_pct(short),
-                medium_count=medium,
-                medium_pct=_pct(medium),
-                long_count=long_,
-                long_pct=_pct(long_),
-                complex_count=complex_,
-                complex_pct=_pct(complex_),
-            ),
+            distribution=distribution,
             staccato_pct=_pct(short),
             kaskade_pct=_pct(complex_),
         )

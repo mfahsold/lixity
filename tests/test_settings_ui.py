@@ -254,8 +254,12 @@ class TestSettingsUi(unittest.TestCase):
         rendered = render_dashboard(result.chapters, result.paragraphs, metrics=result.metrics,
                                     fingerprint=result.fingerprint, labels=language.labels,
                                     language_key="en")
-        self.assertIn('class="z-gradient"></span> −2.5 … +2.5', rendered)
-        self.assertIn('|z*| ≥ 1.5', rendered)
+        legend = rendered.split('class="z-legend"', 1)[1].split("</div>", 1)[0]
+        self.assertIn("Below typical", legend)
+        self.assertIn("Above typical", legend)
+        method = rendered.split('class="panel-disclosure heatmap-method"', 1)[1].split("</details>", 1)[0]
+        self.assertIn('±2.5', method)
+        self.assertIn('|z*| ≥ 1.5', method)
 
     def test_editorial_threshold_presets_round_trip_and_render_selected_state(self):
         from lixity.config import resolve_thresholds

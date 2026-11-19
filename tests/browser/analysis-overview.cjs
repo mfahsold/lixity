@@ -194,14 +194,21 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await page.emulateMedia({colorScheme:'light'});
       await selectSection('analysis-measurements');
       const measurements = page.locator('#analysis-measurements');
-      assert.equal(await measurements.getAttribute('open'), null, 'Dense measurements initially stay folded');
-      assert.equal(await measurements.locator('.kpi').first().isVisible(), false);
+      assert.equal(await measurements.getAttribute('open'), '', 'Selecting measurements opens the overview');
+      assert.ok(await measurements.locator('.kpi').first().isVisible());
       assert.equal(await page.locator('#flags').isVisible(), false, 'The measurement view does not also expand flag review');
       const summary = measurements.locator(':scope > summary');
       assert.ok((await summary.textContent()).trim().length > 0);
-      await summary.focus();
+      const vocabulary = measurements.locator('#kpi-lexis-drawer');
+      assert.equal(await vocabulary.locator('.kpi').first().isVisible(), false, 'Vocabulary indices stay folded');
+      if (locale === 'de' && [1440, 320].includes(width))
+        await measurements.screenshot({path:path.join(artifacts, `measurements-${locale}-${width}.png`)});
+      await vocabulary.locator('summary').focus();
       await page.keyboard.press('Enter');
-      assert.equal(await measurements.evaluate(element => element.open), true);
+      assert.ok(await vocabulary.locator('.kpi').first().isVisible(), 'Vocabulary indices can be opened with the keyboard');
+      const measurementClipping = await measurements.locator('.kpi:visible, summary:visible, .panel-guide:visible').evaluateAll(nodes =>
+        nodes.filter(node => node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
+      assert.deepEqual(measurementClipping, [], `${locale}/${width}: measurement labels and instructions fit`);
       const readability = measurements.locator('#readability-measurements');
       assert.ok(await readability.isVisible(), 'Readability formulas appear when measurements open');
       assert.deepEqual(await readability.locator('dt').allTextContents(), ['Flesch Reading Ease', 'LIX'],
@@ -291,6 +298,9 @@ async function pinnedIdentity(page, panel, cellIndex) {
     assert.equal(await report.locator('#analysis-measurements').getAttribute('open'), '');
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
     assert.ok(await report.locator('#readability-measurements').isVisible(), 'Standalone reports show formula inputs without JavaScript');
+    await report.locator('#kpi-lexis-drawer summary').click();
+    assert.ok(await report.locator('#kpi-lexis-drawer .kpi').first().isVisible(),
+      'Vocabulary measurements are accessible without JavaScript');
     assert.equal(await report.locator('#analysis-sections a').count(),10);
     assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
     for (const selector of [

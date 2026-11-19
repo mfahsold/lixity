@@ -281,7 +281,7 @@ async function finish(page, errors, writes) {
             'A chapter comparison explains its measurement before leaving the overview');
           assert.equal(await page.locator('#metric-context-values tr').count(), 16);
           assert.equal(await page.locator('#metric-context-values [data-metric-row=asl] button').getAttribute('aria-pressed'), 'true');
-          assert.match(await page.locator('#metric-context-value').textContent(), /^– /,
+          assert.equal(await page.locator('#metric-context-value').textContent(), 'Unavailable',
             'An unavailable chapter measurement remains unavailable, not zero');
           await page.locator('#metric-context-read').click(); await settle(page);
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true',
@@ -329,6 +329,7 @@ async function finish(page, errors, writes) {
           const priorLayer = await page.locator('#style-layer').inputValue();
           await chapterOnlyLoading.click();
           assert.equal(await page.locator('#metric-context-no-layer').isVisible(), true);
+          await page.locator('#metric-context-details > summary').click();
           await page.locator('#metric-context-values [data-metric-row=asl] button').click();
           assert.equal(await page.locator('#metric-context-no-layer').isVisible(), false);
           assert.equal(await page.locator('#metric-context-origin').isVisible(), false,
@@ -345,9 +346,10 @@ async function finish(page, errors, writes) {
           await cutoff.click();
           assert.equal(await page.locator('#metric-context-chapter').textContent(),
             await page.locator('#heatmap-ch-' + await cutoff.getAttribute('data-chapter') + ' .ch').textContent());
+          await page.locator('#metric-context-details > summary').click();
           await page.locator('#metric-context-values [data-metric-row=dialog_pct] button').click();
           const dialogValue = await page.locator('#metric-context-value').textContent();
-          assert.ok(!dialogValue.startsWith('–'), 'A measured zero is not missing');
+          assert.match(dialogValue, /^0[.,]00 /, 'A measured zero is shown with its unit');
           await page.locator('[data-metric-close]').first().click();
           await finish(page, errors, writes);
         } finally { await page.close(); }
@@ -466,7 +468,7 @@ async function finish(page, errors, writes) {
             await openOverview(page);
             await openAnalysisSection(page, 'analysis-measurements');
             const measurements = page.locator('#analysis-measurements');
-            if (await measurements.getAttribute('open') === null) await measurements.locator(':scope > summary').click();
+            await measurements.locator('#kpi-lexis-drawer summary').click();
             assert.equal(await page.locator('#style-tab-bands').count(), 1);
             assert.equal(await page.locator('#bands').isVisible(), false);
             const metric = page.locator('.kpi-link[data-jump="#bands"]').first();
@@ -629,6 +631,24 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#metric-context-no-layer').isVisible(), true);
           assert.equal(await page.locator('#metric-context-values tr').count(), 16);
           assert.ok((await page.locator('#metric-context-definition').textContent()).length > 20);
+          const comparison = await dialog.evaluate(node => {
+            const data = JSON.parse(node.dataset.metricContext);
+            const feature = data.features.hd_d;
+            return {
+              typical: node.querySelector('#metric-context-typical').textContent,
+              expected: feature.median + ' ' + feature.unit,
+            };
+          });
+          assert.equal(comparison.typical, comparison.expected, 'The typical value has the same unit as the chapter');
+          const tiles = dialog.locator('.metric-context-comparison > div');
+          const value = await tiles.first().boundingBox();
+          const typical = await tiles.last().boundingBox();
+          assert.equal(value.y, typical.y, 'The chapter and reference values stay side by side');
+          const breakdown = dialog.locator('#metric-context-details');
+          assert.equal(await breakdown.locator('.table-wrap').isVisible(), false,
+            'The opening state shows the selected measurement before the full table');
+          await breakdown.locator('summary').press('Enter');
+          assert.equal(await breakdown.locator('.table-wrap').isVisible(), true);
           const bounds = await dialog.boundingBox();
           assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width + 1,
             'The localized measurement dialog fits the viewport');

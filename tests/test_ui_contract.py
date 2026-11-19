@@ -242,7 +242,7 @@ class TestJsDomContract(unittest.TestCase):
             with self.subTest(language=language):
                 labels = resolve_language(CorpusConfig(language=language)).labels
                 panel = unescape(render_showing_panel(report, labels, language))
-                before, details = panel.split('<details class="signal-method">', 1)
+                before, details = panel.split('<details class="panel-disclosure signal-method">', 1)
                 self.assertIn(labels["showing_brief_note"].replace("{min_words}", "100"), before)
                 self.assertIn(f'<summary>{labels["showing_method"]}</summary>', details)
                 self.assertIn(labels["showing_context_note"].replace("{min_words}", "100"), details)

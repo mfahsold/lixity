@@ -1214,14 +1214,13 @@ if (researchRevisionDialog) {
         body: JSON.stringify(researchBoundPayload(Object.assign({}, operation, {expected_snapshot: expectedSnapshot})))
       });
       var data = await response.json();
-      LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status, data);
+      LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status);
       if (session !== revisionState.session) return;
       if (response.status === 409) {
         revisionStatus(uiLabel("research_revision_conflict"), true);
         revisionReload.hidden = false;
         await revisionPrepareMerge(changes, {}, false);
       } else if (!response.ok || !data.ok) {
-        LixityLog.error("research-record-revise failed:", data);
         revisionStatus(uiFormat("research_revision_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
       } else {
         revisionPending(false);

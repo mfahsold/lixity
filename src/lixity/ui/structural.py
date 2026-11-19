@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from ..status import ContractKeys
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label, panel_formatters
+from .components import esc, help_term, label, panel_formatters, panel_guide
 from .heatmap import FEATURE_HELP_KEYS as _FEATURE_HELP
 
 
@@ -37,7 +37,7 @@ def style_structural(
 
     parts: list[str] = ['<section class="panel" id="structural">']
     parts.append(f"<h2>{help_term(labels, 'structural', translated('panel_structural'))}</h2>")
-    parts.append(f'<p class="panel-guide">{translated("structural_guide")}</p>')
+    parts.append(panel_guide(translated("structural_guide")))
 
     if len(chapters) < 3:
         parts.append(f'<p class="hint">{translated("structural_min_chapters")}</p>')

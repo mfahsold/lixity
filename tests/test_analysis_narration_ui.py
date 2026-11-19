@@ -4,16 +4,19 @@ from xml.etree import ElementTree
 
 import pytest
 
+from lixity.analyzer import CorpusAnalyzer
 from lixity.dialogue import dialogue_report
 from lixity.language import get_language_profile
 from lixity.models import CorpusConfig
 from lixity.pacing import pacing_report
 from lixity.scenes import scene_report
 from lixity.showing import showing_report
+from lixity.style_fingerprint import FEATURE_UNITS
 from lixity.ui.narration import (
     render_dialogue_panel,
     render_pacing_panel,
     render_scenes_panel,
+    render_sentence_dist_panel,
     render_showing_panel,
 )
 from tests.locales import LOCALES
@@ -35,7 +38,7 @@ def synthetic_scenes():
 def test_scene_overview_links_reach_all_measurements_inside_one_closed_disclosure(locale):
     labels = get_language_profile(locale).labels
     panel = ElementTree.fromstring(render_scenes_panel(synthetic_scenes(), labels, locale))  # noqa: S314
-    measurements = panel.find("./details[@class='scene-measurements']")
+    measurements = panel.find("./details[@class='panel-disclosure scene-measurements']")
     assert measurements is not None, "One disclosure keeps the repeated measurement catalogue out of the overview"
     assert "open" not in measurements.attrib
     assert measurements.findtext("summary") == labels["scene_measurements"] + " (19)"
@@ -70,7 +73,7 @@ def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(c
     assert [row.attrib["data-jump"] for row in chart] == [f"#ch-{number}" for number in range(1, count + 1)]
     assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Quoted span")
     assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Quoted spans"
-    details = panel.find("./details[@class='dialogue-measurements']")
+    details = panel.find("./details[@class='panel-disclosure dialogue-measurements']")
     assert details is not None and "open" not in details.attrib
     assert len(details.findall(".//tbody/tr")) == count
 
@@ -85,17 +88,28 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     assert labels.get("help_pacing_hook") and labels["help_pacing_hook"].replace("{max_words}", "8") in help_texts
     assert labels.get("help_pacing_cohesion") in help_texts
     assert labels.get("help_pacing_monotony") in help_texts
-    details = panel.find("./details[@class='pacing-measurements']")
+    details = panel.find("./details[@class='panel-disclosure pacing-measurements']")
     assert details is not None and "open" not in details.attrib
     assert len(details.findall(".//tbody/tr")) == 1
     guide = panel.find("./p[@class='panel-guide']")
-    assert guide is not None and "ASL" in "".join(guide.itertext())
+    assert guide is not None
     assert labels["pacing_scale"] in "".join(guide.itertext())
     value = panel.find("./div[@class='dist scrollable']/div/span[@class='val']")
-    assert "ASL" in "".join(value.itertext())
+    assert FEATURE_UNITS[locale]["asl"] in "".join(value.itertext())
     assert "3" in "".join(value.itertext())
     sparkline = panel.find(".//span[@class='sparkline']")
     assert sparkline is not None and sparkline.text
+
+
+def test_sentence_distribution_names_the_effective_word_ranges():
+    config = CorpusConfig(language="en", short_sentence_max=3, medium_sentence_max=5, long_sentence_max=7)
+    metrics = CorpusAnalyzer(config).analyze_text("This is short. These sentences now differ. How many words are there now? This sentence has more words than the others.")
+    panel = ElementTree.fromstring(render_sentence_dist_panel(metrics))  # noqa: S314
+    assert [node.text for node in panel.findall(".//div[@class='row']/span[@class='label']")] == [
+        "≤ 3 words", "4–5 words", "6–7 words", "> 7 words",
+    ]
+    assert [node.text for node in panel.findall(".//div[@class='row']/span[@class='val']")] == ["1 · 25.0%"] * 4
+    assert "_word_bounds" not in metrics.sentence_dist.model_dump()
 
 
 @pytest.mark.parametrize("locale", LOCALES)

@@ -9,6 +9,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Explain manuscript analysis in terms of questions writers can answer. The
+  overview and pattern panels suggest where to look in the text, chapter tables
+  spell out units, and a chapter measurement opens with the observed value and
+  its manuscript reference. The full comparison table is available on demand.
+- Share disclosure controls across Analysis, Project and Research, use the
+  configured sentence-length ranges in analysis reports, and log browser search
+  timings only in debug mode.
+- Guide the public demo through a comparison of its first two chapters. The
+  browser sandbox starts with a passage and explains each count in context.
 - Harden file I/O, HTTP boundaries, SSRF protections, recovery database, and
   service lifecycle: add `FileUtils.read_bounded_regular_bytes` (`O_NONBLOCK` /
   `O_NOFOLLOW` + `fstat` checks) and reuse it in `speech_transcription` and

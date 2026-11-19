@@ -22,7 +22,12 @@ previews later material within the exported range. Progress stays in the local
 browser. Hiding notes is a reading aid, not content protection: a chapter cap
 must omit later material from the export itself.
 
-Start with chapter 1's setting and chapter 2's action, then choose **Research →
+Start with **Compare chapters 1 and 2** to see how many words each sentence
+contains on average in the harbour description and the action scene. Then
+choose **Inspect chapter 2** and read the opening sentences aloud. Try a passage
+of your own in the [browser sandbox](../sandbox/index.html).
+
+Choose **Research →
 Dossiers → View details** on **Warehouse 4 case notes**. **Dossier alongside**
 opens its reading companion. In **Review**, follow the eastern-gate quote
 through **Linked version** to its pinned claim, dossier and source references, or use
@@ -62,9 +67,8 @@ research, a dossier alongside the manuscript, prepared PDF downloads and a
 claim-evidence matrix.
 Editing, project administration, archive Search and Compare are unavailable in
 the reading copy. Manuscript search and research list filters remain available.
-At the top of the demo, **Read the manuscript** and **Explore research** switch
-the native workspace views; both use the same prepared, read-only project
-snapshot.
+Use **Manuscript** and **Research** to switch workspace views. Both use the same
+prepared, read-only project snapshot.
 The demo cannot import or save; generating new analysis or PDFs requires the
 [local app](../guides/installation.html).
 

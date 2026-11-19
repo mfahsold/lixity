@@ -95,6 +95,19 @@
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
 <p class="updated">Updated <time datetime="2026-11-05">5 November 2026</time></p>
 
+<h2 id="start-with-a-question">Start with one question about the text</h2>
+<div class="feature-table-wrapper" role="region" aria-label="Questions to ask about a passage" tabindex="0">
+<table class="editorial-table">
+<thead><tr><th scope="col">Question</th><th scope="col">What to look at</th><th scope="col">What to read</th></tr></thead>
+<tbody>
+<tr><th scope="row">Where does the rhythm change?</th><td>In the chapter matrix, 12 words per sentence means the average sentence has 12 words. The sentence-length view shows how many sentences fall into each length range.</td><td>Read the start of both chapters aloud. Do the pauses fit what happens in each scene?</td></tr>
+<tr><th scope="row">Where do characters speak?</th><td>30% quoted words means 30 in every 100 words are inside detected quotation marks.</td><td>Look at the counted text to see which quotations are spoken aloud.</td></tr>
+<tr><th scope="row">Why does this chapter stand out?</th><td>Choose a cell in the style comparison. The chapter value and the typical manuscript value appear in the same unit.</td><td>Open the chapter and look for a scene, narrator or passage that could explain the difference.</td></tr>
+</tbody>
+</table>
+</div>
+<p><a href="../demo/report.html">Compare two chapters of the demo</a> or <a href="../sandbox/index.html">try a paragraph in the browser sandbox</a>.</p>
+
 <h2 id="analysis-marks">Read the analysis marks</h2>
 <p>Turn <strong>Analysis</strong> on and choose a metric in <strong>Measure</strong>. The separate <strong>Counted text</strong> and <strong>Paragraph comparison</strong> switches let you inspect the counted passages, the chapter comparison, or both.</p>
 <div class="analysis-mark-key">
@@ -117,11 +130,12 @@
 <p><span class="analysis-key-research">Saved research</span> uses neutral dotted marks and a book-icon <strong>Research</strong> control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity">Visual roles and architecture</a>.</p>
 
 <h2 id="consistency">What does “Comparisons within the limit” measure?</h2>
+<p>In the style comparison, expand <strong>How the comparison is calculated</strong> to find this summary and the thresholds behind it.</p>
 <p>This percentage counts measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. The JSON field is named <code>consistency</code>. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
 <p>The baseline uses the chapter median and median absolute deviation (MAD). The default mild threshold is <code>|z*| &lt; 2.5</code>; project and session settings can change it. A high percentage indicates fewer threshold crossings in this particular analysis. It does not certify narrative continuity, factual accuracy or literary merit. Constant features may remain within the band, so even a measured 100% needs contextual interpretation.</p>
 
 <figure class="frame">
-  <a href="../screenshots/dashboard-heatmap.png"><img src="../screenshots/dashboard-heatmap.png" width="2678" height="1043" alt="Chapter-by-feature deviation heatmap showing noise-adjusted z* cells and FDR-selected markers" loading="lazy" decoding="async"/></a>
+  <a href="../screenshots/dashboard-heatmap.png"><img src="../screenshots/dashboard-heatmap.png" width="2804" height="1009" alt="Chapter-by-feature deviation heatmap showing noise-adjusted z* cells and FDR-selected markers" loading="lazy" decoding="async"/></a>
   <figcaption>The chapter–feature matrix compares each chapter against the manuscript's own median and MAD baseline.</figcaption>
 </figure>
 <p>Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (<code>source_internal</code>); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.</p>

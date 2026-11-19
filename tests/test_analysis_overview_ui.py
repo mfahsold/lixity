@@ -54,8 +54,11 @@ class TestAnalysisOverview(unittest.TestCase):
         attributes, contents = disclosure.groups()
         self.assertNotRegex(attributes, r"\bopen\b")
         self.assertIn("<summary>", contents)
-        for metric in ("ASL", "Flesch", "LIX", "TTR", "Guiraud R", "HD-D", "MTLD", "MATTR", "Maas a²"):
+        for metric in ("Average words per sentence", "Share of short sentences", "Flesch", "LIX"):
             self.assertIn(metric, contents)
+        vocabulary = contents.split('id="kpi-lexis-drawer"', 1)[1]
+        for metric in ("TTR", "Guiraud R", "HD-D", "MTLD", "MATTR", "Maas a²"):
+            self.assertIn(metric, vocabulary)
         self.assertIn('id="flags"', html[disclosure.end():])
         self.assertIn('id="matrix"', html[disclosure.end():])
         flags = html.split('id="flags"', 1)[1].split("</h2>", 1)[0]
@@ -129,7 +132,9 @@ class TestAnalysisOverview(unittest.TestCase):
     def test_matrix_explains_its_distinct_measurement_coverage(self):
         html = self.render()
         panel = html.split('id="matrix"', 1)[1].split("</section>", 1)[0]
-        self.assertIn('<details class="analysis-coverage">', panel)
+        self.assertIn('<details class="panel-disclosure analysis-coverage">', panel)
+        self.assertIn("words per sentence", panel)
+        self.assertIn("30 in every 100 words", panel)
         self.assertIn("What is counted", panel)
         self.assertIn("blockquotes", panel)
 

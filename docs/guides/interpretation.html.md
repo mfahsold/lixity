@@ -4,6 +4,16 @@ Lixity describes patterns in the manuscript you provide. Its style reference com
 
 Updated 5 November 2026
 
+## Start with one question about the text
+
+| Question | What to look at | What to read |
+| --- | --- | --- |
+| Where does the rhythm change? | In the chapter matrix, 12 words per sentence means the average sentence has 12 words. The sentence-length view shows how many sentences fall into each length range. | Read the start of both chapters aloud. Do the pauses fit what happens in each scene? |
+| Where do characters speak? | 30% quoted words means 30 in every 100 words are inside detected quotation marks. | Look at the counted text to see which quotations are spoken aloud. |
+| Why does this chapter stand out? | Choose a cell in the style comparison. The chapter value and the typical manuscript value appear in the same unit. | Open the chapter and look for a scene, narrator or passage that could explain the difference. |
+
+[Compare two chapters of the demo](../demo/report.html) or [try a paragraph in the browser sandbox](../sandbox/index.html).
+
 ## Read the analysis marks
 
 Turn **Analysis** on and choose a metric in **Measure**. The separate **Counted text** and **Paragraph comparison** switches let you inspect the counted passages, the chapter comparison, or both.
@@ -25,6 +35,8 @@ A selected sentence's word count and its paragraph's comparison have different s
 Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
 ## What does “Comparisons within the limit” measure?
+
+In the style comparison, expand **How the comparison is calculated** to find this summary and the thresholds behind it.
 
 This percentage counts measured chapter–feature cells whose noise-adjusted deviation stays below the active mild threshold. The JSON field is named `consistency`. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.
 

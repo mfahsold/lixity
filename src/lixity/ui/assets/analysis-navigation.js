@@ -32,6 +32,7 @@
     current = workflow;
     if (target) remembered[workflow] = target.id;
     sections.forEach(function(section) { section.hidden = section !== target; });
+    if (target && target.id === "analysis-measurements") target.open = true;
     entries.forEach(function(entry) { entry.setAttribute('aria-pressed', String(entry.dataset.analysisWorkflow === current)); });
     choices.forEach(function(choice) {
       choice.hidden = choice.dataset.analysisSectionWorkflow !== current;
@@ -43,7 +44,9 @@
   }
   function reveal(target) {
     var section = major(target);
-    if (section && section.hidden) select(workflowFor(section), section);
+    if (section && (section.hidden || (section.id === "analysis-measurements" && !section.open))) {
+      select(workflowFor(section), section);
+    }
     return Boolean(section);
   }
   controls.addEventListener('click', function(event) {

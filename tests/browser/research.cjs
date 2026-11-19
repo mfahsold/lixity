@@ -11,7 +11,7 @@ const {createInterface} = require('node:readline');
 const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
-const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-research-ui-'));
+const artifacts = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-research-ui-')));
 async function openVersions(page) {
   const versions = page.locator('#research-revision-versions');
   await expect(versions).toBeVisible();

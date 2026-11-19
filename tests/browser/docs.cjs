@@ -925,6 +925,7 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
   const quickStart = page.locator('#demo-quick-start');
   await expect(quickStart).toBeVisible();
+  await expect(quickStart).toContainText('Read “A board moved. Mara turned.” aloud.');
   await expect(quickStart.locator('#demo-task-guide')).not.toHaveAttribute('open', '');
   await quickStart.getByRole('link', {name: 'Inspect chapter 2', exact: true}).click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
@@ -932,8 +933,18 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#style-layer')).toHaveValue('asl');
   await expect(page.locator('#ch-2')).toContainText('A board moved. Mara turned.');
+  await quickStart.getByRole('link', {name: 'Compare chapters 1 and 2', exact: true}).click();
+  const matrix = page.locator('#matrix');
+  await expect(matrix).toBeVisible();
+  const averages = quickStart.locator('#demo-chapter-averages strong');
+  for (const [chapter, index] of [[2, 0], [1, 1]]) {
+    const measured = matrix.locator(`tr[data-jump="#ch-${chapter}"] .bar-cell`).first();
+    await expect(measured).toBeVisible();
+    await expect(measured).toHaveText(await averages.nth(index).textContent());
+  }
+  await page.locator('#workbench-overview-back').click();
   await quickStart.locator('#demo-task-guide > summary').click();
-  await expect(quickStart.locator('#demo-task-guide')).toContainText('The result is a reason to read, not a correction.');
+  await expect(quickStart.locator('#demo-task-guide a[href="../sandbox/index.html"]')).toBeVisible();
   const actionAndGuide = await quickStart.evaluate(node => ({
     actionBottom: node.querySelector('[data-jump="#ch-2"]').getBoundingClientRect().bottom,
     guideTop: node.querySelector('#demo-task-guide').getBoundingClientRect().top,
@@ -961,6 +972,8 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#metric-context-values tr')).toHaveCount(16);
   await expect(page.locator('#metric-context-definition')).toContainText('not the LIX score itself');
   await expect(page.locator('#metric-context-no-layer')).toBeVisible();
+  await expect(page.locator('#metric-context-details .table-wrap')).toBeHidden();
+  await page.locator('#metric-context-details > summary').click();
   if (width === 320) {
     assert.ok(await page.locator('#analysis-metric-context .table-wrap').evaluate(node =>
       node.scrollWidth > node.clientWidth), 'The demo retains readable horizontally scrolling measurement columns');
@@ -1159,6 +1172,20 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (route === 'sandbox/index.html' && javaScriptEnabled) {
             await expect(page.locator('#direct-speech-btn')).toBeVisible();
             await expect(page.locator('#k-sticky')).toBeVisible();
+            await expect(page.locator('#lead')).toContainText(/Satz für Satz|Sentence by sentence/);
+            await expect(page.locator('#l-asl')).toHaveText(/Wörter pro Satz im Schnitt|Average words per sentence/);
+            await expect(page.locator('#k-entropy')).toBeHidden();
+            await page.locator('#more-title').click();
+            await expect(page.locator('#k-entropy')).toBeVisible();
+            await page.locator('#more-title').click();
+            await page.locator('#preset-draft').click();
+            const echo = page.locator('#echo-list').getByRole('button', {name: /^flur ×/});
+            await echo.click();
+            await expect(echo).toHaveAttribute('aria-pressed', 'true');
+            assert.ok(await page.locator('#preview mark.focus-echo').count() >= 3, 'Sandbox highlights the draft repetition');
+            const language = await page.locator('html').getAttribute('lang');
+            await page.locator('#lang-toggle').click();
+            await expect(page.locator('html')).toHaveAttribute('lang', language === 'de' ? 'en' : 'de');
           }
           if (!dashboard && !publication && route !== 'sandbox/index.html') {
             const themeControl = page.locator('#themeToggle');

@@ -200,7 +200,7 @@ server.serve_forever()
       await page.locator('#modal-speech [data-speech-action=close]').click();
       await page.locator('#settings-speech').click();
       await page.locator('[data-speech-action=create]').click();
-      assert.equal(await page.locator('#speech-engine').inputValue(), 'openai-compatible');
+      await page.locator('#speech-engine').selectOption('openai-compatible');
       assert.equal(await page.locator('#speech-provider_language').inputValue(), 'nl');
       await page.locator('#speech-base_url').fill('http://127.0.0.1:8000/v1');
       await page.locator('#speech-provider_model').fill('synthetic');

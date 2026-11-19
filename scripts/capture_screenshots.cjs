@@ -29,6 +29,11 @@ async function main() {
     });
     await target.route(CAPTURE_ORIGIN + '/**', async route => {
       const url = new URL(route.request().url());
+      if (['/assets/design-tokens.css', '/assets/components.css'].includes(url.pathname)) {
+        const asset = path.join(__dirname, '..', 'src', 'lixity', 'ui', 'assets', path.basename(url.pathname));
+        await route.fulfill({status: 200, contentType: 'text/css; charset=utf-8', body: fs.readFileSync(asset)});
+        return;
+      }
       const resource = researchFixture[url.pathname + url.search];
       if (url.pathname === '/api/research/image' && resource && resource.asset_path) {
         assert.equal(route.request().method(), 'GET');

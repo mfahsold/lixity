@@ -24,10 +24,13 @@ from .components import (
     chapter_link,
     checkbox_field,
     contrast_text,
+    details_start,
     esc,
     help_term,
     label,
+    modal_shell,
     panel_formatters,
+    panel_guide,
 )
 
 FEATURE_HELP_KEYS: dict[str, str] = {
@@ -52,6 +55,12 @@ FEATURE_HELP_KEYS: dict[str, str] = {
     "maas_a2": "maas",
 }
 
+_FEATURE_DISPLAY_KEYS = {
+    "asl": "readability_asl",
+    "staccato_pct": "measurement_short_sentences",
+    "sentence_cv": "heatmap_sentence_variation",
+}
+
 
 def render_metric_context(
     fingerprint: StyleFingerprint,
@@ -67,7 +76,7 @@ def render_metric_context(
         base = fingerprint.baseline.get(field, {})
         supported = int(base.get("n", 0)) >= fingerprint.thresholds.min_chapters
         features[field] = {
-            "label": label(labels, key),
+            "label": label(labels, _FEATURE_DISPLAY_KEYS.get(field, key)),
             "unit": units.get(field, unit),
             "help": label(labels, "help_" + FEATURE_HELP_KEYS.get(field, field)),
             "layer": layers.get(field, ""),
@@ -97,33 +106,46 @@ def render_metric_context(
         {
             "features": features,
             "chapters": chapter_data,
-            "labels": {"loading": label(labels, "dim_loading"), "poles": label(labels, "dim_poles")},
+            "labels": {
+                "loading": label(labels, "dim_loading"),
+                "poles": label(labels, "dim_poles"),
+                "unavailable": label(labels, "metric_context_missing"),
+            },
         }
     )
-    return (
-        f'<dialog class="lixity-modal" id="analysis-metric-context" closedby="any" '
-        f'aria-labelledby="metric-context-title" data-metric-context="{payload}">'
-        '<div class="modal-card"><div class="modal-header">'
-        f'<h2 id="metric-context-title" tabindex="-1">{esc(label(labels, "metric_context_title"))}</h2>'
-        f'<button type="button" class="modal-close" data-metric-close aria-label="{esc(label(labels, "modal_close"))}" title="{esc(label(labels, "modal_close"))}" aria-keyshortcuts="Escape">✕</button>'
-        '</div><div class="modal-body">'
+    body = (
+        '<div class="modal-body">'
         '<p id="metric-context-chapter"></p><p class="ctl-note" id="metric-context-sample"></p>'
-        '<p id="metric-context-origin" hidden></p>'
-        '<p id="metric-context-definition"></p><p class="metric-context-value" id="metric-context-value"></p>'
-        f'<p class="ctl-note">{esc(label(labels, "metric_context_hint"))}</p>'
+        '<p id="metric-context-definition"></p>'
+        '<dl class="metric-context-comparison">'
+        f'<div><dt>{esc(label(labels, "metric_context_this_chapter"))}</dt><dd id="metric-context-value"></dd></div>'
+        f'<div><dt>{esc(label(labels, "metric_context_typical"))}</dt><dd id="metric-context-typical"></dd></div>'
+        '</dl>'
+        '<p class="ctl-note" id="metric-context-origin" hidden></p>'
         '<p class="ctl-note" id="metric-context-no-layer" hidden>'
         f'{esc(label(labels, "metric_context_no_layer"))}</p>'
+        + details_start(esc(label(labels, "metric_context_details")), element_id="metric-context-details")
+        + f'<p class="ctl-note">{esc(label(labels, "metric_context_hint"))}</p>'
         '<div class="table-wrap" tabindex="0" role="region" aria-labelledby="metric-context-caption">'
         '<table><caption id="metric-context-caption">'
         f'{esc(label(labels, "metric_context_title"))}</caption><thead><tr>'
         f'<th scope="col">{esc(label(labels, "register_target"))}</th>'
         f'<th scope="col">{esc(label(labels, "scene_value"))}</th>'
         f'<th scope="col">{esc(label(labels, "metric_context_reference"))}</th>'
-        '<th scope="col">z*</th></tr></thead><tbody id="metric-context-values"></tbody></table></div>'
-        '</div><div class="modal-footer">'
-        f'<button type="button" class="ctl" data-metric-close aria-label="{esc(label(labels, "modal_close"))}" title="{esc(label(labels, "modal_close"))}" aria-keyshortcuts="Escape">{esc(label(labels, "modal_close"))}</button>'
+        '<th scope="col">z*</th></tr></thead><tbody id="metric-context-values"></tbody></table></div></details>'
+        '</div>'
+    )
+    close_label = label(labels, "modal_close")
+    footer = (
+        '<div class="modal-footer">'
+        f'<button type="button" class="ctl" data-metric-close>{esc(close_label)}</button>'
         f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "dim_read_chapter"))}</a>'
-        '</div></div></dialog>'
+        '</div>'
+    )
+    return modal_shell(
+        "analysis-metric-context", "metric-context-title", esc(label(labels, "metric_context_title")), body,
+        close_label=close_label, footer_html=footer, extra_attrs=f'data-metric-context="{payload}"',
+        title_tag="h2", focusable_title=True, close_attrs="data-metric-close",
     )
 
 
@@ -140,7 +162,7 @@ def render_register_targets(
     units = {name: FEATURE_UNITS.get(language_key, {}).get(name, unit) for name, _key, unit in FEATURES}
     parts = ['<section class="panel" id="register-targets">',
              f'<h2>{esc(label(labels, "register_title"))}</h2>',
-             f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>',
+             panel_guide(esc(label(labels, "register_hint"))),
              f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>']
     if settings_available:
         parts.append('<p><a class="ctl-link" href="#settings-registers-summary" data-register-settings>'
@@ -177,7 +199,7 @@ def render_heatmap_panel(
     if fingerprint is None or metrics is None or not metrics.chapters:
         return ""
 
-    L, N, _ = panel_formatters(labels, language_key)
+    L, N, P = panel_formatters(labels, language_key)
 
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
     z_mild = fingerprint.thresholds.z_mild
@@ -208,25 +230,38 @@ def render_heatmap_panel(
         )
         + "</h2>"
     )
+    parts.append(panel_guide(L("heatmap_author_guide")))
     parts.append(
         '<div class="z-legend">'
-        + esc(label(labels, "zscore"))
-        + f' <span class="z-gradient"></span> −{N(Z_COLOR_LIMIT, 1)} … +{N(Z_COLOR_LIMIT, 1)}'
-        + "</div>"
+        f'<span>{L("heatmap_lower")}</span><span class="z-gradient" aria-hidden="true"></span>'
+        f'<span>{L("heatmap_higher")}</span></div>'
     )
     reading = (
         label(labels, "matrix_reading")
         .replace("{min_words}", str(MIN_COMPARABLE_WORDS))
         .replace("{min_sentences}", str(MIN_COMPARABLE_SENTENCES))
     )
-    parts.append(f'<p class="panel-guide">{esc(reading)}</p>')
-    fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only" disabled/>', L("matrix_fdr_only"))
+    method = esc(fingerprint.thresholds.fdr_method.upper())
+    consistency = (
+        f'{P(fingerprint.consistency * 100, 0)}'
+        f' · {N(round(fingerprint.consistency * fingerprint.measured_cells), 0)} / {N(fingerprint.measured_cells, 0)}'
+        if fingerprint.measured_cells else '–'
+    )
+    fdr_total = sum(len(results) for results in fingerprint.fdr_flagged.values())
+    parts.append(
+        details_start(L("heatmap_method"), extra_class="heatmap-method")
+        + panel_guide(esc(reading))
+        + f'<p class="analysis-method">{method} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
+        f' · |z*| ≥ {N(z_mild, 1)} · {L("zscore")} ±{N(Z_COLOR_LIMIT, 1)}</p>'
+        + panel_guide(f'{L("cockpit_cohesion_summary")} · {consistency}')
+        + f'<p class="hint">{help_term(labels, "expected_false_positives", L("expected_false_positives"))}: '
+        f'~{N(fingerprint.expected_false_positives, 1)} · {help_term(labels, "fdr", L("fdr_flagged"))}: {fdr_total}</p>'
+        + '</details>'
+    )
+    fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only" disabled/>', L("heatmap_marked_only"))
     parts.append(
         f'<div class="matrix-tools">{fdr_only}'
-        f'<a href="#matrix" class="ctl cockpit-switch" data-jump="#matrix">{L("cockpit_switch_matrix")} →</a>'
-        f'<span class="analysis-method">'
-        f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
-        f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
+        f'<a href="#matrix" class="ctl cockpit-switch" data-jump="#matrix">{L("cockpit_switch_matrix")} →</a></div>'
     )
     if register_names or pov_groups:
         parts.append(
@@ -301,7 +336,7 @@ def render_heatmap_panel(
     for _field, label_key, _unit in FEATURES:
         parts.append(
             f'<th scope="col" id="feat-{_field}">'
-            f"{help_term(labels, FEATURE_HELP_KEYS.get(_field, _field), esc(label(labels, label_key)))}"
+            f'{help_term(labels, FEATURE_HELP_KEYS.get(_field, _field), L(_FEATURE_DISPLAY_KEYS.get(_field, label_key)))}'
             "</th>"
         )
     parts.append("</tr></thead><tbody>")
@@ -323,6 +358,7 @@ def render_heatmap_panel(
                      f'<td class="ch">{chapter.num}. {esc(chapter.title)}{register_badge}</td>')
         for field_name, label_key, _unit in FEATURES:
             z = fingerprint.z_scores[chapter.num].get(field_name)
+            feature_name = label(labels, _FEATURE_DISPLAY_KEYS.get(field_name, label_key))
             layer_key = feature_layers.get(field_name, "")
             cell_attrs = (
                 f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
@@ -337,7 +373,7 @@ def render_heatmap_panel(
                           and status in ("zero_mad_varying", "zero_mad_constant")
                           else label(labels, "project_identity_unavailable"))
                 description = esc(
-                    f"{label(labels, label_key)} · {label(labels, 'chapter')} {chapter.num} · "
+                    f"{feature_name} · {label(labels, 'chapter')} {chapter.num} · "
                     f"{reason}",
                     quote=True,
                 )
@@ -347,7 +383,7 @@ def render_heatmap_panel(
             raw_text = N(raw, 2) if isinstance(raw, float) else str(raw)
             effect = fingerprint.effect_sizes[chapter.num].get(field_name, 0.0)
             tooltip = (
-                f"{label(labels, label_key)}: {raw_text} · "
+                f"{feature_name}: {raw_text} · "
                 f"z* {N(z, 1, signed=True)} · "
                 f"{label(labels, 'effect_size')} {N(effect, 1, signed=True)}\u03c3 · "
                 f"{label(labels, 'click_hint')}"
@@ -362,7 +398,7 @@ def render_heatmap_panel(
                 selected = "research_value_yes" if field_name in confirmed else "research_value_no"
                 fdr_status = f'{label(labels, "fdr_flagged")}: {label(labels, selected)}'
             cell_attrs += (
-                f' aria-label="{esc(label(labels, label_key))} · '
+                f' aria-label="{esc(feature_name)} · '
                 f'{L("chapter")} {chapter.num} · z* {N(z, 1, signed=True)} · {esc(fdr_status, quote=True)}"'
             )
             if abs(z) < 0.05:
@@ -378,12 +414,6 @@ def render_heatmap_panel(
                 )
         parts.append("</tr>")
     parts.append("</tbody></table></div>")
-    fdr_total = sum(len(v) for v in fingerprint.fdr_flagged.values())
-    parts.append(
-        f'<p class="hint">{help_term(labels, "expected_false_positives", L("expected_false_positives"))}: '
-        f"~{N(fingerprint.expected_false_positives, 1)} · "
-        f"{help_term(labels, 'fdr', L('fdr_flagged'))}: {fdr_total}</p>"
-    )
     coupled = _render_coupled_style_patterns(
         fingerprint, metrics.chapters, z_mild, labels, language_key
     )
@@ -459,7 +489,7 @@ def render_style_passport_panel(
 
     parts: list[str] = ['<section class="panel" id="bands">']
     parts.append(f"<h2>{help_term(labels, 'passport', L('style_passport'))}</h2>")
-    parts.append(f'<p class="panel-guide">{L("reference_reading")}</p>')
+    parts.append(panel_guide(L("reference_reading")))
     notes = fingerprint.interpretation_texts(labels, language_key)
     parts.append(f'<p class="hint">{esc(notes["selection_limits"])}</p>')
     if "small_sample" in notes:

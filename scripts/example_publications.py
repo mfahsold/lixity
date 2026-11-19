@@ -197,6 +197,44 @@ def _site_navigation(
     return report.replace('</body>', '<a class="site-back-top" href="#top">Back to top ↑</a></body>', 1)
 
 
+def _demo_quick_start(text: str, project: Path) -> str:
+    """Use the same chapter profiles and number formatting as the report table."""
+    from lixity.config import read_explicit_project_config, resolve_thresholds
+    from lixity.format import num
+    from lixity.pipeline import profile_document, resolve_document_config
+    from lixity.ui.components import details_start, panel_guide
+
+    settings = read_explicit_project_config(project)
+    config, resolved = resolve_document_config(text, settings.get("language", "en"), project_config=settings)
+    _, chapters = profile_document(text, config, resolve_thresholds(project_config=settings))
+    averages = {chapter.num: num(chapter.asl, resolved.key, 1) for chapter in chapters}
+    if not {1, 2} <= averages.keys():
+        raise ValueError("The quick start requires the first two profiled chapters")
+    return (
+        '<section class="panel" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
+        '<h2 id="demo-quick-start-title">Why the short sentences?</h2>'
+        + panel_guide(
+            f'Chapter 2 averages <strong>{averages[2]}</strong> words per sentence. '
+            f'Chapter 1 averages <strong>{averages[1]}</strong>. Read “A board moved. Mara turned.” aloud.',
+            element_id="demo-chapter-averages",
+        )
+        + '<div class="row">'
+        '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
+        '<a class="ctl" href="#matrix" data-jump="#matrix">Compare chapters 1 and 2</a>'
+        '</div>'
+        + details_start("Try one reading check", element_id="demo-task-guide")
+        + '<ol><li>Choose <strong>Inspect chapter 2</strong> and read the opening paragraph.</li>'
+        '<li>Use the paragraph’s <strong>… → Explore passage → Explain measurement</strong> to see what Lixity counted. '
+        'Turn on <strong>Counted text</strong> to see the sentence marks.</li>'
+        '<li>Read the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>. '
+        'How does the sentence rhythm change when Mara starts moving the crate?</li></ol>'
+        '<p><a href="../sandbox/index.html">Compare sentence lengths in your own text</a> or '
+        '<a href="../guides/installation.html">install Lixity to analyse a manuscript</a>.</p>'
+        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
+        '</details></section>'
+    )
+
+
 def build_research_demo(root: Path, project: Path) -> Path:
     """Wrap the production website export of the reviewed synthetic project."""
     from lixity.pdf_export import PDF_LAYOUTS, compose_pdf
@@ -275,26 +313,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
                 'The complete manuscript analysis, PDF downloads and source credits remain available below. '
                 '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
     document = _insert_notice(document, fallback)
-    quick_start = (
-        '<section class="panel" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
-        '<h2 id="demo-quick-start-title">Why the short sentences?</h2>'
-        '<p class="ctl-note">Development preview · Read a passage or explore its research.</p>'
-        '<div class="row">'
-        '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
-        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
-        '</div>'
-        '<details id="demo-task-guide"><summary>Try one reading check</summary>'
-        '<p>Does its shorter rhythm fit the action? No score tells you whether to rewrite.</p>'
-        '<ol><li>Choose <strong>Inspect chapter 2</strong>. Read “A board moved. Mara turned.”</li>'
-        '<li>Use the paragraph’s <strong>… → Explore passage → Explain measurement</strong> to inspect the sentence counts. '
-        'If marks are hidden, turn on <strong>Counted text</strong>.</li>'
-        '<li>Compare the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>. '
-        'Short beats accompany moving the crate; longer sentences establish the harbour. '
-        'You may keep that contrast, or reread it for an unintended choppy effect.</li></ol>'
-        '<p>The result is a reason to read, not a correction. '
-        '<a href="../guides/installation.html">Try the same question with your own manuscript</a>.</p>'
-        '</details></section>'
-    )
+    quick_start = _demo_quick_start(text, project)
     # Keep the example prompt inside the real Manuscript view so the existing
     # workspace navigation hides it in Research and restores its disclosure state.
     document, count = re.subn(r'(<div\b[^>]*\bid="view-pane-analysis"[^>]*>)',

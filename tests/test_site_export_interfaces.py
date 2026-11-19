@@ -130,8 +130,10 @@ def test_export_logs_correlate_server_and_browser_without_content(tmp_path: Path
     finally:
         log.configure(level="INFO", force=True)
     lines = output.getvalue()
-    for stage in ("request", "prepared", "body_written", "response_read"):
+    for stage in ("body_written", "response_read"):
         assert f"id={export_id} stage={stage}" in lines
+    for stage in ("request", "validated", "zip_preparation", "prepared"):
+        assert f"id={export_id} stage={stage}" not in lines
     assert "bytes=" in lines and "duration_ms=" in lines and "error=AbortError" in lines
     for private in (token, str(tmp_path), manuscript.name, "PRIVATE_SYNTHETIC_PROSE"):
         assert private not in lines

@@ -27,7 +27,7 @@ class SiteExportRoutesMixin(ResponseMixin):
     def _handle_site_export(self, payload: dict[str, Any], *, preflight: bool = False) -> None:
         export_id = token_hex(16)
         started = perf_counter()
-        self._log.info("Website export id=%s stage=request", export_id)
+        self._log.debug("Website export id=%s stage=request", export_id)
         try:
             request = SiteExportRequest.model_validate(payload)
         except ValidationError as exc:
@@ -36,9 +36,9 @@ class SiteExportRoutesMixin(ResponseMixin):
                                 for error in exc.errors(include_url=False, include_input=False))
             self._json({"ok": False, "message": message}, 400)
             return
-        self._log.info("Website export id=%s stage=validated mode=%s research=%s source_files=%s cap=%s",
-                       export_id, request.mode, request.include_research,
-                       request.include_source_files, request.max_chapter)
+        self._log.debug("Website export id=%s stage=validated mode=%s research=%s source_files=%s cap=%s",
+                        export_id, request.mode, request.include_research,
+                        request.include_source_files, request.max_chapter)
         expected = request.project_token
         try:
             with self._workspace_lock:
@@ -68,8 +68,6 @@ class SiteExportRoutesMixin(ResponseMixin):
                 **analysis_overrides,
                 **request.export_options().model_dump(exclude_defaults=True),
             )
-            self._log.info("Website export id=%s stage=zip_preparation duration_ms=%d",
-                           export_id, round((perf_counter() - started) * 1000))
             report = bundle.preflight() if preflight else None
             content = b"" if preflight else bundle.to_zip()
             if (report["sizes"]["zip_bytes"] if report is not None else len(content)) > MAX_ARTIFACT_BYTES:
@@ -95,17 +93,17 @@ class SiteExportRoutesMixin(ResponseMixin):
                 self._json({"ok": False, "message": "The selected project changed; reload before downloading"}, 409)
                 return
             if preflight:
-                self._log.info("Website export id=%s stage=preflight_prepared", export_id)
+                self._log.debug("Website export id=%s stage=preflight_prepared duration_ms=%d",
+                                export_id, round((perf_counter() - started) * 1000))
                 self._json({"ok": True, "preflight": report})
                 return
             filename = slugify(bundle.manifest["project"]["title"]) + "-reading-website.zip"
-            self._log.info("Website export id=%s stage=prepared bytes=%d duration_ms=%d",
-                           export_id, len(content), round((perf_counter() - started) * 1000))
             sent = self._send(200, content, "application/zip",
                               headers={"Content-Disposition": f'attachment; filename="{filename}"',
                                        "X-Lixity-Export-ID": export_id})
-            self._log.log(INFO if sent else WARNING, "Website export id=%s stage=%s",
-                          export_id, "body_written" if sent else "client_disconnected")
+            self._log.log(INFO if sent else WARNING, "Website export id=%s stage=%s bytes=%d duration_ms=%d",
+                          export_id, "body_written" if sent else "client_disconnected",
+                          len(content), round((perf_counter() - started) * 1000))
 
     def _handle_site_export_report(self, payload: dict[str, Any]) -> None:
         try:

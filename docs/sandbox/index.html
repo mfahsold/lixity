@@ -21,110 +21,77 @@
 <script type="application/ld+json">
 {"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity Browser-Sandbox: Absatz lokal prüfen", "url": "https://mfahsold.github.io/lixity/sandbox/index.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/sandbox/index.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1942}, "inLanguage": ["de", "en"], "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}}
 </script>
+<link rel="stylesheet" href="../assets/design-tokens.css"/>
+<link rel="stylesheet" href="../assets/components.css"/>
 <style>
   :root {
-    color-scheme: light dark;
-    --bg: #f7f6f2; --surface: #ffffff; --fg: #1b1e24; --muted: #5b6370;
-    --line: #e2dfd7; --accent: #2f5aa8; --accent-soft: rgba(47,90,168,.12);
-    --echo-bg: rgba(217,119,6,.18); --echo-fg: #92400e;
-    --ind-bg: rgba(47,90,168,.14); --ind-fg: #1e40af;
-    --staccato: #0f766e; --medium: #2f5aa8; --cascade: #b45309;
-    --ok: #15803d;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #11141a; --surface: #181c24; --fg: #eceae4; --muted: #9aa3b2;
-      --line: #2a303c; --accent: #7aa2f7; --accent-soft: rgba(122,162,247,.16);
-      --echo-bg: rgba(245,158,11,.22); --echo-fg: #fcd34d;
-      --ind-bg: rgba(122,162,247,.22); --ind-fg: #bfdbfe;
-      --staccato: #2dd4bf; --medium: #7aa2f7; --cascade: #fbbf24;
-      --ok: #4ade80;
-    }
+    --echo-bg: var(--past-light); --echo-fg: var(--past-ink);
+    --ind-bg: var(--accent-light); --ind-fg: var(--accent);
+    --staccato: var(--present-ink); --medium: var(--accent); --cascade: var(--style-space-threshold);
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: var(--bg); color: var(--fg); line-height: 1.6;
+    margin: 0; font-family: var(--font);
+    background: var(--bg); color: var(--fg); line-height: var(--line-body);
   }
+  a { color: var(--accent); }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 56px; }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
   .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--fg); }
   nav { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  nav a, .btn {
-    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
-    background: var(--surface); color: var(--fg); text-decoration: none;
-    font-size: .85rem; cursor: pointer; font-family: inherit;
-    transition: border-color .15s ease, background .15s ease;
-  }
-  .btn:hover, nav a:hover { border-color: var(--accent); }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-sm { padding: 4px 10px; font-size: .78rem; }
-  h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 8px; line-height: 1.25; }
+  h1 { font-family: var(--font-title); font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 var(--space-2); line-height: 1.25; }
   .lead { color: var(--muted); margin: 0 0 20px; max-width: 74ch; }
   .privacy-pill {
-    display: inline-block; padding: 4px 10px; border-radius: 999px;
-    background: var(--accent-soft); color: var(--accent); font-size: .8125rem; font-weight: 600; margin-bottom: 12px;
+    display: inline-block; padding: var(--space-1) .625rem; border-radius: var(--radius-pill);
+    background: var(--accent-light); color: var(--accent); font-size: var(--text-note); font-weight: var(--weight-semibold); margin-bottom: var(--space-3);
   }
-  .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; align-items: start; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-  .card {
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: 14px; padding: 16px;
-  }
-  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: var(--section-gap); align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .presets, .editor-actions, .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
   .editor-wrap { position: relative; }
-  .editor-wrap.drag-over textarea { border-color: var(--accent); background: var(--accent-soft); }
+  .editor-wrap.drag-over textarea { border-color: var(--accent); background: var(--accent-light); }
   textarea {
-    width: 100%; min-height: 330px; padding: 14px; border-radius: 10px;
+    width: 100%; min-height: 330px; padding: .875rem; border-radius: var(--radius-sm);
     border: 1px solid var(--line); background: var(--bg); color: var(--fg);
     font-family: Georgia, "Times New Roman", serif; font-size: 1.03rem; line-height: 1.65; resize: vertical;
   }
-  .editor-foot {
-    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-    gap: 10px; margin-top: 10px; font-size: .8rem; color: var(--muted);
-  }
-  .editor-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
-  .kpi { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .kpis, .supplementary-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .kpi { padding: .625rem var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); }
   .kpi-val { font-size: 1.3rem; font-weight: 700; display: block; line-height: 1.2; }
   .kpi-lbl { font-size: .78rem; color: var(--muted); }
   .voice-box {
-    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
-    margin-bottom: 14px; font-size: .84rem;
+    padding: .625rem var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg);
+    margin-top: var(--space-3); font-size: var(--text-control);
   }
   .voice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
   .voice-cell strong { display: block; font-size: 1.05rem; }
   .voice-cell span { color: var(--muted); font-size: .76rem; }
-  .bar-wrap { margin: 12px 0 14px; }
-  .bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); }
+  .bar { display: flex; height: 10px; border-radius: var(--radius-pill); overflow: hidden; background: var(--line); }
   .seg-s { background: var(--staccato); }
   .seg-m { background: var(--medium); }
   .seg-c { background: var(--cascade); }
   .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .78rem; color: var(--muted); margin-top: 6px; }
   .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
-  .spark-wrap { margin: 12px 0 14px; }
-  .spark-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .spark-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-2); }
   .spark-note { font-size: .78rem; color: var(--muted); }
-  .spark-svg { width: 100%; height: 64px; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+  .spark-svg { width: 100%; height: 64px; display: block; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-1); }
   .spark-bar { cursor: pointer; transition: opacity .12s ease; }
   .spark-bar:hover { opacity: .8; }
   .echo-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .echo-chip {
-    padding: 3px 10px; border-radius: 999px; font-size: .8rem; border: 1px solid transparent;
+    padding: .1875rem .625rem; border-radius: var(--radius-pill); font-size: var(--text-note); border: 1px solid transparent;
     background: var(--echo-bg); color: var(--echo-fg); font-weight: 600; cursor: pointer; font-family: inherit;
   }
   .echo-chip.active { border-color: var(--echo-fg); box-shadow: 0 0 0 2px var(--echo-bg); }
-  .filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 8px; align-items: center; }
   .preview {
-    padding: 12px; border-radius: 10px; background: var(--bg);
+    padding: var(--space-3); border-radius: var(--radius-sm); background: var(--bg);
     border: 1px solid var(--line); font-family: Georgia, "Times New Roman", serif;
     font-size: .95rem; max-height: 250px; overflow: auto; white-space: pre-wrap;
   }
-  mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: 4px; }
+  mark.echo { background: var(--echo-bg); color: var(--echo-fg); padding: 0 3px; border-radius: var(--radius-xs); }
   mark.echo.focus-echo { outline: 2px solid var(--echo-fg); }
-  mark.indirect { background: var(--ind-bg); color: var(--ind-fg); padding: 0 3px; border-radius: 4px; }
-  .sticky-sent { text-decoration: underline dotted #d97706; text-underline-offset: 3px; }
+  mark.indirect { background: var(--ind-bg); color: var(--ind-fg); padding: 0 3px; border-radius: var(--radius-xs); }
+  .sticky-sent { text-decoration: underline dotted var(--style-space-threshold); text-underline-offset: 3px; }
   .preview.hide-echo mark.echo { background: transparent; color: inherit; padding: 0; }
   .preview.hide-indirect mark.indirect { background: transparent; color: inherit; padding: 0; }
   .preview.hide-sticky .sticky-sent { text-decoration: none; }
@@ -133,10 +100,10 @@
   .preview.direct-speech .dlg-seg { opacity: 1; font-weight: 500; }
   .compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 12px; }
   @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
-  .compare-col { padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: .88rem; }
+  .compare-col { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg); font-size: var(--text-control); }
   .compare-col h3 { margin: 0 0 6px; font-size: .95rem; }
   .compare-col ul { margin: 0; padding-left: 18px; color: var(--muted); }
-  .copy-ok { color: var(--ok); font-weight: 600; font-size: .8rem; }
+  #analysis-about { margin-top: var(--section-gap); }
   footer { margin-top: 24px; font-size: .875rem; color: var(--muted); }
 </style>
 </head>
@@ -145,111 +112,118 @@
   <header>
     <a class="brand" href="../index-de.html" id="home-link">Lixity</a>
     <nav>
-      <a href="../demo/report.html" id="nav-demo">Vollständiger Demo-Bericht</a>
-      <a href="../guides/installation.html" id="nav-install">Lokal installieren</a>
-      <button type="button" class="btn" id="lang-toggle">EN</button>
+      <a class="ctl ctl-sm" href="../demo/report.html" id="nav-demo">Vollständiger Demo-Bericht</a>
+      <a class="ctl ctl-sm" href="../guides/installation.html" id="nav-install">Lokal installieren</a>
+      <button type="button" class="ctl ctl-sm" id="lang-toggle" lang="en" aria-label="Switch to English">EN</button>
     </nav>
   </header>
 
   <main>
   <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
-  <h1 id="title">Eigenen Absatz direkt im Browser prüfen</h1>
-  <p class="lead" id="lead">Füge eine Szene ein oder lade eine lokale <code>.txt</code>- oder <code>.md</code>-Datei. Sofort siehst du Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, indirekte Rede und lokale Wortechos. Es gibt keine „Qualitätsnote“: Jede stilistische Entscheidung bleibt bei dir.</p>
+  <h1 id="title">Rhythmus und Wiederholungen im Text prüfen</h1>
+  <p class="lead" id="lead">Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Kürze einen langen Satz und beobachte, wie sich sein Balken unter „Satz für Satz“ verändert.</p>
 
   <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
   <div class="grid">
-    <div class="card">
+    <section class="panel" aria-labelledby="editor-title">
+      <h2 id="editor-title">Text zum Ausprobieren</h2>
       <div class="presets">
-        <span id="preset-lbl" style="font-size:.85rem;color:var(--muted);">Beispiele:</span>
-        <button type="button" class="btn" id="preset-de" data-preset="effi-briest">Effi Briest · Kap. 7</button>
-        <button type="button" class="btn" id="preset-en" data-preset="pride-prejudice">Pride &amp; Prejudice · Dialog</button>
-        <button type="button" class="btn" id="preset-draft" data-preset="rough-draft">Rohentwurf (Echos &amp; klebrige Sätze)</button>
-        <button type="button" class="btn" id="preset-clear">Leeren</button>
+        <span id="preset-lbl" class="ctl-label">Beispiele</span>
+        <button type="button" class="ctl ctl-sm" id="preset-de" data-preset="effi-briest"><cite lang="de">Effi Briest</cite></button>
+        <button type="button" class="ctl ctl-sm" id="preset-en" data-preset="pride-prejudice"><cite lang="en">Pride &amp; Prejudice</cite></button>
+        <button type="button" class="ctl ctl-sm" id="preset-draft" data-preset="rough-draft">Rohentwurf</button>
+        <button type="button" class="ctl ctl-sm" id="preset-clear">Leeren</button>
       </div>
+      <p class="panel-guide" id="draft-guide">Wähle „Rohentwurf“ und dann „flur“ unter „Wiederholte Wörter“. Die Vorschau zeigt dir die Fundstellen im Text.</p>
       <div class="editor-wrap" id="editor-wrap">
-        <textarea id="input" aria-label="Manuskript-Absatz" placeholder="Text hier einfügen oder eine .txt-/.md-Datei ablegen…"></textarea>
+        <textarea id="input" aria-labelledby="editor-title" placeholder="Text hier einfügen oder eine .txt-/.md-Datei ablegen…"></textarea>
       </div>
-      <div class="editor-foot">
-        <span id="drop-hint">Tipp: Du kannst auch eine lokale <code>.txt</code>- oder <code>.md</code>-Datei hier ablegen.</span>
-        <div class="editor-actions">
-          <input type="file" id="file-input" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden/>
-          <button type="button" class="btn btn-sm" id="file-btn">.txt / .md öffnen</button>
-          <button type="button" class="btn btn-sm" id="copy-md-btn">Bericht kopieren</button>
-          <span class="copy-ok" id="copy-status" role="status" aria-live="polite"></span>
-        </div>
+      <div class="editor-actions">
+        <input type="file" id="file-input" accept=".txt,.md,.markdown,text/plain,text/markdown" hidden/>
+        <button type="button" class="ctl ctl-sm" id="file-btn">.txt / .md öffnen</button>
+        <button type="button" class="ctl ctl-sm" id="copy-md-btn">Bericht kopieren</button>
+        <span class="ctl-status ok" id="copy-status" role="status" aria-live="polite"></span>
       </div>
-    </div>
+    </section>
 
-    <div class="card">
+    <section class="panel" aria-labelledby="results-title">
+      <h2 id="results-title">Text im Überblick</h2>
       <div class="kpis">
         <div class="kpi"><span class="kpi-val" id="k-words">0</span><span class="kpi-lbl" id="l-words">Wörter</span></div>
         <div class="kpi"><span class="kpi-val" id="k-sents">0</span><span class="kpi-lbl" id="l-sents">Sätze</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Ø Satzlänge (ASL)</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Dialoganteil</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Satzlängen-Streuung (asl_cv)</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Klebrige Sätze (≥ 45 %)</span></div>
-        <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Indirekte Rede</span></div>
-      </div>
-
-      <div class="voice-box">
-        <strong id="voice-title" style="font-size:.85rem;">Stimmenkontrast: Erzählprosa vs. Dialog</strong>
-        <div class="voice-grid">
-          <div class="voice-cell"><strong id="v-narration">–</strong><span id="vl-narration">Ø Prosa-Satz</span></div>
-          <div class="voice-cell"><strong id="v-dialogue">–</strong><span id="vl-dialogue">Ø Dialog-Satz</span></div>
-          <div class="voice-cell"><strong id="v-contrast">–</strong><span id="vl-contrast">Kontrast (Δ)</span></div>
-        </div>
+        <div class="kpi"><span class="kpi-val" id="k-asl">–</span><span class="kpi-lbl" id="l-asl">Wörter pro Satz im Schnitt</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-dlg">–</span><span class="kpi-lbl" id="l-dlg">Anteil der Wörter in Zitaten</span></div>
       </div>
 
       <div class="bar-wrap">
-        <strong style="font-size:.875rem;" id="rhythm-title">Satzlängen-Rhythmus</strong>
+        <strong id="rhythm-title">Kurze und lange Sätze</strong>
+        <p class="panel-guide" id="rhythm-guide">Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt dieser Wechsel zur Szene?</p>
         <div class="bar" aria-hidden="true">
           <div class="seg-s" id="bar-s" style="width:0%"></div>
           <div class="seg-m" id="bar-m" style="width:0%"></div>
           <div class="seg-c" id="bar-c" style="width:0%"></div>
         </div>
         <div class="legend">
-          <span><span class="dot" style="background:var(--staccato)"></span><span id="leg-s">Kurz (≤ 7 W): 0</span></span>
-          <span><span class="dot" style="background:var(--medium)"></span><span id="leg-m">Mittel (8–24 W): 0</span></span>
-          <span><span class="dot" style="background:var(--cascade)"></span><span id="leg-c">Lang (≥ 25 W): 0</span></span>
+          <span><span class="dot" style="background:var(--staccato)"></span><span id="leg-s">Kurz (≤ 7 Wörter) · 0</span></span>
+          <span><span class="dot" style="background:var(--medium)"></span><span id="leg-m">Mittel (8–24 Wörter) · 0</span></span>
+          <span><span class="dot" style="background:var(--cascade)"></span><span id="leg-c">Lang (≥ 25 Wörter) · 0</span></span>
         </div>
       </div>
 
       <div class="spark-wrap">
         <div class="spark-head">
-          <strong style="font-size:.875rem;" id="spark-title">Satz-für-Satz-Puls</strong>
-          <span class="spark-note" id="spark-hover">Balken antippen oder überfahren für Satzlänge</span>
+          <strong id="spark-title">Satz für Satz</strong>
+          <span class="spark-note" id="spark-hover">Je höher der Balken, desto länger der Satz.</span>
         </div>
-        <svg class="spark-svg" id="spark-svg" viewBox="0 0 400 56" preserveAspectRatio="none" role="img" aria-label="Satzlängen-Puls"></svg>
+        <svg class="spark-svg" id="spark-svg" viewBox="0 0 400 56" preserveAspectRatio="none" role="img" aria-labelledby="spark-title" aria-describedby="spark-hover"></svg>
       </div>
 
       <div>
-        <strong style="font-size:.875rem;" id="echo-title">Lokale Wortechos (≥ 3× · klickbar)</strong>
+        <strong id="echo-title">Wiederholte Wörter</strong>
+        <p class="panel-guide" id="echo-guide">Hier stehen Wörter, die im Text mindestens dreimal vorkommen, etwa Namen oder Beschreibungen. Wähle ein Wort, um zu sehen, ob die Wiederholung an diesen Stellen beabsichtigt ist.</p>
         <div class="echo-list" id="echo-list"></div>
       </div>
 
-      <div class="filter-bar" role="group" aria-label="Markierungen filtern">
-        <button type="button" class="btn btn-sm" id="direct-speech-btn" aria-pressed="false">Nur Dialoge [D]</button>
-        <button type="button" class="btn btn-sm" id="flt-echo" aria-pressed="true">Wortechos</button>
-        <button type="button" class="btn btn-sm" id="flt-sticky" aria-pressed="true">Klebrige Sätze</button>
-        <button type="button" class="btn btn-sm" id="flt-indirect" aria-pressed="true">Indirekte Rede</button>
+      <div class="filter-bar" id="preview-controls" role="group" aria-label="Markierungen filtern">
+        <button type="button" class="ctl ctl-sm" id="direct-speech-btn" aria-pressed="false" aria-controls="preview">Nur Dialoge [D]</button>
+        <button type="button" class="ctl ctl-sm" id="flt-echo" aria-pressed="true" aria-controls="preview">Wiederholungen</button>
+        <button type="button" class="ctl ctl-sm" id="flt-sticky" aria-pressed="true" aria-controls="preview">Viele Funktionswörter</button>
+        <button type="button" class="ctl ctl-sm" id="flt-indirect" aria-pressed="true" aria-controls="preview">Indirekte Rede</button>
       </div>
 
       <div class="preview" id="preview"></div>
       <div class="preview-legend" id="preview-legend">
-        <span><mark class="echo" id="leg-echo">Wortecho</mark></span>
-        <span><mark class="indirect" id="leg-indirect">Indirekte Rede</mark></span>
-        <span><span class="sticky-sent" id="leg-sticky">Klebriger Satz (≥ 45 %)</span></span>
+        <span><mark class="echo" id="leg-echo">Wiederholtes Wort</mark></span>
+        <span><mark class="indirect" id="leg-indirect">Hinweis auf indirekte Rede</mark></span>
+        <span><span class="sticky-sent" id="leg-sticky">Viele Funktionswörter</span></span>
       </div>
-    </div>
+      <div class="supplementary-kpis">
+        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Sätze mit vielen Funktionswörtern</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Hinweise auf indirekte Rede</span></div>
+      </div>
+      <details class="panel-disclosure" id="more-measurements">
+        <summary id="more-title">Weitere Werte zu Rhythmus und Dialog</summary>
+        <p class="panel-guide" id="more-guide">Bei höherer Streuung liegen die Satzlängen weiter auseinander. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Längengruppen verteilen.</p>
+        <div class="supplementary-kpis">
+          <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Streuung der Satzlängen</span></div>
+          <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
+        </div>
+        <div class="voice-box">
+          <strong id="voice-title">Wörter pro Satz im Schnitt</strong>
+          <div class="voice-grid">
+            <div class="voice-cell"><strong id="v-narration">–</strong><span id="vl-narration">Erzähltext</span></div>
+            <div class="voice-cell"><strong id="v-dialogue">–</strong><span id="vl-dialogue">Zitate</span></div>
+            <div class="voice-cell"><strong id="v-contrast">–</strong><span id="vl-contrast">Zitate minus Erzähltext</span></div>
+          </div>
+        </div>
+      </details>
+    </section>
   </div>
 
-  <section class="card" style="margin-top:18px;" aria-label="Hinweise zur Analyse">
-    <h2 style="font-size:1.05rem;margin:0 0 8px;" id="about-title">Was diese Browser-Sandbox direkt prüft und was Lixity lokal ergänzt</h2>
-    <p style="margin:0 0 8px;color:var(--muted);font-size:.92rem;" id="about-body">
-      Alle Berechnungen laufen deterministisch im Browser, sodass kein Text deinen Rechner verlässt. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Sätze ≤ 7 Wörter, mittlere 8–24 Wörter, lange ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa sowie <strong>Streuung (<code>asl_cv</code>)</strong> und <strong>Längen-Entropie</strong> gegen eintöniges Tempo. Dazu markiert die Vorschau <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) und <strong>lokale Wortechos</strong>.
-    </p>
+  <section class="panel" id="analysis-about" aria-labelledby="about-title">
+    <h2 id="about-title">Was die Markierungen zeigen</h2>
+    <p class="panel-guide" id="about-body">Die Vorschau unterstreicht Sätze ab acht Wörtern, wenn mindestens 45 % davon Wörter wie „und“, „sie“ oder „war“ sind. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und entscheide, ob sie so klingen, wie du es möchtest.</p>
     <div class="compare-grid">
       <div class="compare-col">
         <h3 id="cmp-sandbox-title">Browser-Sandbox (diese Seite)</h3>
@@ -305,27 +279,31 @@
   ]);
   const I18N = {
     de: {
-      home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN',
+      home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN', switchLanguage: 'Switch to English',
       pill: '100 % lokal im Browser · Kein Server-Upload',
-      title: 'Eigenen Absatz direkt im Browser prüfen',
-      lead: 'Füge eine Szene ein oder lade eine lokale .txt- oder .md-Datei. Sofort siehst du Satzlängen-Rhythmus, Stimmenkontrast, Dialoganteil, indirekte Rede und lokale Wortechos. Es gibt keine „Qualitätsnote“: Jede stilistische Entscheidung bleibt bei dir.',
+      title: 'Rhythmus und Wiederholungen im Text prüfen',
+      lead: 'Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Kürze einen langen Satz und beobachte, wie sich sein Balken unter „Satz für Satz“ verändert.',
+      editorTitle: 'Text zum Ausprobieren', resultsTitle: 'Text im Überblick',
+      draftGuide: 'Wähle „Rohentwurf“ und dann „flur“ unter „Wiederholte Wörter“. Die Vorschau zeigt dir die Fundstellen im Text.',
       placeholder: 'Text hier einfügen oder eine .txt-/.md-Datei ablegen…',
-      emptyPreview: 'Füge links Text ein oder wähle oben ein Beispiel, um Markierungen für Wortechos, klebrige Sätze und indirekte Rede zu sehen.',
-      preset: 'Beispiele:', draftBtn: 'Rohentwurf (Echos & klebrige Sätze)', clear: 'Leeren',
-      dropHint: 'Tipp: Du kannst auch eine lokale .txt- oder .md-Datei hier ablegen.',
+      emptyPreview: 'Füge Text ein oder wähle ein Beispiel, um die Markierungen zu sehen.',
+      preset: 'Beispiele', draftBtn: 'Rohentwurf', clear: 'Leeren',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
-      directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wortechos', fltSticky: 'Klebrige Sätze', fltIndirect: 'Indirekte Rede',
-      words: 'Wörter', sents: 'Sätze', asl: 'Ø Satzlänge (ASL)', dlg: 'Dialoganteil',
-      cv: 'Satzlängen-Streuung (asl_cv)', entropy: 'Längen-Entropie (Bit)',
-      sticky: 'Klebrige Sätze (≥ 45 %)', indirect: 'Indirekte Rede',
-      voiceTitle: 'Stimmenkontrast: Erzählprosa vs. Dialog', vNar: 'Ø Prosa-Satz', vDlg: 'Ø Dialog-Satz', vCon: 'Kontrast (Δ)', wordUnit: ' W',
-      rhythm: 'Satzlängen-Rhythmus', s: 'Kurz (≤ 7 W)', m: 'Mittel (8–24 W)', c: 'Lang (≥ 25 W)',
-      sparkTitle: 'Satz-für-Satz-Puls', sparkHover: 'Balken antippen oder überfahren für Satzlänge',
-      sparkWords: 'Wörter',
-      echoTitle: 'Lokale Wortechos (≥ 3× · klickbar)', noneEcho: 'Keine auffälligen Wortwiederholungen (≥ 3×) im Absatz.',
-      legEcho: 'Wortecho', legIndirect: 'Indirekte Rede', legSticky: 'Klebriger Satz (≥ 45 %)',
-      aboutTitle: 'Was diese Browser-Sandbox direkt prüft und was Lixity lokal ergänzt',
-      aboutHtml: 'Alle Berechnungen laufen deterministisch im Browser, sodass kein Text deinen Rechner verlässt. Du siehst sofort den <strong>Satzlängen-Rhythmus</strong> (kurze Sätze ≤ 7 Wörter, mittlere 8–24 Wörter, lange ≥ 25 Wörter), den <strong>Stimmenkontrast</strong> zwischen Dialog und Erzählprosa sowie <strong>Streuung (<code>asl_cv</code>)</strong> und <strong>Längen-Entropie</strong> gegen eintöniges Tempo. Dazu markiert die Vorschau <strong>klebrige Sätze</strong> (≥ 45 % Funktionswörter ab 8 Wörtern), <strong>indirekte Rede</strong> (inkl. Konjunktiv I) und <strong>lokale Wortechos</strong>.',
+      previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Viele Funktionswörter', fltIndirect: 'Indirekte Rede',
+      words: 'Wörter', sents: 'Sätze', asl: 'Wörter pro Satz im Schnitt', dlg: 'Anteil der Wörter in Zitaten',
+      cv: 'Streuung der Satzlängen', entropy: 'Längen-Entropie (Bit)',
+      sticky: 'Sätze mit vielen Funktionswörtern', indirect: 'Hinweise auf indirekte Rede',
+      moreTitle: 'Weitere Werte zu Rhythmus und Dialog',
+      moreGuide: 'Bei höherer Streuung liegen die Satzlängen weiter auseinander. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Längengruppen verteilen.',
+      voiceTitle: 'Wörter pro Satz im Schnitt', vNar: 'Erzähltext', vDlg: 'Zitate', vCon: 'Zitate minus Erzähltext',
+      rhythm: 'Kurze und lange Sätze', s: 'Kurz (≤ 7 Wörter)', m: 'Mittel (8–24 Wörter)', c: 'Lang (≥ 25 Wörter)',
+      rhythmGuide: 'Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt dieser Wechsel zur Szene?',
+      sparkTitle: 'Satz für Satz', sparkHover: 'Je höher der Balken, desto länger der Satz.', sparkSentence: 'Satz', sparkWords: 'Wörter',
+      echoTitle: 'Wiederholte Wörter', noneEcho: 'Keine passenden Wiederholungen gefunden.',
+      echoGuide: 'Hier stehen Wörter, die im Text mindestens dreimal vorkommen, etwa Namen oder Beschreibungen. Wähle ein Wort, um zu sehen, ob die Wiederholung an diesen Stellen beabsichtigt ist.',
+      legEcho: 'Wiederholtes Wort', legIndirect: 'Hinweis auf indirekte Rede', legSticky: 'Viele Funktionswörter',
+      aboutTitle: 'Was die Markierungen zeigen',
+      about: 'Die Vorschau unterstreicht Sätze ab acht Wörtern, wenn mindestens 45 % davon Wörter wie „und“, „sie“ oder „war“ sind. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und entscheide, ob sie so klingen, wie du es möchtest.',
       cmpSandboxTitle: 'Browser-Sandbox (diese Seite)',
       cmpSandbox: [
         'Einzelne Szene oder lokale .txt/.md-Datei sofort prüfen',
@@ -345,27 +323,31 @@
       legal: 'Impressum', legalHref: '../index-de.html#impressum'
     },
     en: {
-      home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE',
+      home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE', switchLanguage: 'Auf Deutsch wechseln',
       pill: '100% local in your browser · Zero server upload',
-      title: 'Test your own passage right in the browser',
-      lead: 'Paste a scene or drop a local .txt or .md file to inspect sentence-length rhythm, voice contrast, dialogue share, indirect speech, and nearby word echoes right away. There is no quality score: every stylistic choice stays yours.',
+      title: 'Explore rhythm and repetition in a passage',
+      lead: 'Edit the sample or open a scene of your own as a .txt or .md file. Shorten a long sentence and watch its bar change under “Sentence by sentence”.',
+      editorTitle: 'Passage to try', resultsTitle: 'Passage at a glance',
+      draftGuide: 'Choose “German draft”, then select “flur” under “Repeated words” to see each occurrence in the preview.',
       placeholder: 'Paste your passage here or drop a .txt/.md file…',
-      emptyPreview: 'Paste text on the left or pick an example above to see highlights for word echoes, sticky sentences, and indirect speech.',
-      preset: 'Examples:', draftBtn: 'Rough draft (echoes & glue)', clear: 'Clear',
-      dropHint: 'Tip: You can also drop a local .txt or .md file here.',
+      emptyPreview: 'Paste text or choose an example to see highlights.',
+      preset: 'Examples', draftBtn: 'German draft', clear: 'Clear',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
-      directSpeech: 'Dialogue only [D]', fltEcho: 'Word echoes', fltSticky: 'Sticky sentences', fltIndirect: 'Indirect speech',
-      words: 'Words', sents: 'Sentences', asl: 'Avg. sentence (ASL)', dlg: 'Dialogue share',
-      cv: 'Length variation (asl_cv)', entropy: 'Length entropy (bit)',
-      sticky: 'Sticky sentences (≥ 45%)', indirect: 'Indirect speech',
-      voiceTitle: 'Voice contrast: narration vs. dialogue', vNar: 'Avg. narration', vDlg: 'Avg. dialogue', vCon: 'Contrast (Δ)', wordUnit: ' w',
-      rhythm: 'Sentence-length rhythm', s: 'Short (≤ 7 w)', m: 'Medium (8–24 w)', c: 'Long (≥ 25 w)',
-      sparkTitle: 'Sentence-by-sentence pulse', sparkHover: 'Hover or tap a bar for sentence length',
-      sparkWords: 'words',
-      echoTitle: 'Nearby word echoes (≥ 3× · clickable)', noneEcho: 'No repeated content words (≥ 3×) in this passage.',
-      legEcho: 'Word echo', legIndirect: 'Indirect speech', legSticky: 'Sticky sentence (≥ 45%)',
-      aboutTitle: 'What this browser sandbox checks and what local Lixity adds',
-      aboutHtml: 'All calculations run deterministically in your browser, so no text ever leaves your device. You immediately see <strong>sentence-length rhythm</strong> (short ≤ 7 words, medium 8–24, long ≥ 25), <strong>voice contrast</strong> between dialogue and narration, and <strong>variation (<code>asl_cv</code>)</strong> plus <strong>Shannon length entropy</strong> to spot flat pacing. The preview also highlights <strong>sticky sentences</strong> (≥ 45% function words in sentences of 8+ words), <strong>indirect speech</strong> (including German Konjunktiv I), and <strong>nearby word echoes</strong>.',
+      previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Many function words', fltIndirect: 'Indirect speech',
+      words: 'Words', sents: 'Sentences', asl: 'Average words per sentence', dlg: 'Share of words in quotes',
+      cv: 'Variation in sentence length', entropy: 'Length entropy (bits)',
+      sticky: 'Sentences with many function words', indirect: 'Possible indirect speech',
+      moreTitle: 'More about rhythm and dialogue',
+      moreGuide: 'Higher variation means sentence lengths are farther apart. Entropy increases when sentences are distributed more evenly across the three length groups.',
+      voiceTitle: 'Average words per sentence', vNar: 'Narration', vDlg: 'Quotes', vCon: 'Quotes minus narration',
+      rhythm: 'Short and long sentences', s: 'Short (≤ 7 words)', m: 'Medium (8–24 words)', c: 'Long (≥ 25 words)',
+      rhythmGuide: 'The bar shows how many of your sentences fall into each length group. Does the mix fit the scene?',
+      sparkTitle: 'Sentence by sentence', sparkHover: 'A taller bar means a longer sentence.', sparkSentence: 'Sentence', sparkWords: 'words',
+      echoTitle: 'Repeated words', noneEcho: 'No matching repetitions found.',
+      echoGuide: 'These words appear at least three times in the passage. Select a word to see where it repeats and decide whether it belongs there.',
+      legEcho: 'Repeated word', legIndirect: 'Possible indirect speech', legSticky: 'Many function words',
+      aboutTitle: 'What the highlights show',
+      about: 'The preview underlines sentences of at least eight words when at least 45% are words like “and”, “she” or “was”. Blue highlights show possible indirect speech, such as “she said that”. Read each marked passage in context and decide whether it sounds the way you want.',
       cmpSandboxTitle: 'Browser sandbox (this page)',
       cmpSandbox: [
         'Inspect a single scene or local .txt/.md file immediately',
@@ -435,11 +417,12 @@
       rect.setAttribute('class', 'spark-bar');
       rect.setAttribute('fill', d.n <= 7 ? 'var(--staccato)' : (d.n >= 25 ? 'var(--cascade)' : 'var(--medium)'));
       const title = document.createElementNS(ns, 'title');
-      title.textContent = `S${i + 1}: ${d.n} ${t.sparkWords} — ${d.text.slice(0, 70)}${d.text.length > 70 ? '…' : ''}`;
+      const length = `${t.sparkSentence} ${i + 1} · ${d.n} ${t.sparkWords}`;
+      title.textContent = `${length} — ${d.text.slice(0, 70)}${d.text.length > 70 ? '…' : ''}`;
       rect.appendChild(title);
-      rect.addEventListener('mouseenter', () => {
-        el('spark-hover').textContent = `S${i + 1}: ${d.n} ${t.sparkWords}`;
-      });
+      const showLength = () => { el('spark-hover').textContent = length; };
+      rect.addEventListener('mouseenter', showLength);
+      rect.addEventListener('click', showLength);
       svg.appendChild(rect);
     });
   }
@@ -492,7 +475,7 @@
     el('v-narration').textContent = narAsl !== null ? narAsl.toFixed(1) : '–';
     el('v-dialogue').textContent = dlgAsl !== null ? dlgAsl.toFixed(1) : '–';
     el('v-contrast').textContent = (narAsl !== null && dlgAsl !== null)
-      ? ((dlgAsl - narAsl >= 0 ? '+' : '') + (dlgAsl - narAsl).toFixed(1) + I18N[lang].wordUnit)
+      ? ((dlgAsl - narAsl >= 0 ? '+' : '') + (dlgAsl - narAsl).toFixed(1))
       : '–';
 
     let indirectC = 0;
@@ -515,9 +498,9 @@
     el('bar-m').style.width = ((medC / totalS) * 100).toFixed(1) + '%';
     el('bar-c').style.width = ((longC / totalS) * 100).toFixed(1) + '%';
     const t = I18N[lang];
-    el('leg-s').textContent = t.s + ': ' + shortC;
-    el('leg-m').textContent = t.m + ': ' + medC;
-    el('leg-c').textContent = t.c + ': ' + longC;
+    el('leg-s').textContent = t.s + ' · ' + shortC.toLocaleString(lang);
+    el('leg-m').textContent = t.m + ' · ' + medC.toLocaleString(lang);
+    el('leg-c').textContent = t.c + ' · ' + longC.toLocaleString(lang);
     el('spark-hover').textContent = t.sparkHover;
     renderSparkline(sentDetails);
 
@@ -537,16 +520,19 @@
       span.textContent = t.noneEcho;
       list.append(span);
     } else {
-      echoes.forEach(([w, c]) => {
+      echoes.forEach(([w, c], index) => {
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'echo-chip' + (focusedEcho === w ? ' active' : '');
+        chip.setAttribute('aria-pressed', String(focusedEcho === w));
+        chip.setAttribute('aria-controls', 'preview');
         chip.textContent = w + ' ×' + c;
         chip.addEventListener('click', () => {
           focusedEcho = focusedEcho === w ? '' : w;
           analyze();
+          list.children[index]?.focus({preventScroll: true});
           const firstMark = el('preview').querySelector('mark.echo.focus-echo');
-          if (firstMark) firstMark.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+          if (firstMark) firstMark.scrollIntoView({block: 'nearest'});
         });
         list.append(chip);
       });
@@ -612,16 +598,21 @@
     el('nav-demo').textContent = t.demo;
     el('nav-install').textContent = t.install;
     el('lang-toggle').textContent = t.toggle;
+    el('lang-toggle').lang = t.toggle.toLowerCase();
+    el('lang-toggle').setAttribute('aria-label', t.switchLanguage);
     el('privacy-pill').textContent = t.pill;
     el('title').textContent = t.title;
     el('lead').textContent = t.lead;
+    el('editor-title').textContent = t.editorTitle;
+    el('results-title').textContent = t.resultsTitle;
+    el('draft-guide').textContent = t.draftGuide;
     input.placeholder = t.placeholder;
     el('preset-lbl').textContent = t.preset;
     el('preset-draft').textContent = t.draftBtn;
     el('preset-clear').textContent = t.clear;
-    el('drop-hint').textContent = t.dropHint;
     el('file-btn').textContent = t.openFile;
     el('copy-md-btn').textContent = t.copyMd;
+    el('preview-controls').setAttribute('aria-label', t.previewControls);
     el('direct-speech-btn').textContent = t.directSpeech;
     el('flt-echo').textContent = t.fltEcho;
     el('flt-sticky').textContent = t.fltSticky;
@@ -634,18 +625,22 @@
     el('l-entropy').textContent = t.entropy;
     el('l-sticky').textContent = t.sticky;
     el('l-indirect').textContent = t.indirect;
+    el('more-title').textContent = t.moreTitle;
+    el('more-guide').textContent = t.moreGuide;
     el('voice-title').textContent = t.voiceTitle;
     el('vl-narration').textContent = t.vNar;
     el('vl-dialogue').textContent = t.vDlg;
     el('vl-contrast').textContent = t.vCon;
     el('rhythm-title').textContent = t.rhythm;
+    el('rhythm-guide').textContent = t.rhythmGuide;
     el('spark-title').textContent = t.sparkTitle;
     el('echo-title').textContent = t.echoTitle;
+    el('echo-guide').textContent = t.echoGuide;
     el('leg-echo').textContent = t.legEcho;
     el('leg-indirect').textContent = t.legIndirect;
     el('leg-sticky').textContent = t.legSticky;
     el('about-title').textContent = t.aboutTitle;
-    el('about-body').innerHTML = t.aboutHtml;
+    el('about-body').textContent = t.about;
     el('cmp-sandbox-title').textContent = t.cmpSandboxTitle;
     el('cmp-local-title').textContent = t.cmpLocalTitle;
     el('cmp-sandbox-list').innerHTML = t.cmpSandbox.map(item => `<li>${esc(item)}</li>`).join('');

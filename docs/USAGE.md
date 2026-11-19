@@ -825,13 +825,19 @@ chapter style, paragraph profiles and work markers as data permits. See the
 [workspace manual](WORKSPACE.md) to move from measurements to passages.
 A compatible server provides explicit project actions and marker saves.
 
-**Unreleased native overview:** choose **Review passages**, **Compare chapters**
-or **Explore patterns**. The initial overview shows status and the next passage;
-one selected analysis section is visible at a time. Secondary choices expose
-the existing measurements and methods without replacing their saved state.
-Deep links reveal the corresponding section. Without JavaScript, the complete
-report remains readable. Archived-source reports identify their source-only
-reference and show pinned provenance separately from unverified context.
+**Unreleased native overview.** Choose **Review passages**, **Compare chapters**
+or **Explore patterns** based on the question you have about the manuscript.
+For example, compare words per sentence across chapters to locate a change in
+rhythm, then read those chapters in context. Selecting a style comparison cell
+opens the chapter's value and the manuscript's typical value. Expand **All
+measurements and comparisons** for the full table and statistical scores.
+
+The initial overview shows status and the next passage. One selected analysis
+section is visible at a time, and deep links reveal their target section.
+Inputs persist when switching sections. The complete standalone report remains
+readable without JavaScript.
+Archived-source reports identify their source-only reference and show pinned
+provenance separately from unverified context.
 If a projection cutoff is missing or invalid, the plot reports unavailability
 and keeps the chapter-value table; it does not substitute a default.
 
@@ -1688,10 +1694,10 @@ choice across reloads when local storage works; remove `lixity_debug` to restore
 the server/window default. With blocked storage, the choice lasts for the page.
 It does not change backend logging; restart with the intended server setting.
 
-Warnings/errors still log. API diagnostics show method, URL, status and duration
-without copying response bodies. Backend debug lines carry UTC timestamps;
-browser diagnostics do not. Logs may contain source text or paths, so review
-before sharing.
+The browser logs warnings and errors in normal use. Search timings and API
+diagnostics require debug mode. API diagnostics include the request method,
+route, status and duration. Backend debug lines carry UTC timestamps. Review
+logs before sharing them, since errors may mention local paths or source text.
 
 ## Dashboard workflow
 

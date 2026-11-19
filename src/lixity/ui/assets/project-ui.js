@@ -235,15 +235,6 @@ function processImportedFiles(files) {
 }
 
 document.addEventListener("click", function (event) {
-  var kpiToggle = event.target.closest("[data-kpi-toggle]");
-  if (kpiToggle) {
-    var target = document.getElementById(kpiToggle.dataset.kpiToggle);
-    if (target) {
-      target.hidden = !target.hidden;
-      kpiToggle.setAttribute("aria-expanded", target.hidden ? "false" : "true");
-    }
-    return;
-  }
   var manuscriptDrop = event.target.closest("#manuscript-dropzone");
   if (manuscriptDrop && event.target !== manuscriptInput) {
     if (manuscriptInput) manuscriptInput.click();
@@ -655,10 +646,9 @@ if (openChooser) {
     try {
       var response = await fetch(url);
       var data = await response.json();
-      LixityLog.api("GET", url, performance.now() - t0, response.status, data);
+      LixityLog.api("GET", url, performance.now() - t0, response.status);
       if (request !== chooseRequest || openChooser.hidden) return;
       if (!response.ok || !data.ok || typeof data.path !== "string" || !Array.isArray(data.entries)) {
-        LixityLog.warn("loadOpenChooser response issue:", data);
         if (path) {
           chooseMessage(uiLabel("wizard_choose_stale_path") || (data.message || uiLabel("wizard_unknown_error")), true);
           setTimeout(function() {

@@ -17,7 +17,9 @@ supports German, English, French, Spanish, Italian, Portuguese and Dutch;
 [language coverage](LOCALIZATION.md) explains differences in analysis support.
 For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
-[read-only English example](demo/report.html).
+[read-only English example](demo/report.html) to compare two chapters.
+The [browser sandbox](sandbox/index.html) lets you try the same questions
+with a short passage in German or English.
 
 Choose a task below. These manuals describe the **0.8.2** release. Use
 `lixity --version` and `lixity COMMAND --help` to check your installation; a later

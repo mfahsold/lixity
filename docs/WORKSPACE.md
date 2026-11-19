@@ -623,11 +623,16 @@ native navigation. Passage/chapter links navigate to the corresponding prose.
 These are review locations, not rankings or instructions to revise.
 
 The native overview keeps only the selected analysis section visible.
-**Review passages** exposes flagged passages and work markers. Under **Explore
-patterns**, choose **Manuscript measurements** for the grouped scope, rhythm,
-language, vocabulary and style values, then expand its summary. Its open state
-survives switching sections or returning to the manuscript. Standalone reports
-start with these values expanded, including without JavaScript.
+**Review passages** exposes flagged passages and work markers. Use **Compare
+chapters** to ask where the writing changes, for example where sentences get
+longer or more text appears in quotation marks. The chapter table gives average
+words per sentence and the percentage of words inside recognized quotation marks.
+Under **Explore patterns**, start with pacing, dialogue, sentence lengths or
+recurring word patterns to decide where to read more closely. Choose **Manuscript
+measurements** to see the grouped scope, rhythm and language values immediately.
+Expand the vocabulary and style disclosures for the additional measures.
+Standalone reports open the main measurements by default, including without
+JavaScript.
 
 The flagged-passages heading shows the list count. Use **Read passage** to
 inspect its context; author work markers remain explicit paragraph actions.
@@ -660,15 +665,19 @@ Keep the three comparison scopes separate:
 The [methods](METHODS.md) define these quantities; the
 [interpretation guide](guides/interpretation.html) explains their limits.
 
-Selecting a heatmap cell or a style-reference
-cutoff-hit count opens **Chapter measurements** before navigating. It explains
-the selected metric, its unit and chapter sample, alongside all 16 canonical
+**Unreleased chapter measurements.** Select a heatmap cell or a style-reference
+cutoff-hit count to see what the selected metric measures, its unit and sample,
+the chapter value and the manuscript's typical value (the median in the style
+reference).
+For example, if a chapter averages 8 words per sentence and the typical value is
+12, its sentences are shorter on average. Read the chapter to decide how that
+rhythm fits the scene. Expand **All measurements and comparisons** for all 16
 chapter values, manuscript medians, reference sample counts and z* values.
-Switching metrics keeps the same chapter and does not change manuscript marks.
-Each metric has its own unit and reference. `–` remains unavailable, never zero.
-**Read chapter** uses the existing manuscript navigation and selects only an
-applicable paragraph layer; chapter-only metrics clear the prior layer rather
-than substituting word marks. Closing or Escape returns focus to the trigger.
+Switching metrics keeps the same chapter and the current manuscript marks.
+A dash means the value is unavailable.
+**Read chapter** opens the chapter and selects the matching paragraph layer if
+one is available. Chapter-only metrics clear the prior layer. Closing or
+pressing Escape returns focus to the trigger.
 
 The chapter matrix shows `0` when a style
 comparison is available and no feature crosses its cutoff; `–` means that the

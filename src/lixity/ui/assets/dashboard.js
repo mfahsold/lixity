@@ -1314,7 +1314,7 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
     });
     var data = await res.json();
     if (!res.ok) data.ok = false;
-    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
+    LixityLog.api("POST", url, performance.now() - t0, res.status);
     if (acceptResponse && !acceptResponse()) return data;
     if (status) {
       status.className = "ctl-status " + (data.ok ? "ok" : "err");

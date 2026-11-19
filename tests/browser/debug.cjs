@@ -58,9 +58,11 @@ print(json.dumps({"html": html, "status": {"ok": True, "initialized": False,
       await page.evaluate(() => {
         window.LixityLog.debug('synthetic-disabled-diagnostic');
         window.LixityLog.info('synthetic-disabled-diagnostic');
+        window.LixityLog.perf('synthetic-disabled-diagnostic', 20);
         window.LixityLog.api('GET', '/synthetic-disabled-diagnostic', 1, 200);
       });
       assert.ok(!diagnostics.some(message => message.includes('synthetic-disabled-diagnostic')));
+      assert.ok(!diagnostics.some(message => message.includes('Manuscript Engine ready')));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({path: path.join(artifacts, `debug-disabled-${width}.png`)});
       await context.close();
@@ -89,8 +91,10 @@ print(json.dumps({"html": html, "status": {"ok": True, "initialized": False,
     page.on('console', message => responseLogs.push(message));
     await page.evaluate(() => window.LixityLog.api('GET', '/api/synthetic-source', 12.5, 200,
       {ok: true, text: 'SYNTHETIC_PRIVATE_RESPONSE', nested: {body: 'SYNTHETIC_PRIVATE_RESPONSE'}}));
+    await page.evaluate(() => window.LixityLog.perf('synthetic-search', 20));
     const loggedArguments = await Promise.all(responseLogs.flatMap(message => message.args().map(argument => argument.jsonValue())));
     assert.ok(responseLogs.some(message => message.text().includes('/api/synthetic-source -> 200 (12.5ms)')));
+    assert.ok(responseLogs.some(message => message.text().includes('synthetic-search (20.0ms)')));
     assert.ok(!JSON.stringify(loggedArguments).includes('SYNTHETIC_PRIVATE_RESPONSE'), 'API diagnostics must not retain response content');
     await context.close();
     const blocked = await open({serverDebug: true, blockedStorage: true});

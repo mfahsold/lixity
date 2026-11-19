@@ -138,7 +138,7 @@
         if (!response.ok) data.ok = false;
         data.http_status = response.status;
         if (window.LixityLog && typeof window.LixityLog.api === "function") {
-          window.LixityLog.api((options && options.method) || "GET", url, performance.now() - t0, response.status, data);
+          window.LixityLog.api((options && options.method) || "GET", url, performance.now() - t0, response.status);
         }
         return data;
       } catch (error) {

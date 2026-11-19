@@ -15,6 +15,7 @@ from .components import (
     help_badge,
     help_term,
     label,
+    panel_guide,
     panel_label,
 )
 
@@ -92,7 +93,7 @@ def settings_form(
         f'data-speech-qwen-guide="{esc(docs_url("USAGE.md#lixity-read-aloud"))}" '
         f'data-speech-coqui-guide="{esc(docs_url("USAGE.md#experimental-coqui-and-openvoice-audio-unreleased"))}">',
         f'<h3 class="settings-heading" id="settings-heading">{translated("settings")}</h3>',
-        f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}</p>',
+        panel_guide(translated("settings_intro"), element_id="settings-scope-help"),
         '<fieldset class="settings-section" id="settings-project-details">',
         f'<legend>{translated("settings_project_details")}</legend>',
         project_save_hint,
@@ -174,7 +175,7 @@ def settings_form(
     publication_parts = [
         '<details class="settings-advanced publication-settings" id="settings-publication">',
         f'<summary data-help="{pub_help}">{translated("publication_title")}</summary>',
-        f'<p class="panel-guide">{pub_help}</p>',
+        panel_guide(pub_help),
         '<p class="ctl-note"><a href="' + docs_url("guides/research-pdf.html#publication") + '" '
         f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
         checkbox_field(
@@ -212,7 +213,7 @@ def settings_form(
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
         f'<summary data-help="{translated("settings_thresholds_hint")}">{translated("settings_thresholds_optional")}</summary>',
-        f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
+        panel_guide(translated("settings_thresholds_hint")),
         '<div class="settings-grid">',
         _segmented_select(
             select_id="set-threshold-preset",
@@ -344,7 +345,7 @@ def site_publication_editor(
     return (
         '<details class="settings-advanced" id="settings-site-publications">'
         f'<summary id="settings-site-publications-summary" data-help="{esc(terms["publication_editor_hint"])}">{esc(terms["publication_editor_title"])}</summary>'
-        f'<p class="panel-guide">{esc(terms["publication_editor_hint"])}</p>'
+        + panel_guide(esc(terms["publication_editor_hint"]))
         + ("" if editable else f'<p class="ctl-note">{esc(terms["publication_editor_unavailable"])}</p>')
         + '<fieldset class="site-publication-editor" id="site-publication-editor" '
         f'data-initial="{attr_json(profiles)}" '
@@ -378,8 +379,8 @@ def register_editor(
     return (
         '<details class="settings-advanced" id="settings-registers">'
         f'<summary id="settings-registers-summary" data-help="{register_help}">{esc(label(labels, "register_title"))}</summary>'
-        f'<p class="panel-guide">{register_help}</p>'
-        f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
+        + panel_guide(register_help)
+        + f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>'
         + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
         + f'<fieldset class="register-editor" id="register-editor" data-initial="{attr_json(initial)}" '
         f'data-labels="{attr_json(terms)}" data-features="{attr_json(features)}" '

@@ -104,16 +104,18 @@ def modal_shell(
     footer_html: str = "",
     extra_attrs: str = "",
     title_tag: str = "h3",
+    focusable_title: bool = False,
     close_attrs: str = "data-close-modal",
 ) -> str:
     """Render the shared <dialog class="lixity-modal"> shell."""
     attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
     close_attr_str = f" {close_attrs.strip()}" if close_attrs.strip() else ""
+    title_focus = ' tabindex="-1"' if focusable_title else ""
     return (
         f'<dialog class="lixity-modal" id="{esc(modal_id, quote=True)}"{attrs} '
         f'closedby="any" aria-labelledby="{esc(title_id, quote=True)}">'
         '<div class="modal-card"><div class="modal-header">'
-        f'<{title_tag} id="{esc(title_id, quote=True)}">{title_html}</{title_tag}>'
+        f'<{title_tag} id="{esc(title_id, quote=True)}"{title_focus}>{title_html}</{title_tag}>'
         f'<button type="button" class="modal-close"{close_attr_str} '
         f'aria-label="{esc(close_label, quote=True)}" title="{esc(close_label, quote=True)}" '
         'aria-keyshortcuts="Escape">✕</button>'
@@ -315,6 +317,20 @@ def panel_start(panel_id: str, labels: Mapping[str, str] | None, title_key: str)
         f'<section class="panel" id="{esc(panel_id)}">'
         f'<h2>{esc(label(labels, title_key))}</h2>'
     )
+
+
+def panel_guide(text_html: str, *, element_id: str = "") -> str:
+    """Render a panel's visible reading guidance with trusted inline HTML."""
+    identifier = f' id="{esc(element_id)}"' if element_id else ""
+    return f'<p class="panel-guide"{identifier}>{text_html}</p>'
+
+
+def details_start(title_html: str, *, element_id: str = "", extra_class: str = "", opened: bool = False) -> str:
+    """Open a native panel disclosure with trusted inline summary HTML."""
+    identifier = f' id="{esc(element_id)}"' if element_id else ""
+    classes = f"panel-disclosure {extra_class}" if extra_class else "panel-disclosure"
+    state = " open" if opened else ""
+    return f'<details class="{esc(classes)}"{identifier}{state}><summary>{title_html}</summary>'
 
 
 def manuscript_pdf_controls(
@@ -521,6 +537,23 @@ def kpi(
     else:
         attrs = ' class="kpi"'
     return f"<div{attrs}><b>{value}</b><span>{label_text}</span>{bar_html}</div>"
+
+
+def kpi_row(tiles: Sequence[str], *, row_id: str = "") -> str:
+    """Lay out pre-rendered measurement tiles on the shared responsive grid."""
+    attrs = f' id="{esc(row_id)}"' if row_id else ""
+    return f'<div class="kpi-row"{attrs}>{"".join(tiles)}</div>'
+
+
+def kpi_group(tiles: Sequence[str], caption: str, *, hint: str = "", footer: str = "") -> str:
+    """Group measurement tiles under escaped display copy and optional rendered content."""
+    if not tiles:
+        return ""
+    note = panel_guide(esc(hint)) if hint else ""
+    return (
+        f'<div class="kpi-group"><div class="kpi-caption">{esc(caption)}</div>'
+        f'{note}{kpi_row(tiles)}{footer}</div>'
+    )
 
 
 def band_chart(

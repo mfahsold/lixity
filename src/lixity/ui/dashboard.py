@@ -49,14 +49,18 @@ from .components import (
     attr_json,
     chapter_link,
     checkbox_field,
+    details_start,
     help_term,
     kpi,
+    kpi_group,
+    kpi_row,
     label,
     license_terms,
     line_label,
     manuscript_pdf_controls,
     pane_ribbon,
     panel_formatters,
+    panel_guide,
     panel_start,
     product_details,
     project_header,
@@ -1198,7 +1202,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                if not controls else "") + '</div>'
         )
         parts.append(
-            f'<div id="analysis-review-body"><p class="panel-guide">{manuscript_intro}</p><div class="review-routes">'
+            '<div id="analysis-review-body">' + panel_guide(manuscript_intro) + '<div class="review-routes">'
         )
         if paragraphs:
             candidates = flagged
@@ -1559,28 +1563,27 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
         kpi(N(total_words, 0), help_term(labels, "corpus_words" if metrics is not None else "words", L("words_prose")), jump="#matrix"),
-        kpi(str(len(chapters)), L("chapter"), jump="#matrix"),
-        kpi(str(len(paragraphs)), L("paragraphs"), jump="#matrix"),
+        kpi(N(len(chapters), 0), L("chapter"), jump="#matrix"),
+        kpi(N(len(paragraphs), 0), L("paragraphs"), jump="#matrix"),
     ]
     rhythm_tiles: list[str] = []
     language_tiles: list[str] = []
     lexis_tiles: list[str] = []
-    lexis_secondary_tiles: list[str] = []
-    style_tiles: list[str] = []
+    style_details: list[str] = []
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
         scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
         rhythm_tiles.append(
             kpi(
                 N(metrics.asl, 2) if has_tokens else "–",
-                help_term(labels, "asl", "ASL"),
+                help_term(labels, "asl", L("measurement_words_per_sentence")),
                 jump="#dist",
             )
         )
         rhythm_tiles.append(
             kpi(
                 P(metrics.staccato_pct) if has_tokens else "–",
-                help_term(labels, "staccato", L("feat_staccato")),
+                L("measurement_short_sentences"),
                 bar=metrics.staccato_pct if has_tokens else None,
                 jump="#dist",
             )
@@ -1588,7 +1591,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         language_tiles.append(
             kpi(
                 P(metrics.dialog_ratio) if (has_tokens and metrics.clean_words) else "–",
-                help_term(labels, "dialogue", L("dialogue")),
+                help_term(labels, "dialogue", L("measurement_quoted_words")),
                 bar=metrics.dialog_ratio if (has_tokens and metrics.clean_words) else None,
                 jump="#chapters",
                 layer="dialogue",
@@ -1602,6 +1605,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 jump="#heatmap",
             )
         )
+    scope_tiles.append(
+        kpi(
+            N(total_flagged, 0),
+            help_term(labels, "flagged", L("panel_flags")),
+            jump="#flags",
+            flags=True,
+        )
+    )
     language_tiles.append(
         kpi(
             P(function_pct) if function_pct is not None else "–",
@@ -1612,7 +1623,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
     )
     if metrics is not None:
-        has_tokens = bool(metrics.tokens)
         mtld_value = (
             N(metrics.mtld, 1)
             if (has_tokens and getattr(metrics, "mtld", None) is not None)
@@ -1626,14 +1636,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 jump="#bands",
             )
         )
-        lexis_secondary_tiles.append(
+        lexis_tiles.append(
             kpi(
                 N(metrics.ttr, 4) if has_tokens else "–",
                 help_term(labels, "ttr", "TTR"),
                 jump="#bands",
             )
         )
-        lexis_secondary_tiles.append(
+        lexis_tiles.append(
             kpi(
                 N(metrics.yules_k, 1) if has_tokens else "–",
                 help_term(labels, "yules", "Yule&#8217;s K"),
@@ -1645,27 +1655,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             if (has_tokens and getattr(metrics, "hd_d", None) is not None)
             else "–"
         )
-        lexis_secondary_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
+        lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
         mattr_value = (
             N(metrics.mattr, 3)
             if (has_tokens and getattr(metrics, "mattr", None) is not None)
             else "–"
         )
-        lexis_secondary_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
+        lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
         maas_value = (
             N(metrics.maas_a2, 3)
             if (has_tokens and getattr(metrics, "maas_a2", None) is not None)
             else "–"
         )
-        lexis_secondary_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
-    style_tiles.append(
-        kpi(
-            str(total_flagged),
-            help_term(labels, "flagged", L("flagged")),
-            jump="#flags",
-            flags=True,
-        )
-    )
+        lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
     if fingerprint is not None:
         drifters = fingerprint.top_deviants(1)
         if drifters:
@@ -1675,7 +1677,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             top_layer = feature_layers.get(top_field) if top_field else None
             top_chapter = next((c for c in chapters if c.num == num), None)
             top_title = top_chapter.title if top_chapter is not None else ""
-            style_tiles.append(
+            style_details.append(
                 kpi(
                     f"Ø {N(mean_abs, 1)}",
                     help_term(
@@ -1689,7 +1691,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     only=bool(devs),
                 )
             )
-        style_tiles.append(
+        style_details.append(
             kpi(
                 P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–",
                 help_term(labels, "consistency", L("consistency")),
@@ -1698,65 +1700,28 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         )
 
-    p_unit = L("paragraphs_one") if len(paragraphs) == 1 else L("paragraphs")
-    scope_narrative = f"{N(total_words, 0)} {L('words_prose')} · {len(chapters)} {L('chapter')} · {len(paragraphs)} {p_unit}"
-    rhythm_narrative = (
-        f"Ø {N(metrics.asl, 1) if getattr(metrics, 'asl', None) is not None else '–'} {L('words')}/{L('sentence')} · {P(metrics.staccato_pct) if getattr(metrics, 'staccato_pct', None) is not None else '–'} {L('feat_staccato')}"
-        if (metrics is not None and metrics.tokens)
-        else ""
-    )
-    language_narrative = (
-        f"{P(metrics.dialog_ratio)} {L('dialogue')}"
-        if (metrics is not None and metrics.tokens)
-        else ""
-    )
-    lexis_narrative = (
-        f"MTLD {N(metrics.mtld, 1) if getattr(metrics, 'mtld', None) is not None else '–'} · Guiraud {N(metrics.guiraud_r, 2) if getattr(metrics, 'guiraud_r', None) is not None else '–'}"
-        if (metrics is not None and metrics.tokens)
-        else ""
-    )
-    style_narrative = (
-        f"{L('consistency')} {P(fingerprint.consistency * 100, 0)} · {total_flagged} {L('flagged')}"
-        if (fingerprint is not None and fingerprint.measured_cells)
-        else (f"{total_flagged} {L('flagged')}" if total_flagged else "")
-    )
-
-    measurements_open = "" if controls else " open"
-    parts.append(f'<details id="analysis-measurements"{measurements_open}>')
-    parts.append(f'<summary>{L("analysis_measurements")}</summary>')
+    parts.append(details_start(L("analysis_measurements"), element_id="analysis-measurements", opened=not controls))
     parts.append('<section class="kpis">')
-    if has_chapters and metrics is not None and metrics.tokens < MIN_TOKENS_LD:
-        support = esc(label(labels, "scene_support").replace("{min_tokens}", str(MIN_TOKENS_LD)))
-        parts.append(f'<p class="hint" role="note">{support}</p>')
-    for caption_key, tiles, narrative, *extra in (
-        ("group_scope", scope_tiles, scope_narrative),
-        ("group_style", style_tiles, style_narrative),
-        ("group_rhythm", rhythm_tiles, rhythm_narrative),
-        ("group_language", language_tiles, language_narrative),
-        ("group_lexis", lexis_tiles, lexis_narrative, lexis_secondary_tiles),
-    ):
-        if not tiles:
-            continue
-        parts.append('<div class="kpi-group">')
-        parts.append(
-            f'<div class="kpi-header"><span class="kpi-caption">{L(caption_key)}</span>'
-            + (f'<span class="kpi-narrative">{narrative}</span>' if narrative else '')
-            + '</div>'
-        )
-        parts.append('<div class="kpi-row">')
-        parts.extend(tiles)
-        parts.append("</div>")
-        if caption_key == "group_language" and metrics is not None:
-            parts.append(_readability_formulas(metrics, labels, language_key))
-        if extra and extra[0]:
-            parts.append(
-                f'<div class="kpi-drawer" id="kpi-lexis-drawer">'
-                f'<button type="button" class="kpi-drawer-btn" data-kpi-toggle="kpi-lexis-secondary" aria-expanded="false">{L("kpi_lexis_more")}</button>'
-                '<div class="kpi-row kpi-drawer-row" id="kpi-lexis-secondary" hidden>'
-            )
-            parts.extend(extra[0])
-            parts.append("</div></div>")
-        parts.append("</div>")
+    parts.append(kpi_group(scope_tiles, label(labels, "group_scope")))
+    parts.append(kpi_group(rhythm_tiles, label(labels, "group_rhythm"), hint=label(labels, "measurement_rhythm_guide")))
+    parts.append(kpi_group(
+        language_tiles, label(labels, "group_language"),
+        hint=label(labels, "measurement_language_guide") if metrics is not None else "",
+        footer=_readability_formulas(metrics, labels, language_key) if metrics is not None else "",
+    ))
+    if lexis_tiles and metrics is not None:
+        parts.append(details_start(L("group_lexis"), element_id="kpi-lexis-drawer",
+                                   extra_class="kpi-drawer"))
+        parts.append(panel_guide(L("measurement_vocabulary_guide")))
+        if has_chapters and metrics.tokens < MIN_TOKENS_LD:
+            support = esc(label(labels, "measurement_vocabulary_sample").format(min_tokens=MIN_TOKENS_LD))
+            parts.append(f'<p class="ctl-note">{support}</p>')
+        parts.append(kpi_row(lexis_tiles, row_id="kpi-lexis-secondary"))
+        parts.append("</details>")
+    if style_details:
+        parts.append(details_start(L("measurement_style_details"), extra_class="kpi-drawer"))
+        parts.append(kpi_row(style_details))
+        parts.append("</details>")
     parts.append("</section></details>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
@@ -1764,7 +1729,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     parts.append(f'<section class="panel" id="flags" data-review-capable="{str(review_capable).lower()}">')
     parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))} "
                  f'<span class="badge">{N(len(flagged), 0)}</span></h2>')
-    parts.append(f'<p class="panel-guide">{L("triage_intro")}</p>')
+    parts.append(panel_guide(L("triage_intro")))
     if flagged:
         parts.append('<div class="row triage-controls">')
         parts.append(f'<label>{L("chapter")} <select class="ctl" id="triage-chapter">'
@@ -1913,11 +1878,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         ]
         parts.append(
             f'<section class="panel style-panel" id="style">'
-            f'<div class="style-header"><h2>{L("group_style")}</h2>'
-            f'<div class="cohesion-summary-badge">'
-            f'<span>{L("cockpit_cohesion_summary")}: <strong>{P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–"}</strong>'
-            f' · {round(fingerprint.consistency * fingerprint.measured_cells)} / {fingerprint.measured_cells}</span>'
-            f'</div></div>'
+            f'<h2>{L("group_style")}</h2>'
         )
         parts.append(
             f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>'
@@ -1960,6 +1921,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
         parts.append(panel_start("matrix", labels, "chapter_table"))
+        parts.append(panel_guide(L("chapter_table_reading")))
         if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
             parts.append(
                 f'<div class="cockpit-toolbar">'
@@ -1967,9 +1929,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'title="{L("cockpit_switch_heatmap")}">{L("cockpit_switch_heatmap")} →</a>'
                 '</div>'
             )
-        parts.append('<details class="analysis-coverage">'
-                     f'<summary>{L("analysis_coverage")}</summary>'
-                     f'<p>{L("analysis_chapter_coverage")}</p></details>')
+        parts.append(details_start(L("analysis_coverage"), extra_class="analysis-coverage")
+                     + panel_guide(L("analysis_chapter_coverage")) + '</details>')
         parts.append('<div class="table-wrap" tabindex="0" role="region" '
                      f'aria-label="{L("chapter_table")}">')
         parts.append("<table><thead><tr>")
@@ -1977,7 +1938,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             f'<th scope="col">{help_term(labels, "chapter_row", "#")}</th>'
             f'<th scope="col">{help_term(labels, "chapter_row", L("chapter"))}</th>'
             f'<th scope="col" class="num">{help_term(labels, "words", L("words"))}</th>'
-            f'<th scope="col" class="num">{help_term(labels, "asl", "ASL")}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "asl", L("readability_asl"))}</th>'
             f'<th scope="col" class="num">{help_term(labels, "dialogue", L("dialogue"))}</th>'
             f'<th scope="col" class="num">{help_term(labels, "function_words", L("function_words"))}</th>'
             f'<th scope="col">{help_term(labels, "chapter_tense", L("past") + "/" + L("present"))}</th>'

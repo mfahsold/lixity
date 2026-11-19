@@ -76,10 +76,9 @@ print(json.dumps(documents))
         await page.locator('#workbench-overview-open').click();
         await openAnalysisSection(page, 'pacing');
         const pacing = page.locator('#pacing');
-        assert.ok((await pacing.locator('.panel-guide').textContent()).includes(fixture.unit));
         assert.ok((await pacing.locator('.panel-guide').textContent()).includes(fixture.scale));
         assert.equal(await pacing.locator('.dist .row').count(), 17);
-        assert.ok((await pacing.locator('.dist .val').last().textContent()).includes('ASL'));
+        assert.ok((await pacing.locator('.dist .val').last().textContent()).includes(fixture.unit));
         const hook = pacing.locator('.kpi [data-help]');
         assert.equal(await hook.getAttribute('data-help'), fixture.hook_help);
         await hook.focus();

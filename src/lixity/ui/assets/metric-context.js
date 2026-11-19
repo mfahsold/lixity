@@ -11,7 +11,11 @@
   var trigger = null, chapterKey = null, selectedFeature = null, returnFocus = true;
   var body = document.getElementById("metric-context-values");
   var read = document.getElementById("metric-context-read");
+  var details = document.getElementById("metric-context-details");
   function text(id, value) { document.getElementById(id).textContent = value; }
+  function measurement(value, unit) {
+    return value === "–" ? data.labels.unavailable : value + " " + unit;
+  }
   function cell(row, tag, value) {
     var node = document.createElement(tag);
     node.textContent = value;
@@ -28,7 +32,8 @@
     text("metric-context-sample", chapter.sample);
     text("metric-context-definition", meta.help +
       (chapter.values[feature].reason ? " " + chapter.values[feature].reason : ""));
-    text("metric-context-value", chapter.values[feature].value + " " + meta.unit);
+    text("metric-context-value", measurement(chapter.values[feature].value, meta.unit));
+    text("metric-context-typical", measurement(meta.median, meta.unit));
     document.getElementById("metric-context-no-layer").hidden = Boolean(meta.layer);
     read.href = "#ch-" + chapterKey;
     body.replaceChildren();
@@ -48,7 +53,7 @@
         document.getElementById("metric-context-title").focus({preventScroll:true});
       });
       name.appendChild(button); row.appendChild(name);
-      cell(row, "td", values.value + " " + item.unit);
+      cell(row, "td", measurement(values.value, item.unit));
       cell(row, "td", item.median + " · n = " + item.n);
       cell(row, "td", values.z + (values.reason ? " · " + values.reason : ""));
       body.appendChild(row);
@@ -66,6 +71,7 @@
       return false;
     }
     trigger = element; chapterKey = chapter; returnFocus = true;
+    details.open = false;
     var origin = document.getElementById("metric-context-origin");
     origin.hidden = !element.hasAttribute("data-dimension-loading");
     origin.textContent = origin.hidden ? "" : "D" + element.dataset.dimensionIndex + " · " +

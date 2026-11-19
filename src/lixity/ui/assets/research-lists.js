@@ -406,6 +406,9 @@ function renderResearchDossiersView(data) {
     };
   });
   researchWindowState.dossiers.limit = RESEARCH_DOSSIER_PAGE_SIZE;
+  if (researchWindowState.dossiers.items.length <= RESEARCH_DOSSIER_PAGE_SIZE) {
+    renderWindowedResearchList("dossiers", listHost, researchWindowState.dossiers.items, null);
+  }
   filterResearchList("dossiers");
 }
 

@@ -36,6 +36,8 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 ## Passt der kürzere Rhythmus zur Handlung?
 
+In der Demo öffnet **Compare chapters 1 and 2** die Kapitelmatrix. Dort siehst du, wie viele Wörter die Sätze in der Hafenbeschreibung und in der Handlungsszene im Schnitt haben. Einen eigenen Absatz kannst du direkt in der [Browser-Sandbox](../sandbox/index.html) ausprobieren.
+
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 
 2. Beim Absatz **… → Explore passage → Explain measurement** öffnen. Die Erklärung zeigt die gezählten Sätze und Wörter. **Counted text** blendet die Markierungen ein.
@@ -46,9 +48,9 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären lässt. Dafür sind weder alle Messgrößen noch eine „Korrektur“ nötig. Das kurze Beispiel demonstriert den Arbeitsgang, nicht die statistische Zuverlässigkeit für jedes Manuskript.
 
-**Noch unveröffentlichte Navigation der lokalen App:** Die Analyseübersicht beginnt mit Status, nächster Textstelle und drei Einstiegen: **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Arbeitsweg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar; Eingaben und aufgeklappte Details bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
+**Noch unveröffentlichte Navigation der lokalen App.** Die Analyseübersicht zeigt den Status, die nächste Textstelle und die Einstiege **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Einstieg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar. Eingaben bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
 
-Unter **Muster erkunden → Manuskript in Zahlen** stehen die zusätzlichen Messwerte hinter einer aufklappbaren Zusammenfassung. **Zurück zur Textstelle** stellt den Lesekontext wieder her. Eigenständige Berichte behalten direkte Abschnittslinks; Text und Tabellen bleiben auch ohne JavaScript lesbar.
+Unter **Muster erkunden → Manuskript in Zahlen** siehst du Wörter und Sätze, den Satzrhythmus und weitere Sprachmerkmale. Bei Bedarf kannst du zusätzliche Kennzahlen zur Wortvielfalt und zum Stilvergleich aufklappen. Mit **Zurück zur Textstelle** liest du an derselben Stelle weiter. Eigenständige Berichte behalten direkte Abschnittslinks. Text und Tabellen bleiben auch ohne JavaScript lesbar.
 
 ## Hinweise zum Lesen, keine Schreibziele
 
