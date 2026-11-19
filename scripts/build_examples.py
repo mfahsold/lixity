@@ -110,7 +110,7 @@ def build_demo(root: Path) -> Path:
     with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
         from scripts.example_project import create_example_project
 
-        project = Path(directory) / "research-demo"
+        project = Path(directory).resolve() / "research-demo"
         create_example_project(project)
         demo = build_research_demo(root, project)
         build_publication_examples(root, project)

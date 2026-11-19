@@ -34,6 +34,16 @@ def test_mlx_rejects_ineffective_free_text_delivery_instructions():
         AudioProfile(engine='mlx-audio', language='de', instructions='Knappe Spannung.')
 
 
+def test_mlx_render_explains_unsupported_saved_direction():
+    from lixity.speech_direction import Direction, build_speech_plan, speech_passages
+
+    profile = AudioProfile(engine='mlx-audio', language='de')
+    anchor = speech_passages(TEXT, 'de')[0]['anchor']
+    direction = Direction(anchor=anchor, start=0, end=5, instructions='Knappe Spannung.')
+    with pytest.raises(ValueError, match=r'Export the direction.*--no-direction'):
+        build_speech_plan(TEXT, profile, directions=[direction], chapter=1)
+
+
 def test_adjacent_directions_do_not_emit_whitespace_segments():
     from lixity.speech_direction import Direction, build_speech_plan, speech_passages
     text = '## First\n\nEins. Zwei. Drei.\n'

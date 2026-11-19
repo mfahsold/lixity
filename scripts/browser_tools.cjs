@@ -18,6 +18,7 @@ function resolvePlaywright() {
   const home = os.homedir();
   const candidates = [
     path.resolve(__dirname, '../node_modules/playwright'),
+    path.join(home, '.local/share/lixity/browser-tools/node_modules/playwright'),
     path.join(home, 'node_modules/playwright'),
     path.join(home, 'rosts_services/node_modules/playwright'),
   ];
@@ -26,11 +27,20 @@ function resolvePlaywright() {
 
 function resolveChromium() {
   if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) return process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-  const cache = path.join(os.homedir(), '.cache', 'ms-playwright');
-  if (fs.existsSync(cache)) {
+  const home = os.homedir();
+  const caches = [
+    path.join(home, '.local/share/lixity/browser-tools/browsers'),
+    path.join(home, '.cache', 'ms-playwright'),
+  ];
+  for (const cache of caches) {
+    if (!fs.existsSync(cache)) continue;
     const builds = fs.readdirSync(cache).filter(entry => entry.startsWith('chromium-')).sort().reverse();
     for (const build of builds) {
-      for (const sub of ['chrome-linux-arm64/chrome', 'chrome-linux64/chrome', 'chrome-linux/chrome']) {
+      for (const sub of [
+        'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+        'chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
+        'chrome-linux-arm64/chrome', 'chrome-linux64/chrome', 'chrome-linux/chrome',
+      ]) {
         const candidate = path.join(cache, build, sub);
         if (fs.existsSync(candidate)) return candidate;
       }

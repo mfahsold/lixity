@@ -60,8 +60,29 @@ def speech_endpoint(base_url: str) -> str:
     return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
 
 
-def external_provider_status(profile: AudioProfile | None) -> dict[str, Any]:
-    """Describe configuration without probing a provider or reading its key."""
+def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
+    from .speech_profiles import MLX_AUDIO_TTS_MODEL
+
+    runtime = Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python"
+    snapshots = Path.home() / ".cache/huggingface/hub/models--mlx-community--ZONOS3-Mini/snapshots"
+    runtime_available = (runtime.is_file() and os.access(runtime, os.X_OK)
+                         and Path(__file__).with_name("speech_mlx_zonos.py").is_file())
+    model_cached = any(snapshot.joinpath("config.json").is_file()
+                       and any(snapshot.glob("*.safetensors")) for snapshot in snapshots.glob("*/"))
+    ready = runtime_available and model_cached
+    return {
+        "target": "local", "state": "ready" if ready else "unavailable", "transport": "isolated-process",
+        "configured": profile is not None, "model": MLX_AUDIO_TTS_MODEL, "model_matches": True,
+        "runtime_available": runtime_available, "model_cached": model_cached,
+        "reason": "zonos_worker_ready" if ready else "zonos_worker_or_model_missing",
+    }
+
+
+def external_provider_status(profile: AudioProfile | None, *, engine: str | None = None) -> dict[str, Any]:
+    """Describe provider configuration or inspect the fixed local ZONOS3 worker."""
+    if ((profile is not None and _uses_zonos_direct_worker(profile))
+            or (profile is None and engine == "mlx-audio")):
+        return _zonos_runtime_status(profile)
     return {"target": "provider", "state": "unknown", "transport": "http",
             "configured": profile is not None, "model": profile.model if profile else None,
             "model_matches": None, "reason": "Provider readiness is unknown until an explicit render"}

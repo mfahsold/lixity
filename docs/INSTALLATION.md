@@ -211,7 +211,10 @@ For synthesis, run a separately managed service that implements
 `POST /v1/audio/speech`, then explicitly configure its base URL, model and voice
 in an `openai-compatible` profile. MLX-Audio has its own `mlx-audio` profile so
 Lixity can pass its model-specific language and direction fields explicitly. The minimal Lixity installation adds no
-inference dependency and does not install or start that service. HTTPS endpoints
+inference dependency and does not install or start that service. The fixed
+`mlx-audio` ZONOS3 binding is local-worker-specific rather than a generic provider:
+its UI hides provider credentials and URL fields, while `audio-status` checks the
+isolated Python runtime and cached checkpoint without loading either. HTTPS endpoints
 and explicitly configured local HTTP addresses (localhost, loopback or private
 LAN IPs) are supported. URLs cannot contain credentials, query parameters or
 fragments. Optional authentication refers to an environment-variable name via
@@ -237,13 +240,24 @@ uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python
 MLX-Audio and its model weights are optional and are not installed by Lixity.
 The first selected model can require an explicit download and substantial memory;
 16 GB unified memory is not a guarantee that every model fits. The recommended
-local German TTS path uses `mlx-community/ZONOS3-Mini` with fixed `liesel` voice
-or an explicitly saved project reference. Lixity runs this TTS checkpoint in a
-short-lived worker inside the isolated MLX environment because the tested 0.6.6
-HTTP broker produced silent ZONOS3 WAV files. The recommended STT path continues
-to use the running service and `mlx-community/parakeet-tdt-0.6b-v3`. Kokoro is
-useful for English but is not the German default. Model and voice licenses remain
-separate from MLX-Audio's license.
+local German TTS path uses `mlx-community/ZONOS3-Mini` with fixed `liesel` or
+`wolfgang` voice, or an explicitly saved project reference. The MLX checkpoint
+also contains grouped fixed voices for English, French, Italian, Portuguese and
+Spanish. Lixity runs the TTS checkpoint in a short-lived worker inside the
+isolated MLX environment because the tested MLX-Audio 0.6.6 HTTP broker produced
+silent ZONOS3 WAV files. This worker writes one bounded normalized WAV and deletes
+its temporary reference copy on return. The recommended STT path continues to use
+the running service and `mlx-community/parakeet-tdt-0.6b-v3`.
+
+```sh
+lixity audio-status --project ./novel --engine mlx-audio --json
+```
+
+A local ZONOS3 status target reports `transport: "isolated-process"`, executable
+availability and model-cache presence. It deliberately reports no runtime path.
+`ready` means the prerequisites were found; the command still does not load the
+model or synthesize a sample. Model and voice licenses remain separate from
+MLX-Audio's license.
 
 Existing settings require the reviewed `audio-migrate --to-schema-4` workflow
 before saving an external profile. Keep its backup and use a compatible reader;
@@ -251,8 +265,10 @@ older releases cannot read schema `/4`. Existing native profiles and retained
 reference recordings need no conversion to keep their current behavior.
 
 Providers return WAV. Mono 16-bit PCM at 24 kHz needs no decoder; other supported
-WAV formats require FFmpeg on the Lixity host for normalization. MP3 output and
-non-1.0 playback speed also require FFmpeg. Local `audio-inspect` reads PCM WAV
+WAV formats require FFmpeg on the Lixity host for normalization. ZONOS3 produces
+44.1 kHz model audio and is normalized by this shared boundary. MP3 output and
+non-model tempo postprocessing also require FFmpeg; ZONOS3's `speed` condition
+does not. Local `audio-inspect` reads PCM WAV
 with the standard library; other WAV formats, FLAC and MP3 require FFmpeg.
 `audio-verify` does not install or run speech recognition. Supply a timestamped
 transcript explicitly when text or pause comparison is wanted. See the

@@ -46,7 +46,9 @@ Secret = "private spelling"
     assert status['project']['profiles']==[{'id':'narrator','name':'Test narrator',
         'engine':'qwen3-design','voice':'design','language':'de'}]
     assert [item['model_matches'] for item in status['targets']]==[False,True]
-    assert 'private' not in json.dumps(status)
+    payload = json.dumps(status)
+    for forbidden in ('private voice', 'private delivery', 'private spelling', 'Secret'):
+        assert forbidden not in payload
 
 
 def test_status_default_profile_is_identified_and_unavailable_is_unknown(tmp_path, monkeypatch):

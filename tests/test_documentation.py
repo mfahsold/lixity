@@ -83,7 +83,7 @@ class TestDocumentation(unittest.TestCase):
         relative = [target for target in targets if not target.startswith("#") and not urlsplit(target).scheme]
         self.assertEqual(relative, [], "README targets must work on PyPI as well as GitHub")
         with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "site"
+            output = Path(directory).resolve() / "site"
             stage(ROOT / "docs", output)
             for target in targets:
                 url = urlsplit(target)
@@ -159,7 +159,7 @@ class TestDocumentation(unittest.TestCase):
                         self.targets.append(attributes[key])
 
         with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "site"
+            output = Path(directory).resolve() / "site"
             stage(ROOT / "docs", output)
             pages = (output / "index.html", output / "guides" / "first-look.html", output / "demo" / "report.html")
             resolved = {}

@@ -171,7 +171,8 @@ def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str
         if not approved:
             raise ValueError("Unapproved public demo bundle member")
         path = source / directory / name
-        if any(parent.is_symlink() for parent in (path, *path.parents) if parent != source.parent):
+        if any(parent.is_symlink() for parent in (path, *path.parents)
+               if parent != source and parent.is_relative_to(source)):
             raise ValueError("Symlink in public demo bundle")
         if (not isinstance(metadata, dict) or type(metadata.get("byte_length")) is not int
                 or not isinstance(metadata.get("sha256"), str) or not path.is_file()):

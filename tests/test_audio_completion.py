@@ -136,10 +136,13 @@ def test_native_zsh_dispatches_audio_argument_contract(command, expected):
     if zsh is None:
         pytest.skip("Zsh is unavailable; declaration contracts are checked separately")
     # Stub only Zsh's completion UI, keeping its own word-array dispatch intact.
-    probe = ("\n_arguments() { if [[ $1 == -C ]]; then state=args; else printf '%s\\n' \"$@\"; fi; }\n"
-             f"words=({shlex.quote(command)} '')\n_lixity\n")
+    stub = ("compdef() { :; }\n"
+            "_probe=0\n"
+            "_arguments() { if (( ! _probe )); then return 0; fi; "
+            "if [[ $1 == -C ]]; then state=args; else printf '%s\\n' \"$@\"; fi; }\n")
+    probe = f"\n_probe=1\nwords=({shlex.quote(command)} '')\n_lixity\n"
     result = subprocess.run(  # noqa: S603 - installed shell and generated completion on controlled words
-        [zsh, "-f"], input="compdef() { :; }\n" + _completion_scripts()[1] + probe,
+        [zsh, "-f"], input=stub + _completion_scripts()[1] + probe,
         text=True, capture_output=True, check=True,
     )
     assert not result.stderr

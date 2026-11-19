@@ -15,16 +15,20 @@ operations need a worker, a microphone, a saved reference or FFmpeg.
 | Record, import and review an author voice | [Author voice](../AUDIO.md#author-voice-recording-and-listening) |
 | Set gain or use the teleprompter | [Microphone calibration](../AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) · [Teleprompter](../AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) |
 | Shape delivery and pronunciation | [Passage direction](../AUDIO.md#passage-direction) · [Spelling substitutions](../AUDIO.md#pronunciation-substitutions) · [Toucan IPA/prosody](../AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased) |
+| Use the author's voice with ZONOS3 | [ZONOS3 reference workflow](../AUDIO.md#use-a-reference-with-zonos3) |
 | Export a plan or use a provider | [JSON, SSML and external services](../AUDIO.md#audio-export-and-external-providers-unreleased) |
 | Check an external recording | [Signal inspection and transcript comparison](../AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased) |
 | Add chapter audio to a reader export | [Retain or import chapter audio](../AUDIO.md#retain-or-import-chapter-audio-unreleased) |
-| Install a matching speech worker | [Installation](../INSTALLATION.md#optional-qwen-audio-worker) |
+| Install and inspect a speech worker | [MLX and provider installation](../INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased) |
 
 Local synthesis does not send text to a hosted inference provider. A remote
 provider is an explicit choice and receives spoken text during a render. A
-voice reference and its transcript are private project data. Piper is removed;
-the [migration procedure](../AUDIO.md#audio-settings-upgrades-and-recovery)
-requires reviewed replacements and a backup.
+voice reference and its transcript are private project data. ZONOS3 model tempo is conditioned inside the model, not applied as an FFmpeg
+post-process. Voice references use the same immutable project records as other
+reference engines, with an isolated worker and temporary audio copy. Free-text
+direction is not interpreted by this MLX checkpoint. Piper is removed; the
+[migration procedure](../AUDIO.md#audio-settings-upgrades-and-recovery) requires
+reviewed replacements and a backup.
 
 Literal spelling replacements, IPA, free-text acting instructions and exact
 pauses are distinct controls with different engine support. Neither successful

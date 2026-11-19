@@ -128,6 +128,13 @@
   }
   function profileCapability() { return capabilities && capabilities[fields.engine.value] || {}; }
   function externalEngine(engine) { return !!(capabilities && capabilities[engine] && capabilities[engine].configurable_model); }
+  function providerFields(cap) { return !!(cap && cap.configurable_model && cap.provider_fields !== false); }
+  function referenceSupported(cap) { return !!(cap && (cap.reference_required || cap.reference_supported)); }
+  function selectedReference() {
+    var cap = profileCapability();
+    var voice = providerFields(cap) && fields.provider_voice ? fields.provider_voice.value : fields.voice && fields.voice.value;
+    return !!cap.reference_required || (referenceSupported(cap) && voice === "reference");
+  }
   function profileSupport() {
     var cap = profileCapability(), support = Object.assign({}, cap.control_support || {});
     if (cap.configurable_instructions) support.direction = fields.supports_instructions.checked ? "model_interpreted" : "unsupported";
@@ -350,9 +357,10 @@
   }
   function updateWorkerStatus() {
     if (!fields.worker_status || !fields.engine || !capabilities) return;
+    var selectedCap = profileCapability();
     var external = fields.engine.value === "openai-compatible" ||
-      !!(capabilities[fields.engine.value] && capabilities[fields.engine.value].configurable_model);
-    fields.worker_guide.hidden = external || profileCapability().runtime_status === "unavailable";
+      !!(selectedCap.configurable_model && selectedCap.provider_fields !== false);
+    fields.worker_guide.hidden = external || selectedCap.runtime_status === "unavailable";
     fields.worker_guide.href = profileCapability().guide_url || (fields.engine.value.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
     if (external) { fields.worker_status.textContent = label("provider_status"); return; }
     if (profileCapability().runtime_status === "unavailable") { fields.worker_status.textContent = label("engine_unavailable"); return; }
@@ -379,12 +387,13 @@
   }
   function updateRuntimeHint() {
     var cap = profileCapability();
-    var key = cap.runtime_status === "unavailable" ? "engine_unavailable" : cap.configurable_model ? "provider_hint" : "runtime_hint";
+    var key = cap.runtime_status === "unavailable" ? "engine_unavailable" : cap.local_worker ? "zonos_runtime_hint" :
+      cap.configurable_model ? "provider_hint" : "runtime_hint";
     fields.runtime_hint.textContent = label(key);
   }
   function updateModelFields() {
     var cap = profileCapability(), support = profileSupport();
-    var designed = !!cap.voice_design, referenced = !!cap.reference_required;
+    var designed = !!cap.voice_design, referenced = selectedReference();
     var noInstructions = support.direction !== "model_interpreted";
     var exportOnly = !!support.prosody;
     var descriptionPresent = Boolean(fields.voice_description.value.trim());
@@ -415,17 +424,19 @@
     if (!cap) return;
     var designed = !!cap.voice_design;
     var external = !!cap.configurable_model;
-    var referenced = !!cap.reference_required;
+    var provider = providerFields(cap);
     var language = fields.language.value, voice = fields.voice.value;
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
     options(fields.voice, designed ? [["design", "VoiceDesign"]] : voices.map(function(pair) { return [pair[0], pair[1].name]; }), designed ? "design" : voice);
-    fields.voice.closest("label").hidden = designed || referenced || external;
-    fields.voice.disabled = designed || referenced || external;
-    fields.language.closest("label").hidden = external;
-    fields.language.disabled = external;
+    var referenced = selectedReference();
+    fields.voice.closest("label").hidden = designed || (!!cap.reference_required) || provider;
+    fields.voice.disabled = designed || (!!cap.reference_required) || provider;
+    fields.language.closest("label").hidden = provider;
+    fields.language.disabled = provider;
     ["base_url", "provider_model", "api_key_env", "provider_voice", "provider_language", "supports_instructions"].forEach(function(key) {
-      fields[key].closest("label").hidden = !external; fields[key].disabled = !external;
+      fields[key].closest("label").hidden = !provider; fields[key].disabled = !provider;
+      fields[key].required = provider && !["api_key_env", "supports_instructions"].includes(key);
     });
     fields.supports_instructions.closest("label").hidden = !external || fields.engine.value === "mlx-audio";
     fields.supports_instructions.disabled = !external || fields.engine.value === "mlx-audio";
@@ -435,6 +446,7 @@
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
+    fields.speed_hint.textContent = label(cap.speed.implementation === "model-condition" ? "speed_hint_model" : "speed_hint");
     fields.model.textContent = cap.name;
     direction.setCapabilities(capabilities, fields.engine.value, profileSupport());
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
@@ -515,7 +527,7 @@
     if (pronunciationPending()) throw new Error(label("pronunciation_pending"));
     var conflict = [fields.voice_description, fields.reference_id, fields.instructions].find(function(input) { return input.validity.customError; });
     if (conflict) throw new Error(conflict.validationMessage);
-    if (capabilities[fields.engine.value].reference_required && !fields.reference_id.checkValidity()) throw new Error(label("model_need_reference"));
+    if (selectedReference() && !fields.reference_id.checkValidity()) throw new Error(label("model_need_reference"));
     if (profileCapability().voice_design && !fields.voice_description.value.trim()) throw new Error(label("model_need_description"));
     var replacements = pronunciationEntries();
     var profile = {name: fields.name.value.trim(), engine: fields.engine.value, language: fields.language.value,
@@ -523,15 +535,18 @@
       speed: Number(fields.speed.value), instructions: fields.instructions.value.trim(),
       paragraph_pause: Number(fields.paragraph_pause.value), scene_pause: Number(fields.scene_pause.value), pronunciations: replacements};
     if (profileCapability().voice_design) profile.voice_description = fields.voice_description.value.trim();
-    if (capabilities[profile.engine].reference_required) profile.reference_id = fields.reference_id.value.trim();
+    if (selectedReference()) profile.reference_id = fields.reference_id.value.trim();
     var phonemes = phonemeEntries(), prosody = profileProsody.read();
     if (Object.keys(phonemes).length) profile.phonemes = phonemes;
     if (Object.keys(prosody).length) profile.prosody = prosody;
     if (externalEngine(profile.engine)) {
-      profile.base_url = fields.base_url.value.trim(); profile.model = fields.provider_model.value.trim();
+      profile.base_url = fields.base_url.value.trim() || profileCapability().default_base_url || "";
+      profile.model = fields.provider_model.value.trim() || profileCapability().model || "";
       profile.api_key_env = fields.api_key_env.value.trim() || null;
       profile.supports_instructions = fields.supports_instructions.checked;
-      profile.voice = fields.provider_voice.value.trim(); profile.language = fields.provider_language.value.trim();
+      if (providerFields(profileCapability())) {
+        profile.voice = fields.provider_voice.value.trim(); profile.language = fields.provider_language.value.trim();
+      }
     }
     return profile;
   }
@@ -834,7 +849,7 @@
   function updateVoiceCard() {
     if (!fields.profile_voice_card) return;
     var cap = capabilities && capabilities[fields.engine.value];
-    var referenced = cap && cap.reference_required;
+    var referenced = cap && selectedReference();
     fields.profile_voice_card.hidden = !referenced;
     if (!referenced) return;
     fields.profile_voice_card.replaceChildren();
@@ -914,7 +929,12 @@
             fields.reference_id.value = ref.id;
             profilesDirty = true;
             fields.engine.value = curProf.engine;
-            options(fields.voice, [], curProf.voice); voiceControls();
+            var cap = profileCapability();
+            if (cap.reference_supported && !cap.reference_required) {
+              options(fields.voice, [], "reference");
+              fields.provider_voice.value = "reference";
+            } else options(fields.voice, [], curProf.voice);
+            voiceControls();
             if (!await save()) updateVoiceCard();
           }
         });
@@ -1447,8 +1467,8 @@
     fields.profile_voice_card = node("div", fields.editor, "voice-active-card");
     fields.profile_voice_card.hidden = true;
     var speed = field(grid, "speed", "number"); speed.step = "any"; speed.required = true;
-    var speedHint = node("span", speed.closest("label"), "ctl-note", label("speed_hint"));
-    speedHint.id = "speech-speed-hint"; speed.setAttribute("aria-describedby", speedHint.id);
+    fields.speed_hint = node("span", speed.closest("label"), "ctl-note", label("speed_hint"));
+    fields.speed_hint.id = "speech-speed-hint"; speed.setAttribute("aria-describedby", fields.speed_hint.id);
     ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     fields.instructions_note = node("p", fields.editor, "ctl-note", label("instructions_export_only"));
@@ -1718,8 +1738,14 @@
       if (profileCapability().voices[fields.voice.value]) lastPreset = fields.voice.value;
       var cap = capabilities[fields.engine.value];
       if (cap.languages.length && !cap.languages.includes(fields.language.value)) options(fields.language, [[cap.languages[0], languageName(cap.languages[0])]], cap.languages[0]);
-      var voice = cap.voice_design ? "design" : cap.reference_required ? "reference" : cap.voices[lastPreset] ? lastPreset : Object.keys(cap.voices)[0] || "";
+      var matchingVoices = Object.entries(cap.voices).filter(function(pair) {
+        return pair[1].languages.includes(fields.language.value);
+      });
+      var voice = cap.voice_design ? "design" : cap.reference_required ? "reference" :
+        cap.voices[lastPreset] && cap.voices[lastPreset].languages.includes(fields.language.value) ? lastPreset :
+        (matchingVoices[0] && matchingVoices[0][0]) || "";
       options(fields.voice, [], voice);
+      fields.speed.value = String(cap.speed.default);
       if (fields.engine.value === "mlx-audio") {
         fields.base_url.value = cap.default_base_url || fields.base_url.value;
         fields.provider_model.value = cap.model || fields.provider_model.value;
@@ -1728,6 +1754,11 @@
       voiceControls(); invalidate();
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });
+    fields.voice.addEventListener("change", function() {
+      var cap = profileCapability();
+      if (cap.reference_supported && fields.voice.value !== "reference") fields.reference_id.value = "";
+      voiceControls(); updateVoiceCard(); updateModelFields(); status(label("voice_changed"));
+    });
     fields.profile.addEventListener("change", function() {
       try { stash(); if (settings.selected !== fields.profile.value) profilesDirty = true; settings.selected = fields.profile.value; loadProfile(); }
       catch (error) { fields.profile.value = settings.selected; status(error.message); }

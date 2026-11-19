@@ -58,6 +58,16 @@ class BaseDirectionConflict(ValueError):
         )
 
 
+class MLXDirectionConflict(ValueError):
+    """ZONOS3 cannot interpret free-text passage direction."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "ZONOS3 cannot render free-text passage direction. Export the direction for another "
+            "engine, or use --no-direction for this render; pronunciation rules and explicit pauses remain active."
+        )
+
+
 class NarratorConflict(ValueError):
     """A passage direction would replace the narrator instead of shaping delivery."""
 
@@ -282,6 +292,8 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             selected = effective_profile(selected)
             if not same_narrator(profile, selected):
                 raise NarratorConflict()
+            if not for_export and selected.engine == 'mlx-audio' and d.instructions:
+                raise MLXDirectionConflict()
             if not for_export and selected.engine in ('coqui', 'coqui-reference') and d.instructions:
                 raise CoquiDirectionConflict()
             if not for_export and selected.engine in ('qwen3-base', 'f5-tts') and d.instructions:

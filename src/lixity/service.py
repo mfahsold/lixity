@@ -606,9 +606,9 @@ def _has_marker(pid: int, token: str) -> bool:
         result = _run(
             [ps, "-ww", "-p", str(pid), "-o", "command="], env={"LC_ALL": "C", "TZ": "UTC"}
         )
-    if result.returncode != 0 or not result.stdout.strip():
-        raise ServiceError("Cannot verify the recorded process command")
-    return result.stdout.rstrip().endswith(" " + marker)
+        if result.returncode != 0 or not result.stdout.strip():
+            raise ServiceError("Cannot verify the recorded process command")
+        return result.stdout.rstrip().endswith(" " + marker)
 
 
 def _signal_process(pid: int, number: int, birth: str, token: str | None = None) -> None:

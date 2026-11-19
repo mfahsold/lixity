@@ -136,6 +136,26 @@ The server exposes 16 deterministic read-only analysis and research tools. Query
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
 - `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews.
 
+### Audio status and local ZONOS3 synthesis
+
+`lixity audio-status --json` keeps the additive `lixity-audio-status/1` envelope.
+For a fixed local `mlx-audio` comparison, its single target uses
+`target: "local"` and `transport: "isolated-process"`. `runtime_available` and
+`model_cached` are boolean prerequisite observations; `reason` is a stable code,
+`model` identifies `mlx-community/ZONOS3-Mini`, and `model_matches` is `true` for
+that fixed binding. The JSON deliberately omits runtime and cache paths. `ready`
+means these prerequisites are present, not that weights loaded or speech quality
+was measured.
+
+A ZONOS3 reference profile contains `voice: "reference"` and an opaque 64-hex
+`reference_id`. Resolve references only through an explicitly selected project;
+do not infer a path from the identity. `read-aloud` validates and snapshots the
+reference before launch. The isolated worker receives a temporary audio copy and
+the effective synthesis text only for an explicit render. `speed` is sent as a
+model condition, while free-text direction is unsupported by this adapter. Plan
+and timeline export remain available without loading the runtime. Other MLX or
+OpenAI-compatible HTTP bindings retain unknown provider readiness until render.
+
 Structured editorial prompts are `manuscript_pacing_audit`,
 `manuscript_dialogue_review`, and `manuscript_showing_triage`; discover them with
 `prompts/list`. Lixity processes supplied text locally and returns results over

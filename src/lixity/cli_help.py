@@ -272,8 +272,9 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         'AUDIO.md#lixity-read-aloud',
         (
             'Native rendering requires a separately installed matching worker; an explicit external '
-            'profile sends speech text to its configured provider. FFmpeg is required for MP3 and tempo '
-            'other than 1.0. New default profiles use speed 1.1. Invocations do not save profile '
+            'profile sends speech text to its configured provider. The fixed local ZONOS3 binding uses '
+            'an isolated MLX worker and model tempo; other adapters use FFmpeg for tempo changes. MP3 '
+            'still needs FFmpeg. New default profiles use speed 1.1. Invocations do not save profile '
             'overrides. Rendering normally reads/writes private segment cache; previews bypass it. '
             'Explicit --project plus --chapter retains completed WAV audio in .lixity/audio/exports/. '
             'Plan/export modes make no synthesis request and need no worker.'
@@ -298,9 +299,10 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         'AUDIO.md',
         (
             "Omitting --project probes Qwen endpoints by default; --engine chooses another engine's "
-            'endpoints. Explicit projects supply root-local profiles. External-provider status remains '
-            'unknown and does not contact the provider. This is a read-only snapshot; it does not start '
-            'workers or certify later rendering.'
+            'endpoints. The fixed MLX ZONOS3 path reports isolated-worker, runtime and model-cache '
+            'readiness without loading weights or exposing paths. Other external-provider status '
+            'remains unknown and does not contact the provider. This read-only snapshot does not start '
+            'workers or certify later rendering quality.'
         ),
         ('lixity audio-status --project ./novel --json', 'lixity audio-status --engine qwen3-base --json'),
     ),

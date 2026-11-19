@@ -48,7 +48,7 @@ LixityServerHandler.exports_dir = str(root / 'exports')
 LixityServerHandler.language = 'de'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1',0), LixityServerHandler)
-print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'source':str(source)}), flush=True)
+print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'source':str(source), 'reference':reference.id}), flush=True)
 server.serve_forever()
 `, artifacts);
   const useFirefox = process.argv.includes('--firefox');
@@ -57,7 +57,9 @@ server.serve_forever()
     : await launchChromium();
   const original = fs.readFileSync(server.fixture.source);
   let axe;
-  for (const candidate of ['axe-core/axe.min.js', path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
+  for (const candidate of ['axe-core/axe.min.js',
+    path.join(os.homedir(), '.local/share/lixity/browser-tools/node_modules/axe-core/axe.min.js'),
+    path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
     try { axe = require.resolve(candidate); break; } catch {}
   }
   if (!axe) console.log('axe-core unavailable; full audio dialog accessibility audit not run');
@@ -112,6 +114,32 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
         assert.ok((await page.locator('#speech-engine').getAttribute('data-help'))?.length > 20,
           'Model selection explains its effect in contextual help');
+        await page.locator('#speech-engine').selectOption('mlx-audio');
+        await page.locator('#speech-language').selectOption('de');
+        assert.equal(await page.locator('#speech-voice').isVisible(), true,
+          'ZONOS3 exposes its fixed voices directly');
+        assert.equal(await page.locator('#speech-provider_model').isVisible(), false,
+          'The fixed local worker does not masquerade as an arbitrary HTTP provider');
+        assert.equal(await page.locator('#speech-base_url').isVisible(), false);
+        assert.equal(await page.locator('#speech-language').isVisible(), true);
+        assert.equal(await page.locator('#speech-speed').inputValue(), '1.1',
+          'Switching to ZONOS3 adopts its model speed default');
+        assert.deepEqual(await page.locator('#speech-voice option').evaluateAll(options => options.map(option => option.value)),
+          ['liesel', 'wolfgang', 'reference']);
+        await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `zonos-${width}.png`)});
+        await page.locator('#speech-voice').selectOption('reference');
+        assert.equal(await page.locator('#speech-reference_id').isVisible(), true,
+          'Choosing the clone mode exposes the project reference');
+        assert.equal(await page.locator('#speech-reference_id').getAttribute('required'), '',
+          'The clone mode requires an explicit saved recording');
+        await page.locator('#speech-reference_id').selectOption(server.fixture.reference);
+        await page.locator('#speech-voice').selectOption('liesel');
+        assert.equal(await page.locator('#speech-reference_id').inputValue(), '',
+          'Returning to a fixed voice clears the incompatible reference binding');
+        assert.equal(await page.locator('#speech-reference_id').isVisible(), false);
+        assert.match(await page.locator('#speech-speed-hint').textContent(), /Modell|model|modèle/i,
+          'ZONOS3 speed is explained as a model condition');
+        await page.locator('[data-speech-action=profiles_discard]').click();
         await auditDialog('profiles');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `profiles-${width}.png`)});
         await tabs.nth(2).click();

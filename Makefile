@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -8,6 +8,9 @@ MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= $(shell nproc 2>/dev/null | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}' || echo 4)
+BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
+PLAYWRIGHT_VERSION ?= 1.65.1
+AXE_CORE_VERSION ?= 4.14.1
 PYTEST_ARGS ?= -n auto
 
 help: ## Show this help
@@ -28,6 +31,10 @@ install-dev: ## Create .venv and install with dev extras
 
 test: ## Run the full test suite (warnings as errors, slowest cases reported)
 	PYTHONPATH=src $(VPY) -m pytest -W error -q --durations=15 -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
+
+browser-tools: ## Install isolated versioned Playwright, Chromium and axe-core
+	npm install --prefix "$(BROWSER_TOOLS_DIR)" playwright@$(PLAYWRIGHT_VERSION) axe-core@$(AXE_CORE_VERSION)
+	PLAYWRIGHT_BROWSERS_PATH="$(BROWSER_TOOLS_DIR)/browsers" "$(BROWSER_TOOLS_DIR)/node_modules/.bin/playwright" install chromium
 
 browser: ## Run the everyday browser checks (needs Node and Playwright)
 	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs $(BROWSER_JOBS)

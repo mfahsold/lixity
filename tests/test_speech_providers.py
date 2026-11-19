@@ -101,6 +101,28 @@ def test_unsupported_controls_and_secret_values_are_rejected(changes):
         external(**changes)
 
 
+def test_local_zonos_status_checks_runtime_and_model_without_paths(tmp_path, monkeypatch):
+    from lixity.speech_providers import external_provider_status
+
+    runtime = tmp_path / '.local/share/lixity/runtimes/mlx-audio/bin/python'
+    runtime.parent.mkdir(parents=True)
+    runtime.write_text('')
+    runtime.chmod(0o700)
+    snapshot = tmp_path / '.cache/huggingface/hub/models--mlx-community--ZONOS3-Mini/snapshots/test'
+    snapshot.mkdir(parents=True)
+    (snapshot / 'config.json').write_text('{}')
+    (snapshot / 'model.safetensors').write_bytes(b'')
+    monkeypatch.setattr('lixity.speech_providers.Path.home', lambda: tmp_path)
+
+    ready = external_provider_status(AudioProfile(engine='mlx-audio', language='de'))
+    assert ready['state'] == 'ready'
+    assert ready['target'] == 'local' and ready['transport'] == 'isolated-process'
+    assert ready['runtime_available'] and ready['model_cached'] and ready['model_matches']
+    assert 'tmp_path' not in json.dumps(ready) and str(tmp_path) not in json.dumps(ready)
+    (snapshot / 'model.safetensors').unlink()
+    assert external_provider_status(None, engine='mlx-audio')['state'] == 'unavailable'
+
+
 def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatch):
     from lixity.speech_providers import synthesize_external
     monkeypatch.setenv('SYNTHETIC_SPEECH_KEY', 'synthetic-secret')

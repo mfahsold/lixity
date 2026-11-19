@@ -50,10 +50,17 @@ EXTERNAL_ENGINES = ("openai-compatible", "mlx-audio")
 MLX_AUDIO_BASE_URL = "http://127.0.0.1:8000/v1"
 MLX_AUDIO_TTS_MODEL = "mlx-community/ZONOS3-Mini"
 MLX_AUDIO_DEFAULT_VOICE = "liesel"
-MLX_AUDIO_LANGUAGES = ("zh", "en", "de", "es", "fr", "ko", "ja")
-MLX_AUDIO_MING_SEGMENT_CHARS = 220
+MLX_AUDIO_LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
 MLX_AUDIO_ZONOS_SEGMENT_CHARS = 220
 MLX_AUDIO_TEMPERATURE = 0.0
+MLX_AUDIO_VOICES = {
+    "en": ("cillian", "imogen", "jett", "morgana", "rupert", "sakura", "savannah", "thaddeus", "willow", "wyatt"),
+    "fr": ("gaspard",),
+    "de": ("liesel", "wolfgang"),
+    "it": ("ginevra", "lorenzo"),
+    "pt": ("leonor", "thiago"),
+    "es": ("rodrigo", "ximena"),
+}
 MLX_AUDIO_DEFAULT_MODEL_SPEED = 1.1
 DEFAULT_PLAYBACK_SPEED = 1.1
 MIN_PLAYBACK_SPEED = 0.5
@@ -70,8 +77,6 @@ def speech_segment_limit(profile: AudioProfile) -> int:
     """Return an adapter-specific fragment bound, below the transport maximum."""
     from .speech import MAX_SEGMENT_CHARS
 
-    if profile.engine == "mlx-audio" and profile.model.startswith("mlx-community/Ming-"):
-        return MLX_AUDIO_MING_SEGMENT_CHARS
     if profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL:
         return MLX_AUDIO_ZONOS_SEGMENT_CHARS
     return MAX_SEGMENT_CHARS
@@ -199,7 +204,7 @@ class AudioProfile(BaseModel):
             elif self.engine == "mlx-audio" and self.reference_id:
                 raise ValueError("ZONOS3 reference identity requires voice='reference'")
             if self.engine == "mlx-audio" and self.language not in MLX_AUDIO_LANGUAGES:
-                raise ValueError("MLX-Audio ZONOS3 supports Chinese, English, German, Spanish, French, Korean and Japanese")
+                raise ValueError("MLX-Audio ZONOS3 supports the configured Lixity languages de, en, fr, es, it, pt and nl")
             if self.instructions and (not self.supports_instructions
                                       or (self.engine == "mlx-audio"
                                           and self.model == MLX_AUDIO_TTS_MODEL)):
@@ -377,12 +382,15 @@ def audio_capabilities() -> dict[str, Any]:
             "name": "MLX-Audio ZONOS3 TTS", "targets": ["local"],
             "languages": list(MLX_AUDIO_LANGUAGES),
             "voices": {
-                MLX_AUDIO_DEFAULT_VOICE: {"name": "Liesel", "languages": ["de"]},
-                "wolfgang": {"name": "Wolfgang", "languages": ["de"]},
-                "reference": {"name": "Project voice reference", "languages": ["de"]},
+                **{voice: {"name": voice.title(), "languages": [language]}
+                   for language, voices in MLX_AUDIO_VOICES.items() for voice in voices},
+                "reference": {"name": "Project voice reference", "languages": list(MLX_AUDIO_LANGUAGES)},
             },
-            "configurable_model": True, "configurable_voice": True,
-            "configurable_language": True, "instructions": False, "configurable_instructions": False,
+            "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased",
+            "configurable_model": True, "provider_fields": False,
+            "configurable_voice": True, "configurable_language": True,
+            "reference_supported": True, "local_worker": "isolated-mlx-audio",
+            "instructions": False, "configurable_instructions": False,
             "control_support": speech_control_support("mlx-audio").as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": MLX_AUDIO_DEFAULT_MODEL_SPEED, "implementation": "model-condition"},

@@ -1454,8 +1454,10 @@ flowchart LR
     Planner --> Export[Timeline JSON and SSML projection]
     Planner --> Provider[Explicit HTTP speech provider]
     Planner --> Native[Existing optional native workers]
+    Planner --> MLX[Short-lived ZONOS3 MLX worker]
     Provider --> Output[Normalized PCM, tempo, pauses and atomic output]
     Native --> Output
+    MLX --> Output
     Audio[Imported audio and optional timed transcript] --> Quality[Local signal and plan comparison]
     Export --> Quality
 ```
@@ -1480,6 +1482,15 @@ responses are validated and, if necessary, normalized with FFmpeg to the shared
 mono 16-bit 24 kHz pipeline. Endpoint, model and adapter identity distinguish
 external cache entries; existing native cache identities stay unchanged.
 
+The fixed local ZONOS3 adapter is intentionally not the generic HTTP transport.
+`speech_providers.py` validates a saved reference identity, writes only a temporary
+WAV copy and launches `speech_mlx_zonos.py` in the isolated MLX-Audio Python
+runtime. `speed` is a model condition; ordinary FFmpeg tempo does not run a second
+time. The worker result is bounded and normalized before atomic publication.
+`audio-status` inspects only executable/cache presence and returns an isolated-process
+readiness target without paths. It does not load model weights. The MLX HTTP service
+remains the explicit Parakeet STT transport.
+
 `audio_audit.py` reads chapter audio locally, computes level, clipping, DC offset
 and heuristic silence observations, and optionally compares the direction plan
 with an explicitly supplied timestamped transcript. External speech recognizer
@@ -1499,10 +1510,12 @@ profiles. Existing Qwen synthesis requires a matching worker for the selected
 variant. Coqui and explicit external-provider paths in 0.8.1 extend that set;
 the native inference implementations remain available and are not removed by
 the export/provider change.
-In 0.7.7, the `speed` field is a post-synthesis FFmpeg `atempo` factor
-from 0.5 to 2.0, not native model rate control. Fresh implicit profiles use 1.2;
-previously saved explicit or omitted values retain 1.0 where applicable. Cached
-model segments remain unmodified and are tempo-adjusted before explicit silence
+For Qwen, Coqui, Toucan and ordinary external providers, `speed` remains a
+post-synthesis FFmpeg `atempo` factor from 0.5 to 2.0. The fixed local ZONOS3 adapter
+passes `speed` into the model's `speaking_rate` condition instead. Fresh implicit
+profiles use 1.1; previously saved explicit or omitted values retain their values.
+Cached model segments remain unmodified. Adapters with postprocessing adjust tempo
+before explicit silence; ZONOS3 skips that second processing step.
 is inserted. Delivery instructions do not establish an exact speaking rate. Ten
 explicit speech languages include six of the seven
 analysis languages; Dutch is unsupported by the Qwen adapter. Explicit pronunciation substitutions

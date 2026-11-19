@@ -91,7 +91,8 @@ def audio_status(project: str | Path | None = None, *, engine: str | None = None
         from .speech_providers import external_provider_status
 
         return {"schema_version": "lixity-audio-status/1", "project": project_view,
-                "comparison_engine": comparison_engine, "targets": [external_provider_status(provider_profile)]}
+                "comparison_engine": comparison_engine,
+                "targets": [external_provider_status(provider_profile, engine=comparison_engine)]}
     if comparison_engine is not None:
         expected_model = audio_capabilities()[comparison_engine]["model"]
     selected_engine = comparison_engine or "qwen3"

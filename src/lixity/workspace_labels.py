@@ -12814,13 +12814,13 @@ _ROWS.update(
             'Grabación de referencia', 'Registrazione di riferimento', 'Gravação de referência', 'Referentieopname',
         ),
         'speech_reference_hint': (
-            'Choose a saved project recording by its spoken text and duration. Record or upload one in Author voice. Reusing a recording may improve voice continuity, without guaranteeing it. Qwen Base supports pauses, but not text direction.',
-            'Wähle eine gespeicherte Projektaufnahme anhand von Sprechtext und Dauer. Neue Aufnahmen erstellst oder importierst du unter Autorenstimme. Dieselbe Aufnahme kann die Stimme stabilisieren, garantiert es aber nicht. Qwen Base unterstützt Pausen, aber keine Textregie.',
-            'Choisissez un enregistrement du projet selon son texte et sa durée. Enregistrez ou importez une prise dans Voix d’auteur. Réutiliser une prise peut stabiliser la voix, sans garantie. Qwen Base accepte les pauses, mais pas la direction textuelle.',
-            'Elige una grabación del proyecto por su texto y duración. Graba o importa una en Voz de autor. Reutilizarla puede estabilizar la voz, sin garantía. Qwen Base admite pausas, pero no dirección textual.',
-            'Scegli una registrazione del progetto in base al testo e alla durata. Registra o importa una nuova presa in Voce autore. Riutilizzarla può stabilizzare la voce, senza garanzia. Qwen Base supporta pause, ma non regia testuale.',
-            'Escolha uma gravação do projeto pelo texto e duração. Grave ou importe uma em Voz do autor. Reutilizá-la pode estabilizar a voz, sem garantia. Qwen Base aceita pausas, mas não direção textual.',
-            'Kies een opgeslagen projectopname op gesproken tekst en duur. Maak of importeer een opname onder Auteursstem. Hergebruik kan de stem stabieler maken, zonder garantie. Qwen Base ondersteunt pauzes, maar geen tekstregie.',
+            'Choose a saved project recording by its spoken text and duration. Record or import one in Author voice. Qwen Base and ZONOS3 can reuse it; similarity still requires auditioning. ZONOS3 needs no transcript at generation time, and this model does not interpret free-text direction.',
+            'Wähle eine gespeicherte Projektaufnahme anhand von Sprechtext und Dauer. Neue Aufnahmen erstellst oder importierst du unter Autorenstimme. Qwen Base und ZONOS3 können sie wiederverwenden; Ähnlichkeit musst du anhören. ZONOS3 benötigt beim Generieren kein Transkript und interpretiert keine freie Textregie.',
+            'Choisissez un enregistrement du projet selon son texte et sa durée. Enregistrez ou importez une prise dans Voix d’auteur. Qwen Base et ZONOS3 peuvent la réutiliser ; la similarité doit être écoutée. ZONOS3 ne nécessite pas de transcription à la génération et n’interprète pas la direction textuelle libre.',
+            'Elige una grabación del proyecto por su texto y duración. Graba o importa una en Voz de autor. Qwen Base y ZONOS3 pueden reutilizarla; la similitud debe auditarse. ZONOS3 no necesita transcripción al generar ni interpreta dirección textual libre.',
+            'Scegli una registrazione del progetto in base al testo e alla durata. Registra o importa una presa in Voce autore. Qwen Base e ZONOS3 possono riutilizzarla; la somiglianza va ascoltata. ZONOS3 non richiede una trascrizione durante la generazione e non interpreta regia testuale libera.',
+            'Escolha uma gravação do projeto pelo texto e duração. Grave ou importe uma em Voz do autor. Qwen Base e ZONOS3 podem reutilizá-la; a semelhança precisa ser ouvida. O ZONOS3 não precisa de transcrição na geração e não interpreta direção textual livre.',
+            'Kies een opgeslagen projectopname op gesproken tekst en duur. Maak of importeer een opname onder Auteursstem. Qwen Base en ZONOS3 kunnen die hergebruiken; gelijkenis moet je beluisteren. ZONOS3 vereist geen transcript bij generatie en interpreteert geen vrije tekstregie.',
         ),
         'speech_voice_hint': (
             'Qwen uses preset voices. Choose delivery instructions explicitly.',
@@ -12852,6 +12852,15 @@ _ROWS.update(
             'FFmpeg regola la voce dopo la sintesi. 1,0 mantiene l’originale; le pause non cambiano.',
             'O FFmpeg ajusta a voz após a síntese. 1,0 mantém o original; as pausas não mudam.',
             'FFmpeg past de spraak na synthese aan. 1,0 behoudt het origineel; pauzes blijven gelijk.',
+        ),
+        'speech_speed_hint_model': (
+            'ZONOS3 applies this factor inside the model through its speaking-rate condition. 1.1 is the current default; it is not a guaranteed linear duration ratio, and pauses remain separate.',
+            'ZONOS3 wendet diesen Faktor im Modell über die Sprechrate an. 1,1 ist der aktuelle Standard; ein exakt linearer Dauerfaktor ist damit nicht garantiert, Pausen bleiben getrennt.',
+            'ZONOS3 applique ce facteur dans le modèle via sa condition de débit. 1,1 est la valeur par défaut actuelle ; la durée n’est pas forcément proportionnelle, et les pauses restent séparées.',
+            'ZONOS3 aplica este factor dentro del modelo mediante la condición de velocidad. 1,1 es el valor actual; no garantiza una proporción lineal de duración y las pausas siguen separadas.',
+            'ZONOS3 applica questo fattore nel modello tramite la condizione di velocità. 1,1 è il valore predefinito; non garantisce un rapporto di durata lineare e le pause restano separate.',
+            'O ZONOS3 aplica este fator no modelo através da condição de velocidade. 1,1 é o padrão atual; a duração não é garantida como proporcional e as pausas permanecem separadas.',
+            'ZONOS3 past deze factor in het model toe via de spreektempo-voorwaarde. 1,1 is de huidige standaard; een lineaire duurverhouding is niet gegarandeerd en pauzes blijven apart.',
         ),
         'speech_paragraph_pause': (
             'Paragraph pause (seconds)',
@@ -13108,6 +13117,16 @@ _ROWS["speech_runtime_hint"] = (
     "Qwen richiede il servizio vocale locale opzionale. La generazione su CPU può essere lenta; inizia con una breve anteprima. I segmenti di capitolo completati restano salvati localmente per nuovi tentativi; le anteprime vengono sempre rigenerate.",
     "Qwen requer o serviço de voz local opcional. A geração em CPU pode ser lenta; comece com uma prévia curta. Os segmentos de capítulo concluídos ficam guardados localmente para novas tentativas; as prévias são sempre geradas novamente.",
     "Qwen vereist de optionele lokale spraakdienst. Genereren op de CPU kan traag zijn; begin met een kort voorbeeld. Voltooide hoofdstuksegmenten blijven lokaal bewaard voor nieuwe pogingen; voorbeelden worden altijd opnieuw gegenereerd.",
+)
+
+_ROWS["speech_zonos_runtime_hint"] = (
+    "ZONOS3 runs in an isolated local MLX worker on Apple Silicon. A fixed voice or saved project reference is used; no text is sent to a hosted provider. The worker checks the runtime and model cache before reporting readiness.",
+    "ZONOS3 läuft in einem isolierten lokalen MLX-Arbeiter auf Apple Silicon. Verwendet werden eine feste Stimme oder eine gespeicherte Projektaufnahme; kein Text wird an einen gehosteten Anbieter gesendet. Der Status prüft Laufzeit und Modellcache.",
+    "ZONOS3 s’exécute dans un worker MLX local isolé sur Apple Silicon. Il utilise une voix fixe ou un enregistrement du projet ; aucun texte n’est envoyé à un fournisseur hébergé. Le statut vérifie le runtime et le cache du modèle.",
+    "ZONOS3 se ejecuta en un worker MLX local aislado en Apple Silicon. Usa una voz fija o una grabación del proyecto; no se envía texto a un proveedor alojado. El estado comprueba el runtime y la caché del modelo.",
+    "ZONOS3 viene eseguito in un worker MLX locale isolato su Apple Silicon. Usa una voce fissa o una registrazione del progetto; nessun testo viene inviato a un fornitore ospitato. Lo stato verifica runtime e cache del modello.",
+    "O ZONOS3 executa num worker MLX local isolado no Apple Silicon. Usa uma voz fixa ou uma gravação do projeto; nenhum texto é enviado a um fornecedor alojado. O estado verifica o runtime e a cache do modelo.",
+    "ZONOS3 draait in een geïsoleerde lokale MLX-worker op Apple Silicon. Er wordt een vaste stem of opgeslagen projectopname gebruikt; tekst gaat niet naar een gehoste aanbieder. De status controleert runtime en modelcache.",
 )
 
 _ROWS["speech_coqui_runtime_hint"] = (

@@ -86,7 +86,10 @@ between reading, comparison, research, and sharing:
 
 - **Read and review passages:** read continuous prose, search, and place work
   markers. The native manuscript editor supports writing, local autosave and
-  reviewed recovery. Use the teleprompter to rehearse a passage aloud.
+  reviewed recovery. Use the teleprompter to rehearse a passage aloud, or create
+  a local listening preview with Qwen, Coqui, IMS-Toucan, ZONOS3 or an explicit
+  provider. ZONOS3 on Apple Silicon can reuse a private project voice reference;
+  its tempo is conditioned inside the model, not reprocessed with FFmpeg.
 - **Compare prose patterns:** explore sentence lengths, length-invariant
   lexical diversity (`MATTR`, `MTLD`, exact `HD-D`), dialogue balance,
   repeated words, and skew-aware robust style baselines (median/MAD with

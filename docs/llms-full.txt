@@ -3546,8 +3546,9 @@ Use audio to listen through a manuscript, review pronunciation and pacing, recor
 your own voice, or prepare a direction plan for another service. This manual owns
 the audio workflow in both the local browser app and the CLI. The
 [documentation map](README.md), [browser workspace manual](WORKSPACE.md) and
-[CLI reference](USAGE.md) cover the surrounding project workflow; install models
-and workers through [Installation](INSTALLATION.md#optional-qwen-audio-worker).
+[CLI reference](USAGE.md) cover the surrounding project workflow. Install native
+workers or the optional Apple-Silicon path through
+[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
 
 The workflows below are available in 0.8.1; optional workers and models still
 require their documented setup. Experimental adapters retain their stated
@@ -3558,7 +3559,7 @@ numbers are independent of the application version.
 | I want to… | Start here | CLI route |
 | --- | --- | --- |
 | Hear a short passage or chapter | [Getting started](#getting-started) | `read-aloud` |
-| Record or import my own voice | [Author voice](#author-voice-recording-and-listening) | `audio-reference` |
+| Record, import or clone my own voice | [Author voice](#author-voice-recording-and-listening) and [ZONOS3 reference](#use-a-reference-with-zonos3) | `audio-reference`, `read-aloud` |
 | Set the recording level | [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) | `audio-microphone`, `audio-calibrate` |
 | Read and record with cues | [Teleprompter](#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) | Browser workflow |
 | Correct spoken names or use IPA | [Spelling substitutions](#pronunciation-substitutions) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction-unreleased) | Project profile configuration |
@@ -3583,11 +3584,12 @@ synthesizes audio.
    **Listen and direct**; it opens the **Listen & direct** tab.
 3. Inspect a plan first. **Export direction → Preview export** works without a
    running synthesis service. It still needs valid project/profile settings.
-4. To generate audio, install and start a matching worker using
-   [Installation](INSTALLATION.md#optional-qwen-audio-worker), or configure an
-   [explicit external provider](#audio-export-and-external-providers-unreleased).
-   **Services & audio queue** and `audio-status` report the currently available
-   native model; status does not install or switch one.
+4. To generate audio, install a matching worker. Apple Silicon can use the
+   isolated `mlx-audio` ZONOS3 worker with a fixed voice or saved author reference;
+   other native models use their registered workers, and remote providers remain
+   explicit. See [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
+   **Services & audio queue** and `audio-status` show the available worker, cached
+   model and model match. Status does not install, load or switch one.
 5. Choose **Preview paragraph** for a short passage, listen to its actual words
    and delivery, then render the chapter. Save a download when needed. The
    [chapter recording rules](#retain-or-import-chapter-audio-unreleased) explain
@@ -3597,6 +3599,8 @@ synthesizes audio.
 lixity read-aloud --project ./novel --preview --plan-only
 lixity audio-status --project ./novel
 lixity read-aloud --project ./novel --preview --speed 1.0 -o preview.wav
+lixity read-aloud --project ./novel --engine mlx-audio --language de \
+  --voice liesel --speed 1.1 --no-direction -o zonos-preview.wav
 lixity read-aloud --project ./novel --chapter 1 --progress -o chapter-1.wav
 ```
 
@@ -3617,9 +3621,10 @@ Prerequisites depend on the task:
 - Synthesis needs the exact engine's optional runtime and local model files, or
   an explicitly configured external service. Core analysis dependencies do not
   install inference models.
-- MP3 output and a render tempo other than `1.0` require FFmpeg on the computer
-  running Lixity, even when synthesis runs on a Jetson. New default profiles use
-  `1.2`; use an explicit `--speed 1.0` for a WAV preview without tempo conversion.
+- MP3 output and adapter-level tempo postprocessing require FFmpeg on the Lixity
+  computer. ZONOS3 is the exception: it applies `speed` inside the model as a
+  `speaking_rate` condition and needs no FFmpeg tempo pass. New default profiles
+  use `1.1`; this is a control value, not a guaranteed linear duration ratio.
 - Browser recording needs browser microphone permission. Hardware gain and
   calibration use tools and devices on the server computer; they do not grant
   that permission or select the browser's input.
@@ -3699,12 +3704,14 @@ The following describes Lixity's current adapters, not every upstream model:
 | `coqui` | German Thorsten VITS | Unsupported | Unsupported |
 | `coqui-reference` | Thorsten plus OpenVoice reference conversion | Unsupported | Unsupported |
 | `ims-toucan` | Saved recording, German or English | Unsupported | Supported |
+| `mlx-audio` | ZONOS3 fixed voice or saved project reference | Unsupported | Unsupported; speed uses a model condition |
 | `openai-compatible` | Explicit provider model and voice | Only with declared `supports_instructions` | Unsupported |
 | `f5-tts` | Retained profile and compatible external local worker | Unsupported | Unsupported; bundled loader retired |
 
 Every engine uses Lixity's literal spelling substitutions and explicit external
-pauses. Render tempo is separate FFmpeg postprocessing. These controls do not
-establish word fidelity, calibrated emotion or speaker similarity.
+pauses. Tempo is FFmpeg postprocessing except for the fixed local ZONOS3 binding,
+which passes `speed` into the model. These controls do not establish word fidelity,
+calibrated emotion or speaker similarity.
 
 Saved project audio profiles are shared with the CLI. In the current
 native interface, open **Project → Settings → Audio and services → Voice profiles**
@@ -3811,18 +3818,18 @@ the direct child process, not in-process inference or arbitrary grandchildren.
 
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language` and `--instructions` override that invocation without rewriting the
-saved profile. In 0.7.7, `--speed 1.2` sets a playback tempo factor for all
-profiles in that render; it does not modify saved profiles. Profile speed ranges
-from 0.5 to 2.0. New default profiles use 1.2; existing saved profiles retain their
-explicit rate, and previously omitted rates remain 1.0. FFmpeg applies `atempo`
-to each synthesized or cached speech segment before the explicitly configured
-pauses are inserted; speed 1.0 leaves the original speech untouched. If FFmpeg
-returns no samples for an extremely short segment, the original segment is kept.
-Qwen has no
-precise native rate control, and delivery instructions do not guarantee a speaking
-rate. Postprocessing can change perceived quality; compare short previews by ear.
-The factor applies to model audio, including its internal pauses, so the overall
-chapter's words per minute will not necessarily increase by exactly that factor.
+saved profile. `--speed` applies to every profile in that render without saving.
+The control ranges from 0.5 to 2.0. New implicit profiles use `1.1`; existing saved
+profiles retain their explicit rate and previously omitted legacy rates remain
+`1.0`.
+
+For Qwen and the other postprocessed adapters, FFmpeg applies `atempo` to each
+synthesized or cached speech segment before explicit pauses are inserted. `1.0`
+leaves the original speech untouched. If FFmpeg returns no samples for an
+extremely short segment, the original segment is kept. ZONOS3 instead receives
+`speed` in model generation and skips this FFmpeg step. Neither adapter promises a
+precise linear duration ratio; compare short previews and ASR evidence when pacing
+and word fidelity matter. Delivery instructions do not guarantee a speaking rate.
 
 A root `lixity.toml` can contain:
 
@@ -3977,6 +3984,12 @@ and machine output.
 
 ## Experimental reference voices
 
+ZONOS3 and Qwen Base both reuse immutable project voice references, but they do so
+through different adapters. ZONOS3 extracts a 192-dimensional speaker embedding
+from the raw recording and does not need a reference transcript at generation time.
+Lixity still requires and retains the reviewed transcript because the saved project
+reference is a shared, portable record used by Qwen Base and the Studio workflow.
+
 Qwen's [Voice Design then Clone](https://github.com/QwenLM/Qwen3-TTS#voice-design-then-clone)
 workflow creates a short reference with VoiceDesign and reuses it with the
 separately installed Qwen3-TTS 1.7B Base model. Alternatively, record your own
@@ -4039,6 +4052,37 @@ also contain sensitive voice data. Creating the same reference again is
 idempotent. The browser also records, imports and saves references through
 [Author's voice](#author-voice-recording-and-listening); select saved recordings
 there by their text and duration.
+
+### Use a reference with ZONOS3
+
+The fixed local MLX binding loads `mlx-community/ZONOS3-Mini` in an isolated
+short-lived Python worker. It supports fixed voices and `voice = "reference"` using
+the project reference ID. The worker receives only a validated temporary WAV copy;
+the original record and transcript remain under `.lixity/audio-references/`.
+
+```bash
+lixity audio-reference create --project ./novel \
+  --audio voice-work/reference.wav --transcript-file voice-work/reference.txt
+lixity audio-status --project ./novel --engine mlx-audio --json
+lixity read-aloud --project ./novel --engine mlx-audio --language de \
+  --voice reference --reference-id REFERENCE_ID --speed 1.1 \
+  --no-direction --preview -o author-preview.wav
+```
+
+The status command checks the isolated runtime executable and whether the MLX
+checkpoint is cached. It does not load the model or expose filesystem paths. A
+`ready` result establishes prerequisites only; it does not establish speech quality.
+At `speed=1.1`, ZONOS3 receives `speed` in `generate()`, which maps to the model's
+`speaking_rate` condition. It is not exact `10%` duration arithmetic because the
+model samples acoustic output; compare otherwise identical previews when duration
+is part of the acceptance criterion. Explicit paragraph and scene pauses remain in
+Lixity and are not changed by the model's speed value.
+
+ZONOS3 does not interpret Lixity's free-text passage instructions in the MLX
+implementation. Saved directions remain exportable for another engine, but a
+synthetic ZONOS3 render should use `--no-direction` or omit free-text direction.
+Pronunciation substitutions and explicit Lixity pauses still apply. Do not infer
+speaker identity, consent, accent accuracy or naturalness from a successful render.
 
 ### Use a reference with Qwen Base
 
@@ -4704,16 +4748,28 @@ reference data and cache keys retain their behavior.
 
 Start the MLX-Audio service for speech recognition as described in
 [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
-For the local default TTS binding, Lixity starts a short-lived worker in the
-isolated MLX-Audio runtime and loads `mlx-community/ZONOS3-Mini` directly. This
-avoids the installed HTTP broker's silent ZONOS3 output while keeping MLX imports
-out of Lixity's own Python environment. The default fixed German voice is `liesel`.
+TTS uses a separate short-lived worker and imports MLX only in the isolated Python
+3.11 runtime. This is deliberate: the tested MLX-Audio 0.6.6 HTTP broker returned
+silent ZONOS3 WAV output, while the direct model path returned valid 44.1 kHz audio.
+Lixity does not use that broken broker path for the fixed local ZONOS3 binding.
+The service at port 8000 remains the STT transport.
 
-ZONOS3 also accepts a saved project voice reference. Lixity resolves the explicit
-reference ID, validates its immutable audio record and passes only a temporary
-copy to the local worker. The reference remains inside the project and is removed
-from the worker request after each segment. Configure the profile with
-`voice = "reference"` and the reference ID returned by `audio-reference create`.
+| Lixity language | Fixed voices | Reference |
+| --- | --- | --- |
+| `de` | `liesel`, `wolfgang` | Supported |
+| `en` | `cillian`, `imogen`, `jett`, `morgana`, `rupert`, `sakura`, `savannah`, `thaddeus`, `willow`, `wyatt` | Supported |
+| `fr` | `gaspard` | Supported |
+| `es` | `rodrigo`, `ximena` | Supported |
+| `it` | `ginevra`, `lorenzo` | Supported |
+| `pt` | `leonor`, `thiago` | Supported |
+| `nl` | No grouped fixed voice in the MLX checkpoint | Reference supported |
+
+These are the intersection of the official voice groups and Lixity's complete
+workspace languages, not a claim that only seven languages exist upstream. A
+reference is resolved by its opaque content identity, validated and copied to a
+private temporary directory for each segment. The temp copy is removed when the
+worker returns. ZONOS3 itself does not need a transcript for cloning; Lixity still
+stores the exact reviewed transcript as part of the shared reference record.
 
 ```bash
 lixity read-aloud --project ./novel --engine mlx-audio --language de \
@@ -4724,13 +4780,13 @@ lixity read-aloud --project ./novel --engine mlx-audio --language de \
 
 For ZONOS3, Lixity sends `speed` directly to the model. It is a trained
 `speaking_rate` condition rather than an FFmpeg `atempo` step; `1.1` is the
-profile default. Pauses and cache reuse remain in Lixity. The model controls
-loudness, spectral range and speaking rate, but this MLX checkpoint does not
-interpret free-text delivery instructions. Existing passage directions remain
-saved and exportable; use `--no-direction` for a ZONOS3 render until a model with
-a validated direction control is selected. Test short previews before chapter
-rendering. Quantized weights, voice similarity and exact audio duration remain
-qualities to audition, not guarantees inferred from model size or a speed value.
+profile default. The implementation's only acoustic condition fields are
+`loudness`, `fmax` and `speaking_rate`. Pauses and cache reuse remain in Lixity.
+This MLX checkpoint does not expose text direction, accent adapters, hidden-state
+steering or raw reference-code editing through Lixity's adapter. Existing passage
+directions remain saved and exportable; use `--no-direction` for synthesis.
+Test short previews before chapter rendering. Fixed-voice choice, speaker cloning,
+exact duration and accent remain auditioned properties rather than guarantees.
 
 For German speech recognition, send one selected audio file to the same local
 service with Parakeet v3 and convert the normalized word timings for Lixity's
@@ -9819,6 +9875,26 @@ The server exposes 16 deterministic read-only analysis and research tools. Query
 - `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
 - `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews.
+
+### Audio status and local ZONOS3 synthesis
+
+`lixity audio-status --json` keeps the additive `lixity-audio-status/1` envelope.
+For a fixed local `mlx-audio` comparison, its single target uses
+`target: "local"` and `transport: "isolated-process"`. `runtime_available` and
+`model_cached` are boolean prerequisite observations; `reason` is a stable code,
+`model` identifies `mlx-community/ZONOS3-Mini`, and `model_matches` is `true` for
+that fixed binding. The JSON deliberately omits runtime and cache paths. `ready`
+means these prerequisites are present, not that weights loaded or speech quality
+was measured.
+
+A ZONOS3 reference profile contains `voice: "reference"` and an opaque 64-hex
+`reference_id`. Resolve references only through an explicitly selected project;
+do not infer a path from the identity. `read-aloud` validates and snapshots the
+reference before launch. The isolated worker receives a temporary audio copy and
+the effective synthesis text only for an explicit render. `speed` is sent as a
+model condition, while free-text direction is unsupported by this adapter. Plan
+and timeline export remain available without loading the runtime. Other MLX or
+OpenAI-compatible HTTP bindings retain unknown provider readiness until render.
 
 Structured editorial prompts are `manuscript_pacing_audit`,
 `manuscript_dialogue_review`, and `manuscript_showing_triage`; discover them with
