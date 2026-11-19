@@ -25,6 +25,8 @@ from .language_data import (
     UI_LABELS,
 )
 from .models import CorpusConfig
+from .status import LANGUAGE_CHOICES as LANGUAGE_CHOICES
+from .status import LANGUAGE_CODES as LANGUAGE_CODES
 from .workspace_labels import workspace_labels_for
 
 
@@ -128,11 +130,10 @@ def _build_profiles() -> dict[str, LanguageProfile]:
 
 
 LANGUAGE_PROFILES: dict[str, LanguageProfile] = _build_profiles()
-
-#: Ordered language codes with a complete profile (without "auto").
-LANGUAGE_CODES: tuple[str, ...] = tuple(LANGUAGE_PROFILES)
-#: Accepted language selectors, including explicit detection.
-LANGUAGE_CHOICES: tuple[str, ...] = ("auto", *LANGUAGE_CODES)
+if tuple(LANGUAGE_PROFILES) != LANGUAGE_CODES:
+    raise RuntimeError(
+        f"LANGUAGE_PROFILES keys {tuple(LANGUAGE_PROFILES)!r} drifted from status.LANGUAGE_CODES {LANGUAGE_CODES!r}"
+    )
 
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":

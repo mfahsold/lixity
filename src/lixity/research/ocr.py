@@ -60,6 +60,13 @@ class OCRExtractionResult:
     implementation_id: Literal["baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"] = "baidu-unlimited-ocr/1"
 
 
+def _ocr_tool_env() -> dict[str, str]:
+    """Allow only minimal Poppler/Tesseract variables, never ambient secrets."""
+    from ..io import sanitized_subprocess_env
+
+    return sanitized_subprocess_env(extra_allow=("TESSDATA_PREFIX",), overrides={"LC_ALL": "C"})
+
+
 def render_pdf_pages(pdf_path: Path, *, dpi: int = 150, timeout: int | None = None) -> list[PageImage]:
     """Render physical PDF pages to PNG image streams using system pdftoppm.
 
@@ -70,10 +77,13 @@ def render_pdf_pages(pdf_path: Path, *, dpi: int = 150, timeout: int | None = No
         return []
 
     with tempfile.TemporaryDirectory(prefix="lixity-pdf-pages-") as tmpdir:
+        os.chmod(tmpdir, 0o700)
         out_prefix = Path(tmpdir) / "page"
         cmd = [pdftoppm, "-png", "-r", str(dpi), str(pdf_path), str(out_prefix)]
         try:
-            res = subprocess.run(cmd, capture_output=True, check=False, timeout=timeout)  # noqa: S603
+            res = subprocess.run(  # noqa: S603
+                cmd, capture_output=True, check=False, env=_ocr_tool_env(), timeout=timeout,
+            )
             if res.returncode != 0:
                 return []
         except (OSError, subprocess.SubprocessError):
@@ -115,6 +125,7 @@ def get_pdf_page_count(pdf_path: Path, *, timeout: float | None = None) -> int |
         try:
             res = subprocess.run(  # noqa: S603
                 [pdfinfo, str(pdf_path)], capture_output=True, text=True, check=False,
+                env=_ocr_tool_env(),
                 timeout=timeout if timeout is not None else worker_timeout(),
             )
             if res.returncode == 0:
@@ -177,7 +188,7 @@ def _tesseract_settings() -> tuple[str, list[str], list[str]]:
     try:
         result = subprocess.run(  # noqa: S603
             [executable, "--list-langs"], capture_output=True, text=True, encoding="utf-8",
-            check=False, timeout=min(15, timeout),
+            check=False, env=_ocr_tool_env(), timeout=min(15, timeout),
         )
     except (OSError, subprocess.SubprocessError, UnicodeError) as error:
         raise ResearchError("Cannot inspect Tesseract language data; check the executable and TESSDATA_PREFIX") from error
@@ -207,7 +218,8 @@ def _extract_tesseract(pages: list[PageImage], *, timeout: int | None = None) ->
         try:
             result = subprocess.run(  # noqa: S603
                 [executable, "stdin", "stdout", "-l", "+".join(languages), "--psm", "3", "--dpi", "300"],
-                input=page.image_bytes, capture_output=True, check=False, timeout=remaining,
+                input=page.image_bytes, capture_output=True, check=False,
+                env=_ocr_tool_env(), timeout=remaining,
             )
         except subprocess.TimeoutExpired as error:
             raise ResearchError("Tesseract timed out; no partial capture was retained") from error
@@ -357,7 +369,9 @@ def _extract_pdf_with_backend(
                 raise ResearchError("Native PDF extraction timed out; no partial capture was retained")
             cmd_args = [pdftotext, "-f", str(p_idx), "-l", str(p_idx), str(pdf_path), "-"]
             try:
-                sub = subprocess.run(cmd_args, capture_output=True, check=False, timeout=remaining)  # noqa: S603
+                sub = subprocess.run(  # noqa: S603
+                    cmd_args, capture_output=True, check=False, env=_ocr_tool_env(), timeout=remaining,
+                )
                 if sub.returncode == 0:
                     p_text = sub.stdout.decode("utf-8", errors="replace").strip()
                     if p_text:

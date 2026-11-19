@@ -198,7 +198,9 @@ def _decoded(stream: BinaryIO, audio_format: str) -> Iterator[tuple[wave.Wave_re
         raise ValueError("This audio encoding requires an installed FFmpeg decoder")
     stream.seek(0)
     with tempfile.TemporaryDirectory(prefix="lixity-audio-audit-") as directory:
+        os.chmod(directory, 0o700)
         output = Path(directory) / "decoded.wav"
+        from .io import sanitized_subprocess_env
         try:
             process = subprocess.run(  # noqa: S603 -- fixed decoder arguments; input via local fd
                 [executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-xerror",
@@ -207,11 +209,12 @@ def _decoded(stream: BinaryIO, audio_format: str) -> Iterator[tuple[wave.Wave_re
                  "-threads", "1", "-c:a", "pcm_s32le", "-t", str(MAX_AUDIO_SECONDS + 1),
                  "-fs", str(MAX_DECODED_BYTES), "-f", "wav", str(output)],
                 stdin=stream, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                env=sanitized_subprocess_env(overrides={"LC_ALL": "C"}),
                 timeout=_DECODE_TIMEOUT_SECONDS, check=False,
             )
         except subprocess.TimeoutExpired as exc:
             raise ValueError("Audio decoding exceeded the time budget") from exc
-        if process.returncode or not output.is_file():
+        if process.returncode or output.is_symlink() or not output.is_file():
             raise ValueError("Audio decoding failed; no partial audit was produced")
         # FFmpeg's -fs can stop at a packet boundary. Treat the final MiB as a
         # conservative guard zone rather than accepting a potentially cut tail.

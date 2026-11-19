@@ -703,6 +703,24 @@ sys.exit(1)
                     )
                 run.assert_not_called()
 
+    def test_ocr_tool_env_strips_ambient_secrets_and_preserves_tessdata_prefix(self) -> None:
+        from lixity.research.ocr import _ocr_tool_env
+
+        with patch.dict(
+            os.environ,
+            {
+                "OPENAI_API_KEY": "sk-secret",
+                "HF_TOKEN": "hf_secret",
+                "GH_TOKEN": "ghp_secret",
+                "TESSDATA_PREFIX": "/usr/share/tessdata",
+            },
+        ):
+            env = _ocr_tool_env()
+        for secret in ("OPENAI_API_KEY", "HF_TOKEN", "GH_TOKEN"):
+            self.assertNotIn(secret, env)
+        self.assertEqual(env["TESSDATA_PREFIX"], "/usr/share/tessdata")
+        self.assertEqual(env["LC_ALL"], "C")
+
 
 if __name__ == "__main__":
     unittest.main()

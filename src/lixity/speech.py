@@ -342,14 +342,11 @@ def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
     return output.getvalue()
 
 
-_FFMPEG_ALLOWED_ENV = ("PATH", "HOME", "TMPDIR", "SYSTEMROOT", "TEMP", "TMP")
-
-
 def _ffmpeg_env() -> dict[str, str]:
     """Pass only minimal execution variables to FFmpeg, never ambient secrets."""
-    env = {key: os.environ[key] for key in _FFMPEG_ALLOWED_ENV if key in os.environ}
-    env["LC_ALL"] = "C"
-    return env
+    from .io import sanitized_subprocess_env
+
+    return sanitized_subprocess_env(overrides={"LC_ALL": "C"})
 
 
 def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:

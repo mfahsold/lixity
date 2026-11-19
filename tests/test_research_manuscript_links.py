@@ -1364,3 +1364,43 @@ def test_paragraph_quote_index_matches_linear_scan():
         actual = _quote_occurrences(paragraphs, query, index=index)
         assert [(p.text, off) for p, off in actual] == [(p.text, off) for p, off in expected]
 
+
+def test_source_path_accepts_parent_symlink_and_rejects_escaping_symlinks(tmp_path):
+    from lixity.research.manuscript import resolve_project_manuscript_path
+    from lixity.research.repository import Repository
+
+    real_parent = tmp_path / "real_parent"
+    project = real_parent / "book"
+    chapters = project / "chapters"
+    chapters.mkdir(parents=True)
+    manuscript = chapters / "ch1.md"
+    manuscript.write_text("## Chapter One\n\nSynthetic prose.\n", encoding="utf-8")
+    outside = tmp_path / "outside.md"
+    outside.write_text("## Outside\n\nNot part of this project.\n", encoding="utf-8")
+
+    # Simulate an OS parent symlink (such as macOS /var -> /private/var).
+    alias_parent = tmp_path / "alias_parent"
+    alias_parent.symlink_to(real_parent, target_is_directory=True)
+    repo = Repository(alias_parent / "book")
+    via_alias = alias_parent / "book" / "chapters" / "ch1.md"
+    canonical, relative = resolve_project_manuscript_path(repo, via_alias)
+    assert canonical == manuscript.resolve()
+    assert relative == "chapters/ch1.md"
+
+    # Contained internal aliases keep their relative identity even via an OS parent symlink.
+    internal_link = project / "alias.md"
+    internal_link.symlink_to(manuscript)
+    alias_canonical, alias_relative = resolve_project_manuscript_path(
+        repo, alias_parent / "book" / "alias.md"
+    )
+    assert alias_canonical == repo.root / "alias.md"
+    assert alias_relative == "alias.md"
+
+    # Escaping symlinks and parent traversal still fail.
+    escape_link = project / "escape.md"
+    escape_link.symlink_to(outside)
+    with pytest.raises(ResearchError, match="escapes"):
+        resolve_project_manuscript_path(repo, alias_parent / "book" / "escape.md")
+    with pytest.raises(ResearchError, match="remain inside"):
+        resolve_project_manuscript_path(repo, alias_parent / "book" / ".." / "outside.md")
+

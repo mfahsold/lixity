@@ -205,7 +205,7 @@ class DossierCollectionsTests(unittest.TestCase):
             name="Reading Order",
             dossier_ids=[self.d3, self.d1],
         )
-        bundle = Path(self._tmp.name) / "backup.tar.gz"
+        bundle = Path(self._tmp.name).resolve() / "backup.tar.gz"
         exported = export_archive(self.root, bundle)
         self.assertEqual(exported["output_path"], str(bundle))
 

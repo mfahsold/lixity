@@ -217,3 +217,55 @@ def test_cli_audio_microphone(capsys, monkeypatch: pytest.MonkeyPatch):
     assert data["status"] == "updated"
     assert data["gain"] == 35
 
+
+def test_sanitized_subprocess_env_and_audio_tool_env_strip_ambient_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from lixity.io import sanitized_subprocess_env
+    from lixity.speech_record import _audio_tool_env
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
+    monkeypatch.setenv("HF_TOKEN", "hf_secret")
+    monkeypatch.setenv("GH_TOKEN", "ghp_secret")
+    monkeypatch.setenv("PULSE_SERVER", "unix:/tmp/pulse-test")
+
+    base = sanitized_subprocess_env()
+    for secret in ("OPENAI_API_KEY", "HF_TOKEN", "GH_TOKEN"):
+        assert secret not in base
+    assert "PULSE_SERVER" not in base
+
+    audio_env = _audio_tool_env()
+    for secret in ("OPENAI_API_KEY", "HF_TOKEN", "GH_TOKEN"):
+        assert secret not in audio_env
+    assert audio_env["PULSE_SERVER"] == "unix:/tmp/pulse-test"
+    assert audio_env["LC_ALL"] == "C"
+
+
+def test_alsa_controls_pass_sanitized_env_and_handle_timeout(monkeypatch: pytest.MonkeyPatch):
+    import subprocess
+
+    from lixity.speech_record import get_alsa_gain_info, list_capture_devices
+
+    seen_kwargs: list[dict[str, object]] = []
+
+    def mock_run(cmd, **kwargs):
+        seen_kwargs.append(kwargs)
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=15.0)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
+    monkeypatch.setattr("shutil.which", lambda bin_name: f"/usr/bin/{bin_name}")
+    monkeypatch.setattr("subprocess.run", mock_run)
+
+    assert set_alsa_gain(35) is False
+    assert get_alsa_gain() is None
+    assert get_alsa_gain_info() is None
+    devices = list_capture_devices()
+    assert len(devices) == 1 and devices[0]["alsa_id"] == "default"
+    assert len(seen_kwargs) == 4
+    for kw in seen_kwargs:
+        assert kw.get("timeout") is not None
+        env = kw.get("env")
+        assert isinstance(env, dict)
+        assert "OPENAI_API_KEY" not in env
+        assert env.get("LC_ALL") == "C"
+

@@ -9,7 +9,23 @@ import hashlib
 import os
 import stat
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
+
+_SAFE_SUBPROCESS_ENV_KEYS: tuple[str, ...] = (
+    "PATH", "HOME", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "LANG", "LC_ALL",
+)
+
+
+def sanitized_subprocess_env(
+    *,
+    extra_allow: Sequence[str] = (),
+    overrides: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Return a minimal allowlisted environment so ambient secrets never cross process boundaries."""
+    env = {key: os.environ[key] for key in (*_SAFE_SUBPROCESS_ENV_KEYS, *extra_allow) if key in os.environ}
+    if overrides:
+        env.update(overrides)
+    return env
 
 
 class FileUtils:

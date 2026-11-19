@@ -1,5 +1,6 @@
 """Tests for lixity.server – loopback development server and interactive dashboard."""
 
+import errno
 import io
 import json
 import os
@@ -181,7 +182,7 @@ class TestLixityServer(unittest.TestCase):
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
         original_state = snapshot_handler_state()
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
+            root = Path(td).resolve()
             (root / "Zulu").mkdir()
             (root / "alpha.md").mkdir()
             (root / ".hidden").mkdir()
@@ -191,7 +192,12 @@ class TestLixityServer(unittest.TestCase):
             (root / ".private.md").write_text("Hidden.\n", encoding="utf-8")
             (root / "Zulu" / "nested.md").write_text("Nested.\n", encoding="utf-8")
             if os.name == "posix":
-                os.mkdir(os.fsencode(root) + b"/bad-\xff.md")
+                try:
+                    os.mkdir(os.fsencode(root) + b"/bad-\xff.md")
+                except OSError as exc:
+                    # macOS APFS rejects non-UTF-8 filenames at the kernel level.
+                    if exc.errno != errno.EILSEQ:
+                        raise
             with patch("lixity.server.routes_project.Path.home", return_value=root):
                 status, body, _ = self.make_request("/api/project-paths")
             self.assertEqual(status, 200, body)
@@ -1259,7 +1265,7 @@ class TestLixityServer(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as td:
                 # 1. Create minimal project
-                proj_dir = Path(td) / "my-novel"
+                proj_dir = Path(td).resolve() / "my-novel"
                 create_payload = json.dumps(
                     {
                         "title": "Die Chroniken von Nebelwald",
@@ -1726,12 +1732,12 @@ class TestLixityServer(unittest.TestCase):
                             {name: getattr(LixityServerHandler, name) for name in before},
                             before,
                         )
-                unreadable = Path(td) / "unreadable.md"
+                unreadable = Path(td).resolve() / "unreadable.md"
                 unreadable.write_text("Synthetic manuscript.\n", encoding="utf-8")
                 snapshot_read = FileUtils.read_source_snapshot
 
                 def fail_target_read(path, *args, **kwargs):
-                    if Path(path) == unreadable:
+                    if Path(path).resolve() == unreadable:
                         raise PermissionError("Synthetic unreadable manuscript")
                     return snapshot_read(path, *args, **kwargs)
 
@@ -1812,7 +1818,7 @@ class TestLixityServer(unittest.TestCase):
         original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
-                project = Path(td) / "research-only"
+                project = Path(td).resolve() / "research-only"
                 project.mkdir()
                 source_path = Path(td) / "public-note.txt"
                 source_bytes = b"The reading room opened in 1924.\n"

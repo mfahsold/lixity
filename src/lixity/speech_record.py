@@ -16,12 +16,22 @@ import wave
 from pathlib import Path
 from typing import Any
 
+from .io import sanitized_subprocess_env
 from .speech_qwen import SAMPLE_RATE
 from .speech_references import SpeechReference, save_reference
 
 DEFAULT_DEVICE = "plughw:CARD=I3000,DEV=0"
 MAX_RECORD_SECONDS = 30.0
 MIN_RECORD_SECONDS = 1.0
+_CONTROL_TIMEOUT_SECONDS = 15.0
+
+
+def _audio_tool_env() -> dict[str, str]:
+    """Allow only audio-device session variables, never ambient API secrets."""
+    return sanitized_subprocess_env(
+        extra_allow=("XDG_RUNTIME_DIR", "PULSE_SERVER", "ALSA_CONFIG_PATH"),
+        overrides={"LC_ALL": "C"},
+    )
 
 
 def set_alsa_gain(gain: int, card: int | str = 1, control: str = "Mic") -> bool:
@@ -33,9 +43,12 @@ def set_alsa_gain(gain: int, card: int | str = 1, control: str = "Mic") -> bool:
         return False
     try:
         cmd = [amixer, "-c", str(card), "sset", str(control), str(gain)]
-        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)  # noqa: S603 - fixed command vector
+        res = subprocess.run(  # noqa: S603 - fixed command vector
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+            env=_audio_tool_env(), timeout=_CONTROL_TIMEOUT_SECONDS,
+        )
         return res.returncode == 0
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
 
@@ -46,13 +59,16 @@ def get_alsa_gain(card: int | str = 1, control: str = "Mic") -> int | None:
         return None
     try:
         cmd = [amixer, "-c", str(card), "sget", str(control)]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603 - fixed command vector
+        res = subprocess.run(  # noqa: S603 - fixed command vector
+            cmd, capture_output=True, text=True, check=False,
+            env=_audio_tool_env(), timeout=_CONTROL_TIMEOUT_SECONDS,
+        )
         if res.returncode != 0:
             return None
         stdout = res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
         match = re.search(r"Capture\s+(\d+)\s+\[", stdout)
         return int(match.group(1)) if match else None
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
 
 
@@ -63,7 +79,10 @@ def list_capture_devices() -> list[dict[str, Any]]:
     if arecord is None:
         return fallback
     try:
-        res = subprocess.run([arecord, "-l"], capture_output=True, text=True, check=False)  # noqa: S603
+        res = subprocess.run(  # noqa: S603
+            [arecord, "-l"], capture_output=True, text=True, check=False,
+            env=_audio_tool_env(), timeout=_CONTROL_TIMEOUT_SECONDS,
+        )
         if res.returncode != 0:
             return fallback
         devices: list[dict[str, Any]] = []
@@ -81,7 +100,7 @@ def list_capture_devices() -> list[dict[str, Any]]:
                     "label": f"{c_name.strip()} ({d_name.strip()})",
                 })
         return devices if devices else fallback
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return fallback
 
 
@@ -92,7 +111,10 @@ def get_alsa_gain_info(card: int | str = 1, control: str = "Mic") -> dict[str, A
         return None
     try:
         cmd = [amixer, "-c", str(card), "sget", str(control)]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: S603
+        res = subprocess.run(  # noqa: S603
+            cmd, capture_output=True, text=True, check=False,
+            env=_audio_tool_env(), timeout=_CONTROL_TIMEOUT_SECONDS,
+        )
         if res.returncode != 0:
             return None
         stdout = res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
@@ -114,7 +136,7 @@ def get_alsa_gain_info(card: int | str = 1, control: str = "Mic") -> dict[str, A
             "min": min_lim,
             "max": max_lim,
         }
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return None
 
 
@@ -170,7 +192,9 @@ def record_audio(
             "-q",
         ]
         try:
-            res = subprocess.run(cmd, capture_output=True, check=False, timeout=duration + 5.0)  # noqa: S603 - fixed command vector
+            res = subprocess.run(  # noqa: S603 - fixed command vector
+                cmd, capture_output=True, check=False, env=_audio_tool_env(), timeout=duration + 5.0,
+            )
             if res.returncode == 0 and res.stdout.startswith(b"RIFF"):
                 return _trim_wav_duration(res.stdout, duration, rate)
         except (subprocess.TimeoutExpired, OSError):
@@ -193,7 +217,9 @@ def record_audio(
                 "pipe:1",
             ]
             try:
-                res = subprocess.run(cmd, capture_output=True, check=False, timeout=duration + 5.0)  # noqa: S603 - fixed command vector
+                res = subprocess.run(  # noqa: S603 - fixed command vector
+                    cmd, capture_output=True, check=False, env=_audio_tool_env(), timeout=duration + 5.0,
+                )
                 if res.returncode == 0 and res.stdout.startswith(b"RIFF"):
                     return res.stdout
             except (subprocess.TimeoutExpired, OSError):
@@ -210,7 +236,9 @@ def record_audio(
         ]
         # PipeWire pw-record does not take a duration flag natively, run with timeout
         try:
-            res = subprocess.run(cmd, capture_output=True, check=False, timeout=duration)  # noqa: S603 - fixed command vector
+            res = subprocess.run(  # noqa: S603 - fixed command vector
+                cmd, capture_output=True, check=False, env=_audio_tool_env(), timeout=duration,
+            )
             if res.stdout.startswith(b"RIFF"):
                 return _trim_wav_duration(res.stdout, duration, rate)
         except subprocess.TimeoutExpired as exc:

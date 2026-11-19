@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any
 from .log import get_logger, speech_diagnostic_id
 from .speech_engines import QWEN_MODEL, engine_for_model, native_engine
 from .speech_profiles import AudioProfile, audio_capabilities
+from .speech_providers import _NoRedirect as _NoRedirect
+from .speech_providers import no_redirect_opener
 
 if TYPE_CHECKING:
     from .speech_references import SpeechReference
@@ -35,12 +37,6 @@ def _valid_render_id(value: object) -> str | None:
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{16}", value) else None
 
 
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req: Any, fp: Any, code: int, msg: str,
-                         headers: Any, newurl: str) -> None:
-        return None
-
-
 def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
                   endpoints: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Probe the actual allowlisted model worker, never merely an open tunnel."""
@@ -49,7 +45,7 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
         raise ValueError("Unknown native speech execution target")
     endpoints = spec.endpoints if endpoints is None else endpoints
     request = urllib.request.Request(endpoints[target].replace("/v1/audio/speech", "/health"))  # noqa: S310 - fixed loopback allowlist
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    client = no_redirect_opener(opener)
     model_id = None
     residency: dict[str, Any] = {}
     try:
@@ -122,7 +118,7 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     request = urllib.request.Request(endpoints[target], data=payload,  # noqa: S310 - fixed loopback allowlist
                                      headers=headers)
     # Ignore proxy environment variables, even for localhost.
-    client = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    client = no_redirect_opener(opener)
     try:
         with client.open(request, timeout=SYNTHESIS_TIMEOUT_SECONDS) as response:
             if response.status != 200:

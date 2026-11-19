@@ -10,10 +10,23 @@ stable machine codes live here.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum, IntEnum
+from types import MappingProxyType
 
 __all__ = [
+    "DEFAULT_FDR_METHOD",
+    "DEFAULT_FDR_Q",
+    "DEFAULT_HOST",
+    "DEFAULT_MIN_CHAPTERS",
+    "DEFAULT_PORT",
+    "DEFAULT_Z_MILD",
+    "DEFAULT_Z_STRONG",
+    "DIM_SCORE_THRESHOLD",
     "FLAG_MIN_SEVERITY",
+    "LANGUAGE_CHOICES",
+    "LANGUAGE_CODES",
+    "LAYER_FEATURES",
     "PASSPORT_LABEL_SEGMENTED",
     "PASSPORT_LABEL_SHIFTED",
     "PASSPORT_LABEL_STRUCTURAL",
@@ -25,6 +38,7 @@ __all__ = [
     "TENSE_NEUTRAL",
     "TENSE_PAST",
     "TENSE_PRESENT",
+    "THRESHOLD_DEFAULTS",
     "ContractKeys",
     "ManuscriptFlag",
     "ManuscriptState",
@@ -177,6 +191,29 @@ class ManuscriptFlag(str, Enum):
 #: Local dashboard bind defaults shared by CLI, config and server.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+
+#: Ordered language codes with a complete profile (without "auto").
+LANGUAGE_CODES: tuple[str, ...] = ("de", "en", "fr", "es", "it", "pt", "nl", "generic")
+#: Accepted language selectors, including explicit detection.
+LANGUAGE_CHOICES: tuple[str, ...] = ("auto", *LANGUAGE_CODES)
+
+#: Built-in heuristic threshold defaults shared by CLI, service and style_fingerprint.
+DEFAULT_Z_MILD: float = 2.5
+DEFAULT_Z_STRONG: float = 3.5
+DEFAULT_FDR_Q: float = 0.05
+DEFAULT_FDR_METHOD: str = "bh"
+DEFAULT_MIN_CHAPTERS: int = 2
+DIM_SCORE_THRESHOLD: float = 2.5
+
+THRESHOLD_DEFAULTS: Mapping[str, float | int | str] = MappingProxyType({
+    "z_mild": DEFAULT_Z_MILD,
+    "z_strong": DEFAULT_Z_STRONG,
+    "fdr_q": DEFAULT_FDR_Q,
+    "fdr_method": DEFAULT_FDR_METHOD,
+    "min_chapters": DEFAULT_MIN_CHAPTERS,
+    "dim_score_threshold": DIM_SCORE_THRESHOLD,
+    "flag_min_severity": int(FLAG_MIN_SEVERITY),
+})
 
 #: Paragraph layer CLI/UI keys mapped to chapter-level style feature names.
 LAYER_FEATURES: dict[str, str] = {

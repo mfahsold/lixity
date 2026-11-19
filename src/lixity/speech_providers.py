@@ -181,17 +181,14 @@ def _uses_zonos_direct_worker(profile: AudioProfile) -> bool:
             and speech_endpoint(profile.base_url) == speech_endpoint(MLX_AUDIO_BASE_URL))
 
 
-_ZONOS_ALLOWED_ENV = (
-    "HOME", "PATH", "LANG", "LC_ALL", "TMPDIR", "HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME",
-)
-
-
 def _zonos_worker_env() -> dict[str, str]:
     """Build a minimal offline environment so ambient secrets never reach MLX."""
-    env = {key: os.environ[key] for key in _ZONOS_ALLOWED_ENV if key in os.environ}
-    env["HF_HUB_OFFLINE"] = "1"
-    env["TRANSFORMERS_OFFLINE"] = "1"
-    return env
+    from .io import sanitized_subprocess_env
+
+    return sanitized_subprocess_env(
+        extra_allow=("HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME"),
+        overrides={"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"},
+    )
 
 
 def _synthesize_zonos_direct(text: str, profile: AudioProfile,

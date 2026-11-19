@@ -39,9 +39,16 @@ from .math_core import (
 from .models import CorpusConfig
 from .registers import resolve_chapter_registers, validate_register_settings
 from .status import (
-    LAYER_FEATURES as LAYER_FEATURES,
+    DEFAULT_FDR_METHOD as DEFAULT_FDR_METHOD,
 )
 from .status import (
+    DEFAULT_FDR_Q as DEFAULT_FDR_Q,
+)
+from .status import (
+    DEFAULT_MIN_CHAPTERS,
+    DEFAULT_Z_MILD,
+    DEFAULT_Z_STRONG,
+    FLAG_MIN_SEVERITY,
     PASSPORT_LABEL_SEGMENTED,
     PASSPORT_LABEL_SHIFTED,
     PASSPORT_LABEL_STRUCTURAL,
@@ -49,6 +56,12 @@ from .status import (
     SCHEMA_VERSION_STYLE,
     STRUCTURAL_DIAGNOSTICS_KEY,
     ContractKeys,
+)
+from .status import (
+    DIM_SCORE_THRESHOLD as DIM_SCORE_THRESHOLD,
+)
+from .status import (
+    LAYER_FEATURES as LAYER_FEATURES,
 )
 from .workspace_labels import workspace_labels_for
 
@@ -259,10 +272,7 @@ MIN_PARAGRAPH_LAYER_WORDS = 5
 N_DIMENSIONS = 3
 MIN_DIMENSION_CHAPTERS = 3
 MIN_DIMENSION_FEATURES = 3
-DIM_SCORE_THRESHOLD = 2.5  # |chapter score| from here: strong position on a dimension
 REDUNDANCY_RHO = 0.8  # |Spearman rho| from here: features measure (almost) the same
-DEFAULT_FDR_Q = 0.05
-DEFAULT_FDR_METHOD = "bh"
 
 
 @dataclass(frozen=True)
@@ -331,13 +341,13 @@ THRESHOLD_PRESETS: Mapping[str, Mapping[str, Any]] = MappingProxyType({
 class FingerprintThresholds:
     """Thresholds of the consistency heuristic (injectable, documented)."""
 
-    z_mild: float = 2.5  # significance-adjusted z from here: noticeable deviation
-    z_strong: float = 3.5  # significance-adjusted z from here: strong deviation
+    z_mild: float = DEFAULT_Z_MILD  # significance-adjusted z from here: noticeable deviation
+    z_strong: float = DEFAULT_Z_STRONG  # significance-adjusted z from here: strong deviation
     fdr_q: float = DEFAULT_FDR_Q  # Benjamini-Hochberg / Benjamini-Yekutieli false-discovery rate
     fdr_method: str = DEFAULT_FDR_METHOD  # "bh" (default) or "by" (arbitrary dependence)
-    min_chapters: int = 2  # below this chapter count no baseline is derived
+    min_chapters: int = DEFAULT_MIN_CHAPTERS  # below this chapter count no baseline is derived
     dim_score_threshold: float = DIM_SCORE_THRESHOLD  # |dimension score| from here: flagged
-    flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
+    flag_min_severity: int = int(FLAG_MIN_SEVERITY)  # paragraph severity floor for the flags panel (1|2|3)
 
     fdr_methods: ClassVar[tuple[str, ...]] = ("bh", "by")
     minimum_chapters: ClassVar[int] = 2

@@ -9,6 +9,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Centralize subprocess environment allowlisting in `lixity.io.sanitized_subprocess_env`
+  and apply it across FFmpeg (`speech.py`, `audio_audit.py`), ZONOS3 workers
+  (`speech_providers.py`), ALSA/PipeWire audio capture tools (`speech_record.py`,
+  adding explicit control timeouts), and Poppler/Tesseract native OCR calls
+  (`research/ocr.py`), alongside `0o700` temp directories, symlink output guards,
+  and shared `no_redirect_opener()` usage in `speech_worker.py`.
+- Share canonical `LANGUAGE_CODES`, `LANGUAGE_CHOICES`, and `THRESHOLD_DEFAULTS`
+  in `lixity.status` and defer heavy analysis imports in `lixity.service`, cutting
+  `import lixity.service` startup time and heap usage substantially while keeping
+  `service`, `doctor`, and CLI parser contracts unchanged.
+- Fix `research.manuscript.resolve_project_manuscript_path` and
+  `site_export.prepare_site` on hosts with symlinked parent directories (such as
+  macOS `/var` -> `/private/var`) so legitimate project manuscripts and
+  contained internal aliases resolve cleanly while escaping symlinks remain
+  rejected.
 - Move the seven-language workspace label catalog out of the 14.8k-line Python
   module into packaged JSON files (`src/lixity/locales/*.json`) loaded lazily
   per locale with `orjson` (`workspace_labels_for`), adopt PEP 562 lazy exports

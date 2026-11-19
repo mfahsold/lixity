@@ -43,20 +43,40 @@ class ManuscriptLinkExistsError(ResearchConflictError):
         )
 
 
-def _source_path(repository: Repository, manuscript: str | Path) -> tuple[Path, str]:
-    """Resolve inside the explicit project; traversal and escaping symlinks fail."""
+def resolve_project_manuscript_path(repository: Repository, manuscript: str | Path) -> tuple[Path, str]:
+    """Resolve inside the explicit project; traversal and escaping symlinks fail.
+
+    Contained internal aliases keep their relative path inside the project, while
+    OS parent symlinks above the project root (e.g. macOS ``/var -> /private/var``)
+    normalize to ``repository.root``.
+    """
     supplied = Path(manuscript).expanduser()
     if ".." in supplied.parts:
         raise ResearchError("Manuscript path must remain inside the explicit project")
     path = supplied if supplied.is_absolute() else repository.root / supplied
     try:
-        relative = path.relative_to(repository.root).as_posix()
         path.resolve().relative_to(repository.root)
     except (ValueError, OSError, RuntimeError):
         raise ResearchError("Manuscript path escapes the explicit project") from None
+    try:
+        relative = path.relative_to(repository.root).as_posix()
+    except ValueError:
+        relative = ""
+        for ancestor in (path, *path.parents):
+            try:
+                if ancestor.resolve() == repository.root:
+                    relative = path.relative_to(ancestor).as_posix()
+                    break
+            except (OSError, RuntimeError):
+                break
+        if not relative:
+            raise ResearchError("Manuscript path escapes the explicit project") from None
     if relative == ".":
         raise ResearchError("Supply a manuscript file inside the explicit project")
-    return path, relative
+    return repository.root / relative, relative
+
+
+_source_path = resolve_project_manuscript_path
 
 
 def _paragraphs(

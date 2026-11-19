@@ -38,6 +38,7 @@ from .research.manuscript import (
     manuscript_links_data,
     manuscript_review_data,
     manuscript_terms_data,
+    resolve_project_manuscript_path,
 )
 from .research.media import MEDIA_TYPES, VIDEO_TYPES
 from .research.models import (
@@ -632,7 +633,8 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     settings = read_explicit_project_config(repository.root)
     workspace = resolve_manuscript_target(str(manuscript) if manuscript is not None else None,
                                           project=repository.root)
-    source = repository.safe(Path(workspace.manuscript))
+    canonical_manuscript, _ = resolve_project_manuscript_path(repository, workspace.manuscript)
+    source = repository.safe(canonical_manuscript)
     source_info = source.stat()
     if not stat.S_ISREG(source_info.st_mode):
         raise ResearchError("Website manuscript must be a regular file")

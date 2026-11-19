@@ -31,11 +31,8 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import DEFAULT_HOST, DEFAULT_PORT, resolve_thresholds
-from .language import LANGUAGE_CHOICES
 from .log import get_logger, log_event, rotate_service_log
-from .style_fingerprint import FingerprintThresholds
-from .workspace import resolve_project_target
+from .status import DEFAULT_HOST, DEFAULT_PORT, LANGUAGE_CHOICES, THRESHOLD_DEFAULTS
 
 _OPTIONS = (
     "language",
@@ -92,16 +89,28 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
     for key in ("z_mild", "z_strong", "fdr_q", "dim_threshold"):
         if settings.get(key) is not None and type(settings[key]) not in (int, float):
             raise ServiceError("Startup thresholds must be numbers")
-    resolve_thresholds(
-        project_config={},
-        z_mild=settings.get("z_mild"),
-        z_strong=settings.get("z_strong"),
-        fdr_q=settings.get("fdr_q"),
-        fdr_method=settings.get("fdr_method"),
-        min_chapters=settings.get("min_chapters"),
-        flag_min_severity=settings.get("flag_min_severity"),
-        dim_score_threshold=settings.get("dim_threshold"),
+    threshold_keys = (
+        "z_mild",
+        "z_strong",
+        "fdr_q",
+        "fdr_method",
+        "min_chapters",
+        "flag_min_severity",
+        "dim_threshold",
     )
+    if any(settings.get(key) is not None for key in threshold_keys):
+        from .config import resolve_thresholds
+
+        resolve_thresholds(
+            project_config={},
+            z_mild=settings.get("z_mild"),
+            z_strong=settings.get("z_strong"),
+            fdr_q=settings.get("fdr_q"),
+            fdr_method=settings.get("fdr_method"),
+            min_chapters=settings.get("min_chapters"),
+            flag_min_severity=settings.get("flag_min_severity"),
+            dim_score_threshold=settings.get("dim_threshold"),
+        )
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
@@ -190,7 +199,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         "--json", action="store_true",
         help="Machine-readable result; status exits 0 for known state, even stopped, and 1 for unknown",
     )
-    defaults = FingerprintThresholds()
+    defaults = THRESHOLD_DEFAULTS
     for flag, key, help_text in (
         ("z-mild", "z_mild", "Notable |z*| threshold; finite, >= 0; no greater than --z-strong"),
         ("z-strong", "z_strong", "Strong |z*| threshold; finite, >= --z-mild"),
@@ -199,19 +208,19 @@ def configure(parser: argparse.ArgumentParser) -> None:
     ):
         thresholds.add_argument(
             "--" + flag, type=float,
-            help=f"{help_text} (built-in default: {getattr(defaults, key)})",
+            help=f"{help_text} (built-in default: {defaults[key]})",
         )
     thresholds.add_argument(
         "--fdr-method", choices=("bh", "by"),
-        help=f"FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by); built-in default: {defaults.fdr_method}",
+        help=f"FDR method: Benjamini-Hochberg (bh) or Benjamini-Yekutieli (by); built-in default: {defaults['fdr_method']}",
     )
     thresholds.add_argument(
         "--min-chapters", type=int,
-        help=f"Minimum chapters for a style baseline (at least 2; built-in default: {defaults.min_chapters})",
+        help=f"Minimum chapters for a style baseline (at least 2; built-in default: {defaults['min_chapters']})",
     )
     thresholds.add_argument(
         "--flag-min-severity", type=int, choices=(1, 2, 3),
-        help=f"Minimum paragraph severity for the flagged list (built-in default: {defaults.flag_min_severity})",
+        help=f"Minimum paragraph severity for the flagged list (built-in default: {defaults['flag_min_severity']})",
     )
 
 
@@ -224,7 +233,11 @@ def _workspace_scope(selector: str | None) -> Path | None:
     if not selector:
         return None
     path = Path(selector).expanduser().resolve()
-    return Path(resolve_project_target(path, empty="allow").root) if path.is_file() else path
+    if not path.is_file():
+        return path
+    from .workspace import resolve_project_target
+
+    return Path(resolve_project_target(path, empty="allow").root)
 
 
 def resolve_settings(
