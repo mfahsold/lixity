@@ -784,14 +784,17 @@ def main() -> int:
         if Path(str(capture.get("finalTarget", capture["target"]))).suffix == ".webp"
     ]
     if webp_jobs:
+        cwebp = shutil.which("cwebp")
         ffmpeg = shutil.which("ffmpeg")
-        if ffmpeg is None:
-            raise SystemExit("FFmpeg is required to encode reviewed WebP screenshots.")
+        if cwebp is None and ffmpeg is None:
+            raise SystemExit("cwebp or FFmpeg is required to encode reviewed WebP screenshots.")
         with ThreadPoolExecutor(max_workers=min(len(webp_jobs), max(1, os.cpu_count() or 2))) as pool:
             futures = [
                 pool.submit(
                     subprocess.run,
-                    [ffmpeg, "-v", "error", "-y", "-i", str(src), "-c:v", "libwebp", "-quality", "95", str(dst)],
+                    [cwebp, "-quiet", "-q", "95", str(src), "-o", str(dst)]
+                    if cwebp is not None
+                    else [ffmpeg, "-v", "error", "-y", "-i", str(src), "-c:v", "libwebp", "-quality", "95", str(dst)],
                     check=True,
                 )
                 for src, dst in webp_jobs
