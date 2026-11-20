@@ -62,7 +62,10 @@ async function dossierContext(browser, width, artifacts) {
       window.jsonApi=async url=>(await fetch(url)).json();
     });
     for(const file of ['design-tokens.css','components.css','dashboard.css','dossier-images.css','teleprompter.css']) await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets',file),'utf8')});
-    for(const file of ['research-core.js','dossier-images.js','teleprompter.js']) await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets',file),'utf8')});
+    const scripts = ['vendor/preact-10.29.8.min.js', 'vendor/htm-3.1.1.umd.js', 'component-layer.js',
+      'research-core.js', 'dossier-images.js', 'teleprompter.js'];
+    for(const file of scripts) await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets',file),'utf8')});
+    assert.deepEqual(errors, [], 'The standalone fixture loads the same shared component dependencies');
     assert.equal(requests.length,0,'Research context is lazy');
     await page.locator('#reader-teleprompter').click();
     await page.waitForFunction(()=>document.querySelector('.teleprompter-sidebar-content')?.dataset.state==='loading');
@@ -81,7 +84,9 @@ async function dossierContext(browser, width, artifacts) {
     // Equal paragraph text/hash at another line must not inherit a direct association.
     await page.evaluate(()=>{
       const panes=document.querySelectorAll('.teleprompter-paragraph');panes[0].style.height='1000px';
-      const pane=document.querySelector('.teleprompter-scroll-pane');pane.scrollTop=panes[1].offsetTop-200;pane.dispatchEvent(new Event('scroll'));
+      const pane=document.querySelector('.teleprompter-scroll-pane');
+      pane.scrollTop = pane.scrollHeight;
+      pane.dispatchEvent(new Event('scroll'));
     });
     await page.waitForFunction(()=>document.querySelector('.teleprompter-sidebar-content')?.dataset.state==='suggested');
     assert.equal(await page.locator('.teleprompter-sidebar-content img').count(),1);

@@ -16,7 +16,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pattern errors.
 - Improve dark-mode quotation context contrast and wrap word-pattern actions
   at small widths and larger font sizes.
+- Keep project navigation inside the viewport during resizing and make its
+  destinations reachable with larger text. Use the shared control text size
+  for the measurement selector and touch targets for passage navigation.
 - Label changes in dialogue share and sticky-sentence share in percentage points.
+- Update the teleprompter's dossier context when the last paragraph is reached.
+- Verify file stability on Windows without comparing incompatible change times
+  reported for paths and open file descriptors.
 - Match the browser CI host to the Noble container and check Python TLS before
   installing dependencies.
 - Measure all three texts in the local version comparison under one effective

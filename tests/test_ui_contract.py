@@ -1364,7 +1364,7 @@ class TestUiConsolidationAndSecurityContracts(unittest.TestCase):
         self.assertNotIn("function quotationContext", evidence_js)
 
         rendered = _full_dashboard()
-        self.assertIn('class="ctl ctl-sm" id="style-layer"', rendered)
+        self.assertIn('<select class="ctl" id="style-layer"', rendered)
         self.assertIn('class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset"', rendered)
 
 

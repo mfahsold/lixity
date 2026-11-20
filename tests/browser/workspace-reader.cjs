@@ -185,14 +185,30 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         await page.waitForFunction(top => Math.abs(window.__testResizeAnchor.getBoundingClientRect().top - top) <= 2,
           reselected.actual, {timeout: 5000});
 
-        const race = await page.evaluate(() => {
+        const movement = await page.evaluate(() => {
+          // Observe the queued reader restore separately from compositor scrolling.
+          const scrollBy = window.scrollBy;
+          const calls = [];
+          window.__testRestoreRace = {scrollBy, calls};
+          window.scrollBy = function(...args) {
+            calls.push(args);
+            return scrollBy.apply(this, args);
+          };
           LixityReader.retain(() => { document.getElementById('test-end-spacer').style.height = '0px'; });
           window.dispatchEvent(new WheelEvent('wheel', {deltaY:-100}));
-          window.scrollBy(0, -100);
-          return scrollY;
+          const before = scrollY;
+          scrollBy.call(window, 0, -100);
+          return before - scrollY;
         });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-        assert.equal(await page.evaluate(() => scrollY), race, 'a newer scroll must supersede a pending layout restore');
+        const restores = await page.evaluate(() => {
+          const {scrollBy, calls} = window.__testRestoreRace;
+          window.scrollBy = scrollBy;
+          delete window.__testRestoreRace;
+          return calls;
+        });
+        assert.ok(movement > 50, 'the new reader scroll moved the document');
+        assert.deepEqual(restores, [], 'a newer scroll must supersede a pending layout restore');
         await page.evaluate(() => { document.getElementById('test-end-spacer').style.height = '60px'; });
 
         const reflow = await page.evaluate(async () => {
@@ -354,7 +370,12 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       conflict = false;
       await page.locator('#workspace-reader-refresh').click();
       await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();
-      await select.press('Escape');
+      // Escape dismisses a focused hint before it closes the companion.
+      await panel.locator('#workspace-reader-close').press('Escape');
+      if (await panel.isVisible()) {
+        assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
+        await page.keyboard.press('Escape');
+      }
       assert.equal(await panel.isVisible(), false);
       assert.equal(await page.evaluate(() => document.activeElement.id), 'workspace-reader-toggle');
       if (width >= 1100) {

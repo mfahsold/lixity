@@ -10,7 +10,7 @@ const {createInterface} = require('node:readline');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
-const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-project-switch-native-'));
+const artifacts = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-project-switch-native-')));
 
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `

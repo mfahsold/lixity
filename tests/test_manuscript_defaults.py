@@ -133,7 +133,7 @@ def test_root_config_io_failure_is_not_a_valid_discovery_default(tmp_path, monke
     target.write_text('manuscript = "draft.md"\n', encoding="utf-8")
     (tmp_path / "draft.md").write_text("A valid configured manuscript.\n", encoding="utf-8")
     (tmp_path / "manuscript.md").write_text("Wrong conventional manuscript.\n", encoding="utf-8")
-    original_stat, original_open = os.stat, os.open
+    original_stat, original_open = Path.stat, os.open
 
     def failed_stat(path, *args, **kwargs):
         if os.fspath(path) == str(target):
@@ -145,7 +145,11 @@ def test_root_config_io_failure_is_not_a_valid_discovery_default(tmp_path, monke
             raise PermissionError(errno.EACCES, "Synthetic configuration read failure", str(target))
         return original_open(path, *args, **kwargs)
 
-    monkeypatch.setattr(os, "stat", failed_stat) if operation == "stat" else monkeypatch.setattr(os, "open", failed_read)
+    if operation == "stat":
+        # Python 3.10 caches the os.stat binding used by Path.stat.
+        monkeypatch.setattr(Path, "stat", failed_stat)
+    else:
+        monkeypatch.setattr(os, "open", failed_read)
     with pytest.raises((OSError, ValueError), match=r"[Cc]onfig|[Cc]ould not"):
         workspace.discover(root=str(tmp_path))
 

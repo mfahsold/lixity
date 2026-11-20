@@ -9,7 +9,8 @@ const {createInterface} = require('node:readline');
 const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
-const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-media-'));
+// macOS temporary roots can be symlinks, which website exports reject.
+const artifacts = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-media-')));
 const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const env = {...process.env, PYTHONPATH: path.join(root, 'src')};
 

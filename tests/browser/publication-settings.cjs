@@ -133,7 +133,22 @@ server.serve_forever()
       for(const width of language==='en'?[1440,390,320]:[1440,320]){
         await page.setViewportSize({width,height:1000});
         await expect(page.locator('#set-publication-publisher_name')).toHaveValue('New unsaved synthetic publisher');
-        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,
+          `${language} at ${width}px: settings do not widen the page`);
+        if(language==='de' && width===1440){
+          const beforeDensity=await page.locator('#view-pane-project .pane-ribbon').evaluate(ribbon=>{
+            // Reproduce the first layout after crossing the mobile wrapping breakpoint.
+            delete ribbon.dataset.ribbonCompact;
+            delete ribbon.dataset.ribbonWrap;
+            const geometry={ribbonWidth:ribbon.clientWidth,ribbonScroll:ribbon.scrollWidth,
+              pageWidth:innerWidth,pageScroll:document.documentElement.scrollWidth};
+            LixityRibbonDensity.sync(ribbon);
+            return geometry;
+          });
+          assert.ok(beforeDensity.ribbonScroll>beforeDensity.ribbonWidth,'Full German ribbon labels require compaction');
+          assert.ok(beforeDensity.pageScroll<=beforeDensity.pageWidth,
+            `The ribbon cannot widen the page before compaction (${beforeDensity.pageScroll}/${beforeDensity.pageWidth}px)`);
+        }
         assert.equal(await page.locator('#set-publication-year').getAttribute('type'),'text');
         assert.equal(await page.locator('#settings-publication').getByText('publication_title',{exact:true}).count(),0);
         await page.locator('#settings-publication').screenshot({path:path.join(artifacts,`publication-${language}-${width}.png`)});

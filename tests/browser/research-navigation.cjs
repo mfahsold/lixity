@@ -44,20 +44,35 @@ async function assertDesktopGeometry(page, context) {
   }
 }
 
-async function assertPaneRibbon(page, context, width) {
+async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
   await page.locator('[data-view=project]').click();
   const ribbon = page.locator('#view-pane-project .pane-ribbon');
   await expect(ribbon).toBeVisible();
+  const shortMobileViewport = width === 320 && page.viewportSize().height === 480;
   for (const id of ['settings-project-details', 'settings-analysis', 'settings-registers', 'settings-publication']) {
     await expect(page.locator('#' + id)).toHaveAttribute('data-ribbon-section', '');
   }
   if (width === 320) {
+    const labels = ribbon.locator('button:not([hidden]) .pane-ribbon-label');
+    assert.ok(await labels.evaluateAll(nodes => nodes.length > 0 && nodes.every(node =>
+      node.getBoundingClientRect().height > 0 && node.scrollWidth <= node.clientWidth + 1)),
+      `${context}: mobile destination labels stay visible and fit`);
+    if (shortMobileViewport) {
+      const last = ribbon.getByRole('button').last();
+      await last.focus();
+      assert.ok(await last.evaluate(button => {
+        const bounds = button.getBoundingClientRect(), nav = button.closest('nav').getBoundingClientRect();
+        return document.activeElement === button && bounds.top >= nav.top - 1 && bounds.bottom <= nav.bottom + 1;
+      }), `${context}: keyboard focus reveals the last destination inside the ribbon`);
+    }
+  }
+  if (verifyCompactTooltip) {
+    // Above the mobile wrapping breakpoint, the compact state still exposes each label on focus.
+    const viewport = page.viewportSize();
+    await page.setViewportSize({...viewport, width:601});
     await expect(ribbon).toHaveAttribute('data-ribbon-compact', 'true');
     const firstBtn = ribbon.locator('[data-ribbon-target="#settings-project-details"]');
-    const labelHidden = await firstBtn.locator('.pane-ribbon-label').evaluate(
-      el => getComputedStyle(el).display === 'none'
-    );
-    assert.equal(labelHidden, true, `${context}: compact ribbon hides button text labels`);
+    await expect(firstBtn.locator('.pane-ribbon-label')).toBeHidden();
     await firstBtn.focus();
     const tooltip = page.locator('#lixity-tooltip');
     await expect(tooltip).toHaveClass(/visible/);
@@ -65,10 +80,12 @@ async function assertPaneRibbon(page, context, width) {
     const tipText = (await tooltip.textContent() || '').trim();
     assert.ok(tipText.length > 0, `${context}: collapsed icon-only ribbon button shows tooltip text`);
     const tipBox = await tooltip.boundingBox();
-    assert.ok(tipBox && tipBox.x >= 0 && tipBox.x + tipBox.width <= width + 1,
+    assert.ok(tipBox && tipBox.x >= 0 && tipBox.x + tipBox.width <= page.viewportSize().width + 1,
       `${context}: collapsed ribbon button tooltip fits within viewport`);
     await page.keyboard.press('Escape');
     await expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+    await page.setViewportSize(viewport);
+    await expect(firstBtn.locator('.pane-ribbon-label')).toBeVisible();
   }
   const overflow = await ribbon.evaluate(el => ({
     ribbonOverflow: el.scrollWidth > el.clientWidth + 1,
@@ -80,9 +97,19 @@ async function assertPaneRibbon(page, context, width) {
   assert.equal(await publication.evaluate(el => el.open), false,
     `${context}: publication <details> starts collapsed before ribbon jump`);
   const pubTrigger = ribbon.locator('[data-ribbon-target="#settings-publication"]');
-  await pubTrigger.click();
+  if (shortMobileViewport) await pubTrigger.press('Enter');
+  else await pubTrigger.click();
   await expect(publication).toHaveAttribute('open', '');
   await expect(pubTrigger).toHaveAttribute('aria-current', 'location');
+  const heading = publication.locator(':scope > summary');
+  await expect(heading).toBeFocused();
+  if (shortMobileViewport) {
+    assert.ok(await heading.evaluate(node => {
+      const top = node.getBoundingClientRect().top;
+      const ribbonBottom = document.querySelector('#view-pane-project .pane-ribbon').getBoundingClientRect().bottom;
+      return top >= ribbonBottom - 1 && top < innerHeight;
+    }), `${context}: the focused publication heading stays in view below the ribbon at 200% text`);
+  }
 }
 
 (async () => {
@@ -238,6 +265,7 @@ async function assertPaneRibbon(page, context, width) {
             `${locale}/${enlargedWidth}: wrapped destination labels keep the strip aligned`);
           await page.screenshot({path:path.join(artifacts, `${locale}-${enlargedWidth}-enlarged.png`)});
         }
+        await page.setViewportSize({width:320, height:480});
       }
       if (['en', 'de'].includes(locale) && width === 1440 && colorScheme === 'light') {
         await page.locator('[data-rtab=claims]').click();
@@ -249,7 +277,8 @@ async function assertPaneRibbon(page, context, width) {
         assert.deepEqual(writes, [], 'Desktop geometry navigation never saves research');
         assert.deepEqual(errors, []);
       }
-      await assertPaneRibbon(page, `${locale}/${width}/${colorScheme}`, width);
+      await assertPaneRibbon(page, `${locale}/${width}/${colorScheme}`, width,
+        locale === 'en' && width === 320 && colorScheme === 'light');
       assert.deepEqual(writes, [], 'Pane ribbon navigation never saves research');
       assert.deepEqual(errors, []);
       await page.close();

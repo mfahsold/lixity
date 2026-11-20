@@ -69,6 +69,20 @@ async function finish(state) {
   assert.equal(await state.page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
 }
 
+function readerArrivalGeometry(page, id) {
+  return page.evaluate(id => {
+    const targetTop = document.getElementById(id).getBoundingClientRect().top;
+    const bars = [...document.querySelectorAll('#workbench-thread, #manuscript-reader-controls, #analysis-outline-document .toolbar')]
+      .map(bar => {
+        const {top, bottom, height} = bar.getBoundingClientRect();
+        return {name: bar.id || 'search toolbar', position: getComputedStyle(bar).position, top, bottom, height};
+      });
+    // The compact reader lets the search toolbar scroll away on small screens.
+    const sticky = bars.filter(bar => bar.position === 'sticky' && bar.height > 0 && bar.top < innerHeight && bar.bottom > 0);
+    return {targetTop, stickyBottom: Math.max(0, ...sticky.map(bar => bar.bottom)), bars};
+  }, id);
+}
+
 async function observeArrivals(page, ids) {
   await page.evaluate(ids => {
     window.anchorArrivals = [];
@@ -296,10 +310,9 @@ async function nestedFixture(page) {
           document.querySelector('.chip[data-target="' + id + '"]').click();
         }, id);
         await page.waitForFunction(id => document.getElementById(id).classList.contains('flash'), id);
-        const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
-        const searchBar = await page.locator('.toolbar').boundingBox();
-        assert.ok(box.y >= searchBar.y + searchBar.height,
-          'Opening paragraph diagnostics keeps its prose below the wrapped mobile reader controls: ' + JSON.stringify({box, controls, searchBar}));
+        const geometry = await readerArrivalGeometry(page, id);
+        assert.ok(geometry.stickyBottom > 0 && geometry.targetTop >= geometry.stickyBottom,
+          'Opening paragraph diagnostics keeps its prose below the wrapped mobile reader controls: ' + JSON.stringify(geometry));
         await finish(state);
       } finally { await page.close(); }
     });
@@ -311,10 +324,10 @@ async function nestedFixture(page) {
         const id = await page.locator('#chapters .ptext').nth(27).getAttribute('id');
         await page.evaluate(id => scrollAndFlash(document.getElementById(id)), id);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-        const box = await page.locator('#' + id).boundingBox(), controls = await page.locator('#manuscript-reader-controls').boundingBox();
-        const searchBar = await page.locator('.toolbar').boundingBox();
-        assert.ok(box.y >= searchBar.y + searchBar.height && box.y <= searchBar.y + searchBar.height + 14,
-          'A live reduced-motion change reaches the prose immediately and preserves sticky-reader clearance: ' + JSON.stringify({box, controls}));
+        const geometry = await readerArrivalGeometry(page, id);
+        const gap = geometry.targetTop - geometry.stickyBottom;
+        assert.ok(geometry.stickyBottom > 0 && gap >= 0 && gap <= 14,
+          'A live reduced-motion change reaches the prose immediately and preserves sticky-reader clearance: ' + JSON.stringify(geometry));
         await page.waitForFunction(id => document.getElementById(id).classList.contains('flash'), id);
         assert.equal(await page.locator('#' + id).evaluate(node => node.classList.contains('reader-return-target')), true,
           'Prose arrivals use the existing reading gutter even with motion disabled');

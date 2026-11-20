@@ -595,6 +595,9 @@
     var closest = null;
     if (scrollPane.scrollTop <= 20) {
       closest = paragraphs[0];
+    } else if (scrollPane.scrollTop + scrollPane.clientHeight >= scrollPane.scrollHeight - 1) {
+      // The last paragraph can be visible below the reading line at the end of the runway.
+      closest = paragraphs[paragraphs.length - 1];
     } else {
       var paneRect = scrollPane.getBoundingClientRect();
       var targetY = paneRect.top + scrollPane.clientHeight * 0.28;

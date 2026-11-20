@@ -63,10 +63,11 @@ print(json.dumps({locale: {"html": dashboard(text, language=locale, title="Synth
               chapter: cell.dataset.chapter, layer: cell.dataset.layer})),
           })),
           bands: document.querySelector('#bands').innerHTML,
-          globalCounts: document.querySelector('#heatmap > .hint').textContent,
+          globalCounts: document.querySelector('#heatmap > .heatmap-method > .hint').textContent,
           prose: paragraphContent,
         }));
         const before = await measured();
+        assert.ok(before.globalCounts.includes(fixture.fdr_label), 'The method disclosure includes the book-wide FDR count');
         assert.deepEqual(await visible(), [1, 2, 3, 4, 5]);
         assert.equal(await register.locator('option').count(), 3);
         assert.equal(await pov.locator('option').count(), 3, 'Name mentions create no inferred POV group');

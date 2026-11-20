@@ -246,14 +246,23 @@ server.serve_forever()
         assert.equal(await pointerMap.evaluate(node => node._geographyMap.getZoom()), selectionZoom,
           'Rapid number taps select features without becoming a map double-tap zoom gesture');
       }
-      // The area's fill must not intercept the point or route beneath a label.
+      // Test geometry stacking inside the area, away from the number buttons
+      // whose pointer priority is checked above.
       for (const index of [0, 1]) {
         await pointerMap.scrollIntoViewIfNeeded();
         const hit = await pointerMap.locator('svg [data-geo-select="' + index + '"]').evaluate(node => {
-          const point = node.getPointAtLength(node.getTotalLength() * .25);
-          const screen = new DOMPoint(point.x, point.y).matrixTransform(node.getScreenCTM());
-          return {x: screen.x, y: screen.y};
+          const area = node.closest('svg').querySelector('path[data-geo-select="2"]');
+          const length = node.getTotalLength(), transform = node.getScreenCTM();
+          for (let step = 1; step < 20; step++) {
+            const point = node.getPointAtLength(length * step / 20);
+            const screen = new DOMPoint(point.x, point.y).matrixTransform(transform);
+            const x = Math.round(screen.x), y = Math.round(screen.y);
+            const [front, ...behind] = document.elementsFromPoint(x, y);
+            if (front === node && behind.includes(area)) return {x, y};
+          }
+          return null;
         });
+        assert.ok(hit, `${width}px: Feature ${index + 1} has an unobscured hit within the area fill`);
         await page.mouse.click(hit.x, hit.y);
         await expect(pointerView.locator('li').nth(index)).toHaveClass(/is-selected/);
       }

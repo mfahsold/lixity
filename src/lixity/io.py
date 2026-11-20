@@ -211,16 +211,18 @@ class FileUtils:
                 if maximum is not None and len(content) > maximum:
                     raise OSError("Source exceeds the maximum byte limit")
                 if verify_stable:
+                    comparable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
                     after = os.fstat(stream.fileno())
                     if len(content) != actual.st_size or any(
                         getattr(actual, field) != getattr(after, field)
-                        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                        for field in (*comparable_fields, "st_ctime_ns")
                     ):
                         raise OSError("Source changed while reading")
                     final = stat_fn(filepath)
-                    if any(
+                    # Windows may report birth time via path stat and change time via fstat.
+                    if expected.st_ctime_ns != final.st_ctime_ns or any(
                         getattr(after, field) != getattr(final, field)
-                        for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                        for field in comparable_fields
                     ):
                         raise OSError("Source changed while reading")
                 return content, actual

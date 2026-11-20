@@ -28,6 +28,8 @@
   background: var(--surface);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
 }
+/* Keep full-width labels from expanding the page before the density observer runs. */
+.pane-ribbon { overflow-x: clip; }
 .pane-ribbon > .ctl,
 .research-pane-navigation > .ctl {
   flex: 0 0 auto;
@@ -87,6 +89,7 @@
   /* Keep destinations inside the pane as the viewport changes, before density is measured. */
   .pane-ribbon,
   .research-pane-navigation { flex-wrap: wrap; }
+  .pane-ribbon { max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain; }
   .pane-ribbon > .ctl,
   .research-pane-navigation > .ctl { white-space: normal; }
 }

@@ -8,11 +8,35 @@ import stat
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
 from lixity.io import FileUtils
+
+
+@pytest.mark.parametrize("changed", [None, "path", "descriptor"])
+def test_stable_read_compares_change_times_from_the_same_accessor(tmp_path, changed):
+    target = tmp_path / "synthetic.txt"
+    content = b"A synthetic attachment.\n"
+    target.write_bytes(content)
+    info = target.lstat()
+    fields = {key: getattr(info, key) for key in ("st_mode", "st_dev", "st_ino", "st_size", "st_mtime_ns")}
+    # On Windows, pathname ctime can be creation time and descriptor ctime metadata change time.
+    path_before = SimpleNamespace(**fields, st_ctime_ns=1)
+    path_after = SimpleNamespace(**fields, st_ctime_ns=2 if changed == "path" else 1)
+    opened = SimpleNamespace(**fields, st_ctime_ns=3)
+    after = SimpleNamespace(**fields, st_ctime_ns=4 if changed == "descriptor" else 3)
+    with (
+        patch("lixity.io.os.lstat", side_effect=[path_before, path_after]),
+        patch("lixity.io.os.fstat", side_effect=[opened, after]),
+    ):
+        if changed:
+            with pytest.raises(OSError, match="Source changed while reading"):
+                FileUtils.read_bounded_regular_bytes(target, verify_stable=True)
+        else:
+            assert FileUtils.read_bounded_regular_bytes(target, verify_stable=True) == (content, opened)
 
 
 def _write(target: Path, content: bytes, binary: bool) -> bool:

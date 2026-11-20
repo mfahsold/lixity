@@ -1140,7 +1140,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         metric_control = (
             '<label class="metric-layer-control">'
             f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
-            f'<select class="ctl ctl-sm" id="style-layer" aria-label="{L("analysis_measure")}" '
+            f'<select class="ctl" id="style-layer" aria-label="{L("analysis_measure")}" '
             f'data-help="{L("reading_help_measure")}">'
             f'<option value="">{L("layer_off")}</option>'
             + "".join(grouped_layer_options)

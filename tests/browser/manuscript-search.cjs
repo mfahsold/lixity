@@ -61,13 +61,22 @@ print(json.dumps(fixtures))
       await page.waitForFunction(() => document.querySelector('#text-search-status').textContent.length > 0);
       await field.press('Enter');
       await page.waitForFunction(() => {
-        const input = document.querySelector('#text-search').getBoundingClientRect();
+        const input = document.querySelector('#text-search');
+        const toolbar = input.closest('.toolbar');
         const chrome = document.querySelector('#manuscript-reader-controls').getBoundingClientRect();
-        const hit = document.querySelector('mark.text-hit').getBoundingClientRect();
-        return input.top >= chrome.bottom - 1 && hit.top >= input.bottom && hit.bottom <= innerHeight;
+        const hit = document.querySelector('mark.text-hit')?.getBoundingClientRect();
+        // Compact readers let the search toolbar scroll out of the way.
+        const searchSticks = getComputedStyle(toolbar).position === 'sticky';
+        const clearance = searchSticks ? Math.max(chrome.bottom, toolbar.getBoundingClientRect().bottom) : chrome.bottom;
+        return (!searchSticks || input.getBoundingClientRect().top >= chrome.bottom - 1) &&
+          hit && hit.top >= clearance - 1 && hit.bottom <= innerHeight;
       });
+      assert.ok(await field.evaluate(input => document.activeElement === input), 'Jumping to a result retains keyboard search focus');
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({path: `/tmp/lixity-search-stable-${width}.png`});
+      await page.keyboard.press('Escape');
+      assert.equal(await field.inputValue(), '', 'Escape clears the query directly after the jump');
+      assert.equal(await page.locator('mark.text-hit').count(), 0);
       await page.close();
     }
     for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
