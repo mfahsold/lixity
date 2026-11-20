@@ -626,9 +626,11 @@ with the same port. Module and interpreter paths identify the environment.
 Version strings identify the version declared by each build. For exact source
 parity, compare the installed modules and UI assets with the verified wheel.
 
-For a checkout service, run `make install-dev` if its development environment
-needs refreshing. Finish active renders and save open drafts. Then run
-`make restart LIXITY_PORT=8765` with the port you verified.
+For a checkout service, run `make doctor` to check the virtual environment and
+listener together. If the editable package metadata is stale or development
+dependencies changed, refresh the environment with `make install-dev`.
+Finish active renders and save open drafts. Then run `make restart` and
+`make doctor` with the same `LIXITY_PORT` if you chose a custom port.
 
 For a packaged checkout build, build and test the wheel before stopping the
 service:

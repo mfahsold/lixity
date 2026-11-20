@@ -4,6 +4,8 @@ Lixity describes patterns in the manuscript you provide. Its style reference com
 
 Updated 20 November 2026
 
+<a id="start-with-a-question"></a>
+
 ## Start with one question about the text
 
 | Question | What to look at | What to read |
@@ -13,6 +15,8 @@ Updated 20 November 2026
 | Why does this chapter stand out? | Choose a cell in the style comparison. The chapter value and the typical manuscript value appear in the same unit. | Open the chapter and look for a scene, narrator or passage that could explain the difference. |
 
 [Compare two chapters of the demo](../demo/report.html) or [try a paragraph in the browser sandbox](../sandbox/index.html). For a specific value, the [measurement reference](metrics/en.html) explains what Lixity counts, the unit and what to check in the manuscript. The app’s **How it’s measured** links open the relevant entry in your interface language.
+
+<a id="analysis-marks"></a>
 
 ## Read the analysis marks
 
@@ -36,6 +40,8 @@ In **Sticky sentences**, the underline marks a sentence that reaches the configu
 
 Saved research uses neutral dotted marks and a book-icon **Research** control with its association count. It records an explicit connection to claims, dossiers and decisions. It stays visible with Analysis Off; counted-text marks and search backgrounds can appear on the same words. Use the Research control by keyboard or click an exact mark while no selection is active. A saved link does not establish factual truth or a statistical difference. [Visual roles and architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#annotation-semantics-and-visual-identity).
 
+<a id="consistency"></a>
+
 ## What does “Comparisons within the limit” measure?
 
 In the style comparison, expand **How the comparison is calculated** to find this summary and the thresholds behind it.
@@ -50,15 +56,21 @@ The baseline uses the chapter median and median absolute deviation (MAD). The de
 
 Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (`source_internal`); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.
 
+<a id="empty"></a>
+
 ## Why does an empty manuscript show “–”?
 
 The dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.
 
 Style JSON retains the historical numeric `consistency` value for compatibility. The `measured_cells` field identifies the supporting count. When it is zero, the retained value `1.0` is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.
 
+<a id="scenes"></a>
+
 ## Compare scenes within a register
 
 The Scenes & style registers view measures scenes separately. Assign scene registers and target ranges in `lixity.toml`; each scene register has its own manuscript-only median. Chapter registers have a separate editor in Project settings, and display filters do not recalculate the whole-book reference. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#scene-registers-and-project-targets).
+
+<a id="minimums"></a>
 
 ## How much text is enough?
 
@@ -73,6 +85,8 @@ The Scenes & style registers view measures scenes separately. Assign scene regis
 A token floor is an implementation policy, not a quality threshold. Maas remains defined for repetition: 100 repetitions of one token give `maas_a2 = 0.5`. Guiraud `V/√N` still depends on length and corpus composition. Flesch-family values can fall outside 0–100; they estimate surface structure, not reader understanding.
 
 The showing/telling panel displays “–” with an explanation when there are fewer than three chapters or no comparative signals. Numeric fallback zeros remain in JSON for compatibility; they do not justify a ranking.
+
+<a id="review"></a>
 
 ## A practical review loop
 
@@ -102,9 +116,13 @@ For a scene or narrative-voice comparison, choose passages with comparable langu
 
 **Perception filters and dialogue:** `filter_density`, modal, passive and nominal densities count the whole text, including quoted speech. A character who says “I believe this sanatorium…” contributes the same filter marker as a narrating voice would. When one of these values stands out, read the passages and compare with the chapter’s dialogue share: a high value inside dialogue is characterisation, not narration. A narrative-only variant of these densities is a documented candidate, not part of the current contract.
 
+<a id="studio-monitor"></a>
+
 ## Use signals as questions
 
 Measurements point to passages for human review; they do not establish an error, artistic intent or a preferable style. Read dialogue, dialect, repeated words and changes in register in context. Choose when the analysis helps your own writing process.
+
+<a id="editorial-matrix"></a>
 
 ## Signals and questions for review
 
@@ -123,17 +141,23 @@ Use this reference to connect a measurement with a question to investigate. None
 | **Structural & Drift Diagnostics** | Guarded-cost changepoints, Mann-Kendall τ, Wasserstein-KS | **Structure Review:** These exploratory outputs suggest passages to inspect. They do not establish narrative boundaries or statistically confirmed shifts; see the [stability notes](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#structural-diagnostics). | A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause. Structural trends need at least three chapters. Show/tell comparison also needs three chapters with differing signals; an unavailable comparison does not mean the app has failed. |
 | **Persistent Work Markers** | <!-- LIXITY-MARKER id="..." kind="pruefen" --> | **Traceable Editorial Annotations:** Notes remain anchored near the target paragraph in Markdown. Export treatment is controlled by the project adapter. | Content hashes identify the originally marked paragraph; review anchors after manuscript edits. |
 
+<a id="selection-legend"></a>
+
 ## Unreleased: read each threshold in its own scope
 
 The reference panel now includes one decision legend. The median ± 2σ band describes chapter spread without chapter SE; deviation flags and the comparison share use the active noise-adjusted z* cutoff. Nominal BH/BY selection uses normal tails from the same chapters and has no established error-rate calibration. Paragraph marks use their own within-chapter reference and a cutoff applied after rounding z to two decimals.
 
 Two distinct comparable chapters receive z* scores, but in exact arithmetic their magnitude cannot exceed 1/1.4826. Numerical midpoint rounding is checked separately. The default 2.5 deviation cutoff is therefore unreachable; a per-feature notice explains this. More chapters do not automatically establish validity. Feature-rank projections now expose ridge regularization; their variance shares refer to the regularized matrix. The corrected Mahalanobis distance uses the same rank coordinates as its covariance; earlier values must be recomputed.
 
+<a id="fdr"></a>
+
 ## Does FDR make a flagged passage objectively wrong?
 
 No. Benjamini–Hochberg and Benjamini–Yekutieli require valid input probabilities to control false discoveries. Lixity's normal-tail probabilities have not been calibrated for comparisons against a baseline estimated from the same chapters. The configured q is therefore not a guarantee of the manuscript's false-alarm rate. A dot is a selection for review, not statistical confirmation or a judgment of prose quality.
 
 The style summary labels the share of feature comparisons within the threshold and shows its numerator and denominator. For example, 407 of 416 comparisons is about 98%; this is not a measurement of stylistic cohesion. Missing comparisons are excluded. When no comparison is available, the summary remains unknown.
+
+<a id="tense"></a>
 
 ## What can tense and pacing labels tell me?
 
@@ -149,6 +173,8 @@ The review overview makes these limits explicit. Tense cues are word-pattern cou
 
 Without explicit scene dividers, `scenes_are_chapters` is true and scenes use chapter boundaries. Lixity counts words within recognized quotations or marked speech and total words with the same configured word pattern. Read the context to determine who speaks.
 
+<a id="visuals"></a>
+
 ## Read the values as well as the colors
 
 Use the labels, numerical values and selected thresholds alongside a chart's colors. Interface accent colors identify links and controls; analysis colors encode a particular measure or state. A prominent or saturated cell does not necessarily represent a large effect, a reliable estimate or a writing problem. Theme preference does not change the underlying analysis.
@@ -158,6 +184,8 @@ Style axes summarize patterns in ranked chapter measurements. Their variance lab
 Heatmap cells, reference cutoff-hit counts and all style-space loadings open the same chapter measurement view. Read the definition, unit, sample and manuscript reference alongside the other metrics of that chapter. Switching metrics does not change manuscript marks. **Read chapter** deliberately opens the text; chapter-only metrics clear unsupported paragraph layers. An axis loading is not a chapter contribution, and comparing metrics does not establish causality.
 
 Display label keys such as `feat_asl` are not API functions or result fields. Read actual model keys: corpus metrics use `asl`, `dialog_ratio` and `filter_density`; chapter metrics use `asl`, `dialog_pct` and `filter_density`. Style feature identifiers appear in `features[].feature` and deviation/FDR entries. Keep the scope and units with each reported value.
+
+<a id="languages"></a>
 
 ## Are the seven languages equally accurate?
 

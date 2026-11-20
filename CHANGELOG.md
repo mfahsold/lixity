@@ -9,6 +9,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Share chapter-delta response fields between editor comparisons, revision
+  history and standalone text comparisons. Read the paragraph comparison
+  marker position from the prepared dashboard data.
+- Reuse the bounded file reader for serving project exports and reuse validated
+  export options when preparing a native reading website.
+- Align the first-session, writing, recovery and publication guides with the
+  current workspace. Document export choices in the workspace guide, CLI
+  commands in the usage reference and preflight payloads in the API contracts.
+- Document the checkout and packaged service paths separately. Add `make doctor`
+  for the checkout's configured port, and include the Lixity skill in the
+  source archive with the test that checks it.
 - Explain same-port project views in the service help and setup guides. Show
   the running app version in service status and doctor output, and expose
   explicit-port service status through read-only MCP discovery.
@@ -39,6 +50,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Complete the manuscript timeline when an interrupted save is retried. Recover
+  the starting measurement from the journal's verified revision and retained
+  bytes, and commit the available measurements with the save receipt.
+- Preserve section links and manuscript quotations in published Markdown guides.
+- Refresh the open editorial review after saving a dossier image and request the
+  report once when opening the whole-project review.
+- Accept only the stdio launch syntax for `lixity mcp` and describe tool
+  arguments through discovery. Build the MCP outlier matrix from measured
+  chapter-feature scores and accept finite cutoffs above the default range.
+  Use built-in text-analysis defaults independently of the subprocess directory
+  and local user settings.
 - Keep loaded dossier suggestions when switching categories or selecting a
   suggestion, including when loading before the research view finishes
   identifying its project. Offer the existing character template when there

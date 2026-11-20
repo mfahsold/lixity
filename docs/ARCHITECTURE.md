@@ -836,8 +836,10 @@ An identical accepted manuscript-review report in the same source/project
 context retains its list nodes, preserving native dialog focus-return targets.
 A changed report or list filter still renders; errors clear the accepted report.
 The presentation keeps computed counts and authored research separate without
-a new context state or transport contract. The floating card uses native counts
-and the existing paragraph comparison; it never parses localized numeric text.
+a new context state or transport contract. The dashboard prepares the paragraph
+comparison score and scale position together. The floating card renders that
+position and the native counts. If the position is missing, the card shows the
+comparison label and score without a scale.
 
 The reader's directly visible native controls share one metric selector and
 independent Counted text / Paragraph comparison switches. Browser preferences
@@ -1277,8 +1279,18 @@ control. The analysis pipeline supplies counts and verified source positions.
 The browser checks the rendered passage before highlighting it.
 
 Server middleware owns shared project configuration loading and request
-validation. Editor comparison measures exact texts in the analysis backend.
-The view handles debouncing, focus and presentation of the returned state.
+validation. Editor comparison measures exact texts in the analysis backend,
+sharing the same delta fields and chapter matching with revision history and
+standalone text comparisons. The view handles debouncing, focus and presentation
+of the returned state.
+
+The local editor journal adds a nullable verified base revision in SQLite
+schema 3 on the next save. It commits the draft and original recovery bytes
+before replacing the source, then commits the immutable measurements and save
+receipt together. The existing recovery limit keeps verified bases for pending
+drafts ahead of other versions. An older pending draft can recover its text
+without an inferred historical parent. An in-process lock orders saves and
+draft removals per manuscript. Readers can continue during measurement.
 
 Inline styles are reserved for measured/dynamic values. Layout and responsive
 stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden

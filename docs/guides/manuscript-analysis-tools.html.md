@@ -4,6 +4,8 @@ Four families of tools answer different questions about a manuscript. This page 
 
 Updated 23 October 2026
 
+<a id="families"></a>
+
 ## The families at a glance
 
 **Grammar and style checkers** focus on sentences and phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** focus on plot, scenes and characters. These categories overlap; they describe starting workflows, not exclusive feature lists. Lixity's focus is comparing language patterns within a manuscript and following their exact text and research context.
@@ -16,21 +18,31 @@ Updated 23 October 2026
 | Story and structure tools | Plot, scenes, characters, planning | Partly | Often yes | Developmental editing and outlining |
 | Lixity | Language patterns across one manuscript, linked to passages | Yes | No | Revision review with evidence |
 
+<a id="checkers"></a>
+
 ## Choose a grammar or style checker if…
 
 …you want sentence-level corrections, readability scores and phrasing suggestions while you write. Established examples are [LanguageTool](https://languagetool.org/), [ProWritingAid](https://prowritingaid.com/), [AutoCrit](https://www.autocrit.com/) and [Grammarly](https://www.grammarly.com/). They typically work through an account, and several offer manuscript-level reports in addition to in-line checking. Their suggestions are prescriptive by design: the tool proposes a change.
+
+<a id="corpus"></a>
 
 ## Choose a corpus or concordance tool if…
 
 …your question is about collections of texts rather than one manuscript: word frequencies, collocations, keywords or parallel passages. [AntConc](https://www.laurenceanthony.net/software/antconc/) and [Voyant Tools](https://voyant-tools.org/) offer corpus exploration. Check the individual tool for the reading, project and citation workflow you need; the category alone does not establish those limits.
 
+<a id="stylometry"></a>
+
 ## Choose a stylometry or NLP package if…
 
 …you are comfortable in a shell or notebook and need reproducible numbers for a study: authorship attribution, vocabulary measures or syntactic annotations. The R package [stylo](https://cran.r-project.org/package=stylo), [spaCy](https://spacy.io/), [NLTK](https://www.nltk.org/) and statistical helpers such as textstat provide building blocks. A manuscript-reading and editorial workflow may require additional integration.
 
+<a id="story"></a>
+
 ## Choose a story or structure tool if…
 
 …your next decision is about plot, scenes or character arcs. [Fictionary](https://fictionary.co/) and [Scrivener](https://www.literatureandlatte.com/scrivener/) offer story-development or writing workflows. Their language and pacing features can overlap with other categories. Compare the current product documentation and a concrete task rather than assuming that a story tool cannot measure language.
+
+<a id="assistants"></a>
 
 ## Or combine Lixity with an AI writing or editing assistant if…
 
@@ -38,11 +50,15 @@ Updated 23 October 2026
 
 Lixity’s built-in analysis computes documented statistics from your manuscript without generating prose or a quality score. Chapter comparisons help you choose where to read; paragraph disclosures provide local text, measurements and source lines. You can use those observations when reviewing an assistant’s suggestions.
 
+<a id="lixity"></a>
+
 ## Choose Lixity if…
 
 …you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; comparisons against the book’s own baseline; paragraph text and measurements for review; and a local research archive connecting sources and quotations to claims and writing decisions. Built-in analysis runs on your computer without cloud calls or an account. German and English have the deepest language profiles.
 
 Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project with manuscript analysis, research and PDF layouts, using the [first-look walkthrough](first-look.html). No installation is needed. The separate [Fontane case study](../blog/effi-briest-case-study.html) examines a public-domain novel; it is not another product demo.
+
+<a id="limits"></a>
 
 ## Where Lixity does not fit
 
@@ -55,6 +71,8 @@ Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project
 - **Collaborative editing:** the workspace is single-user and local by design.
 
 - **Publishing production:** fixed-layout PDFs and reading websites provide review and reading copies, not EPUB production or print preflight.
+
+<a id="faq"></a>
 
 ## Frequently asked questions
 

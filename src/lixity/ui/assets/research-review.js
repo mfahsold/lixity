@@ -217,15 +217,16 @@ function researchAffectedDossier(dossier, impact) {
 
 var researchReviewRequest = 0;
 var researchAcknowledgementPending = false;
-async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
+async function refreshResearchEditorialReview(options) {
   var host = document.getElementById("research-editorial-review");
   if (!host) return;
+  var preserve = Boolean(options);
   var request = ++researchReviewRequest;
   var context = researchReadContext();
   if (!preserve) host.textContent = uiLabel("research_loading");
   var report = await researchApiGet("research/review");
   if (request !== researchReviewRequest || !acceptResearchContext(context, report)) return;
-  if (preserve && report.ok && report.snapshot !== expectedSnapshot) {
+  if (preserve && report.ok && report.snapshot !== options.expectedSnapshot) {
     researchStatus(uiLabel("research_decision_ack_conflict"), false);
     return;
   }

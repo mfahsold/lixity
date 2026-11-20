@@ -20,6 +20,10 @@ the field starts outside the viewport. Hold a pending response explicitly when
 testing ordering. After a rollout, repeat the critical action on the target
 listener and distinguish package version, running version and source identity.
 
+For an analytical adapter, exercise a measured positive case and an unavailable
+case. An empty list with a valid schema can hide an incorrect projection. Compare
+selected rows and units against the shared analysis result.
+
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not
 render those responses wholesale, even during read-only checks.

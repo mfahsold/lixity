@@ -84,7 +84,6 @@
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
   document.body.prepend(freshness);
-  const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
   const pulseWords = [
     'editor_pulse_words', 'editor_pulse_since', 'editor_pulse_asl', 'editor_pulse_dialogue',
@@ -108,128 +107,6 @@
   const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
   historyGroup.append(undoBtn, redoBtn);
   statusGroup.append(status, retry, closeButton);
-  const readingWords = [
-    'editor_reading_back', 'editor_reading_title', 'editor_reading_error', 'editor_reading_source_changed',
-  ].map(L);
-  const reading = document.createElement('dialog'); reading.id = 'manuscript-reading';
-  reading.setAttribute('aria-label', readingWords[1]);
-  const readingBar = document.createElement('div'); readingBar.className = 'manuscript-edit-tools manuscript-reading-bar';
-  const readingStatus = document.createElement('span'); readingStatus.id = 'manuscript-reading-status'; readingStatus.setAttribute('role', 'status');
-  const reviewLinks = button(L('editor_review_links'), 'manuscript-review-links', () => {
-    const bridge = frame && frame.contentWindow && frame.contentWindow.LixityManuscriptLinks;
-    if (bridge && bridge.review) bridge.review(null);
-  }, null, {icon: 'link'});
-  reviewLinks.hidden = true;
-  const exitWords = [
-    'editor_exit_discard_research', 'editor_exit_research_saving', 'editor_exit_selection_unmapped',
-  ].map(L);
-  function closeReading() {
-    const drafts = frame && frame.contentWindow && frame.contentWindow.LixityResearchDrafts;
-    if (drafts && drafts.busy()) {readingStatus.textContent = exitWords[1]; return;}
-    if (drafts && drafts.hasPendingWork() && !confirm(exitWords[0])) return;
-    reading.close();
-  }
-  const returnWrite = button(readingWords[0], 'manuscript-return-write', closeReading, readingWords[0], {icon: 'arrow-left', shortcut: 'Escape'});
-  readingBar.append(returnWrite, reviewLinks, readingStatus);
-  readingBar.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !event.isComposing && !event.defaultPrevented) {
-      event.preventDefault(); event.stopPropagation(); closeReading();
-    }
-  });
-  let frame = null;
-  reading.append(readingBar); document.body.append(reading);
-  reading.addEventListener('cancel', event => {event.preventDefault(); closeReading();});
-  let readGeneration = 0, readingRevision = '', closingRead = false, readerScroll = 0, selectedReading = null;
-  const sourceBlocks = '#chapters .ptext[data-start], #chapters .reader-structural[data-start]';
-  async function read() {
-    if (!editor || paused || inflight || reading.open || closingRead) return;
-    await flush(); if (dirty || inflight || paused) return;
-    readGeneration = generation; readingRevision = snapshot.revision; selectedReading = null;
-    frame = document.createElement('iframe'); frame.id = 'manuscript-reading-frame';
-    frame.title = readingWords[1]; frame.addEventListener('load', loadedReading);
-    readingStatus.textContent = text(17); frame.hidden = true; reviewLinks.hidden = true;
-    frame.src = api + '/manuscript-view?' + new URLSearchParams({document: snapshot.document, revision: readingRevision});
-    reading.append(frame);
-    reading.showModal();
-    if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(readingBar);
-    returnWrite.focus();
-  }
-  function loadedReading(event) {
-    if (!reading.open || event.target !== frame) return;
-    const body = frame.contentDocument && frame.contentDocument.body;
-    if (readGeneration !== generation || !body || body.dataset.editorRevision !== readingRevision ||
-        body.dataset.editorDocument !== snapshot.document) {
-      frame.hidden = true; readingStatus.textContent = readingWords[2]; return;
-    }
-    frame.contentDocument.documentElement.style.colorScheme = getComputedStyle(document.documentElement).colorScheme;
-    frame.hidden = false;
-    // Firefox clears the native iframe selection when focus returns to the
-    // parent. Retain its range while the reader still owns focus, then validate
-    // the source context again when returning to writing.
-    frame.contentDocument.addEventListener('selectionchange', () => {
-      if (frame && document.activeElement === frame) {
-        const selection = frame.contentWindow.getSelection();
-        selectedReading = selection && !selection.isCollapsed && selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
-      }
-    });
-    reviewLinks.hidden = !(frame.contentWindow.LixityManuscriptLinks && frame.contentWindow.LixityManuscriptLinks.review);
-    readingStatus.textContent = readingWords[1];
-    const line = editor.currentLine();
-    const target = Array.from(body.querySelectorAll(sourceBlocks)).find(node => Number(node.dataset.end || node.dataset.start) >= line);
-    if (target) target.scrollIntoView({block: 'center'});
-    readerScroll = frame.contentWindow.scrollY;
-  }
-  function readerSelection() {
-    const selection = frame.contentWindow.getSelection();
-    const range = selection && !selection.isCollapsed && selection.rangeCount ? selection.getRangeAt(0) : selectedReading;
-    if (!range) return null;
-    const node = range.startContainer;
-    const prose = (node.nodeType === 1 ? node : node.parentElement).closest('.ptext-inner > p');
-    if (!prose || !prose.contains(range.endContainer)) return {invalid: true};
-    const block = prose.closest('.ptext[data-start][data-end]');
-    if (!block || readGeneration !== generation || snapshot.revision !== readingRevision) return {invalid: true};
-    // Source line bounds disambiguate repeated paragraphs; complete literal
-    // context disambiguates repeated quotations inside one paragraph. Markdown
-    // transformations are deliberately rejected instead of guessed.
-    const value = editor.text(), lines = value.split('\n');
-    const first = Number(block.dataset.start), last = Number(block.dataset.end);
-    if (!Number.isInteger(first) || !Number.isInteger(last) || first < 1 || last < first || last > lines.length) return {invalid: true};
-    const context = prose.textContent, source = lines.slice(first - 1, last).join('\n');
-    const offset = source.indexOf(context);
-    if (!context || offset < 0 || source.indexOf(context, offset + 1) !== -1) return {invalid: true};
-    const prefix = range.cloneRange(); prefix.selectNodeContents(prose); prefix.setEnd(range.startContainer, range.startOffset);
-    const quote = range.toString(), start = prefix.toString().length;
-    const from = lines.slice(0, first - 1).reduce((sum, line) => sum + line.length + 1, 0) + offset + start;
-    if (!quote || value.slice(from, from + quote.length) !== quote) return {invalid: true};
-    return {from, to: from + quote.length};
-  }
-  reading.addEventListener('close', async () => {
-    closingRead = true; const rBtn = document.getElementById('manuscript-read'); if (rBtn) rBtn.disabled = true;
-    const validatingRevision = snapshot.revision, validatingGeneration = generation;
-    // Retain the editor's selection/history. Only map the reader position when
-    // it is still displaying the exact revision opened by this editor.
-    try {
-      const body = frame.contentDocument && frame.contentDocument.body;
-      const selected = body && body.dataset.editorRevision === readingRevision && body.dataset.editorDocument === snapshot.document && readGeneration === generation ? readerSelection() : {invalid: true};
-      selectedReading = null;
-      let visibleLine = null;
-      if (!selected && body && body.dataset.editorRevision === readingRevision && Math.abs(frame.contentWindow.scrollY - readerScroll) > 2) {
-        const visible = Array.from(body.querySelectorAll(sourceBlocks)).find(node => node.getBoundingClientRect().bottom > 80);
-        if (visible) visibleLine = Number(visible.dataset.start);
-      }
-      // Dispose only the reading session (including media/timers). The editor
-      // and its undo history remain mounted. Each revision gets a fresh frame.
-      frame.remove(); frame = null;
-      const current = await request('/manuscript-edit');
-      if (generation !== validatingGeneration || snapshot.revision !== validatingRevision) return;
-      if (current.document !== snapshot.document || current.revision !== snapshot.revision) {
-        paused = true; show('conflict', readingWords[3]);
-      } else if (selected) {
-        if (selected.invalid || !editor.selectRange(selected.from, selected.to)) show('saved', exitWords[2]);
-      } else if (visibleLine !== null) editor.line(visibleLine);
-    } catch (error) {if (generation === validatingGeneration && snapshot.revision === validatingRevision) {paused = true; show('error', error.message);}}
-    finally {closingRead = false; const rBtn2 = document.getElementById('manuscript-read'); if (rBtn2) rBtn2.disabled = paused || inflight; editor.focus();}
-  });
   const reload = button(text(1), 'manuscript-reload', () => {if (dirty) download(); location.reload();}, null, {icon: 'rotate-cw'});
   reload.hidden = true;
   const recoverBtn = button(text(9), 'manuscript-recover', async () => {
@@ -241,7 +118,7 @@
       if (generation !== before || dirty || inflight) return;
       if (recovered.document !== snapshot.document) throw new Error('Recovery document mismatch');
       paused = true; pending = null; editor.replace(recovered.text); dirty = true;
-      note.textContent = text(14); show('unsaved', text(15)); versions.open = false; editor.focus();
+      show('unsaved', text(15)); versions.open = false; editor.focus();
     } catch (error) {show('error', error.message);}
   }, null, {icon: 'rotate-ccw'});
   const downloadBtn = button(text(10), 'manuscript-download', download, text(10), {icon: 'download'});
@@ -361,12 +238,6 @@
     @media(max-width:760px) {.manuscript-comparison-grid {grid-template-columns:1fr;}.manuscript-comparison-grid textarea {min-height:clamp(9rem,22dvh,15rem);}}
     #manuscript-analysis-freshness {position:relative;z-index:20;margin:0;padding:.2rem .5rem;background:transparent;border:0;box-shadow:none;font-size:var(--text-note,.8125rem);color:var(--muted);}
     #manuscript-analysis-freshness[hidden] {display:none;}
-    #manuscript-reading {width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:8px 12px;box-sizing:border-box;border:0;background:var(--bg);color:var(--fg);}
-    #manuscript-reading[open] {display:flex;flex-direction:column;}
-    #manuscript-reading .manuscript-reading-bar {flex:none;margin:0 0 8px;padding:6px 12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);box-shadow:var(--shadow);}
-    #manuscript-reading-status {margin-inline-start:auto;font-size:var(--text-small,.8125rem);color:var(--muted);font-weight:500;}
-    #manuscript-reading-frame {flex:1;width:100%;min-height:0;border:0;border-radius:var(--radius,12px);background:var(--bg);}
-    #manuscript-reading-frame[hidden] {display:none;}
     #manuscript-editor {container:editor-tools / inline-size;min-width:0;padding:4px 0 24px;width:100%;}
     .manuscript-edit-tools {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0;}
     .manuscript-editor-toolbar {position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius-sm,8px);box-shadow:var(--shadow);box-sizing:border-box;max-width:100%;}
@@ -382,10 +253,8 @@
     .manuscript-editor-toolbar button.ctl {padding:.25rem .5rem;min-height:2rem;white-space:nowrap;}
     .manuscript-editor-toolbar button.editor-icon-only .editor-tool-label {display:none;}
     .manuscript-editor-toolbar button.editor-icon-only {padding-inline:.45rem;min-width:2rem;justify-content:center;}
-    .manuscript-editor-toolbar button.ctl:not(.primary),
-    .manuscript-reading-bar button.ctl:not(.primary) {border-color:transparent;background:transparent;}
-    .manuscript-editor-toolbar button.ctl:not(.primary):hover,
-    .manuscript-reading-bar button.ctl:not(.primary):hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
+    .manuscript-editor-toolbar button.ctl:not(.primary) {border-color:transparent;background:transparent;}
+    .manuscript-editor-toolbar button.ctl:not(.primary):hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
     #manuscript-save-status {min-width:0;flex:0 1 auto;font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12rem;}
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
@@ -744,8 +613,10 @@
       show(dirty ? 'unsaved' : 'saved', text(dirty ? 6 : 5));
       refreshPulse().catch(() => {});
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
-    finally {inflight = false; const rBtn = document.getElementById('manuscript-read'); if (rBtn) rBtn.disabled = paused || closingRead;
-      if (dirty && !paused && !composing) timer = setTimeout(flush, 800);}
+    finally {
+      inflight = false;
+      if (dirty && !paused && !composing) timer = setTimeout(flush, 800);
+    }
   }
   function download() {
     if (!editor) return;
@@ -806,7 +677,7 @@
     finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0));}
   }
   async function close() {
-    if (reading.open || comparison.open || composing) return;
+    if (comparison.open || composing) return;
     while (inflight) await new Promise(resolve => setTimeout(resolve, 25));
     if (composing) return;
     if (dirty && !paused) await flush();

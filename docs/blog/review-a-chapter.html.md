@@ -6,6 +6,8 @@ A chapter suddenly reads differently from the rest. Sentences get shorter, dialo
 
 Lixity helps you investigate that question in the text. The local open-source workspace connects manuscripts, linguistic observations and research. A conspicuous number is a starting point: it should lead to a passage you can read and judge in context.
 
+<a id="one-question"></a>
+
 ## Start with one question
 
 Choose a specific question for a revision session: “Does the arrival scene become hurried before the character has a reason to hurry?” That gives you something clearer to investigate than every highlighted passage in a whole novel.
@@ -14,9 +16,11 @@ Read the scene first with analysis marks switched off. Notice where you speed up
 
 Consider this invented miniature:
 
-She waited at the gate. Footsteps. A key fell. Nobody picked it up.
+> She waited at the gate. Footsteps. A key fell. Nobody picked it up.
 
 The short sentences might build tension. In another scene they might interrupt an otherwise quiet narrative voice. Sentence length alone cannot make that decision.
+
+<a id="compare"></a>
 
 ## Compare an observation with its surroundings
 
@@ -26,6 +30,8 @@ A high or low value initially tells you that something differs. A flashback, let
 
 The same applies to linguistic investigation. Studying sentence patterns or vocabulary requires understandable counts and known limits. Lixity documents its [methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and identifies language-dependent heuristics. Measurements do not replace interpretation or establish literary quality.
 
+<a id="research"></a>
+
 ## Read research where you need it
 
 Sometimes the question is not about rhythm. The scene may depend on a historical detail, a change of location or a deliberate decision about a character.
@@ -33,6 +39,8 @@ Sometimes the question is not about rhythm. The scene may depend on a historical
 You can open a dossier alongside the manuscript. Sources, claims and author decisions have distinct roles in the research archive. Saved relationships retain their versions rather than silently following a source that has since changed. This does not make a claim true. It makes the basis of a decision inspectable.
 
 The revision loop becomes short: read the passage, inspect the observation, consult its background, make a decision. Not every difference requires an edit. A well-grounded decision to leave something alone is a useful result too.
+
+<a id="bounded-review"></a>
 
 ## Finish a bounded review
 
@@ -42,12 +50,14 @@ For feedback from other readers, you can prepare a selected reading copy and exp
 
 Lixity runs as a local browser application. Built-in analysis works offline; optional external research and speech services are configured separately. The interface has seven languages and technical documentation is maintained in English. Analysis coverage varies by language.
 
+<a id="try"></a>
+
 ## Try a fictional project
 
 The public demo contains six invented English harbour chapters with linked case notes. It is read-only and requires neither an account nor your manuscript. Try one small task: open a chapter comparison, read an explanation and return to its passage. Is it clearer what you want to examine?
 
 [Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
-Development status: an integrated writing editor with undo, local autosave and conflict handling is implemented in development but remains unreleased. The public demo demonstrates reading and inspection, not saving a manuscript.
+Use **Write** in the local app to edit with undo, local autosave and draft recovery. The public demo is read-only. [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased)
 
 [All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

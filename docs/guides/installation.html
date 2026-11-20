@@ -147,6 +147,7 @@ lixity service start --open</code></pre>
 <p>For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF, text, PNG and JPEG attachments with your permission. Retention permits a local copy, not redistribution or factual acceptance. No cloud account is needed. See <a href="research-pdf.html#zotero">Zotero capture and migration</a>; audio and video remain in Zotero.</p>
 
 <h2 id="existing-project">Open an existing project and research archive</h2>
+<p>When the app is running, open its home address in a new browser tab and choose <strong>Project actions → Open Project</strong> to keep a second project open on the same port.</p>
 <p>With the service stopped, launch directly into a project. Replace <code>./My Novel</code> with your folder. Keep the quotes around paths containing spaces.</p>
 <pre><code>lixity service start "./My Novel" --open</code></pre>
 <p>To change the startup project of an already running service, restart with the new path:</p>
@@ -159,10 +160,10 @@ lixity service start --open</code></pre>
 <pre><code>lixity service status
 lixity service restart --open
 lixity service stop</code></pre>
-<p>A project you open in the browser belongs to that view for the current session. After a restart, open the new address reported by the service. Use <strong>Open Project</strong> to reconnect a folder you chose in the previous session. For a foreground <code>lixity serve</code> session, press <code>Ctrl+C</code> in its terminal. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service">service command reference</a> for startup settings and <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login">the setup reference</a> for opening at login.</p>
+<p>A project you open in the browser belongs to that view for the current session. After a restart, return to the home address reported by the service. Use <strong>Open Project</strong> to reconnect additional projects. For a foreground <code>lixity serve</code> session, press <code>Ctrl+C</code> in its terminal. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service">service command reference</a> for startup settings and <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login">the setup reference</a> for opening at login.</p>
 
 <h3 id="custom-port">Use a different port</h3>
-<p>If port 8765 is occupied, inspect it with <code>lixity service status --port 8765</code>. To start a separate workspace, choose a free port. Use the same port for its browser address and every service or diagnostic command.</p>
+<p>If port 8765 is occupied, inspect it with <code>lixity service status --port 8765</code>. Reuse the browser address if a managed instance is ready. Choose a free port when you need a separate app process, and use that port for its browser address and every service or diagnostic command.</p>
 <pre><code>lixity service start "./My Novel" --port 9000 --open</code></pre>
 <p>This example opens <code>http://127.0.0.1:9000/</code>. Any service on port 8765 keeps running.</p>
 <ul>

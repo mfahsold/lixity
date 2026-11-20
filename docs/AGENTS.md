@@ -128,7 +128,10 @@ lixity doctor --port 8765 --json
 
 ### Model Context Protocol (MCP) Server
 
-Lixity exposes the shared Python analysis and research APIs through a JSON-RPC 2.0 stdio server via `lixity mcp`. Its MCP transport uses the standard library and requires no separate MCP package. AI assistants (Claude Desktop, Cursor, Antigravity, OpenCode, Codex) can connect directly:
+Run `lixity mcp` as a JSON-RPC 2.0 stdio subprocess in your client. Use
+the absolute path to the intended executable when the client runs with a
+different PATH. The server accepts inputs in tool calls. Start it with
+`mcp` as its only argument. For example, configure the client with:
 
 ```json
 {
@@ -141,8 +144,13 @@ Lixity exposes the shared Python analysis and research APIs through a JSON-RPC 2
 }
 ```
 
-Query `tools/list` on the installed server for available read-only tools and
-their argument schemas. Availability depends on the chosen build.
+Query `tools/list` and `prompts/list` on the installed server for the available
+read-only operations and input schemas. Successful tools return the result as
+JSON inside a text content item. Check `isError` before decoding it. The client
+controls where it sends manuscript text and results.
+Text analysis tools use their supplied arguments and built-in defaults
+regardless of the subprocess working directory or local user settings.
+The archive audit reads the project explicitly named in its request.
 
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_service_status` (unreleased): Observe the managed dashboard on an
@@ -151,7 +159,7 @@ their argument schemas. Availability depends on the chosen build.
   including `state`, `installed_version` and `running_version`. The tool
   performs observation only and omits local paths and project data.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
-- `lixity_profile`: Word, sentence, and vocabulary profile summary.
+- `lixity_profile`: Paragraph tense and style estimates with chapter and line context.
 - `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
 - `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks` (with `cohesion_drop` / `cohesion_similarity`), and corpus-level `pacing_plateaus`.
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
@@ -163,7 +171,15 @@ their argument schemas. Availability depends on the chosen build.
 - `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
 - `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
-- `lixity_outlier_matrix`: Chapter-by-feature style-reference cells at or above an absolute `z_threshold` (default `2.5`), with per-chapter counts (`lixity-outlier-matrix/1`).
+- `lixity_outlier_matrix`: Chapter-by-feature style-reference cells with
+  `abs(z_star) >= z_threshold` before rounding, with per-chapter counts
+  (`lixity-outlier-matrix/1`). Supply a finite, nonnegative JSON number
+  as the cutoff (default `2.5`). A cutoff of zero includes measured zeros.
+  Unavailable cells are omitted. `value`, `median` and `mad` use the feature's
+  original units. The dimensionless score uses the shared robust reference.
+  Read `measured_cells` before interpreting `consistency`, the share of scored
+  cells below the cutoff. An empty series retains the reference's `1.0`
+  convention. This selection is a threshold filter.
 - `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews.
 
 ### Audio status and local ZONOS3 synthesis
@@ -286,12 +302,8 @@ defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout l
 
 ### 2.1 MCP server (read-only)
 
-`python -m lixity.mcp` serves the same read-only endpoint as `lixity mcp`.
-See the [MCP tool inventory](#model-context-protocol-mcp-server) and query
-`tools/list` for the installed set. Tools wrap the shared Python APIs, so
-contracts and operating boundaries are unchanged; manuscript text stays data,
-never instruction. Prefer the CLI or HTTP API where they fit; use MCP where
-the client only speaks tools.
+`python -m lixity.mcp` launches the same stdio server as `lixity mcp`.
+See [client configuration and available tools](#model-context-protocol-mcp-server).
 
 ## 3. JSON contracts
 
@@ -1891,6 +1903,8 @@ media is refused to preserve text lineage. Receipts use
 semantics. It cannot combine with a body/section replacement.
 
 
+<a id="website-export-preflight"></a>
+
 Native `POST /api/site-preflight` accepts the same strict
 `SiteExportRequest` as `/api/site-export`, including the selected project token
 and explicit research/source-file choices. It returns `{ok:true, preflight:...}`
@@ -1899,6 +1913,19 @@ media packaging/attribution-presence counts. No download or source writes occur;
 selection/context conflicts fail as for export. No mobile or rights verification
 is inferred. CLI `export-site --preflight [--json]` requires no output destination;
 `--output` is refused in this mode. See [export checks](WORKSPACE.md#check-a-reading-website-before-exporting).
+
+Successful preflight measures `html_bytes`, `total_bytes`, `zip_bytes`,
+`source_file_bytes` and `file_count` for the prepared candidate. For reader
+analysis, `analysis_html_bytes` and `total_html_bytes` measure the additional
+page and both HTML pages together. Counts describe exported dossier revisions
+in review mode or selected publication entries after the chapter cap.
+Available retained media without copied files is `not_packaged`, separate
+from unavailable pins. Ordinary Markdown image destinations are counted
+without opening loose files or external URLs. Attribution checks presence of
+`origin_url` and `provenance_note` in retained metadata.
+`mobile_layout_check` is `not_run` and `rights_check` is `not_performed`.
+HTML over 10 MiB and ZIP over 20 MiB trigger advisory warnings. A later export
+prepares its own candidate under the current selection.
 
 Export data, revision-count and bundle-limit failures use
 `lixity-site-preflight-error/1`: `ok:false`,

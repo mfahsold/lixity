@@ -97,7 +97,7 @@ maintained procedure for each task; UI and CLI use the same project archive.
 | Extract PDF text or diagnose a scan import | [PDF and OCR](#self-hosted-pdf-and-ocr-extraction), [local Tesseract](#use-local-ocr-without-a-worker-service) |
 | Analyze a source or compare its vocabulary | [Source analysis](#analyze-a-retained-source), [manuscript comparison](#cross-corpus-comparison-and-evidence-grounding) |
 | Export a claim/evidence report | [Matrix export](#claim-evidence-matrix-export), [terminal formats](#read-reports-in-the-terminal) |
-| Back up, restore or convert an older store | [Research backup](#export-and-restoration), [paired Zotero backup](#paired-zoteroresearch-backup-and-restore), [manifest migration](#migrate-manifest-storage) |
+| Back up, restore or convert an older store | [Choose what to back up](../PROJECT_BACKUP.md), [research backup](#export-and-restoration), [manifest migration](#migrate-manifest-storage) |
 | Retire or permanently remove retained material | [Withdrawal and purge](#withdrawal-vs-purge) |
 | Share a reading copy | [Reading website manual](../WORKSPACE.md#export-a-reading-website); this is separate from archive backup |
 | Automate the archive | [Python entrypoint](#python-api), [API contracts](../AGENTS.md#51-research-api-lixityresearchapi), [data model](DATA_MODEL.md) |
@@ -120,8 +120,10 @@ lixity research dossier --project ./novel --title "Reading room" --file ./notes.
 lixity research audit --project ./novel
 ```
 
-Replace `PASSAGE_ID` with a full returned ID. Open the project from the managed
-app, or run `lixity serve --research-project ./novel --no-project` in the foreground.
+Replace `PASSAGE_ID` with a full returned ID. To continue in the browser, use
+**Open Project** in the managed app and select the project that owns the archive.
+CLI research commands keep the browser's project selection. [Project onboarding](../ONBOARDING.md)
+explains the existing-project and import paths.
 
 **Since v0.7.6:** a new dossier without `--language` inherits the explicit
 research project's language. An explicit language overrides it. Manuscript
@@ -129,13 +131,10 @@ analysis settings do not silently replace the research language, and ordinary
 body updates preserve an existing dossier's language. The Python API and native
 dossier creation use the same default.
 
-Commands do not switch a running server's project. [Project onboarding](../ONBOARDING.md)
-explains the existing-project and new-import paths.
-
-Search selects current captures; old passage IDs still cite original bytes.
-Refreshing unchanged bytes/context is a no-op. Native ingestion without
-`--source-id` creates a distinct source; identical text does not prove identity.
-Zotero uses its structured external identity instead.
+Search selects current captures. Older passage IDs still cite their retained
+source version. A local browser capture or a CLI ingest without `--source-id`
+creates a distinct source. Refreshing an identified source with unchanged bytes
+and context is a no-op. Zotero captures use their structured external identity.
 
 `--allow-retention` permits a local copy, not redistribution or factual acceptance.
 Passages stay `unreviewed`; evidence relations and author-selected claim states
@@ -143,6 +142,22 @@ require human assessment. Decisions are separate authorial records. An unmarked
 `deviation_from_fact` does not certify factual accuracy. Exit codes are `0`
 success, `1` operational/integrity failure and `2` usage error. Failed audits emit
 `ok: false` and exit `1`; other errors use stderr without source contents.
+
+### Capture and use a source in the browser
+
+1. In **Research → Sources**, choose **Add source**. Choose a local file or
+   enter text. Confirm permission to keep a local copy, then choose **Save and
+   index source**. Use **Capture from Zotero** for selected attachments.
+2. Open **Search research** and read the passage you want to cite. **Add to
+   dossier draft** adds its citation to the unsaved dossier form. Review the title,
+   body and citation, then choose **Save dossier** to keep the authored record.
+3. To cite the same passage for an existing claim, choose **Prepare
+   evidence-link draft**. Review the claim and its relation to the passage,
+   then choose **Link evidence** to save the association.
+
+Browser capture sends text for text files and preserves file bytes for PDF
+uploads. For a text file whose original bytes matter, use the CLI
+`research ingest --file` workflow above.
 
 ## Research workflows
 
@@ -631,6 +646,8 @@ defaults to `all`; `dossier-from-manuscript` defaults to `character` when
 → From manuscript** and select **Load suggestions**. Review the character,
 place or scene proposal before saving it as a dossier. **New dossier** in
 the toolbar opens the manual form, where you can choose the **Character** template.
+When there are no new character suggestions, **Create a character dossier
+manually** opens the same form and fills the template if the form is empty.
 
 <a id="configured-terms-and-boundary-policies"></a>
 
@@ -1271,6 +1288,8 @@ Choose **Add image**, select a local PNG/JPEG, describe it, and confirm retentio
 permission before saving. Caption, source title/URL, provenance note and section
 are optional. Browser preview writes nothing; image capture and dossier revision
 commit together or accept neither. A stale save requires refresh and review.
+An open **Review links** view refreshes to show the saved revision. Earlier
+assessments keep the versions they reviewed.
 Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
 `file:` and HTTP(S) Markdown image paths are neither loaded as images nor retained.
 Use **Add image**/`dossier-image` to capture and attach a local image, or reference
@@ -1744,6 +1763,9 @@ finished. Preserve the pre-migration backup until restoration has been tested.
 
 <a id="backup-scope-comparison"></a>
 
+Use the [backup scope comparison](../PROJECT_BACKUP.md) if the same recovery
+plan needs a manuscript or project assets.
+
 Close Zotero before starting; `--confirm-zotero-closed` is the caller's explicit
 confirmation, not automatic process detection. Specify the **data directory**
 containing `zotero.sqlite`, not the application profile.
@@ -1976,21 +1998,28 @@ withdrawal and purge keep their existing contracts.
 
 ## Export and restoration
 
+Use this archive to recover accepted research. To recover a manuscript and its
+research together, use [project backup and restore](../PROJECT_BACKUP.md).
+
 ```sh
 lixity research export --project ./novel --output ./backup-novel.tar.gz
 lixity research restore --from ./backup-novel.tar.gz --to ./restored-novel
 lixity research audit --project ./restored-novel
-lixity research reindex --project ./restored-novel
 ```
 
-Export packages accepted records/history, manifests, original blobs and project
-configuration. `EXPORT_MANIFEST.json` records SHA-256 and byte lengths. Search
-indexes and locks are excluded. Restore refuses an existing store or nonempty
-project destination, validates safe regular-file paths, checksums/sizes, snapshots,
-contiguous history and project identities, then publishes atomically. Symlinks,
-devices, absolute paths and traversal fail. This backup excludes manuscripts,
-Zotero and application profiles; [paired backup](#paired-zoteroresearch-backup-and-restore)
+Export packages accepted history, manifests and retained source bytes. A root
+`lixity.toml`, when present, is included whole after validation. Review it for
+credentials and machine-specific paths before sharing an archive. Manuscripts,
+`pyproject.toml`, search indexes, locks, Zotero and application profiles are
+outside this archive's scope. The [paired backup](#paired-zoteroresearch-backup-and-restore)
 adds the Zotero data directory.
+
+`EXPORT_MANIFEST.json` records SHA-256 and byte lengths. Restore requires a new
+or empty directory and validates paths, checksums, sizes, contiguous history and
+project identity before publishing the store. The `research/` directory and any
+included `lixity.toml` are placed separately. Inspect the destination before
+retrying if publication reports an error. Rebuild the disposable index when
+needed with `lixity research reindex --project ./restored-novel`.
 
 Since v0.7.2, import and export validate every manifest in the accepted ancestry,
 including its content hash, supported schema, project identity, consecutive

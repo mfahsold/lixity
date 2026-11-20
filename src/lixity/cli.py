@@ -1467,6 +1467,8 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "mcp":
+            continue
         if name == "project-backup":
             p.add_argument("--project", required=True)
             p.add_argument("--manuscript", required=True, help="Project-relative manuscript file")

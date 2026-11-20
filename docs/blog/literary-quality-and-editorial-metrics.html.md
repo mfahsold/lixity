@@ -6,6 +6,8 @@ When an author and an editor sit down with a 350-page manuscript, they rarely ar
 
 Over the past decade, empirical literary studies, cognitive reading research and publishing scholarship have investigated how these craft questions relate to perceived literary quality and reader engagement. None of those studies justify reducing a novel to a single score. What they do show is which observable text signals are worth inspecting during revision, and why a manuscript must be compared against its own baseline rather than a generic rulebook.
 
+<a id="research"></a>
+
 ## 1. What empirical studies of novels and editing actually found
 
 Four research traditions inform how Lixity structures its manuscript overview:
@@ -17,6 +19,8 @@ Four research traditions inform how Lixity structures its manuscript overview:
 - **Pacing cadence and thematic focus (Archer & Jockers, 2016; Boyd, Blackburn & Pennebaker, 2020).** Large-scale corpus studies of commercial and literary fiction highlight regular alternation between conversational immediacy and reflective narration, alongside clear transitions between scene-setting exposition and active conflict.
 
 - **Local referential cohesion and voice separation (Graesser et al., 2004; Burrows, 2002).** Psycholinguistic work on reading flow (Coh-Metrix) shows that readers perceive prose as cohesive when adjacent sentences share topical content words, and perceive dialogue as natural when spoken turns differ in length and cadence from surrounding narrative description.
+
+<a id="classic-data"></a>
 
 ## 2. Measuring two complete public-domain novels with Lixity
 
@@ -43,6 +47,8 @@ Look at the **Voice contrast (ASL Δ)** row in both novels. Although Fontane wri
 - In *Pride and Prejudice*, unquoted narration averages **23.39 words per sentence**, while quoted spans average **13.67 words per sentence** (`ASL Δ = −9.73`), with `45.2%` short spans.
 
 When a draft manuscript feels wooden in dialogue scenes, one of the most common causes is that `ASL Δ` hovers near zero: the characters are speaking in the exact same 20-word syntactic periods as the narrator.
+
+<a id="chapter-drills"></a>
 
 ## 3. How chapter-level outliers reveal narrative structure
 
@@ -78,6 +84,8 @@ The same measurements trace Fontane's famous contrast between light social conve
 
 In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
 
+<a id="workflow"></a>
+
 ## 4. An editorial workflow ordered by how authors and editors actually work
 
 To make these signals practical during daily revision, Lixity organizes the **Analysis overview** in the order an author or editor moves through a draft:
@@ -98,6 +106,8 @@ You can run the new dialogue and pacing reports directly from the CLI or inspect
 lixity dialogue samples/effi-briest.md --language de
 lixity pacing samples/pride-and-prejudice.md --language en
 ```
+
+<a id="limits"></a>
 
 ## 5. Methodological boundaries: what these numbers do not claim
 

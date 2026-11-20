@@ -753,7 +753,8 @@ async function metricPreferences(browser) {
         assert.equal(await card.locator('.analysis-evidence-comparison-label strong').textContent(), 'z = ' + (info[2] >= 0 ? '+' : '') + info[2].toFixed(2), 'comparison exposes the existing numeric paragraph score');
         assert.match(await card.locator('.analysis-evidence-comparison-label').textContent(), index === 0 ? /below the chapter median/ : /above the chapter median/);
         assert.equal(await card.locator('.analysis-evidence-scale').getAttribute('aria-label'), info[1], 'bounded visual scale retains the full paragraph reference explanation');
-        assert.equal(await card.locator('.analysis-evidence-comparison').evaluate(node => node.style.getPropertyValue('--evidence-comparison-position')), Math.max(0,Math.min(100,50 + info[2] / 2.5 * 50)) + '%', 'marker uses the same fixed ±2.5 range as the existing diverging legend');
+        assert.equal(await card.locator('.analysis-evidence-scale').evaluate(node => node.style.getPropertyValue('--evidence-comparison-position')),
+          info[5] + '%', 'marker uses the position prepared with the chapter comparison');
         assert.equal(await card.locator('.analysis-evidence-scale').evaluate(node => {
           const track = node.getBoundingClientRect(), marker = node.querySelector('span').getBoundingClientRect();
           return marker.left >= track.left - 1 && marker.right <= track.right + 1;
@@ -790,6 +791,16 @@ async function metricPreferences(browser) {
           await card.waitFor({state:'hidden'});
           assert.equal(await card.isVisible(), false, 'scrolling outside the context-anchored explanation dismisses it');
         }
+      }
+      if (width === 1440) {
+        const target = page.locator('.ptext').first();
+        await target.evaluate(node => { chipLayers(paragraphChips[node.id]).asl.length = 5; });
+        await target.locator('.reader-paragraph-actions').click(); await explainFromMenu(page);
+        const card = page.locator('#analysis-evidence-card');
+        await card.waitFor({state:'visible'});
+        assert.match(await card.locator('.analysis-evidence-comparison-label').textContent(), /below the chapter median/);
+        assert.equal(await card.locator('.analysis-evidence-scale').count(), 0,
+          'a missing visual coordinate leaves the measured comparison text visible');
       }
       await page.close();
     }
@@ -1421,13 +1432,15 @@ server.serve_forever()
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
           await page.screenshot({path:path.join(artifacts, `legends-${locale}-${width}-${fault || 'mapped'}.png`)});
           await page.locator('#workbench-overview-open').click();
-          assert.equal(await page.locator('.toolbar > .legend').isVisible(), true, 'Overview retains the tense key');
+          assert.equal(await page.locator('[data-analysis-workflows]').isVisible(), true, 'Overview shows the guided entry points');
+          assert.equal(await page.locator('.toolbar > .legend').isVisible(), false, 'Overview hides the manuscript toolbar');
           await page.locator('#workbench-overview-back').click();
           await page.locator('#manuscript-analysis-toggle').click();
           assert.equal(await legend.isVisible(), false);
           await page.locator('#manuscript-analysis-toggle').click();
           await selectMetric(page, '');
           assert.equal(await legend.isVisible(), false);
+          assert.equal(await page.locator('.toolbar > .legend').isVisible(), true, 'Analysis without a selected metric shows the tense key beside the manuscript');
           assert.deepEqual(await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({id:node.id, hash:node.dataset.paragraphSha256, text:node.querySelector('.ptext-inner > p').textContent}))), before);
           assert.deepEqual(errors, []); assert.deepEqual(writes, []);
         } finally {await page.close();}

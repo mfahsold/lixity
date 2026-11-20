@@ -37,7 +37,8 @@ def test_optional_reader_analysis_preserves_v1_default_and_nonempty_selection():
     assert 'analysis_sections' not in SiteExportOptions().model_dump()
     unchanged = SiteExportRequest(project_token='a' * 64, include_research=False, include_source_files=False)
     assert 'analysis_sections' not in unchanged.model_dump()
-    assert 'analysis_sections' not in unchanged.export_options().model_dump()
+    assert unchanged.export_options() == SiteExportOptions()
+    assert unchanged.export_options().model_dump(exclude_defaults=True) == {}
     selected = SiteExportRequest(project_token='a' * 64, include_research=False, include_source_files=False,
                                  mode='reader', publication_profile='readers', analysis_sections=['chapters', 'language'])
     assert selected.model_dump()['analysis_sections'] == ['chapters', 'language']

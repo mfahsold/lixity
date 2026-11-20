@@ -8,6 +8,8 @@ Updated 20 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
+<a id="example"></a>
+
 ## 1. Open the example and read a chapter
 
 [Open the demo project](../demo/report.html)
@@ -20,13 +22,17 @@ In the same list, choose **Compare chapters 1 and 2** to see the average words p
 
 *Warehouse 4: explore a passage and compare its chapter using the same app controls as the demo.*
 
+<a id="contrast"></a>
+
+<a id="passage"></a>
+
 ## 2. Inspect one difference
 
-A board moved. Mara turned. The crate tipped towards the drain.
+> A board moved. Mara turned. The crate tipped towards the drain.
 
 1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
 
-2. Choose its **… → Explore passage → Explain measurement**. The card shows the selected sentence, what was counted and a question to consider as you read. Turn on **Counted text** to see the marks in the prose.
+2. Choose its **… → Explore passage → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**. Use **Counted text** to see the marks in the prose.
 
 3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
 
@@ -36,25 +42,17 @@ You have completed the first check when you can explain the contrast in the text
 
 **More controls, marks and chapter comparisons**
 
-Choose a paragraph's **… → Explore passage** to open its right context. **Explain measurement** opens the counted text; **Research for this passage** follows the passage’s explicit links. The separate **Analysis** switch shows diagnostics across the manuscript; the **Passage** inspector works with Analysis On or Off. Use **Analysis overview** to compare sentence rhythm in the setting and action chapters, then **Back to passage** to resume reading. On desktop, the passage return stays hidden while that passage is already visible.
+Turn on **Analysis** and choose a **Measure**. **Counted text** underlines the words or sentences Lixity counted. **Paragraph comparison** uses a separate marker to show how a paragraph compares with its chapter. Open a mark or choose **Explore passage → Explain measurement** with the keyboard. Escape closes the card. **How it’s measured** opens the full method.
 
-**In the read-only demo:** turn **Analysis** on. The first switch-on selects **Sentence length** unless you already saved a metric choice. Choose the metric with the directly visible **Measure** selector; **Counted text** and **Paragraph comparison** are independent switches. Violet underlines identify counted spans. Blue/orange raw-value markers with down/up arrows compare notable paragraphs with their chapter, adding only a subtle paragraph-edge wash. Hover or tap a mark for its explanation; the compact card puts the quotation and count before a separate paragraph comparison. **Read these marks** keeps the method collapsed until opened.
+For a full-manuscript view, open **Analysis overview**. In the development demo, it starts at **Manuscript measurements**. Choose **Review passages**, **Compare chapters** or **Explore patterns** to go deeper. **Back to passage** restores your reading position.
 
-Neutral dotted marks and a book-icon **Research** count identify saved research links. Their pattern stays distinct from solid counted-text underlines and the paragraph comparison colors, including with Analysis Off. Open the Research control to follow the exact saved connection; this is an author association, not an automatic fact check.
+In **Sentence rhythm**, choose a length group to read a counted sentence. In **Motifs & repetition**, open a recurring phrase to move between its occurrences. The reading toolbar takes you through the examples. [Read the mark key](interpretation.html#analysis-marks) or see the [first-session steps](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore).
 
-**Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Choosing **None** or turning off either switch persists across toggling Analysis and reloading. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
-
-**Unreleased native navigation.** Opening **Analysis overview** shows **Manuscript measurements**. Use the link of the same name to jump directly to the values. The suggested passage and the entry points **Review passages**, **Compare chapters** and **Explore patterns** take you to more detail. One analysis section is visible at a time. Inputs remain in place when you switch, and direct links reveal their target section.
-
-Under **Explore patterns**, choose **Manuscript measurements** to see counts, sentence rhythm and language measures. Expand the vocabulary and style disclosures for more detail. A linked scene title reveals its detailed **Scene measurements**. **Back to passage** restores your reading context. Standalone reports retain direct section links and remain readable without JavaScript.
-
-The rhythm view combines chapter averages with the sentence-length distribution. Choose a length group to open a sentence, then move between examples with the reading toolbar. In **Motifs and repetition**, open a recurring phrase to see which occurrences can be read together. Press Tab to reach the next occurrence. Closing the toolbar returns you to the control that opened it.
-
-Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
+<a id="decision"></a>
 
 ## 3. Follow a quotation into research
 
-Someone had tried the eastern gate of Warehouse 4.
+> Someone had tried the eastern gate of Warehouse 4.
 
 **In the read-only demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
 
@@ -72,9 +70,13 @@ From an open dossier, **Back to dossier** restores its saved version and reading
 
 People, events and journeys are fictional. The historical images do not verify them. Maps in this website use local sketches and geographic shapes without requesting online map tiles. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
+<a id="reader-analysis"></a>
+
 ## Read with selected analysis
 
 Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above the story, and inspect its chapter overview. Choose **Back to reading copy** to return to the story and its selected background. This example deliberately includes chapter figures for all six chapters; reading progress does not hide analysis. In your own export, select only the analysis you want to share and use a chapter cap to omit later content.
+
+<a id="reading-copies"></a>
 
 ## Choose the reader’s route
 
@@ -88,15 +90,21 @@ A reading copy is fixed. Reading progress hides or reveals included notes, thoug
 
 The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
 
+<a id="exports"></a>
+
 ## 4. Choose a PDF copy
 
 Use the direct PDF links below or in the demo page; the exported website does not generate new PDFs. Compare the same manuscript as an [editorial copy](../demo/warehouse-4-editor.pdf), [reading copy](../demo/warehouse-4-book.pdf), [submission sheets](../demo/warehouse-4-sheet.pdf) or [analysis report](../demo/warehouse-4-report.pdf). The [PDF guide](research-pdf.html#manuscript-export) explains their purposes and limits.
+
+<a id="own-project"></a>
 
 ## Use your own project
 
 Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). The file importer also accepts one Word/DOCX file. Export Scrivener documents to a supported file format first; inspect the import preview before creating a project. PDFs can be retained separately as Research sources.
 
 [Install the local app](installation.html) and launch the workspace. Choose **Open Project** to continue with an existing folder. Choose **Analyze a manuscript** to review a copy before creating a new project. Confirm the analysis language. See [running the local service](installation.html#restart) if the browser reopens an older workspace.
+
+<a id="audio"></a>
 
 ## Hear a passage in your own project
 

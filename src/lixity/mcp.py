@@ -15,6 +15,7 @@ from typing import Any
 
 from . import __version__
 from . import api as _api
+from .status import DEFAULT_Z_MILD, DEFAULT_Z_STRONG, FLAG_MIN_SEVERITY
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "lixity"
@@ -118,7 +119,7 @@ _TOOLS = (
                 },
                 "flag_min_severity": {
                     "type": ["integer", "null"],
-                    "description": "Paragraph flag floor 1|2|3 (default: configured).",
+                    "description": f"Paragraph flag floor 1|2|3 (default {int(FLAG_MIN_SEVERITY)}).",
                 },
             },
             "required": ["text"],
@@ -335,8 +336,8 @@ _TOOLS = (
     {
         "name": "lixity_outlier_matrix",
         "description": (
-            "Extract a flat, sorted chapter-by-feature matrix of all style-reference cells exceeding "
-            "a configurable z* threshold, plus per-chapter outlier counts and overall consistency."
+            "Extract measured chapter-by-feature style-reference cells at or above an absolute "
+            "z* threshold, plus per-chapter counts and overall consistency."
         ),
         "inputSchema": {
             "type": "object",
@@ -349,8 +350,9 @@ _TOOLS = (
                 },
                 "z_threshold": {
                     "type": "number",
-                    "description": "Absolute z* threshold for filtering cells (default 2.5).",
-                    "default": 2.5,
+                    "minimum": 0,
+                    "description": f"Minimum absolute z* of a selected cell (default {DEFAULT_Z_MILD}).",
+                    "default": DEFAULT_Z_MILD,
                 },
             },
             "required": ["text"],
@@ -527,6 +529,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                 arguments["text"],
                 str(arguments.get("language") or "en"),
                 flag_min_severity=int(severity) if severity is not None else None,
+                project_config={},
             )
         elif name == "lixity_pacing":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
@@ -607,7 +610,9 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "content": [{"type": "text", "text": "lixity_fingerprint requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.fingerprint(arguments["text"], str(arguments.get("language") or "en"))
+            payload = _api.fingerprint(
+                arguments["text"], str(arguments.get("language") or "en"), project_config={},
+            )
         elif name == "revision_diff":
             if (
                 not isinstance(arguments, dict)
@@ -660,45 +665,42 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "content": [{"type": "text", "text": "lixity_outlier_matrix requires a text string."}],
                     "isError": True,
                 }
-            z_raw = arguments.get("z_threshold", 2.5)
-            try:
-                z_threshold = float(z_raw)
-            except (TypeError, ValueError):
-                return {
-                    "content": [{"type": "text", "text": "z_threshold must be a finite number."}],
-                    "isError": True,
-                }
-            fp = _api.fingerprint(
-                arguments["text"],
-                str(arguments.get("language") or "en"),
+            from .pipeline import fingerprint_document, resolve_document_config
+            from .style_fingerprint import FingerprintThresholds
+
+            z_raw = arguments.get("z_threshold", DEFAULT_Z_MILD)
+            FingerprintThresholds.numeric_inputs["z_mild"].validate("z_threshold", z_raw)
+            z_threshold = float(z_raw)
+            thresholds = FingerprintThresholds(
                 z_mild=z_threshold,
+                z_strong=max(z_threshold, DEFAULT_Z_STRONG),
             )
+            text = arguments["text"]
+            config, _ = resolve_document_config(
+                text, str(arguments.get("language") or "en"), project_config={},
+            )
+            fingerprint = fingerprint_document(text, config, thresholds)
             cells: list[dict[str, Any]] = []
             by_chapter: dict[str, int] = {}
-            for dim in fp.get("dimensions", []):
-                z_scores = dim.get("z_scores") or {}
-                scores = dim.get("scores") or {}
-                for ch_key, z_val in z_scores.items():
-                    if z_val is None or abs(float(z_val)) < z_threshold:
-                        continue
-                    ch_str = str(ch_key)
-                    by_chapter[ch_str] = by_chapter.get(ch_str, 0) + 1
-                    cells.append(
-                        {
-                            "chapter": ch_key,
-                            "feature": dim.get("key", ""),
-                            "value": scores.get(ch_key),
-                            "median": dim.get("median"),
-                            "mad": dim.get("mad"),
-                            "z_star": round(float(z_val), 4),
-                        }
-                    )
-            cells.sort(key=lambda item: abs(float(item["z_star"])), reverse=True)
+            for chapter, deviations in fingerprint.deviations.items():
+                chapter_key = str(chapter)
+                by_chapter[chapter_key] = len(deviations)
+                for feature, z_star in deviations.items():
+                    baseline = fingerprint.baseline[feature]
+                    cells.append({
+                        "chapter": chapter_key,
+                        "feature": feature,
+                        "value": fingerprint.values[feature][chapter],
+                        "median": baseline["median"],
+                        "mad": baseline["mad"],
+                        "z_star": round(z_star, 4),
+                    })
+            cells.sort(key=lambda item: abs(item["z_star"]), reverse=True)
             payload = {
                 "schema_version": "lixity-outlier-matrix/1",
                 "z_threshold": z_threshold,
-                "consistency": fp.get("consistency"),
-                "measured_cells": fp.get("measured_cells"),
+                "consistency": round(fingerprint.consistency, 4),
+                "measured_cells": fingerprint.measured_cells,
                 "outlier_count": len(cells),
                 "outliers_by_chapter": by_chapter,
                 "cells": cells,

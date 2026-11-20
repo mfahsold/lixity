@@ -14,7 +14,6 @@
     "#manuscript-reader-controls",
     ".manuscript-reading .toolbar",
     ".manuscript-editor-toolbar",
-    "#manuscript-reading .manuscript-reading-bar",
     ".teleprompter-toolbar",
     ".pane-ribbon",
     ".research-pane-navigation"
@@ -569,7 +568,6 @@
       if (document.body.classList.contains("reader-focus")) return true;
       if (document.body.classList.contains("manuscript-writing")) return true;
       if (document.querySelector("#teleprompter-modal:not([hidden])")) return true;
-      if (document.querySelector("#manuscript-reading[open]")) return true;
       if (
         document.body.classList.contains("manuscript-reading") &&
         !document.body.classList.contains("workbench-overview") &&
@@ -675,7 +673,7 @@
         } else if (
           hidden &&
           event.target && event.target.closest &&
-          event.target.closest("#chapters, #manuscript-reading")
+          event.target.closest("#chapters")
         ) {
           show();
         } else {

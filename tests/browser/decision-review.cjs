@@ -65,11 +65,13 @@ server.serve_forever()
       page.setDefaultTimeout(7000);
       const errors = [], writes = [], reads = [], external = [];
       let recordMode = 'native', postMode = 'native', impactMode = 'native', releases = [], postReleases = [], impactReleases = [];
+      let reviewReads = 0;
       page.on('pageerror', error => errors.push(error.message));
       await page.route('**/*', async route => {
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== server.fixture.url) {external.push(request.url()); return route.abort();}
         if (url.pathname === '/') return route.fulfill({contentType: 'text/html', body: fs.readFileSync(path.join(artifacts, locale + '.html'), 'utf8')});
+        if (url.pathname === '/api/research/review' && request.method() === 'GET') reviewReads++;
         if (request.method() !== 'GET') {
           writes.push(request.postDataJSON());
           if (postMode === 'failed') return route.fulfill({status:503,json:{ok:false,message:'Synthetic save unavailable'}});
@@ -115,8 +117,10 @@ server.serve_forever()
       await expect(page.locator('#research-review-all')).toBeVisible();
       await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.decision}"]`)).toBeVisible();
       await expect(page.locator(`#research-editorial-review > .research-card:visible [data-decision-ack-decision="${server.fixture.other_decision}"]`)).toHaveCount(0);
+      const filteredReads = reviewReads;
       await page.locator('#research-review-all').click();
       await expect(page.locator('#research-editorial-review')).toContainText('Synthetic unlinked decision');
+      assert.equal(reviewReads, filteredReads + 1, 'Opening the whole-project review reloads its report once');
       const allCandidate = page.locator(`#research-editorial-review > [data-review-candidate-decision="${server.fixture.other_decision}"]`);
       await allCandidate.locator(':scope > summary').click();
       await expect(allCandidate.locator(`[data-decision-ack-decision="${server.fixture.other_decision}"]`)).toBeVisible();

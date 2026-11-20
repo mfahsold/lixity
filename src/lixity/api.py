@@ -630,7 +630,7 @@ def about() -> dict[str, Any]:
                 "output": "text|json",
             },
             {
-                "name": "mcp", "purpose": "read-only Model Context Protocol server on stdio for AI assistants",
+                "name": "mcp", "purpose": "read-only JSON-RPC tools on stdio for analysis, research and managed service status",
                 "output": "stdio",
             },
             {

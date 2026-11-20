@@ -10,6 +10,8 @@ That is an editorial problem as well as an interface problem. An author needs th
 
 The useful loop is short: **read the passage, inspect the reason, make a contextual decision, return to the text.** Lixity brings manuscript analysis and linked research into that loop. The current workflow makes their separate questions clearer.
 
+<a id="one-signal"></a>
+
 ## 1. Ask what the signal actually measures
 
 The default tense-pattern signal counts heuristic markers of present and past forms. It can indicate a mixture within a paragraph or a change from the previous paragraph. The selected measurement layer answers its own question, such as sentence length or literal perception-word matches. Those are separate observations.
@@ -18,13 +20,15 @@ Optional installed syntax models instead compose contextual verb groups. Their e
 
 Consider this invented contrast:
 
-Mara closed the gate and pocketed the key. Every morning, the porter checks the seal and writes down the number.
+> Mara closed the gate and pocketed the key. Every morning, the porter checks the seal and writes down the number.
 
 The second sentence could describe a standing routine within a past-tense narrative. It could also be an accidental change of tense during revision. This example illustrates the editorial distinction; it is not a claim that these two short sentences meet a particular detection threshold.
 
 The software cannot infer that intention reliably from marker counts. A useful explanation exposes the counts, their heuristic limits and the exact passage. The author or editor supplies the reading that turns them into a decision.
 
 In the local app, the labelled **Tense pattern · review** action opens that explanation directly. It is separate from **Explain measurement**, which inspects the selected analysis layer. A change of rhythm, voice or tense can be a reason to preserve a passage.
+
+<a id="one-context"></a>
 
 ## 2. Keep the context attached to the chosen passage
 
@@ -36,6 +40,8 @@ The return control retains the destination and one action. Record titles and rev
 
 On a narrow screen, opening a tool can move it above the prose. A useful return therefore restores the reading position and keyboard focus as well as selecting the Manuscript view. These behaviours are checked with synthetic projects; passing those checks does not substitute for feedback from people reading a long draft.
 
+<a id="versions"></a>
+
 ## 3. Separate the current record from the version used
 
 Suppose two quotations refer to the same historical dossier, and one quotation was linked to an earlier version of a claim. A later correction should remain discoverable alongside the exact version used at the time.
@@ -45,6 +51,8 @@ The passage context shows a current dossier or claim once within its group. Dist
 This answers two different reading questions: what does the record say now, and what was linked to this sentence? A saved association records that connection. It does not automatically verify the claim, accept a new version or establish that a decision has been incorporated into the prose.
 
 The backend prepares these summaries from one archive snapshot for both the live reader and an offline review export. Opening the context no longer asks the browser to assemble several independently fetched record versions. Full records remain available through their explicit viewers. The [automation contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) document the versioned data model.
+
+<a id="editorial-use"></a>
 
 ## 4. Turn the observation into an editorial conversation
 
@@ -59,6 +67,8 @@ The backend prepares these summaries from one archive snapshot for both the live
 5. **Prepare the right copy.** Use an editorial PDF or a fixed review website for a discussion. A curated companion shares selected background material. These are reading exports rather than live collaborative editing.
 
 Built-in manuscript analysis runs locally, and Lixity does not automatically rewrite prose. Markdown and plain-text manuscripts are supported. The importer also accepts one Word/DOCX file; export Scrivener documents to a supported format first. Optional integrations have their own [data boundaries](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md).
+
+<a id="try"></a>
 
 ## Try one question
 

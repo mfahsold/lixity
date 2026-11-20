@@ -308,11 +308,7 @@
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
     var z = comparison && zFmt.format(comparison[2]);
-    // Position comes from the backend's SSOT colour scale; fall back to the
-    // legacy computation for cached/older payloads without element 5.
-    var marker = comparison && (Number.isFinite(comparison[5])
-      ? comparison[5]
-      : Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50)));
+    var marker = comparison && Number.isFinite(comparison[5]) ? comparison[5] : null;
     var reason = sticky
       ? uiCountFormat("evidence_sticky_rule", sticky.minWords, {
           words:sticky.minWords, percent:percentFormat.format(sticky.minPct / 100)
@@ -353,10 +349,11 @@
         ${summary ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
         <p class="analysis-evidence-value">${summary}</p>` : null}
         ${share ? html`<p class="ctl-note">${share}</p>` : null}
-        ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0], "--evidence-comparison-position":marker + "%"}}>
+        ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0]}}>
           <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
           <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
-          <div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}><span></span></div>
+          ${marker !== null ? html`<div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}
+            style=${{"--evidence-comparison-position":marker + "%"}}><span></span></div>` : null}
         </div>` : null}
         ${allParagraphValues ? html`<details class="analysis-evidence-all-values" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("evidence_all_values")}</summary>
           <p class="analysis-evidence-value">${allParagraphValues}</p></details>` : null}

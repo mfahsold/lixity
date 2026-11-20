@@ -18,7 +18,7 @@ A chapter suddenly reads differently. Choose one concrete question, compare an o
 
 Published 11 November 2026 · 6 minutes
 
-Why a revision-aware writing workspace needs explicit sessions, conditional saves, analysis bound to the saved text and separate recovery, backup and research records. The editor described here is unreleased.
+How the local manuscript editor handles writing sessions and conflicts, ties analysis to saved text, and uses recovery copies alongside project backups.
 
 ## [What makes a novel read well? Literary research, editorial craft and manuscript data](literary-quality-and-editorial-metrics.html)
 

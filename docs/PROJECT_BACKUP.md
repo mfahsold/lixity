@@ -5,17 +5,30 @@ bundle, separate from reading websites and research-only exports. Stop manuscrip
 editing and other project writers before capture. Selected files are checked for
 changes during copying, but this is not a transactional snapshot of running apps.
 
+| What you need to recover | Backup and restore |
+| --- | --- |
+| Selected manuscript, explicitly selected settings and assets, and any accepted research | `lixity project-backup` and `lixity project-restore` |
+| Accepted research history and retained sources, with root `lixity.toml` when present | [Research archive export and restoration](research/USAGE.md#export-and-restoration) |
+| Accepted research plus a Zotero data directory and its stored attachments | [Paired Zotero/research backup and restore](research/USAGE.md#paired-zoteroresearch-backup-and-restore) |
+
+## Back up and verify a restored copy
+
 ```bash
 lixity project-backup --project ./novel --manuscript manuscript.md \
   --settings lixity.toml --attachment images/cover.png --output ./novel-backup
 lixity project-restore --from ./novel-backup --to ./restored-novel
-lixity research audit --project ./restored-novel
+lixity project --project ./restored-novel --json
 ```
 
-Both commands print JSON, including explicit exclusions, and return a nonzero exit
-status on failure. Backup output must be a new directory outside the project.
-Restore requires a destination that does not exist, even if an existing directory
-is empty. Failed verification does not publish a restored project.
+Successful backup and restore commands print JSON with `research_included` and
+the exclusions. Failures report a diagnostic and return a nonzero exit status.
+Choose a new backup directory outside the project and a restore destination that
+does not exist. Failed verification does not publish a restored project.
+
+Check the restored manuscript selection, settings and file paths. If the restore
+reports `research_included: true`, also run
+`lixity research audit --project ./restored-novel`. To continue in the browser,
+use **Open Project** and select the restored copy in the existing app.
 
 ## Inventory and scope
 
@@ -55,8 +68,9 @@ its store. This is a complete backup of the stated inventory, not a disk image.
 The wrapper permits up to 10,000 files, 20,000 filesystem entries and 10 GiB of
 bundle bytes, with a 4 MiB manifest limit. The nested research archive retains its
 own 10 GiB uncompressed ceiling and schema validation. Symlinks, special files,
-absolute selected paths, traversal and backslash/drive paths are rejected. Files
-are streamed when hashed. Bundle inventories must match exactly, and restored
+absolute selected paths, traversal and backslash/drive paths are rejected.
+Use physical source and destination paths when a directory alias is a symlink.
+Files are streamed when hashed. Bundle inventories must match exactly, and restored
 selected files are verified again before placement. Publication uses the existing
 atomic no-replace directory primitive; unsupported platforms/filesystems fail
 explicitly instead of replacing a concurrently created destination.
@@ -67,5 +81,5 @@ external references before resuming work. Existing evidence links remain pinned
 to their retained research versions; an audit does not claim that changed prose
 still matches every manuscript quotation. Rebuild disposable research search
 indexes when needed with `lixity research reindex --project ./restored-novel`.
-Linux synthetic tests cover the documented flow; they do not establish equivalent
-Windows/macOS filesystem behavior.
+Test restoration on the intended filesystem before adopting a backup as the
+working copy.

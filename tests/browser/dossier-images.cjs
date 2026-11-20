@@ -119,6 +119,7 @@ for y in range(360):
 plan = png[:8] + chunk(b'IHDR', struct.pack('>IIBBBBB', 640, 360, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(b''.join(rows))) + chunk(b'IEND', b'')
 (base / 'synthetic-plan.png').write_bytes(plan)
 dossier = api.create_dossier(project, title='Synthetic image dossier', body='# Notes\\n\\nRetained evidence.\\n\\n# Detail\\n\\nSecond section.')
+api.record_decision(project, title='Synthetic image review', rationale='Check the retained illustration.', dossier_ids=[dossier['dossier_id']])
 other_dossier = api.create_dossier(project, title='Other synthetic dossier', body='# Visual notes\\n\\n![Local plan](bilder/plan.jpg)\\n\\n# Context\\n\\nUnrelated synthetic content.')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.exports_dir = str(base / 'exports')
@@ -201,6 +202,9 @@ server.serve_forever()
     await expect(page.locator('[data-dossier-add-image]')).toBeFocused();
     await expect.poll(() => page.evaluate(() => window.imageURLs.created.length === window.imageURLs.revoked.length)).toBe(true);
     assert.deepEqual(await page.evaluate(() => window.imageURLs.created), await page.evaluate(() => window.imageURLs.revoked), 'Cancel revokes preview URLs');
+    await page.locator('[data-rtab=review]').click();
+    const reviewPair = page.locator('#research-editorial-review [data-decision-ack-dossier="' + fixture.dossier + '"]');
+    await expect(reviewPair).toHaveAttribute('data-decision-ack-dossier-revision', '1');
     await page.locator('[data-dossier-add-image]').click();
     // Real JPEG decoding accompanies PNG; rejected SVG never reaches decoding.
     await page.locator('#dossier-image-file').setInputFiles({name: 'synthetic.jpg', mimeType: 'image/jpeg', buffer: fs.readFileSync(path.join(artifacts, 'synthetic.jpg'))});
@@ -272,11 +276,14 @@ server.serve_forever()
     await page.locator('#r-filter-dossiers').focus();
     finishDetail();
     await page.unroute('**/api/research-dossier-image');
-    await expect(page.locator('.research-dossier-body-rendered .dossier-image img')).toBeVisible();
-    await expect(page.locator('.research-dossier-body-rendered .dossier-image figcaption')).toContainText('Synthetic provenance <img src=x onerror=window.imageProvenanceInjected=true>');
-    await expect(page.locator('.research-dossier-body-rendered .dossier-image figcaption a')).toHaveAttribute('href', 'https://example.org/synthetic-source');
+    const savedImage = page.locator('#research-dossiers-list .research-dossier-body-rendered .dossier-image');
+    await expect(savedImage.locator('img')).toBeVisible();
+    await expect(savedImage.locator('figcaption')).toContainText('Synthetic provenance <img src=x onerror=window.imageProvenanceInjected=true>');
+    await expect(savedImage.locator('figcaption a')).toHaveAttribute('href', 'https://example.org/synthetic-source');
+    await expect(reviewPair).toHaveAttribute('data-decision-ack-dossier-revision', '2');
     assert.equal(await page.evaluate(() => Boolean(window.imageProvenanceInjected)), false);
     await expect(page.locator('#r-filter-dossiers')).toBeFocused();
+    await page.locator('#research-tool-close').click();
     await page.unroute(dossierDetailURL);
     // Clicking dossier content gives its labelled tabpanel focus. An accepted
     // save must respect that move when its delayed reconciliation completes.
@@ -422,7 +429,7 @@ server.serve_forever()
     assert.equal(await page.locator('#research-sources-list [data-source-view]').count(), 0, 'An image source has no fabricated text view');
     await expect(page.locator('#research-sources-list .dossier-image img')).toBeVisible();
     assert.ok((await page.locator('#research-sources-list .dossier-image img').getAttribute('src')).includes(encodeURIComponent(pin.source_version_id)));
-    const dossierSummary = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
+    const dossierSummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
     await Promise.all([page.waitForResponse(response => dossierListURL(new URL(response.url())), {timeout: 10000}), page.locator('[data-rtab=dossiers]').click()]);
     // A refresh preserves an unchanged open detail, so close it first;
     // clicking blindly would toggle the preserved detail shut.
@@ -693,6 +700,21 @@ server.serve_forever()
     await expect(recordBody.locator('.dossier-image img')).toHaveCount(1);
     await expect(recordBody.locator('[data-dossier-add-image], [data-dossier-replace-image]')).toHaveCount(0);
     await page.keyboard.press('Escape');
+    await page.locator('[data-rtab=decisions]').click();
+    await page.locator('[data-rtab=review]').click();
+    await expect(page.locator('#rtab-dossiers')).toBeHidden();
+    await expect(reviewPair).toHaveAttribute('data-decision-ack-dossier-revision', /^\d+$/);
+    const priorRevision = Number(await reviewPair.getAttribute('data-decision-ack-dossier-revision'));
+    const inReview = page.locator(`#research-editorial-review [data-review-candidate-dossier="${fixture.dossier}"]`);
+    await inReview.locator('[data-research-detail=dossier]').click();
+    await inReview.locator('[data-dossier-add-image]').click();
+    await page.locator('#dossier-image-file').setInputFiles(file);
+    await page.locator('#dossier-image-alt').fill('Synthetic image added in review');
+    await page.locator('#dossier-image-retention').check();
+    await page.locator('#dossier-image-save').click();
+    await expect(dialog).not.toBeVisible();
+    await expect(reviewPair).toHaveAttribute('data-decision-ack-dossier-revision', String(priorRevision + 1));
+    await expect(page.locator('#research-tool-title')).toBeFocused();
     assert.deepEqual(external, [], 'Images must not make external requests');
     assert.deepEqual(errors, []);
     console.log(`Dossier images: readable Mermaid viewport/keyboard enlargement at 1440/320 in light/dark; PNG/JPEG decoding; preview cancel/race/limits; atomic save busy/error/CAS recovery; exact old pins, full/section/history and lifecycle states; hostile data with no external requests; seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);

@@ -6,6 +6,8 @@ Wenn Autorinnen, Autoren und Lektorat gemeinsam an einem Romanmanuskript arbeite
 
 Empirische Studien aus der Literaturwissenschaft (Computational Literary Studies), der Leseforschung und der Verlagsarbeit haben in den letzten Jahren genau untersucht, welche Textmerkmale mit wahrgenommener literarischer Qualität, Lesefluss und Spannungsdramaturgie zusammenhängen. Dieser Artikel zeigt, was die Forschung tatsächlich belegt – und wie man diese Signale mit Lixity datengetrieben an gemeinfreier Weltliteratur und am eigenen Manuskript prüft.
 
+<a id="forschung"></a>
+
 ## 1. Vier Befunde aus Literaturwissenschaft und Lektoratsforschung
 
 - **Makro-Lektorat vs. Satz-Lektorat (Ginna, 2017; Greenberg, 2018).** Gute Lektoratsarbeit verbindet den Blick aus der Vogelperspektive (Kapiteltempo, Szenen-Ökonomie, Perspektivverteilung, Stimmkontrast) mit der Arbeit am einzelnen Absatz (Tempusbrüche, Wort-Echos, Satzübergänge). Ein Werkzeug hilft Schreibenden vor allem dann, wenn jede Kapitel-Kennzahl direkt zur betreffenden Textstelle zurückführt.
@@ -15,6 +17,8 @@ Empirische Studien aus der Literaturwissenschaft (Computational Literary Studies
 - **Dialog-Distinktivität (Burrows, 2002; Muzny et al., 2017).** In überzeugend gebauten Romanen unterscheidet sich die wörtliche Rede messbar vom umgebenden Erzähltext – insbesondere durch kürzere Sätze, elliptische Einwürfe und einen eigenen Schlagabtausch-Rhythmus.
 
 - **Lokale Satz-zu-Satz-Kohäsion (Coh-Metrix, Graesser, McNamara & Kintsch, 2004).** Ob ein Absatz flüssig trägt oder gedanklich springt, zeigt sich oft daran, ob aufeinanderfolgende Sätze Inhaltswörter wiederaufnehmen (Wortbrücke) oder ob gleichförmige Satzanfänge den Lesefluss mechanisch bremsen.
+
+<a id="klassiker-daten"></a>
 
 ## 2. Datenvergleich an zwei gemeinfreien Romanen: *Effi Briest* und *Pride and Prejudice*
 
@@ -35,6 +39,8 @@ Wie sehen diese Lektorats-Signale an vollständigen Klassikern aus? Die folgende
 | Gleiche Satzanfänge (Ketten ≥ 3) | 5 Ketten in 36 Kapiteln | 21 Ketten in 61 Kapiteln | Stellen für bewusste Anaphern oder Satzanfangs-Monotonie |
 
 Besonders aufschlussreich ist der **ASL-Abstand zwischen Zitaten und Erzähltext**: Obwohl zwischen Fontanes deutschem Gesellschaftsroman und Austens englischem Klassiker über achtzig Jahre und zwei verschiedene Sprachen liegen, trennen beide ihre Figurenrede im Schnitt um **fast exakt 10 Wörter pro Satz** (`−9,90` bzw. `−9,73`) vom Erzähltext. Wenn Dialoge in einem Rohmanuskript steif oder „papierern“ wirken, liegt dieser Differenzwert häufig nahe bei `0` – die Figuren sprechen dann in denselben Satzbögen wie die Erzählstimme.
+
+<a id="kapitel-diagnose"></a>
 
 ## 3. Wie einzelne Kapitel-Ausreißer dramaturgische Wendepunkte sichtbar machen
 
@@ -57,6 +63,8 @@ Erst im Kapitelvergleich zeigt sich, wie präzise diese Kennzahlen dramatische S
 
 In *Pride and Prejudice* markiert derselbe Blick sofort das berühmte Briefkapitel (Kapitel 35): Dort stehen **87,6 %** des Kapitels in Anführungszeichen, aber der Anteil kurzer Zitate fällt auf **0,0 %** und die Satzlänge innerhalb der Anführungszeichen steigt auf **27,39 Wörter** (`ASL-Abstand = +0,81`). In Lixity lässt sich ein solches Briefkapitel gezielt einem eigenen [Stilregister](intentional-registers.html) zuordnen, damit beabsichtigte Briefprosa nicht als unfreiwillige Dialog-Abweichung gewertet wird.
 
+<a id="workflow"></a>
+
 ## 4. Vom Befund zur Überarbeitung: Die neue Lektorats-Reihenfolge in Lixity
 
 Damit Autorinnen, Autoren und Lektorat ohne Umwege arbeiten können, sind die Sektionen der Analyse-Übersicht in Lixity nach dem tatsächlichen Überarbeitungs-Ablauf geordnet:
@@ -70,6 +78,8 @@ Damit Autorinnen, Autoren und Lektorat ohne Umwege arbeiten können, sind die Se
 4. **Figuren & Echos (*Namensnennungen*, *Motive & Wiederholungen*):** Figurenpräsenz über das Buch und lokale Phrasenechos im 300-Wörter-Fenster kontrollieren.
 
 5. **Stilvergleich & Gesamttabelle (*Stil* mit Heatmap, Stilpass, 3D-Stilraum sowie *Kapitelmatrix*):** Alle Kapitel gegen den eigenen Korridor des Manuskripts abgleichen.
+
+<a id="grenzen"></a>
 
 ## 5. Was diese Kennzahlen bewusst nicht behaupten
 

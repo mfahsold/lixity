@@ -45,21 +45,28 @@ logger = get_logger("manuscript")
 
 SOURCE_WRITE_LOCK = RLock()
 _DOC_LOCKS_GUARD = RLock()
-_DOC_LOCKS: dict[str, RLock] = {}
+_DOC_LOCKS: dict[str, tuple[RLock, RLock]] = {}
+
+
+def _document_locks(source: str | Path) -> tuple[RLock, RLock]:
+    key = str(Path(source).resolve())
+    with _DOC_LOCKS_GUARD:
+        locks = _DOC_LOCKS.get(key)
+        if locks is None:
+            locks = RLock(), RLock()
+            _DOC_LOCKS[key] = locks
+        return locks
 
 
 def document_lock(source: str | Path) -> RLock:
-    """Return a re-entrant lock scoped to the resolved manuscript path."""
-    key = str(Path(source).resolve())
-    with _DOC_LOCKS_GUARD:
-        lock = _DOC_LOCKS.get(key)
-        if lock is None:
-            lock = RLock()
-            _DOC_LOCKS[key] = lock
-        return lock
+    """Return the state lock shared with other in-process source writers."""
+    return _document_locks(source)[0]
+
+
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 _ID = re.compile(r"[a-f0-9]{32,64}\Z")
 _MAX_CHAPTER_SIMILARITY_PAIRS = 16_384
+_RECOVERY_SCHEMA_VERSION = 3
 
 
 class EditConflict(ValueError):
@@ -121,6 +128,7 @@ class ManuscriptStore:
         if not self.source.is_relative_to(self.root) or self.source.suffix.lower() not in {".md", ".txt", ".markdown"}:
             raise ValueError("Choose a Markdown or text manuscript inside the selected project")
         self.document = _digest((str(self.root) + "\0" + str(self.source)).encode())
+        self._state_lock, self._operation_lock = _document_locks(self.source)
         self.directory = self.root / ".lixity" / "editing"
         self.language = language or "en"
         self.project_config: dict[str, Any] = dict(project_config) if project_config else {}
@@ -137,7 +145,13 @@ class ManuscriptStore:
 
     def _initialize_schema(self, db: sqlite3.Connection) -> None:
         db.execute("PRAGMA journal_mode=WAL")
-        db.execute("CREATE TABLE IF NOT EXISTS recovery (document TEXT, id TEXT, kind TEXT, content BLOB, created REAL, PRIMARY KEY(document,id))")
+        db.execute("BEGIN IMMEDIATE")
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS recovery (document TEXT, id TEXT, kind TEXT, content BLOB, "
+            "created REAL, base_revision TEXT, PRIMARY KEY(document,id))"
+        )
+        if not any(row[1] == "base_revision" for row in db.execute("PRAGMA table_info(recovery)")):
+            db.execute("ALTER TABLE recovery ADD COLUMN base_revision TEXT")
         db.execute("CREATE INDEX IF NOT EXISTS idx_recovery_doc_created ON recovery (document, kind, created DESC)")
         db.execute("CREATE TABLE IF NOT EXISTS receipts (document TEXT, id TEXT, request TEXT, response TEXT, created REAL, PRIMARY KEY(document,id))")
         db.execute("CREATE INDEX IF NOT EXISTS idx_receipts_doc_created ON receipts (document, created DESC)")
@@ -184,7 +198,7 @@ class ManuscriptStore:
             db.execute("DROP TABLE manuscript_revisions")
             db.execute("ALTER TABLE manuscript_revisions_new RENAME TO manuscript_revisions")
         db.execute("CREATE INDEX IF NOT EXISTS idx_manuscript_revisions_doc_created ON manuscript_revisions (document, created_at DESC)")
-        db.execute("PRAGMA user_version=2")
+        db.execute(f"PRAGMA user_version={_RECOVERY_SCHEMA_VERSION}")
         db.commit()
 
     def _database(self, *, ensure_schema: bool = True) -> sqlite3.Connection:
@@ -207,12 +221,13 @@ class ManuscriptStore:
             db.execute("PRAGMA busy_timeout=5000")
             db.execute("PRAGMA synchronous=FULL")
             if not self._schema_ready:
-                if not created and not ensure_schema:
+                if not created:
                     version = int(db.execute("PRAGMA user_version").fetchone()[0])
                     journal_mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
                     if version >= 2 and journal_mode == "wal":
-                        self._schema_ready = True
-                        return db
+                        self._schema_ready = version >= _RECOVERY_SCHEMA_VERSION
+                        if self._schema_ready or not ensure_schema:
+                            return db
                 self._initialize_schema(db)
                 self._schema_ready = True
             return db
@@ -304,11 +319,7 @@ class ManuscriptStore:
         created_at: float | None = None,
         flags_count: int | None = None,
     ) -> None:
-        existing = db.execute(
-            "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
-            (self.document, revision),
-        ).fetchone()
-        if existing is not None:
+        if self._revision_exists(db, revision):
             return
         config = self._fixed_auto_config(text)
         snap = self._cached_snapshot(text, config)
@@ -322,8 +333,14 @@ class ManuscriptStore:
             flags_count=flags_count,
         )
 
+    def _revision_exists(self, db: sqlite3.Connection, revision: str) -> bool:
+        return db.execute(
+            "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
+            (self.document, revision),
+        ).fetchone() is not None
+
     def _lock(self) -> RLock:
-        return document_lock(self.source)
+        return self._state_lock
 
     def open(self) -> dict[str, Any]:
         with self._lock():
@@ -352,9 +369,27 @@ class ManuscriptStore:
                     "revision": _digest(content), "id": identifier, "kind": str(row["kind"]),
                     "text": _decode(content)[0]}
 
+    def _saved_response(self, db: sqlite3.Connection, operation: str, request: str) -> dict[str, str] | None:
+        receipt = db.execute(
+            "SELECT request,response FROM receipts WHERE document=? AND id=?",
+            (self.document, operation),
+        ).fetchone()
+        if receipt is None:
+            return None
+        if receipt["request"] != request:
+            raise ValueError("Operation identifier was reused for different content")
+        response: dict[str, str] = json.loads(str(receipt["response"]))
+        return response
+
     def save(self, document: str, revision: str, operation: str, text: str) -> dict[str, str]:
         if document != self.document or not re.fullmatch(r"[a-f0-9]{64}", revision) or not re.fullmatch(r"[a-f0-9]{32}", operation):
             raise ValueError("Invalid document, revision or operation")
+        # Keep editor saves and discards ordered while readers can use the state lock.
+        with self._operation_lock:
+            return self._save(revision, operation, text)
+
+    def _save(self, revision: str, operation: str, text: str) -> dict[str, str]:
+        document = self.document
         if "\r" in text or "\0" in text:
             raise ValueError("Editor text must use LF and contain no NUL")
         encoded = text.encode("utf-8")
@@ -362,116 +397,120 @@ class ManuscriptStore:
             raise ValueError("Manuscript exceeds the 4 MiB editing limit")
         request = _digest(revision.encode() + b"\0" + encoded)
         with self._lock(), closing(self._database()) as db:
-            receipt = db.execute("SELECT request,response FROM receipts WHERE document=? AND id=?", (document, operation)).fetchone()
-            if receipt is not None:
-                if receipt["request"] != request:
-                    raise ValueError("Operation identifier was reused for different content")
-                response: dict[str, str] = json.loads(str(receipt["response"]))
-                return response
+            saved = self._saved_response(db, operation, request)
+            if saved is not None:
+                return saved
             original = self._read()
             original_text, newline, bom = _decode(original)
             candidate = bom + text.replace("\n", newline).encode("utf-8")
             if len(candidate) > MAX_TEXT_BYTES:
                 raise ValueError("Encoded manuscript exceeds the 4 MiB editing limit")
-            prior = db.execute("SELECT content FROM recovery WHERE document=? AND id=?", (document, operation)).fetchone()
-            if prior is not None and bytes(prior["content"]) != candidate:
+            prior = db.execute(
+                "SELECT content,created,base_revision FROM recovery WHERE document=? AND id=?", (document, operation),
+            ).fetchone()
+            recorded_base = prior["base_revision"] if prior is not None else None
+            if prior is not None and (bytes(prior["content"]) != candidate
+                                      or (recorded_base is not None and recorded_base != revision)):
                 raise ValueError("Operation identifier was reused for different content")
             count = int(db.execute("SELECT count(*) AS n FROM recovery WHERE document=? AND kind='draft'", (document,)).fetchone()["n"])
             if prior is None and count >= 8:
                 raise ValueError("Eight recovery drafts retained; recover or remove a draft before saving")
+            verified_base = _digest(original) == revision
+            journal_base = revision if verified_base else recorded_base
+            now = (
+                float(prior["created"]) if not verified_base and prior is not None
+                and recorded_base is not None else time.time()
+            )
             with db:
                 db.execute(
-                    "INSERT INTO recovery (document, id, kind, content, created) VALUES (?,?,?,?,?) "
-                    "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, created=excluded.created",
-                    (document, operation, "draft", candidate, time.time()),
+                    "INSERT INTO recovery (document, id, kind, content, created, base_revision) VALUES (?,?,?,?,?,?) "
+                    "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, "
+                    "created=excluded.created, base_revision=excluded.base_revision",
+                    (document, operation, "draft", candidate, now, journal_base),
                 )
-            # A retry after replacement but before receipt persistence is safe
-            # only when this exact operation was already journaled.
-            if _digest(original) != revision and not (prior is not None and original == candidate):
-                log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="revision-mismatch")
-                raise EditConflict("Manuscript changed elsewhere; your draft is retained")
-            identity = self.source.stat()
-            def guard() -> None:
-                current = self.source.stat()
-                if (current.st_dev, current.st_ino) != (identity.st_dev, identity.st_ino) or self._read() != original:
-                    log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="write-guard")
-                    raise EditConflict("Manuscript changed while saving; your draft is retained")
-            if original != candidate:
-                with db:
+                if verified_base and original != candidate:
                     db.execute(
                         "INSERT INTO recovery (document, id, kind, content, created) VALUES (?,?,?,?,?) "
-                        "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, created=excluded.created",
-                        (document, _digest(original), "version", original, time.time()),
+                        "ON CONFLICT(document, id) DO UPDATE SET kind=excluded.kind, content=excluded.content, "
+                        "created=excluded.created",
+                        (document, revision, "version", original, now),
                     )
+            # A retry after replacement but before receipt persistence is safe
+            # only when this exact operation was already journaled.
+            if not verified_base and not (prior is not None and original == candidate):
+                log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="revision-mismatch")
+                raise EditConflict("Manuscript changed elsewhere; your draft is retained")
+            if original != candidate:
+                identity = self.source.stat()
+
+                def guard() -> None:
+                    current = self.source.stat()
+                    if (current.st_dev, current.st_ino) != (identity.st_dev, identity.st_ino) or self._read() != original:
+                        log_event(logger, "manuscript_save_conflict", level=logging.WARNING, stage="write-guard")
+                        raise EditConflict("Manuscript changed while saving; your draft is retained")
+
                 FileUtils.atomic_write_bytes_if_changed(str(self.source), candidate, before_replace=guard)
-            response = {"document": document, "revision": _digest(candidate)}
-            orig_rev = _digest(original)
-            target_rev = response["revision"]
-            changed = original != candidate
-            now = time.time()
-            with db:
-                orig_row = (
-                    db.execute(
-                        "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
-                        (self.document, orig_rev),
-                    ).fetchone()
-                    if changed
-                    else None
-                )
-                need_orig = changed and orig_row is None
-                target_row = db.execute(
-                    "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
-                    (self.document, target_rev),
-                ).fetchone()
-                need_target = target_row is None
-                db.execute("DELETE FROM recovery WHERE document=? AND id=? AND kind='draft'", (document, operation))
-                db.execute("INSERT INTO receipts (document, id, request, response, created) VALUES (?,?,?,?,?)", (document, operation, request, json.dumps(response), time.time()))
-                db.execute(
-                    "DELETE FROM recovery WHERE document=? AND kind='version' AND id IN ("
-                    "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created DESC, id DESC) AS rn "
-                    "FROM recovery WHERE document=? AND kind='version') WHERE rn > 20)",
-                    (document, document),
-                )
-                db.execute(
-                    "DELETE FROM receipts WHERE document=? AND id IN ("
-                    "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created DESC, id DESC) AS rn "
-                    "FROM receipts WHERE document=?) WHERE rn > 100)",
-                    (document, document),
-                )
-        # Compute expensive stylometric snapshots outside SOURCE_WRITE_LOCK so
-        # concurrent readers/writers are not blocked while preserving revision identity.
-        orig_config = self._fixed_auto_config(original_text) if need_orig else None
+            target_rev = _digest(candidate)
+            response = {"document": document, "revision": target_rev}
+            parent = journal_base if journal_base != target_rev else None
+            orig_text = None
+            if parent is not None and not self._revision_exists(db, parent):
+                orig_text = original_text if verified_base else self._retained_revision_text(db, parent)
+                if orig_text is None:
+                    parent = None
+            need_target = not self._revision_exists(db, target_rev)
+        # Retain the draft until the receipt and available measurements commit together.
+        # Compute from captured bytes outside the document lock.
+        orig_config = self._fixed_auto_config(orig_text) if orig_text is not None else None
         target_config = self._fixed_auto_config(text) if need_target else None
-        orig_snap = self._measure_snapshot(original_text, orig_config) if need_orig else None
+        orig_snap = self._measure_snapshot(orig_text, orig_config) if orig_text is not None else None
         target_snap = self._measure_snapshot(text, target_config) if need_target else None
-        if orig_snap is not None or target_snap is not None:
-            with self._lock(), closing(self._database()) as db, db:
-                if orig_snap is not None:
-                    self._insert_revision_snapshot(
-                        db,
-                        orig_rev,
-                        orig_snap,
-                        settings_sha256=self._snapshot_settings(orig_config),
-                        parent_revision=None,
-                        created_at=now - 0.001,
-                    )
-                if target_snap is not None:
-                    self._insert_revision_snapshot(
-                        db,
-                        target_rev,
-                        target_snap,
-                        settings_sha256=self._snapshot_settings(target_config),
-                        parent_revision=orig_rev if changed else None,
-                        created_at=now,
-                    )
-        log_event(logger, "manuscript_save", changed=changed, bytes=len(candidate))
+        with self._lock(), closing(self._database()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            saved = self._saved_response(db, operation, request)
+            if saved is not None:
+                return saved
+            if parent is not None and orig_snap is not None:
+                self._insert_revision_snapshot(
+                    db, parent, orig_snap, settings_sha256=self._snapshot_settings(orig_config),
+                    created_at=now - 0.001,
+                )
+            if target_snap is not None:
+                self._insert_revision_snapshot(
+                    db, target_rev, target_snap, settings_sha256=self._snapshot_settings(target_config),
+                    parent_revision=parent, created_at=now,
+                )
+            db.execute(
+                "DELETE FROM recovery WHERE document=? AND id=? AND kind='draft' AND content=? AND base_revision IS ?",
+                (document, operation, candidate, journal_base),
+            )
+            db.execute(
+                "INSERT INTO receipts (document, id, request, response, created) VALUES (?,?,?,?,?)",
+                (document, operation, request, json.dumps(response), time.time()),
+            )
+            db.execute(
+                "DELETE FROM recovery WHERE document=? AND kind='version' AND id IN ("
+                "SELECT id FROM (SELECT version.id, ROW_NUMBER() OVER (ORDER BY EXISTS ("
+                "SELECT 1 FROM recovery AS pending WHERE pending.document=version.document "
+                "AND pending.kind='draft' AND pending.base_revision=version.id"
+                ") DESC, version.created DESC, version.id DESC) AS rn "
+                "FROM recovery AS version WHERE version.document=? AND version.kind='version') WHERE rn > 20)",
+                (document, document),
+            )
+            db.execute(
+                "DELETE FROM receipts WHERE document=? AND id IN ("
+                "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created DESC, id DESC) AS rn "
+                "FROM receipts WHERE document=?) WHERE rn > 100)",
+                (document, document),
+            )
+        log_event(logger, "manuscript_save", changed=parent is not None, bytes=len(candidate))
         return response
 
     def discard(self, identifier: str) -> None:
         """Explicitly remove a selected recovery copy, never the manuscript."""
         if not _ID.fullmatch(identifier):
             raise ValueError("Invalid recovery identifier")
-        with self._lock(), closing(self._database()) as db, db:
+        with self._operation_lock, self._lock(), closing(self._database()) as db, db:
             db.execute("DELETE FROM recovery WHERE document=? AND id=?", (self.document, identifier))
         log_event(logger, "manuscript_discard", kind="recovery")
 
@@ -611,14 +650,6 @@ class ManuscriptStore:
             digest = revision if key == "current" else _digest(raw.encode("utf-8"))
             measurements[key] = {**by_text[raw], "revision": digest}
 
-        def _pair(prev_key: str, next_key: str) -> dict[str, Any]:
-            deltas, chapter_deltas = diff_snapshots(measurements[prev_key], measurements[next_key])
-            return {
-                "deltas": deltas,
-                "chapter_deltas": chapter_deltas,
-                "chapter_matching": summarize_chapter_matching(chapter_deltas),
-            }
-
         primary_diff: str | None = None
         if draft_text != current_text:
             primary_diff = "current_to_draft"
@@ -630,8 +661,8 @@ class ManuscriptStore:
             "document": self.document,
             "settings_sha256": settings,
             "measurements": measurements,
-            "base_to_current": _pair("base", "current"),
-            "current_to_draft": _pair("current", "draft"),
+            "base_to_current": _comparison_fields(measurements["base"], measurements["current"]),
+            "current_to_draft": _comparison_fields(measurements["current"], measurements["draft"]),
             "primary_diff": primary_diff,
         }
 
@@ -740,7 +771,6 @@ class ManuscriptStore:
                 "chapter_matching": {"clear": True, "matched": 0, "unmatched": 0, "ambiguous": 0},
             }
 
-        deltas, chapter_deltas = diff_snapshots(base, target)
         return {
             "schema_version": "lixity-timeline/1",
             "document": self.document,
@@ -748,9 +778,7 @@ class ManuscriptStore:
             "revisions_count": len(history),
             "base": base,
             "current": target,
-            "deltas": deltas,
-            "chapter_deltas": chapter_deltas,
-            "chapter_matching": summarize_chapter_matching(chapter_deltas),
+            **_comparison_fields(base, target),
         }
 
 
@@ -1118,6 +1146,16 @@ def diff_snapshots(
     return deltas, chapter_deltas
 
 
+def _comparison_fields(base: dict[str, Any], target: dict[str, Any]) -> dict[str, Any]:
+    """Project comparable snapshots into the shared delta fields."""
+    deltas, chapter_deltas = diff_snapshots(base, target)
+    return {
+        "deltas": deltas,
+        "chapter_deltas": chapter_deltas,
+        "chapter_matching": summarize_chapter_matching(chapter_deltas),
+    }
+
+
 def compare_texts(
     base_text: str,
     target_text: str,
@@ -1129,13 +1167,10 @@ def compare_texts(
     config, _ = resolve_document_config(target_text, language or "en", project_config=project_config)
     base_snap = analyze_manuscript_snapshot(base_text, config=config)
     target_snap = analyze_manuscript_snapshot(target_text, config=config)
-    deltas, chapter_deltas = diff_snapshots(base_snap, target_snap)
     return {
         "schema_version": "lixity-diff/1",
         "has_baseline": True,
         "base": base_snap,
         "current": target_snap,
-        "deltas": deltas,
-        "chapter_deltas": chapter_deltas,
-        "chapter_matching": summarize_chapter_matching(chapter_deltas),
+        **_comparison_fields(base_snap, target_snap),
     }

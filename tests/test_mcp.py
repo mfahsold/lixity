@@ -2,6 +2,8 @@
 
 import io
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -122,6 +124,35 @@ def test_call_profile_returns_paragraphs():
     assert "paragraphs" in payload and "chapters" in payload
 
 
+def test_mcp_text_analysis_does_not_inherit_working_directory_thresholds(tmp_path, monkeypatch):
+    from lixity.status import FLAG_MIN_SEVERITY
+
+    (tmp_path / "lixity.toml").write_text("min_chapters = 99\nflag_min_severity = 3\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    passages = (
+        "The ferryman greeted the guests by the river.",
+        "It rained. We waited. The water rose.",
+        "The lantern made a faint arc above the water while Marta kept her hands on the rail "
+        "and read the name painted on the ferry.",
+    )
+    text = "\n\n".join(f"## Chapter {number}\n\n" + " ".join([passage] * 35)
+                       for number, passage in enumerate(passages, 1))
+
+    def call(name, **arguments):
+        response = _request("tools/call", {"name": name, "arguments": {"text": text, **arguments}})
+        result = response["result"]
+        assert not result.get("isError")
+        return json.loads(result["content"][0]["text"])
+
+    reference = call("lixity_fingerprint")
+    matrix = call("lixity_outlier_matrix")
+    assert reference["measured_cells"] == matrix["measured_cells"] > 0
+    profile = call("lixity_profile")
+    assert {paragraph["flag_min"] for paragraph in profile["paragraphs"]} == {int(FLAG_MIN_SEVERITY)}
+    explicit = call("lixity_profile", flag_min_severity=1)
+    assert {paragraph["flag_min"] for paragraph in explicit["paragraphs"]} == {1}
+
+
 def test_call_extended_tools():
     for tool in ("lixity_pacing", "lixity_dialogue", "lixity_showing", "lixity_motifs", "lixity_characters", "lixity_fingerprint"):
         response = _request("tools/call", {"name": tool, "arguments": {"text": SAMPLE, "language": "en"}})
@@ -139,6 +170,61 @@ def test_call_extended_tools():
     outlier_payload = json.loads(outlier_res["result"]["content"][0]["text"])
     assert outlier_payload["schema_version"] == "lixity-outlier-matrix/1"
     assert isinstance(outlier_payload["cells"], list)
+
+
+def test_outlier_matrix_reports_chapter_features_and_preserves_measured_zeroes():
+    from lixity import api
+
+    chapters = [
+        "The ferryman greeted the guests by the river.",
+        "The guests waited on the wooden dock, where the leaves of the old trees hung over the quiet water.",
+        "It rained. We waited. The water rose.",
+        "The captain turned the boat. We heard the bell.",
+        "The lantern made a faint arc above the water while Marta kept her hands on the rail "
+        "and read the name painted on the ferry.",
+    ]
+    text = "\n".join(f"## Chapter {number}\n\n" + " ".join([line] * 35)
+                     for number, line in enumerate(chapters, 1))
+    text += "\n\n## Short chapter\n\nA gate closed.\n"
+
+    for cutoff in (0, 1, 4):
+        response = _request("tools/call", {
+            "name": "lixity_outlier_matrix", "arguments": {"text": text, "z_threshold": cutoff},
+        })
+        assert not response["result"].get("isError")
+        result = json.loads(response["result"]["content"][0]["text"])
+        reference = api.fingerprint(text, z_mild=cutoff, z_strong=4, project_config={})
+        assert result["schema_version"] == "lixity-outlier-matrix/1"
+        assert result["measured_cells"] == reference["measured_cells"]
+        assert result["consistency"] == reference["consistency"]
+        assert result["outliers_by_chapter"] == {
+            chapter: len(features) for chapter, features in reference["deviations"].items()
+        }
+        rows = result["cells"]
+        assert result["outlier_count"] == len(rows) > 0
+        assert all(row["chapter"] != "6" and abs(row["z_star"]) >= cutoff for row in rows)
+        assert [abs(row["z_star"]) for row in rows] == sorted(
+            (abs(row["z_star"]) for row in rows), reverse=True,
+        )
+        for row in rows:
+            assert round(row["z_star"], 2) == reference["deviations"][row["chapter"]][row["feature"]]
+        if cutoff == 0:
+            assert len(rows) == result["measured_cells"]
+            assert any(row["z_star"] == 0 for row in rows)
+        if cutoff == 1:
+            sentence_length = next(row for row in rows if row["chapter"] == "5" and row["feature"] == "asl")
+            assert sentence_length["value"] == 25.0
+            assert sentence_length["median"] == 8.0
+            assert sentence_length["mad"] == pytest.approx(17 / 3)
+
+
+@pytest.mark.parametrize("cutoff", [-1, "1", True, float("inf"), float("nan")])
+def test_outlier_matrix_rejects_invalid_thresholds(cutoff):
+    response = _request("tools/call", {
+        "name": "lixity_outlier_matrix", "arguments": {"text": SAMPLE, "z_threshold": cutoff},
+    })
+    assert response["result"]["isError"]
+    assert "z_threshold" in response["result"]["content"][0]["text"]
 
 
 def test_call_research_gaps_audits_archive(tmp_path):
@@ -219,6 +305,36 @@ def test_serve_roundtrip_over_stdio():
     assert len(by_id[2]["result"]["tools"]) == 17
     assert "lixity" in by_id[3]["result"]["content"][0]["text"]
     assert lines[-1]["error"]["code"] == -32700
+
+
+def _run_mcp_cli(*arguments, request=""):
+    return subprocess.run(  # noqa: S603 -- fixed module and synthetic parser test inputs
+        [sys.executable, "-m", "lixity", "mcp", *arguments],
+        input=request, capture_output=True, text=True, timeout=10, check=False,
+    )
+
+
+def test_mcp_cli_help_advertises_only_the_stdio_interface():
+    completed = _run_mcp_cli("--help")
+    assert completed.returncode == 0 and not completed.stderr
+    assert "usage: lixity mcp [-h]" in completed.stdout
+    assert "tools/list" in completed.stdout and "prompts/list" in completed.stdout
+    for argument in ("--project", "--language", "--json", "--output", "--z-mild", "[file]"):
+        assert argument not in completed.stdout
+
+
+@pytest.mark.parametrize("arguments", [["manuscript.md"], ["--project", "."], ["--json"]])
+def test_mcp_cli_rejects_ignored_report_arguments(arguments):
+    completed = _run_mcp_cli(*arguments)
+    assert completed.returncode == 2 and not completed.stdout
+    assert "unrecognized arguments" in completed.stderr
+
+
+def test_mcp_cli_stdout_contains_only_protocol_responses():
+    request = '{"jsonrpc":"2.0","id":1,"method":"ping"}\n'
+    completed = _run_mcp_cli(request=request)
+    assert completed.returncode == 0 and not completed.stderr
+    assert json.loads(completed.stdout) == {"jsonrpc": "2.0", "id": 1, "result": {}}
 
 
 def test_skill_markdown_documents_all_registered_mcp_tools():

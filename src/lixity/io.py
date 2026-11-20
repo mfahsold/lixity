@@ -29,6 +29,10 @@ def sanitized_subprocess_env(
     return env
 
 
+class FileSizeLimitError(OSError):
+    """A bounded read found more bytes than it permits."""
+
+
 class FileUtils:
     """
     Tools for reliable, atomic and idempotent filesystem operations.
@@ -191,7 +195,7 @@ class FileUtils:
         if not stat.S_ISREG(expected.st_mode):
             raise OSError("Source must be a regular file")
         if maximum is not None and expected.st_size > maximum:
-            raise OSError("Source exceeds the maximum byte limit")
+            raise FileSizeLimitError("Source exceeds the maximum byte limit")
         flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
         if nofollow:
             flags |= getattr(os, "O_NOFOLLOW", 0)
@@ -203,13 +207,13 @@ class FileUtils:
                     or (actual.st_dev, actual.st_ino) != (expected.st_dev, expected.st_ino)):
                 raise OSError("Source changed or is not a regular file")
             if maximum is not None and actual.st_size > maximum:
-                raise OSError("Source exceeds the maximum byte limit")
+                raise FileSizeLimitError("Source exceeds the maximum byte limit")
             stream = os.fdopen(opened, "rb")
             descriptor = None
             with stream:
-                content: bytes = stream.read() if maximum is None else stream.read(maximum + 1)
-                if maximum is not None and len(content) > maximum:
-                    raise OSError("Source exceeds the maximum byte limit")
+                # Allow a byte to detect growth without allocating the full bound for small files.
+                read_limit = actual.st_size if verify_stable else maximum
+                content: bytes = stream.read() if read_limit is None else stream.read(read_limit + 1)
                 if verify_stable:
                     comparable_fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
                     after = os.fstat(stream.fileno())
@@ -225,6 +229,8 @@ class FileUtils:
                         for field in comparable_fields
                     ):
                         raise OSError("Source changed while reading")
+                if maximum is not None and len(content) > maximum:
+                    raise FileSizeLimitError("Source exceeds the maximum byte limit")
                 return content, actual
         finally:
             if descriptor is not None:

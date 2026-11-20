@@ -2,9 +2,13 @@
 
 Posted 15 October 2026 · 7 minutes
 
+<a id="problem"></a>
+
 ## The problem with external style rules
 
 Style guides can tell you that a mean sentence length of 12 words is “brisk” and 24 words is “dense”. What they cannot tell you is whether *your* novel already lives at 19, whether chapter 4 broke that pattern on purpose, or whether the break holds for three chapters straight. Fixed norms make every manuscript an exception; a reference built from the manuscript itself is what actually describes change.
+
+<a id="idea"></a>
 
 ## The idea: a corridor from the manuscript's own chapters
 
@@ -15,6 +19,8 @@ Two details keep this useful instead of noisy:
 - **Noise adjustment.** The distance from the median is divided by a combination of the manuscript's descriptive spread and the chapter feature's estimated standard error (`z*`). A larger estimated error reduces the reported deviation. The spread is not an estimate of uncertainty in the median itself.
 
 - **Multiple comparisons.** Eligible chapter–feature cells enter a Benjamini–Hochberg (or Benjamini–Yekutieli) selection rule. The report also gives an expected-hit count under a standard-normal reference model. That count is not a measured number of false findings, and the probabilities used for prose features have not been calibrated ([methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)).
+
+<a id="walkthrough"></a>
 
 ## Walkthrough: the public example
 
@@ -28,6 +34,8 @@ Open the [Effi Briest case study](../examples/effi-briest.html) in the browser. 
 
 A useful question is “what changed in this chapter, and was it on purpose?”. Deviations are questions to the text: a chapter that sheds dialogue may be a solitary interior section; a jump in nominalisation may be a documentary letter; a drop in sentence length may be the action scene you intended. These are possible interpretations, not conclusions the measurements establish.
 
+<a id="try"></a>
+
 ## Try it on your own draft
 
 For a quick reference from the command line:
@@ -38,6 +46,8 @@ lixity style manuscript.md --json
 ```
 
 Or open the interactive view: `lixity service start --open`, then choose **Open Project**. Open **Analysis overview → Style** for the chapter comparisons; use **Back to passage** to return to the manuscript.
+
+<a id="limits"></a>
 
 ## What it does not say
 

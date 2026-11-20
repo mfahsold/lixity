@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -37,21 +38,7 @@ VOID_TAGS = {
     "wbr",
 }
 SKIP_TAGS = {"script", "style", "nav", "svg"}
-BLOCK_TAGS = {
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "p",
-    "ul",
-    "ol",
-    "pre",
-    "table",
-    "details",
-    "figure",
-    "footer",
-    "a",
-}
+HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 
 
 class Node:
@@ -126,13 +113,25 @@ def _render_blocks(node: Node, out: list[str]) -> None:
             continue
         if child.tag in SKIP_TAGS:
             continue
-        if child.tag in {"h1", "h2", "h3", "h4"}:
+        # Explicit anchors keep links stable even when heading text is translated.
+        if child.tag in HEADING_TAGS or child.tag == "a":
+            identifier = child.attrs.get("id")
+            if identifier:
+                out.append(f'<a id="{escape(identifier, quote=True)}"></a>')
+        if child.tag in HEADING_TAGS:
             level = int(child.tag[1])
             out.append("#" * level + " " + _clean(_inline(child)))
         elif child.tag == "p":
             text = _clean(_inline(child))
             if text:
                 out.append(text)
+        elif child.tag == "blockquote":
+            quoted: list[str] = []
+            _render_blocks(child, quoted)
+            if quoted:
+                out.append("\n".join(
+                    f"> {line}" if line else ">" for line in "\n\n".join(quoted).splitlines()
+                ))
         elif child.tag in {"ul", "ol"}:
             # Whitespace text nodes sit between the <li> elements; counting the
             # item positions alone keeps ordered lists at 1., 2., 3., ...

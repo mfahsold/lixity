@@ -542,7 +542,7 @@ document.addEventListener("click", async function (event) {
       }
     });
     if (restoreFocus && updatedPair && document.activeElement === document.body) updatedPair.querySelector("button").focus();
-    await refreshResearchEditorialReview(true, acknowledged.snapshot);
+    await refreshResearchEditorialReview({expectedSnapshot: acknowledged.snapshot});
     researchAcknowledgementPending = false;
     if (restoreFocus && updatedPair && !updatedPair.isConnected && document.activeElement === document.body) {
       var nextButton = document.querySelector("#research-editorial-review [data-decision-ack-status]");
@@ -801,7 +801,6 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }
     if (tabBtn.dataset.rtab === "timeline") refreshResearchClaimProjections();
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
-    if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
     document.dispatchEvent(new CustomEvent("lixity:viewchange"));
     if (window.LixityMotion) window.LixityMotion.view(document.getElementById(targetId));
     return;

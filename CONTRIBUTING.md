@@ -59,9 +59,10 @@ make browser              # everyday local Playwright checks (browser-full: all)
 make docs-check           # standalone generated-doc and staged-site checks
 ```
 
-For the dashboard, use `make run` in the foreground, or `make start` and
-`make stop` for the managed background service. A custom port
-is selected with `make start LIXITY_PORT=9000`. See
+For the dashboard, use `make run` in the foreground or `make start` for the
+managed service. Run `make doctor` to inspect the checkout environment and the
+same managed port. For an explicitly separate process, pass
+`LIXITY_PORT=9000` to each service target. See
 [server setup](docs/INSTALLATION.md#running-the-server) for Windows and login startup.
 
 Without make:
@@ -146,8 +147,9 @@ For optional hooks, install `pre-commit` separately, then run
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
 release packages; after GitHub publication and a successful or intentionally
 skipped PyPI step, the release pipeline deploys Pages from the same tag.
-Main pushes do not publish unreleased documentation automatically;
-manual Pages dispatch remains available for a deliberate preview.
+Main pushes leave the public site at its deployed commit. Stage a local preview
+with `scripts/stage_pages.py --output NEW_DIR`. Use `make pages-deploy` for an
+authorized publication from `main`.
 
 ### Test architecture
 
@@ -321,9 +323,11 @@ Preparation does not commit, tag, push or publish. Follow this four-phase releas
    to recover/verify the immutable GitHub Release and attestations, verify byte-for-byte
    identity of the downloaded PyPI wheel and sdist, and verify live GitHub Pages
    `deployment.json` (`source_sha`) plus staged HTML/JSON entrypoints. Verify the
-   Zenodo version DOI asynchronously before reporting archival complete. For local
-   service rollout, install the verified wheel and restart the managed service explicitly
-   (`make restart`).
+   Zenodo version DOI asynchronously before reporting archival complete. For a
+   packaged local rollout, install the verified wheel into the chosen tool
+   environment and run that installation's `lixity service restart --port PORT`.
+   Use `make restart` when the checkout environment owns the service. Verify the
+   selected listener after either route. [Local rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
 Verify a downloaded artifact with:
 
 ```bash
@@ -372,8 +376,8 @@ all four documentation generators (`sync_docs.py`, `build_public_site.py`,
 concurrency and records the verified checkout `source_sha` and `workflow_run_url`
 in `deployment.json`. A PyPI catch-up dispatch also pins Pages to its selected
 existing tag. The `github-pages` environment must permit version tags (`v*`);
-existing branch policies remain separate. A manual Pages dispatch can deliberately
-preview an explicitly selected, permitted ref.
+existing branch policies remain separate. A manual Pages dispatch publishes the
+selected, permitted ref to the public site.
 A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager
@@ -424,6 +428,10 @@ Update the canonical reference, changelog, README and relevant guides together.
 Preserve mathematical limits and JSON compatibility notes. Reuse the shared
 Pages stylesheet and scripts; distinguish unreleased behavior from the current
 release. Keep `llms.txt` factual.
+
+The published guide and blog Markdown alternates are generated from HTML.
+Maintain section IDs and quoted examples in the HTML source. `make docs-sync`
+regenerates the Markdown and preserves those anchors and quotations.
 
 Keep technical documentation (manuals, installation instructions, CLI/API
 references and contributor guidance) in English only. Public product presentation

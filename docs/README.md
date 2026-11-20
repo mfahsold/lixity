@@ -49,7 +49,9 @@ links the release notes for the documented version, and
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
 | Import sources from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF/OCR setup](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |
-| Make a PDF or a reading website | [Choose the exported content](WORKSPACE.md#export-a-reading-website) | [PDF command](USAGE.md#lixity-pdf) · [CLI reference](USAGE.md#command-reference) |
+| Make one PDF for editing, reading or submission | [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf) | [PDF layouts and command](USAGE.md#lixity-pdf) |
+| Share a read-only website or selected background notes | [Choose the recipient's copy](WORKSPACE.md#export-a-reading-website) | [Check and export the same scope](USAGE.md#lixity-export-site) |
+| Generate project-local analysis artifacts | [Project outputs](WORKSPACE.md#inspect-project-structure) | [Preview or run a build](USAGE.md#lixity-build) |
 | Record an author's voice or use the teleprompter | [Audio manual](AUDIO.md) | [Audio worker installation](INSTALLATION.md#optional-qwen-audio-worker) |
 | Add chapter audio to a reading copy | [Audio generation and exchange](AUDIO.md) | [Reading website options](WORKSPACE.md#export-a-reading-website) |
 | Stop, restart or repair the app | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
@@ -74,7 +76,7 @@ require the local application and, where applicable, separately installed tools.
 - [Architecture](ARCHITECTURE.md) and [research documentation map](research/README.md): implementation boundaries, storage and clearly marked proposals.
 - [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the first implementation shipped in 0.8.1 from future work.
 - [Rust evaluation RFC](RUST_EVALUATION_RFC.md): question, evidence and acceptance gates for a possible future native implementation; no rewrite authorized.
-- Agent skill (`skills/lixity/SKILL.md` in the checkout): entry point for AI-assisted workflows; `docs/AGENTS.md` remains normative on conflicts.
+- [Lixity agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) routes AI-assisted workflows to the maintained contracts. The source archive also includes the skill.
 - [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development, checks and release workflow.
 - [Licensing](LICENSING.md) and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): usage terms and reporting issues.
 

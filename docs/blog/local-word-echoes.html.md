@@ -6,6 +6,8 @@ A phrase used four times across a novel may be unobtrusive. The same phrase used
 
 Repetition can make a refrain, sustain a character's vocabulary or give a sentence its rhythm. An echo supplies no instruction to replace words. Read the passage aloud and ask whether hearing that phrase again produces the effect you intended.
 
+<a id="first-result"></a>
+
 ## Get an echo report
 
 In Lixity 0.5.0, run the existing motif report against a Markdown manuscript:
@@ -15,6 +17,8 @@ lixity motifs manuscript.md --language en --json
 ```
 
 Look for `echoes` in the JSON result. By default, it finds sequences of three words occurring at least twice within 300 words, separately for each chapter. Each row supplies the phrase, chapter number, local count and first and last word positions. The words are lowercased and punctuation is discarded; a sequence can cross a sentence boundary. Sequences consisting entirely of function words or stopwords are skipped.
+
+<a id="worked-example"></a>
 
 ## Count one example yourself
 
@@ -50,6 +54,8 @@ Here, `text` contains the exact Markdown above. The command-line report uses the
 
 The complete last occurrence must fit inside the window. For `Bright copper bell. Blue river flows. Bright copper bell.`, both occurrences occupy words 1–9. A nine-word window admits the pair; an eight-word window does not. `last_word` is the last word of the final occurrence, with positions counted from 1.
 
+<a id="overlap"></a>
+
 ## One repeated passage can produce several phrases
 
 Consider a second, separate synthetic chapter:
@@ -72,6 +78,8 @@ Red metal door. Opens. Red metal door.
 ```
 
 `red wooden door` remains a separate echo from `red metal door`. Each occurs twice, at words 1–7 and 9–15 respectively. They share words, but their occurrences describe different passages.
+
+<a id="review"></a>
 
 ## Turn the count into a reading decision
 

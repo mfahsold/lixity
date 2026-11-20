@@ -1,21 +1,23 @@
 # Dashboard browser regression
 
 `node tests/browser/manuscript-editor.cjs` starts a disposable synthetic native
-workspace and covers typing, undo after autosave, external-file conflict and
-explicit recovery, revision-bound reading, preserved undo/insertion point,
-research-link review and delayed return validation. It also checks that external
-changes during reading preserve the editor buffer. Add `--firefox` for Firefox. The suite also mounts synthetic
-50k/150k/300k-word documents in the shared CodeMirror adapter and reports mount
-and six-keystroke times; these are single-run component observations, not p95
-budgets or full-analysis timings. Desktop/mobile screenshots remain in `/tmp`.
+workspace. It covers typing, undo across autosaves, return to reading with the
+updated analysis, restored reader controls and focus, external-file conflicts,
+and explicit recovery. A delayed recovery response must preserve newer typing.
+Add `--firefox` for Firefox. The suite also mounts synthetic 50k/150k/300k-word
+documents in the shared CodeMirror adapter and reports mount and six-keystroke
+times as single-run observations. Desktop/mobile screenshots remain in temporary
+storage.
 The Python store suite separately checks persistence/recovery of a 300k-word
 source. Real OS IME, screen-reader and power-loss tests remain manual gates.
 
 `editor-features.cjs` covers localized search/replace integration, one-step
 replace-all undo, reviewed comparison, cancellation and stale save rejection.
-`editor-navigation.cjs` checks literal reader selections and research draft guards
-across return, Escape, reload and pending/failed requests. Both accept `--firefox`
-and use synthetic native projects. They run in the analysis browser group.
+`editor-navigation.cjs` checks returning without edits, flushing a pending save
+on close, and an external change that keeps the writer open in conflict. Both
+accept `--firefox` and use synthetic native projects. They run in the analysis
+browser group. The exact-revision `/api/manuscript-view` contract is covered
+separately by `tests/test_manuscript_editing_http.py`.
 
 Run after installing the Python development environment and Playwright with
 Chromium. Install `axe-core` as well to run the audio direction accessibility

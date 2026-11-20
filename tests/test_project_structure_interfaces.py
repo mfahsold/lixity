@@ -1,6 +1,8 @@
 """One read-only project observation is shared by the CLI, Python and native UI."""
 
 import json
+import os
+from types import SimpleNamespace
 from urllib.parse import quote, urlencode
 
 import pytest
@@ -161,8 +163,6 @@ def test_overview_artifact_links_decode_names_once_and_reject_stale_context(proj
 
 @pytest.mark.parametrize("protected", ["draft.md", "lixity.toml"])
 def test_artifact_transport_rejects_source_and_config_hardlink_aliases(project, protected):
-    import os
-
     root, manuscript = project
     exports = root / "exports"
     exports.mkdir()
@@ -187,9 +187,32 @@ def test_artifact_transport_rejects_encoded_path_components_and_oversized_files(
         assert server.request("/artifact/large.html").status == 413
 
 
-def test_artifact_transport_protects_a_discovered_manuscript_without_a_selected_source(tmp_path):
-    import os
+def test_artifact_transport_accepts_different_path_and_descriptor_ctimes(project, monkeypatch):
+    root, manuscript = project
+    exports = root / "exports"
+    exports.mkdir()
+    target = exports / "report.html"
+    content = b"Synthetic report"
+    target.write_bytes(content)
+    path_info = target.lstat()
+    real_fstat = os.fstat
 
+    def descriptor_stat(fd):
+        info = real_fstat(fd)
+        if os.path.samestat(path_info, info):
+            fields = {field: getattr(info, field) for field in ("st_mode", "st_size", "st_dev", "st_ino", "st_mtime_ns")}
+            # Windows can expose file creation time by path and metadata change time by descriptor.
+            return SimpleNamespace(**fields, st_ctime_ns=path_info.st_ctime_ns + 1)
+        return info
+
+    monkeypatch.setattr("lixity.io.os.fstat", descriptor_stat)
+    with LoopbackServer(make_handler(root, source_input=manuscript)) as server:
+        response = server.request("/artifact/report.html")
+        assert response.status == 200
+        assert response.body == content
+
+
+def test_artifact_transport_protects_a_discovered_manuscript_without_a_selected_source(tmp_path):
     (tmp_path / "research").mkdir()
     source = tmp_path / "manuscript.md"
     source.write_text("Synthetic source, not an output.", encoding="utf-8")

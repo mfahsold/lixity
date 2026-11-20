@@ -2,9 +2,13 @@
 
 Posted 15 October 2026 · 6 minutes
 
+<a id="why"></a>
+
 ## A tense break is rarely a typo
 
 The base tense of a novel is a choice. Past tense can suggest a narrator looking back; present tense can bring a scene closer. A shift between them may be deliberate, accidental or part of quoted speech. The useful question is whether the shift does what you intended in this passage. A list of candidate passages can give that review a starting point.
+
+<a id="what"></a>
 
 ## What Lixity shows you
 
@@ -17,6 +21,8 @@ Out of that come two lists, and they answer different questions:
 - **The chapter line** summarizes the chapter's dominant tense markers. It supplies a comparison for the paragraph, rather than determining how a reader experiences the scene.
 
 The default heuristic readings come from verb forms and marker patterns. An explicitly configured [optional grammatical backend](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense) can provide syntax-based evidence; unavailable models are reported rather than silently substituted. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage, not a number.
+
+<a id="workflow"></a>
 
 ## The review loop, step by step
 
@@ -34,6 +40,8 @@ The interactive workspace opens as continuous prose with **Analysis Off**. Choos
 
 5. **Write your decision where you read it.** In a configured local project, the paragraph's **…** menu offers work markers such as **To-do**, **Check** and **Attention**. Saving a marker writes a review note into the manuscript as a Markdown comment. It stays invisible while you read and shows up later in the **Work markers** panel.
 
+<a id="deliberate"></a>
+
 ## When a switch is on purpose
 
 A high rating measures a change, not a mistake. These cases are usually intentional:
@@ -48,9 +56,13 @@ A high rating measures a change, not a mistake. These cases are usually intentio
 
 The flagged list decides none of this. It can bring a pattern to your attention, but it can also miss tense changes or flag an intentional passage. Read the surrounding prose before making a decision.
 
+<a id="limits"></a>
+
 ## What this can and cannot do
 
 Verb-form patterns miss irony, ellipsis and unusual syntax. Dialogue and reported speech affect the counts. Chapters below 100 words are excluded from the manuscript's chapter-style comparisons; that separate size floor does not validate a paragraph's tense flag. The `flag_min_severity` setting (1–3) controls which paragraph ratings appear in the list; its default is 2. Lixity does not automatically rewrite prose. Saving a work marker is an explicit write of a Markdown comment in the native project; the published examples are read-only. The [interpretation guide](../guides/interpretation.html) and the [methods document](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) explain the details.
+
+<a id="try"></a>
 
 ## Try it without installing
 

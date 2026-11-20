@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -137,3 +137,6 @@ restart: ## Restart the managed instance with its saved startup settings.
 
 status: ## Inspect the managed instance without modifying manuscript data.
 	"$(VPY)" -m lixity service status --port $(LIXITY_PORT)
+
+doctor: ## Check the checkout CLI and the managed instance on LIXITY_PORT.
+	"$(VPY)" -m lixity doctor --port $(LIXITY_PORT)

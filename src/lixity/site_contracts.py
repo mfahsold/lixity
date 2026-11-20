@@ -90,7 +90,8 @@ class SiteExportRequest(SiteExportOptions):
     include_source_files: bool = Field(...)
 
     def export_options(self) -> SiteExportOptions:
-        return SiteExportOptions.model_validate(self.model_dump(exclude={"project_token"}))
+        """Project choices already validated by the inherited options contract."""
+        return SiteExportOptions.model_construct(**self.model_dump(exclude={"project_token"}))
 
 
 class SiteExportReport(_SiteModel):

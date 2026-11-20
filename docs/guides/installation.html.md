@@ -8,6 +8,8 @@ Updated 20 November 2026
 
 This source guide describes **v0.9.0**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.0.md). The regular install uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
+<a id="requirements"></a>
+
 ## What do I need?
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on [PyPI](https://pypi.org/project/lixity/); every release also ships a pinned wheel with checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases), and released versions are archived on Zenodo for citation (concept DOI [10.5281/zenodo.23390297](https://doi.org/10.5281/zenodo.23390297)). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
@@ -19,6 +21,8 @@ Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered,
 [licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 
 .
+
+<a id="install"></a>
 
 ## Install Lixity
 
@@ -51,6 +55,8 @@ lixity service start --open
 ```
 
 If your terminal cannot find `lixity`, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory.
+
+<a id="first-dashboard"></a>
 
 ## Start the workspace
 
@@ -94,15 +100,23 @@ lixity dashboard warehouse-4.md --language en -o warehouse-4.html
 
 Open `warehouse-4.html` in your browser. This generates an analysis report from the same six chapters; the public demo also includes prepared research records. The short synthetic manuscript exercises the workflow, not a reliable literary baseline. Read [how to interpret the results](interpretation.html). English is the default; use `--language de` for German or explicit `--language auto` for detection.
 
+<a id="audio"></a>
+
 ## Optional audio export and speech providers
 
 **Audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased).
+
+<a id="zotero"></a>
 
 ## Optional Zotero Desktop
 
 For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF, text, PNG and JPEG attachments with your permission. Retention permits a local copy, not redistribution or factual acceptance. No cloud account is needed. See [Zotero capture and migration](research-pdf.html#zotero); audio and video remain in Zotero.
 
+<a id="existing-project"></a>
+
 ## Open an existing project and research archive
+
+When the app is running, open its home address in a new browser tab and choose **Project actions → Open Project** to keep a second project open on the same port.
 
 With the service stopped, launch directly into a project. Replace `./My Novel` with your folder. Keep the quotes around paths containing spaces.
 
@@ -120,6 +134,8 @@ Check the project name after it opens. A separate CLI command, `lixity project -
 
 An initialized research archive can also open as a research-only workspace. Load a manuscript when you want to compare it with sources.
 
+<a id="restart"></a>
+
 ## Running the server day to day
 
 Use `status` to find the address and state of the managed service. Use `stop` to close it or `restart --open` to reopen it with its saved startup settings.
@@ -130,11 +146,13 @@ lixity service restart --open
 lixity service stop
 ```
 
-A project you open in the browser belongs to that view for the current session. After a restart, open the new address reported by the service. Use **Open Project** to reconnect a folder you chose in the previous session. For a foreground `lixity serve` session, press `Ctrl+C` in its terminal. See the [service command reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service) for startup settings and [the setup reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login) for opening at login.
+A project you open in the browser belongs to that view for the current session. After a restart, return to the home address reported by the service. Use **Open Project** to reconnect additional projects. For a foreground `lixity serve` session, press `Ctrl+C` in its terminal. See the [service command reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service) for startup settings and [the setup reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login) for opening at login.
+
+<a id="custom-port"></a>
 
 ### Use a different port
 
-If port 8765 is occupied, inspect it with `lixity service status --port 8765`. To start a separate workspace, choose a free port. Use the same port for its browser address and every service or diagnostic command.
+If port 8765 is occupied, inspect it with `lixity service status --port 8765`. Reuse the browser address if a managed instance is ready. Choose a free port when you need a separate app process, and use that port for its browser address and every service or diagnostic command.
 
 ```
 lixity service start "./My Novel" --port 9000 --open
@@ -149,6 +167,8 @@ This example opens `http://127.0.0.1:9000/`. Any service on port 8765 keeps runn
 - Reload the service with `lixity service restart --port 9000 --open`.
 
 - Close that instance with `lixity service stop --port 9000`.
+
+<a id="updates"></a>
 
 ## Update or remove Lixity
 
@@ -165,11 +185,15 @@ Use the same port to stop and restart each instance. After restart, reload the b
 
 For removal, stop all managed instances and disable any login-startup entry you configured, then run `uv tool uninstall lixity`. Manuscript folders and research archives remain. See the [complete update/removal reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
 
+<a id="troubleshooting"></a>
+
 ## The project exists, but the server cannot open it
 
 The chooser shows folders available to the computer and account running Lixity. A container or service account may have different access from your terminal. Check the project path and permissions, then restart the intended server. Use Open Project to reconnect the original folder rather than importing another copy.
 
 If the browser shows an unexpected project or version, check its address against `lixity service status` and inspect the same port with `lixity doctor`. See [installation troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#troubleshooting).
+
+<a id="python-api"></a>
 
 ## Using the Python API?
 

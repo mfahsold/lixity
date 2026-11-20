@@ -4,17 +4,25 @@ Updated 5 November 2026 · First posted 16 October 2026 · 8 minutes
 
 Lixity combines separated analysis layers and read-only project inspection with project-local passage direction, provider-independent JSON and SSML speech-plan export, per-axis standard-deviation labels in the 3D style-space projection, cross-paragraph quotation attribution, and contextual navigation tooltips. See the [detailed walkthrough](speech-direction-and-style-space.html) and [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.7.7.md).
 
+<a id="speech-direction"></a>
+
 ## Passage speech direction and provider-independent plan export
 
 In a local project, `lixity audio-direction inspect --project /path/to/book` inspects paragraph anchors and saved delivery ranges in `.lixity/audio-directions.json`, and `lixity read-aloud --plan-only` previews the effective speech plan without synthesis. `lixity audio-export-plan` (or `read-aloud --timeline` / `--ssml`) exports a deterministic `lixity-audio-timeline/1` JSON plan or W3C SSML projection, and `lixity audio-inspect` / `audio-verify` inspect local recordings and optional hash-bound transcripts. See [audio export and speech direction](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased).
+
+<a id="development-preview"></a>
 
 ## Clearer style-space spreads and multi-paragraph quotes
 
 Each 3D style-dimension card and cutoff explanation reports the raw coordinate threshold alongside its multiple of that axis’s sample standard deviation (for example, `|Score| ≥ 2.5 (≈ 1.18 SD)`), keeping the exploratory PCA ring distinct from noise-adjusted `z*` and FDR results. When a recognized quotation span crosses a paragraph break, each overlapping paragraph receives its covered quoted words in the paragraph quotation-share calculation. Contextual tooltips across the seven interface languages also explain analysis navigation, section outline items, **Back to passage** and the reader speech control.
 
+<a id="project-overview"></a>
+
 ## Sources and outputs in one local view
 
 Open **Project** or run `lixity project --project /path/to/book` for a read-only metadata inspection. Source locations, existing output files and structural findings stay distinct. A file's presence is not proof of freshness, and output provenance remains unknown. The overview moves nothing and is absent from exported reading websites. See [project inspection](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
+
+<a id="reading-website"></a>
 
 ## A reading copy without an installation
 
@@ -22,19 +30,27 @@ Choose **Project actions → Reading website** to download a ZIP. A reader can u
 
 The default review workspace includes manuscript analysis and work-marker notes. Two curated formats instead share the novel with selected background material, or a standalone companion without novel text. Choose dossier sections and release chapters in Project settings; readers confirm progress explicitly. For an excerpt, an export chapter limit physically omits later material. Internal Research is an explicit review-workspace choice; original source files always need another opt-in. Local progress only hides content already in the copy. Review the scope before sharing; the download does not publish anything. The [reading website guide](../guides/research-pdf.html#reading-website) explains the workflow and limits.
 
+<a id="passage-return"></a>
+
 ## Follow the evidence and return to the sentence
 
 Choose a paragraph’s **… → Explore passage → Research for this passage**. Its saved claims and dossiers open in the right context while the manuscript stays visible. A title opens the current entry; **Linked version** opens the exact earlier version used by the association. Expanding **Versions** shows the history without switching the displayed entry. **Back to passage** takes you back to your reading.
 
 The [three-minute first look](../guides/first-look.html) follows this loop in the invented Warehouse 4 project. Its public demo uses the same production website export, with prepared PDF copies linked directly from the page.
 
+<a id="two-legends"></a>
+
 ## See what was counted and what was compared
 
 Choose the visible metric, then switch **Counted text** and **Paragraph comparison** independently. Violet underlines identify counted words or sentences. Blue/orange raw-value markers and arrows compare notable paragraphs with their chapter, without tinting the prose background. Inspection puts the concrete quotation and count before the separate comparison. A sentence's word count and a paragraph's comparison answer different questions; neither is a quality verdict. The [interpretation guide](../guides/interpretation.html) explains these descriptive signals and their limits.
 
+<a id="historical-048"></a>
+
 ## Historical notes: Lixity 0.4.8
 
 The following notes describe the 0.4.8 release line, first published on 16 October 2026. They are retained as history. Use the linked guides above for the current interface.
+
+<a id="floors"></a>
 
 ### Small chapters no longer shout
 
@@ -50,9 +66,13 @@ Unavailable chapter comparisons appear as a dash or “not comparable”. Rebuil
 
 On the same theme: sentence counting now respects blank-line boundaries. A salutation, a stage note or a sign-off stays one unit, and chapter rhythm, scene units and the corpus statistics finally agree with each other.
 
+<a id="digest"></a>
+
 ### The dashboard notices when your manuscript changed
 
 The local dashboard checks your manuscript when the page loads. If the file changed on disk since the last build, it rebuilds itself instead of showing yesterday’s numbers with today’s confidence.
+
+<a id="anchors"></a>
 
 ### Review manuscript associations after edits
 
@@ -64,6 +84,8 @@ A manuscript association connects a quote you explicitly select in your draft to
 
 Small thing, same spirit: you can now type a plain hyphen between years (`1929-1933`). Lixity reads it as the range you meant.
 
+<a id="research"></a>
+
 ### A calmer research workspace
 
 The research side keeps sources, dossiers, claims, decisions and evidence in one local archive. Recent polish:
@@ -73,6 +95,8 @@ The research side keeps sources, dossiers, claims, decisions and evidence in one
 - **Zotero stays a catalogue, visibly.** Cards show a quiet *Zotero ↗* link and a type line; tags filter the list. Capturing a source into your archive is still a deliberate click, never a background sync.
 
 - Evidence panels keep their citations when other lists refresh, so nothing you loaded gets rebuilt under your hands.
+
+<a id="interface"></a>
 
 ### One look, everywhere
 
@@ -86,13 +110,19 @@ The interface had accumulated separate choices for corners, text sizes, spacing 
 
 - Regression checks cover selected shared styles and loading states to help catch inconsistent changes.
 
+<a id="logging"></a>
+
 ### Logs you can actually find
 
 Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). `--debug`, `LIXITY_DEBUG` and `LIXITY_LOG_LEVEL` choose how much you see, and `lixity service status` prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file, and log records never contain manuscript text.
 
+<a id="security"></a>
+
 ### Your privacy, in plain words
 
 Built-in analysis and dashboard generation run on your computer without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling. The browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s `SECURITY.md`. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.
+
+<a id="try"></a>
 
 ## Try it
 

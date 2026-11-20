@@ -12,6 +12,8 @@ Lixity keeps the manuscript at the centre of that review. The interactive worksp
 
 *The reader uses one continuous prose surface. This synthetic capture shows the reader controls; paragraph tools and the companion open separately.*
 
+<a id="start-with-a-scene"></a>
+
 ## Start with a scene
 
 Open the [Warehouse 4 demo](https://mfahsold.github.io/lixity/demo/report.html). Its six short English chapters follow Mara through an invented harbour incident. Read the opening setting, then use the chapter control to move to chapter 2's action. You can compare their pace before opening a single measurement.
@@ -19,6 +21,8 @@ Open the [Warehouse 4 demo](https://mfahsold.github.io/lixity/demo/report.html).
 The reader uses ordinary scrolling and text selection. **A−** and **A+** change text size; **Reading settings** adjusts width and line spacing. Those preferences stay in your browser and leave the manuscript unchanged. **Focus reading** hides the surrounding navigation, side tools and both analysis displays temporarily. Its return control, or Escape, restores the workspace and previous display choices.
 
 The aim is a usable reading surface with tools nearby. Manuscript text reflows when its size changes. Images, maps and the style-space view retain their own zoom or movement controls.
+
+<a id="ask-one-question-of-a-paragraph"></a>
 
 ## Ask one question of a paragraph
 
@@ -36,17 +40,21 @@ Choose **Analysis overview** when the question calls for chapter comparisons or 
 
 The overview keeps its review routes visible and puts secondary numbers under **Manuscript measurements**. Open that summary when the question needs them and close it to return to the compact view. A linked scene title similarly reveals grouped **Scene measurements**. Passage measurements cover profiled body paragraphs and list items; other structural elements can remain reading-only. [The coverage reference](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) distinguishes paragraph profiles from chapter and corpus measurements.
 
+<a id="give-research-its-own-space"></a>
+
 ## Give research its own space
 
 The Warehouse 4 story includes this sentence:
 
-Someone had tried the eastern gate of Warehouse 4.
+> Someone had tried the eastern gate of Warehouse 4.
 
 Open **Research → Dossiers**, then **View details** on **Warehouse 4 case notes**. The dossier brings together a claim about attempted warehouse entry, a retained customs-log passage and visual references. The incident, people and log are invented. The credited historical images provide visual context and do not verify the fictional incident.
 
 Use **Dossier alongside** to consult a saved dossier while reading the manuscript. On desktop, the project navigation folds down to make room; you can reopen it, and closing the dossier restores the previous choice. Drag the divider to adjust the two reading areas. You can also focus the divider with Tab and use Left/Right; Home/End reach its limits. Narrow screens stack the documents.
 
 The passage inspector and the dossier replace one another as the active side tool. Each has a direct closing route. Display and companion changes try to retain the visible paragraph's position, so consulting context need not mean finding the sentence again. On narrow screens, opening a tool from a passage reveals its heading; closing it or pressing Escape returns to that passage and its control. Brief feedback marks reveals and returns without moving the manuscript surface; reduced-motion preferences disable the optional effects.
+
+<a id="make-the-return-route-explicit"></a>
 
 ## Make the return route explicit
 
@@ -60,11 +68,15 @@ In a configured local project, you can select text within one manuscript paragra
 
 An exact return requires the current paragraph, line range and quotation to match its saved anchor. Changed or ambiguous anchors remain review tasks. Lixity does not silently infer a new connection. The public demo is read-only; saving associations requires a compatible local server and an explicitly configured research project. Research keeps its own explicit-project and retention requirements.
 
+<a id="project-sources-and-outputs"></a>
+
 ## Keep sources and outputs distinct
 
 The local **Project overview** separates the manuscript and research locations from generated output files and structural findings. It checks the selected folder without moving files, reading manuscript contents or auditing the research archive. Existing output history remains unknown: a filename alone does not prove which manuscript version produced it.
 
 The same read-only inspection is available as `lixity project --project /path/to/book --json`. Output links recheck the selected project when opened. This local folder view is deliberately absent from static reading copies. The [project guide](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure) explains bounds, unavailable states and the distinction from archive audit.
+
+<a id="share-a-reading-copy"></a>
 
 ## Share a reading copy
 
@@ -73,6 +85,8 @@ In the local app, **Project actions → Reading website** downloads a browser-re
 For a reader-facing experience, choose **Novel and companion** or **Companion only**. A publication profile selects the dossier sections, images, diagrams and optional citations or offline maps to include. Try the [novel with companion](../demo/reader/index.html) or the [standalone companion](../demo/companion/index.html). Confirming a chapter reveals the selected background material; previewing a chapter does not advance progress. A separate export limit physically leaves later content out.
 
 Unzip the copy and open `index.html`, or host its folder as a static website. The recipient needs no Lixity installation. The copy cannot edit your working project, but its included files can be inspected and copied: local progress is not access control. Review the selected content before sharing; original source files require a separate explicit choice and redistribution rights. The [sharing guide](../guides/research-pdf.html#reading-website) explains the formats and their boundaries.
+
+<a id="know-which-document-you-are-reading"></a>
 
 ## Know which document you are reading
 

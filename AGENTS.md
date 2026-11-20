@@ -15,14 +15,14 @@ and investigate reported bugs before changing behavior.
 ## Layout, packaging and constraints
 
 - `src/lixity/` holds the engine, CLI (`cli.py`, console entrypoint
-  `lixity.cli:main`), HTTP server (`server/`), the research archive API
-  (`research/`, own `cli.py`) and UI assets (`ui/`, packaged as data).
-  `tests/`, `scripts/` and `docs/` complete the repo; everything ships as one
-  `lixity` distribution with no separately packaged components. Product code
-  goes in `src/lixity`, never in `docs/`.
-- Analysis stays offline and deterministic, Python 3.10+. Runtime deps are
-  only `pydantic`, `rich`, `orjson`; statistical code is stdlib-only (no
-  numpy/scipy). Discuss any new required dependency first.
+  `lixity.cli:main`), HTTP server (`server/`), research archive API
+  (`research/`, own `cli.py`) and packaged UI assets (`ui/`). These product
+  components ship in the `lixity` distribution. Repository guides and the
+  agent skill live in `docs/` and `skills/`.
+- Analysis stays offline and deterministic on Python 3.10+. Runtime
+  dependencies are `pydantic`, `rich`, `orjson` and `tomli` on Python 3.10.
+  Statistical code uses the standard library. Discuss new required dependencies
+  before adding them.
 - Package version lives in `src/lixity/_version.py`. A release tag must match
   it (`make release-check RELEASE_TAG=vX.Y.Z`); `make docs-sync` then
   rewrites documentation version pins and generated artifacts (`llms-full.txt`,
@@ -70,7 +70,8 @@ and investigate reported bugs before changing behavior.
   Pages build.
 - Dashboard & rollout: use one managed port for project views. Identify the
   listener and intended executable with `service status --port PORT --json`
-  and `doctor --port PORT --json`. For checkout development use `make run`
+  and `doctor --port PORT --json`. From a checkout, `make doctor` uses its
+  own virtual environment and `LIXITY_PORT`. Use `make run`
   (foreground) or `make start`/`stop`/`restart` (managed); non-default
   ports use `LIXITY_PORT`. For a packaged rollout, build and smoke-test the
   wheel, install it into the selected environment, then restart its managed

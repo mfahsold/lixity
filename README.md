@@ -20,9 +20,9 @@ offline workspace. Compare chapter rhythms, inspect dialogue and repeated words
 in context, trace scene details to versioned sources and author decisions, and
 export clean PDFs or self-contained reading websites.
 
-- **Return from signal to prose:** jump from any chapter outlier or marked
-  passage straight to the counted words and sentences. Signals support human
-  review; they never grade literary quality or rewrite prose.
+- **Return from signal to prose:** open the relevant chapter and inspect
+  counted words and sentences where evidence is available. Signals support
+  the author's review and revision decisions.
 - **Keep research traceable:** sources, claims, and author decisions stay
   distinct and retain the exact linked versions across edits.
 - **Local-first by default:** analysis, editing (native editor with undo,
@@ -75,15 +75,15 @@ importing a file into a new project. The preview accepts Markdown, plain text an
 one Word (.docx) file. Confirm the analysis language before reading the results.
 English is the default. Choose automatic detection to analyze in the detected language.
 
-To work on another project, open the same address in a second tab and choose
-**Project actions → Open Project**. Each tab keeps its own project view.
+To work on another project, open the service's root address in a new tab and
+choose **Project actions → Open Project**. Lixity opens a separate view for the
+chosen folder. Tabs with the same `/w/…/` URL share that view.
 
 To return to a running workspace, use the address shown by `lixity service status`.
 After updating the installation, run `lixity service restart --open` on the
 same port and reload the browser. `lixity doctor` reports the CLI and service
-versions. The package installed from PyPI follows the
-[latest published release](https://github.com/mfahsold/lixity/releases/latest).
-The demo and source documentation follow development.
+versions. The install command uses the package published on
+[PyPI](https://pypi.org/project/lixity/). The demo follows development.
 
 [Open your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) ·
 [Start with a project path or use a custom port](https://mfahsold.github.io/lixity/guides/installation.html#existing-project) ·
@@ -321,13 +321,13 @@ their own projects.
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
 
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.0.md)
-cover archive compatibility and upgrades. See the
-[changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for subsequent work.
-The repository's generated demo follows the interface documented here, using a fictional project and read-only research. Importing
-and saving require the local app. A push to `main` alone does not deploy Pages
-or update a running local installation; see
-[update and deployment boundaries](https://mfahsold.github.io/lixity/INSTALLATION.md).
+Use the [latest published release](https://github.com/mfahsold/lixity/releases/latest)
+for published packages and their upgrade notes. The source
+[release notes](https://mfahsold.github.io/lixity/releases/v0.9.0.md) describe
+the version prepared in this repository. See the
+[changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for work
+in progress. For local updates and website availability, see the
+[installation guide](https://mfahsold.github.io/lixity/INSTALLATION.md).
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).

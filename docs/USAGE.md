@@ -881,13 +881,13 @@ and keeps the chapter-value table; it does not substitute a default.
 
 ### `lixity pdf`
 
-Create a local reading copy without a browser or external converter:
+Generate a PDF from the selected manuscript on disk. Choose a layout explicitly
+when reproducing a browser download. The CLI defaults to `report`. The browser
+initially selects the editorial copy.
 
 ```sh
-lixity pdf manuscript.md --layout book --author "Example Writer" -o reading.pdf
-# Since v0.7.0: an annotation copy with page and line numbers.
-lixity pdf manuscript.md --layout editor -o editorial.pdf
-# Since v0.7.4: neutral A4 text without generated title/header material.
+lixity pdf --project ./novel --layout book --author "Example Writer" -o reading.pdf
+lixity pdf --project ./novel --layout editor -o editorial.pdf
 lixity pdf expose.md --layout document -o expose.pdf
 ```
 
@@ -955,12 +955,12 @@ not establish accessibility or production compliance.
 
 ### `lixity export-site`
 
-Prepare a portable website from an explicitly selected project. Check the package
-first, then export to a new directory:
+Prepare a portable website from an explicitly selected project. Use the same
+inclusion choices for the check and the export.
 
 ```bash
 lixity export-site --project ./novel --preflight --json
-lixity export-site --project ./novel -o review-copy
+lixity export-site --project ./novel --output ./review-copy --json
 ```
 
 `--preflight` writes nothing and cannot be combined with `--output`. Ordinary
@@ -969,22 +969,28 @@ export manifest; it does not replace the website files. The default `review`
 mode contains the manuscript and analysis. Add `--include-research` only when
 internal records, history and cited excerpts belong in the recipient's copy.
 
-For a curated reading copy, save a root-local publication profile first:
+For a curated reading copy, save a root-local publication profile first.
+Here both commands select the same profile and chapter cap.
 
 ```bash
-lixity export-site --project ./novel -o reader-copy --mode reader \
+lixity export-site --project ./novel --mode reader \
+  --publication-profile readers --max-chapter 4 --preflight --json
+lixity export-site --project ./novel --output ./reader-copy --mode reader \
   --publication-profile readers --max-chapter 4
 ```
 
-`--mode companion` exports only the selected background. Reader/companion modes
-use an explicit profile instead of `--include-research`. Optional `--analysis`
-and `--include-audio` apply to reader mode only. See the workspace manual for
+`--mode companion` exports only the selected background. Reader and companion
+modes take an explicit profile. Use `--max-chapter` with either curated mode
+to omit later content. Optional `--analysis` and `--include-audio` apply to
+reader mode only. A preflight measures the current scope. A limit failure in
+JSON mode reports the first limit crossing and exits with status 1. See the
+workspace manual for
 [format and inclusion choices](WORKSPACE.md#export-a-reading-website),
 [publication profile TOML](WORKSPACE.md#curate-a-reader-publication),
 [chapter audio](WORKSPACE.md#include-existing-chapter-recordings-unreleased),
 [sharing limits](WORKSPACE.md#sharing-limits-and-automation) and
-[preflight reports](WORKSPACE.md#check-a-reading-website-before-exporting).
-Export creates local files; it does not upload or publish them.
+[browser checks](WORKSPACE.md#check-a-reading-website-before-exporting).
+[Preflight JSON contract](AGENTS.md#website-export-preflight)
 
 ### `lixity serve`
 
@@ -1100,6 +1106,15 @@ metadata/status exit 1. The port uses `--port`, then `LIXITY_PORT`, then 8765.
 An out-of-range numeric port or invalid `LIXITY_PORT` returns `ok: false` and
 `error: {code: "invalid-service-port", message: ...}` under the same schema, with
 exit 1. A non-integer explicit `--port` is a normal argument usage error (exit 2).
+
+### `lixity mcp`
+
+Configure your client to launch the chosen `lixity` executable with the single
+argument `mcp`. The subprocess reads and writes JSON-RPC messages over stdio.
+Put manuscript text, language, thresholds and any required port in the tool
+arguments. The client can request `tools/list` to see the supported fields.
+The browser app uses a separate local HTTP service.
+[Client configuration and tool contracts](AGENTS.md#model-context-protocol-mcp-server)
 
 ### `lixity build`
 

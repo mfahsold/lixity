@@ -413,8 +413,7 @@
     var reviewAll = event.target.closest("#research-review-all");
     if (reviewAll) {
       open("review", reviewAll);
-      var header = document.querySelector('#research-tools-entry [data-rtab="review"]');
-      header.click(); title.focus({preventScroll: true}); return;
+      return;
     }
     var termsTrigger = event.target.closest("#research-reader-terms");
     if (termsTrigger) {
@@ -452,12 +451,10 @@
     active: function() { return active; }, restore: paint,
     sourceChanged: function(id, version) { if (comparison && (comparison.detail.id !== id || comparison.detail.version_id !== version)) close(false); }
   };
-  ["lixity:research-revision-saved", "lixity:dossier-image-saved", "lixity:manuscript-saved"].forEach(function(evt) {
-    document.addEventListener(evt, function() {
-      if (active === "review" && typeof refreshResearchEditorialReview === "function") {
-        refreshResearchEditorialReview(true);
-      }
-    });
+  document.addEventListener("lixity:dossier-image-saved", function() {
+    if (active !== "review") return;
+    if (panes.review.contains(document.activeElement)) title.focus();
+    refreshResearchEditorialReview();
   });
   paint();
 })();

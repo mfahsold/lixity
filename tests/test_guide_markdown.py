@@ -77,3 +77,28 @@ Run the **extra** check.
 echo "extra"
 ```
 '''
+
+
+def test_markdown_preserves_authored_heading_links_and_aliases(tmp_path) -> None:
+    page = tmp_path / "translated.html"
+    page.write_text('''<main><h1>Einführung</h1>
+<p><a href="#rhythmus">Zum Satzrhythmus</a> oder <a href="#contrast">zum Beispiel</a>.</p>
+<a id="contrast"></a><h2 id="rhythmus">Passt der kürzere Rhythmus zur Handlung?</h2>
+<p>Ein Beispiel.</p></main>''', encoding="utf-8")
+
+    rendered = guide_markdown(page)
+    assert "[Zum Satzrhythmus](#rhythmus) oder [zum Beispiel](#contrast)." in rendered
+    assert ('<a id="contrast"></a>\n\n<a id="rhythmus"></a>\n\n'
+            '## Passt der kürzere Rhythmus zur Handlung?') in rendered
+
+
+def test_markdown_retains_quoted_examples_as_blockquotes(tmp_path) -> None:
+    page = tmp_path / "passage.html"
+    page.write_text('''<main><h1>Read the sentence</h1>
+<blockquote>A board moved.</blockquote>
+<blockquote><p>Read this <em>line</em>.</p><p>Then read the next.</p></blockquote>
+<p>Consider the rhythm.</p></main>''', encoding="utf-8")
+
+    rendered = guide_markdown(page)
+    assert "> A board moved." in rendered
+    assert "> Read this *line*.\n>\n> Then read the next.\n\nConsider the rhythm." in rendered

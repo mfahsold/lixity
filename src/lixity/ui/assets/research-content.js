@@ -913,7 +913,7 @@ document.addEventListener("lixity:dossier-image-saved", async function(event) {
     refreshResearchDossiers(null, accepted.record.id, true), refreshResearchProjectInfo()]);
   var detail = await researchApiGet("research/dossiers?id=" + encodeURIComponent(accepted.record.id));
   if (!detail.ok || detail.project_id !== accepted.project_id) return;
-  var summary = Array.from(document.querySelectorAll('[data-research-detail="dossier"]')).find(function(button) {
+  var summary = Array.from(document.querySelectorAll('#research-dossiers-list [data-research-detail="dossier"]')).find(function(button) {
     return button.dataset.recordId === accepted.record.id;
   });
   if (!summary) return;

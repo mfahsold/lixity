@@ -18,6 +18,8 @@ and
 
 .
 
+<a id="import"></a>
+
 ## Import a local source
 
 Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as `source.txt`. Initialize only a new research archive:
@@ -36,11 +38,15 @@ For an authorized file outside Zotero, open **Research → Sources → Add local
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
+<a id="origin-url"></a>
+
 ## What does the origin URL do?
 
 This field records the original HTTP(S) address in source details and citations. Lixity does not fetch the page or monitor it. Use a stable public address where appropriate; credentials and whitespace are rejected. Do not include private access tokens or signed download links.
 
 Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see [archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#limits).
+
+<a id="zotero"></a>
 
 ## Keep source work in Zotero
 
@@ -51,6 +57,8 @@ Run Zotero on the same computer and download the attachments you need. Open **Re
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
 To bring existing Lixity sources into Zotero, `research zotero-export` creates a RIS import bundle with retained files and their identifiers. Export preserves the Lixity archive. Follow the [setup, migration and compatibility reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#zotero-desktop-bridge-since-v1190), and verify imported files before relying on the new workflow.
+
+<a id="places-and-routes"></a>
 
 ## Read a place alongside its sources
 
@@ -63,6 +71,8 @@ In the [Warehouse 4 demo project's Research view](../demo/report.html#research-m
 Use **Places and routes** in the dossier editor for named points, paths and areas. In the local app, maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Exported reading websites keep their map geometry offline and make no tile requests. Tile requests disclose the viewed area and client IP to the provider and stop outside the visible map/project context. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
 Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.webp). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
+
+<a id="search"></a>
 
 ## Search sources and current notes
 
@@ -77,6 +87,8 @@ lixity research search --project ./sample-project --query "inspector" --scope de
 
 The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.
 
+<a id="keyword-citation"></a>
+
 ## Choose a citation by keywords
 
 Select a claim in the evidence form and choose **Find source passage**. Search opens with **Sources** selected and keeps your claim choice. Read a match, choose **Use for claim**, then review the full paragraph, select the evidence relation and save explicitly. A search match or draft does not verify a claim or create a saved link.
@@ -90,6 +102,8 @@ lixity research cite --project ./sample-project --query "reading room" \
 
 One match resolves the existing full-paragraph citation. Zero or multiple matches return search JSON and exit `1`; multiple matches print numbered choices on stderr. A numbered choice requires the same query and displayed snapshot. Changed snapshots or unavailable sources require another search. Exact `--passage` retrieval remains available for historical captures. See the [selection and API reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#choose-citations-by-keywords-since-v300).
 
+<a id="evidence-draft"></a>
+
 ## Prepare evidence from selected source text
 
 Open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.
@@ -97,6 +111,8 @@ Open a retained source and select text within one uniquely resolved paragraph. T
 The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.
 
 For reading notes against the manuscript, open **Dossier alongside** in Manuscript and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.
+
+<a id="manuscript-claims"></a>
 
 ## Associate manuscript text with a claim
 
@@ -114,11 +130,15 @@ back up the archive. Retention-confirmed manuscript links require record/manifes
 
 .
 
+<a id="dossiers-and-decisions"></a>
+
 ## Edit dossiers and review decisions
 
 Open a dossier to read its notes, linked claims and source quotations. Use **Edit section** beside a unique heading for a bounded change, or **Edit** for the full record. Select correction or supersession, give a reason and save explicitly. An unchanged save keeps the existing revision; a changed save appends history. For an external editor, use the [export → edit → preview → apply procedure](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#edit-an-exported-markdown-dossier). Ordinary source import does not create an authored dossier.
 
 In **Review**, open **Read decision with dossier** to compare the named versions. **Mark as applied** records your assessment for those exact versions; it does not update old pins or inspect prose. A later revision may need another review. The manual covers [concurrent drafts](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#resolve-conflicting-drafts) and [saving related changes together](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#review-decisions-and-save-related-revisions-together).
+
+<a id="claim-chronology"></a>
 
 ## Organize claim periods and causal interpretations
 
@@ -156,6 +176,8 @@ lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
 
 Replace the claim placeholders with complete IDs from the claim list. `results_in` is an alias for `causes` in the same cause-to-effect direction. Software consuming claim lists must update to the uniform `research-claims-local/2` envelope; stored claims remain unchanged. Read the [implemented chronology and compatibility reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#claim-chronology-and-causeeffect-links) for accepted periods, revision guards and retraction.
 
+<a id="cli-project"></a>
+
 ## Use the intended research project in the terminal
 
 Existing-archive commands may omit `--project` only when your current directory is itself a validated initialized research project. Lixity does not search parent folders or reuse the browser's last project. An explicit `--project` remains authoritative. Initialization still names its project.
@@ -168,6 +190,8 @@ lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relat
 
 Use returned IDs, passage first and claim second. Complete bare UUIDv4 selectors and plural aliases in grouped help are also supported. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#reading-and-cli-workflows-since-v240).
 
+<a id="grounding"></a>
+
 ## Compare vocabulary with your manuscript
 
 Beyond individual citations, Lixity can compare word occurrences in a retained source and your draft. Matching words do not establish factual agreement or source influence. Source-internal analysis (`lixity research analyze` / `dashboard`) inspects a single source against its own chapters, while **Research → Sources → select a text source → Compare vocabulary with manuscript** (`lixity research compare`) compares one retained source against your manuscript:
@@ -179,6 +203,8 @@ Beyond individual citations, Lixity can compare word occurrences in a retained s
 - **Register & style contrast:** Side-by-side deltas for mean sentence length (ASL), dialogue share (%), vocabulary richness (Guiraud *R*), and vocabulary repetition (Yule's *K*).
 
 For structured external workflows, the research archive also supports **dossier collections** (ordered reading lists in `lixity.toml`), deterministic character/location/scene drafts (`dossier-drafts`), bounded MP4/WebM video attachments (`lixity:media/...`), offline HTML article extraction (`extract-article`), a Claim–Evidence–Decision matrix (`matrix` in Markdown, CSV, or JSON), and **JSON Canvas 1.0** graph export (`canvas`). Audio files remain outside the research source archive.
+
+<a id="ocr"></a>
 
 ## Can Lixity read scanned PDFs?
 
@@ -194,6 +220,8 @@ Diagnostics identify missing tools, language data and configuration errors with 
 Install `poppler-utils` on Debian/Ubuntu or `poppler` with Homebrew on macOS. The server must be able to find `pdftotext` and `pdftoppm`. Check extracted quotations against the original PDF; configuration checks do not measure recognition accuracy.
 
 Scans can use locally installed Tesseract without a separate worker service. Set `LIXITY_OCR_BACKEND=tesseract` and choose installed language data with `LIXITY_OCR_LANGUAGES` (default `eng`), then restart the server. Diagnostics list missing languages. New native Poppler and local Tesseract captures require a v4 archive reader; existing cached provenance stays unchanged. [Local OCR setup and compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#use-local-ocr-without-a-worker-service).
+
+<a id="worker"></a>
 
 ## Connect an existing self-hosted worker
 
@@ -211,6 +239,8 @@ These commands use a POSIX shell. Use equivalent environment settings on Windows
 
 Lixity retains the original PDF and extracted text separately. Citations identify spans in that text; they do not provide audited page coordinates or recognition confidence. Consult the original when visual evidence matters.
 
+<a id="backup"></a>
+
 ## Back up and test restoration
 
 The project's `research/` folder contains the evidence archive. The search index can be rebuilt and is not a backup. Keep backups outside public repositories and avoid writes while exporting.
@@ -226,6 +256,8 @@ lixity research search --project ./restored-sample --query "reading room"
 Restore into a new, empty target. Restoration checks paths, checksums and record links. Resolve a known passage afterward to check its quotation and original URL. A successful audit checks archive integrity, not historical truth or permissions.
 
 `research zotero-backup` pairs the archive with a selected Zotero data folder; you must close Zotero first. `research zotero-restore` verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the [paired-backup reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#paired-zoteroresearch-backup-and-restore) before relying on the pair.
+
+<a id="cli-workflow"></a>
 
 ## Command-line example: sources to decisions
 
@@ -275,6 +307,8 @@ lixity research audit --project ./novel-research
 
 For the managed app instead, use `lixity service start --open` and **Open Project** to select the archive. See the [lifecycle guide](installation.html#restart).
 
+<a id="manuscript-export"></a>
+
 ## Export print-ready PDFs and editorial copies
 
 Open **PDF export** in the workspace bar (or run `lixity pdf`) to compose pure-Python PDFs with TrueType subsetting, Identity-H CID / ToUnicode glyph mapping, orphan/widow control, and PDF bookmarks. Each of the five layouts targets a distinct stage of drafting, editing, or printing:
@@ -296,6 +330,8 @@ lixity pdf manuscript.md --layout book -o print-a5.pdf
 ```
 
 Override system-discovered fonts via `LIXITY_PDF_FONT_SERIF`, `LIXITY_PDF_FONT_SANS`, or `LIXITY_PDF_FONT_MONO` when needed. See the [browser workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md) and [PDF command reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-pdf) for full options and limits.
+
+<a id="reading-website"></a>
 
 ## Export reading versions with curated dossiers & selective analysis
 
@@ -319,11 +355,15 @@ Use **Project actions → Reading website** (or `POST /api/site-export`) to buil
 
 You can also organize dossiers into named reading sequences via `[tool.lixity.dossier_collections]`. Try the live [novel and companion demo](../demo/reader/) or the [standalone companion demo](../demo/companion/), and see the [complete reading-website workflow](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website) for full configuration details.
 
+<a id="publication"></a>
+
 ## Configure print imprint and ISBNs
 
 Open **Project → Settings → A5 book PDF details** (or configure `[tool.lixity.publication]` in `lixity.toml`) to add optional front-matter metadata for the `book` layout: `publisher_name`, `publisher_address`, `printer_name`, `printer_address`, `edition`, `year`, `isbn_print`, `isbn_digital`, `rights_notice`, `credits`, and `extra_info`.
 
 Lixity validates ISBN-10/13 checksums and ensures print and digital ISBNs are distinct when both are provided, without claiming legal completeness or publishing rights. Other PDF layouts (`editor`, `sheet`, `report`, `document`) omit the A5 imprint page. See the [publication-settings reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#publication-settings).
+
+<a id="limits"></a>
 
 ## Input and research limits
 

@@ -1,19 +1,11 @@
 # Start using Lixity
 
-[Documentation map](README.md) · [Workspace manual](WORKSPACE.md) · [CLI reference](USAGE.md)
+[Documentation map](README.md) · [Install Lixity](INSTALLATION.md) · [Workspace manual](WORKSPACE.md)
 
-Read a manuscript closely, follow its research links and prepare a copy for
-readers. This walkthrough starts with one passage, then shows where to inspect
-measurements, consult sources and choose an output.
-Install Lixity first using the [installation guide](INSTALLATION.md).
-
-Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
-the demo project for manuscript analysis, research and PDF layouts.
-The [illustrated first look](guides/first-look.html) follows that same project;
-then try the steps below with your own manuscript. The demo uses the same
-reading-website export as your own shareable copies.
-[Installation](INSTALLATION.md) covers setup, upgrades and service management;
-[interpretation](guides/interpretation.html) explains the measurements.
+Start by reading one passage. Choose a measurement, check what Lixity counted,
+and decide whether the difference matters to the scene.
+Practice in the read-only [Warehouse 4 demo](demo/report.html) with the
+[illustrated walkthrough](guides/first-look.html), or open your own project below.
 
 <a id="the-journey-at-a-glance"></a>
 <a id="see-a-finished-example-first"></a>
@@ -21,40 +13,32 @@ reading-website export as your own shareable copies.
 
 | Your starting point | Action |
 | --- | --- |
-| An existing manuscript/project folder | Start the app and choose **Open Project**. |
-| A file to copy into a new project | Choose **Analyze a manuscript**, review the preview and confirm the destination. |
-| A new manuscript | Choose **New Project → Start New Manuscript**. |
+| A folder where you already work | Choose **Project actions → Open Project** to reconnect its manuscript and research. |
+| A file to copy into a new project | Choose **Analyze a manuscript** on the welcome screen, or **Project actions → New Project → Import manuscript**. |
+| A blank manuscript | Choose **Project actions → New Project → Start new manuscript**. |
 | A linguistic question about an existing text | Follow the [text-analysis workflow](USAGE.md#linguistic-text-analysis) to record scope, settings and reproducible outputs. |
 | Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
 
 ## Session checklist
 
-1. Start the local app and open the intended project, or preview an imported copy.
-2. Check the displayed project path and analysis language.
-3. Read a paragraph, optionally inspect a measurement, then return to the text.
-   To edit in place, choose **Write** in the local app. Check for **Saved locally**,
-   then choose **Close writing** to return to the reader and analysis.
-   [Write a manuscript](WORKSPACE.md#write-a-manuscript-unreleased)
-4. Optionally follow a saved research link or record a short reading.
-5. Choose an output deliberately; stop the service when finished.
-
-The demo and exported websites are read-only. Perform saves, imports and new
-rendering in the local application. Detailed instructions live in the linked
-manuals; this walkthrough introduces the sequence.
+1. Open or create the project and confirm its path and analysis language.
+2. Read a paragraph in **Manuscript** and inspect one [measurement](#read-and-explore).
+3. To revise the passage locally, choose **Write**. Check for **Saved locally**,
+   then choose **Close writing** to return to the reader.
+   [Writing and recovery](WORKSPACE.md#write-a-manuscript-unreleased)
 
 ## Start with a manuscript
 
-Use UTF-8 Markdown with `## Chapter title` headings and blank lines between
-paragraphs. For terminal analysis and saved exports:
+In a Markdown manuscript, use `## Chapter title` headings and blank lines
+between paragraphs. For an initial measurement from the terminal:
 
 ```sh
 lixity analyze manuscript.md --language en
-lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html`. Choose the manuscript language explicitly;
-English is the default, and `auto` requests detection. Short texts can leave
-measurements unavailable. [Language support](LOCALIZATION.md) describes profile limits.
+English is the default. For automatic language detection, choose
+`--language auto`. Some measurements require a longer text.
+[Language support](LOCALIZATION.md) · [Command reference](USAGE.md#which-command-for-which-question)
 
 ## Use the interactive workspace
 
@@ -62,28 +46,24 @@ measurements unavailable. [Language support](LOCALIZATION.md) describes profile 
 lixity service start --open
 ```
 
-The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
-field explanations describe the next action. **Project actions** groups New/Open,
-**Show guidance**, PDF export and **Reading website**. It starts expanded in an empty workspace and
-collapsed when a manuscript is loaded; the three workspace destinations stay visible.
+Open the address reported by the service. The default is
+`http://127.0.0.1:8765/`. Use **Project actions** to open or create a project.
+This menu starts expanded in an empty workspace. It may be collapsed when a
+manuscript is already open. [Start, reconnect or change ports](INSTALLATION.md#running-the-server)
 
 ### Open or import?
 
-**Open Project** reconnects the folder and research archive visible to the server.
-Browsing or cancelling does not switch projects. **Analyze a manuscript** copies
-a file into a separate project after preview; it does not reconnect the original
-folder's archive. A research project may open without a manuscript. One server
-can retain independent project views in multiple tabs; tabs using the same view
-share its project context. Check the displayed path before saving. View URLs
-expire on restart; see [service management](USAGE.md#lixity-service).
+**Open Project** connects to the existing folder and its research archive.
+Confirm the path to open it in the current tab. To keep two projects open,
+open the service's root address in a new tab and choose **Open Project** there.
+Tabs with the same `/w/…/` address share a view. Reopen projects from the service
+root after restarting. [Service management](USAGE.md#lixity-service)
 
-**Available in 0.8.0:** the import dialog accepts exactly one Markdown (`.md`,
-`.markdown`), plain-text (`.txt`) or Word (`.docx`) file. Unsupported files and
-multiple-file drops show an explanation and clear the previous preview. Choose
-a supported file again to continue; creating the project still requires confirmation.
-The preview's word and chapter counts are rough estimates; the analysis can count
-them differently. If the current language setting cannot be preserved for a new
-project, choose a supported analysis language explicitly before continuing.
+**Analyze a manuscript** opens a preview of one Markdown (`.md`, `.markdown`),
+plain-text (`.txt`), or Word (`.docx`) file. The preview estimates words and
+chapters. Check the destination and choose the analysis language before
+confirming. Confirmation creates a new local project with a manuscript copy and
+its own settings.
 
 If configuration or Research setup fails while creating/importing a project,
 the app reports incomplete setup and keeps the previous project selected. Created
@@ -93,32 +73,35 @@ continue and initialize Research if it is still absent.
 
 ### Read and explore
 
-For an explanation while reading, choose **?** in the reading toolbar.
-The optional guide distinguishes Analysis Off, no selected measure and the
-selected measure with its units. It can open a counted-text example or the
-current passage's tools. Opening help changes no analysis setting.
+The labels below follow the current source and the demo. The published package
+can show older labels. [Check your installed version](INSTALLATION.md#cli-current-release)
 
-Start in **Manuscript** and read a passage. Turn **Analysis**
-On to show diagnostics in place; this does not open a tool or narrow the prose.
-Choose a paragraph's **… → Explore passage** for measurement explanations or
-research beside that passage. The **Passage values** inspector
-works with Analysis On or Off. **Analysis overview**
-opens chapter comparisons; **Back to passage** restores your place and prior
-Analysis On/Off choice.
-The opening candidate is not a quality ranking; read the text before
-deciding whether a difference matters. Settings explain saved versus session-only
-choices, and offer editorial threshold presets (`balanced`, `developmental`,
-`line_editing`, `conservative_by`) as well as chapter register starter templates.
-A standalone analysis report is read-only. To share manuscript,
-analysis and optional research together, choose **Project actions → Reading
-website**. The ZIP copy opens in a browser without a running Lixity server;
-project writes and new PDF generation require the local app. See
-[reading websites](WORKSPACE.md#export-a-reading-website) and [PDF layouts](USAGE.md#lixity-pdf).
+1. Read a paragraph in **Manuscript**. Turn on **Analysis**, open **Measure**,
+   and choose **Sentence length**. **Analysis help (?)** explains the selected
+   measure and can open the count for the passage in view.
+2. Use **Counted text** to display the exact words or sentences where the
+   measurement can show a source span. Open a mark directly or use the
+   paragraph menu **… → Explore passage → Explain measurement**. The menu also
+   works with **Analysis** off and turns analysis on when you choose **Explain
+   measurement**.
+3. Read **Why this is marked** and **What to check while reading**. For sentence
+   length, “A board moved.” counts as three words. In **Sticky sentences**, the
+   card highlights the contributing function words and shows the rule and the
+   count. Ask whether the sentence's connections are clear when you read it
+   within its paragraph. Use **How it’s measured** for the full method.
 
-The overview's **Open passage** route identifies its selection reason visibly:
-the first tense-pattern flag in source order, or the opening paragraph when
-there are no tense flags at the chosen threshold. This is not a general ranking
-of all metrics or proof that other patterns need no review.
+**Paragraph comparison** is a separate display. It compares a paragraph
+measurement with that chapter when a comparison is available. A measured
+zero means the rule found no matches. An unavailable comparison can reflect a
+short sample. When a result has no verified source span, **What is counted**
+shows the evidence card's coverage.
+[Counted text and paragraph comparison](WORKSPACE.md#counted-text-and-paragraph-comparison)
+
+Open **Analysis overview** to compare chapters or explore patterns.
+**Open passage** suggests the first tense-pattern flag in manuscript order, or
+the opening paragraph when no flag meets the threshold. The suggestion explains
+its selection. **Back to passage** restores your reading position and prior
+analysis display. [Interpret the measurements](guides/interpretation.html)
 
 ### Choose a view
 
@@ -128,19 +111,15 @@ dossier alongside it for context, or use **Research** to work with sources and
 saved records. Analysis points to differences you can inspect; it does not
 decide whether a passage needs revision.
 
-Research references use a neutral dotted line and an adjacent book
-icon labelled **Research** with the association count. These identify saved links
-to claims, dossiers and author decisions. Metric comparisons retain their color
-scale; solid analysis underlines identify counted text. Research references stay
-visible when analysis is switched off. Search highlighting can coexist with both;
-none of these display changes edits manuscript text.
+The book button labelled **Research** opens the saved associations for that
+paragraph. Its dotted references stay visible with **Analysis** off.
+[Read the mark key](guides/interpretation.html#analysis-marks)
 
 The [reader reference](WORKSPACE.md#reading-paragraphs) explains display preferences,
 keyboard controls, companion sizing and coverage. Changing a view writes nothing.
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Manuscript**: choose **… → Explore passage** for one paragraph; use **Analysis** independently for diagnostics. |
 | Compare chapter positions | **Analysis overview → Compare chapters → Style → Feature-rank projection**. Select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
@@ -220,11 +199,9 @@ Inspect the copy before sharing it. An export is not a complete project backup.
 
 ## Check your first session and return later
 
-Check the project, language and a sample quotation against its source. Stop with
-`lixity service stop`; return with `lixity service start --open` and open the project.
-For an explicit startup project, use `lixity service start --open ./my-novel` while
-stopped. Restart uses recorded launch settings, not a later browser selection;
-[restart after upgrades](INSTALLATION.md#running-the-server) to load new code.
+Check that the active project and analysis language match your manuscript.
+Use [service management](INSTALLATION.md#running-the-server) to close, reopen or
+update the local app. The project stays in its folder between sessions.
 
 Back up manuscripts separately: research/Zotero backups exclude them and external
 linked attachments. Use [implemented research usage](research/USAGE.md), not

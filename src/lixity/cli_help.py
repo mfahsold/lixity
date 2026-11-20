@@ -254,11 +254,11 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ('lixity schema', 'lixity schema --section configuration'),
     ),
     'mcp': (
-        'AGENTS.md#21-mcp-server-read-only',
+        'AGENTS.md#model-context-protocol-mcp-server',
         (
-            'Runs the read-only Model Context Protocol (MCP) server over standard input and output '
-            'using JSON-RPC 2.0. Exposes tools for corpus analysis, style profiles, pacing, dialogue, '
-            'showing-vs-telling, motifs, characters, and review markers. Completely offline and safe.'
+            'Start this command with no arguments to serve read-only tools over standard input and '
+            'output using JSON-RPC 2.0. Discover tools and prompts with tools/list and prompts/list. '
+            'Send manuscript text, analysis settings or the port of a managed service in tool requests.'
         ),
         ('lixity mcp',),
     ),

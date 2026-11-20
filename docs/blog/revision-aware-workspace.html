@@ -17,15 +17,15 @@
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
 <meta property="og:image:height" content="1942"/>
-<meta property="og:image:alt" content="Lixity's released continuous reading workspace; the manuscript editor described in this article is unreleased"/>
+<meta property="og:image:alt" content="Lixity's continuous manuscript reading workspace"/>
 <meta property="article:author" content="https://github.com/mfahsold"/>
 <meta property="article:published_time" content="2026-11-11"/>
-<meta property="article:modified_time" content="2026-11-11"/>
+<meta property="article:modified_time" content="2026-11-20"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Adding a manuscript editor changes more than the text box"/>
 <meta name="twitter:description" content="Sessions, conditional saves, analysis bound to the saved text and separate recovery, backup and research records."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta name="twitter:image:alt" content="Lixity's released continuous reading workspace; the manuscript editor described in this article is unreleased"/>
+<meta name="twitter:image:alt" content="Lixity's continuous manuscript reading workspace"/>
 <link rel="alternate" type="text/markdown" href="revision-aware-workspace.html.md" title="Markdown version of this page"/>
 <link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
 <link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
@@ -42,7 +42,7 @@
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/revision-aware-workspace.html",
   "inLanguage": "en",
   "datePublished": "2026-11-11",
-  "dateModified": "2026-11-11",
+  "dateModified": "2026-11-20",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -58,7 +58,7 @@
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
     "width": 2960,
     "height": 1942,
-    "caption": "Lixity's released continuous reading workspace; the manuscript editor described in this article is unreleased"
+    "caption": "Lixity's continuous manuscript reading workspace"
   }
 }
 </script>
@@ -73,15 +73,14 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Revision-aware workspace</span></li></ol></nav>
 <h1>Adding a manuscript editor changes more than the text box</h1>
-<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-11">11 November 2026</time> · 6 minutes</p>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-11">11 November 2026</time> · Updated <time datetime="2026-11-20">20 November 2026</time> · 6 minutes</p>
 
 <p>A manuscript workspace can show a useful observation: this chapter uses a different sentence rhythm, this quotation supports a research note, this passage deserves another look. Once the author can edit the manuscript in the same application, each observation needs a second question: which version of the text does it describe?</p>
-<p>That is the problem we are working through in Lixity, an open-source local workspace for close reading, linguistic analysis and traceable research. The integrated editor described here is implemented in development and remains <strong>unreleased</strong>. The public demo is read-only.</p>
+<p>That is the problem we are working through in Lixity, an open-source local workspace for close reading, linguistic analysis and traceable research. The local app includes the manuscript editor. The public demo is read-only.</p>
 
 <h2 id="session">Preserve the writing session</h2>
-<p>Lixity's development editor uses CodeMirror 6. The practical goal is modest: write, undo, inspect the result, and return without rebuilding the writing session.</p>
-<p>Moving to the reading view should not discard the editor and its undo history. “Read and refresh” opens the ordinary workspace for the saved text revision while retaining the writing buffer. Returning to writing keeps that session available. Browser reload is a different boundary: it still resets undo.</p>
-<p>That distinction matters. “Undo survives autosave” does not mean “undo survives every failure.” The product needs to say what is kept, where it is kept, and which actions end a session.</p>
+<p>Choose <strong>Write</strong> in the local manuscript workspace to open the CodeMirror editor. Undo and redo stay available while the editor saves changes in the background. <strong>Saved locally</strong> confirms that the file was updated.</p>
+<p>Choose <strong>Close writing</strong> to return to reading. When the file has changed, Lixity reloads the reader and recalculates its analysis. That reload starts a new undo history. If saving fails, the editor stays open so you can review the draft.</p>
 
 <h2 id="save">Treat saving as a conditional operation</h2>
 <p>A local application still has concurrent writers. An author may open the same Markdown file in another editor, or another process may replace it. Autosave must not treat the last request to arrive as automatically authoritative.</p>
@@ -90,7 +89,7 @@
 
 <h2 id="analysis">Bind analysis to the saved text</h2>
 <p>A measurement can remain mathematically correct for yesterday's manuscript and still be misleading beside today's paragraph. Lixity therefore checks the saved revision when returning to reading and identifies stale analysis.</p>
-<p>The same principle applies to navigation. Opening a passage in the editor requires a defensible mapping to source text. Literal selections within one paragraph have revision-aware mapping. Transformed Markdown and cross-paragraph selections can be reported as unmappable. Guessing at a location would look convenient until it edits the wrong passage.</p>
+<p>To edit after reviewing a finding, use its link to the manuscript, then choose <strong>Write</strong>. The editor opens at the visible source block.</p>
 <p>The objective is not to hide every boundary. It is to make a boundary understandable when the application cannot cross it reliably.</p>
 
 <h2 id="evidence">Keep evidence separate from changing prose</h2>
@@ -99,14 +98,14 @@
 <p>That separation also limits what the software claims. Retaining a source does not verify its assertions. A statistical signal does not decide whether a sentence should be rewritten. The application connects evidence to human review; it does not replace that review.</p>
 
 <h2 id="recovery">Recovery and backup are different tools</h2>
-<p>The development work also includes verified project backup and restore. The selected saved manuscript, settings, attachments and retained research have an explicit inventory and integrity checks. Restore uses a fresh destination rather than overwriting an existing project.</p>
+<p>Verified project backup includes the selected saved manuscript, settings, attachments and retained research in its inventory. Restore checks the inventory and uses a fresh destination.</p>
 <p>Unsaved drafts and the editor recovery journal are excluded from that backup. Writers should be stopped before taking it. Recovery copies, undo history, reading exports and a verified project backup each cover a different need; presenting them as interchangeable would create false confidence.</p>
 <p>The automated tests exercise writing, navigation, conflicts and recovery using synthetic projects, including long manuscripts. Real input methods, assistive technology and interruption scenarios still need acceptance work. Atomic replacement alone is not proof of power-loss durability.</p>
 
-<h2 id="next">A useful next milestone</h2>
-<p>For us, the next milestone is a recoverable revision session: an author can write, inspect the saved result, understand a conflict and return to work without losing their place. More analysis metrics can wait until that loop is dependable.</p>
+<h2 id="next">Try one revision</h2>
+<p>In the local app, write a short change and wait for <strong>Saved locally</strong>. Close writing to read the saved passage. The workspace manual shows how to compare versions and keep a separate copy of a draft.</p>
 <p>The released reading workflow can already be explored without an account or manuscript upload. The demo uses a fictional harbour manuscript with linked research notes.</p>
-<p><a class="ctl primary" href="../demo/report.html">Explore the read-only Lixity workspace</a> <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased">Review the editor's development scope</a> <a href="https://github.com/mfahsold/lixity">Source code</a></p>
+<p><a class="ctl primary" href="../demo/report.html">Explore the read-only Lixity workspace</a> <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased">Write a manuscript</a> <a href="https://github.com/mfahsold/lixity">Source code</a></p>
 
 <footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>

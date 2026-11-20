@@ -1,8 +1,9 @@
 """Synthetic source fidelity, conflict and recovery contracts."""
 import json
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from contextlib import closing
 from hashlib import sha256
+from threading import Event
 
 import pytest
 
@@ -65,6 +66,160 @@ def test_failure_retains_original_and_pending_draft(tmp_path, monkeypatch):
     assert editor.recover(pending["id"])["text"] == "Unsaved work"
 
 
+@pytest.mark.parametrize("interruption", ["after_replace", "before_receipt"])
+def test_interrupted_save_retry_records_exact_revision_pair(tmp_path, monkeypatch, interruption):
+    from lixity.io import FileUtils
+
+    original = b"\xef\xbb\xbf## Chapter\r\n\r\nThe gate shut.\r\n"
+    editor, source = store(tmp_path, original)
+    opened = editor.open()
+    updated = opened["text"] + "The keeper turned quickly.\n"
+    expected = original + b"The keeper turned quickly.\r\n"
+    write = FileUtils.atomic_write_bytes_if_changed
+    insert_snapshot = editor._insert_revision_snapshot
+
+    def interrupted_write(*args, **kwargs):
+        write(*args, **kwargs)
+        raise OSError("interrupted after replacement")
+
+    def interrupted_receipt(*args, **kwargs):
+        insert_snapshot(*args, **kwargs)
+        raise OSError("interrupted before receipt")
+
+    with monkeypatch.context() as patch:
+        if interruption == "after_replace":
+            patch.setattr(FileUtils, "atomic_write_bytes_if_changed", interrupted_write)
+        else:
+            patch.setattr(editor, "_insert_revision_snapshot", interrupted_receipt)
+        with pytest.raises(OSError, match="interrupted"):
+            save(editor, opened, updated)
+
+    assert source.read_bytes() == expected
+    restarted = ManuscriptStore(tmp_path, source)
+    assert restarted.recover("a" * 32)["text"] == updated
+    assert restarted.recover(opened["revision"])["text"] == opened["text"]
+    assert restarted.timeline() == []
+    with pytest.raises(ValueError, match="reused"):
+        save(restarted, {**opened, "revision": "0" * 64}, updated)
+    result = save(restarted, opened, updated)
+    assert source.read_bytes() == expected
+    assert save(restarted, opened, updated) == result
+    base, target = restarted.timeline()
+    assert base["revision"] == opened["revision"]
+    assert target["parent_revision"] == base["revision"]
+    assert target["revision"] == result["revision"] == sha256(expected).hexdigest()
+    assert base["created_at"] < target["created_at"]
+    assert base["words"] == 3
+    assert target["words"] == 7
+    assert restarted.delta()["deltas"]["words"] == 4
+
+
+def test_v2_pending_draft_retry_preserves_recovery_without_inventing_a_base(tmp_path):
+    import sqlite3
+
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    updated = b"The keeper turned.\n"
+    editor.directory.mkdir(parents=True)
+    with closing(sqlite3.connect(editor.directory / "recovery.sqlite3")) as db, db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA user_version=2")
+        db.execute(
+            "CREATE TABLE recovery (document TEXT, id TEXT, kind TEXT, "
+            "content BLOB, created REAL, PRIMARY KEY(document,id))"
+        )
+        db.executemany(
+            "INSERT INTO recovery VALUES (?,?,?,?,?)",
+            [
+                (editor.document, opened["revision"], "version", source.read_bytes(), 1000.0),
+                (editor.document, "a" * 32, "draft", updated, 1000.0),
+            ],
+        )
+    source.write_bytes(updated)
+
+    assert editor.recover("a" * 32)["text"] == updated.decode()
+    with closing(sqlite3.connect(editor.directory / "recovery.sqlite3")) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+    result = save(editor, opened, updated.decode())
+    assert save(editor, opened, updated.decode()) == result
+    assert editor.recover(opened["revision"])["text"] == opened["text"]
+    assert source.read_bytes() == updated
+    target, = editor.timeline()
+    assert target["revision"] == result["revision"]
+    assert target["parent_revision"] is None
+    assert editor.delta()["has_baseline"] is False
+
+
+@pytest.mark.parametrize("discard_base", [False, True])
+def test_pending_base_is_retained_within_version_limit_until_explicitly_discarded(
+    tmp_path, monkeypatch, discard_base,
+):
+    from lixity.io import FileUtils
+
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    updated = "A new draft.\n"
+    write = FileUtils.atomic_write_bytes_if_changed
+
+    def interrupted_write(*args, **kwargs):
+        write(*args, **kwargs)
+        raise OSError("interrupted after replacement")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FileUtils, "atomic_write_bytes_if_changed", interrupted_write)
+        with pytest.raises(OSError, match="interrupted"):
+            save(editor, opened, updated)
+
+    # Subsequent edits measure an external branch while the earlier draft waits.
+    source.write_bytes(b"An external branch.\n")
+    for index in range(21):
+        save(editor, editor.open(), f"A subsequent change {index}.\n", f"{index:032x}")
+    versions = {row["id"] for row in editor.open()["recovery"] if row["kind"] == "version"}
+    assert len(versions) == 20
+    assert opened["revision"] in versions
+    assert editor.recover(opened["revision"])["text"] == opened["text"]
+    if discard_base:
+        editor.discard(opened["revision"])
+
+    source.write_bytes(updated.encode())
+    result = save(editor, opened, updated)
+    snapshots = {item["revision"]: item for item in editor.timeline()}
+    target = snapshots[result["revision"]]
+    if discard_base:
+        assert target["parent_revision"] is None
+        assert opened["revision"] not in snapshots
+    else:
+        assert target["parent_revision"] == opened["revision"]
+        assert snapshots[opened["revision"]]["words"] == 2
+
+
+def test_retry_that_replaces_the_source_uses_the_successful_save_time(tmp_path, monkeypatch):
+    from lixity.io import FileUtils
+
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    original = source.read_bytes()
+    now = 1000.0
+    monkeypatch.setattr("lixity.manuscript_editing.time.time", lambda: now)
+
+    def interrupted_write(*args, **kwargs):
+        raise OSError("interrupted before replacement")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FileUtils, "atomic_write_bytes_if_changed", interrupted_write)
+        with pytest.raises(OSError, match="interrupted"):
+            save(editor, opened, "Later recovered draft.\n")
+
+    now = 1001.0
+    save(editor, opened, "Another successful save.\n", "b" * 32)
+    source.write_bytes(original)
+    now = 1002.0
+    result = save(editor, opened, "Later recovered draft.\n")
+
+    assert editor.timeline()[-1]["revision"] == result["revision"]
+    assert editor.delta()["has_baseline"] is True
+
+
 @pytest.mark.parametrize("content", [b"bad\xff", b"one\r\ntwo\n", b"a\x00b"])
 def test_unsupported_source_is_not_rewritten(tmp_path, content):
     editor, source = store(tmp_path, content)
@@ -95,6 +250,49 @@ def test_two_tabs_only_one_wins(tmp_path):
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert sorted(pool.map(attempt, [1, 2])) == [False, True]
     assert source.read_text() in ("1", "2")
+
+
+def test_pending_save_orders_writes_and_discards_without_blocking_readers(tmp_path, monkeypatch):
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    other = ManuscriptStore(tmp_path, source)
+    measuring = Event()
+    release = Event()
+    measure = editor._measure_snapshot
+
+    def held_measurement(*args):
+        measuring.set()
+        assert release.wait(timeout=5)
+        return measure(*args)
+
+    monkeypatch.setattr(editor, "_measure_snapshot", held_measurement)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        first = pool.submit(save, editor, opened, "First accepted edit.\n")
+        try:
+            assert measuring.wait(timeout=5)
+            mid_save = pool.submit(other.open).result(timeout=2)
+            assert mid_save["text"] == "First accepted edit.\n"
+            second = pool.submit(save, other, mid_save, "Second accepted edit.\n", "b" * 32)
+            discard = pool.submit(other.discard, "a" * 32)
+            with pytest.raises(TimeoutError):
+                second.result(timeout=0.1)
+            with pytest.raises(TimeoutError):
+                discard.result(timeout=0.1)
+        finally:
+            release.set()
+        first_result = first.result(timeout=5)
+        second_result = second.result(timeout=5)
+        discard.result(timeout=5)
+
+    with pytest.raises(ValueError, match="reused"):
+        save(other, other.open(), "Different edit using an earlier operation.", "a" * 32)
+    assert other.open()["text"] == "Second accepted edit.\n"
+    base, first_snapshot, second_snapshot = other.timeline()
+    assert base["revision"] == opened["revision"]
+    assert first_snapshot["revision"] == first_result["revision"]
+    assert first_snapshot["parent_revision"] == base["revision"]
+    assert second_snapshot["revision"] == second_result["revision"]
+    assert second_snapshot["parent_revision"] == first_snapshot["revision"]
 
 
 def test_original_version_recoverable_without_overwriting_current(tmp_path):

@@ -7,13 +7,12 @@ tables drive both dispatch and the content-free API index.
 from __future__ import annotations
 
 import json
-import os
-import stat
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, ClassVar
 from urllib.parse import parse_qs, unquote, urlparse
 
+from ..io import FileSizeLimitError, FileUtils
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..speech_status import native_worker_inventory
@@ -317,28 +316,22 @@ class LixityServerHandler(
                 return
         try:
             target = project_artifact_path(root, name, selected_manuscript=source)
-            flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
-            with os.fdopen(os.open(target, flags), "rb") as handle:
-                opened = os.fstat(handle.fileno())
-                if not stat.S_ISREG(opened.st_mode):
-                    raise ValueError("Artifact is no longer a regular file")
-                if opened.st_size > MAX_ARTIFACT_BYTES:
-                    self._json({"ok": False, "message": "Artifact exceeds the serving limit"}, 413)
-                    return
-                # The observed length bounds allocation even for tiny outputs.
-                # Growth is detected by the extra byte and fresh descriptor stats.
-                content = handle.read(opened.st_size + 1)
-                after = os.fstat(handle.fileno())
-            if len(content) != opened.st_size or any(
-                getattr(opened, field) != getattr(after, field)
-                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
-            ):
-                raise ValueError("Artifact changed while reading")
+            initial = target.lstat()
+            content, opened = FileUtils.read_bounded_regular_bytes(
+                target, maximum=MAX_ARTIFACT_BYTES, verify_stable=True,
+            )
             checked = project_artifact_path(root, name, selected_manuscript=source)
-            final = checked.stat()
-            if checked != target or any(getattr(after, field) != getattr(final, field)
-                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")):
+            final = checked.lstat()
+            # Windows can use different ctime clocks for the path and descriptor.
+            if checked != target or initial.st_ctime_ns != final.st_ctime_ns or any(
+                getattr(observed, field) != getattr(final, field)
+                for observed in (initial, opened)
+                for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+            ):
                 raise ValueError("Artifact identity changed")
+        except FileSizeLimitError:
+            self._json({"ok": False, "message": "Artifact exceeds the serving limit"}, 413)
+            return
         except (OSError, RuntimeError, ValueError):
             self._json({"ok": False, "message": "Artifact not found or no longer available"}, 404)
             return

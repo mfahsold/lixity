@@ -3,7 +3,8 @@
 Use this manual to read a manuscript, inspect language patterns, keep research
 linked to passages and prepare copies for readers. These activities share one
 local project. The native writing, reading and research workflows below are
-included in 0.8.1.
+available in the local app. The **Versions** menu and the text association
+display control beside the editor describe the current development build.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 use [Installation](INSTALLATION.md) for application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
@@ -78,32 +79,45 @@ text leave accepted research links and past analysis decisions for you to review
 **Find / replace** opens the bundled CodeMirror search panel (also Ctrl/Cmd+F).
 It supports case-sensitive, whole-word and regular-expression searches, individual
 replacement and replace-all. Replacement edits the current buffer and follows
-normal autosave; a replace-all is one undoable operation. Selection-only search
-and a separate persistent match counter are not provided.
-
-If another tab or an external editor changed the file, autosave pauses and keeps
-a recovery draft. **Compare versions** shows the last acknowledged text, the current
-file and an editable candidate side by side. Choose a retained copy first to compare
-that recovery text instead of the live buffer. Revision identities distinguish the
-copies. The local backend measures all three displayed texts under the same
-effective project settings. With automatic language detection, the current
-file provides the language for all three texts. Chapter differences require
-an identifiable match across versions. Shares appear as percentages and
-their changes as percentage points. For example, a dialogue share rising
-from 25% to 50% increases by 25 percentage points. If measurement is
-unavailable, the text remains available for comparison and editing.
-When a measurement rule changes, history keeps its recorded values. A comparison
-recomputes older versions from their retained source under the current rule.
-If the source is unavailable, the affected comparison has a gap.
-
-**Use as draft** changes only the editor buffer and leaves saving paused.
-**Save this draft** applies the reviewed result against the captured file
-revision. A subsequent external change is rejected again. Cancelling an edited
-comparison asks before discarding it. **Load as draft** remains available for a
-retained copy. Loading while the current buffer is dirty downloads that buffer.
+normal autosave. A replace-all is one undoable operation.
 
 To edit a passage after reviewing an analysis finding, jump to the passage in
 the reader and choose **Write**. The editor starts at the visible source block.
+
+### Compare versions and resolve a conflict
+
+When another tab or an external editor changes the file, Lixity rejects the
+conflicting save, retains the submitted draft and pauses autosave. The text in
+the editor stays available. With a network error or interrupted save, use
+**Versions → Download draft** to keep a copy of the current buffer.
+
+1. Open **Versions → Compare versions**. The dialog shows **Last acknowledged
+   text**, **Current file** and **Draft to review**. The last acknowledged text
+   is the editor's last confirmed revision. To compare a recovery copy, choose
+   it in **Versions** before opening the comparison.
+2. Check the two saved texts and edit **Draft to review**. **Use as draft**
+   brings your candidate into the editor with autosave paused. Closing an edited
+   comparison asks for confirmation before discarding its changes.
+3. Choose **Save this draft** to apply the result. The save checks the exact
+   file revision shown in the comparison. If the file changed again, open a
+   fresh comparison before trying to save.
+
+The three texts use the same effective analysis settings. With automatic
+language detection, the current file supplies the language for all three.
+Chapter differences appear when the comparison can match the chapters. A
+dialogue share rising from 25% to 50% increases by 25 percentage points.
+Unavailable measurements leave the text available for review. Timeline values
+stay recorded under their original measurement rules. For a new comparison,
+Lixity remeasures retained source text where it can and leaves a gap when it
+cannot establish comparable values.
+
+### Use recovery copies and project backups
+
+Choose an entry in **Versions → Choose a recovery copy**. **Load as draft**
+opens a retained copy for review with saving paused. If the editor already has
+unsaved changes, **Load as draft** downloads that buffer and leaves the text
+in the editor. To combine text from both drafts, use **Compare versions** with
+the recovery copy selected.
 
 Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous source
 versions and eight unresolved drafts per document. Unresolved drafts are not
@@ -112,6 +126,9 @@ contains manuscript text and must remain private and excluded from version contr
 It is not included in public reading exports. Use [project backup and restore](PROJECT_BACKUP.md) for an explicit
 verified inventory of saved manuscript, selected settings, research and attachments.
 The editor recovery journal and unacknowledged drafts are excluded from that backup.
+When the same save is retried after a process interruption, Lixity uses the
+journal's verified base revision and retained source bytes to complete its
+timeline. If the exact base cannot be recovered, the timeline keeps the gap.
 Changes made before an autosave request reaches the server are not guaranteed
 recoverable; failed/offline saves remain visibly unsaved. Browser-close warnings
 are an additional safeguard, not reliable persistence. Atomic writes and retained
@@ -125,11 +142,12 @@ uncooperative external editor.
 | Review website | Fixed manuscript/analysis copy with the explicitly included research; no live project writes |
 | Reader or companion website | Curated recipient view; no import, recalculation or local project editing |
 
-The live app separates **Manuscript**, **Research** and **Project**. To work
-on two projects at once, open **Project actions → Open Project** from the same
-app address and keep each project's view in its own browser tab. One instance
-can keep up to 16 views. After a restart, return to the home address and reopen
-any additional projects you need.
+The live app separates **Manuscript**, **Research** and **Project**. To work on
+two projects at once, open the app's home address in a new browser tab and use
+**Project actions → Open Project**. Each new project view has its own
+`/w/…/` address. Duplicating a tab at that address shows the same view. One
+instance can keep up to 16 views. After a restart, return to the home address
+and reopen any additional projects you need.
 
 ## Explore language in the browser
 
@@ -325,12 +343,10 @@ The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
 Use the directly visible **Measure**
 selector while Analysis is on. **Counted text** and **Paragraph comparison** are
-independent switches: keep either, both or neither. **In 0.8.0:** counted text starts off
-for each measure, and its choice is remembered separately per measure; paragraph
-comparison starts on and remains a shared choice. An older saved global counted-text
-choice is assigned to the last selected measure, if one was selected. If it was
-set to None or no valid measure was saved, all measures start with counted text off.
-Other reader preferences are retained. For sentence length, every recognized sentence with words is counted,
+independent switches. **Counted text** initially follows the selected measure's
+inline-evidence availability and remembers your choice for each measure.
+**Paragraph comparison** starts on and is a shared choice across measures.
+For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
@@ -402,7 +418,7 @@ the mark and a reading question. Paragraph measurements and chapter comparison
 have their own section. In **Sticky sentences**, a filled highlight identifies
 each counted function word in the selected sentence. In the repeated-word
 view, dashed underlines connect additional occurrences of the selected word.
-Mapping limits appear under **About this comparison**. A word count is not an editorial fault; a
+Mapping limits appear under **What is counted**. A word count is not an editorial fault; a
 perception-word match does not establish narrative distance. When exact
 counting/display mapping cannot be verified, the value remains but its evidence
 is explicitly unavailable. Browsers without native text highlighting retain
@@ -427,47 +443,40 @@ their owning section before navigating, including nested style views.
 CLI standalone reports retain direct section navigation; without JavaScript their
 complete text and tables remain readable.
 
-**? → Help with your first analysis** is a voluntary
-panel in the reader toolbar. It explains the current Analysis Off /
-no selected measure / selected measure state and a read–count–compare workflow.
-It does not enable diagnostics, reset preferences, create a task or change
-measurements. It is hidden in Focus reading and the overview; returning to
-the manuscript restores it. The overview's opening-passage action now visibly
-explains its existing tense-flag/opening-paragraph selection, not a quality rank.
+With **Analysis On**, open **Analysis help (?)** in the reader toolbar. It
+explains the selected measure and the steps from counted text to comparison.
+Return from Focus reading or the overview to find it in the regular toolbar.
+The overview's opening-passage action explains whether it selected a tense
+finding or the opening paragraph.
 CLI `profile --help` gives the same source-lines → counted-text workflow;
 default outputs and JSON contracts are unchanged.
 
 ### Save review decisions
 
-**Review decisions:** the overview's flagged list contains tense
-heuristics, not all chapter or paragraph metrics. **Why here?** reports actual
-configured present/past marker counts and mixed/switch criteria. **Read passage**
-is primary; a diagnostic no longer directly proposes a To-do. Author work markers
-remain available from the manuscript's paragraph menu.
-The passage list switches from columns to the same compact records when its
-available pane becomes too narrow. Reading and decision controls remain visible
-beside the sidebar as well as on smaller screens.
+Open **Analysis overview → Review passages → Flagged passages** in the local
+app. Expand a finding's explanation to see the configured present and past
+marker counts and the criteria for a mix or a switch. Use **Show in manuscript**
+to read the passage in context. Chapter, severity and decision filters narrow
+the list, and **Review next finding** follows the visible findings.
 
-The native host advertises `analysis-review` to permit project-local decisions.
-From a flagged passage, **Explore passage** offers **Open review decision** to
-return directly to its matching review entry. Filters that would hide the entry
-are cleared. The passage identity must still match; opening it does not save.
-Chapter, stage and decision filters limit the visible list; **Read next visible
-passage** follows that selection without saving anything. Choose **Deliberately
-kept**, **Changed by me** or **Review later**, then save explicitly. Completed
-counts include only current kept/changed decisions, not deferred or stale ones.
-Previously saved decisions for the current manuscript path that no longer match a
-current observation are counted as unmatched and retained, including when no flags
-remain. Decisions under another path, including a manuscript's former name, remain
-in the state file but are not included in this count. Decisions are not silently
-attached to another passage; their individual contents are not yet exposed here.
-No automatic manuscript change, task, source capture or research decision occurs.
+From a flagged paragraph, **Explore passage → Open review decision** returns to
+the matching entry and clears any filters that hide it. Choose **Deliberately
+kept**, **Changed by me** or **Review later**, then click **Save decision**.
+Choosing a value alone leaves the previous decision in place. **Changed by me**
+records your assessment. To edit the manuscript itself, use **Write** and save
+the edit there.
 
-For the CLI workflow, exact identity guards, storage limits and backup scope,
-see [`lixity analysis-review`](USAGE.md#lixity-analysis-review). Text or analysis
-changes can make earlier decisions stale or unmatched; they are retained rather
-than silently attached to another passage. Reading exports do not include these
-decisions or allow saves.
+Completed counts cover current kept and changed decisions. Deferred items stay
+open. A change to the source or analysis settings can leave earlier decisions
+stale or unmatched. Lixity retains them and counts unmatched decisions for the
+current manuscript path. A renamed file has a different path. Previous decisions
+for the old path remain in the project state. To resolve an out-of-date review,
+refresh the analysis, reopen the finding and save a decision for the current
+passage.
+
+The [CLI review workflow](USAGE.md#lixity-analysis-review) explains the exact
+identity checks, storage limits and backup scope. Reading exports omit saved
+decisions. Author work markers are a separate action in the paragraph menu.
 
 ### Keyboard, touch and focus reading
 
@@ -1000,45 +1009,43 @@ a conflict or invalid value keeps the draft and previous saved state.
 
 ## Download a manuscript PDF
 
-Open **Project actions → PDF export**, choose a layout, then
-**Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
-**A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
-Since v0.7.4, **A4 document** adds a neutral copy for exposés and everyday text.
-Changing the layout alone does not generate a file. The download uses the same
-composer and project metadata as [`lixity pdf`](USAGE.md#lixity-pdf), returning bytes
-directly without creating server export files. Reload after switching projects
-or externally changing root configuration; stale export context is rejected.
-JavaScript and a compatible native server are required.
+Open **Project actions → PDF export**, choose a layout and select **Download
+PDF**. The browser initially selects **A4 editorial copy** with line numbers
+and room for comments. Choose **A5 reading copy** for continuous reading,
+**A4 manuscript sheets** for a submission grid, **A4 analysis report** for
+measurements, or **A4 document** for neutral text such as a synopsis.
+
+The browser returns a download. Use [`lixity pdf`](USAGE.md#lixity-pdf) to write
+a chosen file from the terminal. Both paths use the shared composer and
+project metadata. If the browser reports a stale export context, reload the
+project view and select the layout again.
 
 ## Export a reading website
 
-Since v0.7.4, **Project actions → Reading website** downloads a fixed project
-copy as ZIP. Unzip it and open `index.html`, or serve the folder on static
-hosting. The recipient needs no Lixity installation or running service.
-Later project changes require a new export.
+Open **Project actions → Reading website** and choose the format that fits
+your recipient.
 
 | Format | Included content | Intended use |
 | --- | --- | --- |
-| Review workspace | Manuscript and analysis; optionally internal research and history | Author/editor review |
+| Review copy | Manuscript and analysis, with optional internal research and history | Author/editor review |
 | Manuscript + selected background | Reading text, curated notes, optional analysis and opted-in chapter audio | Read the story with selected context and listening material |
 | Selected background only | Curated notes without the novel or analysis | Background for someone reading elsewhere |
 
-```bash
-lixity export-site --project . -o manuscript-copy
-lixity export-site --project . -o editorial-copy --include-research
-lixity export-site --project . -o novel-copy --mode reader --publication-profile readers
-lixity export-site --project . -o companion-copy --mode companion --publication-profile readers
-lixity export-site --project . -o excerpt-copy --mode reader --publication-profile readers --max-chapter 4
-```
+1. Choose **Review copy** for the manuscript, work-marker notes and
+   analysis. Enable research only when the recipient should see the included
+   records, earlier versions and cited excerpts. For either curated format,
+   choose a [saved publication profile](#curate-a-reader-publication).
+2. Set the chapter cap and any optional analysis, recording or source-file
+   choices that apply to the selected format. Review and companion formats
+   have different scopes. The dialog clears source-file inclusion when you
+   change the format or profile.
+3. Select [**Check export**](#check-a-reading-website-before-exporting) to
+   inspect the chosen scope. Select **Download ZIP**, unpack the copy and
+   open `index.html` to review what the recipient will receive.
 
-The destination must be a **new directory**. Existing paths are never
-overwritten. With no mode flag, the default is the review workspace. It includes
-manuscript text, work-marker notes and analysis, including exact text marks.
-On first opening for a project, research and source-file inclusion are unchecked.
-The dialog retains choices within that project; changing the format, publication
-profile or saved profile clears source-file inclusion. Leave research unchecked
-for a manuscript/analysis copy, or choose a reader format and publication profile
-for selected companion notes.
+The website is a fixed copy. The recipient can open the unpacked copy locally
+or from static hosting. Export a new copy after project changes. For terminal
+commands and fresh output directories, see [`lixity export-site`](USAGE.md#lixity-export-site).
 
 **Since v0.7.7:** a manuscript-and-background reader copy can optionally include
 analysis. Select chapter figures and/or language measurements, or the complete
@@ -1081,18 +1088,9 @@ Explicitly imported chapter WAVs can also be included. Only artifacts bound to t
 exact current manuscript and inside the export chapter cap qualify. A changed
 manuscript does not silently reuse an older recording.
 
-To retain an existing recording, obtain the SHA-256 of the current manuscript's
-exact file bytes, replace `CURRENT_MANUSCRIPT_SHA256` below, and choose its chapter:
-
-```bash
-lixity audio-import --project . --audio chapter-1.wav --chapter 1 \
-  --source-sha256 CURRENT_MANUSCRIPT_SHA256 --manuscript manuscript.md
-```
-
-`--manuscript` is optional when the project resolves one manuscript. The explicit hash
-guards against binding the recording after the source changes; it does not prove
-that the audio speaks those words. Supported imports are mono/stereo 16-bit PCM
-WAV at 8–192 kHz. No implicit format conversion, trimming or transcription runs.
+Use [Retain or import chapter audio](AUDIO.md#retain-or-import-chapter-audio-unreleased)
+for the supported WAV format and the browser or CLI steps. The import associates
+the recording with the selected chapter and manuscript revision.
 
 Each included chapter has the shared audio player and a WAV download. Partial
 coverage is allowed and shown: a chapter without a matching recording stays text
@@ -1227,56 +1225,24 @@ The byte and response limits above still apply. For a history-limit error, expor
 without internal research or select a curated reader/companion profile.
 
 ### Check a reading website before exporting
-Prepare and inspect the actual package without
-writing an output directory:
 
-```sh
-lixity export-site --project ./novel --preflight --json
-lixity export-site --project ./novel --mode reader --publication-profile readers --preflight
-```
+**Check export** prepares the selected package and reports its sizes, entries
+and packaged media. It can take comparable time and memory to a download.
+Changing the selection clears the result. Check again after changing which
+chapters, notes or files to include.
 
-Do not supply `--output` with `--preflight`. The native **Reading website** dialog
-has the same explicit **Check export** action. It neither downloads nor publishes;
-changing the selection clears the displayed result. Preparation uses the same
-scope, project guards and limits as export and can take comparable time/memory.
-An invalid selection or an unreadable selected asset fails explicitly rather
-than returning an invented size.
+Use the result to confirm the chapter cap, included notes and source files.
+Media without copied source files appears separately from unavailable media.
+The check reports known attribution fields. Review the unpacked copy on the
+target screen and verify permission to share its contents and files.
 
-`lixity-site-preflight/1` measures actual `html_bytes`, `total_bytes`, `zip_bytes`,
-`source_file_bytes` and `file_count` for the prepared candidate. Counts cover
-exactly the exported dossier revisions (including earlier revisions in review
-mode), or selected publication entries after the chapter cap. `html_bytes` is
-the entry page; when reader analysis is included, `analysis_html_bytes` and
-`total_html_bytes` report the additional page and both HTML pages together.
-Available retained
-media without copied source files is reported as `not_packaged`, separately from
-unavailable pins. Ordinary Markdown image destinations are counted as unchecked;
-no loose file or external URL is opened. Attribution checks only the presence of
-`origin_url` and `provenance_note` in retained source metadata, not license validity
-or whether a reader-visible credit appears in the exported page. External link auditing
-and mobile rendering are not performed: `mobile_layout_check` is `not_run` and
-`rights_check` is `not_performed`.
+If the report identifies a data or history limit, narrow the publication
+scope. A curated profile can omit internal review history. If the bundle is too
+large, review the copied source files and recordings. These choices affect the
+export. The original project remains available for another export.
 
-Warnings advise on HTML over 10 MiB or ZIP over 20 MiB; these are disclosed
-practical thresholds, not performance guarantees. The result describes this
-candidate, not a reserved later export. Curated reader/companion modes often
-avoid exporting internal review history; choose the appropriate saved profile
-and retained-file options deliberately. No automatic image recompression or
-promise of a package under 20 MiB is introduced here.
-
-Export data, revision-count and bundle limits stop the check
-with exit code 1. With
-`--json`, stdout still contains a parseable `lixity-site-preflight-error/1`
-report identifying the limit, observed bytes/count, allowed amount and overflow.
-Response-budget failures identify the route and affected record parameters, with
-accepted bytes grouped by route; operational tokens and source prose are omitted.
-This is the first limit crossing, not a full package-size estimate: `complete`
-is false and no output is written. The 64 MiB data and 200 MiB bundle limits
-remain in force. Suggestions follow the limiting category: prepared research
-responses can exceed their budget without original source files. Omitting
-`--include-source-files` is relevant to the separate bundle budget, not a general
-repair for large record/history responses. Select a narrower publication scope
-rather than deleting project records to make an export fit.
+[Terminal preflight and export](USAGE.md#lixity-export-site) ·
+[Preflight response contract](AGENTS.md#website-export-preflight)
 
 ## Source availability and saved analysis
 
