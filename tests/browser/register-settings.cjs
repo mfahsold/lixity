@@ -1,4 +1,5 @@
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 // Native register settings round-trip, validation and draft preservation.
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
@@ -121,10 +122,13 @@ server.serve_forever()
         await card.locator('[data-register-add-target]').click();
         const added = card.locator('[data-register-range]').last();
         await added.locator('[data-register-field=register_target]').selectOption('hd_d');
+        await assertSelectGeometry(added.locator('[data-register-field=register_target]'),
+          `New register target (${locale}, ${width}px)`);
         assert.ok((await added.locator('[data-register-field=register_target] option:checked').textContent()).includes('0–1'),
           'HD-D bounds expose the index scale rather than a percentage');
         for (const key of ['register_target', 'register_lower', 'register_upper']) {
-          assert.equal(await added.locator('[data-register-field=' + key + ']').evaluate(input => input.parentElement.firstChild.textContent),
+          assert.equal(await added.locator('[data-register-field=' + key + ']').evaluate(input =>
+            input.labels[0].querySelector('.form-label').textContent),
             fixture.labels[locale][key], 'Dynamically added controls use the selected locale');
         }
         assert.equal(await card.locator('[data-register-field=register_name]').evaluate(input => input.parentElement.firstChild.textContent),

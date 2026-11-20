@@ -1,5 +1,6 @@
 // Curated publication profiles share native settings validation/save/draft handling.
 const {startNativeServer} = require('./support/native-server.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const assert = require('node:assert/strict');
@@ -174,7 +175,10 @@ server.serve_forever()
         await expect(field(profile, 'id')).toHaveValue('readers');
         await expect(field(entry, 'section')).toHaveValue('Background');
         await expect(field(entry, 'include_citations')).not.toBeChecked();
-        assert.equal(await field(entry, 'section').evaluate(input => input.parentElement.firstChild.textContent), fixture.labels[locale].publication_editor_section);
+        const section = field(entry, 'section');
+        assert.equal(await section.evaluate(input => input.labels[0].querySelector('.form-label').textContent),
+          fixture.labels[locale].publication_editor_section);
+        await assertSelectGeometry(section, `${locale} ${width}px publication section`);
         assert.equal(await editor.locator('img').count(), 0, 'Titles stay inert');
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} editor fits ${width}px`);
         if (locale === 'en') await page.locator('#settings-site-publications').screenshot({path: path.join(artifacts, `editor-${width}.png`)});

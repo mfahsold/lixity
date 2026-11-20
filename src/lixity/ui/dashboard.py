@@ -162,6 +162,7 @@ _JS_FILES = (
     "research-collections.js",
     "research-review.js",
     "research-workspace.js",
+    "research-dossier-drafts.js",
     "research-tools.js",
     "markdown-editor.js",
     "research-revisions.js",
@@ -189,6 +190,7 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
     "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
+    "research-dossier-drafts.js",
     _PASSAGE_NAVIGATION_SCRIPT,
 ))
 _REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css"})
@@ -200,7 +202,7 @@ _PUBLICATION_JS_FILES = tuple(
         "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
         "teleprompter.js", "speech-presentation.js", "audio-take.js",
-        "research-collections.js", "research-tools.js",
+        "research-collections.js", "research-dossier-drafts.js", "research-tools.js",
         _PASSAGE_NAVIGATION_SCRIPT,
     }
 )
@@ -593,6 +595,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     has_chapters = bool(chapters) and total_words > 0
     has_reading = has_chapters or bool(reader_document)
     default_view = "analysis" if has_reading or (read_only and not research_context_token) else "research"
+    read_only_note = f'<span class="site-read-only-notice" role="note">{L("site_read_only")}</span>' if read_only else ""
     body_class = "lixity-workspace" if controls else "lixity-report"
     if controls and has_reading:
         body_class += " has-reading"
@@ -622,7 +625,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-dossier-media-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-media")).lower()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
-        *((f'<p class="site-read-only-notice" role="note">{L("site_read_only")}</p>',) if read_only else ()),
+        *((read_only_note,) if read_only and not controls else ()),
         '<div class="page">',
         *(('<div class="workspace-shell"><div class="workspace-shell-header">',
            f'<button type="button" class="ctl workspace-navigation-toggle" id="workspace-navigation-toggle" '
@@ -693,7 +696,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 )
             )
         parts.append("</nav></details>")
-        parts.append('<p class="workspace-product-details">' + product_details(labels) + '</p>')
+        parts.append('<p class="workspace-product-details">' + read_only_note + product_details(labels) + '</p>')
         parts.append("</div></div>")
 
     if status:
@@ -1069,6 +1072,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 label_class="",
             )
             + f'<button type="button" class="ctl" id="workspace-reader-refresh" title="{L("reader_refresh")}" data-help="{L("reader_hint")}">{L("reader_refresh")}</button></div>'
+            + '<div id="workspace-reader-associations-field" hidden>'
+            + checkbox_field(
+                '<input type="checkbox" id="workspace-reader-associations" aria-controls="workspace-reader-body" checked/>',
+                f'<span>{L("research_review_links_section")}</span>',
+            )
+            + '</div>'
             + status_banner("workspace-reader-status")
             + '<div id="workspace-reader-body"></div></aside></div>'
             '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '
@@ -1195,7 +1204,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
         parts.append(
             '<div id="analysis-review-body">' + panel_guide(manuscript_intro)
-            + f'<p class="ctl-note">{metric_reference_link(labels, "analysis-review")}</p><div class="review-routes">'
+            + '<p class="ctl-note">'
+            + (f'<a href="#analysis-measurements" data-jump="#analysis-measurements">{L("analysis_measurements")}</a>'
+               ' <span aria-hidden="true">·</span> ' if controls else "")
+            + f'{metric_reference_link(labels, "analysis-review")}</p><div class="review-routes">'
         )
         if paragraphs:
             candidates = flagged
@@ -1876,13 +1888,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             ),
             (
                 "dimensions",
-                "style_dimensions",
+                "style_tab_dimensions",
                 style_dimensions(chapters, fingerprint, labels, language_key),
             ),
             (
                 "structural",
-                "panel_structural",
-                style_structural(chapters, fingerprint, labels, language_key),
+                "style_tab_structural",
+                style_structural(chapters, fingerprint, labels, language_key, chapter_metrics=metrics.chapters),
             ),
         ]
         parts.append(panel_start("style", labels, "group_style", extra_class="style-panel"))

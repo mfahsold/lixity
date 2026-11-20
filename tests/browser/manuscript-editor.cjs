@@ -23,11 +23,23 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.goto(base);
     assert.equal(await page.evaluate(() => Boolean(window.LixityLog && typeof window.LixityLog.event === 'function' && typeof window.setLixityDebug === 'function')), true, 'Structured browser logging API is mounted');
     assert.equal(await page.locator('#manuscript-close').isHidden(), true, 'Close writing button is hidden before entering Write mode');
+    const legend = page.locator('#layer-legend');
+    await page.locator('#manuscript-analysis-toggle').click();
+    await page.locator('#style-layer').selectOption('asl');
+    await legend.locator('summary').click();
+    assert.equal(await legend.isVisible(), true, 'An expanded reader legend reproduces the transition into writing');
     await page.locator('#manuscript-write').click({timeout: 5000});
     await page.locator('.cm-content').waitFor();
     assert.equal(await page.locator('#manuscript-close').isVisible(), true, 'Close writing button is visible while editing');
     assert.equal(await page.locator('#manuscript-write').isHidden(), true, 'Write button is replaced by Close writing while editing');
     assert.equal(await page.locator('#manuscript-reader-controls').isHidden(), true, 'Reader toolbar is hidden in Write mode so only one unified editor toolbar is shown');
+    assert.equal(await legend.isHidden(), true, 'The reader analysis legend is hidden while writing');
+    const versions = page.locator('#manuscript-versions > summary');
+    assert.equal(await page.locator('#manuscript-recovery').isHidden(), true);
+    await versions.press('Enter');
+    assert.equal(await page.locator('#manuscript-recovery').isVisible(), true, 'Versions opens with the keyboard');
+    await versions.press('Escape');
+    assert.equal(await page.locator('#manuscript-recovery').isHidden(), true);
     const editorToolbarBox = await page.locator('.manuscript-editor-toolbar').boundingBox();
     assert.ok(editorToolbarBox && editorToolbarBox.height <= 60, 'Unified editor toolbar fits on a single desktop row');
     assert.equal(await page.evaluate(() => Boolean(window.LixityChrome && typeof window.LixityChrome.hide === 'function' && typeof window.LixityChrome.reveal === 'function')), true, 'Central LixityChrome auto-hide controller is mounted');
@@ -35,6 +47,10 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.locator('#manuscript-recover').isHidden(), true, 'Recover button stays hidden until a recovery entry is selected');
     assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');
     await page.locator('#manuscript-undo').focus();
+    await page.keyboard.press('f');
+    await page.keyboard.press('d');
+    assert.equal(await page.locator('body').evaluate(body => body.matches('.reader-focus, .reader-direct-speech')), false,
+      'Writing controls do not activate hidden reader shortcuts');
     assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
     assert.equal(await page.locator('#manuscript-read').count(), 0, 'Consolidated Read & Refresh button is removed');
     if (!process.argv.includes('--firefox')) {
@@ -62,6 +78,8 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.locator('#manuscript-editor').isHidden(), true, 'Close writing hides the editor section');
     assert.equal(await page.locator('#manuscript-close').isHidden(), true, 'Close writing hides itself');
     assert.equal(await page.locator('#manuscript-write').isVisible(), true, 'Close writing restores the Write button');
+    assert.equal(await legend.isVisible(), true, 'Closing writing restores the active reading legend');
+    assert.equal(await legend.locator('details').evaluate(node => node.open), true, 'The reading disclosure keeps its state');
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'manuscript-write', 'Close writing returns focus to #manuscript-write');
     // Closing after edits flushes pending changes and reloads the reading view.
     await page.locator('#manuscript-write').click();
@@ -90,6 +108,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.reload();
     await page.locator('#manuscript-write').click();
     await page.locator('#manuscript-recovery option[value]:not([value=""])').first().waitFor({state: 'attached'});
+    await versions.click();
     const draft = await page.locator('#manuscript-recovery option[data-kind="draft"]').first().getAttribute('value');
     await page.locator('#manuscript-recovery').selectOption(draft);
     let releaseRecovery;
@@ -107,6 +126,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.unroute('**/manuscript-edit?recovery=*');
     await page.keyboard.press(modShortcut('z'));
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
+    await versions.click();
     await page.locator('#manuscript-recover').click();
     await page.waitForFunction(() => document.querySelector('.cm-content').innerText.includes('My retained draft'));
     assert.match(await page.locator('.cm-content').innerText(), /My retained draft/);

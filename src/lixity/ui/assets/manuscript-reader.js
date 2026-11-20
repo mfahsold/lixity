@@ -1075,7 +1075,9 @@
       button.addEventListener("click", function() { choose(button.dataset.readerChoice); });
     });
   });
-  focus.addEventListener("click", function() { setFocus(!document.body.classList.contains("reader-focus")); });
+  focus.addEventListener("click", function() {
+    if (focus.getClientRects().length) setFocus(!document.body.classList.contains("reader-focus"));
+  });
   function codepointSpansToRanges(prose, text, spans) {
     if (!prose || !spans || !spans.length || prose.textContent !== text) return [];
     var offsets = [0], offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
@@ -1270,8 +1272,7 @@
     if ((event.key === "d" || event.key === "D") && !event.ctrlKey && !event.metaKey && !event.altKey &&
         !event.defaultPrevented && !event.isComposing &&
         !event.target.closest("dialog, [role=dialog], select, input, textarea, [contenteditable]")) {
-      if (directSpeechBtn && document.body.classList.contains("manuscript-reading") &&
-          !document.body.classList.contains("workbench-overview")) {
+      if (directSpeechBtn && directSpeechBtn.getClientRects().length) {
         event.preventDefault();
         retain(function() { setDirectSpeech(!directSpeechActive); });
         return;

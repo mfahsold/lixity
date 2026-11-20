@@ -117,7 +117,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
       assert.equal(await entries.count(), 3, 'The overview starts with three editorial workflows');
       assert.deepEqual(await entries.evaluateAll(nodes => nodes.map(n => n.dataset.analysisWorkflow)),
         ['review', 'compare', 'explore']);
-      assert.equal(await visiblePanels(), 0, 'The initial overview does not expand every analysis panel');
+      assert.equal(await visiblePanels(), 1, 'The initial overview shows one measured summary');
+      const initialMeasurements = page.locator('#analysis-measurements');
+      assert.equal(await initialMeasurements.getAttribute('open'), '');
+      assert.equal(await initialMeasurements.locator('.kpi').first().isVisible(), true);
+      assert.equal(await page.locator('#text-search').isVisible(), false,
+        'Manuscript search stays with the reading view');
+      const initialSummary = await initialMeasurements.locator(':scope > summary').boundingBox();
+      assert.ok(initialSummary.y >= 0 && initialSummary.y + initialSummary.height <= 900,
+        `${locale}/${width}: the default measurement heading is visible on arrival`);
       assert.equal(await page.locator('#analysis-sections').isVisible(), false,
         'The exhaustive section navigation is replaced by the workflow chooser');
       assert.equal(await page.locator('#analysis-outline-nav').isVisible(), false,
@@ -132,6 +140,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
         'Every workflow label is wholly visible');
       if (width<=390) assert.equal(new Set(orientation.entries.map(rect=>Math.round(rect.top))).size,3,
         'Mobile workflow entries form a readable single column');
+      if (locale === 'de' && width === 320) {
+        await page.setViewportSize({width, height: 640});
+        const jump = page.locator('#analysis-review-body a[href="#analysis-measurements"]');
+        await jump.press('Enter');
+        const firstValue = await initialMeasurements.locator('.kpi').first().boundingBox();
+        assert.ok(firstValue.y >= 0 && firstValue.y + firstValue.height <= 640,
+          'The overview shortcut reaches measured values on a short screen');
+        await page.setViewportSize({width, height: 900});
+      }
       async function selectSection(target, scroll = true) {
         const choice = navigation.locator(`[data-analysis-section-target="${target}"]`);
         const workflow = await choice.getAttribute('data-analysis-section-workflow');
@@ -174,8 +191,16 @@ async function pinnedIdentity(page, panel, cellIndex) {
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
       for (const target of ['flags','pacing','scenes','dialogue','showing','characters','motifs','style','matrix']) {
         await selectSection(target);
-        await assertMetricLink(page.locator(`#${target} > p a[href*="/guides/metrics/"]`),
-          `${guideBase}#${target}`, guideLabel);
+        if (target === 'style') {
+          await page.locator('#style-tab-structural').click();
+          await assertMetricLink(page.locator('#structural > p a[href*="/guides/metrics/"]'),
+            `${guideBase}#structural`, guideLabel);
+          assert.equal(await page.locator('#style > h2, #style > p a[href*="/guides/metrics/"]').locator('visible=true').count(), 0,
+            'The nested style workflow has a single visible title and method link');
+        } else {
+          await assertMetricLink(page.locator(`#${target} > p a[href*="/guides/metrics/"]`),
+            `${guideBase}#${target}`, guideLabel);
+        }
         if (target === 'pacing') {
           await assertMetricLink(page.locator('#pacing #dist > p a[href*="/guides/metrics/"]'),
             `${guideBase}#dist`, guideLabel);

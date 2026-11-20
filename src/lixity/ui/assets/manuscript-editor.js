@@ -22,7 +22,7 @@
     b.type = 'button';
     b.className = opts.className || 'ctl ctl-sm';
     b.id = id;
-    b.setAttribute('aria-label', label);
+    b.setAttribute('aria-label', opts.accessibleName || label);
     b.setAttribute('title', help || label);
     if (opts.icon && window.LixityIcons && typeof window.LixityIcons.svg === 'function') {
       const iconWrap = document.createElement('span');
@@ -66,15 +66,20 @@
   const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools manuscript-editor-toolbar'; section.append(tools);
   const historyGroup = document.createElement('div'); historyGroup.className = 'editor-tool-group editor-group-history';
   const formatGroup = document.createElement('div'); formatGroup.className = 'editor-tool-group editor-group-format';
-  const versionsGroup = document.createElement('div'); versionsGroup.className = 'editor-tool-group editor-group-versions manuscript-edit-secondary';
+  formatGroup.setAttribute('role', 'group'); formatGroup.setAttribute('aria-label', L('editor_formatting'));
+  const versions = document.createElement('details'); versions.id = 'manuscript-versions'; versions.className = 'panel-disclosure';
+  const versionsSummary = document.createElement('summary'); versionsSummary.className = 'ctl ctl-sm'; versionsSummary.textContent = L('editor_versions');
+  const versionsGroup = document.createElement('div'); versionsGroup.className = 'panel editor-versions-panel';
+  const versionActions = document.createElement('div'); versionActions.className = 'row';
+  versions.append(versionsSummary, versionsGroup);
   const contextGroup = document.createElement('div'); contextGroup.className = 'editor-tool-group editor-group-context';
   const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
-  tools.append(historyGroup, formatGroup, versionsGroup, contextGroup, statusGroup);
+  tools.append(historyGroup, formatGroup, contextGroup, versions, statusGroup);
   const fmtWords = ['editor_fmt_h2', 'editor_fmt_bold', 'editor_fmt_italic', 'editor_fmt_break'].map(L);
-  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl ctl-sm editor-fmt-btn'});
-  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B'});
-  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I'});
-  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl ctl-sm editor-fmt-btn'});
+  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[0]});
+  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B', accessibleName: L('editor_bold')});
+  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I', accessibleName: L('editor_italic')});
+  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[3]});
   formatGroup.append(fmtH2, fmtBold, fmtItalic, fmtBreak);
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
@@ -236,15 +241,15 @@
       if (generation !== before || dirty || inflight) return;
       if (recovered.document !== snapshot.document) throw new Error('Recovery document mismatch');
       paused = true; pending = null; editor.replace(recovered.text); dirty = true;
-      note.textContent = text(14); show('unsaved', text(15)); editor.focus();
+      note.textContent = text(14); show('unsaved', text(15)); versions.open = false; editor.focus();
     } catch (error) {show('error', error.message);}
   }, null, {icon: 'rotate-ccw'});
-  const downloadBtn = button(text(10), 'manuscript-download', download, text(10), {icon: 'download', iconOnly: true});
+  const downloadBtn = button(text(10), 'manuscript-download', download, text(10), {icon: 'download'});
   const discardBtn = button(text(12), 'manuscript-discard', async () => {
     if (!recovery.value || !confirm(text(12) + '?')) return;
     try {await request('/manuscript-edit-discard', {document: snapshot.document, id: recovery.value}); await refreshRecovery();}
     catch (error) {show('error', error.message);}
-  }, text(12), {icon: 'trash-2', iconOnly: true});
+  }, text(12), {icon: 'trash-2'});
   function syncRecoveryActions() {
     const hasSelection = Boolean(recovery.value);
     recoverBtn.hidden = !hasSelection;
@@ -301,7 +306,7 @@
     if (!comparisonSnapshot || inflight) return;
     paused = true; pending = null; snapshot = comparisonSnapshot; comparisonSnapshot = null;
     editor.replace(comparisonFields[2].field.value); dirty = true;
-    comparison.close(); show('unsaved', text(15)); editor.focus();
+    comparison.close(); versions.open = false; show('unsaved', text(15)); editor.focus();
   }, null, {icon: 'check', className: 'ctl primary'});
   const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape', className: 'ctl'});
   const comparisonActions = document.createElement('div'); comparisonActions.className = 'modal-footer'; comparisonActions.append(comparisonCancel,comparisonUse);
@@ -332,8 +337,12 @@
       comparisonCancel.focus();
     } catch (error) {show('error',error.message);}
     finally {comparisonLoading = false;}
-  }, null, {icon: 'git-compare', iconOnly: true});
-  versionsGroup.append(recovery, recoverBtn, discardBtn, compareBtn, downloadBtn);
+  }, null, {icon: 'git-compare'});
+  versionActions.append(recoverBtn, discardBtn, compareBtn, downloadBtn);
+  versionsGroup.append(recovery, versionActions);
+  document.addEventListener('click', event => {
+    if (versions.open && !versions.contains(event.target) && !comparison.contains(event.target)) versions.open = false;
+  });
   contextGroup.append(reload);
   function dockCompanionTools(intoEditor) {
     if (!companionControls) return;
@@ -358,12 +367,16 @@
     #manuscript-reading-status {margin-inline-start:auto;font-size:var(--text-small,.8125rem);color:var(--muted);font-weight:500;}
     #manuscript-reading-frame {flex:1;width:100%;min-height:0;border:0;border-radius:var(--radius,12px);background:var(--bg);}
     #manuscript-reading-frame[hidden] {display:none;}
-    #manuscript-editor {min-width:0;padding:4px 0 24px;width:100%;}
+    #manuscript-editor {container:editor-tools / inline-size;min-width:0;padding:4px 0 24px;width:100%;}
     .manuscript-edit-tools {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0;}
-    .manuscript-editor-toolbar {container:editor-tools / inline-size;position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius-sm,8px);box-shadow:var(--shadow);box-sizing:border-box;max-width:100%;}
+    .manuscript-editor-toolbar {position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius-sm,8px);box-shadow:var(--shadow);box-sizing:border-box;max-width:100%;}
     .editor-tool-group {display:inline-flex;align-items:center;gap:4px;min-width:0;flex:0 1 auto;}
     .editor-group-history,.editor-group-format {flex-shrink:0;}
-    .editor-group-versions,.editor-group-context {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
+    .editor-group-context {padding-inline-start:var(--space-2);border-inline-start:1px solid var(--line);}
+    .editor-group-context:not(:has(> :not([hidden]))) {display:none;}
+    #manuscript-versions > summary {min-block-size:2rem;gap:var(--space-2);padding:var(--space-1) var(--space-2);white-space:nowrap;}
+    .editor-versions-panel {position:absolute;inset-block-start:calc(100% + var(--space-1));inset-inline-end:0;width:min(27rem,100%);margin:0;display:grid;gap:var(--space-2);max-height:60dvh;overflow:auto;}
+    .manuscript-editor-toolbar .editor-versions-panel button.ctl {white-space:normal;text-align:start;line-height:var(--line-control);}
     .editor-group-status {margin-inline-start:auto;padding-inline-start:6px;gap:6px;}
     .manuscript-editor-toolbar .reader-controls {display:inline-flex;align-items:center;flex-basis:auto;gap:4px;}
     .manuscript-editor-toolbar button.ctl {padding:.25rem .5rem;min-height:2rem;white-space:nowrap;}
@@ -376,7 +389,7 @@
     #manuscript-save-status {min-width:0;flex:0 1 auto;font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12rem;}
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
-    #manuscript-recovery {max-width:10.5rem;min-width:5.5rem;flex:0 1 10.5rem;min-height:2rem;padding-block:.2rem;font-size:var(--text-note,.8125rem);}
+    #manuscript-recovery {width:100%;min-width:0;}
     .manuscript-editor-toolbar button.editor-fmt-btn {min-width:2rem;padding-inline:.45rem;font-size:.82rem;font-weight:650;}
     .manuscript-editor-toolbar button.editor-fmt-italic {font-style:italic;font-family:var(--font-title,serif);}
     .manuscript-editor-toolbar .editor-group-format {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
@@ -394,37 +407,32 @@
     .manuscript-comparison-chapters li {color:var(--fg);}
     .manuscript-comparison-chapters li small {color:var(--muted);margin-inline-start:6px;}
     #manuscript-editor-host .cm-line.lixity-session-edited {box-shadow:inset 2px 0 0 var(--accent,#2f5aa8);}
-    @container editor-tools (max-width: 76rem) {
+    @container editor-tools (max-width: 60rem) {
       #manuscript-search .editor-tool-label,
       .manuscript-editor-toolbar #workspace-reader-toggle .reader-control-label {display:none;}
       #manuscript-search,
       .manuscript-editor-toolbar #workspace-reader-toggle {padding-inline:.45rem;min-width:2rem;justify-content:center;}
-      #manuscript-recovery {max-width:9rem;flex-basis:9rem;}
-    }
-    @container editor-tools (max-width: 60rem) {
-      #manuscript-read .editor-tool-label,
-      #manuscript-recover .editor-tool-label,
-      #manuscript-compare .editor-tool-label,
       #manuscript-save .editor-tool-label,
       .manuscript-editor-toolbar #manuscript-close .reader-control-label {display:none;}
-      #manuscript-read,
-      #manuscript-recover,
-      #manuscript-compare,
-      #manuscript-save,
-      .manuscript-editor-toolbar #manuscript-close {padding-inline:.45rem;min-width:2rem;justify-content:center;}
-      #manuscript-recovery {max-width:8.5rem;flex-basis:8.5rem;}
-      #manuscript-save-status {max-width:8rem;padding-inline:7px;}
+      #manuscript-save,.manuscript-editor-toolbar #manuscript-close {padding-inline:.45rem;min-width:2rem;justify-content:center;}
+      .editor-tool-group {gap:var(--space-1);}
+      .manuscript-editor-toolbar .editor-group-format,.editor-group-context,.editor-group-status {padding-inline-start:var(--space-1);}
+      #manuscript-save-status {padding-inline:var(--space-1);}
     }
-    @media(max-width:760px) {
+    @container editor-tools (max-width: 42rem) {
+      .manuscript-editor-toolbar .editor-tool-group > button,
+      .manuscript-editor-toolbar .editor-tool-group .reader-controls > button {min-inline-size:2rem;padding-inline:var(--space-1);}
+      #manuscript-versions > summary {gap:var(--space-1);padding-inline:var(--space-1);}
+      #manuscript-save-status[data-state=saved] {flex-shrink:0;}
+    }
+    @container editor-tools (max-width: 36rem) {
       .manuscript-editor-toolbar {flex-wrap:wrap;}
       .editor-tool-group {flex-wrap:wrap;flex-shrink:1;max-width:100%;}
-      .editor-group-versions,.editor-group-context {padding-inline-start:0;border-inline-start:0;}
+      .editor-group-context {padding-inline-start:0;border-inline-start:0;}
       .editor-group-status {margin-inline-start:0;padding-inline-start:0;}
-      #manuscript-compare .editor-tool-label {display:none;}
     }
     @media(max-width:600px) {
-      .manuscript-editor-toolbar button.ctl, #manuscript-recovery {min-height:2.75rem;}
-      #manuscript-recovery {min-width:0;flex:1 1 8rem;max-width:100%;}
+      .manuscript-editor-toolbar button.ctl, #manuscript-versions > summary {min-height:2.75rem;}
       #manuscript-session-pulse-wrap {align-items:stretch;}
       .manuscript-pulse-btn {text-align:center;min-height:2.75rem;}
       #manuscript-pulse-popover {width:100%;}
@@ -808,6 +816,7 @@
       return;
     }
     // Keep the mounted editor and its undo history; only leave the writing surface.
+    versions.open = false;
     section.hidden = true; document.body.classList.remove('manuscript-writing');
     dockCompanionTools(false);
     closeButton.hidden = true; openButton.hidden = false;

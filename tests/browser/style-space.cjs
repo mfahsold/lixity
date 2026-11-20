@@ -78,6 +78,13 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     try { await run(); results.push({name, passed: true}); }
     catch (error) { results.push({name, passed: false, error: error.message}); }
   }
+  async function canvasDigest() {
+    const bitmap = await page.locator('#dim-3d-canvas').evaluate(async canvas => {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return canvas.toDataURL();
+    });
+    return createHash('sha256').update(bitmap).digest('hex');
+  }
   await check('invalid cutoffs disable the plot and explain unavailability without replacing chapter evidence', async () => {
     for (const threshold of [undefined, 0, -1, '2.5', null, NaN, Infinity]) {
       for (const width of [320, 1280]) {
@@ -340,11 +347,18 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     } finally { await report.close(); }
   });
   await check('planar projection retains scores and exposes its state', async () => {
-    await page.locator('#dim-projection').selectOption('d1-d2');
+    const projection = page.locator('#dim-projection');
+    assert.equal(await projection.evaluate(node => getComputedStyle(node).opacity), '1');
+    await projection.focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'dim-chapter-select');
+    await projection.selectOption('d1-d2');
     assert.equal(await page.locator('#dim-3d-canvas').getAttribute('data-projection'), 'd1-d2');
     assert.equal(await page.locator('#dim-ctl-spin').isDisabled(), true);
-    await page.locator('#dim-projection').selectOption('3d');
+    assert.equal(await page.locator('#dim-3d-view #dim-legend-note').isVisible(), true);
+    await projection.selectOption('3d');
     assert.equal(await page.locator('#dim-ctl-spin').isDisabled(), false);
+    assert.equal(await page.locator('#dim-expert #dim-legend-note').count(), 1);
   });
   await check('idle canvas does not animate', async () => {
     await page.waitForTimeout(150);
@@ -404,13 +418,6 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     assert.equal(await page.locator('.dim-navigation button').count(), 6);
     await page.locator('#dim-ctl-reset').click();
     await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
-    async function canvasDigest() {
-      const bitmap = await page.locator('#dim-3d-canvas').evaluate(async canvas => {
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        return canvas.toDataURL();
-      });
-      return createHash('sha256').update(bitmap).digest('hex');
-    }
     const initial = await canvasDigest();
     for (const id of ['dim-ctl-left', 'dim-ctl-right', 'dim-ctl-up', 'dim-ctl-down', 'dim-ctl-zoom-in', 'dim-ctl-zoom-out']) {
       const control = page.locator('#' + id);
@@ -436,7 +443,16 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
   await check('zoomed point hit testing matches drawing', async () => {
     await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
     const box = await page.locator('#dim-3d-canvas').boundingBox();
-    for (let iteration = 0; iteration < 8; iteration++) await page.locator('#dim-3d-canvas').dispatchEvent('wheel',{deltaY:-100});
+    const canvas = page.locator('#dim-3d-canvas');
+    const wheel = shiftKey => canvas.evaluate((node, held) => {
+      const event = new WheelEvent('wheel', {deltaY:-100, shiftKey:held, bubbles:true, cancelable:true});
+      node.dispatchEvent(event);
+      return event.defaultPrevented;
+    }, shiftKey);
+    const beforeZoom = await canvasDigest();
+    assert.equal(await wheel(false), false, 'Normal wheel scrolling stays with the page');
+    assert.equal(await canvasDigest(), beforeZoom);
+    for (let iteration = 0; iteration < 8; iteration++) assert.equal(await wheel(true), true);
     const zoom = Math.pow(1.08,8);
     const radius = Math.min(box.width,box.height)*0.4;
     const normalized = 3/(2.5*1.35)*radius*zoom;
@@ -455,6 +471,43 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     const dimensions = await page.locator('#dimensions').evaluate(element => ({scroll:element.scrollWidth,width:element.clientWidth}));
     assert.ok(dimensions.scroll <= dimensions.width + 1, JSON.stringify(dimensions));
     assert.equal(await page.locator('.dim-canvas-wrap').evaluate(element => element.clientHeight), 260);
+    assert.equal(await page.locator('#dim-chapter-select').evaluate(node =>
+      node.getBoundingClientRect().bottom < document.getElementById('dim-canvas').getBoundingClientRect().top), true);
+  });
+  await check('a long tooltip stays inside the plot and a vertical touch gesture scrolls the page', async () => {
+    const mobile = await browser.newPage({viewport:{width:320,height:850},hasTouch:true});
+    const longTitle = 'UnbrokenSyntheticChapterTitle'.repeat(12);
+    const longPayload = {...payload, points:[{...payload.points[0], title:longTitle}, payload.points[1]]};
+    const longEncoded = JSON.stringify(longPayload).replaceAll('&','&amp;').replaceAll('"','&quot;')
+      .replaceAll('<','&lt;').replaceAll('>','&gt;');
+    try {
+      await mobile.route('http://lixity.test/**', route => route.fulfill({
+        contentType:'text/html', body:original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${longEncoded}"`),
+      }));
+      await mobile.goto('http://lixity.test/');
+      await mobile.locator('#style-tab-dimensions').click();
+      const canvas = mobile.locator('#dim-3d-canvas');
+      await canvas.evaluate(node => node.scrollIntoView({block:'center', behavior:'instant'}));
+      const box = await canvas.boundingBox();
+      const x = box.x + box.width / 2, y = box.y + box.height / 2;
+      await mobile.mouse.move(x, y);
+      assert.equal(await mobile.locator('.dim-tt-title').textContent(), longTitle);
+      assert.equal(await mobile.locator('#dim-3d-tooltip').evaluate(node => {
+        const tip = node.getBoundingClientRect(), plot = node.parentElement.getBoundingClientRect();
+        return tip.left >= plot.left && tip.right <= plot.right && tip.top >= plot.top && tip.bottom <= plot.bottom;
+      }), true);
+      const scroll = await mobile.evaluate(() => scrollY);
+      const session = await mobile.context().newCDPSession(mobile);
+      try {
+        const start = y + 70;
+        await session.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x,y:start}]});
+        for (let distance = 30; distance <= 150; distance += 30) {
+          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x,y:start-distance}]});
+        }
+        await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+      } finally {await session.detach();}
+      await mobile.waitForFunction(before => scrollY > before + 50, scroll, {timeout:2000});
+    } finally {await mobile.close();}
   });
   await check('loading bars leave room for their labels', async () => {
     const widths = await page.locator('#dimensions .load b').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));

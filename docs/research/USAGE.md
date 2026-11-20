@@ -627,9 +627,10 @@ lixity research dossier-from-manuscript --project ./novel --manuscript ./manuscr
 Both commands accept `--language` to override the project's configured analysis
 language, and `--kind` accepts `all`, `character`, or `scene` (`dossier-drafts`
 defaults to `all`; `dossier-from-manuscript` defaults to `character` when
-`--draft-id` is omitted). In the browser workspace, **Draft dossier from
-manuscript** under **Research -> Dossiers** loads these read-only drafts and lets
-you save a selected draft explicitly.
+`--draft-id` is omitted). In the browser workspace, open **Research → Dossiers
+→ From manuscript** and select **Load suggestions**. Review the character,
+place or scene proposal before saving it as a dossier. **New dossier** in
+the toolbar opens the manual form, where you can choose the **Character** template.
 
 <a id="configured-terms-and-boundary-policies"></a>
 

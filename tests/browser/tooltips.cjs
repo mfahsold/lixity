@@ -12,6 +12,8 @@ const script = ['vendor/preact-10.29.8.min.js', 'vendor/htm-3.1.1.umd.js', 'comp
   .map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tooltips-'));
 const explanation = 'A dossier holds synthetic notes and optional passage references; it is not an accepted claim.';
+const comparison = 'l. 22 · Sentence length: 4.4 words per sentence · below the chapter median · z = -6.43';
+const comparisonAction = 'Explain measurement';
 
 (async () => {
   const useFirefox = process.argv.includes('--firefox');
@@ -32,6 +34,8 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
           dialog {width:min(30rem, 90vw);padding:1rem}
         </style><body>
         <button id="navigation" type="button" title="Show sources">Sources</button>
+        <button id="comparison-badge" type="button" aria-label="${comparison}. ${comparisonAction}"
+          title="${comparison}" style="position:fixed;top:50px;left:20px">↓ 4.4</button>
         <button id="second-action" type="button" data-help="Second action explanation." style="position:fixed;top:150px;left:120px">Other</button>
         <button id="plain-one" type="button" style="position:fixed;top:100px;left:20px">First</button>
         <button id="plain-two" type="button" style="position:fixed;top:100px;left:120px">Second</button>
@@ -66,6 +70,13 @@ const explanation = 'A dossier holds synthetic notes and optional passage refere
       const help = page.locator('#help');
       const tip = page.locator('#lixity-tooltip');
       const copy = tip.locator('.tooltip-copy');
+
+      const badge = page.locator('#comparison-badge');
+      await badge.focus();
+      await expect(tip.locator('.tooltip-heading')).toHaveText(comparisonAction);
+      await expect(copy).toHaveText(comparison);
+      await expect(badge).toHaveAccessibleName(comparison + '. ' + comparisonAction);
+      await page.keyboard.press('Escape');
 
       await page.locator('#appearance-action').focus();
       await expect(tip).toHaveAttribute('aria-hidden', 'false');

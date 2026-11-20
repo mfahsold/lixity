@@ -35,7 +35,7 @@ const fullMatrixRoutes = new Set([...homeRoutes, 'guides/first-look.html', 'guid
   'sandbox/index.html', 'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes, ...publicationAnalysisRoutes,
   ...metricReferenceRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
-  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
+  'blog/whats-new-lixity.html', 'examples/effi-briest.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
 let origin;
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
@@ -141,6 +141,11 @@ async function returnToTop(page, route) {
 }
 
 async function checkReturnNavigation(page, route, exercise) {
+  if (route === 'demo/report.html') {
+    await expect(page.locator('body.lixity-workspace')).toHaveCount(1);
+    await expect(page.locator('.site-return, .site-breadcrumbs, .site-back-top')).toHaveCount(0);
+    return;
+  }
   if (publicationAnalysisRoutes.has(route)) {
     const back = page.getByRole('link', {name: 'Back to reading copy'});
     await expect(back).toBeVisible();
@@ -161,11 +166,6 @@ async function checkReturnNavigation(page, route, exercise) {
     await expect(page.locator('.site-header .brand')).toHaveAttribute('aria-current', 'page');
     await expect(navigation.getByRole('link', {name: 'Home', exact: true})).toHaveCount(0);
     await expect(navigation.getByRole('link', {name: 'Demo', exact: true})).toHaveCount(0);
-  } else if (route === 'demo/report.html') {
-    await expect(navigation.getByRole('link', {name: 'About Lixity', exact: true})).toHaveAttribute('href', '../');
-    await expect(navigation.locator('a')).toHaveCount(2);
-    await expect(navigation).toContainText('Read-only demo');
-    await expect(breadcrumbs).toHaveCount(0);
   } else if (publicationRoutes.has(route)) {
     await expect(navigation.locator('a')).toHaveCount(5);
     await expect(navigation.getByRole('link', {name:'Author workspace', exact:true})).toHaveAttribute('href', '../report.html');
@@ -205,8 +205,7 @@ async function checkReturnNavigation(page, route, exercise) {
   const menuBefore = await navigation.boundingBox();
   // The Reading menu intentionally closes on focus leaving it. The public
   // provenance disclosure keeps the persistent native state checked here.
-  const disclosure = route === 'demo/report.html' ? page.locator('#example-context')
-    : page.locator('details:visible').filter({has: page.locator('summary:visible')}).first();
+  const disclosure = page.locator('details:visible').filter({has: page.locator('summary:visible')}).first();
   const hasDisclosure = await disclosure.count();
   const initiallyOpen = hasDisclosure ? await disclosure.getAttribute('open') !== null : false;
   if (hasDisclosure) await disclosure.locator('summary').first().click();
@@ -897,23 +896,30 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     assert.ok(sidebar.x + sidebar.width <= work.x, 'The public demo retains the native desktop sidebar');
   }
   await expect(page.locator('h1')).toHaveText(demoTitle);
+  const snapshotNotice = page.locator('.workspace-shell .site-read-only-notice');
+  await expect(snapshotNotice).toBeVisible();
+  await expect(snapshotNotice).toContainText('Read-only snapshot');
+  if (javaScriptEnabled && (width >= 1100 || width <= 390)) {
+    const firstProse = page.locator('#chapters .ptext-inner > p').first();
+    await expect(firstProse).toBeVisible();
+    const firstProseY = await firstProse.evaluate(paragraph => paragraph.getBoundingClientRect().top + scrollY);
+    const limit = width >= 1100 ? 420 : 800;
+    assert.ok(firstProseY <= limit, `The workspace reaches prose within ${limit}px at ${width}px, got ${firstProseY}`);
+  }
   const context = page.locator('details#example-context');
   await expect(context).not.toHaveAttribute('open', '');
   await context.locator(':scope > summary').click();
   await expect(context).toContainText('cannot import, edit or save');
+  await expect(context.locator('a[href="../"]')).toBeVisible();
   await expect(context.locator('a[href="../guides/installation.html"]')).toBeVisible();
   await context.locator(':scope > summary').click();
-  if (javaScriptEnabled && (width === 320 || width === 390)) {
-    await page.locator('#tab-view-analysis').click();
-    await expect(page.locator('#chapters')).toBeVisible();
-    const firstProseY = await page.locator('#chapters .ptext-inner > p').first().evaluate(
-      paragraph => paragraph.getBoundingClientRect().top + scrollY,
-    );
-    assert.ok(firstProseY < 1200, `The compact demo reaches prose within 1200px, got ${firstProseY}`);
-  }
   if (javaScriptEnabled) {
     await expect(page.locator('#tab-view-project')).toBeHidden();
-    await expect(page.locator('.site-read-only-notice')).toBeVisible();
+    await page.locator('#workbench-overview-open').click();
+    await expect(page.locator('#analysis-measurements .kpi').first()).toBeVisible();
+    await expect(page.locator('#manuscript-analysis-panels > :visible')).toHaveCount(1);
+    await page.locator('#workbench-overview-back').click();
+    await expect(page.locator('#chapters')).toBeVisible();
   }
   for (const layout of ['editor', 'book', 'sheet', 'report', 'document']) {
     await expect(page.locator(`a[href="warehouse-4-${layout}.pdf"]`).first()).toBeVisible();
@@ -927,10 +933,18 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#tab-view-research')).toBeVisible();
   await expect(page.locator('#tab-view-project')).toBeHidden();
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
-  const quickStart = page.locator('#demo-quick-start');
-  await expect(quickStart).toBeVisible();
+  const quickStart = page.locator('.workspace-shell details#demo-quick-start');
+  const quickStartSummary = quickStart.locator(':scope > summary');
+  await expect(quickStartSummary).toHaveText('Try the draft examples');
+  await expect(quickStart).not.toHaveAttribute('open', '');
+  await expect(quickStart.getByRole('link', {name: 'Inspect chapter 2', exact: true})).toBeHidden();
+  await quickStartSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(quickStart).toHaveAttribute('open', '');
+  assert.ok(await quickStart.evaluate(node => node.scrollWidth <= node.clientWidth + 1),
+    'The expanded exercise guide stays within the native rail');
   await expect(quickStart).toContainText('Read “A board moved. Mara turned.” aloud.');
-  await expect(quickStart.locator('#demo-task-guide')).not.toHaveAttribute('open', '');
+  await expect(quickStart.locator('a[href="../sandbox/index.html"]')).toBeVisible();
   await quickStart.getByRole('link', {name: 'Inspect chapter 2', exact: true}).click();
   await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#view-pane-analysis')).toBeVisible();
@@ -947,14 +961,6 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     await expect(measured).toHaveText(await averages.nth(index).textContent());
   }
   await page.locator('#workbench-overview-back').click();
-  await quickStart.locator('#demo-task-guide > summary').click();
-  await expect(quickStart.locator('#demo-task-guide a[href="../sandbox/index.html"]')).toBeVisible();
-  const actionAndGuide = await quickStart.evaluate(node => ({
-    actionBottom: node.querySelector('[data-jump="#ch-2"]').getBoundingClientRect().bottom,
-    guideTop: node.querySelector('#demo-task-guide').getBoundingClientRect().top,
-  }));
-  assert.ok(actionAndGuide.actionBottom <= actionAndGuide.guideTop,
-    'Opening the instructions keeps primary actions before the expanded guide');
   await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
   await expect(page.locator('#style-layer')).toHaveValue('asl');
   await page.locator('#manuscript-analysis-toggle').click();
@@ -977,19 +983,21 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#workbench-overview-back').click();
   await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
   await expect(page.locator('#style-layer')).toHaveValue('asl');
-  await quickStart.getByRole('button', {name: 'Explore research'}).focus();
-  await page.keyboard.press('Enter');
+  await page.locator('#tab-view-analysis').focus();
+  const orientation = await page.locator('.view-navigation').getAttribute('aria-orientation');
+  await page.keyboard.press(orientation === 'vertical' ? 'ArrowDown' : 'ArrowRight');
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#tab-view-research')).toBeFocused();
   await expect(page.locator('#view-pane-research')).toBeVisible();
-  await expect(quickStart).toBeHidden();
+  await expect(quickStart).toBeVisible();
+  await expect(quickStart).toHaveAttribute('open', '');
   await assertDemoReadOnly(page);
   await page.locator('#tab-view-analysis').click();
   await expect(quickStart).toBeVisible();
-  await expect(quickStart.locator('#demo-task-guide')).toHaveAttribute('open', '');
-  await quickStart.locator('#demo-task-guide > summary').click();
+  await expect(quickStart).toHaveAttribute('open', '');
+  await quickStartSummary.click();
+  await expect(quickStart).not.toHaveAttribute('open', '');
   await showOverview(page);
-  await page.locator('#analysis-measurements').evaluate(node => { node.open = true; });
   await page.locator('#style-tab-heatmap').click();
   await page.locator('#heatmap [data-metric-feature=long_word_pct]').first().click();
   await expect(page.locator('#analysis-metric-context')).toBeVisible();
@@ -1247,6 +1255,10 @@ async function checkSandboxQuotationPairs(page) {
           if (!route && javaScriptEnabled && colorScheme === 'light' && !hasTouch && width !== 390) {
             await checkLazyPreviewStability(page);
           }
+          if (route === 'demo/report.html' && javaScriptEnabled && page.url().startsWith(origin + '/')) {
+            // Measure the default manuscript layout independently of the previously saved view.
+            await page.evaluate(() => localStorage.removeItem('lixity_active_view'));
+          }
           await page.goto(origin + '/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);
           const headings = await page.locator('h1,h2,h3,h4,h5,h6').evaluateAll(nodes => nodes.map(node => Number(node.tagName[1])));
@@ -1451,7 +1463,8 @@ async function checkSandboxQuotationPairs(page) {
         await page.locator('.hero-cta a.primary').click();
         await page.locator('.tour-explore[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The single discovery path leads from the tour to the demo');
-        await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
+        await page.locator('#example-context > summary').click();
+        await page.locator('#example-context a[href="../"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();

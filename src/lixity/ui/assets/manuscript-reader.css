@@ -26,7 +26,7 @@
 .reader-analysis-guide ol { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-inline-start: 1.5rem; }
 .reader-analysis-guide li .ctl { width: 100%; white-space: normal; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
-.manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
+.manuscript-reading.workbench-analysis:not(.reader-focus):not(.manuscript-writing) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
 .reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
@@ -401,7 +401,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 @keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
 @keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: 0; } }
 
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .strip { display: flex; margin: .6rem 0 1.25rem; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
@@ -447,7 +447,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 
 .manuscript-reading.workbench-overview .toolbar-sections { display: flex !important; }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]) { display: flex !important; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing) .layer-legend:not([hidden]) { display: flex !important; }
 .manuscript-reading.workbench-overview .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .toolbar > .legend { display: flex !important; }
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }

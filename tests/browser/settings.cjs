@@ -1,4 +1,5 @@
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -959,6 +960,12 @@ server.serve_forever()
         assert.equal(await field.isVisible(),true);
         assert.ok((await field.getAttribute('aria-describedby')).split(/\s+/).includes('settings-scope-help'));
       }
+      const registersToggle = page.locator('#settings-registers > summary');
+      await registersToggle.click();
+      for (const id of ['set-language', 'set-threshold-preset', 'set-fdr-method', 'set-flag-min-sev', 'register-template-select']) {
+        await assertSelectGeometry(page.locator('#' + id), `${id} (${language}, ${width}px)`);
+      }
+      await registersToggle.click();
       const author=page.locator('#set-author-name');
       assert.equal(await author.inputValue(),'Synthetic Writer');
       assert.equal(await author.isDisabled(),false);

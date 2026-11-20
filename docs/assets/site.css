@@ -15,7 +15,6 @@
   font: 400 var(--text-control)/1.5 var(--font);
 }
 .site-return { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
-.site-return .demo-context { align-self: center; font-size: var(--text-small); }
 .site-return a { display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--accent); text-underline-offset: .18em; }
 .site-return a[aria-current] { color: var(--fg); font-weight: 700; text-decoration-thickness: 2px; }
 .site-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: .25rem .6rem; list-style: none; margin: 0; padding: 0; }

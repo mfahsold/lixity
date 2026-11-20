@@ -35,7 +35,8 @@ def render(language, partial):
     html = style_structural([None] * 8, fp, labels=labels, language_key=language)
     return {'html': '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style>' + html,
         'unavailable': labels['structural_unavailable'],
-        'partial': labels['structural_partly_unavailable'],
+        'gap': labels['structural_boundary_gap'],
+        'coverage': labels['structural_gap_count'].format(observed=5 if not partial else 6, total=8),
         'trend': labels['structural_partial_trend'],
         'distribution': labels['structural_partial_distribution']}
 def zero_mad(language):
@@ -68,9 +69,13 @@ print(json.dumps({language: {**{str(partial): render(language, partial) for part
         assert.ok(await panel.isVisible());
         assert.equal(await panel.locator('.badge-success').count(), 0);
         assert.ok(await panel.getByText(data.trend, {exact: true}).isVisible());
-        if (mode === 'False') assert.equal(await panel.getByText(data.unavailable, {exact: true}).count(), 2);
+        await panel.getByText(data.coverage, {exact: true}).waitFor({state: 'visible'});
+        if (mode === 'False') {
+          assert.equal(await panel.getByText(data.unavailable, {exact: true}).count(), 1);
+          assert.ok(await panel.getByText(data.gap, {exact: true}).isVisible());
+        }
         else {
-          assert.ok(await panel.getByText(data.partial, {exact: true}).count() >= 1);
+          assert.equal(await panel.getByText(data.gap, {exact: true}).count(), 0);
           assert.ok(await panel.getByText(data.distribution, {exact: true}).isVisible());
         }
         assert.ok(await panel.evaluate(element => element.scrollWidth <= element.clientWidth + 1),

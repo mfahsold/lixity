@@ -115,6 +115,8 @@
 .workspace-reader-panel .setting-field { margin: 0; flex: 1 1 10rem; }
 .workspace-reader-panel .setting-field label { font-size: var(--text-small); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); }
 .workspace-reader-panel .setting-field select.ctl { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.4rem 0.65rem; }
+#workspace-reader-associations-field { margin-block-end: var(--space-2); }
+#workspace-reader-body[data-hide-dossier-text-associations] [data-dossier-text-association] { display: none; }
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }

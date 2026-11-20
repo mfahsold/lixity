@@ -348,7 +348,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert "exact manuscript quotations" in document
     assert 'href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>' in document
     assert 'href="#matrix" data-jump="#matrix">Compare chapters 1 and 2</a>' in document
-    assert 'id="demo-task-guide"' in document
+    assert 'id="demo-quick-start"><summary>Try the draft examples</summary>' in document
     assert 'Read “A board moved. Mara turned.” aloud.' in document
     assert 'id="demo-chapter-averages">Chapter 2 averages <strong>5.7</strong> words per sentence. ' in document
     assert 'Chapter 1 averages <strong>11.9</strong>.' in document

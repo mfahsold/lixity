@@ -304,7 +304,15 @@
       if (spec.id) input.id = spec.id;
       if (spec.help) input.dataset.help = spec.help;
       if (checkbox) { input.checked = spec.value === true; wrapper.append(input, label); }
-      else { input.value = spec.value == null ? "" : spec.value; wrapper.append(label, input); }
+      else {
+        input.value = spec.value == null ? "" : spec.value;
+        var control = input;
+        if (type === "select" && window.LixityIcons) {
+          control = this.el("span", {className: "ctl-select"});
+          control.append(input, window.LixityIcons.create("chevron-down"));
+        }
+        wrapper.append(label, control);
+      }
       parent.appendChild(wrapper);
       return input;
     },
@@ -536,7 +544,7 @@
       if (active && active !== document.body && active.closest && active.closest(CHROME_SELECTOR)) {
         return true;
       }
-      if (document.querySelector("#reader-settings[open], #reader-analysis-guide[open]")) return true;
+      if (document.querySelector("#reader-settings[open], #reader-analysis-guide[open], #manuscript-versions[open]")) return true;
       if (Array.from(document.querySelectorAll(".passage-jump-bar:not([hidden])")).some(function (bar) {
         return bar.getClientRects().length > 0;
       })) return true;

@@ -70,6 +70,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     fs.writeFileSync(source, external);
     await page.locator('.cm-content').click(); await page.keyboard.press(modShortcut('End')); await page.keyboard.type(' My draft.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='conflict');
+    await page.locator('#manuscript-versions > summary').click();
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();
     const reference = page.locator('#manuscript-comparison a[href*="/guides/metrics/"]');
@@ -112,6 +113,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
     await reviewedTimeline;
     assert.equal(fs.readFileSync(source,'utf8'),reviewed);
+    await page.locator('#manuscript-versions > summary').click();
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();
     await currentSummary.filter({hasText:'Average words per sentence 2.5'}).waitFor();

@@ -184,6 +184,7 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
         });
         await page.locator('#manuscript-write').click();
         await page.locator('.cm-content').waitFor({state: 'visible'});
+        await page.locator('#manuscript-versions > summary').click();
         await page.locator('#manuscript-compare').click();
         target = page.locator('#manuscript-comparison-draft');
         await target.waitFor({state: 'visible'});

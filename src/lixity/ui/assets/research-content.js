@@ -754,7 +754,7 @@ function researchDossierContentsHtml(markup) {
 // This reverse list projects current Claim.dossier_ref associations and
 // counts explicitly retained links against their pinned dossier association.
 // It never infers unwritten prose use or reconstructs historical dossier claims.
-async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
+async function enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAssociations) {
   var nav = host.querySelector('[data-section-nav="dossier"]');
   if (nav && !nav._dossierContents) {
     nav._dossierContents = true;
@@ -812,7 +812,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
       escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>' +
       '<button type="button" class="ctl ctl-sm">' + escapeHtml(uiLabel("research_dossier_claims_retry")) + '</button>';
     slot.querySelector("button").addEventListener("click", function() {
-      enhanceResearchDossierClaims(host, detail, stillCurrent);
+      enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAssociations);
     });
     return;
   }
@@ -824,21 +824,21 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
   var dossierLinks = linksAvailable ? manuscriptLinks.links.filter(function(link) {
     return link.state === "active" && link.dossier_id === detail.id;
   }) : [];
-  var dossierRoute = canOpenLinks && dossierLinks.length ? '<p><button type="button" class="ctl" data-manuscript-links-dossier="' +
+  var dossierRoute = canOpenLinks && dossierLinks.length ? '<p data-dossier-text-association><button type="button" class="ctl" data-manuscript-links-dossier="' +
     escapeHtml(detail.id) + '">' + escapeHtml(uiCountFormat("research_manuscript_quote_count", dossierLinks.length)) + '</button></p>' : '';
   function renderDossierClaimItem(claim, linked) {
     var confidence = ["evidenced", "disputed"].includes(claim.confidence) ? claim.confidence : "hypothetical";
     var badge = confidence === "evidenced" ? "badge-success" : confidence === "disputed" ? "badge-warning" : "badge-neutral";
     var usageText = escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) : uiLabel("research_manuscript_quote_none"));
-    var usage = linksAvailable ? '<p class="ctl-note">' +
+    var usage = linksAvailable ? '<p class="ctl-note" data-dossier-text-association>' +
       (canOpenLinks && linked.length ? '<button type="button" class="ctl ctl-sm" data-manuscript-link-count="' + linked.length +
         '" data-manuscript-links-claim="' + escapeHtml(claim.id) + '" data-manuscript-links-dossier="' + escapeHtml(detail.id) + '">' + usageText + '</button>' :
         '<span data-manuscript-link-count="' + linked.length + '">' + usageText + '</span>') + '</p>' :
       '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
     if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
-      usage += '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';
+      usage += '<p class="ctl-note" data-dossier-text-association>' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';
     if (linked.some(function(link) { return link.dossier_revision !== detail.revision; }))
-      usage += '<p class="ctl-note" data-dossier-version-review>' + escapeHtml(uiLabel("research_manuscript_quote_dossier_version")) + '</p>';
+      usage += '<p class="ctl-note" data-dossier-text-association data-dossier-version-review>' + escapeHtml(uiLabel("research_manuscript_quote_dossier_version")) + '</p>';
     return '<li><strong>' + escapeHtml(claim.title || uiLabel("research_revision_kind_claim")) + '</strong>' +
       '<div class="row"><span class="research-badge ' + badge + '">' +
       escapeHtml(uiLabel("research_confidence_" + confidence)) + '</span>' +
@@ -880,6 +880,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
   }
   slot.innerHTML = heading + '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_hint")) + '</p>' +
     dossierRoute + claimsHtml;
+  if (onTextAssociations) onTextAssociations(dossierLinks.length > 0);
 }
 
 function researchDossierSectionAction(detail, section) {

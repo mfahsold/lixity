@@ -63,7 +63,9 @@ def test_ui_reports_unavailable_and_partial_data_without_success_checks():
     fp = fingerprint([None, None, None, 2.0, 10.0, 11.0, 12.0, 13.0])
     fp.structural_diagnostics = fp._derive_structural_diagnostics()
     html = style_structural([None] * fp.n_chapters, fp)  # type: ignore[list-item]
-    assert html.count("Not enough comparable chapter measurements") == 2
+    assert html.count("Not enough comparable chapter measurements") == 1
+    assert "Not calculated. Finding candidate changes requires a complete chapter series" in html
+    assert "Chapters with complete measurements · 5 of 8" in html
     assert "badge-success" not in html
     assert "No candidate boundaries selected" not in html
     assert "No nominal distribution signals selected" not in html
@@ -74,4 +76,20 @@ def test_ui_reports_unavailable_and_partial_data_without_success_checks():
     fp.baseline["dialog_pct"] = {"n": 8, "sigma": 1.0}
     fp.structural_diagnostics = fp._derive_structural_diagnostics()
     html = style_structural([None] * fp.n_chapters, fp)  # type: ignore[list-item]
-    assert "Some features could not be calculated" in html
+    assert "of 1 tested features shortlisted for review" in html
+    assert "Chapters with complete measurements · 5 of 8" in html
+
+
+def test_single_gap_links_the_chapter_and_explains_the_effective_word_floor():
+    from lixity.models import ChapterMetrics
+    from lixity.style_fingerprint import MIN_COMPARABLE_WORDS
+    from lixity.ui.structural import style_structural
+
+    fp = fingerprint([1.0, 2.0, None, 4.0, 5.0, 6.0])
+    fp.structural_diagnostics = fp._derive_structural_diagnostics()
+    short = ChapterMetrics.model_construct(num=3, words=12)
+    html = style_structural([None] * fp.n_chapters, fp, chapter_metrics=[short])  # type: ignore[list-item]
+    assert "Chapters with complete measurements · 5 of 6" in html
+    assert '<a href="#ch-3" data-jump="#ch-3">Chapter 3</a>' in html
+    assert f"12 words measured, at least {MIN_COMPARABLE_WORDS} required" in html
+    assert "Not calculated." in html

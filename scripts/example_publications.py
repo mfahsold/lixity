@@ -149,7 +149,7 @@ def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -
 
 
 def _site_navigation(
-    report: str, title: str, *, demo: bool = False, breadcrumbs: bool = True,
+    report: str, title: str, *,
     links: tuple[tuple[str, str], ...] | None = None,
 ) -> str:
     """Keep public examples connected without adding external report assets."""
@@ -158,23 +158,14 @@ def _site_navigation(
     _require(stylesheet.count(start) == stylesheet.count(end) == 1,
              "the shared public navigation stylesheet must have one bounded block")
     styles = stylesheet.partition(start)[2].partition(end)[0]
-    navigation = (
-        '<nav class="site-return" aria-label="Lixity navigation">'
-        '<a href="../">About Lixity</a>'
-        '<span class="demo-context">Read-only demo · Fictional manuscript · '
-        '<a href="../guides/installation.html">Install local app</a></span>'
-        '</nav>'
-    ) if demo else (
-        '<nav class="site-return" aria-label="Lixity navigation">'
-        '<a href="../">Home</a><a href="../#guides">Guides</a>'
-        '<a href="../blog/index.html">Articles</a>'
-        '<a href="../demo/report.html">Demo</a>'
-        '</nav>'
+    public_links = links if links is not None else (
+        ("../", "Home"), ("../#guides", "Guides"),
+        ("../blog/index.html", "Articles"), ("../demo/report.html", "Demo"),
     )
-    if links is not None:
-        navigation = '<nav class="site-return" aria-label="Lixity navigation">' + ''.join(
-            f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a>' for href, label in links) + '</nav>'
-    if breadcrumbs and not demo:
+    navigation = '<nav class="site-return" aria-label="Lixity navigation">' + ''.join(
+        f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a>' for href, label in public_links
+    ) + '</nav>'
+    if links is None:
         navigation += (
             '<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
             '<li><a href="../">Home</a></li>' +
@@ -221,41 +212,36 @@ def _demo_quick_start(text: str, project: Path) -> str:
 
     checks = (
         (passage_link("It was only when she looked at it again", "Check a sticky sentence", "sticky"),
-         "What does the blank line tell Mara? Which words delay that detail?"),
+         "Which words delay Mara’s discovery?"),
         ('<a href="#motifs" data-jump="#motifs">Follow “For the time being”</a>',
-         "Three speakers reach for the same phrase. Open its occurrences to compare their voices."),
+         "Compare how three characters use the same phrase."),
         (passage_link("The foreman had brought the book", "Find the tense slip", ""),
-         "The narrative shifts from past to present as Mara reads the ledger. Read the verb forms in order."),
+         "Where does the narration shift to the present?"),
         (passage_link("Hansen said that he might", "Inspect reported speech", "indirect_speech"),
-         "Lixity marks “said that.” Compare it with the words inside quotation marks in the quay scene."),
+         "Compare “said that” with the dialogue in quotes."),
         (passage_link("No implement was recovered.", "Check a passive construction", "passive"),
-         "The customs note leaves the actor unnamed. In an action scene, would naming the actor make the event clearer?"),
+         "Would naming the actor clarify the event?"),
     )
     draft_examples = "".join(f"<li>{link}. {prompt}</li>" for link, prompt in checks)
     return (
-        '<section class="panel" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
-        '<h2 id="demo-quick-start-title">Why the short sentences?</h2>'
+        details_start("Try the draft examples", element_id="demo-quick-start")
         + panel_guide(
             f'Chapter 2 averages <strong>{averages[2]}</strong> words per sentence. '
-            f'Chapter 1 averages <strong>{averages[1]}</strong>. Read “A board moved. Mara turned.” aloud.',
+            f'Chapter 1 averages <strong>{averages[1]}</strong>. Read “A board moved. Mara turned.” aloud. '
+            'Does the shorter rhythm fit the action?',
             element_id="demo-chapter-averages",
         )
         + '<div class="row">'
         '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
         '<a class="ctl" href="#matrix" data-jump="#matrix">Compare chapters 1 and 2</a>'
         '</div>'
-        + details_start("Try the draft examples", element_id="demo-task-guide")
-        + '<p>The manuscript is a draft with deliberate rough spots. Choose a passage to decide what you would revise.</p>'
         + f'<ul>{draft_examples}</ul>'
-        + '<ol><li>Choose <strong>Inspect chapter 2</strong> and read the opening paragraph.</li>'
-        '<li>Use the paragraph’s <strong>… → Explore passage → Explain measurement</strong> to see what Lixity counted. '
-        'Turn on <strong>Counted text</strong> to see the sentence marks.</li>'
-        '<li>Read the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>. '
-        'How does the sentence rhythm change when Mara starts moving the crate?</li></ol>'
-        '<p><a href="../sandbox/index.html">Compare sentence lengths in your own text</a> or '
-        '<a href="../guides/installation.html">install Lixity to analyse a manuscript</a>.</p>'
-        '<button class="ctl" type="button" data-switch-view="research">Explore research</button>'
-        '</details></section>'
+        + '<p>Use <strong>… → Explore passage → Explain measurement</strong> to see what Lixity counted. '
+        'Compare the rhythm with the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>.</p>'
+        '<p><a href="../guides/first-look.html">Follow the walkthrough</a>.</p>'
+        '<p><a href="../sandbox/index.html">Compare sentence lengths in your own text</a>.</p>'
+        '<p><a href="#example-context">About this read-only demo</a></p>'
+        '</details>'
     )
 
 
@@ -325,7 +311,8 @@ def build_research_demo(root: Path, project: Path) -> Path:
         '<summary id="example-heading">About this read-only demo</summary>'
         '<p>Read in Manuscript, then explore the same project in Research. '
         'This demo cannot import, edit or save. It uses the same read-only website export as a local project.</p>'
-        '<div class="license-links"><a href="../guides/first-look.html">Follow the walkthrough</a>'
+        '<div class="license-links"><a href="../">About Lixity</a>'
+        '<a href="../guides/first-look.html">Follow the walkthrough</a>'
         '<a href="#demo-downloads">Download PDFs</a>'
         '<a href="../guides/installation.html">Install the local app</a></div>'
         + "".join("<p>" + paragraph + "</p>" for paragraph in about_paragraphs)
@@ -338,12 +325,9 @@ def build_research_demo(root: Path, project: Path) -> Path:
                 '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
     document = _insert_notice(document, fallback)
     quick_start = _demo_quick_start(text, project)
-    # Keep the example prompt inside the real Manuscript view so the existing
-    # workspace navigation hides it in Research and restores its disclosure state.
-    document, count = re.subn(r'(<div\b[^>]*\bid="view-pane-analysis"[^>]*>)',
-                              lambda match: match.group(1) + quick_start, document)
-    if count != 1:
-        raise ValueError("The demo must retain one native Manuscript view")
+    rail_footer = '<p class="workspace-product-details">'
+    _require(document.count(rail_footer) == 1, "the demo must retain one native workspace rail")
+    document = document.replace(rail_footer, quick_start + rail_footer, 1)
     credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
     for item, _content in reviewed_visual_sources():
         credits.append(f'<h3>{html.escape(item["title"])}</h3><p>{html.escape(item["created_period"])}. '
@@ -365,7 +349,6 @@ def build_research_demo(root: Path, project: Path) -> Path:
                 '<details><summary>Read the complete LICENSE</summary><pre id="demo-license-text" '
                 'style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--text-note)">' + license_text + '</pre></details></section>')
     document = document.replace("<footer>", notice + downloads + "".join(credits) + appendix + "<footer>", 1)
-    document = _site_navigation(document, title, demo=True, breadcrumbs=False)
     destination = root / "docs/demo/report.html"
     destination.parent.mkdir(parents=True, exist_ok=True)
     files["report.html"] = _finalize(document).encode("utf-8")
@@ -439,7 +422,7 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
         metadata = _head_metadata(canonical=f"{SITE}/demo/{mode}/index.html", title=title,
             description=description, language="en", analytics=False)
         document = document.replace("</head>", metadata + "</head>", 1)
-        document = _site_navigation(document, title, demo=True, breadcrumbs=False, links=(
+        document = _site_navigation(document, title, links=(
             ("../report.html", "Author workspace"), ("../reader/", "Read with context"),
             ("../companion/", "Companion only"), ("../../guides/first-look.html", "Short tour"),
             ("../../guides/installation.html", "Install app")))

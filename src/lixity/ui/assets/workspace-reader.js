@@ -11,10 +11,27 @@
   var select = document.getElementById("workspace-reader-dossier");
   var refresh = document.getElementById("workspace-reader-refresh");
   var close = document.getElementById("workspace-reader-close");
+  var associations = document.getElementById("workspace-reader-associations");
+  var associationsField = document.getElementById("workspace-reader-associations-field");
   var status = document.getElementById("workspace-reader-status");
   var body = document.getElementById("workspace-reader-body");
   if (!toggle) return;
   var enabled = false, requestSerial = 0, projectId = null, lastCatalogue = null, requestedDossier = null;
+  function syncTextAssociations(available) {
+    if (!associations || !associationsField) return;
+    associationsField.hidden = !available;
+    body.toggleAttribute("data-hide-dossier-text-associations", available && !associations.checked);
+  }
+  if (associations && associationsField) {
+    var associationPreference = "lixity.manuscript.dossier-text-associations";
+    try { associations.checked = localStorage.getItem(associationPreference) !== "0"; }
+    catch (_) { /* The display control works without persistence. */ }
+    associations.addEventListener("change", function() {
+      syncTextAssociations(!associationsField.hidden);
+      try { localStorage.setItem(associationPreference, associations.checked ? "1" : "0"); }
+      catch (_) { /* Local display preference only. */ }
+    });
+  }
   function current(serial, projectToken, researchToken) {
     return enabled && serial === requestSerial && projectToken === container.dataset.projectToken &&
       researchToken === bridge.contextToken();
@@ -95,6 +112,7 @@
     var serial = ++requestSerial;
     var projectToken = container.dataset.projectToken, researchToken = bridge.contextToken();
     body.replaceChildren();
+    syncTextAssociations(false);
     if (!id) { message(bridge.label("reader_choose")); pending(false); return; }
     pending(true);
     message(bridge.label("research_loading"), "loading");
@@ -111,7 +129,7 @@
     var content = document.createElement("div");
     content.innerHTML = bridge.renderDossier(result);
     body.appendChild(content);
-    bridge.enhanceDossier(content, result, function() { return current(serial, projectToken, researchToken); });
+    bridge.enhanceDossier(content, result, function() { return current(serial, projectToken, researchToken); }, syncTextAssociations);
     message(bridge.label("reader_saved") + " " + bridge.label("research_revision_number").replace("{revision}", result.revision || 1));
   }
   async function openDossiers(selectedId) {
@@ -119,6 +137,7 @@
     var projectToken = container.dataset.projectToken, researchToken = bridge.contextToken();
     pending(true);
     body.replaceChildren();
+    syncTextAssociations(false);
     message(bridge.label("research_loading"), "loading");
     var result = await bridge.read(query());
     if (!current(serial, projectToken, researchToken)) return;

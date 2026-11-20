@@ -276,16 +276,7 @@
           else if (workbench) workbench.dispatch({ type: "view", value: "research" });
           var dosTab = document.querySelector('#research-tab-dossiers, [data-rtab="dossiers"]');
           if (dosTab) dosTab.click();
-          var composer = document.getElementById("r-dos-composer");
-          if (composer) composer.open = true;
-          var titleField = document.getElementById("r-dos-title");
-          if (titleField) {
-            if (typeof scrollAndFlash === "function") scrollAndFlash(titleField, { block: "nearest" });
-            titleField.focus({ preventScroll: true });
-          } else {
-            var newBtn = document.querySelector("#research-new-dossier, [data-research-action='new-dossier']");
-            if (newBtn) newBtn.click();
-          }
+          openResearchDossierComposer();
         }
       },
       {
@@ -684,7 +675,7 @@
     if (!isInput && !isOpen()) {
       if ((key === "f" && !e.ctrlKey && !e.metaKey && !e.altKey) || (isModifier && e.shiftKey && key === "f")) {
         var focusBtn = document.getElementById("reader-focus");
-        if (focusBtn && document.body.classList.contains("manuscript-reading")) {
+        if (focusBtn && focusBtn.getClientRects().length) {
           e.preventDefault();
           focusBtn.click();
         }

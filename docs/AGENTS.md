@@ -1469,9 +1469,11 @@ an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.
-- `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene&language=...`:
-  read-only deterministic character and scene dossier drafts
+- `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene|location&language=...`:
+  read-only deterministic character, scene and location dossier drafts
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.
+  Drafts covered by existing dossiers are excluded by default and counted in
+  `skipped_existing`. Use `include_existing=1` to preview all suggestions.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft (`{"draft_id": "...", "kind": "character",
   "language": "...", "actor": "local-author", "manuscript": "..."}`; omitted

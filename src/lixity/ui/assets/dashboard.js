@@ -282,7 +282,7 @@ if (filter) {
   if (clear) clear.addEventListener("click", function () { clearTimeout(pending); pending = null; input.value = ""; apply(); input.focus(); });
   window.addEventListener("keydown", function (e) {
     if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
-      if (!e.defaultPrevented) {
+      if (!e.defaultPrevented && input.getClientRects().length) {
         e.preventDefault();
         input.focus();
         input.select();
@@ -290,7 +290,7 @@ if (filter) {
     } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
       var target = e.target;
       var isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (!isInput) {
+      if (!isInput && input.getClientRects().length) {
         e.preventDefault();
         input.focus();
         input.select();
@@ -1548,7 +1548,6 @@ function syncAllSelectPills() {
   var dimRetained = document.getElementById("dim-retained");
   if (dimRetained) {
     new MutationObserver(function () {
-      syncSelectPills("dim-projection");
     }).observe(dimRetained, { childList: true, characterData: true, subtree: true });
   }
 })();

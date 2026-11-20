@@ -228,10 +228,10 @@ a.chapter-link:hover { color: var(--accent-hover); }
 dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-.ctl-select { position: relative; display: grid; }
+.ctl-select { position: relative; display: grid; min-inline-size: 0; }
 .ctl-select > select.ctl {
   appearance: none; width: 100%; text-overflow: ellipsis;
-  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4));
+  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
 }
 .ctl-select > .lixity-icon {
   position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;

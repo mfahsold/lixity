@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {startNativeServer} = require('./support/native-server.cjs');
+const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-workspace-reader-'));
 const fixtures = pythonFixture(`
@@ -26,6 +28,100 @@ print(json.dumps(fixtures))
 const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title: 'Synthetic dossier', revision: 2,
   body: '## Context\n\n> [!NOTE]\n> **Working term:** Conservazione.\n\nFormula: $\\sigma^2 = \\frac{1}{N} \\sum (x_i - \\mu)^2$.\n\nA synthetic dossier with <img src=x onerror=window.readerInjected=true> as text.\n\n' + 'Historical source notes. '.repeat(100),
   editable_sections: ['Context'], citations: [], sections: ['Context'], tags: [], evidence_count: 0};
+
+async function checkTextAssociationVisibility(browser) {
+  const server = await startNativeServer(`
+import json, sys
+from hashlib import sha256
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from lixity.research import api
+from lixity.server import LixityServerHandler
+
+project = Path(sys.argv[1]) / 'linked-writing'
+api.init(project, title='Synthetic linked writing')
+linked = api.create_dossier(project, title='Linked dossier', body='A synthetic dossier note.')['dossier_id']
+unlinked = api.create_dossier(project, title='Unlinked dossier', body='A note without links.')['dossier_id']
+claim = api.create_claim(project, title='Preserved synthetic claim', statement='An editorial association.',
+                         dossier_id=linked)['claim_id']
+manuscript = project / 'manuscript.md'
+quote = 'The synthetic lantern illuminated a quiet quay.'
+manuscript.write_text('# Editing specimen\\n\\n## First chapter\\n\\n😀 ' + quote + '\\n', encoding='utf-8')
+anchor = api.resolve_manuscript_anchor(project, manuscript, query=quote)
+api.link_manuscript_claim(project, manuscript, claim, claim_revision=1,
+    selection={key: anchor[key] for key in ('start_line', 'end_line', 'paragraph_sha256', 'start', 'end', 'quote')},
+    expected_project_id=anchor['project_id'], expected_snapshot=anchor['snapshot'],
+    expected_source_sha256=sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True)
+api.revise_record(project, 'claim', claim, expected_revision=1, changes={'statement': 'A revised editorial association.'},
+                  change_kind='correction', reason='Exercise the current claim and retained link.')
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.research_dir = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(Path(sys.argv[1]) / 'linked-writing-exports')
+LixityServerHandler.language = 'en'
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'linked': linked, 'unlinked': unlinked}), flush=True)
+server.serve_forever()
+`, artifacts);
+  try {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width,height:900}, hasTouch:width === 320});
+      const writes = [];
+      await page.route(server.fixture.url + '/**', route => {
+        if (route.request().method() === 'GET') return route.continue();
+        writes.push(new URL(route.request().url()).pathname);
+        return route.abort();
+      });
+      try {
+        await page.goto(server.fixture.url);
+        const toggle = page.locator('#workspace-reader-toggle');
+        const dossiers = page.locator('#workspace-reader-dossier');
+        const body = page.locator('#workspace-reader-body');
+        const associations = page.getByRole('checkbox', {name:'Text associations', exact:true});
+        const usage = body.locator('[data-manuscript-links-claim][data-manuscript-link-count]');
+        const claim = body.getByText('Preserved synthetic claim', {exact:true});
+        await toggle.press('Enter');
+        await dossiers.selectOption(server.fixture.linked);
+        await expect(associations).toBeChecked();
+        await expect(usage).toBeVisible();
+        const originalClaim = await claim.elementHandle();
+        await associations.press('Space');
+        await expect(associations).not.toBeChecked();
+        await expect(associations).toBeFocused();
+        await expect(usage).toBeHidden();
+        assert.equal(await body.locator('[data-dossier-text-association]:visible').count(), 0);
+        await expect(body.getByRole('paragraph').filter({hasText:'A synthetic dossier note.'})).toBeVisible();
+        assert.equal(await claim.evaluate((node, before) => node === before, originalClaim), true);
+        await originalClaim.dispose();
+        assert.equal(await body.locator('[data-research-history=claim]').isVisible(), true);
+
+        await page.locator('#workspace-reader-refresh').press('Enter');
+        await expect(associations).toBeVisible();
+        await expect(associations).not.toBeChecked();
+        await expect(usage).toBeHidden();
+        await dossiers.selectOption(server.fixture.unlinked);
+        await expect(body.getByRole('paragraph').filter({hasText:'A note without links.'})).toBeVisible();
+        await expect(associations).toBeHidden();
+
+        await page.locator('#workspace-reader-close').press('Enter');
+        await page.reload();
+        await page.locator('#manuscript-write').press('Enter');
+        await expect(page.locator('.cm-content')).toBeVisible();
+        await page.locator('#manuscript-editor #workspace-reader-toggle').press('Enter');
+        await dossiers.selectOption(server.fixture.linked);
+        await expect(associations).toBeVisible();
+        await expect(associations).not.toBeChecked();
+        await expect(usage).toBeHidden();
+        await associations.press('Space');
+        await expect(associations).toBeChecked();
+        await expect(usage).toBeVisible();
+        await expect(claim).toBeVisible();
+        assert.deepEqual(writes, [], 'The display preference leaves the manuscript and archived links untouched');
+      } finally {await page.close();}
+    }
+  } finally {await server.close();}
+}
 (async () => {
   const browser = await launchChromium();
   try {
@@ -467,6 +563,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       'A closed reader request cannot overwrite the reopened view');
     assert.equal(await delayed.locator('#workspace-reader-dossier').isDisabled(), false);
     await delayed.close();
+    await checkTextAssociationVisibility(browser);
     console.log('Workspace reader: seven desktop/mobile locales, optional context-bound dossier reads, retained manuscript state, safe errors, retry and read-only controls passed. Screenshots: ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

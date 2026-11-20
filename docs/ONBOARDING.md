@@ -32,9 +32,9 @@ reading-website export as your own shareable copies.
 1. Start the local app and open the intended project, or preview an imported copy.
 2. Check the displayed project path and analysis language.
 3. Read a paragraph, optionally inspect a measurement, then return to the text.
-   In 0.8.1, use the native [Write workflow](WORKSPACE.md#write-a-manuscript-unreleased)
-   to edit in place. Use **Read and refresh** to inspect the saved revision, then **Back to writing**
-   to continue with the same editor and undo history. This workflow requires 0.8.1.
+   To edit in place, choose **Write** in the local app. Check for **Saved locally**,
+   then choose **Close writing** to return to the reader and analysis.
+   [Write a manuscript](WORKSPACE.md#write-a-manuscript-unreleased)
 4. Optionally follow a saved research link or record a short reading.
 5. Choose an output deliberately; stop the service when finished.
 

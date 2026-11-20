@@ -55,32 +55,25 @@ UTF-8 BOM and uniform LF/CRLF are preserved. Mixed endings, CR-only text, binary
 content and unsupported encodings are rejected rather than silently converted.
 Public exports remain read-only and do not contain the editor bundle.
 
-Typing saves after 800 ms of inactivity, with a four-second maximum wait while
-typing continuously. **Saved locally** appears after server acknowledgement;
-it is not a cloud backup. Undo/redo works across autosaves. **Read and refresh**
-opens the ordinary reader and analysis in a full-window reading session for the
-acknowledged source revision. The editor stays mounted: **Back to writing**
-returns without resetting undo. An unchanged reader position preserves the exact
-insertion point; scrolling maps back to the visible source block. Project switching
-is unavailable inside this revision-bound session; return to the outer workspace
-for project changes. Audio/video playback pauses on return to writing. Escape
-inside the reader retains its existing meaning (close a local control or leave
-focus mode); use **Back to writing** to return to the editor. A full browser
-reload still resets editor undo.
+Lixity starts saving to your project file after 800 ms without typing or after
+up to four seconds of continuous typing. **Saved locally** appears when the server
+acknowledges the save. Undo and redo work across autosaves. Open **Versions** to
+compare versions or manage recovery copies. **Download draft** in the same menu
+saves the current editor text as a separate Markdown file. For saved manuscript
+and research files, see
+[project backup and restore](PROJECT_BACKUP.md).
 
-The reading header identifies its source revision. Analysis is recomputed through
-the shared pipeline when needed; a changed source or failed refresh cannot be
-shown as that revision. Previous analysis is not updated while typing. The outer
-workspace keeps a visible warning when its analysis belongs to an earlier text
-revision. Changes
-made elsewhere during reading pause editor saves on return instead of replacing
-the editor buffer.
+**Close writing** saves pending edits and returns to the reader. When the saved
+file changes, Lixity reloads the reader and recalculates its analysis. A reload
+resets undo history. Returning without a reload restores the previous analysis
+display. A failed save or a conflicting edit keeps the editor open so you can
+check the save status, recover your text or compare versions.
 
-When a research archive is connected, **Review research links** opens the existing
-association review. Moved, adjusted, changed and ambiguous passages remain
-explicit review states. Stored quotations and claim versions stay intact; accept
-a new association only after inspecting its candidate. Editing and reading do not
-automatically re-anchor research or renew analysis-review decisions.
+Open **Dossier alongside** to keep research beside the editor. Where text links
+are available, use **Text associations** to show or hide them. Lixity remembers
+this display preference in your browser. When reviewing a link in the reader,
+inspect the candidate before accepting its association. Changes to manuscript
+text leave accepted research links and past analysis decisions for you to review.
 
 **Find / replace** opens the bundled CodeMirror search panel (also Ctrl/Cmd+F).
 It supports case-sensitive, whole-word and regular-expression searches, individual
@@ -109,19 +102,8 @@ revision. A subsequent external change is rejected again. Cancelling an edited
 comparison asks before discarding it. **Load as draft** remains available for a
 retained copy. Loading while the current buffer is dirty downloads that buffer.
 
-Select literal text within one reader paragraph before returning to writing to
-open that exact editable range. The reader revision, source lines and paragraph
-text are validated together, including repeated quotations. Cross-paragraph or
-Markdown-transformed selections cannot always map exactly: Lixity reports that
-limitation and preserves the writing position rather than guessing. An analysis
-finding can be opened in the ordinary reader and selected there; arbitrary metric
-coordinates are not a new source-editing contract.
-
-Nested research forms retain their explicit save semantics. Returning to writing
-or closing the reading session asks before discarding edited fields; pending
-requests block disposal, and failed requests leave the draft available. Reload
-warnings also cover those forms. Browser unload warnings remain best effort,
-especially on mobile; they are not a replacement for acknowledged saves.
+To edit a passage after reviewing an analysis finding, jump to the passage in
+the reader and choose **Write**. The editor starts at the visible source block.
 
 Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous source
 versions and eight unresolved drafts per document. Unresolved drafts are not
@@ -143,9 +125,11 @@ uncooperative external editor.
 | Review website | Fixed manuscript/analysis copy with the explicitly included research; no live project writes |
 | Reader or companion website | Curated recipient view; no import, recalculation or local project editing |
 
-The live app separates **Manuscript**, **Research** and **Project**. Open projects
-have separate view URLs under the same app address; those URLs expire on restart.
-Reopen the project from the home address rather than reusing an expired view.
+The live app separates **Manuscript**, **Research** and **Project**. To work
+on two projects at once, open **Project actions → Open Project** from the same
+app address and keep each project's view in its own browser tab. One instance
+can keep up to 16 views. After a restart, return to the home address and reopen
+any additional projects you need.
 
 ## Explore language in the browser
 
@@ -272,14 +256,14 @@ Across the application, controls use six distinct interaction patterns:
   and highlights the arrival target (including the owning passage for search
   hits) in a reduced-motion-safe style.
 - **Dialogs** (project create/open, `Listen and direct` audio studio, `Teleprompter`,
-  command palette `Ctrl+K` / `Ctrl+P`, version comparison, saved-revision reading,
+  command palette `Ctrl+K` / `Ctrl+P`, version comparison,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`
   or close button) and keep the underlying buffer, selection and undo history intact.
 - **Surface switches** (`Analysis overview` and `Write` mode):
   replace continuous reading with the statistical overview panels or the
   manuscript editor. Leave the overview with `Back to passage` (restoring your
   exact paragraph and prior analysis layer) and leave writing with `Close writing`
-  (keeping the mounted editor instance and undo history).
+  to save and return to the reader.
 
 Happy path for an author or lector (no technical setup beyond the local app):
 
@@ -312,12 +296,12 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
-| Writing | `Write`, then `Read and refresh` / `Close writing` in reader toolbar | Single-row editor bar with live session pulse, docked companion and exit actions (`Undo` `Ctrl+Z`, `Redo` `Ctrl+Y`, `Find / replace` `Ctrl+F`, `Compare versions`, recovery drafts); selecting text in `Read and refresh` and clicking `Back to writing` jumps the editor cursor to that exact passage. |
+| Writing | `Write` in the manuscript toolbar, then `Close writing` in the editor toolbar | `Undo`, `Redo`, `Find / replace` (`Ctrl/Cmd+F`), `Versions` for comparison, download and recovery, and `Dossier alongside`. |
 
 If a control opens a side panel, it stays beside your text. If it clicks a view tab,
 the whole workspace switches. If it opens a dialog, close it explicitly with `Escape`.
 Surface switches (`Analysis overview` and `Write`) always expose an explicit return
-action (`Back to passage` / `Close writing`) in the reader toolbar.
+action in their toolbars (`Back to passage` / `Close writing`).
 
 <a id="reading-paragraphs-since-v230"></a>
 
@@ -432,8 +416,9 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**Unreleased native navigation:** the overview starts with status, the next
-passage and three task choices. Selecting **Review passages**, **Compare
+**Unreleased native navigation:** the overview opens with **Manuscript
+measurements**, manuscript status, the next passage and three task choices.
+Selecting **Review passages**, **Compare
 chapters** or **Explore patterns** reveals one existing analysis section.
 Secondary choices switch sections within that task and retain your inputs.
 Selecting **Manuscript measurements** opens its overview. Deep links reveal
@@ -584,6 +569,14 @@ entries open the same review component. Exact-version comparison, author
 assessments, manuscript-link repair and configured term variants retain their
 explicit review/save steps; they are not automatic corrections. **Terms &
 variants** is also reachable from manuscript inspection.
+
+To start a dossier from the text, open **Research → Dossiers → From
+manuscript** and choose **Load suggestions**. Browse the available characters,
+places and scenes, then select a suggestion to preview it. **Create dossier**
+saves the selected proposal. Suggestions already covered by a dossier are
+counted separately. **New dossier** in the Dossiers toolbar opens the form
+on the same page and places the cursor in its title field. Choose the
+**Character** template, then fill in the title and details before saving.
 
 ## Editing research text
 
@@ -801,11 +794,24 @@ exemptions; **Clear chapter filters** restores all rows. Name mentions are not
 POV declarations. Following an exact hidden row anchor clears the display filters
 before the existing jump. A separate within-voice reference is not implemented.
 
+## Style changes and coverage
+
+Open **Compare chapters → Style → Style over time** to review candidate
+chapter boundaries, trends, and the first and second manuscript halves.
+The cards state how many features were tested and how many were shortlisted.
+The boundary search requires a complete chapter series per feature. Use its
+chapter links to see where measurements are missing, including chapters below
+the shared word floor. Trends use available observations in order. The two
+halves retain their original chapter boundaries. [Methods and coverage](METHODS.md#4c-structural-diagnostics-structural_diagnostics)
+explain the selection rules.
+
 ## Style-space navigation
 
-In **Style dimensions**, drag to rotate, use the wheel or labeled buttons to
-zoom/rotate, and select chapter points or **Chapter scores** links to read a
-chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
+In **Style map**, select a chapter above the plot or choose its point.
+**Read chapter** opens the selected text. Drag to rotate, or use the labeled
+rotation and zoom buttons. Use Shift with the mouse wheel to zoom. On touch
+screens a vertical swipe scrolls the page. Toggle the trajectory or cutoff box
+and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
@@ -815,9 +821,9 @@ The originating axis and loading coefficient remain distinct from the chapter's
 measurement and z*. Selecting another metric removes that axis-origin caption;
 it does not recompute scores, infer chapter contributions or establish causality.
 
-The chapter selector keeps the chosen chapter's
-scores beside the plot. Choose a flat axis pair in **View** when points overlap;
-return to 3D to rotate the same data. The line follows chapter order, including
+The chapter selector keeps the chosen chapter's scores with the plot. Choose a
+flat axis pair in **View** when points overlap. A cutoff ring can reflect an axis
+outside that pair. Return to 3D to rotate the same data. The line follows chapter order, including
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
 

@@ -154,21 +154,15 @@ class TestPagesStaging(unittest.TestCase):
             self.assertIn("nicht als klassischer Desktop-Installer", german)
             self.assertTrue((output / "guides/first-look-de.html.md").is_file())
 
-    def test_compact_demo_navigation_keeps_orientation_without_repeating_the_title(self):
-        from scripts.example_publications import _site_navigation
-
-        document = (
-            '<html><head></head><body id="top" class="lixity-workspace">'
-            '<div class="page"><h1>Fictional manuscript</h1></div></body></html>'
-        )
-        compact = _site_navigation(document, "Fictional manuscript", demo=True, breadcrumbs=False)
-        self.assertNotIn('<nav class="site-breadcrumbs"', compact)
-        self.assertIn('<a href="../">About Lixity</a>', compact)
-        self.assertIn('Read-only demo · Fictional manuscript', compact)
-        self.assertNotIn('href="../demo/report.html"', compact)
-        self.assertIn('<h1>Fictional manuscript</h1>', compact)
-        ordinary = _site_navigation(document, "Fictional manuscript", demo=True)
-        self.assertNotIn('<nav class="site-breadcrumbs"', ordinary)
+    def test_demo_uses_the_native_rail_for_guidance(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        document = (docs / "demo/report.html").read_text(encoding="utf-8")
+        rail = document.split('<div class="workspace-shell">', 1)[1].split('<!--dashboard-freshness-->', 1)[0]
+        self.assertIn('id="demo-quick-start"><summary>Try the draft examples</summary>', rail)
+        self.assertIn('class="site-read-only-notice"', rail)
+        self.assertIn('<a href="../">About Lixity</a>', document)
+        self.assertNotIn('<nav class="site-return"', document)
+        self.assertNotIn('<a class="site-back-top"', document)
 
     def test_public_navigation_preserves_workspace_and_report_classes(self):
         from scripts.example_publications import _insert_notice, _site_navigation

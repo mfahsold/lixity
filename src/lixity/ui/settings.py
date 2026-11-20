@@ -1,5 +1,6 @@
 """Shared, accessible settings form with locale-independent HTML values."""
 
+import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -18,6 +19,7 @@ from .components import (
     label,
     panel_guide,
     panel_label,
+    select_control,
     status_banner,
 )
 
@@ -30,15 +32,13 @@ def _segmented_select(
     default_value: str,
     described_by: str,
     options: Sequence[tuple[str, str, str, bool]],
-    extra_select_attrs: str = "",
+    select_attrs: Mapping[str, str] | None = None,
     note_html: str = "",
     data_help_on_select: bool = True,
 ) -> str:
     """Render a native <select> paired with a synchronized .settings-seg-group."""
     esc_label = esc(label_text)
     badge = help_badge(help_text, label_text)
-    help_attr = f' data-help="{esc(help_text, quote=True)}"' if data_help_on_select else ""
-    extra = f" {extra_select_attrs.strip()}" if extra_select_attrs.strip() else ""
     option_html = "".join(
         f'<option value="{esc(val)}"{" selected" if selected else ""}>{esc(opt_label)}</option>'
         for val, opt_label, _pill_label, selected in options
@@ -52,9 +52,11 @@ def _segmented_select(
         select_id,
         f"{esc_label} {badge}",
         (
-            f'<select class="ctl" id="{esc(select_id)}" data-default="{esc(default_value)}"'
-            f'{extra}{help_attr} aria-describedby="{esc(described_by)}">{option_html}</select>'
-            f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
+            select_control(
+                select_id, option_html, help_text=help_text if data_help_on_select else "",
+                attributes={"data-default": default_value, "aria-describedby": described_by, **(select_attrs or {})},
+            )
+            + f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
             f'data-sync-select="{esc(select_id)}">{pill_html}</div>'
         ),
         label_class="",
@@ -173,15 +175,22 @@ def settings_form(
         '<fieldset class="settings-section" id="settings-analysis">',
         f'<legend>{translated("settings_analysis")}</legend>',
         '<div class="settings-grid">',
-        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("settings_language"))}</label>',
-        f'<select class="ctl" id="set-language" data-help="{translated("settings_language_hint")}" aria-describedby="set-language-help settings-scope-help">',
-    ])
-    for code, name in language_options:
-        selected = " selected" if code == current_language else ""
-        parts.append(f'<option value="{esc(code)}"{selected}>{esc(name)}</option>')
-    parts.extend([
-        '</select>',
-        f'<p id="set-language-help">{translated("settings_language_hint")}</p></div></div>',
+        form_field(
+            "set-language",
+            help_term(labels, "language", translated("settings_language")),
+            select_control(
+                "set-language",
+                "".join(
+                    f'<option value="{esc(code)}"{" selected" if code == current_language else ""}>{esc(name)}</option>'
+                    for code, name in language_options
+                ),
+                help_text=label(labels, "settings_language_hint"),
+                attributes={"aria-describedby": "set-language-help settings-scope-help"},
+            ),
+            label_class="",
+            note_html=f'<p id="set-language-help">{translated("settings_language_hint")}</p>',
+        ),
+        '</div>',
     ])
     disabled = "" if author_setting_enabled else " disabled"
     checked = " checked" if publication_values["enabled"] else ""
@@ -234,9 +243,9 @@ def settings_form(
         for preset in (*FingerprintThresholds.presets, "custom")
     )
     active_preset = thresholds.preset_name()
-    presets_json = attr_json(
+    presets_json = json.dumps(
         {name: dict(values) for name, values in THRESHOLD_PRESETS.items()},
-        sort_keys=True,
+        separators=(",", ":"), sort_keys=True,
     )
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
@@ -249,7 +258,7 @@ def settings_form(
             help_text=label(labels, "settings_preset_hint"),
             default_value="balanced",
             described_by="set-threshold-preset-help settings-scope-help",
-            extra_select_attrs=f'data-presets="{presets_json}"',
+            select_attrs={"data-presets": presets_json},
             options=[
                 (key, label(labels, label_key), label(labels, label_key), key == active_preset)
                 for key, label_key in preset_choices
@@ -423,7 +432,10 @@ def register_editor(
         + form_field(
             "register-template-select",
             esc(label(labels, "register_template_label")),
-            f'<select class="ctl" id="register-template-select" data-register-template-select data-help="{esc(label(labels, "register_scope_hint"))}">{template_options}</select>',
+            select_control(
+                "register-template-select", template_options, help_text=label(labels, "register_scope_hint"),
+                attributes={"data-register-template-select": ""},
+            ),
             label_class="",
         )
         + '</div>'

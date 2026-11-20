@@ -34,3 +34,4 @@ body:not(.has-guided-analysis) .analysis-workflows { display: none; }
 
 .has-guided-analysis .analysis-outline-layout { display: block; }
 .has-guided-analysis .analysis-outline-contents { display: none !important; }
+.has-guided-analysis.workbench-overview .analysis-outline-document > .toolbar { display: none; }

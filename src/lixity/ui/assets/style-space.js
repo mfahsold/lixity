@@ -13,6 +13,9 @@
   var readChapter = document.getElementById("dim-read-chapter");
   var projectionSelect = document.getElementById("dim-projection");
   var retained = document.getElementById("dim-retained");
+  var legendNote = document.getElementById("dim-legend-note");
+  var legendHome = legendNote && legendNote.parentElement;
+  var legendNext = legendNote && legendNote.nextElementSibling;
 
   var raw = canvas.getAttribute("data-dim3d");
   if (!raw) return;
@@ -177,6 +180,10 @@
     projection = value;
     canvas.setAttribute("data-projection", projection);
     if (projectionSelect) projectionSelect.value = value;
+    if (legendNote) {
+      if (projection === "3d") legendHome.insertBefore(legendNote, legendNext);
+      else canvas.parentElement.before(legendNote);
+    }
     if (retained && labels.retained) {
       var share = displayedAxes().reduce(function(total, index) { return total + axes[index].variance; }, 0);
       retained.textContent = labels.retained.replace("{variance}", varianceFormat.format(share * 100));
@@ -628,23 +635,27 @@
     }
   }
 
+  function positionTooltip(point) {
+    var gutter = 8, gap = 10;
+    var width = tooltip.offsetWidth, height = tooltip.offsetHeight;
+    var above = point.y - height - gap;
+    var top = above >= gutter ? above : point.y + gap;
+    tooltip.style.left = Math.max(gutter, Math.min(canvas.clientWidth - width - gutter, point.x - width / 2)) + "px";
+    tooltip.style.top = Math.max(gutter, Math.min(canvas.clientHeight - height - gutter, top)) + "px";
+  }
+
   function updateHover(e) {
     var hit = findPoint(e);
     var closest = hit.point;
-    var closestScreen = hit.screen;
-
-    if (closest !== hoveredPoint) {
-      hoveredPoint = closest;
-      draw();
-    }
-
-    if (closest && closestScreen && tooltip) {
+    if (closest === hoveredPoint) return;
+    hoveredPoint = closest;
+    draw();
+    if (!tooltip) return;
+    if (closest) {
       renderTooltip(closest);
       tooltip.style.display = "block";
-      var halfWidth = tooltip.offsetWidth / 2;
-      tooltip.style.left = Math.max(halfWidth, Math.min(canvas.clientWidth - halfWidth, closestScreen.x)) + "px";
-      tooltip.style.top = Math.max(tooltip.offsetHeight + 10, closestScreen.y) + "px";
-    } else if (tooltip) {
+      positionTooltip(hit.screen);
+    } else {
       tooltip.style.display = "none";
     }
   }
@@ -669,8 +680,11 @@
   });
 
   canvas.addEventListener("wheel", function(e) {
+    if (!e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+    var delta = e.deltaY || e.deltaX;
+    if (!delta) return;
     e.preventDefault();
-    changeZoom(e.deltaY < 0 ? 1.08 : 0.92);
+    changeZoom(delta < 0 ? 1.08 : 0.92);
   }, { passive: false });
 
   canvas.addEventListener("click", function(e) {

@@ -1,4 +1,5 @@
 const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -12,24 +13,6 @@ const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root,'.venv/bin/py
  {cwd:root,env:{...process.env,PYTHONPATH:'src:tests'},encoding:'utf8',maxBuffer:8*1024*1024});
 assert.equal(fixture.status,0,fixture.stderr);
 return fixture.stdout;
-}
-async function assertSelectGeometry(select, context) {
- const spacing = await select.evaluate(control => {
-  const icon = control.nextElementSibling;
-  const field = control.getBoundingClientRect(), arrow = icon.getBoundingClientRect();
-  const style = getComputedStyle(control);
-  return {
-   truncated: control.scrollWidth > control.clientWidth,
-   labelInset: parseFloat(style.paddingInlineStart), arrowInset: field.right - arrow.right,
-   labelEnd: parseFloat(style.paddingInlineEnd), arrowSpan: field.right - arrow.left,
-   centerOffset: (field.top + field.bottom - arrow.top - arrow.bottom) / 2,
-   decorative: icon.getAttribute('aria-hidden') === 'true' && getComputedStyle(icon).pointerEvents === 'none',
-  };
- });
- assert.equal(spacing.truncated, false, `${context} fits the control`);
- assert(Math.abs(spacing.labelInset - spacing.arrowInset) < 1, `${context} has aligned insets`);
- assert(spacing.labelEnd >= spacing.arrowSpan - 1, `${context} leaves room for its arrow`);
- assert(Math.abs(spacing.centerOffset) < 1 && spacing.decorative, `${context} has a centered decorative arrow`);
 }
 (async()=>{
  const browser=await (process.argv.includes('--firefox') ? launchFirefox : launchChromium)();

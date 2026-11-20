@@ -650,6 +650,8 @@ The dossier-workflows suite exercises titled contextual claim/decision forms and
 the shared section editor against a disposable server: preserved drafts and pins,
 body-only preparation, unrelated concurrent-section preservation, explicit
 overlapping conflict choices and desktop/mobile rendering in seven languages.
+It also switches between loaded manuscript suggestions before saving and checks
+that the dossier title is on screen after opening the form in a short viewport.
 
 The manuscript-links test uses synthetic intercepted responses in seven locales
 at 1440 and 320 pixels, with its origin-return checks also at 390 pixels. It

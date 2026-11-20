@@ -36,7 +36,7 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 ## Passt der kürzere Rhythmus zur Handlung?
 
-In der Demo öffnet **Compare chapters 1 and 2** die Kapitelmatrix. Dort siehst du, wie viele Wörter die Sätze in der Hafenbeschreibung und in der Handlungsszene im Schnitt haben. Einen eigenen Absatz kannst du direkt in der [Browser-Sandbox](../sandbox/index.html) ausprobieren.
+Die Demo startet in derselben Manuskriptansicht wie die lokale App. Öffne in der Arbeitsbereichsnavigation **Try the draft examples**. Über **Compare chapters 1 and 2** siehst du in der Kapitelmatrix, wie viele Wörter die Sätze in der Hafenbeschreibung und in der Handlungsszene im Schnitt haben. Einen eigenen Absatz kannst du direkt in der [Browser-Sandbox](../sandbox/index.html) ausprobieren.
 
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 
@@ -50,7 +50,7 @@ Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären läss
 
 Unter **Try the draft examples** führt die Demo zu weiteren bewusst eingebauten Entwurfsstellen. Dazu gehören ein umständlicher Satz, dieselbe Wendung bei drei Figuren und ein Wechsel von Vergangenheit zu Gegenwart.
 
-**Noch unveröffentlichte Navigation der lokalen App.** Die Analyseübersicht zeigt den Status, die nächste Textstelle und die Einstiege **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Einstieg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar. Eingaben bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
+**Noch unveröffentlichte Navigation der lokalen App.** Die **Analyseübersicht** öffnet **Manuskript in Zahlen**. Über den gleichnamigen Link springst du direkt zu den Messwerten. Zur Vertiefung stehen die vorgeschlagene Textstelle und die Einstiege **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden** bereit. Jeweils ein Analysebereich ist sichtbar. Eingaben bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
 
 Unter **Muster erkunden → Manuskript in Zahlen** siehst du Wörter und Sätze, den Satzrhythmus und weitere Sprachmerkmale. Bei Bedarf kannst du zusätzliche Kennzahlen zur Wortvielfalt und zum Stilvergleich aufklappen. Mit **Zurück zur Textstelle** liest du an derselben Stelle weiter. Eigenständige Berichte behalten direkte Abschnittslinks. Text und Tabellen bleiben auch ohne JavaScript lesbar.
 

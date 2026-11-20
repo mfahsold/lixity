@@ -173,11 +173,15 @@
     }
 
     var hasShortcut = Boolean(shortcut && shortcut.trim());
-    var showHeading = hasShortcut || (name && name !== text.trim() && name.length <= 120);
+    // A measurement's accessible name can include its help followed by an
+    // action. Keep the action as the heading and the measurement in the copy.
+    var helpPrefix = text + ". ";
+    var headingName = name.startsWith(helpPrefix) ? name.slice(helpPrefix.length) : name;
+    var showHeading = hasShortcut || (headingName && headingName !== text && headingName.length <= 120);
     heading.replaceChildren();
     heading.hidden = !showHeading;
     if (showHeading) {
-      var displayName = (name && name.length <= 120) ? name : (text && text.length <= 60 ? text : "");
+      var displayName = (headingName && headingName.length <= 120) ? headingName : (text && text.length <= 60 ? text : "");
       if (displayName) {
         heading.appendChild(document.createTextNode(displayName));
       }

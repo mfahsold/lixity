@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Give the writing surface its own editing controls and a Versions disclosure
+  for comparison, recovery and download. Add a display preference for text
+  associations in the companion dossier.
+- Put the chapter picker and projection controls above the style plot. Fit
+  point help within the canvas area and allow page scrolling over the plot.
+- Open the public demo in the native manuscript layout, with guided draft
+  examples and the read-only notice in the workspace navigation.
 - Give the fictional Warehouse 4 draft verifiable examples of a tense slip,
   repeated phrasing, reported speech and wordiness. Add guided passage links
   and parallel English and German practice drafts in the browser sandbox.
@@ -29,8 +36,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Align text and the dropdown indicator in the manuscript chapter picker at
-  desktop and mobile widths.
+- Keep loaded dossier suggestions when switching categories or selecting a
+  suggestion. Offer the existing character template when there is no new
+  character suggestion.
+- Move focus to the title when opening the dossier form from the toolbar.
+  Bring the form into view when expanding its heading in a short window.
+- Hide reader analysis chrome during writing and keep reader shortcuts from
+  activating hidden controls.
+- Distinguish unavailable style-change calculations from tested comparisons
+  with an empty shortlist. Show the exact missing chapters and word floor.
+- Show manuscript measurements on first opening the analysis overview and
+  keep overview links from interrupting the reader during startup.
+- Show paragraph comparison measurements once in the tooltip, with the
+  action in the heading.
+- Share aligned text, arrow spacing and native selection across the chapter and
+  analysis pickers, project settings and dynamically generated settings fields.
 - Show the effective dialogue and chapter-closing thresholds. Label empty
   tense review results, show the reason for the suggested passage and offer
   sentence examples when they are available.

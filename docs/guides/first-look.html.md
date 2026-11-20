@@ -12,9 +12,9 @@ This walkthrough follows the generated demo. It uses the same reading website ex
 
 [Open the demo project](../demo/report.html)
 
-*The Crate at Warehouse 4* has six invented English chapters. No installation, account or upload is needed. Choose **Inspect chapter 2** in the demo's opening task card. It uses the application's actual manuscript navigation and sentence-length controls; no changes can be saved.
+*The Crate at Warehouse 4* has six invented English chapters. The demo opens directly in the same manuscript view as the local app. In the workspace navigation, open **Try the draft examples** and choose **Inspect chapter 2** to jump to the scene and turn on sentence-length analysis.
 
-Choose **Compare chapters 1 and 2** to see the average words per sentence for the harbour description and the action scene. You can also [try a passage of your own in the browser sandbox](../sandbox/index.html).
+In the same list, choose **Compare chapters 1 and 2** to see the average words per sentence for the harbour description and the action scene. You can also [try a passage of your own in the browser sandbox](../sandbox/index.html).
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
@@ -44,7 +44,7 @@ Neutral dotted marks and a book-icon **Research** count identify saved research 
 
 **Explore passage → Explain measurement** also works by keyboard or right-click with Analysis Off; it enables Analysis while preserving both display-switch preferences. Escape closes the explanation. A sentence's word count and its paragraph's comparison are different measurements. Choosing **None** or turning off either switch persists across toggling Analysis and reloading. **Focus reading** hides both displays temporarily and restores the previous choices on exit.
 
-**Unreleased native navigation.** The analysis overview starts with status, the next passage and three choices, **Review passages**, **Compare chapters** and **Explore patterns**. Select a task, then a secondary view. One analysis section is visible at a time. Inputs remain in place when you switch, and direct links reveal their target section.
+**Unreleased native navigation.** Opening **Analysis overview** shows **Manuscript measurements**. Use the link of the same name to jump directly to the values. The suggested passage and the entry points **Review passages**, **Compare chapters** and **Explore patterns** take you to more detail. One analysis section is visible at a time. Inputs remain in place when you switch, and direct links reveal their target section.
 
 Under **Explore patterns**, choose **Manuscript measurements** to see counts, sentence rhythm and language measures. Expand the vocabulary and style disclosures for more detail. A linked scene title reveals its detailed **Scene measurements**. **Back to passage** restores your reading context. Standalone reports retain direct section links and remain readable without JavaScript.
 

@@ -18,9 +18,9 @@
   var chooser = controls.querySelector('.analysis-workflow-sections');
   var current = null, remembered = {};
   function major(target) {
-    if (!target || !panels.contains(target)) return null;
+    if (!target || target === panels || !panels.contains(target)) return null;
     while (target.parentElement !== panels) target = target.parentElement;
-    return target;
+    return sections.includes(target) ? target : null;
   }
   function workflowFor(section) {
     return Object.keys(groups).find(function(key) { return groups[key].includes(section.id); }) || "explore";
@@ -30,7 +30,7 @@
     target = target || document.getElementById(remembered[workflow] || ids[0]);
     target = major(target);
     current = workflow;
-    if (target) remembered[workflow] = target.id;
+    if (workflow && target) remembered[workflow] = target.id;
     sections.forEach(function(section) { section.hidden = section !== target; });
     if (target && target.id === "analysis-measurements") target.open = true;
     entries.forEach(function(entry) { entry.setAttribute('aria-pressed', String(entry.dataset.analysisWorkflow === current)); });
@@ -59,10 +59,10 @@
       if (target && typeof scrollAndFlash === 'function') scrollAndFlash(target, {analysisVisible:true});
     }
   });
-  function revealHash() {
+  function hashTarget() {
     var id;
-    try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { return; }
-    if (id) reveal(document.getElementById(id));
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { return null; }
+    return id ? document.getElementById(id) : null;
   }
   // Stable existing navigation remains in the DOM for links and command search;
   // the workflow chooser replaces its exhaustive visual feature lists.
@@ -72,10 +72,9 @@
     var contents = nav.closest('[data-section-contents]');
     (contents || nav).hidden = true;
   });
-  sections.forEach(function(section) { section.hidden = true; });
-  choices.forEach(function(choice) { choice.hidden = true; });
-  if (chooser) chooser.hidden = true;
   window.LixityAnalysisNavigation = {reveal:reveal};
-  window.addEventListener('hashchange', revealHash);
-  revealHash();
+  window.addEventListener('hashchange', function() { reveal(hashTarget()); });
+  var linkedSection = major(hashTarget());
+  var landing = sections.find(function(section) { return section.id === "analysis-measurements"; }) || sections[0];
+  select(linkedSection ? workflowFor(linkedSection) : null, linkedSection || landing);
 })();

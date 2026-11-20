@@ -1,5 +1,5 @@
 // Contextual forms and selected-section edits use the existing native workflows.
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, modShortcut, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -10,6 +10,67 @@ const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-workflows-'));
+
+async function checkDossierComposerNavigation(browser, url) {
+  const page = await browser.newPage({viewport: {width: 390, height: 700}});
+  try {
+    await page.goto(url);
+    await page.locator('#tab-view-research').click();
+    await page.locator('[data-rtab=dossiers]').click();
+    await expect(page.locator('#research-dossiers-list')).toContainText('Current synthetic dossier');
+    const composer = page.locator('#r-dos-composer');
+    const summary = composer.locator(':scope > summary');
+    const ribbon = page.locator('.research-pane-navigation [aria-controls="r-dos-composer"]');
+    const title = page.locator('#r-dos-title');
+    const body = page.locator('#r-dos-body');
+    async function expectTitleInViewport() {
+      await expect.poll(() => title.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.right <= innerWidth &&
+          rect.top >= 0 && rect.bottom <= innerHeight &&
+          node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
+      }), {message: 'The dossier title is fully on screen and clear of overlapping controls'}).toBe(true);
+    }
+
+    await expect(composer).not.toHaveAttribute('open', '');
+    await summary.evaluate(node => {
+      node.scrollIntoView({block: 'end', behavior: 'instant'});
+      node.focus({preventScroll: true});
+    });
+    await page.keyboard.press('Enter');
+    await expect(composer).toHaveAttribute('open', '');
+    await expectTitleInViewport();
+    await expect(summary).toBeFocused();
+
+    await title.fill('Unsubmitted character dossier');
+    await body.fill('A note in progress.');
+    await summary.press('Enter');
+    await expect(composer).not.toHaveAttribute('open', '');
+    for (let activation = 0; activation < 2; activation++) {
+      await ribbon.click();
+      await expect(composer).toHaveAttribute('open', '');
+      await expectTitleInViewport();
+      await expect(title).toBeFocused();
+      await expect(title).toHaveValue('Unsubmitted character dossier');
+      await expect(body).toHaveValue('A note in progress.');
+    }
+
+    await summary.press('Enter');
+    await expect(composer).not.toHaveAttribute('open', '');
+    await page.locator('#tab-view-analysis').click();
+    await page.keyboard.press(modShortcut('k'));
+    await expect(page.locator('#command-palette-dialog')).toBeVisible();
+    await page.locator('#command-palette-search').fill('Create New Research Dossier');
+    await page.keyboard.press('Enter');
+    await expect(composer).toHaveAttribute('open', '');
+    await expectTitleInViewport();
+    await expect(title).toBeFocused();
+    await expect(title).toHaveValue('Unsubmitted character dossier');
+    await expect(body).toHaveValue('A note in progress.');
+  } finally {
+    await page.close();
+  }
+}
 
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
@@ -22,7 +83,11 @@ base = Path(sys.argv[1]); project = base / 'synthetic-project'
 api.init(project, title='Synthetic contextual research')
 dossier = api.create_dossier(project, title='Current synthetic dossier', body='# Notes\\n\\nOriginal note.\\n\\n# Detail\\n\\nOriginal detail.')
 api.create_dossier(project, title='Another synthetic dossier', body='Unrelated body.')
+manuscript = project / 'manuscript.md'
+manuscript.write_text('# Sample\\n\\n## First chapter\\n\\nMara waited for Ivo. Mara took the lantern.\\n', encoding='utf-8')
+(project / 'lixity.toml').write_text('names = ["Mara", "Ivo"]\\n', encoding='utf-8')
 LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
 LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'; LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
@@ -43,6 +108,7 @@ server.serve_forever()
     const dossierListURL = url => url.origin === fixture.url &&
       url.pathname === '/api/research/dossiers' && !url.searchParams.has('id');
     browser = await launchChromium();
+    await checkDossierComposerNavigation(browser, fixture.url);
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     const errors = [], preparations = [], saves = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -226,6 +292,79 @@ server.serve_forever()
     const reviewedTitle = await (await page.request.get(fixture.url + '/api/research/record?kind=dossier&id=' + fixture.dossier)).json();
     assert.equal(reviewedTitle.record.title, 'My reviewed general title');
     assert.ok(reviewedTitle.record.body.includes('My conflicting note.'));
+
+    const draftWrites = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && /\/api\/research-dossier(?:-from-manuscript)?$/.test(request.url())) {
+        draftWrites.push(request.postDataJSON());
+      }
+    });
+    const draftsBox = page.locator('#r-dos-drafts-box');
+    const loadDrafts = page.locator('#r-manuscript-dossier-btn');
+    const draftList = page.locator('#r-manuscript-drafts');
+    const preview = draftList.locator('#r-manuscript-draft-preview');
+    const ivoDraft = draftList.locator('[data-draft-select="character:ivo"]');
+    const maraDraft = draftList.locator('[data-draft-select="character:mara"]');
+    const characterKind = draftList.locator('[data-draft-kind=character]');
+    const sceneKind = draftList.locator('[data-draft-kind=scene]');
+    const manualDossier = draftList.getByRole('button', {name:'Create a character dossier manually'});
+    await draftsBox.locator(':scope > summary').press('Enter');
+    await loadDrafts.press('Enter');
+    await expect(ivoDraft).toBeVisible();
+    await expect(maraDraft).toHaveAttribute('aria-pressed', 'true');
+    await expect(loadDrafts).toBeFocused();
+    await ivoDraft.press('Space');
+    await expect(preview).toContainText('Ivo');
+    await expect(ivoDraft).toBeFocused();
+    await sceneKind.press('Enter');
+    await expect(sceneKind).toBeFocused();
+    await expect(preview).toContainText(/scenes?/i);
+    await characterKind.press('Enter');
+    await expect(characterKind).toBeFocused();
+    await expect(ivoDraft).toHaveAttribute('aria-pressed', 'true');
+    assert.deepEqual(draftWrites, [], 'Opening and browsing previews sends no save');
+    await preview.locator('[data-create-manuscript-draft="character:ivo"]').press('Enter');
+    await expect(ivoDraft).toHaveCount(0);
+    await expect(maraDraft).toBeFocused();
+    await expect(preview).toContainText('Mara');
+    assert.equal(draftWrites[0].draft_id, 'character:ivo');
+    await preview.locator('[data-create-manuscript-draft="character:mara"]').press('Enter');
+    await expect(manualDossier).toBeVisible();
+    await expect(draftList).toContainText('There are currently no new character suggestions.');
+    await expect(preview).toContainText(/scenes?/i);
+    const savedDossiers = await (await page.request.get(fixture.url + '/api/research/dossiers')).json();
+    assert.ok(savedDossiers.dossiers.some(item => item.title === 'Character: Ivo'));
+    assert.ok(savedDossiers.dossiers.some(item => item.title === 'Character: Mara'));
+
+    const dossierTitle = page.locator('#r-dos-title');
+    const dossierBody = page.locator('#r-dos-body');
+    const dossierTags = page.locator('#r-dos-tags');
+    await page.evaluate(() => {
+      document.getElementById('r-dos-title').value = 'Unsubmitted dossier';
+      document.getElementById('r-dos-body').value = 'Preserved notes.';
+      document.getElementById('r-dos-tags').value = 'working';
+    });
+    await manualDossier.press('Enter');
+    await expect(dossierTitle).toBeFocused();
+    await expect(dossierTitle).toHaveValue('Unsubmitted dossier');
+    await expect(dossierBody).toHaveValue('Preserved notes.');
+    await expect(dossierTags).toHaveValue('working');
+    await page.route('**/api/research/manuscript-dossier-drafts?*', route =>
+      route.fulfill({json:{ok:true, drafts:[], skipped_existing:2}}));
+    await loadDrafts.press('Enter');
+    await expect(preview).toHaveCount(0);
+    await expect(manualDossier).toBeVisible();
+    await dossierTitle.fill('');
+    await dossierBody.fill('');
+    await dossierTags.evaluate(node => { node.value = ''; });
+    await manualDossier.press('Enter');
+    await expect(dossierTitle).toBeFocused();
+    await expect(dossierBody).toHaveValue(/Motivation/i);
+    await expect(dossierTags).toHaveValue('character');
+    assert.deepEqual(draftWrites.map(write => write.draft_id), ['character:ivo', 'character:mara'],
+      'Only explicit manuscript draft saves create records');
+    await page.unroute('**/api/research/manuscript-dossier-drafts?*');
+
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
       await page.request.post(fixture.url + '/api/settings', {data: {language}});
       await page.reload();
@@ -239,9 +378,21 @@ server.serve_forever()
         await dialog.screenshot({path: path.join(artifacts, `section-${language}-${width}.png`)});
       }
       await page.keyboard.press('Escape');
+      if (!await draftsBox.evaluate(node => node.open)) await draftsBox.locator(':scope > summary').press('Enter');
+      await loadDrafts.press('Enter');
+      const localizedManual = draftList.locator('[data-draft-manual-character]');
+      await expect(localizedManual).toBeVisible();
+      const localizedLabel = await localizedManual.textContent();
+      assert.ok(localizedLabel && !localizedLabel.startsWith('research_'), `${language} manual action must be localized`);
+      assert.ok(await localizedManual.evaluate(button => button.scrollWidth <= button.clientWidth),
+        `${language} manual action fits at 320px`);
+      if (language === 'de') await draftList.screenshot({path:path.join(artifacts, 'dossier-suggestions-de-320.png')});
+      await localizedManual.press('Enter');
+      await expect(dossierTitle).toBeFocused();
+      await expect(dossierBody).not.toHaveValue('');
     }
     assert.deepEqual(errors, []);
-    console.log(`Dossier workflows: titled contextual claim/decision pins and preserved drafts; selected-section prepare/save, unrelated concurrent preservation, bounded conflict review and seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);
+    console.log(`Dossier workflows: contextual claim/decision pins, concurrent section edits, manuscript suggestions and manual character dossiers passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
   } finally {
     if (stderr.includes('Traceback')) console.error(stderr);
     if (browser) await browser.close();

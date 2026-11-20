@@ -88,7 +88,8 @@ def reading_metric_control(
     title = help_term(labels, "layer", text("style_layer")) if report else text("analysis_measure")
     options = f'<option value="">{text("layer_off")}</option>{groups}{additional}'
     picker = select_control(
-        "style-layer", label(labels, "analysis_measure"), options, help_text=label(labels, "reading_help_measure"),
+        "style-layer", options, accessible_name=label(labels, "analysis_measure"),
+        help_text=label(labels, "reading_help_measure"),
     )
     return (
         f'<label class="metric-layer-control"><span class="metric-layer-label">{title}</span> {picker}</label>'
@@ -128,8 +129,8 @@ def reading_controls(
                       else "reader-preface")
             options = f'<option value="{target}">{text("reading_view")}</option>' + options
     chapter_picker = select_control(
-        "reader-chapter", label(labels, "reading_chapter"), f'<option value="">{text("reading_chapter")}…</option>{options}',
-        css_class="reader-chapter",
+        "reader-chapter", f'<option value="">{text("reading_chapter")}…</option>{options}',
+        accessible_name=label(labels, "reading_chapter"), css_class="reader-chapter",
     )
     width_choices = _appearance_choices(text, "width", "--reader-measure", _READER_WIDTHS)
     spacing_choices = _appearance_choices(text, "spacing", "--reader-leading", _READER_SPACING)

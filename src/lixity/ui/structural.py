@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
+from ..models import ChapterMetrics
 from ..status import FEATURE_LAYERS, ContractKeys
-from ..style_fingerprint import FEATURES, StyleFingerprint
+from ..style_fingerprint import FEATURES, MIN_COMPARABLE_WORDS, StyleFingerprint
 from ..style_profile import ChapterProfile
 from .components import (
     badge,
+    details_start,
     empty_state,
     esc,
     help_term,
@@ -25,6 +27,8 @@ def style_structural(
     fingerprint: StyleFingerprint,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *,
+    chapter_metrics: Sequence[ChapterMetrics] = (),
 ) -> str:
     """Renders the structural diagnostics & stylistic drift panel.
 
@@ -40,6 +44,12 @@ def style_structural(
 
     def N(value: float, decimals: int = 2, signed: bool = False) -> str:
         return _N(value, decimals, signed)
+
+    def count_summary(tested: int, selected: int) -> str:
+        if not tested:
+            return ""
+        text = label(labels, "structural_selection_count").format(tested=N(tested, 0), selected=N(selected, 0))
+        return f'<p class="ctl-note">{esc(text)}</p>'
 
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
 
@@ -58,12 +68,15 @@ def style_structural(
     # --- Card 1: Guarded-cost changepoints ---
     changepoints = diag.get(ContractKeys.CHANGEPOINTS) or {}
     segmentation_unavailable = diag.get(ContractKeys.SEGMENTATION_UNAVAILABLE) or []
-    segmentation_measured = set(fingerprint._usable_features()) - set(segmentation_unavailable)
+    segmentation_measured = (set(fingerprint._usable_features()) - set(segmentation_unavailable)) | set(changepoints)
+    chapter_ids = sorted({chapter for column in fingerprint.values.values() for chapter in column})
+    gaps = [
+        chapter for chapter in chapter_ids
+        if any(fingerprint.values.get(name, {}).get(chapter) is None for name in segmentation_unavailable)
+    ]
     parts.append('<div class="structural-card">')
-    parts.append(
-        f'<h3><span>{help_term(labels, "changepoints", translated("structural_changepoints_title"))}</span>'
-        f'{badge(len(changepoints), variant="")}</h3>'
-    )
+    parts.append(f'<h3>{help_term(labels, "changepoints", translated("structural_changepoints_title"))}</h3>')
+    parts.append(count_summary(len(segmentation_measured), len(changepoints)))
 
     if changepoints:
         parts.append('<div class="structural-list">')
@@ -102,15 +115,28 @@ def style_structural(
             parts.append('</div>')
         parts.append('</div>')
     else:
-        available = bool(segmentation_measured)
+        status = "structural_no_changepoints" if segmentation_measured else "structural_unavailable"
+        if gaps and not segmentation_measured:
+            status = "structural_boundary_gap"
         parts.append(
-            empty_state(
-                translated("structural_no_changepoints" if available else "structural_unavailable"),
-                css_class="structural-empty",
-                badge_text="–",
-            )
+            empty_state(translated(status), css_class="structural-empty")
         )
-    if segmentation_unavailable and segmentation_measured:
+    if gaps:
+        summary = label(labels, "structural_gap_count").format(
+            observed=N(len(chapter_ids) - len(gaps), 0), total=N(len(chapter_ids), 0),
+        )
+        parts.append(details_start(esc(summary), opened=not segmentation_measured and len(gaps) == 1))
+        words_by_chapter = {chapter.num: chapter.words for chapter in chapter_metrics}
+        parts.append('<ul class="structural-gaps">')
+        for chapter in gaps:
+            parts.append(f'<li><a href="#ch-{chapter}" data-jump="#ch-{chapter}">{translated("chapter")} {N(chapter, 0)}</a>')
+            words = words_by_chapter.get(chapter)
+            if words is not None and words < MIN_COMPARABLE_WORDS:
+                reason = label(labels, "structural_gap_short").format(words=N(words, 0), minimum=N(MIN_COMPARABLE_WORDS, 0))
+                parts.append(f' <span class="ctl-note">· {esc(reason)}</span>')
+            parts.append("</li>")
+        parts.append("</ul></details>")
+    elif segmentation_unavailable and segmentation_measured:
         parts.append(f'<p class="hint">{translated("structural_partly_unavailable")}</p>')
     parts.append('</div>')
 
@@ -118,10 +144,8 @@ def style_structural(
     trends = diag.get(ContractKeys.TRENDS) or {}
     trending_set = set(diag.get(ContractKeys.TRENDING_FEATURES) or [])
     parts.append('<div class="structural-card">')
-    parts.append(
-        f'<h3><span>{help_term(labels, "trends", translated("structural_trends_title"))}</span>'
-        f'{badge(len(trending_set), variant="")}</h3>'
-    )
+    parts.append(f'<h3>{help_term(labels, "trends", translated("structural_trends_title"))}</h3>')
+    parts.append(count_summary(len(trends), len(trending_set)))
 
     sorted_trends = sorted(
         trends.items(),
@@ -167,7 +191,6 @@ def style_structural(
             empty_state(
                 translated("structural_no_trends" if trends else "structural_unavailable"),
                 css_class="structural-empty",
-                badge_text="–",
             )
         )
     if diag.get(ContractKeys.TREND_INCOMPLETE):
@@ -179,10 +202,8 @@ def style_structural(
     shifted_set = set(diag.get(ContractKeys.SHIFTED_FEATURES) or [])
     distribution_unavailable = diag.get(ContractKeys.DISTRIBUTION_UNAVAILABLE) or []
     parts.append('<div class="structural-card">')
-    parts.append(
-        f'<h3><span>{help_term(labels, "distribution_shift", translated("structural_distribution_title"))}</span>'
-        f'{badge(len(shifted_set), variant="")}</h3>'
-    )
+    parts.append(f'<h3>{help_term(labels, "distribution_shift", translated("structural_distribution_title"))}</h3>')
+    parts.append(count_summary(len(dist_shift), len(shifted_set)))
 
     if shifted_set:
         parts.append('<div class="structural-list">')
@@ -211,7 +232,6 @@ def style_structural(
             empty_state(
                 translated("structural_no_shifts" if dist_shift else "structural_unavailable"),
                 css_class="structural-empty",
-                badge_text="–",
             )
         )
     if distribution_unavailable and dist_shift:

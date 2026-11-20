@@ -363,10 +363,10 @@ a.chapter-link:hover { color: var(--accent-hover); }
 dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-.ctl-select { position: relative; display: grid; }
+.ctl-select { position: relative; display: grid; min-inline-size: 0; }
 .ctl-select > select.ctl {
   appearance: none; width: 100%; text-overflow: ellipsis;
-  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4));
+  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
 }
 .ctl-select > .lixity-icon {
   position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
@@ -1506,10 +1506,17 @@ td.flag-excerpt { min-width: 16rem; max-width: 24rem; overflow: hidden; text-ove
 .dim-cutoff { max-width: 95ch; padding: .5rem .85rem; font-size: var(--text-small); }
 .dim-cutoff > summary { cursor: pointer; }
 .dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
-.dim-view-control { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .35rem .75rem; }
-.dim-view-control > select#dim-projection { position: absolute; width: 44px; min-width: 44px; min-height: 2.75rem; opacity: 0; pointer-events: none; }
-.dim-projection-pills { margin-block: 0; }
-#dimensions:not(.dim-ready) #dim-3d-view :is(.dim-view-control, .dim-legend, .dim-threshold-controls,
+.dim-view-controls {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  align-items: start; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+}
+.dim-view-control { display: grid; gap: var(--space-1); min-width: 0; }
+.dim-view-control label { font-weight: var(--weight-semibold); }
+.dim-view-control select { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.dim-chapter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.dim-chapter-actions select { flex: 1 1 8rem; }
+#dim-read-chapter { max-width: 100%; white-space: normal; }
+#dimensions:not(.dim-ready) #dim-3d-view :is(.dim-view-controls, .dim-legend, .dim-threshold-controls,
 .dim-canvas-wrap, .dim-3d-actions, .dim-3d-footer, #dim-legend-note, #dim-incomplete-axes),
 #dimensions:not(.dim-ready) .dim-selection-panel { display: none; }
 .dim-selection-panel { min-width: 0; padding: .85rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
@@ -1521,11 +1528,8 @@ td.flag-excerpt { min-width: 16rem; max-width: 24rem; overflow: hidden; text-ove
 .dim-threshold-controls > * { flex: 0 0 auto; }
 #dim-next-threshold { flex: 0 0 auto; }
 }
-.dim-selection-panel label { display: block; font-weight: var(--weight-semibold); margin-bottom: .35rem; }
-.dim-selection-panel select { display: block; width: 100%; min-width: 0; max-width: 100%; }
 #dim-selection { overflow-wrap: anywhere; }
 #dim-selection > p { margin: .35rem 0; }
-#dim-read-chapter { display: inline-flex; align-items: center; max-width: 100%; margin-top: .5rem; }
 .dim-selected-scores { display: grid; gap: .55rem; margin: .65rem 0; }
 .dim-selected-scores > div { display: flex; gap: .8rem; justify-content: space-between; align-items: baseline; }
 .dim-selected-scores dt { color: var(--muted); }
@@ -1575,7 +1579,7 @@ min-height: 280px;
 background: var(--bg);
 cursor: grab;
 user-select: none;
-touch-action: none;
+touch-action: pan-y pinch-zoom;
 overflow: hidden;
 &:active { cursor: grabbing; }
 & #dim-3d-canvas { display: block; width: 100%; height: 100%; }
@@ -1594,10 +1598,12 @@ backdrop-filter: blur(var(--glass-blur));
 border: 1px solid var(--line-glass);
 color: var(--fg);
 box-shadow: 0 4px 16px light-dark(rgba(0,0,0,.12), rgba(0,0,0,.45));
-transform: translate(-50%, -100%);
-margin-top: -10px;
-white-space: nowrap;
-& .dim-tt-title { font-weight: var(--weight-strong); margin-bottom: .2rem; color: var(--fg); border-bottom: 1px solid var(--line); padding-bottom: .15rem; }
+inline-size: max-content;
+max-inline-size: calc(100% - 2 * var(--space-2));
+max-block-size: calc(100% - 2 * var(--space-2));
+overflow: hidden;
+overflow-wrap: anywhere;
+& .dim-tt-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; font-weight: var(--weight-strong); margin-bottom: .2rem; color: var(--fg); border-bottom: 1px solid var(--line); padding-bottom: .15rem; }
 & .dim-tt-row { display: flex; justify-content: space-between; gap: .75rem; color: var(--muted); & b { color: var(--fg); font-variant-numeric: tabular-nums; } }
 & .dim-tt-flag { margin-top: .2rem; color: var(--style-space-threshold); font-weight: var(--weight-semibold); font-size: var(--text-micro); }
 }
@@ -1613,7 +1619,8 @@ white-space: nowrap;
 .dim-canvas-wrap { height: clamp(260px, 48vw, 360px); min-height: 260px; }
 .loadings { grid-template-columns: 1fr; }
 }
-/* --- Structural diagnostics (PELT changepoints, trends & drift) ------ */
+.style-panel:has(> #style-tabs:not([hidden])) > :is(h2, .ctl-note) { display: none; }
+/* --- Structural diagnostics (chapter changes, trends & drift) ------- */
 .structural-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1.25rem; align-items: stretch; }
 .structural-card {
 background: var(--surface);
@@ -1625,7 +1632,8 @@ flex-direction: column;
 gap: .75rem;
 & h3 { margin: 0; font-size: var(--text-control); font-weight: var(--weight-strong); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 }
-.structural-empty { display: flex; align-items: center; gap: .65rem; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--bg-subtle); border: 1px solid var(--line); font-size: var(--text-small); color: var(--fg); line-height: 1.45; }
+.structural-empty { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--bg-subtle); border: 1px solid var(--line); font-size: var(--text-small); color: var(--fg); line-height: var(--line-body); }
+.structural-gaps { margin: var(--space-2) 0 0; padding-inline-start: var(--space-5); }
 .structural-list { display: flex; flex-direction: column; gap: .55rem; }
 .structural-item {
 display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem .75rem;
@@ -2374,7 +2382,8 @@ footer:empty { display: none; }
 /* Snapshot capabilities belong to the shared workspace, including lazy panes. */
 body[data-read-only="true"] [data-requires-write],
 body[data-read-only="true"] [data-requires-live] { display: none !important; }
-.site-read-only-notice { margin: 0; padding: .45rem 1rem; color: var(--muted); background: var(--surface); font-size: .85rem; text-align: center; }
+.site-read-only-notice { display: block; }
+.lixity-report > .site-read-only-notice { padding: var(--space-2) var(--space-4); color: var(--muted); background: var(--surface); font-size: var(--text-small); text-align: center; }
 /* The pronunciation list remains usable when a project has many replacements. */
 .pronunciation-list { list-style: none; padding: 0; max-height: 18rem; overflow-y: auto; }
 .pronunciation-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .5rem 0; }
@@ -3911,6 +3920,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .workspace-reader-panel .setting-field { margin: 0; flex: 1 1 10rem; }
 .workspace-reader-panel .setting-field label { font-size: var(--text-small); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); }
 .workspace-reader-panel .setting-field select.ctl { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.4rem 0.65rem; }
+#workspace-reader-associations-field { margin-block-end: var(--space-2); }
+#workspace-reader-body[data-hide-dossier-text-associations] [data-dossier-text-association] { display: none; }
 .workspace-reader-panel h3 { font-size: var(--text-body); }
 .workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }
@@ -4070,7 +4081,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-analysis-guide ol { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-inline-start: 1.5rem; }
 .reader-analysis-guide li .ctl { width: 100%; white-space: normal; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
-.manuscript-reading.workbench-analysis:not(.reader-focus) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
+.manuscript-reading.workbench-analysis:not(.reader-focus):not(.manuscript-writing) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
 .reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
@@ -4445,7 +4456,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 @keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
 @keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: 0; } }
 
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .strip { display: flex; margin: .6rem 0 1.25rem; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
@@ -4491,7 +4502,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 
 .manuscript-reading.workbench-overview .toolbar-sections { display: flex !important; }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .layer-legend:not([hidden]) { display: flex !important; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing) .layer-legend:not([hidden]) { display: flex !important; }
 .manuscript-reading.workbench-overview .toolbar > .legend,
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .toolbar > .legend { display: flex !important; }
 .manuscript-reading.workbench-analysis .toolbar > .metric-layer-control { display: flex !important; flex-wrap: wrap; align-items: center; gap: var(--space-2); }

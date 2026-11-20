@@ -207,14 +207,17 @@ def ui_icon(name: str, *, size: int = 16, css_class: str = "", label_text: str =
 
 
 def select_control(
-    control_id: str, accessible_name: str, options_html: str, *, css_class: str = "", help_text: str = "",
+    control_id: str, options_html: str, *, accessible_name: str = "", css_class: str = "",
+    help_text: str = "", attributes: Mapping[str, str] | None = None,
 ) -> str:
     """Render a native select with the shared chevron and logical padding."""
     classes = f"ctl-select {css_class}" if css_class else "ctl-select"
+    name_attr = f' aria-label="{esc(accessible_name)}"' if accessible_name else ""
     help_attr = f' data-help="{esc(help_text)}"' if help_text else ""
+    extra = "".join(f' {key}="{esc(value)}"' for key, value in (attributes or {}).items())
     return (
         f'<span class="{esc(classes)}">'
-        f'<select class="ctl" id="{esc(control_id)}" aria-label="{esc(accessible_name)}"{help_attr}>'
+        f'<select class="ctl" id="{esc(control_id)}"{name_attr}{help_attr}{extra}>'
         f'{options_html}</select>{ui_icon("chevron-down")}</span>'
     )
 
@@ -359,7 +362,7 @@ _PANEL_REFERENCES = {
     "flags": "flags", "pacing": "pacing", "dist": "dist", "dialogue": "dialogue",
     "characters": "characters", "showing": "showing", "motifs": "motifs", "scenes": "scenes",
     "matrix": "matrix", "heatmap": "matrix", "style": "style", "bands": "style",
-    "dimensions": "style", "structural": "style", "register-targets": "register-targets",
+    "dimensions": "dimensions", "structural": "structural", "register-targets": "register-targets",
 }
 
 

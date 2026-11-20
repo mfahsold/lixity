@@ -33,6 +33,9 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
       }
     };
     window.scrollAndFlash = function(target) { target.dataset.visited = "1"; };
+    window.openResearchDossierComposer = function() {
+      document.getElementById("r-dos-composer").dataset.visited = "1";
+    };
   </script>
   <script>${paletteJs}</script>
 </head>
@@ -115,8 +118,7 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Neues Forschungs-Dossier');
   await page.keyboard.press('Enter');
-  assert.equal(await page.locator('#r-dos-composer').evaluate(el => el.open), true, 'New dossier command opens #r-dos-composer');
-  assert.equal(await page.evaluate(() => document.activeElement.id), 'r-dos-title', 'New dossier command focuses #r-dos-title');
+  assert.equal(await page.locator('#r-dos-composer').getAttribute('data-visited'), '1', 'New dossier command delegates to the research workspace');
 
   await page.evaluate(() => ['style-layer', 'pacing'].forEach(id => document.getElementById(id).remove()));
   await page.keyboard.press(modShortcut('k'));
