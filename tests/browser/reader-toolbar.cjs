@@ -37,6 +37,20 @@ return fixture.stdout;
    if(await chapterSelect.isVisible()) {
     const isTruncated=await chapterSelect.evaluate(el=>el.scrollWidth>el.clientWidth);
     assert.equal(isTruncated,false,`Chapter select in ${language} at ${width}px must not be truncated`);
+    const spacing=await chapterSelect.evaluate(select=>{
+     const icon=select.nextElementSibling;
+     const control=select.getBoundingClientRect(), arrow=icon.getBoundingClientRect();
+     const style=getComputedStyle(select);
+     return {
+      labelInset:parseFloat(style.paddingInlineStart), arrowInset:control.right-arrow.right,
+      labelEnd:parseFloat(style.paddingInlineEnd), arrowSpan:control.right-arrow.left,
+      centerOffset:(control.top+control.bottom-arrow.top-arrow.bottom)/2,
+      decorative:icon.getAttribute('aria-hidden')==='true' && getComputedStyle(icon).pointerEvents==='none',
+     };
+    });
+    assert(Math.abs(spacing.labelInset-spacing.arrowInset)<1,`Chapter insets align at ${width}px (${language}, ${theme})`);
+    assert(spacing.labelEnd>=spacing.arrowSpan-1,`Chapter text leaves room for the arrow at ${width}px`);
+    assert(Math.abs(spacing.centerOffset)<1 && spacing.decorative,`Chapter arrow is centered and decorative at ${width}px`);
    }
    assert(await page.locator('#reader-speech').isVisible());
    assert(await page.locator('#workspace-reader-toggle').isVisible());

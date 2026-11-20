@@ -363,6 +363,15 @@ a.chapter-link:hover { color: var(--accent-hover); }
 dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
+.ctl-select { position: relative; display: grid; }
+.ctl-select > select.ctl {
+  appearance: none; width: 100%; text-overflow: ellipsis;
+  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4));
+}
+.ctl-select > .lixity-icon {
+  position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
+  inline-size: var(--space-4); block-size: var(--space-4); pointer-events: none;
+}
 button.ctl:where(:enabled):active, a.ctl:active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
@@ -4037,7 +4046,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .manuscript-reader-controls {
   container: reader-tools / inline-size;
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
-  align-items: center; gap: .4rem; padding: .35rem .5rem;
+  align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2);
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
   background: var(--surface);
   /* Fixed settings panels must escape this bounded toolbar scrollport. */
@@ -4072,7 +4081,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .reader-control-label { display: none; }
   .reader-compact-control { padding: .35rem .5rem; min-width: 2.25rem; justify-content: center; }
 }
-.reader-chapter { max-width: 18rem; min-width: 0; flex: 1 1 10rem; }
+.reader-chapter { min-inline-size: clamp(5.5rem, 8cqi, 8rem); max-inline-size: 14rem; }
 .reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
 .reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }
 .reader-settings { position: relative; }
@@ -4363,8 +4372,6 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-focus .reader-controls { display: none; }
 @media (max-width: 600px) {
   .manuscript-reading .toolbar { position: static; }
-  .manuscript-reader-controls { gap: .25rem; padding: .25rem .35rem; }
-  .reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: none; }
   .reader-size-controls { margin-left: auto; }
   .reader-compact-control { width: 44px; min-height: 44px; padding: .4rem; justify-content: center; }
   .reader-control-label { display: none; }
@@ -4554,9 +4561,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .manuscript-reading .reader-return-target::after { background: var(--accent); width: 3px; }
 
 /* Keep reading tools compact without truncating labels or hiding actions. */
-.manuscript-reader-controls { gap: .25rem; padding: .25rem .45rem; }
 .manuscript-reader-controls .section-navigation { border-bottom: 0; }
-.manuscript-reader-controls select.reader-chapter { flex: 0 1 auto; min-width: 8rem; width: auto; max-width: 14rem; }
 .manuscript-reader-controls > button.ctl,
 .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
 .manuscript-reader-controls .reader-controls > button.ctl {
@@ -4580,7 +4585,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   }
 }
 @container reader-tools (max-width: 95rem) {
-  .manuscript-reader-controls select.reader-chapter { flex: 0 1 auto; min-width: 7.5rem; width: auto; }
   #reader-focus, #reader-teleprompter, #reader-direct-speech, #reader-speech, #workspace-reader-toggle { min-width: 2.5rem; }
   #reader-focus .reader-control-label,
   #reader-teleprompter .reader-control-label,
@@ -4595,14 +4599,13 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   #manuscript-write .reader-control-label { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
-  .manuscript-reader-controls select.reader-chapter { flex: 0 1 auto; min-width: 7rem; width: auto; }
   .reader-control-label { display: none; }
   .reader-compact-control { min-width: 2.5rem; }
 }
 /* An open context dock narrows the reader: keep every tool on one row
    (including the dock toggle) by capping the chapter picker and gaps. */
 @container reader-tools (max-width: 62rem) {
-  .manuscript-reader-controls select.reader-chapter { flex: 0 1 9rem; min-width: 6rem; max-width: 9rem; }
+  .reader-chapter { max-inline-size: 9rem; }
   .manuscript-reader-controls .reader-controls,
   .manuscript-reader-controls .reader-analysis-toggle-controls { gap: .15rem; }
   .manuscript-reader-controls > button.ctl,
@@ -4610,8 +4613,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .manuscript-reader-controls .reader-controls > button.ctl { padding-inline: .35rem; }
 }
 @container reader-tools (max-width: 46rem) {
-  .manuscript-reader-controls { gap: .15rem; padding: .25rem .35rem; }
-  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7.5rem; min-width: 5.5rem; max-width: 7.5rem; }
+  .reader-chapter { max-inline-size: 7.5rem; }
   .manuscript-reader-controls :is(#reader-focus, #reader-teleprompter, #reader-direct-speech, #reader-speech, #workbench-overview-open, #manuscript-write, #workspace-reader-toggle),
   .reader-analysis-guide > summary { min-width: 2.15rem; padding-inline: .25rem; }
   .manuscript-reader-controls .reader-settings > summary { padding: .3rem 1.15rem .3rem .4rem; }
@@ -4632,13 +4634,12 @@ body.lixity-workspace.reader-focus {
   .reader-focus .manuscript-reader-controls:hover { border-color: var(--line-strong); }
 }
 @media (max-width: 600px) {
-  .manuscript-reader-controls select.reader-chapter { flex: 1 1 auto; min-width: 7rem; width: auto; max-width: 100%; }
+  .reader-chapter { flex: 1 1 auto; min-inline-size: min(7rem, 100%); max-inline-size: 100%; }
 }
 @media (pointer: coarse) {
   .manuscript-reader-controls > button.ctl,
   .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
   .manuscript-reader-controls .reader-controls > button.ctl,
-  .manuscript-reader-controls select.reader-chapter,
   .manuscript-reader-controls .reader-settings > summary { min-height: 2.75rem; }
 }
 
@@ -5290,7 +5291,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then <strong>Back to reading copy</strong> to return. This example includes all six chapters; the analysis is not hidden by reading progress.</p><p><strong>Chapter audio</strong> contains the complete first chapter, synthesized with the generic eSpeak NG English voice and imported through the ordinary chapter-audio path. Press Play to listen or download the WAV. This demonstrates the export workflow, not neural voice quality; no human voice reference is used and the other five chapters have no audio.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.9.0</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A61af2abf-748e-4d97-97d6-eeb7f89ac69f\u0026version_id=urn%3Auuid%3Ae619e684-d6e7-4692-88b2-177a5a5a7667":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A3dfc9c99-f00a-429b-a98d-185a0f4d2403\u0026source_id=urn%3Auuid%3A61af2abf-748e-4d97-97d6-eeb7f89ac69f\u0026version_id=urn%3Auuid%3Ae619e684-d6e7-4692-88b2-177a5a5a7667":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A080e36b4-9f6c-413e-af60-8654709174ed\u0026version_id=urn%3Auuid%3A25578e1b-f571-44e7-9a56-4fb2dd6f0d1c":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A3dfc9c99-f00a-429b-a98d-185a0f4d2403\u0026source_id=urn%3Auuid%3A080e36b4-9f6c-413e-af60-8654709174ed\u0026version_id=urn%3Auuid%3A25578e1b-f571-44e7-9a56-4fb2dd6f0d1c":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/2","mode":"reader","profile":"readers","project_id":"urn:uuid:3dfc9c99-f00a-429b-a98d-185a0f4d2403","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:440660e4-eeff-4327-b7a4-ca3ab20f9a93","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:a639e62c-f2d2-4f17-b73c-86af1ba89725","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:61af2abf-748e-4d97-97d6-eeb7f89ac69f/urn:uuid:e619e684-d6e7-4692-88b2-177a5a5a7667)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3dfc9c99-f00a-429b-a98d-185a0f4d2403","source_id":"urn:uuid:61af2abf-748e-4d97-97d6-eeb7f89ac69f","source_version_id":"urn:uuid:e619e684-d6e7-4692-88b2-177a5a5a7667","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A3dfc9c99-f00a-429b-a98d-185a0f4d2403\u0026source_id=urn%3Auuid%3A61af2abf-748e-4d97-97d6-eeb7f89ac69f\u0026version_id=urn%3Auuid%3Ae619e684-d6e7-4692-88b2-177a5a5a7667","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:a639e62c-f2d2-4f17-b73c-86af1ba89725","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:080e36b4-9f6c-413e-af60-8654709174ed/urn:uuid:25578e1b-f571-44e7-9a56-4fb2dd6f0d1c)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:3dfc9c99-f00a-429b-a98d-185a0f4d2403","source_id":"urn:uuid:080e36b4-9f6c-413e-af60-8654709174ed","source_version_id":"urn:uuid:25578e1b-f571-44e7-9a56-4fb2dd6f0d1c","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A3dfc9c99-f00a-429b-a98d-185a0f4d2403\u0026source_id=urn%3Auuid%3A080e36b4-9f6c-413e-af60-8654709174ed\u0026version_id=urn%3Auuid%3A25578e1b-f571-44e7-9a56-4fb2dd6f0d1c","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:440660e4-eeff-4327-b7a4-ca3ab20f9a93","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:440660e4-eeff-4327-b7a4-ca3ab20f9a93","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:440660e4-eeff-4327-b7a4-ca3ab20f9a93","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"e6bf0a5815a9556f03ec3dd3892eceef052aef5261e4ba13099441d36af84c8c","audio":{"schema_version":"lixity-reader-audio/1","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","tracks":[{"chapter":1,"title":"The Eastern Gate","file":"assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav","sha256":"9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501","byte_length":3002838,"duration_seconds":68.09056689342404,"origin":"imported"}]}}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Ae79fff53-6d21-4e98-9b60-e6c71bcb07ac\u0026version_id=urn%3Auuid%3Ae069cd2d-f883-43c8-b8df-d9caf786bc00":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A30cff8af-affc-40f8-b5ad-7fcc7993f2ca\u0026source_id=urn%3Auuid%3Ae79fff53-6d21-4e98-9b60-e6c71bcb07ac\u0026version_id=urn%3Auuid%3Ae069cd2d-f883-43c8-b8df-d9caf786bc00":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A72404687-e3f2-44b9-af0c-baea06e24bcf\u0026version_id=urn%3Auuid%3Ad527ead4-b108-44e7-9004-9ad7babef06e":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A30cff8af-affc-40f8-b5ad-7fcc7993f2ca\u0026source_id=urn%3Auuid%3A72404687-e3f2-44b9-af0c-baea06e24bcf\u0026version_id=urn%3Auuid%3Ad527ead4-b108-44e7-9004-9ad7babef06e":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/2","mode":"reader","profile":"readers","project_id":"urn:uuid:30cff8af-affc-40f8-b5ad-7fcc7993f2ca","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":6,"chapters":[{"number":1},{"number":2},{"number":3},{"number":4},{"number":5},{"number":6}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:4cdb8138-4e03-4564-8251-1c6b40ba9df7","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:0b7e7349-a9d6-48db-93a3-b1ad243b4f6d","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:e79fff53-6d21-4e98-9b60-e6c71bcb07ac/urn:uuid:e069cd2d-f883-43c8-b8df-d9caf786bc00)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:30cff8af-affc-40f8-b5ad-7fcc7993f2ca","source_id":"urn:uuid:e79fff53-6d21-4e98-9b60-e6c71bcb07ac","source_version_id":"urn:uuid:e069cd2d-f883-43c8-b8df-d9caf786bc00","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A30cff8af-affc-40f8-b5ad-7fcc7993f2ca\u0026source_id=urn%3Auuid%3Ae79fff53-6d21-4e98-9b60-e6c71bcb07ac\u0026version_id=urn%3Auuid%3Ae069cd2d-f883-43c8-b8df-d9caf786bc00","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:0b7e7349-a9d6-48db-93a3-b1ad243b4f6d","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:72404687-e3f2-44b9-af0c-baea06e24bcf/urn:uuid:d527ead4-b108-44e7-9004-9ad7babef06e)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:30cff8af-affc-40f8-b5ad-7fcc7993f2ca","source_id":"urn:uuid:72404687-e3f2-44b9-af0c-baea06e24bcf","source_version_id":"urn:uuid:d527ead4-b108-44e7-9004-9ad7babef06e","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A30cff8af-affc-40f8-b5ad-7fcc7993f2ca\u0026source_id=urn%3Auuid%3A72404687-e3f2-44b9-af0c-baea06e24bcf\u0026version_id=urn%3Auuid%3Ad527ead4-b108-44e7-9004-9ad7babef06e","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:4cdb8138-4e03-4564-8251-1c6b40ba9df7","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:4cdb8138-4e03-4564-8251-1c6b40ba9df7","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:4cdb8138-4e03-4564-8251-1c6b40ba9df7","revision":1,"section":"Reader final clue","title":"The receiving signature","body":"A blank signature is an absence, not a name. The two ledger entries, reused board and torn paper leave several possible connections. The morning handover preserves the question instead of identifying a culprit.","reveal_after_chapter":6,"citations":[],"images":[],"media":[],"geography":null}],"identity":"b51a218f4a6e2ceba1160eca65aa259a99d680ccecbce9e09191e56366caee6b","audio":{"schema_version":"lixity-reader-audio/1","source_sha256":"218f7486e837024bb9954e2fd0f7b46de7c05f07e7490e475b52c42013708112","tracks":[{"chapter":1,"title":"The Eastern Gate","file":"assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav","sha256":"9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501","byte_length":3002838,"duration_seconds":68.09056689342404,"origin":"imported"}]}}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
