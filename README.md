@@ -29,11 +29,12 @@ export clean PDFs or self-contained reading websites.
   autosave, and recovery), and exports run offline without accounts or
   telemetry. Supports `.md`, `.txt`, and `.docx` import.
 
-**Try without installing:** open the
-[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html) to
-paste or test a classic directly in your browser, or inspect the read-only
-[Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html) (six
-fictional harbour chapters with linked case notes; fixed snapshot of 0.8.2).
+**Try without installing.** Shorten a sentence or trace a repeated word in the
+[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html).
+In the read-only [Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html),
+compare average sentence lengths in two fictional harbour chapters, then open
+the corresponding passages. The demo shows a fixed project snapshot and
+identifies the development version that generated it.
 Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
 [Methods & limits](https://mfahsold.github.io/lixity/METHODS.md) ·

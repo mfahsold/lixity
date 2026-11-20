@@ -1297,20 +1297,18 @@ def audit(project: str | Path) -> dict[str, Any]:
         for record in snapshot.records.values():
             if isinstance(record, SourceVersion) and record.blob.sha256 not in checked:
                 content = repository.read_blob(record.blob)
-                if record.blob.media_type in IMAGE_TYPES:
+                media_type = record.blob.media_type
+                if media_type in IMAGE_TYPES:
                     image = validate_image(content)
-                    if image["media_type"] != record.blob.media_type:
+                    if image["media_type"] != media_type:
                         raise ResearchError(
                             "Retained image type does not match its blob descriptor"
                         )
-                elif record.blob.media_type in VIDEO_TYPES or (
-                    record.blob.media_type == "application/pdf"
-                    and record.schema_version == "research-local/9"
-                ):
-                    if validate_media(content)["media_type"] != record.blob.media_type:
-                        raise ResearchError(
-                            "Retained media type does not match its blob descriptor"
-                        )
+                elif (
+                    media_type in VIDEO_TYPES
+                    or (media_type == "application/pdf" and record.schema_version == "research-local/9")
+                ) and validate_media(content)["media_type"] != media_type:
+                    raise ResearchError("Retained media type does not match its blob descriptor")
                 checked.add(record.blob.sha256)
             elif isinstance(record, Extraction) and record.text_blob.sha256 not in checked:
                 repository.read_blob(record.text_blob)

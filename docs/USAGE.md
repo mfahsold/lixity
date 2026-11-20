@@ -758,9 +758,9 @@ measurements remain available. Identical balances yield empty
 `most_telling`/`most_showing` ranks. Empty ranks mean no distinguishable
 ordering, not identical artistic effect.
 
-The native **Analysis overview → Signal-group comparison** panel
-shows these chapter values and links back to the manuscript. Review-workspace
-website copies include that analysis; reader copies include it only
+In the native app, open **Analysis overview → Explore patterns → Word patterns,
+quotes and short sentences** for these chapter values and manuscript links.
+Review-workspace website copies include that analysis. Reader copies include it only
 when full analysis is explicitly selected. Companion copies exclude it. Reader
 copies recalculate on the capped chapters using default rules and thresholds.
 Bar length shows the magnitude of the balance; its signed number gives the

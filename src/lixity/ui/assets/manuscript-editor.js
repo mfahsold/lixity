@@ -51,6 +51,7 @@
     else b.textContent = newLabel;
   }
   let editor, snapshot, dirty = false, paused = false, inflight = false, pending = null, timer, maximum, loading = false;
+  let composing = false;
   let loaded = false, generation = 0, openingLine = 1, lastState = '';
   const closeWords = [L('editor_close_writing'), L('editor_close_writing_help')];
   const openButton = button(text(0), 'manuscript-write', open, null, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
@@ -591,13 +592,24 @@
     generation++;
     dirty = true; show('unsaved', text(6));
     scheduleGutterMark();
-    if (paused) return;
+    scheduleSave();
+  }
+  function scheduleSave() {
+    if (paused || composing) return;
     clearTimeout(timer); timer = setTimeout(flush, 800);
     if (!maximum) maximum = setTimeout(flush, 4000);
   }
+  host.addEventListener('compositionstart', () => {
+    composing = true;
+    clearTimeout(timer); clearTimeout(maximum); maximum = null;
+  }, true);
+  host.addEventListener('compositionend', () => {
+    composing = false;
+    if (dirty) scheduleSave();
+  }, true);
   async function flush() {
     clearTimeout(timer); clearTimeout(maximum); maximum = null;
-    if (!editor || !dirty || inflight || paused) return;
+    if (!editor || !dirty || inflight || paused || composing) return;
     inflight = true; show('saving', text(4));
     if (!pending) pending = {document: snapshot.document, revision: snapshot.revision,
       operation: crypto.randomUUID().replaceAll('-', ''), text: editor.text()};
@@ -609,7 +621,7 @@
       refreshPulse().catch(() => {});
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
     finally {inflight = false; const rBtn = document.getElementById('manuscript-read'); if (rBtn) rBtn.disabled = paused || closingRead;
-      if (dirty && !paused) timer = setTimeout(flush, 800);}
+      if (dirty && !paused && !composing) timer = setTimeout(flush, 800);}
   }
   function download() {
     if (!editor) return;
@@ -670,8 +682,9 @@
     finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0));}
   }
   async function close() {
-    if (reading.open || comparison.open) return;
+    if (reading.open || comparison.open || composing) return;
     while (inflight) await new Promise(resolve => setTimeout(resolve, 25));
+    if (composing) return;
     if (dirty && !paused) await flush();
     if (paused) return;
     if (snapshot && snapshot.revision !== document.body.dataset.manuscriptSourceSha256) {

@@ -357,13 +357,12 @@ errors. Native selection keeps the existing association and prevents repeated
 submission for that claim. Existing stored duplicates are not automatically
 merged, withdrawn or re-pinned.
 
-**Approved design direction, not implemented:** dossier navigation will use
-named collections with an explicit reading order and multiple membership.
-Presentation order belongs to project navigation, independently of authored
-record revisions and accepted evidence pins. A dossier title does not encode its
-collection or role; a single parent tree or fixed category vocabulary would
-unnecessarily restrict cross-cutting collections. Unassigned dossiers must remain
-discoverable. This direction does not yet add configuration keys or commands.
+**Since v0.7.6:** dossier navigation supports named collections with explicit
+reading order. A dossier can appear in several collections, and unassigned
+dossiers remain discoverable. Membership and order live in the project's
+`[dossier_collections]` configuration, independently of authored record revisions
+and accepted evidence pins. The [workspace collection editor](WORKSPACE.md#organizing-dossier-collections)
+and `lixity research dossier` share the same collection operations.
 
 **Since v0.7.3:** `manuscript-links.js` selects exact saved
 associations with the same resolved lines, paragraph hash, codepoint span and

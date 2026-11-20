@@ -1065,7 +1065,10 @@ server.serve_forever()
           if (missing.length) await expect(page.locator('#r-ocr-diagnostic-box')).toContainText('Fehlende Sprachdaten: deu.');
           for (const width of [1440, 320]) {
             await page.setViewportSize({width, height: 844});
-            assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Tesseract status overflows at ${width}px`);
+            assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Tesseract ${status} overflows at ${width}px`);
+            const navigation = page.locator('#rtab-sources > .research-pane-navigation');
+            assert.ok(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth + 1),
+              `Source navigation overflows at ${width}px`);
             await page.locator('#r-ocr-diagnostic-box').screenshot({path: path.join(artifacts, `ocr-tesseract-${status}-${width}.png`)});
           }
           await page.unroute('**/api/research/status*');

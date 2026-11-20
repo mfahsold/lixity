@@ -37,6 +37,25 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.locator('#manuscript-undo').focus();
     assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
     assert.equal(await page.locator('#manuscript-read').count(), 0, 'Consolidated Read & Refresh button is removed');
+    if (!process.argv.includes('--firefox')) {
+      const original = fs.readFileSync(source, 'utf8');
+      const cdp = await page.context().newCDPSession(page);
+      await page.locator('.cm-content').click();
+      await page.keyboard.press(modShortcut('End'));
+      await cdp.send('Input.imeSetComposition', {text: '日本', selectionStart: 2, selectionEnd: 2});
+      await page.waitForFunction(() => document.querySelector('.cm-content').textContent.includes('日本'));
+      // Leave the composition uncommitted beyond the idle autosave interval.
+      await page.waitForTimeout(1200);
+      assert.equal(fs.readFileSync(source, 'utf8'), original, 'Autosave waits for composition to finish');
+      await cdp.send('Input.insertText', {text: '日本語'});
+      const saved = () => document.querySelector('#manuscript-save-status').dataset.state === 'saved';
+      await page.waitForFunction(saved);
+      assert.equal((fs.readFileSync(source, 'utf8').match(/日本語/g) || []).length, 1);
+      await page.keyboard.press(modShortcut('z'));
+      await page.waitForFunction(saved);
+      assert.equal(fs.readFileSync(source, 'utf8'), original, 'Undo restores the exact manuscript');
+      await cdp.detach();
+    }
     // Closing without edits returns to reading immediately and restores focus.
     await page.locator('#manuscript-close').click();
     await page.waitForFunction(() => !document.body.classList.contains('manuscript-writing'));

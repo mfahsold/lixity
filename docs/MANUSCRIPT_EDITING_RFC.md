@@ -154,6 +154,8 @@ current product path rather than a permanent old/new editor switch.
 Do not intercept Enter during IME composition or replace the editor during active
 composition. Test accented dead keys, Japanese/Chinese input, RTL selection,
 dictation and mobile keyboards. Synthetic events cannot establish real IME support.
+The Chromium regression verifies that autosave waits for simulated composition
+to finish, saves the committed text once and preserves undo.
 Keep Tab navigation escapable and test screen-reader labels and announcements.
 Do not announce every keystroke or save transition. Treat native spellchecking
 as optional browser behavior, not Lixity's deterministic linguistic analysis.

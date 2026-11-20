@@ -713,14 +713,16 @@ class Repository:
                     content = self.read_blob(record.blob)
                     from .images import IMAGE_TYPES, validate_image
                     from .media import VIDEO_TYPES, validate_media
-                    if record.blob.media_type in IMAGE_TYPES:
+                    media_type = record.blob.media_type
+                    if media_type in IMAGE_TYPES:
                         image = validate_image(content)
-                        if image["media_type"] != record.blob.media_type:
+                        if image["media_type"] != media_type:
                             raise ResearchError("Image bytes do not match their blob media type")
-                    elif (record.blob.media_type in VIDEO_TYPES
-                          or (record.blob.media_type == "application/pdf" and record.schema_version == "research-local/9")):
-                        if validate_media(content)["media_type"] != record.blob.media_type:
-                            raise ResearchError("Media bytes do not match their blob media type")
+                    elif (
+                        media_type in VIDEO_TYPES
+                        or (media_type == "application/pdf" and record.schema_version == "research-local/9")
+                    ) and validate_media(content)["media_type"] != media_type:
+                        raise ResearchError("Media bytes do not match their blob media type")
                 elif isinstance(record, Passage):
                     self.quote(candidate, record)
             created_paths: list[Path] = []

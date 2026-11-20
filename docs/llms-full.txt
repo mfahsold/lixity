@@ -1158,9 +1158,9 @@ measurements remain available. Identical balances yield empty
 `most_telling`/`most_showing` ranks. Empty ranks mean no distinguishable
 ordering, not identical artistic effect.
 
-The native **Analysis overview → Signal-group comparison** panel
-shows these chapter values and links back to the manuscript. Review-workspace
-website copies include that analysis; reader copies include it only
+In the native app, open **Analysis overview → Explore patterns → Word patterns,
+quotes and short sentences** for these chapter values and manuscript links.
+Review-workspace website copies include that analysis. Reader copies include it only
 when full analysis is explicitly selected. Companion copies exclude it. Reader
 copies recalculate on the capped chapters using default rules and thresholds.
 Bar length shows the magnitude of the balance; its signed number gives the
@@ -2685,9 +2685,9 @@ browser preferences; display changes do not edit the source.
 **Unreleased native navigation:** the overview starts with status, the next
 passage and three task choices. Selecting **Review passages**, **Compare
 chapters** or **Explore patterns** reveals one existing analysis section.
-Secondary choices switch sections within that task; lists and methods stay
-available on demand. Switching retains inputs and disclosure state. Deep links
-reveal their owning section before navigating, including nested style views.
+Secondary choices switch sections within that task and retain your inputs.
+Selecting **Manuscript measurements** opens its overview. Deep links reveal
+their owning section before navigating, including nested style views.
 **Back to passage** restores the manuscript position and analysis choice.
 CLI standalone reports retain direct section navigation; without JavaScript their
 complete text and tables remain readable.

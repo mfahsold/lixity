@@ -7,6 +7,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the Research source navigation within the viewport immediately after
+  resizing to a narrow screen.
+- Defer manuscript autosave until text composition finishes.
+
 ### Changed
 
 - Explain manuscript analysis in terms of questions writers can answer. The

@@ -391,9 +391,9 @@ browser preferences; display changes do not edit the source.
 **Unreleased native navigation:** the overview starts with status, the next
 passage and three task choices. Selecting **Review passages**, **Compare
 chapters** or **Explore patterns** reveals one existing analysis section.
-Secondary choices switch sections within that task; lists and methods stay
-available on demand. Switching retains inputs and disclosure state. Deep links
-reveal their owning section before navigating, including nested style views.
+Secondary choices switch sections within that task and retain your inputs.
+Selecting **Manuscript measurements** opens its overview. Deep links reveal
+their owning section before navigating, including nested style views.
 **Back to passage** restores the manuscript position and analysis choice.
 CLI standalone reports retain direct section navigation; without JavaScript their
 complete text and tables remain readable.

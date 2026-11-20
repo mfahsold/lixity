@@ -141,7 +141,7 @@ keyboard controls, companion sizing and coverage. Changing a view writes nothing
 | What you want to do | Where to start |
 | --- | --- |
 | Read a difference in context | **Manuscript**: choose **… → Explore passage** for one paragraph; use **Analysis** independently for diagnostics. |
-| Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
+| Compare chapter positions | **Analysis overview → Compare chapters → Style → Feature-rank projection**. Select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
@@ -151,10 +151,9 @@ work without the tile background.
 
 ## Work through review notes
 
-**Analysis overview → Flagged passages** is
-specifically a heuristic tense-pattern list, not a combined ranking of all
-analysis metrics. Its strongest stage is called a **strong difference**, not a
-defect. Filter by chapter/stage, inspect **Why here?**, and choose **Read passage**
+Open **Analysis overview → Review passages → Flagged passages** to inspect
+heuristic tense patterns. The highest flag level is called **strong difference**.
+Filter by chapter or stage, inspect **Why here?**, and choose **Read passage**
 or **Read next visible passage**. Marker counts, mixed-tense classification and
 switch-from-prior-paragraph explain this list; sentence-length baselines do not.
 
