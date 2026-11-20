@@ -176,9 +176,11 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         'USAGE.md#lixity-diff',
         (
             'Compare two manuscript files or recorded revisions across words, sentence dispersion, '
-            'length entropy, sticky sentences, and indirect speech.'
+             'length entropy, sticky sentences, and indirect speech. With one file, --project reads '
+             'the selected project’s editing history and accepts a path relative to that project.'
         ),
-        ('lixity diff draft1.md draft2.md --json', 'lixity diff manuscript.md --json'),
+        ('lixity diff draft1.md draft2.md --json', 'lixity diff manuscript.md --json',
+         'lixity diff drafts/manuscript.md --project ./novel --json'),
     ),
     'dashboard': (
         'USAGE.md#lixity-dashboard',

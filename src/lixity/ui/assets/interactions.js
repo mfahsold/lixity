@@ -165,11 +165,8 @@ function scrollAndFlash(target, options) {
   var view = target.closest(".view-pane");
   if (view && !view.classList.contains("active")) switchActiveView(view.dataset.viewPane);
   if (target.closest("#manuscript-analysis-panels, #analysis-review, #analysis-sections")) {
-    if (window.LixityWorkbench && window.LixityWorkbench.state().surface !== "overview") {
-      window.LixityWorkbench.dispatch({ type: "surface", value: "overview" });
-    } else if (window.LixityReader) {
-      window.LixityReader.inspect();
-    }
+    if (window.LixityReader) window.LixityReader.openOverview();
+    else if (window.LixityWorkbench) window.LixityWorkbench.dispatch({type:"surface", value:"overview"});
   }
   if (target.closest("#chapters") && window.LixityWorkbench &&
       (window.LixityWorkbench.state().surface !== "document" || options.analysisVisible !== undefined || options.contextTool !== undefined)) {

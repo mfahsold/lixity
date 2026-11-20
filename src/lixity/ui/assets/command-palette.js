@@ -16,10 +16,8 @@
     cmd_cat_research: "Recherche",
     cmd_cat_audio: "Audio & Sprache",
     cmd_cat_export: "Export",
-    cmd_metric_dialogue_title: "Dialoge & Redeanteile hervorheben",
     cmd_layer_dialogue_hint: "Dialoge, Sprecherwechsel & Redeanteile",
     cmd_layer_asl_hint: "Satzlänge & Lesefluss",
-    cmd_layer_tense_hint: "Grammatisches Tempus & Wechsel",
     cmd_research_search_title: "Recherche-Suchmaske öffnen",
     cmd_research_new_dossier_title: "Neues Forschungs-Dossier anlegen"
   };
@@ -40,75 +38,34 @@
     return "";
   }
 
-  function activateAnalysisLayer(layerValue, workbench) {
+  function activateAnalysisLayer(select, layerValue, workbench) {
     if (typeof switchActiveView === "function") switchActiveView("analysis");
     if (workbench) workbench.dispatch({ type: "surface", value: "document", analysisVisible: true });
-    if (typeof selectAnalysisMetric === "function") {
-      selectAnalysisMetric(layerValue);
-    } else {
-      var sel = document.getElementById("style-layer");
-      if (sel) { sel.value = layerValue; sel.dispatchEvent(new Event("change", { bubbles: true })); }
-    }
+    window.LixityComponents.changeSelectOption(select, layerValue);
   }
 
-  function buildAnalysisLayerCommands(workbench) {
-    var styleLayer = document.getElementById("style-layer");
-    var analysisCat = cmdText("cmd_cat_analysis", "Analysis");
-    if (styleLayer && styleLayer.options && styleLayer.options.length > 1) {
-      var layerCommands = [];
-      Array.prototype.slice.call(styleLayer.options).forEach(function (opt) {
-        var val = opt.value || "";
-        var label = (opt.textContent || "").trim();
-        if (!label) return;
-        var parent = opt.parentElement;
-        var groupLabel = (parent && parent.tagName === "OPTGROUP" && parent.label) ? parent.label.trim() : "";
-        var valHints = {
-          dialogue: cmdText("cmd_layer_dialogue_hint", "Dialogue turns & spoken share"),
-          asl: cmdText("cmd_layer_asl_hint", "Sentence length & rhythm"),
-          tense: cmdText("cmd_layer_tense_hint", "Grammatical tense & shifts")
-        };
-        var subtitle = valHints[val]
-          ? (groupLabel ? (groupLabel + " · " + valHints[val]) : valHints[val])
-          : (groupLabel || cmdText("cmd_layer_toggle_sub", "Toggle analysis layer in manuscript"));
-        layerCommands.push({
-          id: val ? ("layer-" + val) : "layer-off",
-          category: groupLabel ? (analysisCat + ": " + groupLabel) : analysisCat,
-          title: label,
-          subtitle: subtitle,
-          icon: val ? "sigma" : "eye",
-          action: function () {
-            activateAnalysisLayer(val, workbench);
-          }
-        });
-      });
-      if (layerCommands.length) return layerCommands;
-    }
-    return [
-      {
-        id: "metric-asl",
-        category: analysisCat,
-        title: cmdText("cmd_metric_asl_title", "Highlight Sentence Length & Rhythm"),
-        subtitle: cmdText("cmd_metric_asl_sub", "Average sentence length and rhythm"),
-        icon: "sigma",
-        action: function () { activateAnalysisLayer("asl", workbench); }
-      },
-      {
-        id: "metric-dialogue",
-        category: analysisCat,
-        title: cmdText("cmd_metric_dialogue_title", "Highlight Dialogue & Direct Speech"),
-        subtitle: cmdText("cmd_metric_dialogue_sub", "Dialogue turns and spoken share"),
-        icon: "quote",
-        action: function () { activateAnalysisLayer("dialogue", workbench); }
-      },
-      {
-        id: "metric-tense",
-        category: analysisCat,
-        title: cmdText("cmd_metric_tense_title", "Highlight Grammatical Tense"),
-        subtitle: cmdText("cmd_metric_tense_sub", "Dominant tense, switches and mix"),
-        icon: "tag",
-        action: function () { activateAnalysisLayer("", workbench); }
-      }
-    ];
+  function buildAnalysisLayerCommands(workbench, category) {
+    var select = document.getElementById("style-layer");
+    if (!select || select.disabled || select.options.length < 2) return [];
+    var hints = {
+      dialogue: cmdText("cmd_layer_dialogue_hint", "Share of words in quotes and marked speech"),
+      asl: cmdText("cmd_layer_asl_hint", "Sentence length & rhythm")
+    };
+    return Array.from(select.options).filter(function(option) {
+      return !option.disabled && !option.parentElement.disabled && option.textContent.trim();
+    }).map(function(option) {
+      var value = option.value;
+      var group = option.parentElement.tagName === "OPTGROUP" ? option.parentElement.label.trim() : "";
+      var hint = hints[value] || option.dataset.hint;
+      return {
+        id: value ? "layer-" + value : "layer-off",
+        category: group ? category + ": " + group : category,
+        title: option.textContent.trim(),
+        subtitle: [group, hint].filter(Boolean).join(" · ") || cmdText("cmd_layer_toggle_sub", "Toggle analysis layer in manuscript"),
+        icon: value ? "sigma" : "eye",
+        action: function () { activateAnalysisLayer(select, value, workbench); }
+      };
+    });
   }
 
   function buildChapterCommands(workbench) {
@@ -129,10 +86,7 @@
           if (typeof switchActiveView === "function") switchActiveView("analysis");
           if (workbench) workbench.dispatch({ type: "surface", value: "document" });
           var sel = document.getElementById("reader-chapter");
-          if (sel) {
-            sel.value = chId;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-          } else {
+          if (!window.LixityComponents.changeSelectOption(sel, chId)) {
             var target = document.getElementById(chId);
             if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
           }
@@ -254,45 +208,42 @@
       });
     }
 
-    commands = commands.concat(buildAnalysisLayerCommands(workbench), [
+    commands = commands.concat(buildAnalysisLayerCommands(workbench, catAnalysis));
+    var analysisSections = [
       {
         id: "metric-pacing",
         category: catAnalysis,
+        target: "pacing",
         title: cmdText("cmd_metric_pacing_title", "Show Pacing & Scene Tension"),
         subtitle: cmdText("cmd_metric_pacing_sub", "Scene lengths, staccato and hook cues"),
-        icon: "layout",
-        action: function () {
-          var target = document.getElementById("pacing");
-          if (target && typeof scrollAndFlash === "function") {
-            scrollAndFlash(target);
-          } else if (typeof selectAnalysisMetric === "function") {
-            selectAnalysisMetric("pacing");
-          }
-        }
+        icon: "layout"
       },
       {
         id: "metric-style-space",
         category: catAnalysis,
+        target: "style",
         title: cmdText("cmd_metric_style_space_title", "Open Style Space Comparison"),
         subtitle: cmdText("cmd_metric_style_space_sub", "Inspect chapter distances in style space"),
-        icon: "sliders",
-        action: function () {
-          var target = document.getElementById("style");
-          if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
-        }
+        icon: "sliders"
       },
       {
         id: "metric-scenes",
         category: catAnalysis,
+        target: "scenes",
         title: cmdText("cmd_metric_scenes_title", "Open Scenes & Registers"),
         subtitle: cmdText("cmd_metric_scenes_sub", "Compare scene registers against project targets"),
-        icon: "table",
-        action: function () {
-          var target = document.getElementById("scenes");
-          if (target && typeof scrollAndFlash === "function") scrollAndFlash(target);
-        }
-      },
-
+        icon: "table"
+      }
+    ];
+    if (typeof scrollAndFlash === "function") {
+      analysisSections.forEach(function(command) {
+        var target = document.getElementById(command.target);
+        if (!target) return;
+        command.action = function () { scrollAndFlash(target); };
+        commands.push(command);
+      });
+    }
+    commands = commands.concat([
       // Research
       {
         id: "research-search",

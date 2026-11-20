@@ -86,6 +86,14 @@
     uiLabel: _uiLabel,
     uiFormat: _uiFormat,
     uiCountFormat: _uiCountFormat,
+    changeSelectOption: function (select, value) {
+      if (!select || select.disabled || !Array.from(select.options).some(function(option) {
+        return option.value === value && !option.disabled && !option.parentElement.disabled;
+      })) return false;
+      select.value = value;
+      select.dispatchEvent(new Event("change", {bubbles:true}));
+      return true;
+    },
     scopedLabel: function (prefix, aliases) {
       return function (key) {
         var mapped = aliases && Object.prototype.hasOwnProperty.call(aliases, key) ? aliases[key] : null;

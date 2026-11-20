@@ -70,6 +70,34 @@ async function documentState(page) {
 (async () => {
   const browser = await launchChromium();
   try {
+    const {page: shortcutPage} = await createPage(browser, fixtures.en, 1440);
+    try {
+      const prompter = shortcutPage.locator('#teleprompter-modal');
+      for (const view of ['research', 'project']) {
+        await shortcutPage.locator('#tab-view-' + view).click();
+        await shortcutPage.keyboard.press('p');
+        assert.equal(await prompter.isVisible(), false, 'P leaves the ' + view + ' view alone');
+      }
+      await shortcutPage.locator('#tab-view-analysis').click();
+      await shortcutPage.locator('#workbench-overview-open').click();
+      await shortcutPage.keyboard.press('p');
+      assert.equal(await prompter.isVisible(), false, 'P leaves the analysis overview open');
+      await shortcutPage.locator('#workbench-overview-back').click();
+      await shortcutPage.locator('#reader-settings > summary').click();
+      await shortcutPage.keyboard.press('p');
+      assert.equal(await prompter.isVisible(), false, 'P leaves the appearance settings open');
+      await shortcutPage.keyboard.press('Escape');
+      await shortcutPage.locator('#reader-chapter').press('p');
+      assert.equal(await prompter.isVisible(), false, 'P is available for native select keyboard navigation');
+      await shortcutPage.evaluate(() => window.LixityCommandPalette.open());
+      await shortcutPage.keyboard.press('p');
+      assert.equal(await prompter.isVisible(), false, 'P is available for an open dialog’s input');
+      await shortcutPage.keyboard.press('Escape');
+      await shortcutPage.locator('#reader-teleprompter').press('p');
+      assert.equal(await prompter.isVisible(), true, 'P activates the eligible manuscript control');
+    } finally {
+      await shortcutPage.close();
+    }
     for (const [locale, html] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const {page, errors, writes} = await createPage(browser, html, width);
       const toggle = page.locator('#manuscript-analysis-toggle');

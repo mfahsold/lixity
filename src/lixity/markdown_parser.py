@@ -30,6 +30,7 @@ _COMMENT_STRIP_RE = COMMENT_STRIP_RE
 _FRONT_MATTER_KEY_RE = re.compile(r"[\w-]+\s*:")
 _FENCE_OPENER_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _HEADING_MARKUP_RE = re.compile(r"^#+\s*")
+_HEADING_LINE_RE = re.compile(r"(?m)^#+.*$")
 _HEADING_GE3_RE = re.compile(r"^#{3,6}\s")
 _PREFACE_SENTENCE_END_RE = re.compile(r"""[.!?…][»«"“”'’)\]]*$""")
 _FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)")
@@ -216,6 +217,20 @@ def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, in
             headings.append((offset, offset + len(original), index + 1, title))
         offset += len(original)
     return headings
+
+
+def legacy_whitespace_text(main_text: str, config: CorpusConfig) -> str:
+    """Project appendix-trimmed text for historical whitespace word and character totals."""
+    cleaned = strip_html_comments(main_text)
+    parts: list[str] = []
+    cursor = 0
+    for start, end, _line, _title in chapter_heading_spans(cleaned, config):
+        parts.append(cleaned[cursor:start])
+        if cleaned[end - 1:end] == "\n":
+            parts.append("\n")
+        cursor = end
+    parts.append(cleaned[cursor:])
+    return _HEADING_LINE_RE.sub("", "".join(parts))
 
 
 def _chapter_spans(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:

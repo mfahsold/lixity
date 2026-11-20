@@ -66,3 +66,25 @@ def test_a_scene_break_cannot_complete_an_open_quote():
     assert analysis.metrics.dialog_words == 0
     assert analysis.evidence[0]["layers"]["dialogue"]["reason"] == "quotation_context_unresolved"
     assert "quotation_context" not in analysis.evidence[0]["layers"]["asl"]["spans"][0]
+
+
+@pytest.mark.parametrize(("language", "prose", "expected", "known_quotes"), [
+    ("en", "“Wait” and “she said after that.", [], 1),
+    ("en", "“Tell her \u2018Stay here’ today,” Mara said.", ["said"], 2),
+    ("generic", "“Wait,” Mara said.", None, 1),
+])
+def test_speech_tags_share_quotation_confidence_across_report_and_evidence(language, prose, expected, known_quotes):
+    source = f"## Chapter\n\n{prose}"
+    config = CorpusConfig(language=language)
+    assert len(quoted_prose(source, config).analysis.spans) == known_quotes
+    report = dialogue_report(source, config)
+    analysis = analyze_document(source, config, FingerprintThresholds(), include_evidence=True)
+    layer = analysis.evidence[0]["layers"]["dialogue_tag"]
+    if expected is None:
+        assert not report.dialogue_tag_available
+        assert (layer["status"], layer["reason"], layer["count"]) == ("unavailable", "language_unavailable", None)
+    else:
+        assert report.dialogue_tag_available
+        assert report.dialogue_tags == layer["count"] == len(expected)
+        assert layer["status"] == "available"
+        assert [prose[span["start"]:span["end"]] for span in layer["spans"]] == expected

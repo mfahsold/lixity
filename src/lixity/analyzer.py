@@ -41,7 +41,7 @@ from .language import (
 from .language_data import READABILITY
 from .markdown_parser import (
     before_appendix,
-    chapter_heading_spans,
+    legacy_whitespace_text,
     split_chapters,
     strip_html_comments,
 )
@@ -59,7 +59,6 @@ from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
 from .tense import TenseMatcher
 
-_RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 _RE_DASHES = re.compile(r"[–—]")
 _RE_ELLIPSES = re.compile(r"(?:…|\.{3})")
 
@@ -562,17 +561,7 @@ class CorpusAnalyzer:
         # 1. Main text vs. appendix, comments removed
         main_text = before_appendix(full_text, self.config)
         cleaned_full = strip_html_comments(full_text)
-        cleaned_main = strip_html_comments(main_text)
-        # Configured chapter headings are metadata, just like Markdown headings.
-        # Retain line separators so removing one never joins adjacent prose.
-        prose_parts: list[str] = []
-        cursor = 0
-        for start, end, _line, _title in chapter_heading_spans(cleaned_main, self.config):
-            prose_parts.append(cleaned_main[cursor:start])
-            prose_parts.append("\n" if cleaned_main[end - 1:end] == "\n" else "")
-            cursor = end
-        prose_parts.append(cleaned_main[cursor:])
-        legacy_clean_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
+        legacy_clean_main = legacy_whitespace_text(main_text, self.config)
 
         raw_words = len(cleaned_full.split())
         clean_words = len(legacy_clean_main.split())

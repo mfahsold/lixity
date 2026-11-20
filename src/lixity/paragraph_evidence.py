@@ -322,7 +322,7 @@ class ParagraphMatcher:
         context = quotation or scan_quotations(clean, self.language.key, pattern=self.dialogue)
         quoted_spans = context.quote_ranges
         dialogue_tag_count = (
-            len(find_dialogue_tag_spans(clean, quoted_spans, self.dialogue_tag))
+            len(find_dialogue_tag_spans(clean, quoted_spans, self.dialogue_tag, unclear_spans=context.unclear))
             if self.dialogue_tag_available
             else 0
         )
@@ -443,7 +443,9 @@ class ParagraphMatcher:
                         source_span["quotation_marker"] = marker
                 spans["dialogue"].append(source_span)
         if self.dialogue_tag_available:
-            tag_spans = find_dialogue_tag_spans(clean, quoted_spans_for_tags, self.dialogue_tag)
+            tag_spans = find_dialogue_tag_spans(
+                clean, quoted_spans_for_tags, self.dialogue_tag, unclear_spans=context.unclear,
+            )
             spans["dialogue_tag"] = [{"start": s, "end": e, "count": 1} for s, e in tag_spans]
         if self.indirect_speech_available:
             ind_spans = find_indirect_speech_spans(

@@ -17,6 +17,7 @@ import stat
 import sys
 import tempfile
 import zipfile
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from importlib import metadata
@@ -30,6 +31,7 @@ from .config import read_explicit_project_config, resolve_thresholds, validate_a
 from .io import FileUtils
 from .markdown_parser import _without_comments, split_chapters
 from .markers import list_markers
+from .models import CorpusConfig
 from .pipeline import analyze_document, resolve_document_config, supplementary_reports
 from .project_identity import manuscript_identity_check, project_title
 from .research import api, editorial
@@ -84,6 +86,21 @@ from .ui.dashboard import _script_json
 from .ui.manuscript_document import ReaderBlock, reader_blocks
 from .ui.render_contracts import DashboardContent, DashboardOptions
 from .workspace import resolve_manuscript_target
+
+_SITE_CONTENT_POLICY = (
+    '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+    'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
+    'img-src \'self\' data: blob:; media-src \'self\' blob:; connect-src \'self\'; font-src data:; '
+    'base-uri \'none\'; form-action \'none\'"/>'
+)
+
+
+def _publication_html(document: str, data: Mapping[str, Any] | None = None) -> bytes:
+    if data is not None:
+        # The first executable script is the provider, which needs this data at load time.
+        script = '<script type="application/json" id="lixity-site-data">' + _script_json(data) + '</script>\n'
+        document = document.replace('<script>', script + '<script>', 1)
+    return document.replace('<head>', '<head>\n' + _SITE_CONTENT_POLICY, 1).encode('utf-8')
 
 
 def _json(value: Any) -> bytes:
@@ -405,32 +422,33 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
     return data, resources, document
 
 
-def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str,
+def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, title: str,
                      sections: list[AnalysisSection]) -> tuple[bytes, dict[str, Any]]:
     """Build analysis from selected chapters only; no project metadata or comments."""
-    from .ui.components import esc, metric_reference_base, metric_reference_link, panel_formatters
+    from .ui.components import (
+        FAVICON_DATA_URI,
+        esc,
+        metric_reference_base,
+        metric_reference_link,
+        panel_formatters,
+    )
     from .ui.dashboard import _REPORT_CSS_FILES, _bundle
     from .workspace_labels import workspace_labels_for
 
-    selected = split_chapters(text, config)[:cap]
-    # Reconstruct the disclosed chapter bodies before analysis. Never derive a
-    # book-wide metric and then merely hide its later chapter rows.
-    # A reader chapter may contain ordinary headings matching the default
-    # chapter or appendix patterns. Use a collision-free synthetic heading
-    # prefix so those authored blocks cannot change the chosen scope.
-    boundary = "#" * 128
-    while any(line.startswith(boundary + " ") for _, chapter_title, body in selected
-              for line in (chapter_title + "\n" + body).splitlines()):
+    selected = [(_without_comments(chapter_title), _without_comments(body))
+                for _, chapter_title, body in split_chapters(text, config)[:cap]]
+    # Disclose only the selected bodies. Choose a chapter prefix outside ordinary
+    # Markdown heading syntax and absent from the exact text passed to analysis.
+    boundary = "#######"  # CommonMark ATX headings have at most six hashes.
+    used_prefixes = {line.partition(" ")[0] for _, body in selected for line in body.splitlines()
+                     if line.startswith(boundary)}
+    while boundary in used_prefixes:
         boundary += "#"
-    appendix_guard = "LIXITYREADERAPPENDIXBOUNDARY"
-    while any(appendix_guard in chapter_title or appendix_guard in body for _, chapter_title, body in selected):
-        appendix_guard += "X"
-    capped = "\n\n".join(f"{boundary} {_without_comments(chapter_title)}\n\n{_without_comments(body)}"
-                         for _number, chapter_title, body in selected)
+    capped = "\n\n".join(f"{boundary} {chapter_title}\n\n{body}" for chapter_title, body in selected)
     analysis_config, resolved = resolve_document_config(capped, language, project_config={})
     analysis_config = analysis_config.model_copy(update={
-        # The parser removes heading markup from an empty title's fallback.
-        "chapter_regex": rf"(?m)^{boundary} ", "appendix_marker": appendix_guard,
+        # Chapter selection already applied the project's appendix boundary.
+        "chapter_regex": rf"(?m)^{boundary} ", "appendix_marker": "",
     })
     thresholds = resolve_thresholds(project_config={})
     analysis = analyze_document(capped, analysis_config, thresholds, include_evidence=sections == ["full"])
@@ -440,6 +458,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
         "_metric_reference_base": metric_reference_base(resolved.key),
     }
     L, N, P = panel_formatters(labels, resolved.key)
+    envelope = None
     if sections == ["full"]:
         reports = supplementary_reports(capped, analysis_config, analysis)
         page = render_analysis(
@@ -463,10 +482,8 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             ),
         )
         envelope = {"schema_version": DATA_SCHEMA, "responses": {}, "resources": {}}
-        script = '<script type="application/json" id="lixity-site-data">' + _script_json(envelope) + '</script>\n'
-        page = page.replace('<script>', script + '<script>', 1)
         link = f'<p class="ctl-note"><a href="index.html">{L("publication_analysis_back")}</a> · {L("publication_analysis_cap_note")}</p>'
-        page = page.replace('<body ', '<body ', 1).replace('<div class="page"', link + '<div class="page"', 1)
+        page = page.replace('<div class="page"', link + '<div class="page"', 1)
     else:
         metrics = analysis.metrics
         def number(value: float | int, available: bool = True) -> str:
@@ -475,7 +492,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             return P(value, 2) if available else "—"
         page_parts = ['<!DOCTYPE html>', f'<html lang="{esc(resolved.key)}"><head><meta charset="utf-8"/>',
             '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
-            '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>',
+            f'<link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}"/>',
             f'<title>{L("publication_analysis_title")} · {esc(title)}</title>',
             f'<style>{_bundle(_REPORT_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
             '<body class="lixity-report" data-read-only="true"><main class="page">',
@@ -503,12 +520,7 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             page_parts.append('</section>')
         page_parts.append('</main></body></html>')
         page = '\n'.join(page_parts)
-    policy = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
-              'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
-              'img-src \'self\' data: blob:; media-src \'self\' blob:; connect-src \'self\'; font-src data:; '
-              'base-uri \'none\'; form-action \'none\'"/>')
-    page = page.replace('<head>', '<head>\n' + policy, 1)
-    return page.encode('utf-8'), {"language": resolved.key, "thresholds": asdict(thresholds)}
+    return _publication_html(page, envelope), {"language": resolved.key, "thresholds": asdict(thresholds)}
 
 
 def _research(repository: Repository, snapshot: Snapshot, text: str, source: Path,
@@ -730,15 +742,7 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     if envelope_size > MAX_SITE_DATA_BYTES:
         raise SiteExportLimitError("prepared_data_bytes", envelope_size, MAX_SITE_DATA_BYTES)
     SiteData.model_validate(envelope)
-    script = '<script type="application/json" id="lixity-site-data">' + _script_json(envelope) + '</script>\n'
-    # The provider is the first bundled asset and must see its data at load time.
-    document = document.replace('<script>', script + '<script>', 1)
-    policy = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
-              'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
-              'img-src \'self\' data: blob:; media-src \'self\' blob:; connect-src \'self\'; font-src data:; '
-              'base-uri \'none\'; form-action \'none\'"/>')
-    document = document.replace("<head>", "<head>\n" + policy, 1)
-    files["index.html"] = document.encode("utf-8")
+    files["index.html"] = _publication_html(document, envelope)
     if FileUtils.read_source_snapshot(str(repository.safe(source)))[1] != source_hash:
         raise ResearchConflictError("Manuscript changed during website preparation; retry the export")
     if _config_state(repository) != settings_state:

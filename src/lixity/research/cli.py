@@ -12,6 +12,7 @@ from typing import Any, Literal, NoReturn, cast
 from pydantic import ValidationError
 
 from ..cli_help import GroupedHelpFormatter
+from ..site import docs_url
 from .limits import MAX_IMAGE_BYTES, MAX_RESEARCH_OBJECT_BYTES
 
 OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
@@ -746,7 +747,7 @@ def _command_epilog(command: argparse.ArgumentParser, name: str) -> str:
     )
     if command.epilog:
         sections.append(command.epilog)
-    sections.append("Manual: https://mfahsold.github.io/lixity/research/USAGE.md")
+    sections.append(f"Manual: {docs_url('research/USAGE.md')}")
     return "\n\n".join(sections)
 
 
@@ -770,8 +771,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         "Help and research terminal output are English; --language selects the content language.\n\n"
         "Use lixity research COMMAND --help for write guards, examples and exact output formats.\n"
         "Most commands emit JSON; reports offer --format only where listed.\n"
-        "Manual: https://mfahsold.github.io/lixity/research/USAGE.md\n"
-        "Documentation map: https://mfahsold.github.io/lixity/README.md"
+        f"Manual: {docs_url('research/USAGE.md')}\n"
+        f"Documentation map: {docs_url('README.md')}"
     )
     commands = parser.add_subparsers(dest="research_command", required=True, metavar="COMMAND")
     for name, help_text, group, aliases in COMMAND_DEFINITIONS:

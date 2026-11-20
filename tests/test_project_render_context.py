@@ -28,12 +28,13 @@ def configured_project(tmp_path, monkeypatch):
 
 
 def test_selected_project_native_and_website_use_identical_root_settings(tmp_path, monkeypatch):
-    from lixity.server import views
+    from lixity.server import middleware, views
 
     project, source = configured_project(tmp_path, monkeypatch)
     def ambient_forbidden(*args, **kwargs):
         raise AssertionError('An explicit selected project must not read ambient settings')
     monkeypatch.setattr(views, 'load_project_config', ambient_forbidden)
+    monkeypatch.setattr(middleware, 'load_project_config', ambient_forbidden)
     before = {p: p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
     native, info = build_server_dashboard(str(source), project_root=project, language="en")
     site = prepare_site(project).files['index.html'].decode()

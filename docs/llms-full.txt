@@ -549,7 +549,7 @@ or equivalent validation across languages. See [Stability](STABILITY.md) and
 | Question | Command | Key numbers |
 | :--- | :--- | :--- |
 | How does the manuscript read overall? | [`lixity analyze`](#lixity-analyze) | ASL, CV, TTR, HD-D, MTLD, Flesch, LIX, dialogue, registers |
-| How did the manuscript change across snapshots? | `lixity diff` | word/sentence deltas, rhythm, sticky %, indirect speech, chapter changes |
+| How did the manuscript change across snapshots? | [`lixity diff`](#lixity-diff) | word and sentence counts, sentence rhythm, function-word cues and chapter changes |
 | Where do heuristic tense markers change or mix? | [`lixity profile`](#lixity-profile) | per paragraph: dominant tense, mix, switch, severity 0–3 |
 | How does each chapter differ from this manuscript's reference? | [`lixity style`](#lixity-style) | median/MAD bands, z\*, FDR set, style dimensions |
 | How is the dialogue structured? | [`lixity dialogue`](#lixity-dialogue) | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
@@ -580,7 +580,7 @@ Choose the command above for a task, or use these groups:
   [grammatical tense](#grammatical-tense), [dialogue](#lixity-dialogue),
   [characters](#lixity-characters), [pacing](#lixity-pacing),
   [scenes and registers](#scene-registers-and-project-targets), [motifs](#lixity-motifs),
-  [showing](#lixity-showing), [style](#lixity-style).
+  [showing](#lixity-showing), [style](#lixity-style), [diff](#lixity-diff).
 - Project and review: [project](#lixity-project), [analysis-review](#lixity-analysis-review),
   [research](#lixity-research), [audio](AUDIO.md).
 - Outputs: [dashboard](#lixity-dashboard), [pdf](#lixity-pdf),
@@ -1212,6 +1212,41 @@ are available, zero coordinates fill the display only; they are not measurements
 Compare scenes within their intended register and read the passages. A
 deliberate change of voice can explain a deviation; the style reference does
 not prescribe a writing target or decide whether to edit.
+
+### `lixity diff`
+
+List the earlier file first when comparing two versions.
+
+```sh
+lixity diff draft-1.md draft-2.md --language de --json
+```
+
+Both files use the analysis settings resolved for the target. Use `--language` to
+override the project language. English is the default when neither is set.
+`--language auto` detects the language from the target and applies it to
+both files. JSON uses the `lixity-diff/1` schema.
+
+Pass one file to compare it with its recorded editing history.
+
+```sh
+lixity diff manuscript.md --json
+lixity diff drafts/manuscript.md --project ./novel --json
+```
+
+Without `--project`, this mode reads the editing history in the manuscript's
+directory. Select the same root as the editor with `--project PATH`, especially
+for manuscripts in subdirectories. With this option, relative manuscript paths
+start at the selected root and its local analysis settings apply.
+
+This mode emits `lixity-timeline/1` JSON. To select specific recorded versions,
+use their full revision SHA-256 values with `--base-rev` and `--target-rev`.
+The default target is the current file. If no comparable baseline is available,
+the JSON has `"has_baseline": false` and `"deltas": null`.
+
+Without `--json`, the CLI prints the available manuscript-wide changes.
+Use JSON for chapter pairs, matching status and the original measurements.
+Chapter deltas require a clear match. Open both passages to interpret a
+difference in context. [Measurement reference](guides/metrics/en.html#revisions).
 
 ### `lixity dashboard`
 

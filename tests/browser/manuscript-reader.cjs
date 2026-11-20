@@ -115,8 +115,8 @@ async function settleGeometry(page) {
       assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'The workspace opens with analysis hidden');
       const analysisName = await analysis.getAttribute('aria-label');
       assert.ok(analysisName, 'The Analysis toggle has a localized, constant accessible name');
-      assert.equal(await page.locator('select#manuscript-mode:visible').count(), 0,
-        'Reading and analysis do not require switching manuscript presentations');
+      assert.equal(await page.locator('#manuscript-mode').count(), 0,
+        'Reading and analysis share the workbench surface state');
       assert.equal(await page.locator('body').evaluate(body => body.classList.contains('manuscript-reading')), true);
       assert.deepEqual(await page.locator('#chapters .ptext .ptext-inner > p').allTextContents(), fixture.text,
         'Every source paragraph appears exactly once, in manuscript order');

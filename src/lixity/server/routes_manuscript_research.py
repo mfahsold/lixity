@@ -6,7 +6,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from ..config import load_project_config, read_explicit_project_config
 from ..research import api as research_api
 from ..research.manuscript import ManuscriptLinkExistsError
 from ..research.repository import ResearchConflictError, ResearchError
@@ -33,8 +32,6 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
         settings = load_selected_project_config(
             source,
             strict_warnings=True,
-            explicit_loader=read_explicit_project_config,
-            implicit_loader=load_project_config,
         )
         return root, source, settings
 

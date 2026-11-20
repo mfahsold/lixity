@@ -11,12 +11,19 @@ staged tree rather than the checkout, because a link can be correct in the
 checkout and still break on the site.
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json
 import re
 import shutil
 from pathlib import Path
+
+try:
+    from build_public_site import LANGUAGES, page_path
+except ModuleNotFoundError:
+    from scripts.build_public_site import LANGUAGES, page_path
 
 #: Approved files inside ``docs/``, keyed by their path relative to it.
 #:
@@ -29,9 +36,7 @@ from pathlib import Path
 #: correctly in both contexts.
 DOCS_ROOT_FILES = {
     ".nojekyll",
-    "index.html",
-    "index-de.html", "index-fr.html", "index-es.html",
-    "index-it.html", "index-pt.html", "index-nl.html",
+    *(page_path(language) for language in LANGUAGES),
     "robots.txt",
     "sitemap.xml",
     "indexnow-key.txt",  # Public ownership proof, scoped to /lixity/ via keyLocation.

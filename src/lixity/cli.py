@@ -2028,10 +2028,21 @@ def _main(argv: list[str] | None = None) -> int:
 
         from .manuscript_editing import ManuscriptStore, compare_texts
 
+        if args.project is not None and args.target is not None:
+            parser.error("diff --project requires a single manuscript file")
         try:
             base_path = Path(args.base)
             target_path = Path(args.target) if args.target is not None else base_path
-            proj_cfg = load_project_config(target_path)
+            history_root = None
+            if args.project is not None:
+                from .workspace import resolve_manuscript_target
+
+                history_workspace = resolve_manuscript_target(args.base, project=args.project)
+                history_root = Path(history_workspace.root)
+                base_path = Path(history_workspace.manuscript)
+                proj_cfg = read_explicit_project_config(history_root)
+            else:
+                proj_cfg = load_project_config(target_path)
             lang = str(args.language or proj_cfg.get("language") or "en")
             if args.target is not None:
                 base_text = FileUtils.read_file(str(base_path))
@@ -2040,10 +2051,10 @@ def _main(argv: list[str] | None = None) -> int:
                     base_text, target_text, language=lang, project_config=proj_cfg
                 )
             else:
-                resolved_source = base_path.resolve(strict=True)
+                history_source = base_path if history_root is not None else base_path.resolve(strict=True)
                 store = ManuscriptStore(
-                    resolved_source.parent,
-                    resolved_source,
+                    history_root if history_root is not None else history_source.parent,
+                    history_source,
                     language=lang,
                     project_config=proj_cfg,
                 )

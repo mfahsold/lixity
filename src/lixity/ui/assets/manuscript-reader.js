@@ -152,7 +152,6 @@
   var controls = document.getElementById("manuscript-reader-controls");
   var chapters = document.getElementById("chapters");
   if (!controls || !chapters) return;
-  var mode = document.getElementById("manuscript-mode");
   var workbench = window.LixityWorkbench;
   var analysisToggle = document.getElementById("manuscript-analysis-toggle");
   var dock = document.getElementById("workspace-context-panel");
@@ -266,8 +265,7 @@
   }
   function defaultMetric(force) {
     if (!metric || metric.value || (!force && preferences.metric !== null)) return;
-    metric.value = "asl";
-    metric.dispatchEvent(new Event("change", {bubbles:true}));
+    window.LixityComponents.changeSelectOption(metric, "asl");
   }
   function selectMetricPreference() {
     restoreEvidencePreference();
@@ -284,13 +282,6 @@
     comparisonToggle.addEventListener("change", queueComparisonRestore, true);
     comparisonToggle.addEventListener("change", rememberAnalysis);
   }
-  var clearMetric = document.getElementById("layer-clear");
-  if (clearMetric) clearMetric.addEventListener("click", function() {
-    selectMetricPreference();
-    if (metric) metric.focus({preventScroll:true});
-  });
-  var resetParagraphs = document.getElementById("paragraph-filter-reset");
-  if (resetParagraphs) resetParagraphs.addEventListener("click", selectMetricPreference);
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
     if (pendingDockAnchor && pendingDockAnchor.revision === arrangementRevision) return pendingDockAnchor.anchor;
@@ -585,12 +576,10 @@
     }
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
   }
-  // Compatibility callers request an analysis overview, without replacing prose.
-  function setMode(value) {
-    if (value === "inspect") {
-      if (workbench.state().surface !== "overview") overviewAnchor = capture();
-      workbench.dispatch({type: "surface", value: "overview"});
-    } else workbench.dispatch({type: "surface", value: "document"});
+  function openOverview() {
+    if (workbench.state().surface === "overview") return;
+    overviewAnchor = capture();
+    workbench.dispatch({type: "surface", value: "overview"});
   }
   function passageContext(panel) {
     var chapter = panel.closest(".chapter"), heading = chapter && chapter.querySelector("h2, h3");
@@ -869,7 +858,6 @@
     if (dossierToggle) dossierToggle.hidden = state.surface === "overview";
     var guideToggle = document.getElementById("reader-analysis-guide");
     if (guideToggle) guideToggle.hidden = state.surface === "overview" || !state.analysisVisible;
-    mode.value = state.surface === "overview" ? "inspect" : "read";
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
     document.getElementById("workbench-overview-back").hidden = state.surface !== "overview";
     document.getElementById("workbench-overview-label").hidden = state.surface !== "overview";
@@ -1044,7 +1032,6 @@
   settingsPanels.forEach(function(panel) {
     new MutationObserver(placeSettings).observe(panel, {attributes: true, attributeFilter: ["open"]});
   });
-  mode.addEventListener("change", function() { setMode(mode.value); });
   analysisToggle.addEventListener("click", function() {
     var previous = workbench.state();
     retain(function() {
@@ -1061,7 +1048,7 @@
     }); });
   });
   document.getElementById("workbench-overview-open").addEventListener("click", function() {
-    overviewAnchor = capture(); workbench.dispatch({type: "surface", value: "overview"});
+    openOverview();
     (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
     document.getElementById("workbench-overview-back").focus({preventScroll: true});
   });
@@ -1428,7 +1415,7 @@
     contextFocusReturnPending: function() { return pendingDockFocusRevision === arrangementRevision; },
     pendingComparisonPassage: pendingComparisonPassage,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
-    inspect: function() { setMode("inspect", true); },
+    openOverview: openOverview,
     inspectPassage: function(panel, point) {
       if (!panel) return;
       retain(function() {
@@ -1443,6 +1430,6 @@
   workbench.dispatch({type: "analysis", value: false});
   var hashId = window.location.hash.slice(1);
   var hash = hashId ? document.getElementById(hashId) : null;
-  if (hash && hash.closest("#manuscript-analysis-panels")) setMode("inspect", true);
+  if (hash && hash.closest("#manuscript-analysis-panels")) openOverview();
   if (hash && hash.closest("#chapters, #manuscript-analysis-panels")) requestAnimationFrame(function() { scrollAndFlash(hash); });
 })();

@@ -132,16 +132,19 @@ def test_analysis_preserves_selected_chapters_with_nondefault_headings_and_appen
         assert anchors == [(b'3', b'3'), (b'7', b'7')]
 
 
-def test_analysis_boundary_cannot_match_authored_content(tmp_path):
+@pytest.mark.parametrize(('hash_count', 'comment'), [(7, '<!-- hidden note -->'), (128, '')])
+def test_analysis_boundary_cannot_match_authored_content(tmp_path, hash_count, comment):
     project = tmp_path / 'project'
     manuscript = _publication_project(project)
-    authored_heading = '#' * 128 + ' literal text retained.'
-    manuscript.write_text('## One\n\n' + authored_heading + '\n')
+    authored_heading = '#' * hash_count + ' literal text retained.'
+    manuscript.write_text(f'## One\n\nFirst paragraph.\n\n{comment}{authored_heading}\n')
     bundle = prepare_site(project, mode='reader', publication_profile='readers', max_chapter=1,
                           analysis_sections=['full'])
     page = bundle.files['analysis.html']
     assert authored_heading.encode() in page
-    assert b'#' * 129 not in page
+    assert b'hidden note' not in page
+    assert b'#' * (hash_count + 1) + b' One' not in page
+    assert page.count(b'<section class="chapter" id="ch-') == 1
 
 
 def test_analysis_does_not_create_chapters_from_inner_headings(tmp_path):

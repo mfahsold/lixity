@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """Build equivalent, crawlable public introductions; technical docs stay English."""
+from __future__ import annotations
+
 import argparse
 import html
 import json
 import struct
 from pathlib import Path
 from string import Template
-
-try:
-    from check_release import source_version
-except ModuleNotFoundError:
-    from scripts.check_release import source_version
 
 ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = {'en': 'English', 'de': 'Deutsch', 'fr': 'Français', 'es': 'Español',
@@ -28,6 +25,11 @@ def page_url(language: str) -> str:
 
 def render_pages(root: Path | None = None) -> dict[str, str]:
     """Require complete translations rather than silently shipping English fallback."""
+    try:
+        from check_release import source_version
+    except ModuleNotFoundError:
+        from scripts.check_release import source_version
+
     base = ROOT if root is None else root
     dictionaries = {lang: json.loads((base / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
                     for lang in LANGUAGES}

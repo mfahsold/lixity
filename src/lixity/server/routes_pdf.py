@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from .. import pdf_export
-from ..config import load_project_config, read_explicit_project_config
 from ..io import FileUtils
 from ..pdf_document import PdfError
 from ..workspace import slugify
@@ -44,8 +43,6 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                     ctx.source,
                     project_root=ctx.root,
                     strict_warnings=True,
-                    explicit_loader=read_explicit_project_config,
-                    implicit_loader=load_project_config,
                 )
                 settings = {**identity, **ctx.analysis_overrides}
 

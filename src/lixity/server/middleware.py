@@ -5,7 +5,7 @@ from __future__ import annotations
 import contextlib
 import os
 import warnings
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -51,8 +51,6 @@ def load_selected_project_config(
     project_root: str | Path | None = None,
     strict_warnings: bool = False,
     overrides: Mapping[str, Any] | None = None,
-    explicit_loader: Callable[..., dict[str, Any]] = read_explicit_project_config,
-    implicit_loader: Callable[..., dict[str, Any]] = load_project_config,
 ) -> dict[str, Any]:
     """Load explicit project configuration (or selected-source config) deterministically."""
     guard = warnings.catch_warnings() if strict_warnings else contextlib.nullcontext()
@@ -60,9 +58,9 @@ def load_selected_project_config(
         if strict_warnings:
             warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
         if project_root is not None:
-            settings = dict(explicit_loader(project_root))
+            settings = read_explicit_project_config(project_root)
         elif source_input and os.path.isfile(source_input):
-            settings = dict(implicit_loader(source_input))
+            settings = load_project_config(source_input)
         else:
             settings = {}
     extra = analysis_open_overrides(overrides)
@@ -78,7 +76,6 @@ def build_manuscript_store(
     language: str = "en",
     project_root: str | Path | None = None,
     overrides: Mapping[str, Any] | None = None,
-    explicit_loader: Callable[..., dict[str, Any]] = read_explicit_project_config,
 ) -> ManuscriptStore:
     """Construct a project-bound ManuscriptStore with explicit project configuration."""
     if not source_input:
@@ -88,7 +85,6 @@ def build_manuscript_store(
         source_input,
         project_root=effective_root,
         overrides=overrides,
-        explicit_loader=explicit_loader,
     )
     return ManuscriptStore(
         Path(workspace_root),

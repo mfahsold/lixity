@@ -158,8 +158,6 @@ def reading_controls(
     )
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
-        f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
-        f'<option value="inspect">{text("reading_inspect")}</option></select>'
         f'{chapter_picker}'
         '<details class="reader-settings" id="reader-settings" name="reader-settings">'
         f'{appearance_summary}<div class="reader-settings-body">'

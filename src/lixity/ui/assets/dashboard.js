@@ -14,10 +14,8 @@ function setFilter(input, bodyClass, on) {
 }
 
 function selectAnalysisMetric(key) {
-  if (!layer) return;
   // Chapter-only measurements intentionally clear a previous paragraph layer.
-  layer.value = key || "";
-  layer.dispatchEvent(new Event("change", {bubbles: true}));
+  window.LixityComponents.changeSelectOption(layer, key || "");
 }
 
 function activate(el) {
@@ -305,7 +303,7 @@ var paragraphReset = document.getElementById("paragraph-filter-reset");
 if (paragraphReset) paragraphReset.addEventListener("click", function() {
   setFilter(filter, "only-flags", false);
   setFilter(layerOnly, "layer-only", false);
-  if (layer) { layer.value = ""; applyLayer(); }
+  selectAnalysisMetric("");
 });
 // Do not advertise filters or chapter toggles in a static, uninitialized report.
 document.body.classList.add("has-js-dashboard-controls");
@@ -603,9 +601,8 @@ if (layer) {
 }
 var layerClear = document.getElementById("layer-clear");
 if (layerClear) layerClear.addEventListener("click", function() {
-  if (layer) layer.value = "";
   setFilter(layerOnly, "layer-only", false);
-  applyLayer();
+  selectAnalysisMetric("");
   if (layer) layer.focus({preventScroll: true});
 });
 document.addEventListener("lixity:reader-ready", applyLayer);

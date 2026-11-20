@@ -475,6 +475,24 @@ def test_snapshot_matches_full_pipeline_and_unknown_semantics(tmp_path):
     assert generic_snap["flags_count"] is None
 
 
+@pytest.mark.parametrize(("newline", "raw_chars", "clean_chars"), [("\n", 163, 81), ("\r\n", 176, 90)])
+def test_snapshot_keeps_legacy_whitespace_counts_for_markdown_and_custom_headings(newline, raw_chars, clean_chars):
+    from lixity.analyzer import CorpusAnalyzer
+    from lixity.models import CorpusConfig
+
+    source = (
+        "## Title\n\nCHAPTER THE TRACK\nFirst sentence.<!-- don't count this -->\n"
+        "Second sentence.\n\n```txt\n## Hidden example\nCHAPTER CODE\nSample code text.\n```\n\n"
+        "END NOTES\nEverything after the appendix."
+    ).replace("\n", newline)
+    config = CorpusConfig(language="en", chapter_regex=r"(?m)^CHAPTER [^\r\n]+$", appendix_marker="END NOTES")
+    metrics = CorpusAnalyzer(config).analyze_text(source)
+    snapshot = analyze_manuscript_snapshot(source, config=config)
+    assert (metrics.raw_words, metrics.raw_chars) == (25, raw_chars)
+    assert (metrics.clean_words, metrics.clean_chars, metrics.tokens) == (11, clean_chars, 4)
+    assert snapshot["words"] == 11
+
+
 def test_flags_count_migration_from_not_null_zero_to_nullable(tmp_path):
     import sqlite3
     from contextlib import closing

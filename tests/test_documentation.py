@@ -476,21 +476,22 @@ class TestDocumentation(unittest.TestCase):
         self.assertTrue(release_notes.is_file(), f"Missing release notes file: {release_notes}")
 
     def test_published_tree_has_no_broken_links(self):
-        """The staged Pages output must resolve every relative link it ships.
+        """Resolve documentation and CLI manual links against the staged site.
 
         Staging flattens ``docs/<name>`` to ``/<name>``, so a link that is
         correct when browsing the checkout can still break on the site. This
         validates the staged tree rather than the repository, which is what a
         reader actually receives.
         """
-        import sys
         import tempfile
 
-        sys.path.insert(0, str(ROOT / "scripts"))
         from stage_pages import stage
 
+        from lixity.cli_help import COMMAND_HELP
+        from lixity.site import DOCS_BASE, docs_url
+
         with tempfile.TemporaryDirectory() as td:
-            output = Path(td) / "site"
+            output = Path(td).resolve() / "site"
             stage(ROOT / "docs", output)
 
             def anchors(target: Path) -> set[str]:
@@ -505,20 +506,27 @@ class TestDocumentation(unittest.TestCase):
                 return found
 
             broken: list[str] = []
-            for md in output.rglob("*.md"):
-                for m in re.finditer(
-                    r"\]\((?!https?://|mailto:)([^)#]+)(?:#([^)]*))?\)",
-                    md.read_text(encoding="utf-8"),
+
+            def check_link(directory: Path, source: str, target: str) -> None:
+                path, _, anchor = target.partition("#")
+                if path == DOCS_BASE or path.startswith(DOCS_BASE + "/"):
+                    resolved = (output / path.removeprefix(DOCS_BASE).lstrip("/")).resolve()
+                elif path.startswith(("https://", "http://", "mailto:")):
+                    return
+                else:
+                    resolved = (directory / path).resolve()
+                if resolved.is_dir():
+                    resolved = resolved / "index.html"
+                if not resolved.is_relative_to(output) or not resolved.is_file() or (
+                    anchor and anchor not in anchors(resolved)
                 ):
-                    target, anchor = m.group(1), m.group(2)
-                    resolved = (md.parent / target).resolve()
-                    if resolved.is_dir():
-                        resolved = resolved / "index.html"
-                    where = f"{md.relative_to(output)} -> {target}"
-                    if not resolved.exists():
-                        broken.append(where)
-                    elif anchor and anchor not in anchors(resolved):
-                        broken.append(f"{where}#{anchor}")
+                    broken.append(f"{source} -> {target}")
+
+            for md in output.rglob("*.md"):
+                for m in re.finditer(r"\]\(([^)#]+(?:#[^)]*)?)\)", md.read_text(encoding="utf-8")):
+                    check_link(md.parent, md.relative_to(output).as_posix(), m.group(1))
+            for command, (manual, _, _) in COMMAND_HELP.items():
+                check_link(output, f"lixity {command} --help", docs_url(manual))
             self.assertEqual(broken, [], f"Broken links in the published site: {broken}")
 
             raw_md_hrefs: list[str] = []

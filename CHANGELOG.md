@@ -20,6 +20,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Link each public homepage to its metric reference. Check generated guides
   with the same documentation gate in local builds, release preparation and
   GitHub Pages.
+- Reuse the legacy word-count preparation in analysis and version history.
+  Use one reader control path for metric selection and clearing, and share the
+  export's page preparation between the reading and analysis pages.
 
 ### Fixed
 
@@ -30,6 +33,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sentence examples when they are available.
 - Keep flagged manuscript passages visible when navigating to them on a
   narrow screen.
+- Omit speech tags inside unresolved quotes consistently from dialogue
+  reports and passage evidence. Keep authored heading-like text in capped
+  exports and restrict the teleprompter shortcut to the manuscript reader.
 - Recognize paired typographic quotation marks in the browser sandbox and keep
   function-word highlights visible across quotations and speech cues.
 - Distinguish missing language rules, zero matches and unavailable text ranges

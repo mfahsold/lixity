@@ -398,6 +398,9 @@ unique heading subtrees, public titles and chapter release gates before renderin
 They never serialize native Research responses. Manuscript analysis is absent by
 default; the explicit reader analysis option calls the shared pipeline on the
 physically exported chapter text, with default language settings and thresholds.
+Chapter selection applies the original project's appendix boundary before the
+export is assembled. The analysis then uses only the selected chapter bodies
+with editorial comments removed and their line boundaries preserved.
 Whole-dossier citations and geography require explicit profile fields; original
 image, document and video bytes require a separate, one-export choice. Reverse associations, internal
 claims, decisions and history are not inferred publication selections.
@@ -485,6 +488,8 @@ chapter registers and project-local character profiles; user/ancestor defaults c
 The optional root `manuscript` setting follows the same project-only boundary.
 `config.read_explicit_project_config` reuses the existing TOML parser but reads
 only root pyproject/lixity files and promotes failed reads to errors.
+The server middleware owns this lookup for dashboard analysis, PDF preparation,
+manuscript search and revision requests.
 The native view, PDF composer and website exporter all use this selected root,
 including when the manuscript is in a subdirectory with another configuration.
 `workspace.configured_manuscript` owns contained relative-path resolution without

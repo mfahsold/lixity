@@ -424,8 +424,10 @@ def find_dialogue_tag_spans(
     clean: str,
     quoted_spans: Sequence[tuple[int, int]],
     tag_re: re.Pattern[str] | None,
+    *,
+    unclear_spans: Sequence[tuple[int, int]] = (),
 ) -> list[tuple[int, int]]:
-    """Return sorted unique spans of speech-attribution verbs adjacent to quoted spans."""
+    """Find unique speech tags near resolved quotes and outside uncertain ranges."""
     if tag_re is None or not quoted_spans:
         return []
     seen_spans: set[tuple[int, int]] = set()
@@ -464,16 +466,7 @@ def find_dialogue_tag_spans(
                 match = tag_re.search(clean, before_start, before_end)
                 if match is not None:
                     seen_spans.add(match.span())
-    return sorted(seen_spans)
-
-
-def _count_dialogue_tags(
-    clean: str,
-    quoted_spans: Sequence[tuple[int, int]],
-    tag_re: re.Pattern[str] | None,
-) -> int:
-    """Count unique speech-attribution verb hits adjacent to quoted spans."""
-    return len(find_dialogue_tag_spans(clean, quoted_spans, tag_re))
+    return sorted((start, end) for start, end in seen_spans if not _overlaps_any(start, end, unclear_spans))
 
 
 def _overlaps_any(start: int, end: int, spans: Sequence[tuple[int, int]]) -> bool:
@@ -671,8 +664,10 @@ def _turn_stats(
         region = clean[start:end]
         quotation = projection.slice_analysis(start, end)
         region_spans = quotation.quote_ranges
-        tag_spans = find_dialogue_tag_spans(region, region_spans, _DIALOGUE_TAG_PATTERNS.get(language.key))
-        tag_spans = [(a, b) for a, b in tag_spans if not _overlaps_any(a, b, quotation.unclear)]
+        tag_spans = find_dialogue_tag_spans(
+            region, region_spans, _DIALOGUE_TAG_PATTERNS.get(language.key),
+            unclear_spans=quotation.unclear,
+        )
         dialogue_tags += len(tag_spans)
         adverbial_tags += _count_adverbial_tags(region, tag_spans, region_spans, language.key)
         excluded = merge_quotation_spans((*region_spans, *quotation.unclear))

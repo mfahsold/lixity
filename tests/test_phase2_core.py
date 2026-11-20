@@ -7,6 +7,8 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+import pytest
+
 from lixity import cli, mcp
 from lixity.characters import presence_report
 from lixity.dialogue import character_voice_profiles
@@ -155,3 +157,42 @@ def test_enriched_revision_diff_store_cli_and_mcp(tmp_path: Path, capsys):
     assert "error" not in resp
     mcp_payload = json.loads(resp["result"]["content"][0]["text"])
     assert mcp_payload["deltas"]["length_entropy"] == diff["deltas"]["length_entropy"]
+
+
+def test_cli_diff_uses_selected_project_editing_history_for_nested_manuscript(tmp_path, capsys):
+    project = tmp_path / "project"
+    source = project / "drafts" / "book.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("## Kapitel\n\nDie Bahn kommt.\n", encoding="utf-8")
+    (project / "lixity.toml").write_text('language = "de"\n', encoding="utf-8")
+
+    editor = ManuscriptStore(project, source, language="de", project_config={"language": "de"})
+    opened = editor.open()
+    saved = editor.save(editor.document, opened["revision"], "a" * 32, opened["text"] + "\nWann kommt sie an?\n")
+
+    # Legacy file selection still looks only in the manuscript's own folder.
+    assert cli.main(["diff", str(source), "--json"]) == cli.EXIT_OK
+    legacy = json.loads(capsys.readouterr().out)
+    assert legacy["revisions_count"] == 0
+    assert legacy["has_baseline"] is False
+
+    assert cli.main([
+        "diff", "drafts/book.md", "--project", str(project), "--json",
+        "--base-rev", opened["revision"], "--target-rev", saved["revision"],
+    ]) == cli.EXIT_OK
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == editor.delta(opened["revision"], saved["revision"])
+    assert payload["document"] == editor.document
+    assert payload["deltas"]["words"] == 4
+    assert not (source.parent / ".lixity").exists()
+
+    other_project = tmp_path / "other"
+    other_project.mkdir()
+    assert cli.main(["diff", str(source), "--project", str(other_project), "--json"]) == cli.EXIT_ERROR
+    assert "inside the selected project" in capsys.readouterr().err
+    assert not (other_project / ".lixity").exists()
+
+    with pytest.raises(SystemExit) as stopped:
+        cli.main(["diff", str(source), str(source), "--project", str(project)])
+    assert stopped.value.code == 2
+    assert "requires a single manuscript file" in capsys.readouterr().err

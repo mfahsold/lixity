@@ -15,7 +15,6 @@ from typing import Any
 from ..characters import presence_report, resolve_character_settings
 from ..config import (
     load_project_config,
-    read_explicit_project_config,
     resolve_thresholds,
     validate_author_name,
 )
@@ -117,8 +116,6 @@ def build_server_dashboard(
     settings = load_selected_project_config(
         source_input,
         project_root=project_root,
-        explicit_loader=read_explicit_project_config,
-        implicit_loader=load_project_config,
     )
     identity_settings = settings
     if project_root is None and source_input and not source_is_file:

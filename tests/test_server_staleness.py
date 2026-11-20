@@ -160,7 +160,7 @@ def test_reload_observes_removed_project_configuration(tmp_path: Path, filename:
 def test_configuration_changed_during_refresh_does_not_publish_mixed_dashboard(
     tmp_path: Path, monkeypatch,
 ) -> None:
-    from lixity.server import views
+    from lixity.server import middleware
 
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")
@@ -170,7 +170,7 @@ def test_configuration_changed_during_refresh_does_not_publish_mixed_dashboard(
     handler.refresh()
     old_html, old_info = handler.dashboard_html, handler.dashboard_info
     settings.write_text('title = "Second"\n', encoding="utf-8")
-    real_read = views.read_explicit_project_config
+    real_read = middleware.read_explicit_project_config
 
     def read_during_change(*args, **kwargs):
         result = real_read(*args, **kwargs)
@@ -179,7 +179,7 @@ def test_configuration_changed_during_refresh_does_not_publish_mixed_dashboard(
 
     with LoopbackServer(handler) as server:
         with monkeypatch.context() as changing:
-            changing.setattr(views, "read_explicit_project_config", read_during_change)
+            changing.setattr(middleware, "read_explicit_project_config", read_during_change)
             response = server.request("/")
             _assert_notice(response, "refresh-failed", "en", "status_refresh_failed")
             assert handler.dashboard_html == old_html

@@ -262,7 +262,7 @@ class TestPagesStaging(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             docs = root / "docs"
-            public = ("index.html", "USAGE.md", "guides/install.html", "assets/site.css",
+            public = ("index.html", "index-de.html", "USAGE.md", "guides/install.html", "assets/site.css",
                       "blog/article.html", "blog/article.html.md",
                       "assets/research/hamburg-free-port-1900.jpg",
                       "assets/research/hamburg-harbour-1890-1900.jpg", "assets/research/sources.json",
@@ -273,7 +273,7 @@ class TestPagesStaging(unittest.TestCase):
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
-            private = ("superpowers/plans/task.md", "archive/wave2-plan.md", "notes.md",
+            private = ("index-draft.html", "superpowers/plans/task.md", "archive/wave2-plan.md", "notes.md",
                        "GROWTH_REVIEW.md", "SECURITY_REVIEW.md",
                        ".planning/secret.md", "research/.scratch/session.md",
                        "screenshots/local.log", "private/source.txt")

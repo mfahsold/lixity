@@ -911,19 +911,16 @@
     });
 
     document.addEventListener("keydown", function(e) {
-      if (e.code === "KeyP" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        var activeEl = document.activeElement;
-        if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
-          return;
-        }
-        var readerMode = document.getElementById("manuscript-mode");
-        if (readerMode && readerMode.value === "read" && (!modal || modal.hidden)) {
-          e.preventDefault();
-          var selected = document.querySelector("#chapters .ptext.reader-selected, #chapters .ptext:focus-within");
-          var sha = selected ? selected.dataset.paragraphSha256 : "";
-          openTeleprompter(sha);
-        }
-      }
+      if (!["p", "P"].includes(e.key) || e.ctrlKey || e.altKey || e.metaKey ||
+          e.defaultPrevented || e.isComposing || e.repeat || (modal && !modal.hidden)) return;
+      if (e.target.closest?.("input, textarea, select, [contenteditable], [role=dialog]") ||
+          document.querySelector("dialog[open], #reader-settings[open], #reader-analysis-guide[open], #manuscript-context-menu:not([hidden])")) return;
+      var state = window.LixityWorkbench && window.LixityWorkbench.state();
+      if (!state || state.view !== "analysis" || state.surface !== "document") return;
+      var control = document.getElementById("reader-teleprompter");
+      if (!control || control.disabled || !control.getClientRects().length || getComputedStyle(control).visibility !== "visible") return;
+      e.preventDefault();
+      control.click();
     });
   }
 

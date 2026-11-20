@@ -544,6 +544,14 @@ server.serve_forever()
       assert.equal(await page.locator('#layer-legend').isVisible(), true);
       assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length · words per sentence',
         'the restored metric names its raw measurement unit');
+      await page.locator('.layer-comparison-note > summary').click();
+      await page.locator('#layer-clear').press('Enter');
+      assert.equal(await page.locator('#style-layer').inputValue(), '', 'The legend clears the native metric selector');
+      assert.equal(await page.locator('#style-layer').evaluate(select => select === document.activeElement), true,
+        'Clearing the metric returns keyboard focus to the selector');
+      await selectMetric(page, 'asl');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true,
+        'Reselecting a cleared metric restores its own counted-text preference');
       await page.locator('#analysis-evidence-enabled').uncheck();
       await page.keyboard.press('Escape');
       await page.locator('#manuscript-analysis-toggle').click();
@@ -573,7 +581,13 @@ server.serve_forever()
       await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('reader-focus')), false, 'explicit inspection uses existing workbench exit from Focus reading');
       await page.keyboard.press('Escape');
+      await page.locator('#style-layer').evaluate(select => {
+        select.dataset.resetChanges = '0';
+        select.addEventListener('change', () => { select.dataset.resetChanges = String(Number(select.dataset.resetChanges) + 1); });
+      });
       await page.locator('#paragraph-filter-reset').click();
+      assert.equal(await page.locator('#style-layer').getAttribute('data-reset-changes'), '1',
+        'Reset uses the same change event as the native metric selector');
       await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#style-layer').inputValue(), '', 'reset remains a deliberate None after reload');
       await openAnalysisSettings(page);

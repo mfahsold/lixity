@@ -242,7 +242,7 @@ class ParagraphProfiler:
             btype = block.get("type")
             if btype == "h2":
                 title = block.get("text", "").strip()
-                if title == self._appendix_title:
+                if self.config.appendix_marker and title == self._appendix_title:
                     break
                 chapter = _ProfileChapter(block.get("chapter_num", chapter.num + 1), title,
                                           block.get("start_line", 0), block.get("end_line", 0))

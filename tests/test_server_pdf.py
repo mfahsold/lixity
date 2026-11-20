@@ -103,17 +103,17 @@ def test_old_project_token_and_cross_origin_downloads_are_rejected(pdf_server):
 
 
 def test_download_resolves_shared_project_configuration_once(pdf_server, monkeypatch):
-    from lixity.server import routes_pdf
+    from lixity.server import middleware
 
     port, project, _handler, token = pdf_server
     calls: list[str | None] = []
-    original = routes_pdf.read_explicit_project_config
+    original = middleware.read_explicit_project_config
 
     def counting(start=None):
         calls.append(str(start) if start is not None else None)
         return original(start)
 
-    monkeypatch.setattr(routes_pdf, "read_explicit_project_config", counting)
+    monkeypatch.setattr(middleware, "read_explicit_project_config", counting)
     status, _headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 200, body.decode("utf-8", errors="replace")
     assert calls == [str(project)]

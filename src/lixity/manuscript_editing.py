@@ -28,11 +28,10 @@ from .language import compile_word_pattern, resolve_language
 from .log import get_logger, log_event
 from .markdown_parser import (
     before_appendix,
-    chapter_heading_spans,
+    legacy_whitespace_text,
     prose_text,
     split_chapters,
     split_scenes,
-    strip_html_comments,
 )
 from .models import CorpusConfig
 from .pacing import compute_rhythm_profile
@@ -60,7 +59,6 @@ def document_lock(source: str | Path) -> RLock:
         return lock
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 _ID = re.compile(r"[a-f0-9]{32,64}\Z")
-_RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 _MAX_CHAPTER_SIMILARITY_PAIRS = 16_384
 
 
@@ -778,17 +776,7 @@ def analyze_manuscript_snapshot(
     ind_speech_available = indirect_speech_available(lang_key)
 
     main_text = before_appendix(text, cfg)
-
-    cleaned_main = strip_html_comments(main_text)
-    prose_parts: list[str] = []
-    cursor = 0
-    for start, end, _line, _title in chapter_heading_spans(cleaned_main, cfg):
-        prose_parts.append(cleaned_main[cursor:start])
-        prose_parts.append("\n" if cleaned_main[end - 1:end] == "\n" else "")
-        cursor = end
-    prose_parts.append(cleaned_main[cursor:])
-    legacy_clean_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
-    clean_words = len(legacy_clean_main.split())
+    clean_words = len(legacy_whitespace_text(main_text, cfg).split())
 
     projection = quoted_prose(main_text, cfg, language=resolved)
     prose_main = projection.text

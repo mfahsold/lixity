@@ -32,13 +32,17 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
         if (cmd.type === "focus") this._state.focus = cmd.value;
       }
     };
+    window.scrollAndFlash = function(target) { target.dataset.visited = "1"; };
   </script>
   <script>${paletteJs}</script>
 </head>
 <body class="manuscript-reading">
   <div id="workspace">
     <button id="reader-focus" type="button">Focus</button>
-    <select id="style-layer"><option value="">None</option><option value="asl">ASL</option><option value="dialogue">Dialogue</option></select>
+    <select id="style-layer"><option value="">None</option><option value="asl">ASL</option><option value="dialogue">Dialogue</option>
+      <option value="disabled-metric" disabled>Unavailable fixture metric</option></select>
+    <select id="reader-chapter"><option value="">Choose</option><option value="ch-2">Second fixture chapter</option></select>
+    <section id="pacing">Rhythm fixture</section>
     <button id="research-tab-search" data-rtab="search" type="button">Search</button>
     <input id="r-search-query" type="search" />
     <button id="research-tab-dossiers" data-rtab="dossiers" type="button">Dossiers</button>
@@ -92,6 +96,18 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   assert.equal(await page.locator('#style-layer').inputValue(), 'dialogue', 'Dialogue command selects real #style-layer option');
 
   await page.keyboard.press(modShortcut('k'));
+  await page.fill('#command-palette-search', 'Unavailable fixture metric');
+  assert.equal(await page.locator('.command-palette-item').count(), 0, 'Disabled options have no commands');
+  await page.fill('#command-palette-search', 'Second fixture chapter');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#reader-chapter').inputValue(), 'ch-2', 'The chapter command selects the real chapter option');
+
+  await page.keyboard.press(modShortcut('k'));
+  await page.fill('#command-palette-search', 'Scene Tension');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#pacing').getAttribute('data-visited'), '1', 'Section command opens its real destination');
+
+  await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Suchmaske');
   await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'r-search-query', 'Research search command focuses #r-search-query');
@@ -101,6 +117,13 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#r-dos-composer').evaluate(el => el.open), true, 'New dossier command opens #r-dos-composer');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'r-dos-title', 'New dossier command focuses #r-dos-title');
+
+  await page.evaluate(() => ['style-layer', 'pacing'].forEach(id => document.getElementById(id).remove()));
+  await page.keyboard.press(modShortcut('k'));
+  for (const missing of ['Scene Tension', 'Grammatical Tense', 'Highlight Sentence Length']) {
+    await page.fill('#command-palette-search', missing);
+    assert.equal(await page.locator('.command-palette-item').count(), 0, 'Unavailable destination ' + missing + ' has no command');
+  }
 
   await browser.close();
   console.log('Command palette browser checks passed successfully.');
