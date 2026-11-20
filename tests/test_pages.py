@@ -8,6 +8,7 @@ import re
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -28,32 +29,40 @@ def pages_workflow_script(name):
     """Extract one reviewed literal shell step for a local workflow boundary test."""
     source = (Path(__file__).resolve().parents[1] / ".github/workflows/pages.yml").read_text()
     step = source.split(f"      - name: {name}\n", 1)[1].split("      - ", 1)[0]
-    return textwrap.dedent(step.split("        run: |\n", 1)[1])
+    script = step.split("        run: ", 1)[1]
+    return textwrap.dedent(script[2:]) if script.startswith("|\n") else script.splitlines()[0]
 
 
 @unittest.skipUnless(BASH and GIT, "Workflow boundary requires the Pages runner's bash and git")
 class TestPagesWorkflow(unittest.TestCase):
-    def test_stale_public_site_fails_the_standalone_generated_documentation_gate(self):
+    @unittest.skipUnless(shutil.which("make"), "Pages documentation gate requires make")
+    def test_stale_metric_reference_fails_the_standalone_generated_documentation_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            scripts = root / "scripts"
-            scripts.mkdir()
-            for name in ("sync_docs", "build_public_site", "build_llms_full", "build_guide_markdown"):
-                (scripts / f"{name}.py").write_text(
-                    "import sys\nfrom pathlib import Path\n"
-                    "if sys.argv[1:] != ['--check']: raise SystemExit(9)\n"
-                    f"Path('{name}.checked').touch()\n"
-                    f"raise SystemExit({23 if name == 'build_public_site' else 0})\n",
+            checkout = Path(__file__).resolve().parents[1]
+            for relative in ("Makefile", "scripts/sync_docs.py", "scripts/check_release.py", "src/lixity/_version.py"):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(checkout / relative, target)
+            builders = ("build_public_site", "build_llms_full", "build_guide_markdown", "build_metric_reference")
+            for name in builders:
+                stale = ["docs/guides/metrics/de.html"] if name == "build_metric_reference" else []
+                (root / "scripts" / f"{name}.py").write_text(
+                    "def build(*, check_only, root):\n"
+                    "    assert check_only\n"
+                    f"    (root / '{name}.checked').touch()\n"
+                    f"    return {stale!r}\n",
                     encoding="utf-8",
                 )
             result = subprocess.run(  # noqa: S603 - reviewed workflow step, disposable generators
                 [BASH, "-e", "-c", pages_workflow_script("Verify generated documentation")],
                 cwd=root, capture_output=True, text=True, check=False, timeout=10,
+                env={**os.environ, "PATH": os.pathsep.join((str(Path(sys.executable).parent), os.environ.get("PATH", "")))},
             )
-            self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-            self.assertTrue((root / "sync_docs.checked").exists())
-            self.assertTrue((root / "build_public_site.checked").exists())
-            self.assertFalse((root / "build_llms_full.checked").exists())
+            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("docs/guides/metrics/de.html", result.stderr)
+            for name in builders:
+                self.assertTrue((root / f"{name}.checked").exists(), name)
 
     def test_public_deployment_metadata_records_actual_checkout_head(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -401,6 +410,9 @@ class TestPagesStaging(unittest.TestCase):
             self.assertTrue(pages, "Staged pages expected")
             references = {f"guides/metrics/{code}.html": code for code in LANGUAGE_CODES if code != "generic"}
             self.assertLessEqual(references.keys(), {page.relative_to(output).as_posix() for page in pages})
+            for reference, language in references.items():
+                homepage = "index.html" if language == "en" else f"index-{language}.html"
+                self.assertIn(f'href="{reference}"', (output / homepage).read_text(encoding="utf-8"))
             sitemap = {node.find("{*}loc").text: node.find("{*}lastmod").text
                        for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314
             for page in pages:

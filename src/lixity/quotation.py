@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import re
 from bisect import bisect_right
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, cached_property
 from typing import Literal, TypeAlias
 from unicodedata import category
 
@@ -19,6 +19,7 @@ from .language import quotation_capture_group
 
 Range: TypeAlias = tuple[int, int]
 QuotationKind: TypeAlias = Literal["quotation", "marked_speech", "custom"]
+QuotationContext: TypeAlias = Literal["in_quotation", "outside_quotation", "overlaps_quotation"]
 
 
 @dataclass(frozen=True, order=True)
@@ -38,9 +39,22 @@ class QuotationAnalysis:
     # Preserve the identity of configured matches with an empty first capture.
     empty_matches: tuple[int, ...] = ()
 
-    @property
+    @cached_property
     def quote_ranges(self) -> tuple[Range, ...]:
         return merge_quotation_spans(self.spans)
+
+
+def quotation_context(
+    start: int, end: int, ranges: Sequence[Range], unclear: Sequence[Range],
+) -> QuotationContext | None:
+    """Classify an exact span against known ranges and unresolved boundaries."""
+    if any(left <= start and end <= right for left, right in ranges):
+        return "in_quotation"
+    if any(start < right and end > left for left, right in unclear):
+        return None
+    if any(start < right and end > left for left, right in ranges):
+        return "overlaps_quotation"
+    return "outside_quotation"
 
 
 _DOUBLE_QUOTES = {'"': '"', "\u201c": "\u201d"}

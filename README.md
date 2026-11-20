@@ -175,6 +175,7 @@ Italian, Portuguese and Dutch have localized interfaces with narrower heuristic
 coverage. Optional local syntax models add grammatical tense analysis with
 language-specific verb-group rules; parser errors remain possible.
 [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html) ·
+[Metric reference](https://mfahsold.github.io/lixity/guides/metrics/en.html) ·
 [Language coverage](https://mfahsold.github.io/lixity/LOCALIZATION.md) ·
 [Grammatical tense setup](https://mfahsold.github.io/lixity/USAGE.md#grammatical-tense).
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from ..status import ContractKeys
-from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
+from ..status import FEATURE_LAYERS, ContractKeys
+from ..style_fingerprint import FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
 from .components import (
     badge,
@@ -42,7 +42,6 @@ def style_structural(
         return _N(value, decimals, signed)
 
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
-    feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
     parts: list[str] = [
         panel_start("structural", labels, "panel_structural", help_key="structural"),
@@ -72,7 +71,7 @@ def style_structural(
             cps = changepoints[field_name]
             feat_label = label(labels, field_labels.get(field_name, field_name))
             help_k = _FEATURE_HELP.get(field_name, field_name)
-            layer = feature_layers.get(field_name)
+            layer = FEATURE_LAYERS.get(field_name)
 
             sorted_chs = sorted(
                 ch for ch, value in fingerprint.values.get(field_name, {}).items()

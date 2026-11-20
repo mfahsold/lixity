@@ -66,7 +66,9 @@ def test_sync_failure_lists_edits_already_made(
 
 def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatch, capsys):
     root = prepare_script.ROOT
-    (root / "scripts").mkdir(exist_ok=True)
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    import sync_docs
+
     calls: list[tuple[str, bool, Path | None]] = []
 
     def make_module(name, fn_name, *, check_result=None):
@@ -81,10 +83,11 @@ def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatc
         return mod
 
     monkeypatch.setitem(sys.modules, "check_release", type("M", (), {"source_version": staticmethod(lambda r: "0.3.0")})())
-    monkeypatch.setitem(sys.modules, "sync_docs", make_module("sync_docs", "check_or_sync_files"))
+    monkeypatch.setattr(sync_docs, "check_or_sync_files", make_module("sync_docs", "check_or_sync_files").check_or_sync_files)
     monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build"))
     monkeypatch.setitem(sys.modules, "build_llms_full", make_module("build_llms_full", "build"))
     monkeypatch.setitem(sys.modules, "build_guide_markdown", make_module("build_guide_markdown", "build"))
+    monkeypatch.setitem(sys.modules, "build_metric_reference", make_module("build_metric_reference", "build"))
 
     prepare_script.run_sync()
     assert "Documentation already synchronized" in capsys.readouterr().out
@@ -93,10 +96,12 @@ def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatc
         ("build_public_site", False, root),
         ("build_llms_full", False, root),
         ("build_guide_markdown", False, root),
+        ("build_metric_reference", False, root),
         ("sync_docs", True, root),
         ("build_public_site", True, root),
         ("build_llms_full", True, root),
         ("build_guide_markdown", True, root),
+        ("build_metric_reference", True, root),
     ]
 
     monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build", check_result=["index.html"]))

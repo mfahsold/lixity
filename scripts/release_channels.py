@@ -21,6 +21,7 @@ import urllib.request
 from pathlib import Path
 
 import check_release
+from build_public_site import LANGUAGES, page_path
 
 JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
@@ -28,13 +29,8 @@ SHA = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"[0-9a-f]{64}")
 DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
 PAGES_VERIFY_FILES = (
-    "index.html",
-    "index-de.html",
-    "index-fr.html",
-    "index-es.html",
-    "index-it.html",
-    "index-pt.html",
-    "index-nl.html",
+    *(page_path(language) for language in LANGUAGES),
+    *(f"guides/metrics/{language}.html" for language in LANGUAGES),
     "llms.txt",
     "sandbox/index.html",
     "demo/manifest.json",

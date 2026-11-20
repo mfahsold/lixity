@@ -27,17 +27,22 @@ from .language import (
 )
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, strip_inline_markup
 from .models import CorpusConfig
-from .quotation import QuotationAnalysis, count_quoted_words, quoted_word_counts, scan_quotations
+from .quotation import (
+    QuotationAnalysis,
+    QuotationContext,
+    count_quoted_words,
+    quotation_context,
+    quoted_word_counts,
+    scan_quotations,
+)
 from .quotation_projection import project_quotations
 from .sentences import split_sentence_spans
+from .sticky import measure_function_words
 from .tense import TenseMatcher
 from .text_normalization import counting_view
 
 if TYPE_CHECKING:
     from .style_profile import ParagraphProfile
-
-
-QuotationContext = Literal["in_quotation", "outside_quotation", "overlaps_quotation"]
 
 
 class _EvidenceSpan(TypedDict):
@@ -185,18 +190,6 @@ def _unavailable_layer(kind: str, reason: str) -> LayerEvidence:
     return {"status": "unavailable", "kind": kind, "count": None, "mapped_count": 0, "spans": [], "reason": reason}
 
 
-def quotation_context(start: int, end: int, ranges: Sequence[tuple[int, int]],
-                      unclear: Sequence[tuple[int, int]]) -> QuotationContext | None:
-    """Use recognized structure even when it contains zero counted words."""
-    if any(left <= start and end <= right for left, right in ranges):
-        return "in_quotation"
-    if any(start < right and end > left for left, right in unclear):
-        return None
-    if any(start < right and end > left for left, right in ranges):
-        return "overlaps_quotation"
-    return "outside_quotation"
-
-
 def _envelope(text: str, layers: dict[str, LayerEvidence]) -> ParagraphEvidence:
     result: ParagraphEvidence = {"schema_version": "paragraph-evidence/1",
                                 "paragraph_sha256": sha256(text.encode("utf-8")).hexdigest(),
@@ -247,11 +240,12 @@ class ParagraphMatcher:
         return hit
 
     def _is_sticky_sentence(self, tokens: Sequence[str]) -> bool:
-        n_words = len(tokens)
-        if not self.sticky_available or n_words < self.sticky_min_words:
-            return False
-        glue_words = sum(1 for tok in tokens if tok in self.language.function_words)
-        return (glue_words / n_words * 100.0) >= self.sticky_glue_pct
+        return self.sticky_available and measure_function_words(
+            tokens,
+            self.language.function_words,
+            min_words=self.sticky_min_words,
+            min_pct=self.sticky_glue_pct,
+        ).sticky
 
     def _sticky_details(self, sentence: str, start: int, end: int) -> tuple[int, list[tuple[int, int]]]:
         group = 1 if self.word.groups == 1 else 0

@@ -7,10 +7,10 @@ from typing import Any
 
 from ..format import num as format_num
 from ..models import ChapterMetrics
+from ..status import FEATURE_LAYERS
 from ..style_fingerprint import (
     FEATURE_UNITS,
     FEATURES,
-    LAYER_FEATURES,
     MIN_COMPARABLE_SENTENCES,
     MIN_COMPARABLE_WORDS,
     REFERENCE_BAND_SIGMA,
@@ -74,7 +74,6 @@ def render_metric_context(
     language_key: str = "generic",
 ) -> str:
     """Project existing chapter measurements into one shared, read-only inspector."""
-    layers = {field: key for key, field in LAYER_FEATURES.items()}
     units = FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])
     features = {}
     for field, key, unit in FEATURES:
@@ -84,7 +83,7 @@ def render_metric_context(
             "label": label(labels, _FEATURE_DISPLAY_KEYS.get(field, key)),
             "unit": units.get(field, unit),
             "help": label(labels, "help_" + FEATURE_HELP_KEYS.get(field, field)),
-            "layer": layers.get(field, ""),
+            "layer": FEATURE_LAYERS.get(field, ""),
             "median": format_num(float(base["median"]), language_key, 2) if supported else "–",
             "n": int(base.get("n", 0)),
         }
@@ -205,7 +204,6 @@ def render_heatmap_panel(
 
     L, N, P = panel_formatters(labels, language_key)
 
-    feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
     z_mild = fingerprint.thresholds.z_mild
     chapter_numbers = {chapter.num for chapter in metrics.chapters if chapter.num in fingerprint.z_scores}
     register_names = sorted({name for number, name in fingerprint.chapter_registers.items()
@@ -361,7 +359,7 @@ def render_heatmap_panel(
         for field_name, label_key, _unit in FEATURES:
             z = fingerprint.z_scores[chapter.num].get(field_name)
             feature_name = label(labels, _FEATURE_DISPLAY_KEYS.get(field_name, label_key))
-            layer_key = feature_layers.get(field_name, "")
+            layer_key = FEATURE_LAYERS.get(field_name, "")
             cell_attrs = (
                 f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
                 f' data-metric-feature="{field_name}"'
@@ -487,7 +485,6 @@ def render_style_passport_panel(
 
     L, N, _ = panel_formatters(labels, language_key)
 
-    feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
     parts: list[str] = [
         panel_start("bands", labels, "style_passport", help_key="passport"),
@@ -515,7 +512,7 @@ def render_style_passport_panel(
         sigma = float(base["sigma"])
         series = fingerprint.values.get(field_name, {})
         if sigma == 0.0:
-            layer = feature_layers.get(field_name)
+            layer = FEATURE_LAYERS.get(field_name)
             layer_attr = f' data-layer="{esc(layer)}"' if layer else ""
             parts.append(f'<div class="band-row" data-jump="#feat-{field_name}" '
                          f'data-feature="{field_name}" role="button" tabindex="0"{layer_attr}>')
@@ -529,7 +526,7 @@ def render_style_passport_panel(
         ]
         outliers = [float(val) for ch in outlier_chapters if (val := series.get(ch)) is not None]
         n_out = len(outliers)
-        layer = feature_layers.get(field_name)
+        layer = FEATURE_LAYERS.get(field_name)
         click_hint = label(labels, "click_hint")
         title = (
             f"{label(labels, label_key)}: {L('median')} {N(centre, 2)} · "

@@ -1315,10 +1315,11 @@ an opaque `docs/assets/brand/apple-touch-icon.png`, `docs/assets/brand/icon-192.
 and `docs/assets/brand/icon-512.png`, wired via `docs/manifest.webmanifest`.
 `scripts/build_brand_assets.py` (`make brand-assets`) deterministically renders the
 raster PNG, ICO, and WebP derivatives from `docs/assets/mark.svg` using
-ImageMagick so no manual binary edits are needed. Before staging and deploying
-GitHub Pages, `.github/workflows/pages.yml` runs pre-deploy verification across
-`scripts/sync_docs.py --check`, `scripts/build_llms_full.py --check`,
-`scripts/build_guide_markdown.py --check`, and `scripts/build_public_site.py --check`.
+ImageMagick. GitHub Pages runs the same `make docs-generated-check` gate as local
+development before staging. Release preparation and `make docs-sync` use the
+same generators for version pins, language-specific homepages, Markdown guide
+exports, the agent documentation bundle, and the seven metric references.
+The reference renderer shares the app's terminology and built-in defaults.
 
 ## First-run journey (server contract)
 

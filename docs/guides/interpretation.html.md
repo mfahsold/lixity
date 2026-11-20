@@ -2,17 +2,17 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Updated 5 November 2026
+Updated 20 November 2026
 
 ## Start with one question about the text
 
 | Question | What to look at | What to read |
 | --- | --- | --- |
 | Where does the rhythm change? | In the chapter matrix, 12 words per sentence means the average sentence has 12 words. The sentence-length view shows how many sentences fall into each length range. | Read the start of both chapters aloud. Do the pauses fit what happens in each scene? |
-| Where do characters speak? | 30% quoted words means 30 in every 100 words are inside detected quotation marks. | Look at the counted text to see which quotations are spoken aloud. |
+| Where do characters speak? | 30% means about 30 in every 100 words are within recognized quotations or marked speech. | Open the counted text to see which passages are dialogue, thoughts, titles or quoted sources. |
 | Why does this chapter stand out? | Choose a cell in the style comparison. The chapter value and the typical manuscript value appear in the same unit. | Open the chapter and look for a scene, narrator or passage that could explain the difference. |
 
-[Compare two chapters of the demo](../demo/report.html) or [try a paragraph in the browser sandbox](../sandbox/index.html).
+[Compare two chapters of the demo](../demo/report.html) or [try a paragraph in the browser sandbox](../sandbox/index.html). For a specific value, the [measurement reference](metrics/en.html) explains what Lixity counts, the unit and what to check in the manuscript. The app’s **How it’s measured** links open the relevant entry in your interface language.
 
 ## Read the analysis marks
 
@@ -139,7 +139,7 @@ The style summary labels the share of feature comparisons within the threshold a
 
 Read the word ranges next to the sentence groups. The sentence-length distribution uses four groups. The detailed pacing profile uses three groups to describe how widely sentence lengths vary.
 
-Open the rhythm view and choose a chapter or length group to read examples in the manuscript. Word-pattern examples show their relation to recognized quotation marks when it can be established. In the motifs view, open a repeated phrase to see which occurrences can be highlighted together.
+Open the rhythm view and choose a chapter or length group to read examples in the manuscript. Word-pattern examples show whether the match is inside a quotation or marked speech, outside it, or across a boundary. Unclear boundaries are reported separately. In the motifs view, open a repeated phrase to see which occurrences can be highlighted together.
 
 The passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.
 
@@ -147,7 +147,7 @@ Tense labels, dialogue detection, pacing indicators and showing/telling patterns
 
 The review overview makes these limits explicit. Tense cues are word-pattern counts, not a grammatical parse: infinitives and auxiliary forms can be ambiguous, and quoted recollections can mix present and past cues intentionally.
 
-Without explicit scene dividers, `scenes_are_chapters` is true: scene counts are chapter placeholders, not detected narrative transitions. Dialogue shares count quoted and total words with the same configured token regex; quotation marks still do not identify a speaker.
+Without explicit scene dividers, `scenes_are_chapters` is true and scenes use chapter boundaries. Lixity counts words within recognized quotations or marked speech and total words with the same configured word pattern. Read the context to determine who speaks.
 
 ## Read the values as well as the colors
 

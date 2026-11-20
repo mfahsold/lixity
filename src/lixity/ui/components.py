@@ -206,6 +206,19 @@ def ui_icon(name: str, *, size: int = 16, css_class: str = "", label_text: str =
     )
 
 
+def select_control(
+    control_id: str, accessible_name: str, options_html: str, *, css_class: str = "", help_text: str = "",
+) -> str:
+    """Render a native select with the shared chevron and logical padding."""
+    classes = f"ctl-select {css_class}" if css_class else "ctl-select"
+    help_attr = f' data-help="{esc(help_text)}"' if help_text else ""
+    return (
+        f'<span class="{esc(classes)}">'
+        f'<select class="ctl" id="{esc(control_id)}" aria-label="{esc(accessible_name)}"{help_attr}>'
+        f'{options_html}</select>{ui_icon("chevron-down")}</span>'
+    )
+
+
 def pane_ribbon(
     labels: Mapping[str, str] | None, aria_key: str,
     items: Sequence[tuple[str, str, str] | tuple[str, str, str, str]],

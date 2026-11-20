@@ -93,29 +93,17 @@ def update_changelog(version: str, *, release_date: str | None = None) -> None:
 
 
 def run_sync() -> None:
-    from build_guide_markdown import build as build_guides
-    from build_llms_full import build as build_llms
-    from build_public_site import build as build_site
     from check_release import source_version
-    from sync_docs import check_or_sync_files
+    from sync_docs import check_or_sync_generated
 
     version = source_version(ROOT)
-    drift = check_or_sync_files(version, check_only=False, root=ROOT)
-    site_pages = build_site(check_only=False, root=ROOT)
-    llms_files = build_llms(check_only=False, root=ROOT)
-    guide_files = build_guides(check_only=False, root=ROOT)
-    updated = [*drift, *site_pages, *llms_files, *guide_files]
+    updated = check_or_sync_generated(version, check_only=False, root=ROOT)
     if updated:
         print(f"[OK] Synchronized documentation in {len(updated)} files: {', '.join(updated)}")
     else:
         print("[OK] Documentation already synchronized.")
 
-    remaining = [
-        *check_or_sync_files(version, check_only=True, root=ROOT),
-        *build_site(check_only=True, root=ROOT),
-        *build_llms(check_only=True, root=ROOT),
-        *build_guides(check_only=True, root=ROOT),
-    ]
+    remaining = check_or_sync_generated(version, check_only=True, root=ROOT)
     if remaining:
         raise RuntimeError(f"Generated documentation remains out of sync: {', '.join(remaining)}")
 

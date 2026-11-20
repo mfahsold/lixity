@@ -28,12 +28,13 @@ jobs:
           persist-credentials: false
           ref: ${{ inputs.source_ref || github.sha }}
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Install the metric reference renderer
+        run: python -m pip install .
       - name: Verify generated documentation
-        run: |
-          python3 scripts/sync_docs.py --check
-          python3 scripts/build_public_site.py --check
-          python3 scripts/build_llms_full.py --check
-          python3 scripts/build_guide_markdown.py --check
+        run: make docs-generated-check PYTHON=python
       - name: Stage public product documentation
         run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages"
       - name: Record exact public deployment source

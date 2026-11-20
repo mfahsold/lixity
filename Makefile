@@ -74,7 +74,7 @@ release-check: ## Validate the tag first, then test once, check generated docs, 
 
 release-prepare: ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
 	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
-	$(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)"
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)"
 
 github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
 	$(SCRIPT_PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
@@ -102,21 +102,13 @@ brand-assets: ## Regenerate multi-size/multi-format brand icons and favicon from
 media: brand-assets screenshots videos examples ## Regenerate all brand assets, screenshots, videos and published examples
 
 docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
-	$(SCRIPT_PYTHON) scripts/sync_docs.py --check
-	$(SCRIPT_PYTHON) scripts/build_llms_full.py --check
-	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py --check
-	$(SCRIPT_PYTHON) scripts/build_public_site.py --check
-	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/build_metric_reference.py --check
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
 	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
 
 docs-sync: ## Synchronize documentation version references to match __version__
-	$(SCRIPT_PYTHON) scripts/sync_docs.py
-	$(SCRIPT_PYTHON) scripts/build_llms_full.py
-	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py
-	$(SCRIPT_PYTHON) scripts/build_public_site.py
-	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/build_metric_reference.py
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all
 
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main

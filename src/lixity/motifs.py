@@ -36,8 +36,7 @@ from .markdown_parser import (
     strip_inline_markup,
 )
 from .models import CorpusConfig
-from .paragraph_evidence import quotation_context
-from .quotation import QuotationAnalysis
+from .quotation import QuotationAnalysis, quotation_context
 from .quotation_projection import QuotedProse, project_quotations, quoted_prose
 from .text_normalization import CountingText, counting_view
 

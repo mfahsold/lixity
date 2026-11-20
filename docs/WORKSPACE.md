@@ -195,7 +195,7 @@ The local app serves it offline. Exported reports link to the public reference.
 Read the [English measurement reference](guides/metrics/en.html) to browse all
 sections.
 
-In the manuscript, **Metric** offers eight paragraph measurements with a
+In the manuscript, **Measure** offers eight paragraph measurements with a
 within-chapter comparison: sentence length, function words, quoted text,
 perception and thought cues, sensory cues, passive patterns, modal forms and
 nominal-style patterns. The function-word sentence filter, dialogue tags,
@@ -669,14 +669,14 @@ These are review locations, not rankings or instructions to revise.
 The native overview keeps only the selected analysis section visible.
 **Review passages** exposes flagged passages and work markers. Use **Compare
 chapters** to ask where the writing changes, for example where sentences get
-longer or more text appears in quotation marks. The chapter table gives average
-words per sentence and the percentage of words inside recognized quotation marks.
+longer or more words appear in quotations or marked speech. The chapter table
+gives average words per sentence and the percentage of words in those passages.
 Under **Explore patterns**, the rhythm view puts chapter averages and the
 sentence-length distribution together. Open the examples for a selected chapter
 or length group to read actual sentences. The word-pattern view opens examples
-for the selected pattern and indicates whether the match falls inside recognized
-quotation marks, outside them or across a boundary when the text supports that
-distinction. The examples come from verifiable manuscript paragraphs.
+for the selected pattern and indicates whether the match falls inside a quotation
+or marked speech, outside it or across a boundary. It reports unclear boundaries
+separately. The examples come from verifiable manuscript paragraphs.
 
 Under **Motifs and repetition**, open a match or highlight related occurrences
 together. The reading toolbar keeps previous and next actions within reach.

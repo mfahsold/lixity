@@ -151,6 +151,27 @@ class TestDocumentPipeline(unittest.TestCase):
                 span = analysis.evidence[0]["layers"]["sticky"]["spans"][0]
                 self.assertEqual(paragraph.text[span["start"]:span["end"]], sentence)
 
+    def test_sticky_threshold_agrees_in_evidence_pacing_and_revisions(self):
+        from lixity.manuscript_editing import analyze_manuscript_snapshot
+        from lixity.pacing import pacing_report
+
+        text = ("## Divided chapter\n\nThe path and the bridge.\n\n---\n\nI will wait for you.\n\n"
+                "## Undivided chapter\n\nThe path and the bridge. It is.")
+        thresholds = resolve_thresholds(project_config={})
+        for min_words, min_pct, expected in ((5, 60.0, [3, 4, 3]), (5, 60.01, [4]), (6, 60.0, [])):
+            with self.subTest(sticky_min_words=min_words, sticky_glue_pct=min_pct):
+                config, _ = resolve_document_config(text, "en", sticky_min_words=min_words, sticky_glue_pct=min_pct)
+                analysis = analyze_document(text, config, thresholds, include_evidence=True)
+                assert analysis.evidence is not None
+                hits = [span["function_words"] for item in analysis.evidence.values()
+                        for span in item["layers"]["sticky"]["spans"]]
+                self.assertEqual(hits, expected)
+                pacing = pacing_report(text, config).to_dict()
+                self.assertCountEqual([item["glue_words"] for item in pacing["sticky_items"]], expected)
+                self.assertEqual(pacing["sticky_sentence_pct"], len(expected) * 25.0)
+                snapshot = analyze_manuscript_snapshot(text, config=config)
+                self.assertEqual(snapshot["sticky_pct"], pacing["sticky_sentence_pct"])
+
     def test_supplementary_reports_precomputes_sentence_group_matches_with_evidence(self):
         from lixity import pipeline
 

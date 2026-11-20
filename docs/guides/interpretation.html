@@ -43,7 +43,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-11-05",
+  "dateModified": "2026-11-20",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/interpretation.html",
   "image": {
@@ -93,7 +93,7 @@
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Interpret results</span></li></ol></nav>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
-<p class="updated">Updated <time datetime="2026-11-05">5 November 2026</time></p>
+<p class="updated">Updated <time datetime="2026-11-20">20 November 2026</time></p>
 
 <h2 id="start-with-a-question">Start with one question about the text</h2>
 <div class="feature-table-wrapper" role="region" aria-label="Questions to ask about a passage" tabindex="0">
@@ -101,12 +101,12 @@
 <thead><tr><th scope="col">Question</th><th scope="col">What to look at</th><th scope="col">What to read</th></tr></thead>
 <tbody>
 <tr><th scope="row">Where does the rhythm change?</th><td>In the chapter matrix, 12 words per sentence means the average sentence has 12 words. The sentence-length view shows how many sentences fall into each length range.</td><td>Read the start of both chapters aloud. Do the pauses fit what happens in each scene?</td></tr>
-<tr><th scope="row">Where do characters speak?</th><td>30% quoted words means 30 in every 100 words are inside detected quotation marks.</td><td>Look at the counted text to see which quotations are spoken aloud.</td></tr>
+<tr><th scope="row">Where do characters speak?</th><td>30% means about 30 in every 100 words are within recognized quotations or marked speech.</td><td>Open the counted text to see which passages are dialogue, thoughts, titles or quoted sources.</td></tr>
 <tr><th scope="row">Why does this chapter stand out?</th><td>Choose a cell in the style comparison. The chapter value and the typical manuscript value appear in the same unit.</td><td>Open the chapter and look for a scene, narrator or passage that could explain the difference.</td></tr>
 </tbody>
 </table>
 </div>
-<p><a href="../demo/report.html">Compare two chapters of the demo</a> or <a href="../sandbox/index.html">try a paragraph in the browser sandbox</a>.</p>
+<p><a href="../demo/report.html">Compare two chapters of the demo</a> or <a href="../sandbox/index.html">try a paragraph in the browser sandbox</a>. For a specific value, the <a href="metrics/en.html">measurement reference</a> explains what Lixity counts, the unit and what to check in the manuscript. The app’s <strong>How it’s measured</strong> links open the relevant entry in your interface language.</p>
 
 <h2 id="analysis-marks">Read the analysis marks</h2>
 <p>Turn <strong>Analysis</strong> on and choose a metric in <strong>Measure</strong>. The separate <strong>Counted text</strong> and <strong>Paragraph comparison</strong> switches let you inspect the counted passages, the chapter comparison, or both.</p>
@@ -292,11 +292,11 @@
 
 <h2 id="tense">What can tense and pacing labels tell me?</h2>
 <p>Read the word ranges next to the sentence groups. The sentence-length distribution uses four groups. The detailed pacing profile uses three groups to describe how widely sentence lengths vary.</p>
-<p>Open the rhythm view and choose a chapter or length group to read examples in the manuscript. Word-pattern examples show their relation to recognized quotation marks when it can be established. In the motifs view, open a repeated phrase to see which occurrences can be highlighted together.</p>
+<p>Open the rhythm view and choose a chapter or length group to read examples in the manuscript. Word-pattern examples show whether the match is inside a quotation or marked speech, outside it, or across a boundary. Unclear boundaries are reported separately. In the motifs view, open a repeated phrase to see which occurrences can be highlighted together.</p>
 <p>The passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.</p>
 <p>Tense labels, dialogue detection, pacing indicators and showing/telling patterns are language-dependent heuristics. Quoted speech, ambiguous word forms and unconventional punctuation can affect them. A friction rating locates mixed signals; it does not determine whether a flashback or tense change is mistaken. Read the original paragraph before making an editorial decision.</p>
 <p>The review overview makes these limits explicit. Tense cues are word-pattern counts, not a grammatical parse: infinitives and auxiliary forms can be ambiguous, and quoted recollections can mix present and past cues intentionally.</p>
-<p>Without explicit scene dividers, <code>scenes_are_chapters</code> is true: scene counts are chapter placeholders, not detected narrative transitions. Dialogue shares count quoted and total words with the same configured token regex; quotation marks still do not identify a speaker.</p>
+<p>Without explicit scene dividers, <code>scenes_are_chapters</code> is true and scenes use chapter boundaries. Lixity counts words within recognized quotations or marked speech and total words with the same configured word pattern. Read the context to determine who speaks.</p>
 
 <h2 id="visuals">Read the values as well as the colors</h2>
 <p>Use the labels, numerical values and selected thresholds alongside a chart's colors. Interface accent colors identify links and controls; analysis colors encode a particular measure or state. A prominent or saturated cell does not necessarily represent a large effect, a reliable estimate or a writing problem. Theme preference does not change the underlying analysis.</p>

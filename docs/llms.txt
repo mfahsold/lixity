@@ -53,6 +53,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 - [Installation](https://mfahsold.github.io/lixity/INSTALLATION.md): supported systems, isolated environments, service startup, upgrades and removal.
 - [CLI reference](https://mfahsold.github.io/lixity/USAGE.md): commands, analysis, project configuration, PDF and website export options.
 - [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md): browser navigation, passage inspection, project settings and reading-copy selection.
+- [Measurement reference](https://mfahsold.github.io/lixity/guides/metrics/en.html): what each measurement counts, the unit and how to interpret it in a manuscript.
 - [Audio manual](https://mfahsold.github.io/lixity/AUDIO.md): recording, teleprompter, profiles, phonetics, direction, generation and WAV/JSON exchange.
 - [Research usage](https://mfahsold.github.io/lixity/research/USAGE.md): implemented capture, citations, dossiers, manuscript associations, Zotero, media, OCR, backups and explicit storage migration.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python APIs, HTTP requests, guarded writes and failure semantics.

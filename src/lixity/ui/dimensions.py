@@ -6,7 +6,8 @@ from typing import Any, cast
 
 from ..format import pct as format_pct
 from ..format import precise_num
-from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint, dimension_loading_poles
+from ..status import FEATURE_LAYERS
+from ..style_fingerprint import FEATURES, StyleFingerprint, dimension_loading_poles
 from ..style_profile import ChapterProfile
 from .components import (
     attr_json,
@@ -158,12 +159,11 @@ def style_dimensions(
             parts.append(f'<div><dt>D{axis["idx"]}<span class="dim-axis-meaning">{esc(meaning)}</span></dt><dd>{number(score, signed=bool(score))}</dd></div>')
         parts.append(f'</dl><p>{translated("flagged" if point["flagged"] else "dim_not_flagged")}</p></div><p class="hint">{translated("dim_score_units")}</p><a class="ctl dim-ctl" id="dim-read-chapter" href="#ch-{point["ch"]}" data-jump="#ch-{point["ch"]}">{translated("dim_read_chapter")}</a></div>')
         parts.append('</div><div class="dim-cards-col">')
-        feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
         for dim in dim_list:
             positive, negative = dimension_loading_poles(dim["loadings"])
             entries = [(feature_name(name), float(value)) for name, value in positive + negative]
-            chip_layers = {feature_name(name): feature_layers[name]
-                           for name, _ in positive + negative if name in feature_layers}
+            chip_layers = {feature_name(name): FEATURE_LAYERS[name]
+                           for name, _ in positive + negative if name in FEATURE_LAYERS}
             variance_badge = badge(
                 f'{format_pct(dim["variance"] * 100, language_key, 0)} {label(labels, "dim_variance")}',
                 variant="",

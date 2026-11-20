@@ -440,8 +440,23 @@ async function settleGeometry(page) {
         await page.locator('#reader-text-smaller').click();
         await settleGeometry(page);
         assert.equal(await paragraph.evaluate(p => parseFloat(getComputedStyle(p).fontSize)), originalSize);
-        await page.locator('#reader-width').selectOption('narrow');
+        if (width === 1440) {
+          const decrease = page.locator('#reader-text-smaller');
+          const increase = page.locator('#reader-text-larger');
+          const size = page.locator('#reader-size-value');
+          await decrease.click();
+          assert.equal(await size.textContent(), '16');
+          assert.equal(await decrease.isDisabled(), true);
+          await increase.click();
+        }
+        const narrower = page.locator('#reader-width-label + .reader-segmented [data-reader-choice=narrow]');
+        await narrower.press('Enter');
+        assert.equal(await narrower.getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('#reader-width').inputValue(), 'narrow');
+        assert.equal(await page.evaluate(() => document.body.style.getPropertyValue('--reader-measure')), '54ch');
         await page.locator('#reader-spacing').selectOption('relaxed');
+        assert.equal(await page.locator('#reader-spacing-label + .reader-segmented [data-reader-choice=relaxed]')
+          .getAttribute('aria-pressed'), 'true');
         const relaxed = await paragraph.evaluate(p => parseFloat(getComputedStyle(p).lineHeight));
         await page.locator('#reader-spacing').selectOption('compact');
         assert.ok(await paragraph.evaluate(p => parseFloat(getComputedStyle(p).lineHeight)) < relaxed,

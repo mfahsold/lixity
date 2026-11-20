@@ -212,18 +212,29 @@
   var analysisGuide = document.getElementById("reader-analysis-guide");
   var metric = document.getElementById("style-layer"), evidenceToggle = document.getElementById("analysis-evidence-enabled");
   var comparisonToggle = document.getElementById("analysis-comparison-enabled");
-  var width = document.getElementById("reader-width");
-  var spacing = document.getElementById("reader-spacing");
   var current = null, savedRange = null, evidencePoint = null, returnTarget = null, selecting = false;
-  var preferences = {size: 18, width: "standard", spacing: "standard", metric: null, evidence: false, evidenceByMetric: Object.create(null), comparison: true};
+  var sizeOutput = document.getElementById("reader-size-value");
+  var smaller = document.getElementById("reader-text-smaller");
+  var larger = document.getElementById("reader-text-larger");
+  var minSize = Number(sizeOutput.dataset.min), maxSize = Number(sizeOutput.dataset.max), sizeStep = Number(sizeOutput.dataset.step);
+  var preferences = {size: Number(sizeOutput.defaultValue), metric: null, evidence: false, evidenceByMetric: Object.create(null), comparison: true};
+  var appearanceChoices = Array.from(settings.querySelectorAll("select[data-reader-setting]"), function(select) {
+    var key = select.dataset.readerSetting;
+    var options = new Map(Array.from(select.options, function(option) { return [option.value, option.dataset.cssValue]; }));
+    var buttons = select.parentElement.querySelectorAll("[data-reader-choice]");
+    preferences[key] = select.value;
+    return {key: key, select: select, options: options, buttons: buttons};
+  });
+  function boundedSize(size) { return Math.min(maxSize, Math.max(minSize, size)); }
   function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function save(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* Display works without storage. */ } }
   try {
     var stored = JSON.parse(read("lixity.manuscript.reader") || "null");
     if (stored && typeof stored === "object") {
-      if (Number.isFinite(stored.size)) preferences.size = Math.min(28, Math.max(16, stored.size));
-      if (["narrow", "standard", "wide"].includes(stored.width)) preferences.width = stored.width;
-      if (["compact", "standard", "relaxed"].includes(stored.spacing)) preferences.spacing = stored.spacing;
+      if (Number.isFinite(stored.size)) preferences.size = boundedSize(stored.size);
+      appearanceChoices.forEach(function(choice) {
+        if (choice.options.has(stored[choice.key])) preferences[choice.key] = stored[choice.key];
+      });
       if (typeof stored.metric === "string" && metric && Array.from(metric.options).some(function(option) {return option.value === stored.metric;})) preferences.metric = stored.metric;
       if (typeof stored.evidence === "boolean") preferences.evidence = stored.evidence;
       if (stored.evidenceByMetric && typeof stored.evidenceByMetric === "object" && !Array.isArray(stored.evidenceByMetric)) {
@@ -486,18 +497,17 @@
   }
   function appearance() {
     document.body.style.setProperty("--reader-font-size", (preferences.size / 16) + "rem");
-    document.body.style.setProperty("--reader-measure", {narrow: "54ch", standard: "68ch", wide: "78ch"}[preferences.width]);
-    document.body.style.setProperty("--reader-leading", {compact: "1.5", standard: "1.8", relaxed: "2.1"}[preferences.spacing]);
-    width.value = preferences.width; spacing.value = preferences.spacing;
-    document.querySelectorAll("[data-reader-width]").forEach(function(btn) {
-      btn.setAttribute("aria-pressed", String(btn.dataset.readerWidth === preferences.width));
+    appearanceChoices.forEach(function(choice) {
+      var value = preferences[choice.key];
+      document.body.style.setProperty(choice.select.dataset.cssProperty, choice.options.get(value));
+      choice.select.value = value;
+      choice.buttons.forEach(function(button) {
+        button.setAttribute("aria-pressed", String(button.dataset.readerChoice === value));
+      });
     });
-    document.querySelectorAll("[data-reader-spacing]").forEach(function(btn) {
-      btn.setAttribute("aria-pressed", String(btn.dataset.readerSpacing === preferences.spacing));
-    });
-    document.getElementById("reader-size-value").value = String(preferences.size);
-    document.getElementById("reader-text-smaller").disabled = preferences.size <= 16;
-    document.getElementById("reader-text-larger").disabled = preferences.size >= 28;
+    sizeOutput.value = String(preferences.size);
+    smaller.disabled = preferences.size <= minSize;
+    larger.disabled = preferences.size >= maxSize;
     save("lixity.manuscript.reader", JSON.stringify(preferences));
   }
   function enhanceText(panel) {
@@ -1060,14 +1070,23 @@
     workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor, true);
     document.getElementById("workbench-overview-open").focus({preventScroll: true});
   });
-  document.getElementById("reader-text-smaller").addEventListener("click", function() { retain(function() { preferences.size = Math.max(16, preferences.size - 2); appearance(); }); });
-  document.getElementById("reader-text-larger").addEventListener("click", function() { retain(function() { preferences.size = Math.min(28, preferences.size + 2); appearance(); }); });
-  [width, spacing].forEach(function(select) { select.addEventListener("change", function() { retain(function() { preferences[select === width ? "width" : "spacing"] = select.value; appearance(); }); }); });
-  document.querySelectorAll("[data-reader-width]").forEach(function(btn) {
-    btn.addEventListener("click", function() { retain(function() { preferences.width = btn.dataset.readerWidth; appearance(); }); });
-  });
-  document.querySelectorAll("[data-reader-spacing]").forEach(function(btn) {
-    btn.addEventListener("click", function() { retain(function() { preferences.spacing = btn.dataset.readerSpacing; appearance(); }); });
+  function resizeText(direction) {
+    retain(function() {
+      preferences.size = boundedSize(preferences.size + direction * sizeStep);
+      appearance();
+    });
+  }
+  smaller.addEventListener("click", function() { resizeText(-1); });
+  larger.addEventListener("click", function() { resizeText(1); });
+  appearanceChoices.forEach(function(choice) {
+    function choose(value) {
+      if (!choice.options.has(value)) return;
+      retain(function() { preferences[choice.key] = value; appearance(); });
+    }
+    choice.select.addEventListener("change", function() { choose(choice.select.value); });
+    choice.buttons.forEach(function(button) {
+      button.addEventListener("click", function() { choose(button.dataset.readerChoice); });
+    });
   });
   focus.addEventListener("click", function() { setFocus(!document.body.classList.contains("reader-focus")); });
   function codepointSpansToRanges(prose, text, spans) {

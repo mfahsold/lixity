@@ -37,13 +37,12 @@ from .markdown_parser import split_chapters, split_scenes
 from .models import (
     DEFAULT_HOOK_SHORT_SENTENCE,
     DEFAULT_MONOTONY_MIN_RUN,
-    DEFAULT_STICKY_GLUE_PCT,
-    DEFAULT_STICKY_MIN_WORDS,
     CorpusConfig,
 )
 from .quotation import QuotationAnalysis, count_quoted_words, scan_quotations
 from .quotation_projection import quoted_prose
 from .sentences import SHORT_SENTENCE_MAX, split_prose_sentence_spans, split_prose_sentences
+from .sticky import measure_function_words
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
 HOOK_SHORT_SENTENCE = DEFAULT_HOOK_SHORT_SENTENCE
@@ -393,8 +392,8 @@ def _scene_stats(
     *,
     short_sentence_max: int = SHORT_SENTENCE_MAX,
     hook_short_sentence: int = HOOK_SHORT_SENTENCE,
-    sticky_glue_pct: float = DEFAULT_STICKY_GLUE_PCT,
-    sticky_min_words: int = DEFAULT_STICKY_MIN_WORDS,
+    sticky_glue_pct: float,
+    sticky_min_words: int,
     include_sticky_identity: bool = False,
 ) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
     words = len(word_re.findall(scene_text))
@@ -419,20 +418,18 @@ def _scene_stats(
     sticky_items: list[dict[str, Any]] = []
     if function_words:
         for sentence, tokens in zip(sentences, sentence_tokens, strict=True):
-            n_words = len(tokens)
-            if not n_words:
-                continue
-            glue_words = sum(1 for tok in tokens if tok in function_words)
-            glue_pct = glue_words / n_words * 100.0
-            glue_pcts.append(glue_pct)
-            if n_words >= sticky_min_words and glue_pct >= sticky_glue_pct:
+            measurement = measure_function_words(
+                tokens, function_words, min_words=sticky_min_words, min_pct=sticky_glue_pct,
+            )
+            glue_pcts.append(measurement.pct)
+            if measurement.sticky:
                 sticky_count += 1
                 item = {
                     "chapter_num": chapter_num,
                     "scene_index": index,
-                    "words": n_words,
-                    "glue_words": glue_words,
-                    "glue_pct": round(glue_pct, 2),
+                    "words": measurement.words,
+                    "glue_words": measurement.function_words,
+                    "glue_pct": round(measurement.pct, 2),
                     "preview": sentence.strip()[:80],
                 }
                 if include_sticky_identity:

@@ -38,7 +38,7 @@
   "top": "Back to top",
   "linguistics_title": "Compare rhythm, dialogue, and repeated words.",
   "linguistics_text": "Compare sentence lengths and dialogue proportions, inspect nearby word repetitions, and explore heuristic signals for speech, scene shifts, and character voices. Follow available evidence back to the prose. Built-in analysis runs offline; these signals support review, not a verdict on the writing.",
-  "linguistics_link": "Text-analysis workflow (English)",
+  "linguistics_link": "How Lixity measures text",
   "language_action": "Continue in English",
   "language_suggestion": "Prefer another language? Use your saved choice or a language supported by your browser.",
   "language_stay": "Stay in English",

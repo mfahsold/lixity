@@ -13,6 +13,24 @@ const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root,'.venv/bin/py
 assert.equal(fixture.status,0,fixture.stderr);
 return fixture.stdout;
 }
+async function assertSelectGeometry(select, context) {
+ const spacing = await select.evaluate(control => {
+  const icon = control.nextElementSibling;
+  const field = control.getBoundingClientRect(), arrow = icon.getBoundingClientRect();
+  const style = getComputedStyle(control);
+  return {
+   truncated: control.scrollWidth > control.clientWidth,
+   labelInset: parseFloat(style.paddingInlineStart), arrowInset: field.right - arrow.right,
+   labelEnd: parseFloat(style.paddingInlineEnd), arrowSpan: field.right - arrow.left,
+   centerOffset: (field.top + field.bottom - arrow.top - arrow.bottom) / 2,
+   decorative: icon.getAttribute('aria-hidden') === 'true' && getComputedStyle(icon).pointerEvents === 'none',
+  };
+ });
+ assert.equal(spacing.truncated, false, `${context} fits the control`);
+ assert(Math.abs(spacing.labelInset - spacing.arrowInset) < 1, `${context} has aligned insets`);
+ assert(spacing.labelEnd >= spacing.arrowSpan - 1, `${context} leaves room for its arrow`);
+ assert(Math.abs(spacing.centerOffset) < 1 && spacing.decorative, `${context} has a centered decorative arrow`);
+}
 (async()=>{
  const browser=await (process.argv.includes('--firefox') ? launchFirefox : launchChromium)();
  try {
@@ -33,28 +51,16 @@ return fixture.stdout;
    assert(await page.locator('#manuscript-write').isVisible());
    const toolbar=page.locator('#manuscript-reader-controls');
    if(width>=1024) assert((await toolbar.boundingBox()).height<=64,`All native tools including Write fit one desktop row at ${width}px (${language}, ${theme})`);
-   const chapterSelect=page.locator('#reader-chapter');
-   if(await chapterSelect.isVisible()) {
-    const isTruncated=await chapterSelect.evaluate(el=>el.scrollWidth>el.clientWidth);
-    assert.equal(isTruncated,false,`Chapter select in ${language} at ${width}px must not be truncated`);
-    const spacing=await chapterSelect.evaluate(select=>{
-     const icon=select.nextElementSibling;
-     const control=select.getBoundingClientRect(), arrow=icon.getBoundingClientRect();
-     const style=getComputedStyle(select);
-     return {
-      labelInset:parseFloat(style.paddingInlineStart), arrowInset:control.right-arrow.right,
-      labelEnd:parseFloat(style.paddingInlineEnd), arrowSpan:control.right-arrow.left,
-      centerOffset:(control.top+control.bottom-arrow.top-arrow.bottom)/2,
-      decorative:icon.getAttribute('aria-hidden')==='true' && getComputedStyle(icon).pointerEvents==='none',
-     };
-    });
-    assert(Math.abs(spacing.labelInset-spacing.arrowInset)<1,`Chapter insets align at ${width}px (${language}, ${theme})`);
-    assert(spacing.labelEnd>=spacing.arrowSpan-1,`Chapter text leaves room for the arrow at ${width}px`);
-    assert(Math.abs(spacing.centerOffset)<1 && spacing.decorative,`Chapter arrow is centered and decorative at ${width}px`);
-   }
+   const context = `${language}, ${theme}, ${width}px`;
+   await assertSelectGeometry(page.locator('#reader-chapter'), `Chapter picker (${context})`);
    assert(await page.locator('#reader-speech').isVisible());
    assert(await page.locator('#workspace-reader-toggle').isVisible());
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const analysis = page.locator('#manuscript-analysis-toggle');
+   await analysis.click();
+   await assertSelectGeometry(page.locator('#style-layer'), `Metric picker (${context})`);
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await analysis.click();
    if(language==='de' && theme==='dark' && [1468,1024,390].includes(width)) await page.screenshot({path:path.join(captures, `${width}.png`)});
    await page.locator('#reader-settings > summary').click();
    assert(await page.locator('#reader-width').isVisible());

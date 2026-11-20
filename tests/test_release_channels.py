@@ -591,6 +591,11 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
     with pytest.raises(ValueError, match=r"index-de\.html"):
         channels.verify_pages(source, TAG, SHA, client, base_url=base)
 
+    values[base + "index-de.html"] = pages["index-de.html"]
+    values[base + "guides/metrics/de.html"] = b"stale german measurement reference"
+    with pytest.raises(ValueError, match=r"guides/metrics/de\.html"):
+        channels.verify_pages(source, TAG, SHA, client, base_url=base)
+
 
 def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, candidate, monkeypatch):
     source, dist = candidate

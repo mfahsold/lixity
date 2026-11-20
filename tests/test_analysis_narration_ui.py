@@ -519,7 +519,10 @@ def test_reader_metric_options_match_available_measurements_and_reference(locale
 
     labels = get_language_profile(locale).labels
     control = reading_metric_control(labels, locale, {}, include_evidence=True, report=False)
-    select = ElementTree.fromstring(control).find("select")  # noqa: S314
+    wrapper = ElementTree.fromstring(control).find("span[@class='ctl-select']")  # noqa: S314
+    select = wrapper.find("select")
+    assert select.attrib["aria-label"] == labels["analysis_measure"]
+    assert wrapper.find("svg").attrib["aria-hidden"] == "true"
     options = {item.attrib["value"]: item for item in select.findall(".//option")}
     assert list(options) == ["", "asl", "function", "sticky", "dialogue", "dialogue_tag", "indirect_speech",
                              "filter", "sensory", "echo", "passive", "modal", "nominal"]

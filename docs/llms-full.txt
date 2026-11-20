@@ -75,6 +75,7 @@ For linguistic work, use the [text-analysis workflow](https://mfahsold.github.io
 - [Installation](https://mfahsold.github.io/lixity/INSTALLATION.md): supported systems, isolated environments, service startup, upgrades and removal.
 - [CLI reference](https://mfahsold.github.io/lixity/USAGE.md): commands, analysis, project configuration, PDF and website export options.
 - [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md): browser navigation, passage inspection, project settings and reading-copy selection.
+- [Measurement reference](https://mfahsold.github.io/lixity/guides/metrics/en.html): what each measurement counts, the unit and how to interpret it in a manuscript.
 - [Audio manual](https://mfahsold.github.io/lixity/AUDIO.md): recording, teleprompter, profiles, phonetics, direction, generation and WAV/JSON exchange.
 - [Research usage](https://mfahsold.github.io/lixity/research/USAGE.md): implemented capture, citations, dossiers, manuscript associations, Zotero, media, OCR, backups and explicit storage migration.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python APIs, HTTP requests, guarded writes and failure semantics.
@@ -308,9 +309,9 @@ undo, local autosave and explicit conflict recovery. Read the
 [editing workflow and current limits](WORKSPACE.md#write-a-manuscript-unreleased)
 before using it. The public demo and exported websites remain read-only.
 
-Technical documentation is maintained in **English only**. The app interface
-supports German, English, French, Spanish, Italian, Portuguese and Dutch;
-[language coverage](LOCALIZATION.md) explains differences in analysis support.
+The app and its measurement reference support German, English, French, Spanish,
+Italian, Portuguese and Dutch. The technical manuals are maintained in English.
+[Language coverage](LOCALIZATION.md) explains differences in analysis support.
 For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html) to compare two chapters.
@@ -341,7 +342,7 @@ links the release notes for the documented version, and
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
 | Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
-| Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Choose an analysis command](USAGE.md#which-command-for-which-question) |
+| Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Measurement reference](guides/metrics/en.html) · [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
 | Import sources from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF/OCR setup](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |
@@ -2490,7 +2491,7 @@ The local app serves it offline. Exported reports link to the public reference.
 Read the [English measurement reference](guides/metrics/en.html) to browse all
 sections.
 
-In the manuscript, **Metric** offers eight paragraph measurements with a
+In the manuscript, **Measure** offers eight paragraph measurements with a
 within-chapter comparison: sentence length, function words, quoted text,
 perception and thought cues, sensory cues, passive patterns, modal forms and
 nominal-style patterns. The function-word sentence filter, dialogue tags,
@@ -2964,14 +2965,14 @@ These are review locations, not rankings or instructions to revise.
 The native overview keeps only the selected analysis section visible.
 **Review passages** exposes flagged passages and work markers. Use **Compare
 chapters** to ask where the writing changes, for example where sentences get
-longer or more text appears in quotation marks. The chapter table gives average
-words per sentence and the percentage of words inside recognized quotation marks.
+longer or more words appear in quotations or marked speech. The chapter table
+gives average words per sentence and the percentage of words in those passages.
 Under **Explore patterns**, the rhythm view puts chapter averages and the
 sentence-length distribution together. Open the examples for a selected chapter
 or length group to read actual sentences. The word-pattern view opens examples
-for the selected pattern and indicates whether the match falls inside recognized
-quotation marks, outside them or across a boundary when the text supports that
-distinction. The examples come from verifiable manuscript paragraphs.
+for the selected pattern and indicates whether the match falls inside a quotation
+or marked speech, outside it or across a boundary. It reports unclear boundaries
+separately. The examples come from verifiable manuscript paragraphs.
 
 Under **Motifs and repetition**, open a match or highlight related occurrences
 together. The reading toolbar keeps previous and next actions within reach.

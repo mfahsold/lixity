@@ -228,7 +228,7 @@ threads, dependencies, a database service or a native extension.
 
 To prepare a new release, bump the version, scaffold pending release notes (explicitly
 marking publication date and verification results as pending) and synchronize
-documentation pins in one step via `scripts/prepare_release.py`:
+documentation with the same generators used by GitHub Pages:
 
 ```bash
 make release-prepare VERSION=X.Y.Z

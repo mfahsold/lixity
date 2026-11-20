@@ -12,9 +12,9 @@ undo, local autosave and explicit conflict recovery. Read the
 [editing workflow and current limits](WORKSPACE.md#write-a-manuscript-unreleased)
 before using it. The public demo and exported websites remain read-only.
 
-Technical documentation is maintained in **English only**. The app interface
-supports German, English, French, Spanish, Italian, Portuguese and Dutch;
-[language coverage](LOCALIZATION.md) explains differences in analysis support.
+The app and its measurement reference support German, English, French, Spanish,
+Italian, Portuguese and Dutch. The technical manuals are maintained in English.
+[Language coverage](LOCALIZATION.md) explains differences in analysis support.
 For a product introduction before reading the manuals, visit the
 [Lixity website](https://mfahsold.github.io/lixity/) or try the
 [read-only English example](demo/report.html) to compare two chapters.
@@ -45,7 +45,7 @@ links the release notes for the documented version, and
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
 | Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
-| Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Choose an analysis command](USAGE.md#which-command-for-which-question) |
+| Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Measurement reference](guides/metrics/en.html) · [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
 | Import sources from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF/OCR setup](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |

@@ -14,6 +14,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and let writers decide how a passage reads in context.
 - Use one manuscript metric selector for the app and reports. Explain each
   selection in seven languages and link to its exact method.
+- Share the chapter and metric select control and define reader appearance
+  choices in one place. Reuse the same function-word rule and quotation context
+  across evidence, pacing, phrase search and version comparisons.
+- Link each public homepage to its metric reference. Check generated guides
+  with the same documentation gate in local builds, release preparation and
+  GitHub Pages.
 
 ### Fixed
 

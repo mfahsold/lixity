@@ -23,6 +23,7 @@ __all__ = [
     "DEFAULT_Z_MILD",
     "DEFAULT_Z_STRONG",
     "DIM_SCORE_THRESHOLD",
+    "FEATURE_LAYERS",
     "FLAG_MIN_SEVERITY",
     "LANGUAGE_CHOICES",
     "LANGUAGE_CODES",
@@ -226,3 +227,6 @@ LAYER_FEATURES: dict[str, str] = {
     "nominal": "nominalization_density",
     "passive": "passive_density",
 }
+
+#: Chapter-level style features with a corresponding paragraph layer.
+FEATURE_LAYERS: Mapping[str, str] = MappingProxyType({field: layer for layer, field in LAYER_FEATURES.items()})

@@ -19,7 +19,7 @@ from ..markers import Marker
 from ..models import CorpusMetrics
 from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..site import docs_url
-from ..status import FLAG_MIN_SEVERITY
+from ..status import FEATURE_LAYERS, FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURE_UNITS,
     FEATURES,
@@ -559,7 +559,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         flag_min_severity = int(FLAG_MIN_SEVERITY)
     total_flagged = sum(1 for p in paragraphs if p.severity >= flag_min_severity)
     scale = max(1, max((p.words for p in paragraphs), default=1))
-    feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
     function_pct = metrics.function_word_pct if metrics is not None and metrics.tokens else None
     has_house_style = bool(
@@ -1696,7 +1695,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             num, mean_abs = drifters[0]
             devs = fingerprint.deviations.get(num, {})
             top_field = max(devs, key=lambda k: abs(devs[k])) if devs else None
-            top_layer = feature_layers.get(top_field) if top_field else None
+            top_layer = FEATURE_LAYERS.get(top_field) if top_field else None
             top_chapter = next((c for c in chapters if c.num == num), None)
             top_title = top_chapter.title if top_chapter is not None else ""
             style_details.append(

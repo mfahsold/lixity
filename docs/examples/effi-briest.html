@@ -4134,7 +4134,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   min-width: 0;
   flex: 0 1 auto;
 }
-.reader-analysis-controls .metric-layer-control > span {
+.reader-analysis-controls .metric-layer-label {
   flex-shrink: 0;
   font-size: var(--text-micro);
   font-weight: 600;
@@ -4145,9 +4145,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-analysis-controls select {
   min-width: 11rem;
   max-width: 18rem;
-  min-height: 32px;
-  height: 32px;
-  padding: .2rem .65rem;
+  min-height: 2rem;
+  height: 2rem;
+  padding-block: .2rem;
   font-size: var(--text-control);
   border-radius: var(--radius-sm);
   box-sizing: border-box;
@@ -4383,8 +4383,9 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .reader-settings[open] .reader-settings-menu { max-width: calc(100vw - 1.5rem); max-height: 70dvh; overflow-y: auto; }
   .reader-analysis-controls { padding-top: var(--space-1); gap: .35rem; }
   .reader-analysis-controls .metric-layer-control { width: 100%; position: relative; }
-  .reader-analysis-controls .metric-layer-control > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .reader-analysis-controls select { width: 100%; max-width: none; }
+  .reader-analysis-controls .metric-layer-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .reader-analysis-controls .metric-layer-control > .ctl-select { flex: 1; min-width: 0; }
+  .reader-analysis-controls select { min-width: 0; max-width: none; }
   .reader-analysis-switches { display: flex; flex-wrap: wrap; gap: .35rem; width: 100%; }
   .reader-comparison-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
   .reader-evidence-toggle, .reader-comparison-toggle { min-width: 0; gap: var(--space-1); line-height: var(--line-control); }
@@ -5152,7 +5153,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 </span>
 <label class="form-checkbox js-analysis-control"><input type="checkbox" id="filter-flags"/> Nur Auffälligkeiten</label>
 <button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>Alle Absätze anzeigen</button>
-<label class="metric-layer-control"><span><span class="help" data-help="Absatzwerte relativ zum Kapitelmedian: Blau = niedriger, Orange = höher. Ring = Abweichung |z| ≥ 1,5; keine Qualitätsbewertung." tabindex="0">Abweichungen</span></span> <select class="ctl" id="style-layer" aria-label="Messgröße" data-help="Messgröße für Markierungen und Absatzvergleich wählen."><option value="">Keine</option><optgroup label="Satzbau &amp; Rhythmus"><option value="asl" data-hint="Durchschnittliche Wortzahl pro erkanntem Satz im Absatz." data-unit="Wörter je Satz" data-comparable="99" data-reference="measure-asl">Satzlänge</option><option value="function" data-hint="Anteil der Wörter aus der Funktionswortliste, etwa Artikel und Pronomen." data-unit="% der Wörter" data-comparable="92" data-reference="measure-function">Funktionswörter</option></optgroup><optgroup label="Erzählstimme &amp; Dialog"><option value="dialogue" data-hint="Anteil der Wörter in Zitaten und markierter Rede" data-unit="% der Wörter" data-comparable="41" data-reference="measure-dialogue">Zitate und markierte Rede</option><option value="filter" data-hint="Muster für Wahrnehmung, Gedanken oder Erinnerungen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-filter">Wahrnehmung &amp; Gedanken</option><option value="sensory" data-hint="Muster für Sehen, Hören und andere Sinneseindrücke je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-sensory">Sinneswörter</option></optgroup><optgroup label="Grammatik &amp; Stil"><option value="passive" data-hint="Treffer für mögliche Passivformen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-passive">Passivmuster</option><option value="modal" data-hint="Treffer aus der Liste der Modalformen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-modal">Modalverben</option><option value="nominal" data-hint="Wortmuster für Nominalstil je 1.000 Wörter, etwa Endungen wie „-ung“." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-nominal">Nominalstil-Muster</option></optgroup></select></label>
+<label class="metric-layer-control"><span class="metric-layer-label"><span class="help" data-help="Absatzwerte relativ zum Kapitelmedian: Blau = niedriger, Orange = höher. Ring = Abweichung |z| ≥ 1,5; keine Qualitätsbewertung." tabindex="0">Abweichungen</span></span> <span class="ctl-select"><select class="ctl" id="style-layer" aria-label="Messgröße" data-help="Messgröße für Markierungen und Absatzvergleich wählen."><option value="">Keine</option><optgroup label="Satzbau &amp; Rhythmus"><option value="asl" data-hint="Durchschnittliche Wortzahl pro erkanntem Satz im Absatz." data-unit="Wörter je Satz" data-comparable="99" data-reference="measure-asl">Satzlänge</option><option value="function" data-hint="Anteil der Wörter aus der Funktionswortliste, etwa Artikel und Pronomen." data-unit="% der Wörter" data-comparable="92" data-reference="measure-function">Funktionswörter</option></optgroup><optgroup label="Erzählstimme &amp; Dialog"><option value="dialogue" data-hint="Anteil der Wörter in Zitaten und markierter Rede" data-unit="% der Wörter" data-comparable="41" data-reference="measure-dialogue">Zitate und markierte Rede</option><option value="filter" data-hint="Muster für Wahrnehmung, Gedanken oder Erinnerungen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-filter">Wahrnehmung &amp; Gedanken</option><option value="sensory" data-hint="Muster für Sehen, Hören und andere Sinneseindrücke je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-sensory">Sinneswörter</option></optgroup><optgroup label="Grammatik &amp; Stil"><option value="passive" data-hint="Treffer für mögliche Passivformen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-passive">Passivmuster</option><option value="modal" data-hint="Treffer aus der Liste der Modalformen je 1.000 Wörter." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-modal">Modalverben</option><option value="nominal" data-hint="Wortmuster für Nominalstil je 1.000 Wörter, etwa Endungen wie „-ung“." data-unit="je 1.000 Wörter" data-comparable="0" data-reference="measure-nominal">Nominalstil-Muster</option></optgroup></select><svg class="lixity-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></label>
 <span class="legend">
 <span><span class="swatch" style="background:var(--present)"></span>Präsens</span>
 <span><span class="swatch" style="background:var(--past)"></span>Vergangenheit</span>

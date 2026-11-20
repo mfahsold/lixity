@@ -1,6 +1,6 @@
 """Shared display controls for the canonical manuscript paragraph tree."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from html import escape
 
 from ..style_fingerprint import FEATURE_UNITS, LAYER_FEATURES, ParagraphLayerData
@@ -12,6 +12,7 @@ from .components import (
     label,
     metric_reference_link,
     panel_label,
+    select_control,
     ui_icon,
 )
 from .manuscript_document import ReaderBlock
@@ -21,6 +22,39 @@ _LAYER_GROUPS = (
     ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
     ("layer_group_grammar", ("passive", "modal", "nominal")),
 )
+_READER_WIDTHS = (("narrow", "54ch"), ("standard", "68ch"), ("wide", "78ch"))
+_READER_SPACING = (("compact", "1.5"), ("standard", "1.8"), ("relaxed", "2.1"))
+_READER_SIZE_DEFAULT = 18
+_READER_SIZE_MIN = 16
+_READER_SIZE_MAX = 28
+_READER_SIZE_STEP = 2
+
+
+def _appearance_choices(
+    text: Callable[[str], str], key: str, css_property: str, choices: Sequence[tuple[str, str]],
+) -> str:
+    """Supply one set of choices to the visible controls and their select."""
+    buttons = []
+    options = []
+    for value, css_value in choices:
+        title = text(f"reading_{value}")
+        selected = value == "standard"
+        pressed = "true" if selected else "false"
+        selected_attr = " selected" if selected else ""
+        buttons.append(
+            f'<button type="button" class="ctl ctl-sm" data-reader-choice="{value}" '
+            f'aria-pressed="{pressed}">{title}</button>'
+        )
+        options.append(f'<option value="{value}" data-css-value="{css_value}"{selected_attr}>{title}</option>')
+    control_id = f"reader-{key}"
+    return (
+        '<div class="reader-setting-field">'
+        f'<span class="reader-setting-label" id="{control_id}-label">{text(f"reading_{key}")}</span>'
+        f'<div class="reader-segmented" role="group" aria-labelledby="{control_id}-label">'
+        f'{"".join(buttons)}<select class="ctl reader-segmented-native" id="{control_id}" '
+        f'data-reader-setting="{key}" data-css-property="{css_property}" aria-hidden="true" tabindex="-1">'
+        f'{"".join(options)}</select></div></div>'
+    )
 
 
 def reading_metric_control(
@@ -52,11 +86,12 @@ def reading_metric_control(
     additional = "".join(option(key) for key in LAYER_FEATURES
                          if not any(key in keys for _, keys in _LAYER_GROUPS))
     title = help_term(labels, "layer", text("style_layer")) if report else text("analysis_measure")
+    options = f'<option value="">{text("layer_off")}</option>{groups}{additional}'
+    picker = select_control(
+        "style-layer", label(labels, "analysis_measure"), options, help_text=label(labels, "reading_help_measure"),
+    )
     return (
-        f'<label class="metric-layer-control"><span>{title}</span> '
-        f'<select class="ctl" id="style-layer" aria-label="{text("analysis_measure")}" '
-        f'data-help="{text("reading_help_measure")}">'
-        f'<option value="">{text("layer_off")}</option>{groups}{additional}</select></label>'
+        f'<label class="metric-layer-control"><span class="metric-layer-label">{title}</span> {picker}</label>'
     )
 
 
@@ -92,6 +127,12 @@ def reading_controls(
             target = (f"ch-{chapters[0].num}" if chapters and chapters[0].start_line < source_chapters[0].start_line
                       else "reader-preface")
             options = f'<option value="{target}">{text("reading_view")}</option>' + options
+    chapter_picker = select_control(
+        "reader-chapter", label(labels, "reading_chapter"), f'<option value="">{text("reading_chapter")}…</option>{options}',
+        css_class="reader-chapter",
+    )
+    width_choices = _appearance_choices(text, "width", "--reader-measure", _READER_WIDTHS)
+    spacing_choices = _appearance_choices(text, "spacing", "--reader-leading", _READER_SPACING)
     help_icon = ui_icon("help-circle")
     appearance_summary = compact_control(
         label(labels, "reading_appearance"), "type", tag="summary",
@@ -119,34 +160,15 @@ def reading_controls(
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
         f'<option value="inspect">{text("reading_inspect")}</option></select>'
-        '<span class="ctl-select reader-chapter">'
-        f'<select class="ctl" id="reader-chapter" aria-label="{text("reading_chapter")}">'
-        f'<option value="">{text("reading_chapter")}…</option>{options}</select>'
-        f'{ui_icon("chevron-down")}</span>'
+        f'{chapter_picker}'
         '<details class="reader-settings" id="reader-settings" name="reader-settings">'
         f'{appearance_summary}<div class="reader-settings-body">'
         f'<div class="reader-size-controls" role="group" aria-label="{text("reading_size")}">'
         f'<button class="ctl" type="button" id="reader-text-smaller" aria-label="{text("reading_smaller")}">A−</button>'
-        '<output id="reader-size-value" aria-live="polite">18</output>'
+        f'<output id="reader-size-value" aria-live="polite" data-min="{_READER_SIZE_MIN}" '
+        f'data-max="{_READER_SIZE_MAX}" data-step="{_READER_SIZE_STEP}">{_READER_SIZE_DEFAULT}</output>'
         f'<button class="ctl" type="button" id="reader-text-larger" aria-label="{text("reading_larger")}">A+</button></div>'
-        '<div class="reader-setting-field">'
-        f'<span class="reader-setting-label" id="reader-width-label">{text("reading_width")}</span>'
-        '<div class="reader-segmented" role="group" aria-labelledby="reader-width-label">'
-        f'<button type="button" class="ctl ctl-sm" data-reader-width="narrow" aria-pressed="false">{text("reading_narrow")}</button>'
-        f'<button type="button" class="ctl ctl-sm" data-reader-width="standard" aria-pressed="true">{text("reading_standard")}</button>'
-        f'<button type="button" class="ctl ctl-sm" data-reader-width="wide" aria-pressed="false">{text("reading_wide")}</button>'
-        '<select class="ctl reader-segmented-native" id="reader-width" aria-hidden="true" tabindex="-1">'
-        f'<option value="narrow">{text("reading_narrow")}</option><option value="standard" selected>{text("reading_standard")}</option>'
-        f'<option value="wide">{text("reading_wide")}</option></select></div></div>'
-        '<div class="reader-setting-field">'
-        f'<span class="reader-setting-label" id="reader-spacing-label">{text("reading_spacing")}</span>'
-        '<div class="reader-segmented" role="group" aria-labelledby="reader-spacing-label">'
-        f'<button type="button" class="ctl ctl-sm" data-reader-spacing="compact" aria-pressed="false">{text("reading_compact")}</button>'
-        f'<button type="button" class="ctl ctl-sm" data-reader-spacing="standard" aria-pressed="true">{text("reading_standard")}</button>'
-        f'<button type="button" class="ctl ctl-sm" data-reader-spacing="relaxed" aria-pressed="false">{text("reading_relaxed")}</button>'
-        '<select class="ctl reader-segmented-native" id="reader-spacing" aria-hidden="true" tabindex="-1">'
-        f'<option value="compact">{text("reading_compact")}</option><option value="standard" selected>{text("reading_standard")}</option>'
-        f'<option value="relaxed">{text("reading_relaxed")}</option></select></div></div>'
+        f'{width_choices}{spacing_choices}'
         f'<div class="reader-shortcuts"><strong>{text("reading_shortcuts")}</strong><dl>'
         f'<dt><kbd>P</kbd></dt><dd>{text("reading_teleprompter")}</dd>'
         f'<dt><kbd>D</kbd></dt><dd>{text("reading_direct_speech")}</dd>'

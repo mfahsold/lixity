@@ -4,7 +4,8 @@
 The version comes from src/lixity/_version.py. Run with --check to report drift
 without changing files. Rewriting handles known pins; the separate claim scan
 also checks wording outside that list. Historical release notes and third-party
-versions are not treated as current Lixity claims.
+versions are not treated as current Lixity claims. Use --all to include the
+generated documentation and localized metric references.
 """
 
 import argparse
@@ -275,20 +276,35 @@ def find_version_drift(version: str, *, root: Path | None = None) -> list[str]:
     return findings
 
 
+def check_or_sync_generated(version: str, *, check_only: bool, root: Path) -> list[str]:
+    """Run the same document generators for local work, releases and Pages."""
+    from build_guide_markdown import build as build_guides
+    from build_llms_full import build as build_llms
+    from build_metric_reference import build as build_metrics
+    from build_public_site import build as build_site
+
+    changed = check_or_sync_files(version, check_only=check_only, root=root)
+    for build in (build_site, build_llms, build_guides, build_metrics):
+        changed.extend(build(check_only=check_only, root=root))
+    return changed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="Check for version drift without writing changes")
+    parser.add_argument("--check", action="store_true", help="Check for drift without writing changes")
+    parser.add_argument("--all", action="store_true", help="Include generated files (requires Lixity dependencies)")
     args = parser.parse_args()
 
     version = get_version()
-    drift = check_or_sync_files(version, check_only=args.check)
+    sync = check_or_sync_generated if args.all else check_or_sync_files
+    drift = sync(version, check_only=args.check, root=ROOT)
 
     if args.check:
         # The invariant is independent of the rewrite list: a file can need no
         # rewriting and still be making a stale current-version claim.
         stale = find_version_drift(version)
         if drift or stale:
-            print(f"Documentation version drift detected for version {version}:", file=sys.stderr)
+            print(f"Documentation drift detected for version {version}:", file=sys.stderr)
             for f in drift:
                 print(f"  - needs sync: {f}", file=sys.stderr)
             for f in stale:
@@ -301,9 +317,10 @@ def main() -> int:
                     "  adds ...') so it is no longer a currency claim.",
                     file=sys.stderr,
                 )
-            print("Run 'python scripts/sync_docs.py' to update pinned documentation files.", file=sys.stderr)
+            command = "make docs-sync" if args.all else "python scripts/sync_docs.py"
+            print(f"Run '{command}' to synchronize documentation.", file=sys.stderr)
             return 1
-        print(f"Documentation versions are synchronized with v{version}.")
+        print(f"Documentation is synchronized with v{version}.")
         return 0
 
     if drift:

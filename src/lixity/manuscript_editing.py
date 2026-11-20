@@ -40,6 +40,7 @@ from .pipeline import resolve_document_config
 from .quotation import count_quoted_words, merge_quotation_spans
 from .quotation_projection import quoted_prose
 from .sentences import split_prose_sentences
+from .sticky import measure_function_words
 
 logger = get_logger("manuscript")
 
@@ -861,29 +862,24 @@ def analyze_manuscript_snapshot(
 
         if sticky_available:
             raw_scenes, _ = split_scenes(body)
-            if len(raw_scenes) == 1 and raw_scenes[0] == body:
-                total_sticky_denom += c_total_sents
-                for toks in c_sent_tokens:
-                    n_w = len(toks)
-                    if n_w >= cfg.sticky_min_words:
-                        glue_pct = sum(1 for tok in toks if tok in function_words) / n_w * 100.0
-                        if glue_pct >= cfg.sticky_glue_pct:
-                            total_sticky_sentences += 1
-            else:
-                for scene_raw in raw_scenes:
+            for scene_raw in raw_scenes:
+                if len(raw_scenes) == 1 and scene_raw == body:
+                    scene_tokens = iter(c_sent_tokens)
+                else:
                     scene_clean = prose_text(scene_raw, _front_matter=False)
-                    if not word_re.findall(scene_clean):
+                    if not word_re.search(scene_clean):
                         continue
-                    for s in split_prose_sentences(scene_clean, lang_key):
-                        toks = [w.lower() for w in word_re.findall(s)]
-                        n_w = len(toks)
-                        if not n_w:
-                            continue
+                    scene_tokens = (
+                        [word.lower() for word in word_re.findall(sentence)]
+                        for sentence in split_prose_sentences(scene_clean, lang_key)
+                    )
+                for sentence_tokens in scene_tokens:
+                    if sentence_tokens:
                         total_sticky_denom += 1
-                        if n_w >= cfg.sticky_min_words:
-                            glue_pct = sum(1 for tok in toks if tok in function_words) / n_w * 100.0
-                            if glue_pct >= cfg.sticky_glue_pct:
-                                total_sticky_sentences += 1
+                        total_sticky_sentences += measure_function_words(
+                            sentence_tokens, function_words,
+                            min_words=cfg.sticky_min_words, min_pct=cfg.sticky_glue_pct,
+                        ).sticky
 
         if ind_speech_available:
             indirect_speech_words += n_cw

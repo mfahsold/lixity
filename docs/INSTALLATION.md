@@ -9,7 +9,7 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this documentation describes **v0.9.0**. Verify packages at
+> **Version scope:** this source documentation describes the prepared **v0.9.0**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -336,8 +336,10 @@ The migration preserves source files and never assumes an equivalent Qwen timbre
 or precise speed; see the same [read-aloud guide](AUDIO.md#lixity-read-aloud).
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
-hardware-appropriate PyTorch installation. Install the current Lixity release into that
-environment (`python -m pip install 'lixity==0.9.0'`) and obtain the
+hardware-appropriate PyTorch installation. Install the same Lixity version as
+the browser app in that environment. For a published package, replace `VERSION`
+in `python -m pip install 'lixity==VERSION'` with your version. For a source build,
+use `python -m pip install /path/to/lixity-checkout` with your checkout. Obtain the
 complete local CustomVoice checkpoint, including its speech tokenizer, using the
 [upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
 build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker
