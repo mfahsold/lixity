@@ -16,13 +16,15 @@ from urllib.parse import quote, urlencode
 import pytest
 
 from lixity import __version__
+from lixity.config import read_explicit_project_config, resolve_thresholds
+from lixity.pipeline import analyze_document, resolve_document_config, supplementary_reports
 from lixity.research import api
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import make_screenshots  # noqa: E402
 
-from scripts import example_project, example_publications  # noqa: E402
+from scripts import build_demo_audio, example_project, example_publications  # noqa: E402
 
 
 def site_data(document):
@@ -128,6 +130,38 @@ def test_reviewed_demo_source_survives_autocrlf_checkout(tmp_path):
     assert hashlib.sha256(checked_out).hexdigest() == provenance["source_sha256"]
 
 
+@pytest.mark.parametrize(("fault", "message"), [
+    (None, None),
+    ("spoken text", "spoken text changed"),
+    ("WAV", "WAV differs"),
+])
+def test_demo_audio_reuses_only_the_reviewed_spoken_text_and_recording(tmp_path, monkeypatch, fault, message):
+    original = build_demo_audio.SOURCE.read_bytes()
+    source = tmp_path / "first-look.md"
+    edited = original + b"\nShe put the notebook away.\n"
+    if fault == "spoken text":
+        edited = edited.replace(b"Mara stopped beneath the quay lamp.", b"Mara waited beneath the quay lamp.", 1)
+    source.write_bytes(edited)
+    target = tmp_path / "chapter.wav"
+    audio = build_demo_audio.TARGET.read_bytes()
+    target.write_bytes(audio + b"corrupt" if fault == "WAV" else audio)
+    manifest = target.with_suffix(".json")
+    reviewed = build_demo_audio.TARGET.with_suffix(".json").read_bytes()
+    manifest.write_bytes(reviewed)
+    monkeypatch.setattr(build_demo_audio, "SOURCE", source)
+    monkeypatch.setattr(build_demo_audio, "TARGET", target)
+
+    if message is not None:
+        with pytest.raises(SystemExit, match=message):
+            build_demo_audio.main(["--reuse-recording"])
+        assert manifest.read_bytes() == reviewed
+    else:
+        build_demo_audio.main(["--reuse-recording"])
+        expected = {**json.loads(reviewed), "source_sha256": hashlib.sha256(edited).hexdigest()}
+        assert json.loads(manifest.read_bytes()) == expected
+    assert target.read_bytes() == (audio + b"corrupt" if fault == "WAV" else audio)
+
+
 def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_boundaries(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
     manifest = json.loads((ROOT / "docs/assets/research/sources.json").read_text(encoding="utf-8"))
@@ -200,6 +234,36 @@ def test_first_revision_question_matches_the_shared_manuscript_measurements():
     assert action.title == "The Loose Board"
     assert action.asl < opening.asl
     assert "A board moved. Mara turned." in text
+
+
+def test_demo_draft_has_mapped_examples_and_observable_drafting_patterns(tmp_path, research_fixture):
+    project = tmp_path / "research-demo"
+    text = (project / "harbour-manuscript.md").read_text(encoding="utf-8")
+    settings = read_explicit_project_config(project)
+    config, _ = resolve_document_config(text, "en", project_config=settings)
+    analysis = analyze_document(text, config, resolve_thresholds(project_config=settings), include_evidence=True)
+    assert analysis.evidence is not None
+    mapped = {key for evidence in analysis.evidence.values() for key, layer in evidence["layers"].items()
+              if layer["mapped_count"]}
+    assert analysis.paragraph_available_layers <= mapped
+    assert analysis.metrics.chapters[0].dialog_pct == 0
+
+    reports = supplementary_reports(text, config, analysis)
+    assert reports["dialogue"]["long_turns"] >= 1
+    assert reports["dialogue"]["adverbial_tags"] >= 1
+    assert reports["dialogue"]["indirect_speech"] >= 1
+    assert reports["pacing"]["explicit_scene_breaks"] >= 1
+    assert reports["pacing"]["repeated_start_runs"] >= 1
+    motif = next(item for item in reports["motifs"]["motifs"] if item["name"] == "For the time being")
+    assert motif["mentions"] == motif["mapped_occurrence_count"] == 3
+    assert all(item["quotation_context"] == "in_quotation" for item in motif["occurrences"])
+
+    sticky = next(index for index, paragraph in enumerate(analysis.paragraphs)
+                  if paragraph.text.startswith("It was only when she looked at it again"))
+    assert analysis.evidence[sticky]["layers"]["sticky"]["mapped_count"] == 1
+    tense_slip = next(paragraph for paragraph in analysis.paragraphs
+                      if paragraph.text.startswith("The foreman had brought the book"))
+    assert tense_slip.chapter_num == 6 and tense_slip.severity >= 2
 
 
 def test_demo_records_source_disagreement_and_preserves_the_earlier_interpretation(tmp_path, research_fixture):

@@ -132,10 +132,10 @@
         <span id="preset-lbl" class="ctl-label">Beispiele</span>
         <button type="button" class="ctl ctl-sm" id="preset-de" data-preset="effi-briest"><cite lang="de">Effi Briest</cite></button>
         <button type="button" class="ctl ctl-sm" id="preset-en" data-preset="pride-prejudice"><cite lang="en">Pride &amp; Prejudice</cite></button>
-        <button type="button" class="ctl ctl-sm" id="preset-draft" data-preset="rough-draft">Rohentwurf</button>
+        <button type="button" class="ctl ctl-sm" id="preset-draft">Szenenentwurf</button>
         <button type="button" class="ctl ctl-sm" id="preset-clear">Leeren</button>
       </div>
-      <p class="panel-guide" id="draft-guide">Wähle „Rohentwurf“ und dann „flur“ unter „Wiederholte Wörter“. Die Vorschau zeigt dir die Fundstellen im Text.</p>
+      <p class="panel-guide" id="draft-guide">Wähle den Szenenentwurf und dann „flur“ unter „Wiederholte Wörter“. Welche Wiederholung hilft dir, dich in der Szene zu orientieren?</p>
       <div class="editor-wrap" id="editor-wrap">
         <textarea id="input" aria-labelledby="editor-title" placeholder="Text hier einfügen oder eine .txt-/.md-Datei ablegen…"></textarea>
       </div>
@@ -192,7 +192,7 @@
       </div>
 
       <p class="panel-guide">
-        <span id="dialogue-guide">„Nur Dialoge“ hebt einfache Anführungszeichenpaare hervor. Lies die Stellen laut. Lassen sich die Stimmen unterscheiden?</span>
+        <span id="dialogue-guide">„Nur Dialoge“ hebt Text in einfachen Anführungszeichenpaaren hervor. Lies die Antworten laut. Erkennst du daran, wer spricht?</span>
         <a href="../guides/metrics/de.html#measure-dialogue" target="_blank" rel="noopener noreferrer" data-metric-reference="dialogue">Wörter in Zitaten zählen</a>
       </p>
       <div class="filter-bar" id="preview-controls" role="group" aria-label="Markierungen filtern">
@@ -213,7 +213,7 @@
         <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Hinweise auf indirekte Rede</span></div>
       </div>
       <p class="panel-guide">
-        <span id="sticky-guide">Der Filter zählt Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“.</span>
+        <span id="sticky-guide">Der Filter markiert Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“. Lies einen markierten Satz laut und prüfe, welche Verbindungen die Szene braucht.</span>
         <a href="../guides/metrics/de.html#measure-sticky" target="_blank" rel="noopener noreferrer" data-metric-reference="sticky">Funktionswortfilter erklärt</a>
       </p>
       <details class="panel-disclosure" id="more-measurements">
@@ -238,7 +238,7 @@
 
   <section class="panel" id="analysis-about" aria-labelledby="about-title">
     <h2 id="about-title">Was die Markierungen zeigen</h2>
-    <p class="panel-guide" id="about-body">Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und achte darauf, wie sie dort wirken.</p>
+    <p class="panel-guide" id="about-body">Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blau markierte Wendungen wie „er sagte, dass“ weisen auf mögliche indirekte Rede hin. Überlege, wann die Erzählstimme zusammenfassen soll und wann du die Figur selbst sprechen lassen möchtest.</p>
     <div class="compare-grid">
       <div class="compare-col">
         <h3 id="cmp-sandbox-title">Browser-Sandbox (diese Seite)</h3>
@@ -280,8 +280,10 @@
   const PRESETS = {
     'effi-briest': 'Nach diesem im Pfarr- und Kantorhause gemachten Besuche, der keine halbe Stunde gedauert hatte, war Effi wieder nach drüben zurückgekehrt, wo man auf der Gartenveranda eben den Kaffee nehmen wollte. Schwiegervater und Schwiegersohn gingen auf dem Kieswege zwischen den zwei Platanen auf und ab. Briest sprach von dem Schwierigen einer landrätlichen Stellung; sie sei ihm verschiedentlich angetragen worden, aber er habe jedesmal gedankt. »So nach meinem eigenen Willen schalten und walten zu können ist mir immer das liebste gewesen, jedenfalls lieber - Pardon, Innstetten -, als so die Blicke beständig nach oben richten zu müssen. Man hat dann bloß immer Sinn und Merk für hohe und höchste Vorgesetzte. Das ist nichts für mich. Hier leb ich so freiweg und freue mich über jedes grüne Blatt und über den wilden Wein, der da drüben in die Fenster wächst.«\n\nEr glaubte nicht an Zeichen und ähnliches, im Gegenteil, wies alles Abergläubische weit zurück. Aber er konnte trotzdem von den zwei Worten nicht los, und während Briest immer weiterperorierte, war es ihm beständig, als wäre der kleine Hergang doch mehr als ein bloßer Zufall gewesen.',
     'pride-prejudice': 'It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.\n\nHowever little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters.\n\n“My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?”\n\nMr. Bennet replied that he had not.\n\n“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”\n\nMr. Bennet made no answer.\n\n“Do not you want to know who has taken it?” cried his wife, impatiently.\n\n“You want to tell me, and I have no objection to hearing it.”\n\nThis was invitation enough.\n\n“Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.”\n\n“What is his name?”',
-    'rough-draft': 'Es war eigentlich schon ziemlich spät am Abend, als Mara wieder einmal durch den langen Flur ging und dabei überlegte, ob sie die Tür am Ende des Flurs überhaupt noch rechtzeitig erreichen würde. Sie dachte, dass der Flur heute noch viel länger wirkte als an allen anderen Tagen zuvor, und irgendwie hatte sie das Gefühl, dass jemand hinter der Tür auf sie wartete. Der Flur war dunkel. Die Tür blieb zu.\n\n„Bist du sicher, dass die Tür wirklich abgeschlossen ist?“, fragte Jonas leise am Ende des Flurs.\n\n„Ja, ganz sicher“, sagte Mara. „Ich habe den Schlüssel doch selbst herumgedreht.“\n\nEr meinte, sie solle trotzdem noch einmal nachsehen, weil man in diesem alten Haus schließlich nie wissen könne, wer sich gerade hinter der Tür oder im Flur aufhielt.'
+    'rough-draft': 'Mara hatte den Schlüssel in die Manteltasche gesteckt, bevor sie durch den Flur ging, doch als sie vor der Tür stand, sah sie einen Spalt zwischen Tür und Rahmen. Sie blieb im Flur stehen. Hinter der Tür scharrte etwas.\n\n„Hast du abgeschlossen?“, fragte Jonas.\n\n„Ich habe den Schlüssel zweimal gedreht.“ Mara blickte den Flur hinunter.\n\nEr sagte, dass er das Klicken gehört hatte.',
+    'rough-draft-en': 'Mara had put the key in her coat before she crossed the hall, but when she reached the door she saw a gap between it and the frame. She stopped in the hall. Something scraped beyond the door.\n\n“Did you lock it?” Jonas asked.\n\n“I turned the key twice.” Mara looked back down the hall.\n\nHe said that he had heard the latch click.'
   };
+  const DRAFT_PRESETS = {de:'rough-draft', en:'rough-draft-en'};
   const INDIRECT_RES = [
     /\b(?:said|told\s+\w+|asked|replied|answered|explained|claimed|insisted|admitted|whispered|murmured|noted|added|thought|felt|knew|believed|realized|wondered|remembered|suspected|hoped|feared|imagined|assumed|supposed)\s+(?:that|whether|if)\b/gi,
     /\b(?:asked|wondered)\s+(?:why|how|when|where|who|what)\b/gi,
@@ -305,17 +307,17 @@
       title: 'Rhythmus und Wiederholungen im Text prüfen',
       lead: 'Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Ändere die Länge eines Satzes und beobachte seinen Balken unter „Satz für Satz“.',
       editorTitle: 'Text zum Ausprobieren', resultsTitle: 'Text im Überblick',
-      draftGuide: 'Wähle „Rohentwurf“ und dann „flur“ unter „Wiederholte Wörter“. Die Vorschau zeigt dir die Fundstellen im Text.',
+      draftGuide: 'Wähle den Szenenentwurf und dann „flur“ unter „Wiederholte Wörter“. Welche Wiederholung hilft dir, dich in der Szene zu orientieren?',
       placeholder: 'Text hier einfügen oder eine .txt-/.md-Datei ablegen…',
       emptyPreview: 'Füge Text ein oder wähle ein Beispiel, um die Markierungen zu sehen.',
-      preset: 'Beispiele', draftBtn: 'Rohentwurf', clear: 'Leeren',
+      preset: 'Beispiele', draftBtn: 'Szenenentwurf', clear: 'Leeren',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
       previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Funktionswortfilter', fltIndirect: 'Indirekte Rede',
-      dialogueGuide: '„Nur Dialoge“ hebt einfache Anführungszeichenpaare hervor. Lies die Stellen laut. Lassen sich die Stimmen unterscheiden?',
+      dialogueGuide: '„Nur Dialoge“ hebt Text in einfachen Anführungszeichenpaaren hervor. Lies die Antworten laut. Erkennst du daran, wer spricht?',
       words: 'Wörter', sents: 'Sätze', asl: 'Wörter pro Satz im Schnitt', dlg: 'Anteil der Wörter in Zitaten',
       cv: 'Streuung der Satzlängen', entropy: 'Längen-Entropie (Bit)',
       sticky: 'Sätze im Funktionswortfilter', indirect: 'Hinweise auf indirekte Rede',
-      stickyGuide: 'Der Filter zählt Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“.',
+      stickyGuide: 'Der Filter markiert Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“. Lies einen markierten Satz laut und prüfe, welche Verbindungen die Szene braucht.',
       moreTitle: 'Weitere Werte zu Rhythmus und Dialog',
       moreGuide: 'Die Streuung zeigt, wie stark die Satzlängen im Verhältnis zum Durchschnitt schwanken. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Gruppen verteilen.',
       voiceTitle: 'Wörter pro Satz im Schnitt', vNar: 'Erzähltext', vDlg: 'Zitate', vCon: 'Zitate minus Erzähltext',
@@ -331,7 +333,7 @@
         dialogue: 'Wörter in Zitaten zählen', sticky: 'Funktionswortfilter erklärt'
       },
       aboutTitle: 'Was die Markierungen zeigen',
-      about: 'Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und achte darauf, wie sie dort wirken.',
+      about: 'Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blau markierte Wendungen wie „er sagte, dass“ weisen auf mögliche indirekte Rede hin. Überlege, wann die Erzählstimme zusammenfassen soll und wann du die Figur selbst sprechen lassen möchtest.',
       cmpSandboxTitle: 'Browser-Sandbox (diese Seite)',
       cmpSandbox: [
         'Einzelne Szene oder lokale .txt/.md-Datei sofort prüfen',
@@ -356,17 +358,17 @@
       title: 'Explore rhythm and repetition in a passage',
       lead: 'Edit the sample or open a scene of your own as a .txt or .md file. Change the length of a sentence and watch its bar under “Sentence by sentence”.',
       editorTitle: 'Passage to try', resultsTitle: 'Passage at a glance',
-      draftGuide: 'Choose “German draft”, then select “flur” under “Repeated words” to see each occurrence in the preview.',
+      draftGuide: 'Choose the scene draft, then select “hall” under “Repeated words”. Which repetition helps you find your bearings in the scene?',
       placeholder: 'Paste your passage here or drop a .txt/.md file…',
       emptyPreview: 'Paste text or choose an example to see highlights.',
-      preset: 'Examples', draftBtn: 'German draft', clear: 'Clear',
+      preset: 'Examples', draftBtn: 'Scene draft', clear: 'Clear',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
       previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Function-word filter', fltIndirect: 'Indirect speech',
-      dialogueGuide: '“Dialogue only” highlights passages enclosed by simple pairs of quotation marks. Read them aloud. Can you tell the voices apart?',
+      dialogueGuide: '“Dialogue only” highlights text inside simple pairs of quotation marks. Read the replies aloud. Can you tell who is speaking?',
       words: 'Words', sents: 'Sentences', asl: 'Average words per sentence', dlg: 'Share of words in quotes',
       cv: 'Variation in sentence length', entropy: 'Length entropy (bits)',
       sticky: 'Sentences matching the function-word filter', indirect: 'Possible indirect speech',
-      stickyGuide: 'The filter counts sentences of at least 8 words when 45% or more of their words are on the list, such as “and”, “she”, or “was”.',
+      stickyGuide: 'The filter marks sentences of at least 8 words when 45% or more of their words are on the list, such as “and”, “she”, or “was”. Read a marked sentence aloud and check which connections the scene needs.',
       moreTitle: 'More about rhythm and dialogue',
       moreGuide: 'Variation shows how much sentence lengths differ relative to the average. Entropy increases when sentences are spread more evenly across the three groups.',
       voiceTitle: 'Average words per sentence', vNar: 'Narration', vDlg: 'Quotes', vCon: 'Quotes minus narration',
@@ -382,7 +384,7 @@
         dialogue: 'How words in quotes are counted', sticky: 'How the function-word filter works'
       },
       aboutTitle: 'What the highlights show',
-      about: 'The sandbox detects sentences, quotations, and repetitions using simpler rules than the Lixity app. Blue highlights show possible indirect speech, such as “she said that”. Read each marked passage in context and listen to how it sounds there.',
+      about: 'The sandbox detects sentences, quotations, and repetitions using simpler rules than the Lixity app. Blue highlights on phrases such as “he said that” flag possible indirect speech. Consider when to have the narrator sum up and when to let the reader hear the character speak.',
       cmpSandboxTitle: 'Browser sandbox (this page)',
       cmpSandbox: [
         'Inspect a single scene or local .txt/.md file immediately',
@@ -763,7 +765,7 @@
 
   el('preset-de').addEventListener('click', () => setPreset('effi-briest', true));
   el('preset-en').addEventListener('click', () => setPreset('pride-prejudice', true));
-  el('preset-draft').addEventListener('click', () => setPreset('rough-draft', true));
+  el('preset-draft').addEventListener('click', () => setPreset(DRAFT_PRESETS[lang], true));
   el('preset-clear').addEventListener('click', () => {
     focusedEcho = '';
     input.value = '';
@@ -820,7 +822,7 @@
 
   const initialPreset = new URLSearchParams(window.location.search).get('preset');
   if (initialPreset && PRESETS[initialPreset]) {
-    lang = initialPreset === 'pride-prejudice' ? 'en' : 'de';
+    lang = initialPreset === 'pride-prejudice' || initialPreset === DRAFT_PRESETS.en ? 'en' : 'de';
     input.value = PRESETS[initialPreset];
   } else {
     input.value = PRESETS[lang === 'de' ? 'effi-briest' : 'pride-prejudice'];

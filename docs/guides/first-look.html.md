@@ -4,7 +4,7 @@ Start with one question: does chapter 2's shorter rhythm fit its action?
 
 [Kurze Einführung auf Deutsch](first-look-de.html)
 
-Updated 5 November 2026
+Updated 20 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
@@ -32,7 +32,7 @@ A board moved. Mara turned. The crate tipped towards the drain.
 
 **A possible decision:** keep the short beats because they separate physical actions. Or, if the scene sounds mechanically chopped when read aloud, try joining an action to its consequence in your own draft. The measurement explains the difference; it cannot decide whether the rhythm works. These short synthetic chapters are not a calibration corpus.
 
-You have completed the first check when you can explain the contrast in the text. Stop there, or follow the research trail below. [Use the same workflow with your manuscript](installation.html).
+You have completed the first check when you can explain the contrast in the text. Open **Try the draft examples** in the demo to find a wordy sentence, a repeated phrase across three speakers and a shift from past to present. [Use the same workflow with your manuscript](installation.html).
 
 **More controls, marks and chapter comparisons**
 

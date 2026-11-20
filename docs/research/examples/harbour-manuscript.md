@@ -37,7 +37,7 @@ He let go of the cord. Across the basin, the engine faded.
 
 "Did you see who left it?" Hansen asked. He had come from customs with a pencil, a small book and a length of sealing cord.
 
-"Two people by the gate," the watchman said. "When I called, they ran towards the basin."
+"For the time being, all I can say is that there were two people by the gate," the watchman said. "When I called, they ran towards the basin."
 
 "Were they carrying anything?"
 
@@ -45,7 +45,7 @@ He let go of the cord. Across the basin, the engine faded.
 
 Hansen turned to Mara. "And the launch?"
 
-"A light. The engine after it disappeared. I couldn't see anyone aboard."
+"For the time being, all I can say is that I saw a light," Mara said quietly. "I could see the lamp, but I could not make out anyone aboard. I was standing under the quay lamp when I lost sight of it, and I thought the light would show again if it came out from behind the crane, but it didn't, and by then the engine was the only thing I could follow, that little knock carrying the whole way across the water long after I could see nothing but the quay lamp's reflection, which is why I called it a launch even though I couldn't have told you where it was going or who was on it."
 
 "So you cannot say they reached it."
 
@@ -53,7 +53,7 @@ Hansen turned to Mara. "And the launch?"
 
 Ivo lifted his coat. "The foreman needs this gate. There's a cart waiting at the other end."
 
-"It can wait," Hansen said.
+"For the time being, all I can say is that it can wait," Hansen said.
 
 "He told me to keep it clear."
 
@@ -103,6 +103,8 @@ The office stove had gone cold. Mara held her wet boot towards it while Hansen l
 
 She unfolded it. Same blue stock, same narrow border. Her own figures filled the dispatch column. The receiving line was empty.
 
+It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.
+
 She brought the torn edges together. They did not fit. Hansen watched her try the other corner, then take her hand away. She had wanted the paper to settle it. Instead, there were two forms and only her handwriting to connect them.
 
 The foreman had dictated the number while putting on his coat. At eight, she had been thinking about the last ferry and the bread she still needed to buy. She remembered the scratch of her pen, his hand reaching for the key, the office door closing between them.
@@ -111,7 +113,13 @@ The foreman had dictated the number while putting on his coat. At eight, she had
 
 "I copied a number."
 
-Hansen said nothing. She could hear Ivo moving about outside, stamping his feet against the cold.
+Hansen said nothing. Mara noticed that the paper rasped against the desk. She could hear Ivo moving about outside, stamping his feet against the cold. She felt the wet leather press against her toes.
+
+Hansen said that he might have to check the time with the watchman. He took the label and left the office.
+
+***
+
+In the passage outside, a draught moved under the door. Mara waited by the door. Mara watched the clock. Mara waited for Hansen. Then she turned to her notebook.
 
 Mara opened her notebook. She had written that the smugglers escaped by boat. She crossed out the sentence. Beneath it she wrote the number, then the time the foreman had given her. The empty receiving line showed through the thin paper underneath.
 
@@ -128,6 +136,8 @@ Mara gave him the receipt. She had checked it so often that the fold was beginni
 The foreman fetched the ledger. Mara watched him turn past yesterday's entries and turn back. His thumb rested on the receiving column.
 
 Cart seventeen: returned, six forty in the evening. Below it, the same number stood against the dispatch she had copied at eight.
+
+The foreman had brought the book, and she had waited for him, and the clock had struck twice. She is standing there now, she has the receipt in her hand, and she looks down at the return time. Then she drew the book closer.
 
 The earlier entry was squeezed into the margin. Its ink had spread along a crease in the paper; the entries above it had dried cleanly. Mara moved the cup away before the foreman could set it over the figures.
 

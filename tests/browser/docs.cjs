@@ -957,6 +957,26 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     'Opening the instructions keeps primary actions before the expanded guide');
   await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
   await expect(page.locator('#style-layer')).toHaveValue('asl');
+  await page.locator('#manuscript-analysis-toggle').click();
+  const tenseLink = quickStart.getByRole('link', {name: 'Find the tense slip'});
+  await tenseLink.click();
+  const tensePassage = page.locator(await tenseLink.getAttribute('href'));
+  await expect(page.locator('#manuscript-analysis-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#style-layer')).toHaveValue('');
+  await expect(tensePassage.locator('.reader-review-flag')).toBeVisible();
+  const stickyLink = quickStart.getByRole('link', {name: 'Check a sticky sentence'});
+  await stickyLink.focus();
+  await page.keyboard.press('Enter');
+  const stickyPassage = page.locator(await stickyLink.getAttribute('href'));
+  await expect(stickyPassage).toContainText('It was only when she looked at it again');
+  await expect(page.locator('#style-layer')).toHaveValue('sticky');
+  await quickStart.getByRole('link', {name: 'Follow “For the time being”'}).click();
+  const motif = page.locator('#motifs [data-motif-label="For the time being"]');
+  await expect(motif).toBeAttached();
+  assert.equal(JSON.parse(await motif.getAttribute('data-motif-occurrences')).length, 3);
+  await page.locator('#workbench-overview-back').click();
+  await quickStart.getByRole('link', {name: 'opening chapter', exact: true}).click();
+  await expect(page.locator('#style-layer')).toHaveValue('asl');
   await quickStart.getByRole('button', {name: 'Explore research'}).focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
@@ -1096,6 +1116,31 @@ async function checkSandboxReferences(page, locale) {
     await expect(link).toHaveAttribute('href', `../guides/metrics/${locale}.html#${section}`);
     await expect(link).toHaveAttribute('target', '_blank');
   }
+}
+
+async function checkSandboxDraft(page, locale) {
+  const german = locale === 'de';
+  const word = german ? 'flur' : 'hall';
+  const preset = german ? 'rough-draft' : 'rough-draft-en';
+  const opening = german ? /^Mara hatte den Schlüssel/ : /^Mara had put the key/;
+  const quotes = german ? ['„Hast du abgeschlossen?“', '„Ich habe den Schlüssel zweimal gedreht.“']
+    : ['“Did you lock it?”', '“I turned the key twice.”'];
+  await page.locator('#preset-draft').press('Enter');
+  assert.equal(new URL(page.url()).searchParams.get('preset'), preset);
+  const echo = page.locator('#echo-list').getByRole('button', {name: word + ' ×3', exact: true});
+  await echo.press('Enter');
+  await expect(echo).toHaveAttribute('aria-pressed', 'true');
+  await expect(echo).toBeFocused();
+  await expect(page.locator('#preview mark.focus-echo')).toHaveCount(3);
+  await expect(page.locator('#preview .sticky-sent').first()).toHaveText(opening);
+  await expect(page.locator('#preview .dlg-seg')).toHaveText(quotes);
+  await expect(page.locator('#k-dlg')).toHaveText('14 %');
+  await expect(page.locator('#preview mark.indirect')).toHaveText(german ? 'sagte, dass' : 'said that');
+  const draft = await page.locator('#input').inputValue();
+  await expect(page.locator('#preview')).toHaveText(draft);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', locale);
+  await expect(page.locator('#input')).toHaveValue(draft);
 }
 
 async function checkSandboxOverlappingHighlights(page) {
@@ -1253,11 +1298,7 @@ async function checkSandboxQuotationPairs(page) {
             await page.locator('#more-title').click();
             await expect(page.locator('#k-entropy')).toBeVisible();
             await page.locator('#more-title').click();
-            await page.locator('#preset-draft').click();
-            const echo = page.locator('#echo-list').getByRole('button', {name: /^flur ×/});
-            await echo.click();
-            await expect(echo).toHaveAttribute('aria-pressed', 'true');
-            assert.ok(await page.locator('#preview mark.focus-echo').count() >= 3, 'Sandbox highlights the draft repetition');
+            await checkSandboxDraft(page, await page.locator('html').getAttribute('lang'));
             await checkSandboxOverlappingHighlights(page);
             const passage = 'In der Stadt haben wir ihn gestern gesehen. In der Stadt haben wir ihn gesehen.';
             await page.locator('#input').fill(passage);

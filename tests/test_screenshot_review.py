@@ -26,8 +26,10 @@ def test_capture_review_fixture_uses_real_exact_source_state(tmp_path, marked):
         tmp_path, manuscript=tmp_path / "harbour-manuscript.md", language="en", thresholds=thresholds,
     )}
     assert response["source_sha256"] == sha256(text.encode()).hexdigest()
-    assert response["observations"] == []
-    assert response["completed"] == response["total"] == response["unmatched_decisions"] == 0
+    assert response["total"] == len(response["observations"])
+    assert any(item["chapter"] == 6 and item["mixed"] for item in response["observations"])
+    assert all(item["status"] == "unreviewed" for item in response["observations"])
+    assert response["completed"] == response["unmatched_decisions"] == 0
     assert fixture["token"] == manuscript_pdf_token(
         str(tmp_path / "harbour-manuscript.md"), project_root=tmp_path, language="en",
         title="Synthetic Warehouse", thresholds=thresholds,

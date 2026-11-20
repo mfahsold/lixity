@@ -526,15 +526,16 @@ async function main() {
         }), 'Walkthrough captions must not obscure task actions during interaction');
       };
       const assertReviewConfirmed = async () => {
-        await page.waitForFunction(() => {
+        const total = await page.locator('#flags .flag-row').count();
+        await page.waitForFunction(total => {
           const reload = document.getElementById('triage-reload');
           const status = document.getElementById('triage-save-status');
           const progress = document.getElementById('triage-progress');
+          const rows = Array.from(document.querySelectorAll('#flags .flag-row'));
           return reload && reload.hidden && status && status.textContent === '' && progress &&
-            progress.textContent.includes(uiFormat('triage_completed', {completed: 0, total: 0}));
-        });
-        assert.equal(await page.locator('#flags .flag-row').count(), 0,
-          'The canonical guide fixture must retain its true empty tense review');
+            progress.textContent.includes(uiFormat('triage_completed', {completed: 0, total})) &&
+            rows.every(row => row.dataset.reviewState === 'unreviewed');
+        }, total);
       };
       await page.goto(CAPTURE_ORIGIN + '/' + path.basename(capture.source));
       if (flow !== 'research-timeline' && await page.locator('#workbench-overview-open').count()) {
@@ -548,7 +549,7 @@ async function main() {
         await page.locator('[data-analysis-workflow=review]').click();
         await page.locator('#flags').scrollIntoViewIfNeeded();
         await page.waitForTimeout(900);
-        const flagRow = page.locator('#flags [data-marker-kind]').first();
+        const flagRow = page.locator('#flags .flag-row button[data-target]').first();
         if (await flagRow.count()) {
           await flagRow.hover();
           await page.waitForTimeout(900);

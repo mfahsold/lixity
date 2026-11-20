@@ -27,6 +27,14 @@ contains on average in the harbour description and the action scene. Then
 choose **Inspect chapter 2** and read the opening sentences aloud. Try a passage
 of your own in the [browser sandbox](../sandbox/index.html).
 
+The manuscript is a deliberately rough draft. Open **Try the draft examples**
+for direct links to a wordy sentence in **The Blank Line**, a past-to-present
+tense slip in **Morning Handover**, and a phrase repeated by three speakers in
+**Questions on the Quay**. That chapter also includes a long reply. Compare
+the tags and the quoted words, then check how the customs note uses passive
+phrasing for a different purpose. The highlights give you a passage to review
+and a reason for looking there.
+
 Choose **Research →
 Dossiers → View details** on **Warehouse 4 case notes**. **Dossier alongside**
 opens its reading companion. In **Review**, follow the eastern-gate quote
@@ -59,8 +67,8 @@ them, and coordinates are not georeferenced to the map image.
   manifest, selected resources and license notices.
 - `research.html`: compatibility entry to `report.html#research-manager`.
 - The same six chapters as an [editorial copy](warehouse-4-editor.pdf),
-  [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf)
-  and [analysis report](warehouse-4-report.pdf).
+  [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf),
+  [analysis report](warehouse-4-report.pdf) and [plain A4 document](warehouse-4-document.pdf).
 
 The author-workspace demo supports exploring manuscript analysis, retained
 research, a dossier alongside the manuscript, prepared PDF downloads and a
@@ -127,13 +135,26 @@ assets; changing a local project does not authorize publishing it.
 
 After [installation](../INSTALLATION.md), use `make examples` for the three
 websites and PDFs, `make screenshots` for product captures, and `make videos`
-for walkthroughs.
+for walkthroughs. The full video build uses Chromium and FFmpeg with libx264,
+libaom-av1, libwebp, and the `drawtext` filter.
 These entrypoints reuse the existing analysis, research and PDF APIs. Fontane
 and Austen outputs under `examples/` remain named literary case studies linked
 from the relevant articles; they are not alternative demo projects.
 
+After changing `samples/first-look.md`, refresh the reviewed chapter-one audio
+provenance before running `make examples`.
+
+```sh
+PYTHONPATH=src .venv/bin/python scripts/build_demo_audio.py --reuse-recording
+```
+
+This checks the exact speech text for chapter one and verifies the WAV's
+checksum before recording the new full manuscript checksum. If the speech text
+changes, run the command without `--reuse-recording` on a machine with eSpeak NG
+and review the new clip before building the reader demo.
+
 Review the output and run `make docs-check` plus the public-documentation browser
 check in [`tests/browser/README.md`](../../tests/browser/README.md). The explicit
 Pages boundary includes the three website bundles and their verified manifests,
-the compatibility entry, four PDFs and reviewed visual assets. Source archives,
+the compatibility entry, five PDFs and reviewed visual assets. Source archives,
 private manuscripts, credentials and local build state remain excluded.

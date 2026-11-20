@@ -52,7 +52,8 @@ def _populate(work_dir: Path) -> dict:
     research_api.init(research_proj, title=manuscript_title(manuscript_bytes.decode("utf-8")), language="en")
     (research_proj / "lixity.toml").write_text(
         'manuscript = "harbour-manuscript.md"\nlanguage = "en"\n'
-        'author_name = "Example Author"\n\n[characters.Mara]\n\n[characters.Ivo]\n\n[characters.Hansen]\n',
+        'author_name = "Example Author"\n\n[characters.Mara]\n\n[characters.Ivo]\n\n[characters.Hansen]\n\n'
+        '[motif_regexes]\n"For the time being" = \'\\bfor the time being\\b\'\n',
         encoding="utf-8",
     )
     source_text = """## Section 1: Port Authority Log – October 1923

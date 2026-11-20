@@ -198,7 +198,7 @@ def _site_navigation(
 
 
 def _demo_quick_start(text: str, project: Path) -> str:
-    """Use the same chapter profiles and number formatting as the report table."""
+    """Link draft examples using the same paragraph IDs and measurements as the report."""
     from lixity.config import read_explicit_project_config, resolve_thresholds
     from lixity.format import num
     from lixity.pipeline import profile_document, resolve_document_config
@@ -206,10 +206,32 @@ def _demo_quick_start(text: str, project: Path) -> str:
 
     settings = read_explicit_project_config(project)
     config, resolved = resolve_document_config(text, settings.get("language", "en"), project_config=settings)
-    _, chapters = profile_document(text, config, resolve_thresholds(project_config=settings))
+    paragraphs, chapters = profile_document(text, config, resolve_thresholds(project_config=settings))
     averages = {chapter.num: num(chapter.asl, resolved.key, 1) for chapter in chapters}
     if not {1, 2} <= averages.keys():
         raise ValueError("The quick start requires the first two profiled chapters")
+
+    def passage_link(opening: str, title: str, layer: str) -> str:
+        matches = [idx for idx, paragraph in enumerate(paragraphs) if paragraph.text.startswith(opening)]
+        if len(matches) != 1:
+            raise ValueError(f"The demo must have one paragraph starting with {opening!r}")
+        target = f"#p-{matches[0]}"
+        # An empty layer enables analysis with the tense flags visible.
+        return f'<a href="{target}" data-jump="{target}" data-layer="{layer}">{html.escape(title)}</a>'
+
+    checks = (
+        (passage_link("It was only when she looked at it again", "Check a sticky sentence", "sticky"),
+         "What does the blank line tell Mara? Which words delay that detail?"),
+        ('<a href="#motifs" data-jump="#motifs">Follow “For the time being”</a>',
+         "Three speakers reach for the same phrase. Open its occurrences to compare their voices."),
+        (passage_link("The foreman had brought the book", "Find the tense slip", ""),
+         "The narrative shifts from past to present as Mara reads the ledger. Read the verb forms in order."),
+        (passage_link("Hansen said that he might", "Inspect reported speech", "indirect_speech"),
+         "Lixity marks “said that.” Compare it with the words inside quotation marks in the quay scene."),
+        (passage_link("No implement was recovered.", "Check a passive construction", "passive"),
+         "The customs note leaves the actor unnamed. In an action scene, would naming the actor make the event clearer?"),
+    )
+    draft_examples = "".join(f"<li>{link}. {prompt}</li>" for link, prompt in checks)
     return (
         '<section class="panel" id="demo-quick-start" aria-labelledby="demo-quick-start-title">'
         '<h2 id="demo-quick-start-title">Why the short sentences?</h2>'
@@ -222,7 +244,9 @@ def _demo_quick_start(text: str, project: Path) -> str:
         '<a class="ctl primary" href="#ch-2" data-jump="#ch-2" data-layer="asl">Inspect chapter 2</a>'
         '<a class="ctl" href="#matrix" data-jump="#matrix">Compare chapters 1 and 2</a>'
         '</div>'
-        + details_start("Try one reading check", element_id="demo-task-guide")
+        + details_start("Try the draft examples", element_id="demo-task-guide")
+        + '<p>The manuscript is a draft with deliberate rough spots. Choose a passage to decide what you would revise.</p>'
+        + f'<ul>{draft_examples}</ul>'
         + '<ol><li>Choose <strong>Inspect chapter 2</strong> and read the opening paragraph.</li>'
         '<li>Use the paragraph’s <strong>… → Explore passage → Explain measurement</strong> to see what Lixity counted. '
         'Turn on <strong>Counted text</strong> to see the sentence marks.</li>'
@@ -260,7 +284,7 @@ def build_research_demo(root: Path, project: Path) -> Path:
     page_title = "Lixity project demo — " + title
     document = _replace_title(document, page_title)
     head = _head_metadata(canonical=f"{SITE}/demo/report.html", title=page_title,
-                          description="Does chapter 2's shorter rhythm fit its action? Read a passage, inspect the counted sentences and make your own judgment in this fictional, read-only project.",
+                          description="Explore a fictional manuscript draft with uneven rhythm, repeated phrases, a tense slip and wordy passages. Inspect what Lixity counted and decide what to revise.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
     counter = _analytics_endpoint(root)

@@ -9,6 +9,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Give the fictional Warehouse 4 draft verifiable examples of a tense slip,
+  repeated phrasing, reported speech and wordiness. Add guided passage links
+  and parallel English and German practice drafts in the browser sandbox.
 - Add localized measurement references from the analysis overview, chapter
   inspector, passage evidence and version comparison. Explain counting filters
   and let writers decide how a passage reads in context.

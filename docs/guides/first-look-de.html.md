@@ -2,7 +2,7 @@
 
 Mit Lixity liest du dein Manuskript, vergleichst Sprachmuster und findest die Quellen zu einem Szenendetail wieder. Die lokale Browser-App verbindet Textstellen, Recherche und eigene Entscheidungen. Ihre Sprachhinweise sind Heuristiken zur Prüfung; sie bewerten weder literarische Qualität noch die Wahrheit einer Aussage.
 
-Aktualisiert am 5. November 2026
+Aktualisiert am 20. November 2026
 
 ## Eine Frage statt eines Zielwerts
 
@@ -47,6 +47,8 @@ In der Demo öffnet **Compare chapters 1 and 2** die Kapitelmatrix. Dort siehst 
 **Mögliche Entscheidung:** Den Kontrast beibehalten, weil die kurzen Sätze körperliche Handlungen voneinander trennen. Klingt die Stelle beim Vorlesen dagegen unbeabsichtigt abgehackt, lässt sich im eigenen Entwurf eine Handlung mit ihrer Folge verbinden. Kürzer ist nicht automatisch besser. Der Durchschnitt ist kein Schreibziel.
 
 Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären lässt. Dafür sind weder alle Messgrößen noch eine „Korrektur“ nötig. Das kurze Beispiel demonstriert den Arbeitsgang, nicht die statistische Zuverlässigkeit für jedes Manuskript.
+
+Unter **Try the draft examples** führt die Demo zu weiteren bewusst eingebauten Entwurfsstellen. Dazu gehören ein umständlicher Satz, dieselbe Wendung bei drei Figuren und ein Wechsel von Vergangenheit zu Gegenwart.
 
 **Noch unveröffentlichte Navigation der lokalen App.** Die Analyseübersicht zeigt den Status, die nächste Textstelle und die Einstiege **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Einstieg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar. Eingaben bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
 

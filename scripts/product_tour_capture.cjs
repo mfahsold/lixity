@@ -1,6 +1,7 @@
 // Capture six deliberate shots. Preparation is excluded by a decoded frame anchor.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
 const {spawnSync} = require('node:child_process');
@@ -8,6 +9,32 @@ const {performance} = require('node:perf_hooks');
 
 const ROOT = path.resolve(__dirname, '..');
 const MINIMUM_HOLD = 3;
+
+function readComparisonFixture(directory, payload = null) {
+  const python = process.env.PYTHON_BIN || path.join(ROOT, '.venv', 'bin', 'python');
+  const result = spawnSync(python, ['-c', `
+import json
+import sys
+from pathlib import Path
+from lixity.manuscript_editing import ManuscriptStore
+
+project = Path(sys.argv[1])
+store = ManuscriptStore(project, project / "harbour-manuscript.md", language="en")
+request = json.load(sys.stdin)
+if request is None:
+    result = store.open()
+else:
+    if request.pop("document") != store.document:
+        raise ValueError("Comparison must address the synthetic fixture")
+    result = store.compare(**request)
+print(json.dumps({"ok": True, **result}))
+`, directory], {
+    cwd: ROOT, input: JSON.stringify(payload), encoding: 'utf8', timeout: 10000,
+    env: {...process.env, PYTHONPATH: path.join(ROOT, 'src')},
+  });
+  assert.equal(result.status, 0, 'Synthetic comparison failed: ' + (result.stderr || result.error));
+  return JSON.parse(result.stdout);
+}
 
 function anchorFrame(source, requiredFrames) {
   // Read a corner of every decoded source frame, rather than guessing when
@@ -71,7 +98,7 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    let video;
+    let video, comparisonDirectory;
     try {
       await prepareWorkspacePage(page, {cursor: true});
       // Product-tour fixtures are completely local; guide map captures retain
@@ -91,7 +118,8 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
         await page.locator('#manuscript-analysis-toggle').click();
         await page.locator('#style-layer').selectOption('sticky');
         await page.locator('#analysis-evidence-enabled').check();
-        await page.locator('#analysis-comparison-enabled').uncheck();
+        assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), false,
+          'The function-word sentence filter uses counted-text marks without paragraph comparison');
         const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id => {
           const layer = paragraphContent[id][3]?.layers?.sticky;
           return layer && layer.mapped_count > 0 && paragraphContent[id][0].length < 700 && document.getElementById(id);
@@ -128,8 +156,10 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
         };
       } else if (scene.id === 'compare') {
         const original = '# 1. The Eastern Gate\n\nThe watchman waited beside the quiet harbour. "Did you hear the bell?" she asked.\n\nHe shook his head. Fog covered the pilings.\n';
-        const snapshot = {ok: true, document: 'harbour-manuscript.md', text: original,
-          revision: 'tour-original', sha256: createHash('sha256').update(original).digest('hex'), recovery: []};
+        comparisonDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tour-comparison-'));
+        const manuscript = path.join(comparisonDirectory, 'harbour-manuscript.md');
+        fs.writeFileSync(manuscript, original);
+        const snapshot = readComparisonFixture(comparisonDirectory);
         await page.route('**/api/**', async route => {
           const url = new URL(route.request().url());
           if (url.pathname.endsWith('/editor-bootstrap.js') || url.pathname.endsWith('/editor-bundle.js')) {
@@ -137,7 +167,10 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
             await route.fulfill({contentType: 'application/javascript', body: fs.readFileSync(path.join(ROOT, 'src/lixity/ui/assets', asset))});
           } else if (url.pathname === '/api/manuscript-edit') {
             assert.equal(route.request().method(), 'GET', 'An isolated comparison draft must never save the original');
-            await route.fulfill({contentType: 'application/json', body: JSON.stringify(snapshot)});
+            await route.fulfill({json: snapshot});
+          } else if (url.pathname === '/api/manuscript-compare') {
+            assert.equal(route.request().method(), 'POST', 'The comparison submits text for read-only analysis');
+            await route.fulfill({json: readComparisonFixture(comparisonDirectory, route.request().postDataJSON())});
           } else await route.fallback();
         });
         await open(path.basename(capture.source));
@@ -165,12 +198,17 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
           assert.equal(await target.inputValue(), original + ' Lanterns lit.');
           assert.equal(await page.locator('#manuscript-save-status').getAttribute('data-state'), 'saved');
           assert.equal(await page.locator('#manuscript-comparison-use').isEnabled(), true);
+          const chapter = page.locator('#manuscript-comparison-chapters li').filter({hasText: '+2 words'});
+          await chapter.waitFor({state: 'visible'});
+          await visible(page, chapter, 'Measured chapter change');
+          assert.equal(fs.readFileSync(manuscript, 'utf8'), original);
         };
       } else if (scene.id === 'research') {
         await open(path.basename(capture.source));
         await page.locator('#tab-view-analysis').click();
         await page.locator('#workbench-overview-open').click();
-        await page.locator('#analysis-measurements').evaluate(node => {node.open = true;});
+        await page.locator('[data-analysis-workflow=compare]').click();
+        await page.locator('[data-analysis-section-target=style]').click();
         await page.locator('#style-tab-heatmap').click();
         target = page.locator('#heatmap-ch-3 td[data-layer="asl"]');
         await target.scrollIntoViewIfNeeded();
@@ -300,6 +338,7 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
       throw error;
     } finally {
       if (!video) await context.close();
+      if (comparisonDirectory) fs.rmSync(comparisonDirectory, {recursive: true, force: true});
     }
   }
   const pendingSidecar = sidecar + '.tmp-' + process.pid;
