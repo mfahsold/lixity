@@ -489,7 +489,11 @@
       parts.push(aslPart);
     }
     if (snap.dialogue_ratio !== null && snap.dialogue_ratio !== undefined) {
-      parts.push(pulseWords[3] + ' ' + fmtNum(snap.dialogue_ratio, 0) + ' %');
+      let dialoguePart = pulseWords[3] + ' ' + fmtNum(snap.dialogue_ratio, 0) + ' %';
+      if (typeof deltas?.dialogue_ratio === 'number' && Math.abs(deltas.dialogue_ratio) >= 0.05) {
+        dialoguePart += ' (Δ ' + formatPercentagePointChange(deltas.dialogue_ratio) + ')';
+      }
+      parts.push(dialoguePart);
     }
     if (snap.length_entropy !== null && snap.length_entropy !== undefined) {
       let entPart = pulseWords[7] + ' ' + fmtNum(snap.length_entropy, 2);

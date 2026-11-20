@@ -24,8 +24,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sentence examples when they are available.
 - Keep flagged manuscript passages visible when navigating to them on a
   narrow screen.
-- Keep function-word highlights visible across quotations and speech cues in
-  the browser sandbox.
+- Recognize paired typographic quotation marks in the browser sandbox and keep
+  function-word highlights visible across quotations and speech cues.
 - Distinguish missing language rules, zero matches and unavailable text ranges
   in manuscript analysis. Apply revision deltas to the matching source and
   report missing chapter measurements as unavailable in version history.
@@ -43,7 +43,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Share quotation boundaries across the analysis, reader and retained-version
   measurements. Recognize supported typography across paragraphs and count
   each quoted word from its own analysis scope once. Use the actual baseline
-  date in the editor's version summary.
+  date in the editor's version summary and show share changes in percentage
+  points for the manuscript as well as for chapters.
 - Preserve an opening prose passage before the first chapter heading and
   ignore appendix markers shown inside comments and fenced code examples.
 

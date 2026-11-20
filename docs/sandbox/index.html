@@ -192,7 +192,7 @@
       </div>
 
       <p class="panel-guide">
-        <span id="dialogue-guide">„Nur Dialoge“ hebt erkannte Zitate hervor. Lies sie laut. Lassen sich die Stimmen unterscheiden?</span>
+        <span id="dialogue-guide">„Nur Dialoge“ hebt einfache Anführungszeichenpaare hervor. Lies die Stellen laut. Lassen sich die Stimmen unterscheiden?</span>
         <a href="../guides/metrics/de.html#measure-dialogue" target="_blank" rel="noopener noreferrer" data-metric-reference="dialogue">Wörter in Zitaten zählen</a>
       </p>
       <div class="filter-bar" id="preview-controls" role="group" aria-label="Markierungen filtern">
@@ -288,6 +288,12 @@
     /\b(?:sagte|sagten|erklärte|erklärten|behauptete|behaupteten|meinte|meinten|betonte|betonten|erwiderte|erwiderten|antwortete|antworteten|fragte|fragten|dachte|dachten|glaubte|glaubten|vermutete|vermuteten|hoffte|hofften|fürchtete|fürchteten|ahnte|ahnten|wusste|wussten|überlegte|überlegten|gestand|gestanden|versicherte|versicherten|berichtete|berichteten|erzählte|erzählten)\s*,\s*(?:dass|daß|ob)\b/gi,
     /\b(?:er|sie|es|man)\s+(?:sei|habe|werde|könne|müsse|dürfe|wolle|solle|wäre|hätte|würde|könnte|müsste|dürfte|wollte|sollte)\b/gi
   ];
+  // The sandbox recognizes simple pairs on a single passage. Use the app for manuscript structure and dialogue conventions.
+  const QUOTATION_PAIR = new RegExp('(' + [
+    '"[^"]+"', '„[^„“”]+“', '“[^„“”]+”', '«[^«»]+»', '»[^«»]+«',
+    '‹[^‹›]+›', '›[^‹›]+‹', '‚[^‚‘]+‘',
+    String.raw`(?<![\p{L}\p{N}])(?:‘(?:[^‘’]|’(?=[\p{L}\p{N}]))+’|'(?:[^']|'(?=[\p{L}\p{N}]))+')(?![\p{L}\p{N}])`,
+  ].join('|') + ')', 'gu');
   const STOP = new Set([
     'aber','alle','als','also','am','an','auch','auf','aus','bei','bin','bis','bist','da','dadurch','daher','damit','dann','darum','das','dass','dein','deine','dem','den','denn','der','des','dessen','dich','die','dies','diese','dieser','dieses','dir','doch','dort','du','durch','ein','eine','einem','einen','einer','eines','er','es','euch','euer','für','gegen','habe','haben','hat','hatte','hier','hin','ich','ihm','ihn','ihr','ihre','im','in','ist','ja','jede','jeder','jedes','jetzt','kann','kein','keine','man','mein','meine','mich','mir','mit','nach','nicht','noch','nun','nur','ob','oder','ohne','sehr','sein','seine','sich','sie','sind','so','soll','sondern','sonst','über','um','und','uns','unser','unter','viel','vom','von','vor','war','waren','was','weg','weil','weiter','welche','wenn','wer','werden','wie','wieder','will','wir','wird','wo','zu','zum','zur','zwar',
     'about','above','after','again','against','all','am','an','and','any','are','as','at','be','because','been','before','being','below','between','both','but','by','can','could','did','do','does','doing','down','during','each','few','for','from','further','had','has','have','having','he','her','here','hers','herself','him','himself','his','how','i','if','in','into','is','it','its','itself','just','me','more','most','my','myself','no','nor','not','now','of','off','on','once','only','or','other','our','ours','ourselves','out','over','own','same','she','should','so','some','such','than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to','too','under','until','up','very','was','we','were','what','when','where','which','while','who','whom','why','will','with','would','you','your','yours','yourself'
@@ -305,7 +311,7 @@
       preset: 'Beispiele', draftBtn: 'Rohentwurf', clear: 'Leeren',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
       previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Funktionswortfilter', fltIndirect: 'Indirekte Rede',
-      dialogueGuide: '„Nur Dialoge“ hebt erkannte Zitate hervor. Lies sie laut. Lassen sich die Stimmen unterscheiden?',
+      dialogueGuide: '„Nur Dialoge“ hebt einfache Anführungszeichenpaare hervor. Lies die Stellen laut. Lassen sich die Stimmen unterscheiden?',
       words: 'Wörter', sents: 'Sätze', asl: 'Wörter pro Satz im Schnitt', dlg: 'Anteil der Wörter in Zitaten',
       cv: 'Streuung der Satzlängen', entropy: 'Längen-Entropie (Bit)',
       sticky: 'Sätze im Funktionswortfilter', indirect: 'Hinweise auf indirekte Rede',
@@ -356,7 +362,7 @@
       preset: 'Examples', draftBtn: 'German draft', clear: 'Clear',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
       previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Function-word filter', fltIndirect: 'Indirect speech',
-      dialogueGuide: '“Dialogue only” highlights detected quotations. Read them aloud. Can you tell the voices apart?',
+      dialogueGuide: '“Dialogue only” highlights passages enclosed by simple pairs of quotation marks. Read them aloud. Can you tell the voices apart?',
       words: 'Words', sents: 'Sentences', asl: 'Average words per sentence', dlg: 'Share of words in quotes',
       cv: 'Variation in sentence length', entropy: 'Length entropy (bits)',
       sticky: 'Sentences matching the function-word filter', indirect: 'Possible indirect speech',
@@ -473,8 +479,7 @@
     const raw = input.value;
     const words = raw.match(/[\p{L}\p{N}_]+/gu) || [];
     const sents = splitSentences(raw);
-    const dlgRegex = /([„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’'])/g;
-    const parts = raw.split(dlgRegex);
+    const parts = raw.split(QUOTATION_PAIR);
     const dlgText = parts.filter((_, idx) => idx % 2 === 1).join(' ');
     const narText = parts.filter((_, idx) => idx % 2 === 0).join(' ');
     const dlgWords = dlgText.match(/[\p{L}\p{N}_]+/gu) || [];

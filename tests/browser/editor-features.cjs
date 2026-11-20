@@ -90,7 +90,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await currentSummary.filter({hasText:'25 %'}).waitFor();
     await draftSummary.filter({hasText:'Average words per sentence'}).waitFor();
     await page.locator('#manuscript-comparison-draft').fill('# External\n\n“Rain falls. Storm clouds” bring rain again soon.\n');
-    await draftSummary.filter({hasText:'50 %'}).waitFor();
+    await draftSummary.filter({hasText:'50 % (Δ +25.0 percentage points)'}).waitFor();
     await chaptersCompare.filter({hasText:'+25.0 percentage points'}).waitFor();
     await page.locator('#manuscript-comparison-draft').fill('# External\n\n“Rain falls.” It was only a matter of the time that he had to go.\n');
     await draftSummary.filter({hasText:'50.0 % (Δ +50.0 percentage points)'}).waitFor();

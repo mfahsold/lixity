@@ -1130,6 +1130,25 @@ async function checkSandboxOverlappingHighlights(page) {
   await indirectFilter.click();
 }
 
+async function checkSandboxQuotationPairs(page) {
+  const input = page.locator('#input');
+  const preview = page.locator('#preview');
+  const quote = page.locator('#k-dlg');
+  const segments = ['"To the gate."', '„Bleib hier“', '“Stay here,”', '»Geh jetzt.«'];
+  const passage = `${segments[0]} ${segments[1]}, sagte Mara. ${segments[2]} she said. ${segments[3]}`;
+  await input.fill(passage);
+  await expect(quote).toHaveText(/^69\s*%$/);
+  const filter = page.locator('#direct-speech-btn');
+  await filter.click();
+  await expect(filter).toHaveAttribute('aria-pressed', 'true');
+  await expect(preview.locator('.dlg-seg')).toHaveText(segments);
+  assert.equal(await preview.textContent(), passage);
+  await input.fill("I can't go. She can't stay. „Offen”");
+  await expect(quote).toHaveText(/^0\s*%$/);
+  await expect(preview.locator('.dlg-seg')).toHaveCount(0);
+  await filter.click();
+}
+
 (async () => {
   let browser;
   // Chromium's native download requests bypass Playwright routing. Serve only
@@ -1259,6 +1278,7 @@ async function checkSandboxOverlappingHighlights(page) {
             } finally {
               await guide.close();
             }
+            await checkSandboxQuotationPairs(page);
           }
           if (metricReference) {
             await expect(page.locator('html')).toHaveAttribute('lang', path.basename(route, '.html'));
