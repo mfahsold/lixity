@@ -100,7 +100,8 @@ class TestDialogueReport(unittest.TestCase):
         config = CorpusConfig(language="de", dialogue_regex=r"(?=(„[^“]+“|»[^«]+«))")
         report = dialogue_report(text, config)
         self.assertEqual(report.turns, 2)
-        self.assertEqual(report.dialogue_words, 4)  # Legacy span-based total.
+        self.assertEqual(report.turn_words, 4)
+        self.assertEqual(report.dialogue_words, 3)
         self.assertEqual(report.chapters[0].dialogue_paragraphs, 1)
 
     def test_quotation_patterns_without_capture_and_with_unmatched_optional_capture(self):
@@ -121,7 +122,8 @@ class TestDialogueReport(unittest.TestCase):
         config = CorpusConfig(language="de", dialogue_regex=r"(?=(„[^“]+“|»[^«]+«))")
         report = dialogue_report(text, config)
         self.assertEqual(report.turns, 2)
-        self.assertEqual(report.dialogue_words, 4)
+        self.assertEqual(report.turn_words, 4)
+        self.assertEqual(report.dialogue_words, 3)
         self.assertEqual(report.chapters[0].dialogue_paragraphs, 0)
 
     def test_appendix_is_excluded(self):

@@ -69,14 +69,19 @@ function jumpToLine(row) {
     row.hasAttribute("data-flags") ||
     row.closest("#flags, [data-flags]")
   );
+  var dock = fromFlag && document.getElementById("workspace-context-panel");
+  // A dock stacked above the manuscript would open offscreen after the jump.
+  // The paragraph's own tense action can open it with an explicit scroll and focus.
+  var inspectFlag = fromFlag && (!dock || getComputedStyle(dock).position === "sticky");
+  var options = {
+    analysisVisible: fromFlag ? true : undefined,
+    contextTool: fromFlag ? (inspectFlag ? "analysis" : "none") : undefined
+  };
   if (panel) {
     var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
     if (chip) toggleParagraph(chip, true, true);
-    scrollAndFlash(panel, {
-      analysisVisible: fromFlag ? true : undefined,
-      contextTool: fromFlag ? "analysis" : undefined
-    });
-    if (fromFlag && window.LixityReader && window.LixityReader.inspectPassage) {
+    scrollAndFlash(panel, options);
+    if (inspectFlag && window.LixityReader && window.LixityReader.inspectPassage) {
       window.LixityReader.inspectPassage(panel);
     }
     if (row.hasAttribute("data-review-passage")) {
@@ -90,10 +95,7 @@ function jumpToLine(row) {
     var cstart = parseInt(chapters[j].getAttribute("data-start"), 10);
     var cend = parseInt(chapters[j].getAttribute("data-end"), 10);
     if (line >= cstart && line <= cend) {
-      scrollAndFlash(chapters[j], {
-        analysisVisible: fromFlag ? true : undefined,
-        contextTool: fromFlag ? "analysis" : undefined
-      });
+      scrollAndFlash(chapters[j], options);
       return;
     }
   }
@@ -320,6 +322,11 @@ if (microhint) {
 
 var layer = document.getElementById("style-layer");
 var layerLegend = document.getElementById("layer-legend");
+var layerReference = document.getElementById("layer-metric-reference");
+
+function selectedLayerOption() {
+  return layer && layer.selectedIndex >= 0 ? layer.options[layer.selectedIndex] : null;
+}
 
 function chipLayers(chip) {
   if (!chip._layers) {
@@ -378,7 +385,7 @@ function syncOutlierNavigation() {
       }
     }
   }
-  var option = layer && layer.selectedOptions && layer.selectedOptions[0];
+  var option = selectedLayerOption();
   var inlineOnly = Boolean(option && option.dataset.inlineEvidence === "1" && !chips.length);
   var layerNav = layerPosition && layerPosition.closest(".layer-nav");
   if (layerNav) layerNav.hidden = !layer || !layer.value || inlineOnly;
@@ -453,18 +460,23 @@ function paintLayerAction(panel, info) {
 function syncEvidenceLegend() {
   var legend = document.getElementById("layer-evidence-legend");
   var toggle = document.getElementById("analysis-evidence-enabled");
-  if (legend) legend.hidden = !toggle || !toggle.checked;
-  var selectedOption = layer && layer.selectedIndex >= 0 ? layer.options[layer.selectedIndex] : null;
+  var selectedOption = selectedLayerOption();
+  var unavailable = Boolean(selectedOption && selectedOption.dataset.available === "0");
+  var note = document.getElementById("layer-language-unavailable");
+  if (note) note.hidden = !unavailable;
+  if (toggle) toggle.disabled = unavailable;
+  if (legend) legend.hidden = unavailable || !toggle || !toggle.checked;
   var inlineOnly = Boolean(selectedOption && selectedOption.dataset.inlineEvidence === "1");
   var comparison = document.getElementById("layer-comparison-legend");
-  if (comparison) comparison.hidden = inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
+  if (comparison) comparison.hidden = unavailable || inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
   var comparisonControls = comparisonToggle && comparisonToggle.closest(".reader-comparison-controls");
-  if (comparisonControls) comparisonControls.hidden = inlineOnly;
+  if (comparisonControls) comparisonControls.hidden = unavailable || inlineOnly;
   var instruction = document.getElementById("analysis-evidence-instruction");
   if (instruction && layer) instruction.textContent = uiLabel(
     layer.value === "sticky" ? "evidence_sticky_instruction" : "evidence_open_instruction"
   );
-  if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
+  if (layerLegend) layerLegend.hidden = !layer || !layer.value ||
+    (!unavailable && Boolean(legend && legend.hidden && comparison && comparison.hidden));
 }
 
 var allChips = null;
@@ -513,7 +525,7 @@ function applyLayer() {
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
-      var option = (layer.selectedIndex >= 0 ? layer.options[layer.selectedIndex] : null) || layer.querySelector('option[value="' + key + '"]');
+      var option = selectedLayerOption();
       if (option) {
         var title = document.getElementById("layer-legend-title");
         var hint = option.getAttribute("data-hint") || "";
@@ -524,12 +536,9 @@ function applyLayer() {
         }
         var comparisonHint = document.getElementById("layer-comparison-hint");
         if (comparisonHint) comparisonHint.textContent = hint;
+        if (layerReference) layerReference.hash = option.dataset.reference;
         var evidenceHint = document.getElementById("layer-evidence-hint");
         if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
-        if (option.dataset.inlineEvidence === "1" && evidenceLegendToggle && !evidenceLegendToggle.checked) {
-          evidenceLegendToggle.checked = true;
-          evidenceLegendToggle.dispatchEvent(new Event("change"));
-        }
         var comparable = Number(option.dataset.comparable);
         var count = outlierChips().length;
         if (layerCount) {
@@ -733,15 +742,26 @@ var UI_LABELS = window.LixityLabels ? window.LixityLabels.all() : {};
 document.addEventListener("lixity:reader-ready", function initAnalysisGuide() {
   var guide = document.getElementById("reader-analysis-guide");
   var status = document.getElementById("reader-analysis-guide-state");
-  var metric = document.getElementById("style-layer");
-  if (!guide || !status || !metric || !window.LixityWorkbench) return;
+  var reference = document.getElementById("reader-metric-reference");
+  var definition = document.getElementById("reader-metric-definition");
+  if (!guide || !status || !layer || !window.LixityWorkbench) return;
   function update() {
     var state = LixityWorkbench.state();
     guide.hidden = state.surface !== "document" || state.focus;
-    var key = !state.analysisVisible ? "analysis_guide_off" :
-      !metric.value ? "analysis_guide_none" : "analysis_guide_selected";
-    var option = metric.selectedIndex >= 0 ? metric.options[metric.selectedIndex] : (metric.value ? metric.querySelector('option[value="' + metric.value + '"]') : null);
-    status.textContent = uiFormat(key, {metric: option ? option.textContent : "", unit: (option && option.dataset.unit) || ""});
+    var option = state.analysisVisible && layer.value ? selectedLayerOption() : null;
+    var text = uiLabel(state.analysisVisible ? "analysis_guide_none" : "analysis_guide_off");
+    if (option) {
+      var unit = option.dataset.unit;
+      text = unit ? uiFormat("analysis_guide_selected", {metric:option.textContent, unit:unit}) : option.textContent;
+      if (option.dataset.available === "0") text += ". " + uiLabel("layer_language_unavailable");
+    }
+    status.textContent = text;
+    if (reference) reference.hash = (option && option.dataset.reference) || "measurements";
+    var hint = option && option.dataset.hint;
+    if (definition) {
+      definition.hidden = !hint;
+      definition.textContent = hint || "";
+    }
   }
   document.addEventListener("lixity:workbench-change", update);
   document.addEventListener("lixity:analysis-layer-change", update);

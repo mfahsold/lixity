@@ -4,9 +4,9 @@ Beyond the plain dialogue share (see ``CorpusMetrics.dialog_ratio``) this
 module describes the *turn structure*: how often speech starts, how long the
 turns are, how dialogue is distributed across chapters and paragraphs.
 
-Deliberately heuristic and offline: quoted speech is detected with the
-language profile's dialogue pattern (curated per language); there is no
-speaker attribution – a "turn" is one quoted segment, not a named speaker.
+The report measures passages recognized by the shared quotation projection.
+Each measured turn is one continuous quoted span. Character attribution is
+calculated separately when the project supplies character names.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from __future__ import annotations
 import itertools
 import math
 import re
+from bisect import bisect_left
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -21,19 +22,25 @@ from statistics import median
 from typing import Any
 
 from .language import (
-    compile_pattern,
+    ResolvedLanguage,
     compile_word_pattern,
-    quotation_capture_group,
-    quotation_texts,
     resolve_language,
 )
-from .markdown_parser import prose_paragraphs, split_chapters  # shared segmentation (re-export)
+from .markdown_parser import prose_paragraphs as prose_paragraphs
+from .markdown_parser import split_chapters
 from .models import (
     DEFAULT_DIALOGUE_PARAGRAPH_SHARE,
     DEFAULT_LONG_TURN_MIN_WORDS,
     DEFAULT_SHORT_TURN_MAX_WORDS,
     CorpusConfig,
 )
+from .quotation import (
+    QuotationAnalysis,
+    count_quoted_words,
+    merge_quotation_spans,
+    partition_quoted_words,
+)
+from .quotation_projection import quoted_prose
 from .sentences import split_prose_sentences
 
 # A paragraph counts as dialogue paragraph when at least this share of its
@@ -211,7 +218,7 @@ def find_indirect_speech_spans(
     for pattern in patterns:
         for match in pattern.finditer(clean):
             start, end = match.span()
-            if end > start and not _overlaps_any(start, end, quoted_spans):
+            if end > start and clean.find("\n\n", start, end) < 0 and not _overlaps_any(start, end, quoted_spans):
                 candidates.append((start, end))
     candidates.sort()
     deduped: list[tuple[int, int]] = []
@@ -404,6 +411,14 @@ class DialogueReport:
             "chapters": [chapter.to_dict() for chapter in self.chapters],
         }
 
+    def to_display_dict(self, config: CorpusConfig) -> dict[str, Any]:
+        """Include the effective quotation lengths used by this report."""
+        return {
+            **self.to_dict(),
+            "short_turn_max_words": config.short_turn_max_words,
+            "long_turn_min_words": config.long_turn_min_words,
+        }
+
 
 def find_dialogue_tag_spans(
     clean: str,
@@ -543,30 +558,71 @@ class _ChapterTurnStats:
     narration_tokens: Counter[str]
 
 
+def _outside_quotation_text(text: str, spans: Sequence[tuple[int, int]]) -> str:
+    """Preserve the separation between distinct unquoted source fragments."""
+    parts: list[str] = []
+    cursor = 0
+    for start, end in spans:
+        parts.append(text[cursor:start])
+        cursor = end
+    parts.append(text[cursor:])
+    return " ".join(parts)
+
+
+def _narration_context(
+    text: str, word_re: re.Pattern[str], quotation: QuotationAnalysis, outside: list[str],
+) -> tuple[str, list[str]]:
+    """Use only reliably unquoted ranges for the narration comparison."""
+    excluded = quotation.quote_ranges
+    if quotation.unclear:
+        excluded = merge_quotation_spans((*excluded, *quotation.unclear))
+        _, outside = partition_quoted_words(text, word_re, excluded)
+    return _outside_quotation_text(text, excluded), [token.lower() for token in outside]
+
+
+def _overlapping_turn_lengths(
+    text: str, word_re: re.Pattern[str], quotation: QuotationAnalysis,
+) -> list[int]:
+    """Retain separate turn lengths for explicitly overlapping project matches."""
+    group = 1 if word_re.groups else 0
+    tokens = sorted(match.span(group) for match in word_re.finditer(text)
+                    if match.end(group) > match.start(group))
+    lengths = []
+    for span in quotation.spans:
+        first = bisect_left(tokens, (span.start, 0))
+        after = bisect_left(tokens, (span.end, 0))
+        lengths.append(sum(end <= span.end for _, end in tokens[first:after]))
+    return lengths
+
+
 def _turn_stats(
     body: str,
-    dialogue_re: re.Pattern[str],
+    config: CorpusConfig,
     word_re: re.Pattern[str],
-    language_key: str = "en",
+    language: ResolvedLanguage,
     *,
     dialogue_paragraph_share: float = DIALOGUE_PARAGRAPH_SHARE,
 ) -> _ChapterTurnStats:
-    paragraphs = prose_paragraphs(body, _front_matter=False)
-    clean = "\n\n".join(paragraphs)
-    matches = list(quotation_texts(dialogue_re, clean))
-    turn_word_counts: list[int] = []
+    projection = quoted_prose(body, config, language=language, chapter_body=True)
+    paragraphs = projection.parts
+    clean = projection.text
+    quoted_spans = projection.analysis.quote_ranges
+    turn_tokens, narration_token_list = partition_quoted_words(clean, word_re, quoted_spans)
+    turn_word_counts = [len(tokens) for tokens in turn_tokens]
+    dialogue_words = sum(turn_word_counts)
+    if config.dialogue_regex is not None and len(projection.analysis.spans) > len(quoted_spans):
+        turn_word_counts = _overlapping_turn_lengths(clean, word_re, projection.analysis)
+    turn_word_counts.extend([0] * len(projection.analysis.empty_matches))
     dialogue_tokens: Counter[str] = Counter()
     dialogue_sentences = 0
     dialogue_q_excl = 0
-    for match_text in matches:
-        tokens = [str(t).lower() for t in word_re.findall(match_text)]
-        count = len(tokens)
-        turn_word_counts.append(count)
-        if count > 0:
-            dialogue_tokens.update(tokens)
+    for (start, end), tokens in zip(quoted_spans, turn_tokens, strict=True):
+        if tokens:
+            match_text = clean[start:end]
+            dialogue_tokens.update(token.lower() for token in tokens)
             sents = [
                 s
-                for s in split_prose_sentences(match_text, language_key)
+                for s in split_prose_sentences(match_text, language.key)
                 if word_re.search(s)
             ]
             if sents:
@@ -576,35 +632,15 @@ def _turn_stats(
                 dialogue_sentences += 1
                 if _is_question_or_excl(match_text):
                     dialogue_q_excl += 1
-    dialogue_words = sum(turn_word_counts)
-    words = len(word_re.findall(clean))
-
-    # A recognized quoted span may continue across paragraph boundaries.
-    # Reuse the same chapter-wide matches for paragraph shares instead of
-    # requiring both quote delimiters to occur inside each paragraph.
-    capture = quotation_capture_group(dialogue_re)
-    spans = sorted(match.span(capture) for match in dialogue_re.finditer(clean)
-                   if match.start(capture) >= 0 and match.end(capture) > match.start(capture))
-    quoted_spans: list[tuple[int, int]] = []
-    for start, end in spans:
-        if quoted_spans and start <= quoted_spans[-1][1]:
-            quoted_spans[-1] = (quoted_spans[-1][0], max(end, quoted_spans[-1][1]))
-        else:
-            quoted_spans.append((start, end))
-
-    narration_parts: list[str] = []
-    cursor = 0
-    for start, end in quoted_spans:
-        narration_parts.append(clean[cursor:start])
-        cursor = end
-    narration_parts.append(clean[cursor:])
-    narration_text = " ".join(narration_parts)
-    narration_token_list = [str(t).lower() for t in word_re.findall(narration_text)]
+    words = dialogue_words + len(narration_token_list)
+    narration_text, narration_token_list = _narration_context(
+        clean, word_re, projection.analysis, narration_token_list,
+    )
     narration_words = len(narration_token_list)
     narration_tokens: Counter[str] = Counter(narration_token_list)
     nar_sents = [
         s
-        for s in split_prose_sentences(narration_text, language_key)
+        for s in split_prose_sentences(narration_text, language.key)
         if word_re.search(s)
     ]
     narration_sentences = max(1, len(nar_sents)) if narration_words > 0 else 0
@@ -619,23 +655,28 @@ def _turn_stats(
             first_span += 1
         paragraph_words = len(word_re.findall(paragraph))
         if paragraph_words:
-            quoted = 0
+            local_spans: list[tuple[int, int]] = []
             index = first_span
             while index < len(quoted_spans) and quoted_spans[index][0] < paragraph_end:
                 start, end = quoted_spans[index]
-                fragment = paragraph[max(0, start - paragraph_start):min(len(paragraph), end - paragraph_start)]
-                quoted += len(word_re.findall(fragment))
+                local_spans.append((max(0, start - paragraph_start), min(len(paragraph), end - paragraph_start)))
                 index += 1
+            quoted = count_quoted_words(paragraph, word_re, local_spans)
             if quoted / paragraph_words >= dialogue_paragraph_share:
                 dialogue_paragraphs += 1
         paragraph_start = paragraph_end + 2  # separator inserted in clean
 
-    tag_spans = find_dialogue_tag_spans(
-        clean, quoted_spans, _DIALOGUE_TAG_PATTERNS.get(language_key)
-    )
-    dialogue_tags = len(tag_spans)
-    adverbial_tags = _count_adverbial_tags(clean, tag_spans, quoted_spans, language_key)
-    indirect_speech = len(find_indirect_speech_spans(clean, quoted_spans, language_key))
+    dialogue_tags = adverbial_tags = indirect_speech = 0
+    for start, end in projection.regions:
+        region = clean[start:end]
+        quotation = projection.slice_analysis(start, end)
+        region_spans = quotation.quote_ranges
+        tag_spans = find_dialogue_tag_spans(region, region_spans, _DIALOGUE_TAG_PATTERNS.get(language.key))
+        tag_spans = [(a, b) for a, b in tag_spans if not _overlaps_any(a, b, quotation.unclear)]
+        dialogue_tags += len(tag_spans)
+        adverbial_tags += _count_adverbial_tags(region, tag_spans, region_spans, language.key)
+        excluded = merge_quotation_spans((*region_spans, *quotation.unclear))
+        indirect_speech += len(find_indirect_speech_spans(region, excluded, language.key))
 
     return _ChapterTurnStats(
         turn_word_counts=turn_word_counts,
@@ -661,7 +702,6 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
 
     chapters: list[DialogueChapter] = []
     all_turn_lengths: list[int] = []
@@ -686,14 +726,15 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
     for number, title, body in split_chapters(text, config):
         stats = _turn_stats(
             body,
-            dialogue_re,
+            config,
             word_re,
-            resolved.key,
+            resolved,
             dialogue_paragraph_share=config.dialogue_paragraph_share,
         )
         if not stats.words:
             continue
         turns = len(stats.turn_word_counts)
+        turn_words = sum(stats.turn_word_counts)
         short_turns = sum(1 for w in stats.turn_word_counts if 1 <= w <= config.short_turn_max_words)
         long_turns = sum(1 for w in stats.turn_word_counts if w >= config.long_turn_min_words)
         dialogue_asl = (stats.dialogue_words / stats.dialogue_sentences) if stats.dialogue_sentences else 0.0
@@ -708,11 +749,11 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
                 chapter_num=number,
                 title=title,
                 turns=turns,
-                turn_words=stats.dialogue_words,
+                turn_words=turn_words,
                 dialogue_words=stats.dialogue_words,
                 words=stats.words,
                 dialogue_pct=(stats.dialogue_words / stats.words * 100.0) if stats.words else 0.0,
-                avg_turn_words=(stats.dialogue_words / turns) if turns else 0.0,
+                avg_turn_words=(turn_words / turns) if turns else 0.0,
                 longest_turn_words=max(stats.turn_word_counts, default=0),
                 dialogue_paragraphs=stats.dialogue_paragraphs,
                 paragraphs=stats.paragraphs,
@@ -759,6 +800,7 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
         all_narration_tokens.update(stats.narration_tokens)
 
     turns = len(all_turn_lengths)
+    turn_words = sum(all_turn_lengths)
     short_turns = sum(1 for w in all_turn_lengths if 1 <= w <= config.short_turn_max_words)
     long_turns = sum(1 for w in all_turn_lengths if w >= config.long_turn_min_words)
     corpus_dialogue_asl = (
@@ -808,11 +850,11 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
     return DialogueReport(
         language=resolved.key,
         turns=turns,
-        turn_words=all_dialogue_words,
+        turn_words=turn_words,
         dialogue_words=all_dialogue_words,
         words=all_words,
         dialogue_pct=(all_dialogue_words / all_words * 100.0) if all_words else 0.0,
-        avg_turn_words=(all_dialogue_words / turns) if turns else 0.0,
+        avg_turn_words=(turn_words / turns) if turns else 0.0,
         median_turn_words=median(all_turn_lengths) if all_turn_lengths else 0.0,
         longest_turn_words=max(all_turn_lengths, default=0),
         turns_per_1000=(turns / all_words * 1000.0) if all_words else 0.0,
@@ -922,8 +964,6 @@ def character_voice_profiles(
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
-    capture = quotation_capture_group(dialogue_re)
     patterns = _compile_character_patterns(names, case_sensitive=case_sensitive)
     func_words = resolved.function_words
 
@@ -939,34 +979,17 @@ def character_voice_profiles(
     pair_co_chapters: Counter[tuple[str, str]] = Counter()
 
     for _number, _title, body in split_chapters(text, config):
-        paragraphs = prose_paragraphs(body, _front_matter=False)
-        clean = "\n\n".join(paragraphs)
+        projection = quoted_prose(body, config, language=resolved, chapter_body=True)
+        clean = projection.text
         if not clean:
             continue
         present_in_chapter = {
             label for label, pats in patterns.items() if any(pat.search(clean) for pat in pats)
         }
         speakers_in_chapter: set[str] = set()
-        raw_spans = sorted(
-            match.span(capture)
-            for match in dialogue_re.finditer(clean)
-            if match.start(capture) >= 0 and match.end(capture) > match.start(capture)
-        )
-        quoted_spans: list[tuple[int, int]] = []
-        for s_pos, e_pos in raw_spans:
-            if quoted_spans and s_pos <= quoted_spans[-1][1]:
-                quoted_spans[-1] = (quoted_spans[-1][0], max(e_pos, quoted_spans[-1][1]))
-            else:
-                quoted_spans.append((s_pos, e_pos))
-
-        nar_parts: list[str] = []
-        cursor = 0
-        for s_pos, e_pos in quoted_spans:
-            nar_parts.append(clean[cursor:s_pos])
-            cursor = e_pos
-        nar_parts.append(clean[cursor:])
-        nar_text = " ".join(nar_parts)
-        nar_tokens = [str(t).lower() for t in word_re.findall(nar_text)]
+        quoted_spans = projection.analysis.quote_ranges
+        turn_tokens, narration_token_list = partition_quoted_words(clean, word_re, quoted_spans)
+        nar_text, nar_tokens = _narration_context(clean, word_re, projection.analysis, narration_token_list)
         if nar_tokens:
             narrator_words += len(nar_tokens)
             if func_words:
@@ -978,7 +1001,7 @@ def character_voice_profiles(
             narrator_q_excl += sum(1 for s in nar_sents if _is_question_or_excl(s))
 
         prev_speaker: str | None = None
-        for idx, span in enumerate(quoted_spans):
+        for idx, (span, raw_tokens) in enumerate(zip(quoted_spans, turn_tokens, strict=True)):
             prev_end = quoted_spans[idx - 1][1] if idx > 0 else 0
             next_start = quoted_spans[idx + 1][0] if idx + 1 < len(quoted_spans) else len(clean)
             speaker = _attribute_turn_speaker(clean, span, prev_end, next_start, patterns)
@@ -986,7 +1009,7 @@ def character_voice_profiles(
                 prev_speaker = None
                 continue
             turn_text = clean[span[0]:span[1]]
-            tokens = [str(t).lower() for t in word_re.findall(turn_text)]
+            tokens = [token.lower() for token in raw_tokens]
             if not tokens:
                 prev_speaker = None
                 continue

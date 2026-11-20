@@ -5,6 +5,7 @@ const {startNativeServer} = require('./support/native-server.cjs');
 const {expect} = require(require('node:path').join(playwrightModule, 'test'));
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const {execFileSync} = require('node:child_process');
+const {createHash} = require('node:crypto');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-analysis-triage-'));
@@ -18,6 +19,8 @@ from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 base = Path(sys.argv[1]); project = base / 'project'; project.mkdir()
 text = '## First\\n\\nShe walks. She waits. She watches.\\n\\nShe walks. She waits. She watches. She walked. She waited. She watched.\\n\\n## Second\\n\\nHe walks. He waits. He watches. He walked. He waited. He watched.\\n'
+text = text.replace('\\n\\n## Second', '\\n\\n' + 'Brass lamps on granite. ' * 30 + '\\n\\n## Second')
+text += '\\n' + 'Silver dust. Granite gates. Silent fog. ' * 30 + '\\n'
 source = project / 'manuscript.md'; source.write_text(text)
 (project / 'lixity.toml').write_text('manuscript = "manuscript.md"\\nlanguage = "en"\\n')
 LixityServerHandler.workspace_root = str(project); LixityServerHandler.source_input = str(source)
@@ -48,7 +51,31 @@ server.serve_forever()
       await expect(page.locator('#flags .triage-choice').first()).toBeEnabled();
     }
     await page.goto(server.fixture.url);
+    const sourceRevision = createHash('sha256').update(original).digest('hex');
+    const projectToken = await page.locator('body').getAttribute('data-manuscript-project-token');
+    let deltaRevision = '0'.repeat(64);
+    const deltaURL = /\/api\/manuscript-delta\?project_token=[a-f0-9]{64}$/;
+    const chapterDelta = page.locator('#heatmap-ch-1 .chapter-delta-badge');
+    const progress = page.locator('#triage-progress');
+    await page.route(deltaURL, route => {
+      assert.equal(new URL(route.request().url()).searchParams.get('project_token'), projectToken);
+      return route.fulfill({json:{
+        ok:true, schema_version:'lixity-timeline/1', has_baseline:true, current:{revision:deltaRevision},
+        deltas:{words:71}, chapter_deltas:[{num:1, match_status:'matched', words_delta:71}],
+      }});
+    });
     await overview();
+    await expect(progress).not.toContainText('+71 W');
+    await expect(chapterDelta).toHaveCount(0);
+    deltaRevision = sourceRevision;
+    await page.locator('#triage-reload').evaluate(button => button.click());
+    await expect(progress).toContainText('+71 W');
+    await expect(chapterDelta).toHaveText('↑ +71 W');
+    deltaRevision = '0'.repeat(64);
+    await page.locator('#triage-reload').evaluate(button => button.click());
+    await expect(progress).not.toContainText('+71 W');
+    await expect(chapterDelta).toHaveCount(0);
+    await page.unroute(deltaURL);
     assert.ok(await rows.count() >= 2);
     await expect(page.locator('#flags .flag-row[role="button"]')).toHaveCount(0);
     await expect(page.locator('#flags [data-marker-kind]')).toHaveCount(0);

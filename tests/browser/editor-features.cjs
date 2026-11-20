@@ -23,14 +23,46 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
       const url = new URL(request.url());
       if (/^https?:$/.test(url.protocol) && url.origin !== new URL(base).origin) outsideWorkspace.push(url.origin);
     });
+    let holdInitial = true, initialMeasured, releaseInitial, initialDelivered;
+    const initialPulseMeasured = new Promise(resolve => {initialMeasured = resolve;});
+    const initialPulseHeld = new Promise(resolve => {releaseInitial = resolve;});
+    const initialPulseDelivered = new Promise(resolve => {initialDelivered = resolve;});
+    const deltaRoute = '**/manuscript-delta';
+    await page.route(deltaRoute, async route => {
+      if (!holdInitial) return route.continue();
+      holdInitial = false;
+      const response = await route.fetch();
+      initialMeasured();
+      await initialPulseHeld;
+      try {await route.fulfill({response});}
+      finally {initialDelivered();}
+    });
     await page.goto(base); await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
+    await initialPulseMeasured;
     await page.locator('#manuscript-search').click();
     await page.locator('.cm-search input[name=search]').fill('Café');
-    await page.locator('.cm-search input[name=replace]').fill('Morgen');
+    await page.locator('.cm-search input[name=replace]').fill('Next morning');
+    const refreshedPulse = page.waitForResponse(response => response.url().endsWith('/manuscript-delta'));
     await page.locator('.cm-search button[name=replaceAll]').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
-    assert.equal(fs.readFileSync(source,'utf8'),original.replaceAll('Café','Morgen'));
+    assert.equal(fs.readFileSync(source,'utf8'),original.replaceAll('Café','Next morning'));
+    const measured = await (await refreshedPulse).json();
+    const pulse = page.locator('#manuscript-session-pulse');
+    const baselineDate = await page.evaluate(createdAt => (
+      new Intl.DateTimeFormat(document.documentElement.lang, {dateStyle:'medium'}).format(new Date(createdAt * 1000))
+    ), measured.base.created_at);
+    await pulse.filter({hasText: new RegExp('^' + measured.current.words + ' words')}).waitFor();
+    await pulse.filter({hasText:'since ' + baselineDate}).waitFor();
+    const expectedPulse = await pulse.textContent();
+    releaseInitial();
+    await initialPulseDelivered;
+    await page.waitForLoadState('networkidle');
+    assert.equal(await pulse.textContent(), expectedPulse, 'A late response cannot replace the acknowledged revision’s pulse');
+    await page.unroute(deltaRoute);
+    await page.setViewportSize({width:320,height:844});
+    assert.ok(await pulse.evaluate(node => node.scrollWidth <= node.clientWidth));
+    await page.setViewportSize({width:1440,height:900});
     await page.locator('#manuscript-undo').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
     assert.equal(fs.readFileSync(source,'utf8'),original,'One undo restores replace-all');
@@ -40,6 +72,12 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='conflict');
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();
+    const reference = page.locator('#manuscript-comparison a[href*="/guides/metrics/"]');
+    assert.ok(await reference.isVisible(), 'The version comparison exposes its reference in the open dialog');
+    assert.equal(await reference.getAttribute('href'), '/guides/metrics/en.html#revisions');
+    assert.equal(await reference.textContent(), 'How it’s measured');
+    assert.equal(await reference.getAttribute('target'), '_blank');
+    assert.ok(await reference.evaluate(node => node.relList.contains('noopener')));
     assert.equal(await page.locator('#manuscript-comparison-base').inputValue(),original);
     assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), external);
     assert.match(await page.locator('#manuscript-comparison-draft').inputValue(),/My draft/);

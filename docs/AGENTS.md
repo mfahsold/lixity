@@ -344,8 +344,8 @@ keeps numeric schema 2; this is a separate opt-in projection, not a replacement.
 descriptor while retaining its existing default output/schema keys.
 
 The body contains `layer`, canonical fingerprint `feature`, canonical English
-`unit`, `comparison`, `selection` and `paragraphs`. Choices are the seven existing
-paragraph layers: `asl|function|dialogue|filter|modal|nominal|passive`.
+`unit`, `comparison`, `selection` and `paragraphs`. The eight comparison layers
+are `asl|function|dialogue|filter|sensory|modal|nominal|passive`.
 `comparison` identifies `median_mad_robust_z`, all measurable paragraphs within
 each chapter, a minimum of 3, nonzero MAD, `z_decimals: 2` and `notable_abs_z: 1.5`.
 Scores and notability are prepared together in Python using `layer_stats` and the
@@ -388,27 +388,36 @@ See the [review workflow and storage limits](USAGE.md#lixity-analysis-review).
 Offsets refer to the exact displayed `ParagraphProfile.text`, with an exclusive
 end; they are not byte offsets or JavaScript UTF-16 positions. Each layer has
 `status`, `kind`, `count`, `mapped_count` and `spans`, whose entries contain
-`start`, `end`, `count`. ASL entries additionally report `words` from the same
-configured tokenizer. Units differ: ASL counts sentences, dialogue counts quoted
-words, lexical layers count configured tokens or pattern matches. A span is
-counted evidence, not a statistical judgment about that individual word.
+`start`, `end`, `count`. Evidence covers twelve layer IDs:
+
+| Layer IDs | Counted contributions |
+|---|---|
+| `asl`, `sticky` | Recognized sentences and sentences meeting the function-word filter, respectively. Each span also includes `words` from the configured tokenizer. |
+| `dialogue` | Words inside recognized quotations. |
+| `function`, `modal`, `echo` | Function words, modal forms, and occurrences of a word of at least four characters repeated within the paragraph, with function words excluded from echoes. |
+| `filter`, `sensory`, `nominal`, `passive` | Matches to configured word or phrase patterns. |
+| `dialogue_tag`, `indirect_speech` | Speech-attribution patterns near quotations and possible reported speech or thought outside recognized quotations, respectively. |
+
+`sticky`, `dialogue_tag`, `echo` and `indirect_speech` have evidence only. Every
+span identifies a counted contribution; comparison scores describe whole paragraphs.
 
 **Since v0.7.6:** the same envelope optionally includes `tense`
 with `present` and `past` entries using the existing layer shape, and a `trigger`
 of `none`, `mixed`, `switch` or `mixed_switch`. This is an additive optional
-field of `paragraph-evidence/1`; the seven measurement `layers` and default
-profile JSON remain unchanged. Effective cues use the same finite-form
+field of `paragraph-evidence/1`. Effective cues use the same finite-form
 precedence and German perfect-construction ownership as the counters. These
 are lexical cues, not grammatical error annotations. Consumers can ignore
 `tense`; absent or unmappable evidence must never be guessed from counts.
 
-`available` means all counted contributions map; `partial` preserves the mapped
-subset; `unavailable` supplies no invented range. Optional stable `reason` codes
-explain unmapped contributions. When source profiles cannot be verified,
-`source_mismatch` uses `count: null` for an unknown count, never a measured zero.
-The current inline-count/display
-projection may report `inline_mapping_unavailable`. Zero-width matches remain in
-the metric count but cannot form highlights. No prose is added to JSON.
+`available` means all counted contributions map, including a measured zero.
+`partial` preserves a mapped subset. With `unavailable`, `spans` is empty and
+`mapped_count` is zero. A missing counting rule in the effective profile uses
+`language_unavailable` with `count: null`. A known rule with no hits, including an
+explicitly empty configured cue pattern, has `count: 0`. An unverifiable profile
+uses `source_mismatch` with `count: null`. Mapping reasons such as
+`inline_mapping_unavailable` and `zero_width_matches` preserve the known count.
+The JSON contains coordinates and counts; retrieve the displayed paragraph text
+before resolving spans.
 Lixity counts NFC prose while keeping `ParagraphProfile.text` and its
 hash in the original representation. Canonical-cluster ranges map back to those
 original codepoints; `unicode_mapping_unavailable` preserves a count when an
@@ -636,8 +645,11 @@ the shared hook dispatch rather than a parallel click handler.
 All five return `{"meta": {...}, …}` with the same meta block; result fields are
 deterministic proxies, with the following scope and availability rules.
 
-- `dialogue`: `turns` = quoted segments (language dialogue pattern; **no
-  speaker attribution**), `avg_turn_words`, `median_turn_words`,
+- `dialogue`: `turns` counts recognized outer quotes and marked replies, or
+  the segments selected by a project pattern. `dialogue_words` counts the
+  chapter tokens contained in the union of their ranges. `turn_words` retains
+  per-turn counts, which can overlap when a custom pattern returns overlapping
+  captures. The response gives `avg_turn_words`, `median_turn_words`,
   `longest_turn_words`, `turns_per_1000`, `dialogue_paragraph_pct` (a
   paragraph counts as dialogue paragraph when ≥ 50 % of its words sit inside
   recognized chapter-wide quotation spans, including spans crossing paragraph

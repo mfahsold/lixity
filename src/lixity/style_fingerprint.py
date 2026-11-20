@@ -2379,9 +2379,14 @@ def paragraph_layer_cells(paragraphs: Sequence[Any], layer: str) -> dict[int, Pa
     return cells
 
 
-def prepare_paragraph_layers(paragraphs: Sequence[Any]) -> ParagraphLayerData:
+def prepare_paragraph_layers(
+    paragraphs: Sequence[Any], *, available_layers: frozenset[str] | None = None,
+) -> ParagraphLayerData:
     """Prepare every statistical paragraph layer at the analysis boundary."""
-    return {layer: paragraph_layer_cells(paragraphs, layer) for layer in LAYER_FEATURES}
+    return {
+        layer: paragraph_layer_cells(paragraphs, layer) for layer in LAYER_FEATURES
+        if available_layers is None or layer in available_layers
+    }
 
 
 def paragraph_layer_projection(

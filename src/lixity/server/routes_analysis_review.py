@@ -30,10 +30,11 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
         if query is None:
             return
         with self._workspace_lock:
+            stale_message = "Selected analysis changed; refresh before reviewing"
             ctx = self._capture_manuscript_context(
                 query["project_token"],
                 require_readable=False,
-                stale_message="Selected analysis changed; refresh before reviewing",
+                stale_message=stale_message,
             )
             if ctx is None:
                 return
@@ -48,6 +49,8 @@ class AnalysisReviewRoutesMixin(ResponseMixin):
                 )
                 if result["source_sha256"] != ctx.info.get("manuscript_source_sha256"):
                     raise ResearchConflictError("Manuscript differs from the displayed analysis; update analysis first")
+                if not self._manuscript_context_still_current(ctx, stale_message=stale_message):
+                    return
                 self._ok(result)
             except (OSError, ValueError, RuntimeError) as error:
                 self._log.warning("Analysis review stage=read_failed error=%s", type(error).__name__)

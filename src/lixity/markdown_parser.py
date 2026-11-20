@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html as html_mod
 import re
+from collections.abc import Iterator
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
@@ -26,15 +27,11 @@ SCENE_BREAK_RE = re.compile(
 )
 COMMENT_STRIP_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _COMMENT_STRIP_RE = COMMENT_STRIP_RE
-
-
-def strip_html_comments(content: str) -> str:
-    """Remove HTML comments completely from the text."""
-    return COMMENT_STRIP_RE.sub("", content)
 _FRONT_MATTER_KEY_RE = re.compile(r"[\w-]+\s*:")
 _FENCE_OPENER_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _HEADING_MARKUP_RE = re.compile(r"^#+\s*")
 _HEADING_GE3_RE = re.compile(r"^#{3,6}\s")
+_PREFACE_SENTENCE_END_RE = re.compile(r"""[.!?…][»«"“”'’)\]]*$""")
 _FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)")
 _EM_TRIPLE_STRIP_RE = re.compile(r"\*\*\*(.*?)\*\*\*")
 _EM_BOLD_STRIP_RE = re.compile(r"\*\*(.*?)\*\*")
@@ -44,15 +41,6 @@ _EM_TRIPLE_HTML_RE = re.compile(r"\*\*\*(.+?)\*\*\*")
 _EM_BOLD_HTML_RE = re.compile(r"\*\*(.+?)\*\*")
 _EM_ITALIC_HTML_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 _CHAPTER_SPANS_CACHE: dict[tuple[str, str], list[tuple[int, str, str, int]]] = {}
-
-
-def _without_comments(content: str) -> str:
-    """Remove comments while retaining their original line boundaries."""
-    return _COMMENT_STRIP_RE.sub(
-        lambda match: "".join(character for character in match.group()
-                             if character in "\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"),
-        content,
-    )
 
 
 def _trim_blank_lines(content: str) -> str:
@@ -96,6 +84,100 @@ def _fence_closer(line: str) -> re.Pattern[str] | None:
         return None
     marker = opening[1]
     return re.compile(r" {0,3}" + re.escape(marker[0]) + "{" + str(len(marker)) + r",}[ \t]*")
+
+
+def _markdown_block_spans(text: str) -> Iterator[tuple[int, int, bool]]:
+    """Yield original offsets for fenced code and comments, with a comment flag."""
+    lines = text.splitlines(keepends=True)
+    front_matter_end = _front_matter_end(lines)
+    closing: re.Pattern[str] | None = None
+    offset = fence_start = comment_end = 0
+    comments_exhausted = False
+    for index, line in enumerate(lines):
+        end = offset + len(line)
+        start = max(offset, comment_end)
+        offset = end
+        if closing is not None:
+            if closing.fullmatch(line.rstrip("\r\n")):
+                yield fence_start, end, False
+                closing = None
+            continue
+        indent = 0 if index >= front_matter_end else None
+        while start < end:
+            # A fence can start after leading comments and at most three spaces.
+            # Once a fence opens, comment-like text is literal until it closes.
+            if indent is not None and text[start] in " `~":
+                closing = _fence_closer(" " * indent + text[start:end])
+                if closing is not None:
+                    fence_start = start
+                    break
+            if comments_exhausted:
+                break
+            marker = text.find("<!--", start, end)
+            if marker < 0:
+                break
+            stop = text.find("-->", marker + 4)
+            if stop < 0:
+                comments_exhausted = True
+                break
+            comment_end = stop + 3
+            yield marker, comment_end, True
+            if indent is not None:
+                before = marker - start
+                indent = (indent + before if indent + before <= 3 and text[start:marker] == " " * before
+                          else None)
+            start = comment_end
+    if closing is not None:
+        yield fence_start, len(text), False
+
+
+def _strip_comments(content: str, *, preserve_lines: bool) -> str:
+    if "<!--" not in content:
+        return content
+    parts: list[str] = []
+    cursor = 0
+    for start, end, is_comment in _markdown_block_spans(content):
+        if is_comment:
+            parts.append(content[cursor:start])
+            if preserve_lines:
+                parts.append("".join(character for character in content[start:end]
+                                     if character in "\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"))
+            cursor = end
+    return "".join(parts) + content[cursor:] if parts else content
+
+
+def strip_html_comments(content: str) -> str:
+    """Remove Markdown HTML comments, retaining literal fenced content."""
+    return _strip_comments(content, preserve_lines=False)
+
+
+def _without_comments(content: str) -> str:
+    """Remove Markdown HTML comments while retaining original line boundaries."""
+    return _strip_comments(content, preserve_lines=True)
+
+
+@lru_cache(maxsize=1)
+def _appendix_offset(text: str, marker: str) -> int:
+    """Find the first literal marker outside comments and fenced code."""
+    start = text.find(marker)
+    if start < 0:
+        return len(text)
+    for left, right, is_comment in _markdown_block_spans(text):
+        if start + len(marker) <= left:
+            break
+        # A marker configured as a complete comment may deliberately mark a boundary.
+        if is_comment and start == left and start + len(marker) == right:
+            break
+        if start < right:
+            start = text.find(marker, right)
+            if start < 0:
+                return len(text)
+    return start
+
+
+def before_appendix(text: str, config: CorpusConfig) -> str:
+    """Keep the original source up to its configured, visible appendix marker."""
+    return text[:_appendix_offset(text, config.appendix_marker)] if config.appendix_marker else text
 
 
 def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, int, int, str]]:
@@ -152,12 +234,24 @@ def _chapter_spans(text: str, config: CorpusConfig) -> list[tuple[int, str, str,
     return list(cached)
 
 
+def _is_opening_prose(block: dict[str, Any], lines: list[str]) -> bool:
+    """Recognize an opening paragraph while preserving legacy bare title lines."""
+    if block["type"] != "p":
+        return False
+    if block["start_line"] == block["end_line"]:
+        return bool(_PREFACE_SENTENCE_END_RE.search(block["text"]))
+    first_line = strip_inline_markup(lines[block["start_line"] - 1])
+    continuation = lines[block["start_line"]]
+    initial = next((character for character in continuation if character.isalpha()), "")
+    # An unmarked single-word title can be immediately followed by a sentence.
+    return not (first_line.isalpha() and initial.isupper())
+
+
 def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:
     """Compute accepted chapters with original heading lines for profile alignment."""
     from .language import compile_word_pattern, resolve_language
 
-    if config.appendix_marker:
-        text = text.split(config.appendix_marker, 1)[0]
+    text = before_appendix(text, config)
     word_re = compile_word_pattern(resolve_language(config, sample_text=text).word_regex)
     headings = chapter_heading_spans(text, config)
     first_end = headings[0][0] if headings else len(text)
@@ -188,10 +282,10 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
         body = block
         if saved_title is None:
             prefix_blocks = parse_markdown_blocks(block, _front_matter=False)
-            if prefix_blocks and prefix_blocks[0]["type"] not in ("p", "list_item", "quote_block"):
-                # Nonprose prefixes must keep their fences and indentation intact.
-                title = ""
-            else:
+            title = ""
+            if (prefix_blocks and prefix_blocks[0]["type"] in ("p", "list_item", "quote_block")
+                    and not _is_opening_prose(prefix_blocks[0], _without_comments(block).splitlines())):
+                # Preserve an existing plain title separated from its prose.
                 lines = block.split("\n")
                 title = lines[0].strip().replace("# ", "")
                 body = _trim_blank_lines("\n".join(lines[1:]))
@@ -417,12 +511,25 @@ def counting_inline_text(text: str) -> str:
     return normalize("NFC", strip_inline_markup("".join(parts)))
 
 
+def _soft_break_offsets(lines: list[str], hard_breaks: list[bool] | None = None) -> tuple[int, ...]:
+    """Offsets of the spaces inserted to fold physical lines into one block."""
+    offsets = []
+    offset = 0
+    for index, line in enumerate(lines[:-1]):
+        offset += len(line)
+        if hard_breaks is None or not hard_breaks[index]:
+            offsets.append(offset)
+        offset += 1
+    return tuple(offsets)
+
+
 def parse_markdown_blocks(
-    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True
+    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True,
+    _quote_lines: bool = False,
 ) -> list[dict[str, Any]]:
     """Parses Markdown content into semantic blocks and filters editorial HTML comments."""
-    if config and config.appendix_marker:
-        content = content.split(config.appendix_marker, 1)[0]
+    if config:
+        content = before_appendix(content, config)
     headings = chapter_heading_spans(content, config) if config else []
     heading_titles = {line: title for _start, _end, line, title in headings}
     clean_content = _without_comments(content)
@@ -499,6 +606,7 @@ def parse_markdown_blocks(
         if stripped.startswith(">"):
             start_line = i + 1
             paras = []
+            quote_breaks = []
             cur_p: list[str] = []
             while i < len(lines):
                 q_line = lines[i].rstrip("\r\n").strip()
@@ -507,6 +615,8 @@ def parse_markdown_blocks(
                     if content_q == "":
                         if cur_p:
                             paras.append(" ".join(cur_p))
+                            if _quote_lines:
+                                quote_breaks.append(_soft_break_offsets(cur_p))
                             cur_p = []
                     else:
                         cur_p.append(content_q)
@@ -515,9 +625,13 @@ def parse_markdown_blocks(
                     break
             if cur_p:
                 paras.append(" ".join(cur_p))
+                if _quote_lines:
+                    quote_breaks.append(_soft_break_offsets(cur_p))
             blocks.append(
                 {"type": "quote_block", "paras": paras, "start_line": start_line, "end_line": i}
             )
+            if _quote_lines:
+                blocks[-1]["quote_breaks"] = quote_breaks
             continue
 
         # Footnote definitions [^id]: text
@@ -573,6 +687,8 @@ def parse_markdown_blocks(
                     "end_line": i,
                 }
             )
+            if _quote_lines:
+                blocks[-1]["quote_breaks"] = [_soft_break_offsets(item_text)]
             continue
 
         # Body paragraph
@@ -602,6 +718,8 @@ def parse_markdown_blocks(
         blocks.append(
             {"type": "p", "text": "".join(parts), "start_line": start_line, "end_line": i}
         )
+        if _quote_lines:
+            blocks[-1]["quote_breaks"] = [_soft_break_offsets(para_lines, has_break)]
 
     if config:
         chapters = _chapter_spans(content, config)
@@ -609,7 +727,9 @@ def parse_markdown_blocks(
         for block in blocks:
             if block["type"] == "h2":
                 block["chapter_num"] = chapter_numbers.get(block["start_line"], 0)
-        if chapters and blocks and not headings:
+        if chapters and blocks and (not headings or (
+            chapters[0][3] < headings[0][2] and _is_opening_prose(blocks[0], lines)
+        )):
             blocks[0]["chapter_num"] = chapters[0][0]
             blocks[0]["chapter_title"] = chapters[0][1]
     return blocks

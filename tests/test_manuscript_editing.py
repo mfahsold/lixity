@@ -1,10 +1,12 @@
 """Synthetic source fidelity, conflict and recovery contracts."""
+import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
+from hashlib import sha256
 
 import pytest
 
-from lixity.manuscript_editing import EditConflict, ManuscriptStore
+from lixity.manuscript_editing import EditConflict, ManuscriptStore, analyze_manuscript_snapshot
 
 
 def store(tmp_path, content=b"# Chapter\n\nSynthetic prose.\n"):
@@ -217,6 +219,42 @@ def test_timeline_sparse_empty_text_reports_null_metrics(tmp_path):
     assert delta["current"]["dialogue_ratio"] is None
     assert delta["deltas"]["asl"] is None
     assert delta["deltas"]["dialogue_ratio"] is None
+
+
+@pytest.mark.parametrize(("initial", "sentences"), [
+    ("# Manuscript\n\nShe said that a storm was coming.\n\n## Empty chapter\n", 1),
+    ("## Only code\n\n```\nOnly excluded code.\n```\n", 0),
+])
+def test_revision_snapshot_keeps_unmeasurable_chapter_rates_unknown(tmp_path, initial, sentences):
+    editor, _source = store(tmp_path, initial.encode())
+    current = editor.delta()["current"]
+    assert current["sentences"] == sentences
+    assert current["chapter_metrics"] == []
+    assert current["sticky_pct"] is None
+    assert current["indirect_speech_per_1000"] is None
+
+    opened = editor.open()
+    save(editor, opened, "## Chapter\n\nMara waits.\n")
+    history = editor.timeline()
+    assert history[0]["sticky_pct"] is None
+    assert history[0]["indirect_speech_per_1000"] is None
+    assert history[1]["sticky_pct"] == 0.0
+    assert history[1]["indirect_speech_per_1000"] == 0.0
+
+    previous_method = sha256(b'{"language":"en","snapshot_method":"lixity-snapshot/1"}').hexdigest()
+    with closing(editor._database()) as connection, connection:
+        connection.execute(
+            "UPDATE manuscript_revisions SET settings_sha256=?, sticky_pct=0, indirect_speech_per_1000=0 "
+            "WHERE document=? AND revision=?", (previous_method, editor.document, opened["revision"]),
+        )
+    archived = editor.timeline()
+    compared = editor.delta()
+    assert compared["has_baseline"] is True
+    for key in ("sticky_pct", "indirect_speech_per_1000"):
+        assert archived[0][key] == 0.0
+        assert compared["base"][key] is None
+        assert compared["deltas"][key] is None
+    assert editor.timeline() == archived
 
 
 def test_delta_uses_current_source_after_reverting_to_recorded_content(tmp_path):
@@ -662,6 +700,89 @@ def test_legacy_row_without_provenance_or_text_does_not_imply_a_comparable_basel
     assert editor.delta()["has_baseline"] is True  # The original text is retained and can be remeasured.
     editor.discard(opened["revision"])
     assert editor.delta()["deltas"] is None
+
+
+def test_delta_remeasures_retained_snapshots_cut_by_the_previous_appendix_policy(tmp_path):
+    previous_method = sha256(b'{"language":"en","snapshot_method":"lixity-snapshot/1"}').hexdigest()
+    original = "## One\n\nRain falls.\n\n<!-- ## Anmerkungen und Literaturverzeichnis -->\n\n## Two\n\nRain stays.\n"
+    editor, _source = store(tmp_path, original.encode())
+    opened = editor.open()
+    save(editor, opened, original + "It also hails.\n")
+    with closing(editor._database()) as connection, connection:
+        connection.execute(
+            "UPDATE manuscript_revisions SET settings_sha256=?, sentences=1 WHERE document=? AND revision=?",
+            (previous_method, editor.document, opened["revision"]),
+        )
+    archive = editor.timeline()
+    assert archive[0]["sentences"] == 1
+    compared = editor.delta()
+    assert compared["has_baseline"] is True
+    assert compared["base"]["sentences"] == 2
+    assert compared["deltas"]["sentences"] == 1
+    assert editor.timeline() == archive
+
+    editor.discard(opened["revision"])
+    unavailable = editor.delta()
+    assert unavailable["has_baseline"] is False
+    assert unavailable["deltas"] is None
+    assert editor.timeline() == archive
+
+
+def test_snapshot_dialogue_stops_at_chapters_and_counts_only_scope_words():
+    chapter_break = '## One\n\n“She waits.\n\n## Two\n\nHe rests.”'
+    snap = analyze_manuscript_snapshot(chapter_break)
+    assert snap["dialogue_ratio"] == 0.0
+    assert [chapter["dialog_pct"] for chapter in snap["chapter_metrics"]] == [0.0, 0.0]
+
+    custom_words = {"word_regex": r"^(\w+)"}
+    detached = '## One\n\nShe said, "Come." He said, "Rest."'
+    snap = analyze_manuscript_snapshot(detached, project_config=custom_words)
+    assert snap["dialogue_ratio"] == 0.0
+    assert snap["chapter_metrics"][0]["dialog_pct"] == 0.0
+
+
+def test_snapshot_indirect_speech_suppresses_unresolved_quotation_context():
+    prose = analyze_manuscript_snapshot("## One\n\nShe said that Mara had left.")
+    unclear = analyze_manuscript_snapshot("## One\n\n“She said that Mara had left.")
+    assert prose["indirect_speech_per_1000"] > 0.0
+    assert unclear["indirect_speech_per_1000"] == 0.0
+
+
+def test_delta_remeasures_both_retained_quotation_snapshots_with_current_method(tmp_path):
+    source = tmp_path / "book.md"
+    original = '## One\n\nShe said, "Come." He said, "Rest."'
+    source.write_text(original, encoding="utf-8")
+    settings = {"word_regex": r'^"?(\w+)'}
+    editor = ManuscriptStore(tmp_path, source, project_config=settings)
+    base = editor.open()
+    target = save(editor, base, '## One\n\n"Stay." She said, "Wait."')
+    save(editor, target, "## One\n\nThe light faded.", "b" * 32)
+
+    older_settings = {**settings, "language": "en", "snapshot_method": "lixity-snapshot/2"}
+    previous_method = sha256(json.dumps(older_settings, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    with closing(editor._database()) as connection, connection:
+        connection.execute(
+            "UPDATE manuscript_revisions SET settings_sha256=?, dialogue_ratio=200 "
+            "WHERE document=? AND revision IN (?, ?)",
+            (previous_method, editor.document, base["revision"], target["revision"]),
+        )
+    archive = editor.timeline()
+    assert [row["dialogue_ratio"] for row in archive[:2]] == [200.0, 200.0]
+
+    compared = editor.delta(base_revision=base["revision"], target_revision=target["revision"])
+    assert compared["has_baseline"] is True
+    assert compared["base"]["dialogue_ratio"] == 0.0
+    assert compared["current"]["dialogue_ratio"] == 100.0
+    assert compared["deltas"]["dialogue_ratio"] == 100.0
+    assert compared["base"]["created_at"] == archive[0]["created_at"]
+    assert compared["current"]["created_at"] == archive[1]["created_at"]
+    assert editor.timeline() == archive
+
+    editor.discard(target["revision"])
+    unavailable = editor.delta(base_revision=base["revision"], target_revision=target["revision"])
+    assert unavailable["has_baseline"] is False
+    assert unavailable["deltas"] is None
+    assert editor.timeline() == archive
 
 
 def test_delta_withholds_ambiguous_chapters_and_matches_renumbered_content(tmp_path):

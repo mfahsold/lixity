@@ -7,10 +7,45 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Add localized measurement references from the analysis overview, chapter
+  inspector, passage evidence and version comparison. Explain counting filters
+  and let writers decide how a passage reads in context.
+- Use one manuscript metric selector for the app and reports. Explain each
+  selection in seven languages and link to its exact method.
+
 ### Fixed
 
 - Align text and the dropdown indicator in the manuscript chapter picker at
   desktop and mobile widths.
+- Show the effective dialogue and chapter-closing thresholds. Label empty
+  tense review results, show the reason for the suggested passage and offer
+  sentence examples when they are available.
+- Keep flagged manuscript passages visible when navigating to them on a
+  narrow screen.
+- Keep function-word highlights visible across quotations and speech cues in
+  the browser sandbox.
+- Distinguish missing language rules, zero matches and unavailable text ranges
+  in manuscript analysis. Apply revision deltas to the matching source and
+  report missing chapter measurements as unavailable in version history.
+- Preserve evidence display preferences across metric changes and reloads.
+- Compare word-pattern groups only when the language profile supplies the
+  component rules. Describe a passage's comparison against its chapter median.
+- Keep sticky-sentence links when counted text and displayed text use
+  canonically equivalent Unicode forms.
+- Use the measured sentence lengths for paragraph averages, including with
+  boundary-sensitive custom word patterns. Bind revision deltas and review
+  results to the same project settings. Keep late responses from replacing
+  the editor's current revision measurements.
+- Keep cue hits consistent between corpus measurements and paragraph evidence
+  when a project changes the word tokenizer or an unrelated cue pattern.
+- Share quotation boundaries across the analysis, reader and retained-version
+  measurements. Recognize supported typography across paragraphs and count
+  each quoted word from its own analysis scope once. Use the actual baseline
+  date in the editor's version summary.
+- Preserve an opening prose passage before the first chapter heading and
+  ignore appendix markers shown inside comments and fenced code examples.
 
 ## [0.9.0] - Pending release
 

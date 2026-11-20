@@ -381,7 +381,8 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
     ):
-        label = _m(key) if key.startswith("dlg_") else key
+        label = (_m(key, short_words=config.short_turn_max_words, long_words=config.long_turn_min_words)
+                 if key.startswith("dlg_") else key)
         summary.add_row(label, value)
     con.print(summary)
 
@@ -538,7 +539,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
         ("pac_fastest", str(report.fastest_chapter or "–")),
         ("pac_slowest", str(report.slowest_chapter or "–")),
     ):
-        label = _m(key) if key.startswith("pac_") else key
+        label = _m(key, min_run=config.monotony_min_run) if key.startswith("pac_") else key
         summary.add_row(label, value)
     con.print(summary)
     if corridor_data is not None:
@@ -2617,7 +2618,7 @@ def _main(argv: list[str] | None = None) -> int:
                 args._project_config.get("scene_analysis"),
                 premeasured_chapters=metrics.chapters,
             ),
-            dialogue=dialogue_report(text, config).to_dict(),
+            dialogue=dialogue_report(text, config).to_display_dict(config),
             characters=character_report,
         ),
     )

@@ -19,11 +19,15 @@ from .analyzer import CorpusAnalyzer
 from .language import resolve_language
 from .math_core import mad, mean_or_zero, median, robust_z, significance_z
 from .models import CorpusConfig
+from .paragraph_evidence import available_paragraph_layers
+from .status import LAYER_FEATURES
 from .style_fingerprint import MIN_COMPARABLE_WORDS
 
 TELL_FEATURES = ("filter_density", "modal_density", "passive_density", "nominalization_density")
 SHOW_FEATURES = ("dialog_pct", "staccato_pct")
 MIN_COMPARISON_CHAPTERS = 3
+COMPARISON_LAYERS = frozenset(layer for layer, field_name in LAYER_FEATURES.items()
+                              if field_name in TELL_FEATURES or field_name in SHOW_FEATURES)
 
 
 @dataclass(frozen=True)
@@ -147,7 +151,9 @@ def showing_report(
     book adapter) to reuse the result instead of re-running the analyzer.
     """
     config = config or CorpusConfig()
-    language = resolve_language(config, sample_text=text).key
+    resolved = resolve_language(config, sample_text=text)
+    language = resolved.key
+    layers = available_paragraph_layers(resolved, config=config)
     resolved_metrics = (metrics if metrics is not None
                         else CorpusAnalyzer(config, sample_text=text).analyze_text(text))
     chapters = resolved_metrics.chapters
@@ -156,10 +162,11 @@ def showing_report(
             language=language, chapters=0, tell_z_mean=None, show_z_mean=None, balance_mean=None
         )
 
-    # Both a chapter word floor and enough eligible chapters are required for
-    # the manuscript-relative baseline; raw densities remain available.
+    # Both groups need their full, fixed set of counters and enough text.
+    # A profile without a rule cannot contribute a measured zero to a group.
     eligible_nums = {chapter.num for chapter in chapters if chapter.words >= MIN_COMPARABLE_WORDS}
-    comparable_nums = eligible_nums if len(eligible_nums) >= MIN_COMPARISON_CHAPTERS else set()
+    comparable_nums = (eligible_nums if len(eligible_nums) >= MIN_COMPARISON_CHAPTERS
+                       and COMPARISON_LAYERS.issubset(layers) else set())
     tell_z: dict[int, float] = {}
     show_z: dict[int, float] = {}
     for field_name in TELL_FEATURES:
@@ -190,7 +197,7 @@ def showing_report(
         sensory_dens = getattr(chapter, "sensory_density", 0.0)
         immersion_ratio = (
             round(sensory_dens / chapter.filter_density, 2)
-            if chapter.filter_density > 0.0
+            if "sensory" in layers and "filter" in layers and chapter.filter_density > 0.0
             else None
         )
         chapter_list.append(ChapterBalance(
@@ -218,7 +225,7 @@ def showing_report(
     tell_values = [c.tell_z for c in comparable_list if c.tell_z is not None]
     show_values = [c.show_z for c in comparable_list if c.show_z is not None]
     balance_values = [c.balance for c in comparable_list if c.balance is not None]
-    sensory_values = [c.sensory_density for c in comparable_list]
+    sensory_values = [c.sensory_density for c in comparable_list] if "sensory" in layers else []
     immersion_values = [c.immersion_ratio for c in comparable_list if c.immersion_ratio is not None]
 
     ranked = sorted(comparable_list, key=lambda item: item.balance or 0.0)

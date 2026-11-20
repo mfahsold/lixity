@@ -288,6 +288,10 @@ async function localizedContributions(browser) {
         const card = await openRange(quote);
         assert.equal(await card.locator('blockquote').textContent(), quote, 'marking preserves the original sentence');
         assert.deepEqual(await card.locator('blockquote mark').allTextContents(), counted);
+        const reference = card.locator('a[href*="/guides/metrics/"]');
+        assert.ok(await reference.isVisible(), 'The exact sentence evidence exposes its measurement reference');
+        assert.equal(await reference.getAttribute('href'), `/guides/metrics/${locale}.html#measure-sticky`);
+        assert.equal(await reference.textContent(), await page.evaluate(() => uiLabel('metric_reference_link')));
         const expected = await page.evaluate(() => {
           const format = new Intl.NumberFormat(document.documentElement.lang, {style:'percent',maximumFractionDigits:3});
           return {
@@ -667,6 +671,8 @@ async function metricPreferences(browser) {
 (async () => {
   const browser = await launchChromium();
   try {
+    await nativeQuotationEvidence(browser);
+    if (process.env.LIXITY_QUOTATION_ONLY) return;
     await touchArrivalAndCancellation(browser);
     await metricPreferences(browser);
     const proximity = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
@@ -696,10 +702,10 @@ async function metricPreferences(browser) {
         await marksEnabled(page, true);
         await selectMetric(page, 'nominal');
         await marksEnabled(page, true);
-        assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nomen-Endungen');
+        assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nominalstil-Muster');
         await page.locator('.layer-comparison-note > summary').click();
-        assert.match(await page.locator('#layer-comparison-hint').textContent(), /Die Prüfung des Antrags erfolgt/);
-        assert.match(await page.locator('#layer-comparison-hint').textContent(), /Gezählt werden nur/);
+        assert.match(await page.locator('#layer-comparison-hint').textContent(), /je 1\.000 Wörter/);
+        assert.match(await page.locator('#layer-comparison-hint').textContent(), /etwa Endungen wie „-ung“/);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({path:path.join(artifacts, `german-nominal-guide-${width}.png`)});
         await page.locator('.layer-comparison-note > summary').click();
@@ -1002,7 +1008,8 @@ async function metricPreferences(browser) {
     await native.close();
     console.log('native shared evidence renderer: passed');
     // Honest fallbacks and asynchronous cancellation use the same rendered dashboard.
-    for (const fault of ['adjacent', 'unsupported', 'no-crypto', 'bad-hash', 'bad-offset', 'unavailable', 'zero', 'partial', 'stale-digest', 'forced-colors']) {
+    for (const fault of ['adjacent', 'unsupported', 'no-crypto', 'bad-hash', 'bad-offset', 'unavailable',
+      'language-unavailable', 'unmapped', 'zero', 'partial', 'stale-digest', 'forced-colors']) {
       const page = await browser.newPage({viewport:{width:320,height:480}, reducedMotion:'no-preference'});
       page.setDefaultTimeout(10000);
       if (fault === 'unsupported') await page.addInitScript(() => {window.Highlight = undefined;});
@@ -1027,6 +1034,8 @@ async function metricPreferences(browser) {
           if (fault === 'bad-hash') entry[3].paragraph_sha256 = '0'.repeat(64);
           if (fault === 'bad-offset') entry[3].layers.filter.spans[0].end = 999999;
           if (fault === 'unavailable') entry[3].layers.filter = {kind:'pattern',status:'unavailable',count:null,mapped_count:0,spans:[],reason:'source_mismatch'};
+          if (fault === 'language-unavailable') entry[3].layers.filter = {kind:'pattern',status:'unavailable',count:null,mapped_count:0,spans:[],reason:'language_unavailable'};
+          if (fault === 'unmapped') entry[3].layers.filter = {kind:'pattern',status:'unavailable',count:2,mapped_count:0,spans:[],reason:'inline_mapping_unavailable'};
           if (fault === 'zero') entry[3].layers.filter = {kind:'pattern',status:'available',count:0,mapped_count:0,spans:[]};
           if (fault === 'partial') {entry[3].layers.filter.status = 'partial'; entry[3].layers.filter.count = 2; entry[3].layers.filter.reason = 'zero_width_matches';}
         }
@@ -1043,6 +1052,9 @@ async function metricPreferences(browser) {
         await settle(page);
         assert.deepEqual(await ranges(page), [], 'late verification never paints when analysis is off');
       } else {
+        const noticeKeys = {'bad-hash':'evidence_mismatch', 'bad-offset':'evidence_unavailable', unavailable:'evidence_mismatch',
+          'language-unavailable':'layer_language_unavailable', unmapped:'evidence_unmapped', zero:'evidence_no_visible_matches'};
+        if (noticeKeys[fault]) await page.waitForFunction(key => document.getElementById('analysis-evidence-status').textContent === uiLabel(key), noticeKeys[fault]);
         if (fault === 'adjacent') await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 2);
         else if (['partial', 'forced-colors'].includes(fault)) await page.waitForFunction(() => CSS.highlights.get('lixity-analysis-evidence')?.size === 1);
         else if (fault === 'zero') {
@@ -1071,7 +1083,15 @@ async function metricPreferences(browser) {
         if (fault === 'adjacent') assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'el', 'exclusive previous end belongs to the next span');
         else if (['unsupported', 'partial', 'forced-colors'].includes(fault)) assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
         else assert.equal(await page.locator('#analysis-evidence-card blockquote').count(), 0);
-        if (fault === 'unavailable') assert.doesNotMatch(await page.locator('#analysis-evidence-card').textContent(), /Mapped:/, 'unavailable/source mismatch must not present measured zero coverage');
+        if (['unavailable', 'language-unavailable', 'bad-offset'].includes(fault)) {
+          assert.equal(await page.locator('#analysis-evidence-card .analysis-evidence-number').count(), 0, 'unknown measurements have no numeric result');
+          assert.doesNotMatch(await page.locator('#analysis-evidence-card').textContent(), /Mapped:/, 'unknown measurements have no mapping tally');
+        }
+        if (fault === 'language-unavailable') assert.match(await page.locator('#analysis-evidence-card').textContent(), /unavailable for the selected language profile/);
+        if (fault === 'unmapped') {
+          assert.equal(await page.locator('#analysis-evidence-card .analysis-evidence-number').textContent(), '2');
+          assert.match(await page.locator('#analysis-evidence-card').textContent(), /Mapped: 0 of 2/);
+        }
         if (fault === 'zero') assert.match(await page.locator('#analysis-evidence-card').textContent(), /0 of 0/, 'actual measured zero remains distinct from unknown');
         if (fault === 'bad-hash') assert.match(await page.locator('#analysis-evidence-card').textContent(), /identity/);
         if (fault === 'no-crypto') assert.match(await page.locator('#analysis-evidence-card').textContent(), /HTTPS or on localhost/);
@@ -1089,6 +1109,186 @@ async function metricPreferences(browser) {
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode=1;});
 
+async function verifyNativeMetricReference(page, locale, chapterFeatures) {
+  const guideBase = `/guides/metrics/${locale}.html`;
+  const label = await page.evaluate(() => uiLabel('metric_reference_link'));
+  const source = page.url();
+  assert.equal(await page.locator('body').getAttribute('data-metric-guide'), guideBase);
+  await selectMetric(page, '');
+  const readerGuide = page.locator('#reader-analysis-guide');
+  await readerGuide.locator('summary').click();
+  const measurementLink = readerGuide.locator('a[href*="/guides/metrics/"]');
+  assert.ok(await measurementLink.isVisible());
+  assert.equal(await measurementLink.evaluate(link => link.href), new URL(`${guideBase}#measurements`, source).href);
+  assert.equal(await measurementLink.textContent(), label);
+  await selectMetric(page, 'asl');
+  assert.equal(await measurementLink.evaluate(link => link.href), new URL(`${guideBase}#measure-asl`, source).href);
+  await readerGuide.locator('summary').click();
+
+  assert.equal(await page.evaluate(() => LixityAnalysisEvidence.inspectSpan(document.querySelector('#chapters .ptext'), 'asl', 0)), true);
+  const reference = page.locator('#analysis-evidence-card a[href*="/guides/metrics/"]');
+  assert.ok(await reference.isVisible());
+  assert.equal(await reference.textContent(), label);
+  const [guide] = await Promise.all([page.waitForEvent('popup'), reference.click()]);
+  try {
+    await guide.waitForLoadState('domcontentloaded');
+    assert.equal(guide.url(), new URL(`${guideBase}#measure-asl`, source).href);
+    assert.equal(await guide.locator('html').getAttribute('lang'), locale);
+    assert.ok(await guide.locator('#measure-asl:target').isVisible());
+    assert.ok(await guide.evaluate(() => window.opener === null));
+    const layers = await page.locator('#style-layer option').evaluateAll(options => options.map(option => option.value).filter(Boolean));
+    const featureIds = [...chapterFeatures, ...layers].map(key => `measure-${key}`);
+    const sectionIds = ['analysis-review', 'measurements', 'flags', 'pacing', 'dist', 'sticky', 'dialogue',
+      'showing', 'motifs', 'characters', 'scenes', 'style', 'matrix', 'register-targets', 'revisions'];
+    assert.deepEqual(await guide.evaluate(ids => ids.filter(id => !document.getElementById(id)),
+      [...new Set([...sectionIds, ...featureIds])]), [], `${locale}: all measurement links have actual destinations`);
+    assert.equal(page.url(), source, 'Opening a reference leaves the workspace at the reading location');
+  } finally {
+    await guide.close();
+    if (await page.locator('#analysis-evidence-card').isVisible()) await page.keyboard.press('Escape');
+  }
+}
+
+async function verifyInlineMarkPreferences(browser, url) {
+  const page = await browser.newPage({viewport:{width:320,height:480}, reducedMotion:'reduce'});
+  const marks = page.locator('#analysis-evidence-enabled');
+  const analysis = page.locator('#manuscript-analysis-toggle');
+  const inlineOptions = ['sticky', 'dialogue_tag', 'indirect_speech', 'echo'];
+  try {
+    await page.goto(url);
+    await analysis.click();
+    for (const key of inlineOptions) {
+      await selectMetric(page, key);
+      assert.equal(await marks.isChecked(), true, `${key} defaults to marking on first use`);
+      await marks.uncheck();
+      await selectMetric(page, '');
+      await selectMetric(page, 'asl');
+      await selectMetric(page, key);
+      assert.equal(await marks.isChecked(), false, `${key} keeps the explicit choice when revisited`);
+    }
+    await analysis.click();
+    await analysis.click();
+    assert.equal(await marks.isChecked(), false, 'Turning Analysis off and on keeps the explicit choice');
+    await page.reload();
+    await analysis.click();
+    assert.equal(await page.locator('#style-layer').inputValue(), 'echo', 'Reload restores the selected metric');
+    assert.equal(await page.locator('#layer-evidence-legend').isVisible(), false, 'Reload leaves the marked-text legend hidden');
+    for (const key of inlineOptions) {
+      await selectMetric(page, key);
+      assert.equal(await marks.isChecked(), false, `${key} keeps its own explicit choice after reload`);
+    }
+    await marks.check();
+    await selectMetric(page, 'sticky');
+    await selectMetric(page, 'echo');
+    assert.equal(await marks.isChecked(), true, 'The reader also remembers an explicit re-enable');
+  } finally {await page.close();}
+}
+
+async function nativeQuotationEvidence(browser) {
+  const profiles = {
+    de:['„','“','Mara wartet','Bleib hier.','Komm morgen.','Mara ging.','D’Artagnan blieb allein.'],
+    en:['“','”','Mara waits','Stay here.','Come tomorrow.','Mara left.','I can’t go today.'],
+    es:['«','»','Mara espera','Quédate aquí.','Ven mañana.','Mara salió.','D’Artagnan siguió solo.'],
+    fr:['«','»','Mara attend','Reste ici.','Viens demain.','Mara partit.','L’objectif reste clair.'],
+    it:['«','»','Mara aspetta','Resta qui.','Vieni domani.','Mara partì.','L’autore resta solo.'],
+    nl:['‘','’','Mara wacht','Blijf hier.','Kom morgen.','Mara vertrok.',"'s Morgens bleef zij."],
+    pt:['“','”','Mara espera','Fique aqui.','Venha amanhã.','Mara saiu.','D’Artagnan ficou sozinho.'],
+  };
+  const source = String.raw`
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+project = Path(sys.argv[1])
+language, opening, closing, intro, first, second, outro, apostrophe = PROFILE
+manuscript = project / 'quotation-boundaries.md'
+manuscript.write_text(
+    f'## Synthetic quotation chapter\n\n{intro}. {opening}{first}\n\n{second}{closing} {outro}\n\n'
+    f'## Synthetic unresolved quotation\n\n{opening}{first}\n\n'
+    f'## Synthetic narration chapter\n\n{apostrophe}\n',
+    encoding='utf-8',
+)
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.language = language
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+server.serve_forever()
+`;
+  for (const locale of browserLocales) {
+    const [opening, closing, , first, second, , apostrophe] = profiles[locale];
+    const marker = opening + '…' + closing;
+    const directory = fs.mkdtempSync(path.join(artifacts, 'quotation-' + locale + '-'));
+    const server = await startNativeServer(source.replace('PROFILE', JSON.stringify([locale, ...profiles[locale]])), directory);
+    const before = fs.readFileSync(server.fixture.manuscript);
+    try {
+      for (const width of locale === 'de' || locale === 'en' ? [320, 1440] : [320]) {
+        const page = await browser.newPage({viewport:{width,height:780},reducedMotion:'reduce',colorScheme:width === 320 ? 'dark' : 'light'});
+        const errors = [], writes = [];
+        page.on('pageerror', error => errors.push(error.message));
+        page.on('request', request => {if (request.method() !== 'GET') writes.push(request.url());});
+        try {
+          await page.goto(server.fixture.url);
+          assert.equal(await page.locator('html').getAttribute('lang'), locale);
+          const evidence = await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => {
+            const item = paragraphContent[node.id], layer = item[3].layers.dialogue;
+            return {text:item[0], count:layer.count, denominator:layer.denominator, reason:layer.reason,
+              quoteRanges:layer.quotation_ranges.map(([start,end]) => Array.from(item[0]).slice(start,end).join('')),
+              spans:layer.spans.map(span => ({marker:span.quotation_marker, context:span.quotation_context}))};
+          }));
+          assert.equal(evidence.length, 4);
+          for (const [index, text] of [first, second].entries()) {
+            assert.equal(evidence[index].count, 2);
+            assert.equal(evidence[index].denominator, 4);
+            assert.deepEqual(evidence[index].quoteRanges, [text]);
+            assert.deepEqual(evidence[index].spans, [{marker, context:'in_quotation'}]);
+          }
+          assert.equal(evidence[2].reason, 'quotation_context_unresolved');
+          assert.deepEqual(evidence[2].quoteRanges, [], 'An unclosed mark cannot extend into a later chapter');
+          assert.equal(evidence[3].text, apostrophe);
+          assert.equal(evidence[3].count, 0);
+          assert.equal(evidence[3].reason, undefined);
+
+          await page.locator('#manuscript-analysis-toggle').click();
+          await selectMetric(page, 'dialogue');
+          await marksEnabled(page, true);
+          const paragraph = page.locator('#chapters .ptext').nth(1);
+          await paragraph.scrollIntoViewIfNeeded();
+          await page.waitForFunction(text => [...(CSS.highlights.get('lixity-analysis-evidence') || [])]
+            .some(range => range.toString() === text), second);
+          await paragraph.locator('.reader-paragraph-actions').click();
+          await explainFromMenu(page);
+          const card = page.locator('#analysis-evidence-card');
+          await card.waitFor({state:'visible'});
+          assert.equal(await card.locator('blockquote').textContent(), second);
+          assert.equal(await card.locator('[data-quote-context]').getAttribute('data-quote-context'), 'in_quotation');
+          const localized = await page.evaluate(value => ({
+            share:uiCountFormat('evidence_quotation_share', 4, {quoted:2}),
+            marker:uiFormat('evidence_quotation_marker', {marker:value}),
+          }), marker);
+          assert.ok((await card.locator('.analysis-evidence-paragraph').textContent()).includes(localized.share));
+          assert.equal(await card.locator('.analysis-evidence-explanation p').first().textContent(), localized.marker);
+          assert.equal(await card.evaluate(node => {
+            const box = node.getBoundingClientRect();
+            return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
+          }), true);
+          await page.keyboard.press('Escape');
+          await page.locator('#reader-direct-speech').click();
+          assert.equal(await page.locator('#reader-direct-speech').getAttribute('aria-pressed'), 'true');
+          await page.waitForFunction(expected => [...(CSS.highlights.get('lixity-direct-speech') || [])]
+            .map(range => range.toString()).join('|') === expected, first + '|' + second);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          assert.deepEqual(errors, []);
+          assert.deepEqual(writes, []);
+        } finally {await page.close();}
+      }
+      assert.deepEqual(fs.readFileSync(server.fixture.manuscript), before);
+    } finally {await server.close();}
+  }
+  console.log('Native quotation evidence: chapter boundaries, literal highlights, localized counts, punctuation and direct speech agree.');
+}
+
 async function nativeLegends(browser) {
   const classic = await browser.newPage({viewport:{width:320,height:480}});
   try {
@@ -1104,16 +1304,22 @@ import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+from lixity.style_fingerprint import FEATURES
 project = Path(sys.argv[1])
+language = LOCALE
 manuscript = project / 'legend.md'
-manuscript.write_text('## Synthetic legend chapter\n\nI feel the rain.\n\nThe gate was opened slowly beside the quiet garden.\n\nWait. The keeper watches the courtyard and listens.\n', encoding='utf-8')
+prose = '## Synthetic legend chapter\n\nI feel the rain.\n\nThe gate was opened slowly beside the quiet garden.\n\nWait. The keeper watches the courtyard and listens.\n'
+if language == 'generic':
+    prose += '\n'.join('\nThe keeper tends the garden, opens the gate, and walks away.' for _ in range(28))
+manuscript.write_text(prose, encoding='utf-8')
 (project / 'lixity.toml').write_text('title = "Synthetic legend clarity"\n', encoding='utf-8')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.source_input = str(manuscript)
-LixityServerHandler.language = LOCALE
+LixityServerHandler.language = language
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript),
+    'features': [field for field, _, _ in FEATURES]}), flush=True)
 server.serve_forever()
 `;
   for (const locale of browserLocales) {
@@ -1121,6 +1327,7 @@ server.serve_forever()
     const server = await startNativeServer(source.replace('LOCALE', JSON.stringify(locale)), directory);
     const bytes = fs.readFileSync(server.fixture.manuscript);
     try {
+      if (locale === 'de') await verifyInlineMarkPreferences(browser, server.fixture.url);
       const cases = [{width:1440}, {width:320}];
       if (locale === 'de' || locale === 'fr') cases.push({width:390});
       if (locale === 'en') cases.push({width:320, fault:'unsupported'}, {width:320, fault:'missing'});
@@ -1152,6 +1359,7 @@ server.serve_forever()
           assert.equal(await counted.locator('strong').textContent(), labels.counted);
           assert.equal(await comparison.locator('strong').first().textContent(), labels.comparison);
           assert.equal(await counted.locator('.analysis-evidence-swatch').evaluate(node => getComputedStyle(node).textDecorationLine.includes('underline')), true);
+          if (width === 1440) await verifyNativeMetricReference(page, locale, server.fixture.features);
           for (const key of ['asl', 'passive']) {
             await selectMetric(page, key);
             await marksEnabled(page, true);
@@ -1213,5 +1421,64 @@ server.serve_forever()
       assert.deepEqual(fs.readFileSync(server.fixture.manuscript), bytes);
     } finally {await server.close();}
   }
-  console.log('Native legends: distinct counted text/comparison keys, visible color meaning, Off/None/unchecked persistence, unavailable marks, and source identity passed in seven locales at desktop/mobile. ' + artifacts);
+  const directory = fs.mkdtempSync(path.join(artifacts, 'legend-generic-'));
+  const server = await startNativeServer(source.replace('LOCALE', JSON.stringify('generic')), directory);
+  const page = await browser.newPage({viewport:{width:320,height:480}, reducedMotion:'reduce'});
+  try {
+    await page.goto(server.fixture.url);
+    await page.locator('#manuscript-analysis-toggle').click();
+    await selectMetric(page, 'passive');
+    const unavailable = await page.evaluate(() => uiLabel('layer_language_unavailable'));
+    assert.equal(await page.locator('#style-layer option:checked').getAttribute('data-available'), '0');
+    assert.equal(await page.locator('#layer-language-unavailable').textContent(), unavailable);
+    assert.equal(await page.locator('#layer-language-unavailable').isVisible(), true);
+    assert.equal(await page.locator('#analysis-evidence-enabled').isDisabled(), true);
+    assert.equal(await page.locator('#layer-comparison-legend').isVisible(), false);
+    const guide = page.locator('#reader-analysis-guide');
+    await guide.locator('summary').click();
+    assert.ok((await guide.locator('#reader-analysis-guide-state').textContent()).includes(unavailable));
+    assert.equal(await guide.locator('#reader-metric-reference').evaluate(link => link.href),
+      new URL('/guides/metrics/en.html#measure-passive', page.url()).href);
+    await guide.locator('summary').click();
+    await page.locator('.ptext').first().locator('.reader-paragraph-actions').click();
+    await explainFromMenu(page);
+    const card = page.locator('#analysis-evidence-card');
+    await card.waitFor({state:'visible'});
+    assert.equal(await card.locator('.analysis-evidence-warning').textContent(), unavailable);
+    assert.equal(await card.locator('.analysis-evidence-number').count(), 0);
+    await page.keyboard.press('Escape');
+    await selectMetric(page, 'asl');
+    assert.equal(await page.locator('#analysis-evidence-enabled').isDisabled(), false);
+    assert.equal(await page.locator('#layer-language-unavailable').isVisible(), false);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    // The full explanation precedes the manuscript. The native selector still
+    // exposes the short status once that explanation has scrolled off screen.
+    for (const width of [320,1440]) {
+      await page.setViewportSize({width,height:720});
+      await page.locator('.ptext').nth(16).evaluate(node => node.scrollIntoView({block:'center',behavior:'instant'}));
+      await selectMetric(page, 'passive');
+      const state = await page.locator('#style-layer').evaluate(select => {
+        const option = select.selectedOptions[0];
+        const picker = select.getBoundingClientRect();
+        const note = document.getElementById('layer-language-unavailable').getBoundingClientRect();
+        const style = getComputedStyle(select);
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.font = [style.fontWeight,style.fontSize,style.fontFamily].join(' ');
+        const shortStatus = uiLabel('metric_context_missing');
+        return {caption:option.textContent, shortStatus,
+          statusFits:ctx.measureText(shortStatus).width <= select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+          pickerInView:picker.top >= 0 && picker.bottom <= innerHeight && picker.left >= 0 && picker.right <= innerWidth,
+          noteAboveViewport:note.bottom < 0, fits:document.documentElement.scrollWidth <= innerWidth};
+      });
+      assert.ok(state.noteAboveViewport && state.pickerInView, `Depth and sticky selection at ${width}px`);
+      assert.ok(state.caption.startsWith(state.shortStatus + ' · ') && state.statusFits && state.fits,
+        `Unavailable status stays visible without widening the selector at ${width}px`);
+      await selectMetric(page, 'asl');
+      assert.ok(!(await page.locator('#style-layer option:checked').textContent()).includes(state.shortStatus));
+    }
+  } finally {
+    await page.close();
+    await server.close();
+  }
+  console.log('Native legends: distinct counted text/comparison keys, visible color meaning, Off/None/unchecked persistence, unavailable marks, and source identity passed at desktop/mobile. ' + artifacts);
 }

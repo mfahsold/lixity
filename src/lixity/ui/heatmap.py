@@ -29,6 +29,7 @@ from .components import (
     esc,
     help_term,
     label,
+    metric_reference_link,
     modal_footer,
     modal_shell,
     panel_formatters,
@@ -121,6 +122,7 @@ def render_metric_context(
         '<div class="modal-body">'
         '<p id="metric-context-chapter"></p><p class="ctl-note" id="metric-context-sample"></p>'
         '<p id="metric-context-definition"></p>'
+        f'<p class="ctl-note">{metric_reference_link(labels, "style", element_id="metric-context-reference-link")}</p>'
         '<dl class="metric-context-comparison">'
         f'<div><dt>{esc(label(labels, "metric_context_this_chapter"))}</dt><dd id="metric-context-value"></dd></div>'
         f'<div><dt>{esc(label(labels, "metric_context_typical"))}</dt><dd id="metric-context-typical"></dd></div>'

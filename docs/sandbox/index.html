@@ -121,7 +121,7 @@
   <main>
   <span class="privacy-pill" id="privacy-pill">100 % lokal im Browser · Kein Server-Upload</span>
   <h1 id="title">Rhythmus und Wiederholungen im Text prüfen</h1>
-  <p class="lead" id="lead">Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Kürze einen langen Satz und beobachte, wie sich sein Balken unter „Satz für Satz“ verändert.</p>
+  <p class="lead" id="lead">Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Ändere die Länge eines Satzes und beobachte seinen Balken unter „Satz für Satz“.</p>
 
   <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
@@ -158,7 +158,10 @@
 
       <div class="bar-wrap">
         <strong id="rhythm-title">Kurze und lange Sätze</strong>
-        <p class="panel-guide" id="rhythm-guide">Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt dieser Wechsel zur Szene?</p>
+        <p class="panel-guide">
+          <span id="rhythm-guide">Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt der Wechsel zur Szene?</span>
+          <a href="../guides/metrics/de.html#pacing" target="_blank" rel="noopener noreferrer" data-metric-reference="rhythm">Satzlängen messen</a>
+        </p>
         <div class="bar" aria-hidden="true">
           <div class="seg-s" id="bar-s" style="width:0%"></div>
           <div class="seg-m" id="bar-m" style="width:0%"></div>
@@ -181,15 +184,21 @@
 
       <div>
         <strong id="echo-title">Wiederholte Wörter</strong>
-        <p class="panel-guide" id="echo-guide">Hier stehen Wörter, die im Text mindestens dreimal vorkommen, etwa Namen oder Beschreibungen. Wähle ein Wort, um zu sehen, ob die Wiederholung an diesen Stellen beabsichtigt ist.</p>
+        <p class="panel-guide">
+          <span id="echo-guide">Die Sandbox zeigt bis zu zwölf Wörter ab vier Zeichen, die im ganzen Text mindestens dreimal vorkommen. Funktionswörter wie „und“ bleiben außen vor. Wähle ein Wort für seine Fundstellen.</span>
+          <a href="../guides/metrics/de.html#measure-echo" target="_blank" rel="noopener noreferrer" data-metric-reference="echo">Wiederholungen in der App</a>
+        </p>
         <div class="echo-list" id="echo-list"></div>
       </div>
 
-      <p class="panel-guide" id="dialogue-guide">Blende den Erzähltext mit „Nur Dialoge“ ab und lies die Zitate laut. Lassen sich die Stimmen beim Lesen unterscheiden?</p>
+      <p class="panel-guide">
+        <span id="dialogue-guide">„Nur Dialoge“ hebt erkannte Zitate hervor. Lies sie laut. Lassen sich die Stimmen unterscheiden?</span>
+        <a href="../guides/metrics/de.html#measure-dialogue" target="_blank" rel="noopener noreferrer" data-metric-reference="dialogue">Wörter in Zitaten zählen</a>
+      </p>
       <div class="filter-bar" id="preview-controls" role="group" aria-label="Markierungen filtern">
         <button type="button" class="ctl ctl-sm" id="direct-speech-btn" aria-pressed="false" aria-controls="preview" aria-describedby="dialogue-guide">Nur Dialoge [D]</button>
         <button type="button" class="ctl ctl-sm" id="flt-echo" aria-pressed="true" aria-controls="preview">Wiederholungen</button>
-        <button type="button" class="ctl ctl-sm" id="flt-sticky" aria-pressed="true" aria-controls="preview">Viele Funktionswörter</button>
+        <button type="button" class="ctl ctl-sm" id="flt-sticky" aria-pressed="true" aria-controls="preview">Funktionswortfilter</button>
         <button type="button" class="ctl ctl-sm" id="flt-indirect" aria-pressed="true" aria-controls="preview">Indirekte Rede</button>
       </div>
 
@@ -197,15 +206,19 @@
       <div class="preview-legend" id="preview-legend">
         <span><mark class="echo" id="leg-echo">Wiederholtes Wort</mark></span>
         <span><mark class="indirect" id="leg-indirect">Hinweis auf indirekte Rede</mark></span>
-        <span><span class="sticky-sent" id="leg-sticky">Viele Funktionswörter</span></span>
+        <span><span class="sticky-sent" id="leg-sticky">Satz im Funktionswortfilter</span></span>
       </div>
       <div class="supplementary-kpis">
-        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Sätze mit vielen Funktionswörtern</span></div>
+        <div class="kpi"><span class="kpi-val" id="k-sticky">0</span><span class="kpi-lbl" id="l-sticky">Sätze im Funktionswortfilter</span></div>
         <div class="kpi"><span class="kpi-val" id="k-indirect">0</span><span class="kpi-lbl" id="l-indirect">Hinweise auf indirekte Rede</span></div>
       </div>
+      <p class="panel-guide">
+        <span id="sticky-guide">Der Filter zählt Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“.</span>
+        <a href="../guides/metrics/de.html#measure-sticky" target="_blank" rel="noopener noreferrer" data-metric-reference="sticky">Funktionswortfilter erklärt</a>
+      </p>
       <details class="panel-disclosure" id="more-measurements">
         <summary id="more-title">Weitere Werte zu Rhythmus und Dialog</summary>
-        <p class="panel-guide" id="more-guide">Bei höherer Streuung liegen die Satzlängen weiter auseinander. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Längengruppen verteilen.</p>
+        <p class="panel-guide" id="more-guide">Die Streuung zeigt, wie stark die Satzlängen im Verhältnis zum Durchschnitt schwanken. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Gruppen verteilen.</p>
         <div class="supplementary-kpis">
           <div class="kpi"><span class="kpi-val" id="k-cv">–</span><span class="kpi-lbl" id="l-cv">Streuung der Satzlängen</span></div>
           <div class="kpi"><span class="kpi-val" id="k-entropy">–</span><span class="kpi-lbl" id="l-entropy">Längen-Entropie (Bit)</span></div>
@@ -225,14 +238,14 @@
 
   <section class="panel" id="analysis-about" aria-labelledby="about-title">
     <h2 id="about-title">Was die Markierungen zeigen</h2>
-    <p class="panel-guide" id="about-body">Die Vorschau unterstreicht Sätze ab acht Wörtern, wenn mindestens 45 % davon Wörter wie „und“, „sie“ oder „war“ sind. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und entscheide, ob sie so klingen, wie du es möchtest.</p>
+    <p class="panel-guide" id="about-body">Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und achte darauf, wie sie dort wirken.</p>
     <div class="compare-grid">
       <div class="compare-col">
         <h3 id="cmp-sandbox-title">Browser-Sandbox (diese Seite)</h3>
         <ul id="cmp-sandbox-list">
           <li>Einzelne Szene oder lokale <code>.txt</code>/<code>.md</code>-Datei sofort prüfen</li>
           <li>Satz-für-Satz-Puls, Stimmenkontrast &amp; Nur-Dialog-Modus <code>[D]</code></li>
-          <li>Klickbare Wortechos, klebrige Sätze &amp; indirekte Rede</li>
+          <li>Wiederholte Wörter, Funktionswortfilter und Hinweise auf indirekte Rede</li>
           <li>Markdown-Kurzbericht für Notizen kopieren</li>
         </ul>
       </div>
@@ -284,35 +297,40 @@
       home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN', switchLanguage: 'Switch to English',
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Rhythmus und Wiederholungen im Text prüfen',
-      lead: 'Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Kürze einen langen Satz und beobachte, wie sich sein Balken unter „Satz für Satz“ verändert.',
+      lead: 'Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Ändere die Länge eines Satzes und beobachte seinen Balken unter „Satz für Satz“.',
       editorTitle: 'Text zum Ausprobieren', resultsTitle: 'Text im Überblick',
       draftGuide: 'Wähle „Rohentwurf“ und dann „flur“ unter „Wiederholte Wörter“. Die Vorschau zeigt dir die Fundstellen im Text.',
       placeholder: 'Text hier einfügen oder eine .txt-/.md-Datei ablegen…',
       emptyPreview: 'Füge Text ein oder wähle ein Beispiel, um die Markierungen zu sehen.',
       preset: 'Beispiele', draftBtn: 'Rohentwurf', clear: 'Leeren',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
-      previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Viele Funktionswörter', fltIndirect: 'Indirekte Rede',
-      dialogueGuide: 'Blende den Erzähltext mit „Nur Dialoge“ ab und lies die Zitate laut. Lassen sich die Stimmen beim Lesen unterscheiden?',
+      previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Funktionswortfilter', fltIndirect: 'Indirekte Rede',
+      dialogueGuide: '„Nur Dialoge“ hebt erkannte Zitate hervor. Lies sie laut. Lassen sich die Stimmen unterscheiden?',
       words: 'Wörter', sents: 'Sätze', asl: 'Wörter pro Satz im Schnitt', dlg: 'Anteil der Wörter in Zitaten',
       cv: 'Streuung der Satzlängen', entropy: 'Längen-Entropie (Bit)',
-      sticky: 'Sätze mit vielen Funktionswörtern', indirect: 'Hinweise auf indirekte Rede',
+      sticky: 'Sätze im Funktionswortfilter', indirect: 'Hinweise auf indirekte Rede',
+      stickyGuide: 'Der Filter zählt Sätze ab 8 Wörtern, wenn mindestens 45 % ihrer Wörter auf der Liste stehen, etwa „und“, „sie“ oder „war“.',
       moreTitle: 'Weitere Werte zu Rhythmus und Dialog',
-      moreGuide: 'Bei höherer Streuung liegen die Satzlängen weiter auseinander. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Längengruppen verteilen.',
+      moreGuide: 'Die Streuung zeigt, wie stark die Satzlängen im Verhältnis zum Durchschnitt schwanken. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Gruppen verteilen.',
       voiceTitle: 'Wörter pro Satz im Schnitt', vNar: 'Erzähltext', vDlg: 'Zitate', vCon: 'Zitate minus Erzähltext',
       voiceGuide: 'Bei −3 sind die Sätze in Zitaten im Schnitt drei Wörter kürzer als im Erzähltext.',
       rhythm: 'Kurze und lange Sätze', s: 'Kurz (≤ 7 Wörter)', m: 'Mittel (8–24 Wörter)', c: 'Lang (≥ 25 Wörter)',
-      rhythmGuide: 'Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt dieser Wechsel zur Szene?',
+      rhythmGuide: 'Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt der Wechsel zur Szene?',
       sparkTitle: 'Satz für Satz', sparkHover: 'Je höher der Balken, desto länger der Satz.', sparkSentence: 'Satz', sparkWords: 'Wörter',
       echoTitle: 'Wiederholte Wörter', noneEcho: 'Keine passenden Wiederholungen gefunden.',
-      echoGuide: 'Hier stehen Wörter, die im Text mindestens dreimal vorkommen, etwa Namen oder Beschreibungen. Wähle ein Wort, um zu sehen, ob die Wiederholung an diesen Stellen beabsichtigt ist.',
-      legEcho: 'Wiederholtes Wort', legIndirect: 'Hinweis auf indirekte Rede', legSticky: 'Viele Funktionswörter',
+      echoGuide: 'Die Sandbox zeigt bis zu zwölf Wörter ab vier Zeichen, die im ganzen Text mindestens dreimal vorkommen. Funktionswörter wie „und“ bleiben außen vor. Wähle ein Wort für seine Fundstellen.',
+      legEcho: 'Wiederholtes Wort', legIndirect: 'Hinweis auf indirekte Rede', legSticky: 'Satz im Funktionswortfilter',
+      metricReferences: {
+        rhythm: 'Satzlängen messen', echo: 'Wiederholungen in der App',
+        dialogue: 'Wörter in Zitaten zählen', sticky: 'Funktionswortfilter erklärt'
+      },
       aboutTitle: 'Was die Markierungen zeigen',
-      about: 'Die Vorschau unterstreicht Sätze ab acht Wörtern, wenn mindestens 45 % davon Wörter wie „und“, „sie“ oder „war“ sind. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und entscheide, ob sie so klingen, wie du es möchtest.',
+      about: 'Die Sandbox erkennt Sätze, Zitate und Wiederholungen mit einfacheren Regeln als die Lixity-App. Blaue Markierungen zeigen mögliche indirekte Rede, etwa „sie sagte, dass“. Lies die markierten Stellen im Zusammenhang und achte darauf, wie sie dort wirken.',
       cmpSandboxTitle: 'Browser-Sandbox (diese Seite)',
       cmpSandbox: [
         'Einzelne Szene oder lokale .txt/.md-Datei sofort prüfen',
         'Satz-für-Satz-Puls, Stimmenkontrast & Nur-Dialog-Modus [D]',
-        'Klickbare Wortechos, klebrige Sätze & indirekte Rede',
+        'Wiederholte Wörter, Funktionswortfilter und Hinweise auf indirekte Rede',
         'Markdown-Kurzbericht für Notizen kopieren'
       ],
       cmpLocalTitle: 'Volle Lixity-App & CLI (lokal installiert)',
@@ -330,35 +348,40 @@
       home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE', switchLanguage: 'Auf Deutsch wechseln',
       pill: '100% local in your browser · Zero server upload',
       title: 'Explore rhythm and repetition in a passage',
-      lead: 'Edit the sample or open a scene of your own as a .txt or .md file. Shorten a long sentence and watch its bar change under “Sentence by sentence”.',
+      lead: 'Edit the sample or open a scene of your own as a .txt or .md file. Change the length of a sentence and watch its bar under “Sentence by sentence”.',
       editorTitle: 'Passage to try', resultsTitle: 'Passage at a glance',
       draftGuide: 'Choose “German draft”, then select “flur” under “Repeated words” to see each occurrence in the preview.',
       placeholder: 'Paste your passage here or drop a .txt/.md file…',
       emptyPreview: 'Paste text or choose an example to see highlights.',
       preset: 'Examples', draftBtn: 'German draft', clear: 'Clear',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
-      previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Many function words', fltIndirect: 'Indirect speech',
-      dialogueGuide: 'Use “Dialogue only” to dim the narration, then read the quotations aloud. Can you tell the voices apart?',
+      previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Function-word filter', fltIndirect: 'Indirect speech',
+      dialogueGuide: '“Dialogue only” highlights detected quotations. Read them aloud. Can you tell the voices apart?',
       words: 'Words', sents: 'Sentences', asl: 'Average words per sentence', dlg: 'Share of words in quotes',
       cv: 'Variation in sentence length', entropy: 'Length entropy (bits)',
-      sticky: 'Sentences with many function words', indirect: 'Possible indirect speech',
+      sticky: 'Sentences matching the function-word filter', indirect: 'Possible indirect speech',
+      stickyGuide: 'The filter counts sentences of at least 8 words when 45% or more of their words are on the list, such as “and”, “she”, or “was”.',
       moreTitle: 'More about rhythm and dialogue',
-      moreGuide: 'Higher variation means sentence lengths are farther apart. Entropy increases when sentences are distributed more evenly across the three length groups.',
+      moreGuide: 'Variation shows how much sentence lengths differ relative to the average. Entropy increases when sentences are spread more evenly across the three groups.',
       voiceTitle: 'Average words per sentence', vNar: 'Narration', vDlg: 'Quotes', vCon: 'Quotes minus narration',
       voiceGuide: 'At −3, sentences in quotations are three words shorter on average than sentences in the narration.',
       rhythm: 'Short and long sentences', s: 'Short (≤ 7 words)', m: 'Medium (8–24 words)', c: 'Long (≥ 25 words)',
       rhythmGuide: 'The bar shows how many of your sentences fall into each length group. Does the mix fit the scene?',
       sparkTitle: 'Sentence by sentence', sparkHover: 'A taller bar means a longer sentence.', sparkSentence: 'Sentence', sparkWords: 'words',
       echoTitle: 'Repeated words', noneEcho: 'No matching repetitions found.',
-      echoGuide: 'These words appear at least three times in the passage. Select a word to see where it repeats and decide whether it belongs there.',
-      legEcho: 'Repeated word', legIndirect: 'Possible indirect speech', legSticky: 'Many function words',
+      echoGuide: 'The sandbox lists up to 12 words of at least four characters that appear three or more times anywhere in the passage. It skips common function words such as “and”. Select a word to see where it repeats.',
+      legEcho: 'Repeated word', legIndirect: 'Possible indirect speech', legSticky: 'Sentence matching the function-word filter',
+      metricReferences: {
+        rhythm: 'How sentence lengths are measured', echo: 'Repetitions in the app',
+        dialogue: 'How words in quotes are counted', sticky: 'How the function-word filter works'
+      },
       aboutTitle: 'What the highlights show',
-      about: 'The preview underlines sentences of at least eight words when at least 45% are words like “and”, “she” or “was”. Blue highlights show possible indirect speech, such as “she said that”. Read each marked passage in context and decide whether it sounds the way you want.',
+      about: 'The sandbox detects sentences, quotations, and repetitions using simpler rules than the Lixity app. Blue highlights show possible indirect speech, such as “she said that”. Read each marked passage in context and listen to how it sounds there.',
       cmpSandboxTitle: 'Browser sandbox (this page)',
       cmpSandbox: [
         'Inspect a single scene or local .txt/.md file immediately',
         'Sentence-by-sentence pulse, voice contrast & Dialogue-only [D]',
-        'Clickable word echoes, sticky sentences & indirect speech',
+        'Repeated words, the function-word filter, and possible indirect speech',
         'Copy a Markdown summary for your revision notes'
       ],
       cmpLocalTitle: 'Full Lixity App & CLI (installed locally)',
@@ -399,7 +422,20 @@
   }
 
   function splitSentences(text) {
-    return text.split(/[.!?]+(?:\s|$)/).map(s => s.trim()).filter(Boolean);
+    const parts = text.split(/([.!?]+(?:\s|$))/);
+    const sentences = [];
+    let offset = 0;
+    for (let i = 0; i < parts.length; i += 2) {
+      const part = parts[i];
+      const trimmedStart = part.trimStart();
+      const sentence = trimmedStart.trimEnd();
+      if (sentence) {
+        const start = offset + part.length - trimmedStart.length;
+        sentences.push({text: sentence, start, end: start + sentence.length});
+      }
+      offset += part.length + (parts[i + 1]?.length || 0);
+    }
+    return sentences;
   }
 
   function renderSparkline(sentDetails) {
@@ -445,19 +481,20 @@
     const dlgSents = splitSentences(dlgText);
     const narSents = splitSentences(narText);
 
-    let shortC = 0, medC = 0, longC = 0, stickyC = 0;
+    let shortC = 0, medC = 0, longC = 0;
     const sentDetails = [];
-    const stickySet = new Set();
-    sents.forEach(s => {
-      const sw = s.match(/[\p{L}\p{N}_]+/gu) || [];
+    const stickyRanges = [];
+    sents.forEach(({text, start, end}) => {
+      const sw = text.match(/[\p{L}\p{N}_]+/gu) || [];
       const n = sw.length;
-      sentDetails.push({n, text: s});
+      sentDetails.push({n, text});
       if (n <= 7) shortC++; else if (n >= 25) longC++; else medC++;
       if (n >= 8) {
         const glue = sw.filter(w => STOP.has(w.toLowerCase())).length;
-        if ((glue / n) >= 0.45) { stickyC++; stickySet.add(s); }
+        if ((glue / n) >= 0.45) stickyRanges.push([start, end]);
       }
     });
+    const stickyC = stickyRanges.length;
     const sentLens = sentDetails.map(d => d.n);
     const totalS = sents.length || 1;
     let cvText = '–', entropyText = '–';
@@ -562,37 +599,51 @@
       return;
     }
     function renderEchoes(text) {
-      let html = esc(text);
-      if (echoSet.size) {
-        html = html.replace(/[\p{L}\p{N}_]+/gu, m => {
-          const lw = m.toLowerCase();
-          if (!echoSet.has(lw)) return m;
-          const cls = focusedEcho === lw ? 'echo focus-echo' : 'echo';
-          return `<mark class="${cls}">${m}</mark>`;
-        });
+      if (!echoSet.size) return esc(text);
+      let html = '', position = 0;
+      for (const match of text.matchAll(/[\p{L}\p{N}_]+/gu)) {
+        const word = match[0];
+        const key = word.toLowerCase();
+        if (!echoSet.has(key)) continue;
+        const cls = focusedEcho === key ? 'echo focus-echo' : 'echo';
+        html += esc(text.slice(position, match.index)) + `<mark class="${cls}">${esc(word)}</mark>`;
+        position = match.index + word.length;
       }
-      return html;
+      return html + esc(text.slice(position));
     }
-    function renderProseWithIndirect(text, spans) {
-      if (!spans.length) return renderEchoes(text);
-      let out = '', pos = 0;
-      spans.forEach(([s, e]) => {
-        if (s > pos) out += renderEchoes(text.slice(pos, s));
-        out += '<mark class="indirect">' + renderEchoes(text.slice(s, e)) + '</mark>';
-        pos = e;
-      });
-      if (pos < text.length) out += renderEchoes(text.slice(pos));
-      return out;
-    }
+    let partStart = 0, stickyIndex = 0;
     preview.innerHTML = parts.map((part, idx) => {
       if (!part) return '';
-      const isDlg = idx % 2 === 1;
-      const cls = isDlg ? 'dlg-seg' : 'prose-seg';
-      let rendered = isDlg ? renderEchoes(part) : renderProseWithIndirect(part, proseIndirect[idx]);
-      stickySet.forEach(s => {
-        const es = renderEchoes(s);
-        if (es && rendered.includes(es)) rendered = rendered.replace(es, '<span class="sticky-sent">' + es + '</span>');
-      });
+      const partEnd = partStart + part.length;
+      const indirect = proseIndirect[idx];
+      let position = 0, indirectIndex = 0;
+      function renderThrough(end) {
+        let html = '';
+        while (position < end && indirect[indirectIndex]?.[0] < end) {
+          const [markStart, markEnd] = indirect[indirectIndex];
+          if (position < markStart) html += renderEchoes(part.slice(position, markStart));
+          const markUntil = Math.min(markEnd, end);
+          html += '<mark class="indirect">' + renderEchoes(part.slice(Math.max(position, markStart), markUntil)) + '</mark>';
+          position = markUntil;
+          if (position === markEnd) indirectIndex++;
+        }
+        html += renderEchoes(part.slice(position, end));
+        position = end;
+        return html;
+      }
+      let rendered = '';
+      // A sentence can continue into the next quotation or prose part.
+      while (stickyIndex < stickyRanges.length) {
+        const [start, end] = stickyRanges[stickyIndex];
+        if (start >= partEnd) break;
+        rendered += renderThrough(Math.max(0, start - partStart));
+        rendered += '<span class="sticky-sent">' + renderThrough(Math.min(end, partEnd) - partStart) + '</span>';
+        if (end > partEnd) break;
+        stickyIndex++;
+      }
+      rendered += renderThrough(part.length);
+      partStart = partEnd;
+      const cls = idx % 2 === 1 ? 'dlg-seg' : 'prose-seg';
       return '<span class="' + cls + '">' + rendered + '</span>';
     }).join('');
   }
@@ -631,6 +682,7 @@
     el('l-cv').textContent = t.cv;
     el('l-entropy').textContent = t.entropy;
     el('l-sticky').textContent = t.sticky;
+    el('sticky-guide').textContent = t.stickyGuide;
     el('l-indirect').textContent = t.indirect;
     el('more-title').textContent = t.moreTitle;
     el('more-guide').textContent = t.moreGuide;
@@ -647,6 +699,10 @@
     el('leg-echo').textContent = t.legEcho;
     el('leg-indirect').textContent = t.legIndirect;
     el('leg-sticky').textContent = t.legSticky;
+    document.querySelectorAll('[data-metric-reference]').forEach(link => {
+      link.textContent = t.metricReferences[link.dataset.metricReference];
+      link.setAttribute('href', `../guides/metrics/${lang}.html${link.hash}`);
+    });
     el('about-title').textContent = t.aboutTitle;
     el('about-body').textContent = t.about;
     el('cmp-sandbox-title').textContent = t.cmpSandboxTitle;

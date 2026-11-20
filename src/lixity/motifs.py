@@ -21,13 +21,13 @@ from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from functools import cached_property
 from itertools import accumulate, pairwise
 from typing import TYPE_CHECKING, Any
 
 from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import (
     _chapter_spans,
+    before_appendix,
     chapter_heading_spans,
     counting_inline_text,
     parse_markdown_blocks,
@@ -36,11 +36,9 @@ from .markdown_parser import (
     strip_inline_markup,
 )
 from .models import CorpusConfig
-from .paragraph_evidence import (
-    EvidenceSpan,
-    classify_span_quotation_context,
-    extract_paragraph_dialogue_spans,
-)
+from .paragraph_evidence import quotation_context
+from .quotation import QuotationAnalysis
+from .quotation_projection import QuotedProse, project_quotations, quoted_prose
 from .text_normalization import CountingText, counting_view
 
 if TYPE_CHECKING:
@@ -181,14 +179,7 @@ class _ReaderBlock:
     index: int
     paragraph: ParagraphProfile | ParagraphText
     view: CountingText
-    dialogue_re: re.Pattern[str]
-    word_re: re.Pattern[str]
-
-    @cached_property
-    def dialogue_context(self) -> tuple[list[EvidenceSpan], str]:
-        return extract_paragraph_dialogue_spans(
-            self.paragraph.text, self.view.text, self.view, self.dialogue_re, self.word_re
-        )
+    quotation: QuotationAnalysis
 
 
 @dataclass
@@ -208,7 +199,7 @@ class _OccurrenceLocations:
         self.count += 1
         if len(self.items) < MAX_DISPLAY_OCCURRENCES:
             occurrence = _make_occurrence(
-                block.index, block.paragraph, block.view, left, right, dialogue_context=block.dialogue_context
+                block.index, block.paragraph, block.view, left, right, quotation=block.quotation
             )
             if occurrence is not None:
                 self.items.append(occurrence)
@@ -219,13 +210,12 @@ def _reader_block_ranges(
     config: CorpusConfig,
     chapter_prose: Mapping[int, str],
     paragraphs: Sequence[ParagraphProfile | ParagraphText],
-    dialogue_re: re.Pattern[str],
-    word_re: re.Pattern[str],
+    projection: QuotedProse,
 ) -> dict[int, list[_ReaderBlock]]:
     """Align the counted chapter projection to exact profiled line anchors."""
     by_line = {(p.chapter_num, p.start_line, p.end_line): (index, p)
                for index, p in enumerate(paragraphs)}
-    source = text.split(config.appendix_marker, 1)[0] if config.appendix_marker else text
+    source = before_appendix(text, config)
     line_offsets = [0, *accumulate(len(line) for line in source.splitlines(keepends=True))]
     headings = chapter_heading_spans(source, config)
     heading_lines = [line for _start, _end, line, _title in headings]
@@ -254,7 +244,8 @@ def _reader_block_ranges(
                     index, paragraph = by_line[anchor]
                     view = counting_view(paragraph.text)
                     if paragraph.text == strip_inline_markup(value) and view.text == clean:
-                        projected.append(_ReaderBlock(cursor, index, paragraph, view, dialogue_re, word_re))
+                        quotation = projection.paragraph_analysis(paragraph.start_line)
+                        projected.append(_ReaderBlock(cursor, index, paragraph, view, quotation))
                 chunks.append(clean)
                 cursor += len(clean) + 2
         if "\n\n".join(chunks) == chapter_prose[number]:
@@ -281,6 +272,7 @@ def motif_report(
     top_echoes: int = DEFAULT_TOP_ECHOES,
     *,
     _paragraphs: Sequence[ParagraphProfile | ParagraphText] | None = None,
+    _projection: QuotedProse | None = None,
 ) -> MotifReport:
     """Motif presence and repetition signals (deterministic, offline).
 
@@ -306,7 +298,7 @@ def motif_report(
                           for number, body in chapter_bodies.items()}
     else:
         reader_blocks = _reader_block_ranges(
-            text, config, chapter_bodies, _paragraphs, compile_pattern(resolved.dialogue_regex), word_re
+            text, config, chapter_bodies, _paragraphs, _projection or quoted_prose(text, config, language=resolved)
         )
         token_group = 1 if word_re.groups == 1 else 0
         for number, body in chapter_bodies.items():
@@ -535,7 +527,7 @@ def _make_occurrence(
     start: int,
     end: int,
     *,
-    dialogue_context: tuple[Sequence[EvidenceSpan], str] | None = None,
+    quotation: QuotationAnalysis | None = None,
 ) -> dict[str, Any] | None:
     mapped = view.source_span(start, end)
     if mapped is None:
@@ -555,11 +547,8 @@ def _make_occurrence(
         "quote": display[src_start:src_end],
         "excerpt": _occurrence_excerpt(display, src_start, src_end),
     }
-    if dialogue_context is not None:
-        d_spans, d_status = dialogue_context
-        q_ctx = classify_span_quotation_context(
-            src_start, src_end, d_spans, dialogue_status=d_status
-        )
+    if quotation is not None:
+        q_ctx = quotation_context(start, end, quotation.quote_ranges, quotation.unclear)
         if q_ctx is not None:
             occurrence["quotation_context"] = q_ctx
     return occurrence
@@ -583,14 +572,14 @@ def search_manuscript(
     )
     cfg = config or CorpusConfig()
     resolved = resolve_language(cfg, sample_text=text)
-    word_re = compile_word_pattern(resolved.word_regex)
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
+    blocks = parse_markdown_blocks(text, cfg, _quote_lines=True)
+    projection = project_quotations(blocks, cfg, resolved)
 
     if paragraphs is None:
         from .style_profile import ParagraphProfiler
 
         paragraphs = ParagraphProfiler(cfg, sample_text=text).text_blocks(
-            parse_markdown_blocks(text, cfg)
+            blocks
         )
 
     occurrences: list[dict[str, Any]] = []
@@ -602,18 +591,16 @@ def search_manuscript(
         matches = [match.span() for match in compiled.finditer(clean) if match.end() > match.start()]
         if not matches:
             continue
-        d_ctx: tuple[list[EvidenceSpan], str] | None = None
+        bounds = projection.blocks.get(paragraph.start_line)
+        quotation = (projection.slice_analysis(*bounds)
+                     if bounds is not None and projection.text[slice(*bounds)] == clean else None)
         for s, e in matches:
             if limit is not None and len(occurrences) >= limit:
                 mapped = view.source_span(s, e)
                 if mapped is not None and mapped[1] > mapped[0]:
                     total_matches += 1
                 continue
-            if d_ctx is None:
-                d_ctx = extract_paragraph_dialogue_spans(
-                    display, clean, view, dialogue_re, word_re
-                )
-            occ = _make_occurrence(idx, paragraph, view, s, e, dialogue_context=d_ctx)
+            occ = _make_occurrence(idx, paragraph, view, s, e, quotation=quotation)
             if occ is not None:
                 total_matches += 1
                 occurrences.append(occ)

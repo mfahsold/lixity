@@ -24,25 +24,21 @@ from typing import Any
 from .dialogue import find_indirect_speech_spans, indirect_speech_available
 from .diversity import mattr as mattr_value
 from .io import FileUtils
-from .language import (
-    compile_pattern,
-    compile_word_pattern,
-    quotation_capture_group,
-    quotation_texts,
-    resolve_language,
-)
+from .language import compile_word_pattern, resolve_language
 from .log import get_logger, log_event
 from .markdown_parser import (
-    COMMENT_STRIP_RE,
+    before_appendix,
     chapter_heading_spans,
-    prose_paragraphs,
     prose_text,
     split_chapters,
     split_scenes,
+    strip_html_comments,
 )
 from .models import CorpusConfig
 from .pacing import compute_rhythm_profile
 from .pipeline import resolve_document_config
+from .quotation import count_quoted_words, merge_quotation_spans
+from .quotation_projection import quoted_prose
 from .sentences import split_prose_sentences
 
 logger = get_logger("manuscript")
@@ -103,7 +99,7 @@ def snapshot_settings_digest(
         if key in CorpusConfig.model_fields and key != "language"
     }
     effective["language"] = language or "en"
-    effective["snapshot_method"] = "lixity-snapshot/1"
+    effective["snapshot_method"] = "lixity-snapshot/3"
     payload = json.dumps(effective, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
@@ -775,18 +771,14 @@ def analyze_manuscript_snapshot(
         cfg = config
         resolved = resolve_language(cfg, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
     lang_key = resolved.key
     function_words = resolved.function_words
     sticky_available = bool(function_words)
     ind_speech_available = indirect_speech_available(lang_key)
 
-    if cfg.appendix_marker and cfg.appendix_marker in text:
-        main_text, _ = text.split(cfg.appendix_marker, 1)
-    else:
-        main_text = text
+    main_text = before_appendix(text, cfg)
 
-    cleaned_main = COMMENT_STRIP_RE.sub("", main_text)
+    cleaned_main = strip_html_comments(main_text)
     prose_parts: list[str] = []
     cursor = 0
     for start, end, _line, _title in chapter_heading_spans(cleaned_main, cfg):
@@ -797,8 +789,8 @@ def analyze_manuscript_snapshot(
     legacy_clean_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
     clean_words = len(legacy_clean_main.split())
 
-    prose_units = prose_paragraphs(main_text, cfg)
-    prose_main = "\n\n".join(prose_units)
+    projection = quoted_prose(main_text, cfg, language=resolved)
+    prose_main = projection.text
 
     tokens = word_re.findall(prose_main)
     n_tokens = len(tokens)
@@ -816,20 +808,19 @@ def analyze_manuscript_snapshot(
         asl = 0.0
         sentence_cv = 0.0
 
-    dialog_matches = quotation_texts(dialogue_re, prose_main)
-    dialog_words = sum(len(word_re.findall(m)) for m in dialog_matches)
+    dialog_words = count_quoted_words(prose_main, word_re, projection.analysis.spans)
     dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 
     chapters: list[dict[str, Any]] = []
     all_corpus_sentence_lengths: list[int] = []
     total_sticky_sentences = 0
     total_sticky_denom = 0
-    all_dialogue_words = 0
+    indirect_speech_words = 0
     all_indirect_speech = 0
-    capture = quotation_capture_group(dialogue_re) if ind_speech_available else 0
 
     for number, title, body in split_chapters(main_text, cfg):
-        cl_b = prose_text(body, _front_matter=False)
+        chapter = quoted_prose(body, cfg, language=resolved, chapter_body=True)
+        cl_b = chapter.text
         c_words = word_re.findall(cl_b)
         if not c_words:
             chapters.append({
@@ -854,8 +845,7 @@ def analyze_manuscript_snapshot(
         c_sent_lengths = [len(toks) for toks in c_sent_tokens if toks]
         c_total_sents = len(c_sent_lengths)
         c_asl = (sum(c_sent_lengths) / c_total_sents) if c_total_sents else 0.0
-        c_dial = quotation_texts(dialogue_re, cl_b)
-        c_dial_words = sum(len(word_re.findall(m)) for m in c_dial)
+        c_dial_words = count_quoted_words(cl_b, word_re, chapter.analysis.spans)
         c_dial_pct = (c_dial_words / n_cw) * 100.0
 
         chapters.append({
@@ -896,35 +886,16 @@ def analyze_manuscript_snapshot(
                                 total_sticky_sentences += 1
 
         if ind_speech_available:
-            all_dialogue_words += n_cw
-            spans = sorted(
-                match.span(capture)
-                for match in dialogue_re.finditer(cl_b)
-                if match.start(capture) >= 0 and match.end(capture) > match.start(capture)
-            )
-            quoted_spans: list[tuple[int, int]] = []
-            for start, end in spans:
-                if quoted_spans and start <= quoted_spans[-1][1]:
-                    quoted_spans[-1] = (quoted_spans[-1][0], max(end, quoted_spans[-1][1]))
-                else:
-                    quoted_spans.append((start, end))
-            all_indirect_speech += len(find_indirect_speech_spans(cl_b, quoted_spans, lang_key))
+            indirect_speech_words += n_cw
+            for start, end in chapter.regions:
+                analysis = chapter.slice_analysis(start, end)
+                excluded = merge_quotation_spans((*analysis.quote_ranges, *analysis.unclear))
+                all_indirect_speech += len(find_indirect_speech_spans(cl_b[start:end], excluded, lang_key))
 
     rhythm = compute_rhythm_profile(
         all_corpus_sentence_lengths, short_sentence_max=cfg.short_sentence_max
     )
     raw_entropy = rhythm.get("length_entropy")
-    sticky_pct_val = (
-        (total_sticky_sentences / total_sticky_denom * 100.0)
-        if (total_sticky_denom and sticky_available)
-        else 0.0
-    )
-    indirect_per_1000 = (
-        (all_indirect_speech / all_dialogue_words * 1000.0)
-        if (all_dialogue_words and ind_speech_available)
-        else 0.0
-    )
-
     return {
         "words": int(clean_words),
         "sentences": int(total_sentences),
@@ -934,14 +905,12 @@ def analyze_manuscript_snapshot(
         "mattr": round(float(mattr_score), 4) if mattr_score is not None else None,
         "length_entropy": round(float(raw_entropy), 4) if raw_entropy is not None else None,
         "sticky_pct": (
-            round(float(sticky_pct_val), 2)
-            if (sticky_available and total_sentences > 0)
-            else None
+            round(total_sticky_sentences / total_sticky_denom * 100.0, 2)
+            if total_sticky_denom else None
         ),
         "indirect_speech_per_1000": (
-            round(float(indirect_per_1000), 2)
-            if (ind_speech_available and clean_words > 0)
-            else None
+            round(all_indirect_speech / indirect_speech_words * 1000.0, 2)
+            if indirect_speech_words else None
         ),
         "flags_count": None,
         "chapter_metrics": chapters,

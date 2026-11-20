@@ -408,7 +408,7 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
 def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str,
                      sections: list[AnalysisSection]) -> tuple[bytes, dict[str, Any]]:
     """Build analysis from selected chapters only; no project metadata or comments."""
-    from .ui.components import esc, label
+    from .ui.components import esc, metric_reference_base, metric_reference_link, panel_formatters
     from .ui.dashboard import _REPORT_CSS_FILES, _bundle
     from .workspace_labels import workspace_labels_for
 
@@ -434,9 +434,12 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
     })
     thresholds = resolve_thresholds(project_config={})
     analysis = analyze_document(capped, analysis_config, thresholds, include_evidence=sections == ["full"])
-    labels = {**workspace_labels_for(resolved.key), **resolved.labels}
-    def L(key: str) -> str:
-        return esc(label(labels, key))
+    labels = {
+        **workspace_labels_for(resolved.key),
+        **resolved.labels,
+        "_metric_reference_base": metric_reference_base(resolved.key),
+    }
+    L, N, P = panel_formatters(labels, resolved.key)
     if sections == ["full"]:
         reports = supplementary_reports(capped, analysis_config, analysis)
         page = render_analysis(
@@ -467,9 +470,9 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
     else:
         metrics = analysis.metrics
         def number(value: float | int, available: bool = True) -> str:
-            return esc(f"{value:.2f}" if isinstance(value, float) else value) if available else "—"
+            return N(value, 2 if isinstance(value, float) else 0) if available else "—"
         def percentage(value: float, available: bool) -> str:
-            return number(value) + "%" if available else "—"
+            return P(value, 2) if available else "—"
         page_parts = ['<!DOCTYPE html>', f'<html lang="{esc(resolved.key)}"><head><meta charset="utf-8"/>',
             '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
             '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI5NDljYyIvPjxyZWN0IHg9IjcuOCIgeT0iNi41IiB3aWR0aD0iNC42IiBoZWlnaHQ9IjE5IiByeD0iMS41IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iNy44IiB5PSIyMS4yIiB3aWR0aD0iMTMuMiIgaGVpZ2h0PSI0LjMiIHJ4PSIxLjUiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIxNS4zIiB5PSI4LjIiIHdpZHRoPSI4LjYiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjEyLjUiIHdpZHRoPSI2LjMiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjxyZWN0IHg9IjE1LjMiIHk9IjE2LjgiIHdpZHRoPSI0LjIiIGhlaWdodD0iMi4zIiByeD0iMS4xNSIgZmlsbD0iI2M5ZDRmZiIvPjwvc3ZnPg=="/>',
@@ -479,16 +482,18 @@ def _reader_analysis(text: str, config: Any, language: str, cap: int, title: str
             f'<a href="index.html">{L("publication_analysis_back")}</a>',
             f'<h1>{L("publication_analysis_title")}</h1>', f'<p>{L("publication_analysis_cap_note")}</p>']
         if "language" in sections:
-            valid = metrics.clean_words > 0 and metrics.total_sentences > 0
-            page_parts.extend(['<section id="analysis-section-language">', f'<h2>{L("publication_analysis_language")}</h2>', '<dl>',
-                f'<dt>{L("words")}</dt><dd>{number(metrics.clean_words)}</dd>',
+            valid = metrics.tokens > 0 and metrics.total_sentences > 0
+            page_parts.extend(['<section id="analysis-section-language">', f'<h2>{L("publication_analysis_language")}</h2>',
+                f'<p class="ctl-note">{metric_reference_link(labels, "measurements")}</p>', '<dl>',
+                f'<dt>{L("words")}</dt><dd>{number(metrics.tokens)}</dd>',
                 f'<dt>{L("sentences")}</dt><dd>{number(metrics.total_sentences)}</dd>',
                 f'<dt>{L("layer_asl")}</dt><dd>{number(metrics.asl, valid)}</dd>',
-                f'<dt>{L("dialogue")}</dt><dd>{percentage(metrics.dialog_ratio, metrics.clean_words > 0)}</dd>',
+                f'<dt>{L("dialogue")}</dt><dd>{percentage(metrics.dialog_ratio, metrics.tokens > 0)}</dd>',
                 f'<dt>LIX</dt><dd>{number(metrics.lix, valid)}</dd>',
-                f'<dt>Flesch</dt><dd>{number(metrics.flesch_de, valid)}</dd>', '</dl></section>'])
+                f'<dt>{esc(metrics.flesch_variant or "Flesch")}</dt><dd>{number(metrics.flesch_de, valid)}</dd>', '</dl></section>'])
         if "chapters" in sections:
-            page_parts.extend(['<section id="analysis-section-chapters">', f'<h2>{L("publication_analysis_chapters")}</h2>'])
+            page_parts.extend(['<section id="analysis-section-chapters">', f'<h2>{L("publication_analysis_chapters")}</h2>',
+                               f'<p class="ctl-note">{metric_reference_link(labels, "matrix")}</p>'])
             page_parts.extend(f'<article class="reader-analysis-chapter"><h3>{chapter.num}. {esc(chapter.title)}</h3>'
                     f'<dl class="reader-analysis-grid"><div><dt>{L("words")}</dt><dd>{chapter.words}</dd></div>'
                     f'<div><dt>{L("sentences")}</dt><dd>{chapter.sentences}</dd></div>'

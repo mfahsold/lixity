@@ -6,19 +6,15 @@ from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
-from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
-from .markdown_parser import (
-    prose_paragraphs,
-    prose_text,
-    split_chapters,
-    split_scenes,
-    strip_html_comments,
-)
+from .language import compile_pattern, compile_word_pattern, resolve_language
+from .markdown_parser import split_chapters, split_scenes
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
-from .pacing import HOOK_TYPES, _hook_score, classify_scene_hook
+from .pacing import HOOK_TYPES, _classify_span_hook, _hook_score
+from .quotation import count_quoted_words
+from .quotation_projection import QuotedProse, quoted_prose
 from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
-from .sentences import split_prose_sentences
+from .sentences import split_prose_sentence_spans
 from .style_fingerprint import FEATURES
 
 _INTRA_SCENE_MIN_WORDS = 120
@@ -143,14 +139,13 @@ def _window_content_words(
 def _detect_implicit_breaks(
     chapter_num: int,
     scene_index: int,
-    part: str,
+    paragraphs: Sequence[str],
     para_offset: int,
     recurring_names: set[str],
     word_re: re.Pattern[str],
     content_blacklist: frozenset[str],
 ) -> tuple[list[dict[str, Any]], int]:
     """Detect time, place, character, and lexical-cohesion discontinuities inside a scene."""
-    paragraphs = prose_paragraphs(part, _front_matter=False)
     breaks: list[dict[str, Any]] = []
     for idx in range(1, len(paragraphs)):
         prev_para = paragraphs[idx - 1]
@@ -193,10 +188,10 @@ def _detect_implicit_breaks(
 
 
 def _intra_scene_dynamics(
-    scene_sentences: Sequence[str],
+    projection: QuotedProse,
+    scene_sentences: Sequence[tuple[int, int]],
     words: int,
     word_re: re.Pattern[str],
-    dialogue_re: re.Pattern[str],
 ) -> tuple[float | None, float | None, str]:
     """Measure first-half vs. second-half ASL and dialogue shifts within a scene."""
     if words < _INTRA_SCENE_MIN_WORDS or len(scene_sentences) < 2:
@@ -205,11 +200,16 @@ def _intra_scene_dynamics(
     first_half = scene_sentences[:mid]
     second_half = scene_sentences[mid:]
 
-    def _half_stats(sents: Sequence[str]) -> tuple[float, float]:
-        total_w = sum(len(word_re.findall(s)) for s in sents)
+    def _half_stats(sents: Sequence[tuple[int, int]]) -> tuple[float, float]:
+        total_w = dialogue_words = 0
+        for start, end in sents:
+            sentence = projection.text[start:end]
+            total_w += len(word_re.findall(sentence))
+            dialogue_words += count_quoted_words(
+                sentence, word_re, projection.slice_analysis(start, end).spans,
+            )
         asl = total_w / len(sents)
-        dlg_w = sum(len(word_re.findall(m)) for s in sents for m in quotation_texts(dialogue_re, s))
-        dlg_pct = (dlg_w / total_w * 100.0) if total_w else 0.0
+        dlg_pct = (dialogue_words / total_w * 100.0) if total_w else 0.0
         return asl, dlg_pct
 
     first_asl, first_dlg = _half_stats(first_half)
@@ -362,7 +362,6 @@ def scene_report(
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     content_blacklist = resolved.function_words | resolved.stopwords
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
     filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
@@ -372,23 +371,24 @@ def scene_report(
     breaks = 0
     implicit_breaks: list[dict[str, Any]] = []
     for chapter_num, title, body in split_chapters(text, config):
-        clean = strip_html_comments(body)
+        chapter_prose = quoted_prose(body, config, language=resolved, chapter_body=True)
         recurring_names = _chapter_recurring_names(
-            prose_paragraphs(clean, _front_matter=False),
+            chapter_prose.parts,
             language_key=resolved.key,
         )
-        parts, scene_breaks = split_scenes(clean)
+        parts, scene_breaks = split_scenes(body)
         chapter_dividers[chapter_num] = scene_breaks
         breaks += scene_breaks
         para_offset = 0
         for index, part in enumerate(parts, 1):
+            scene = quoted_prose(part, config, language=resolved, chapter_body=True) if scene_breaks else chapter_prose
             part_breaks, para_offset = _detect_implicit_breaks(
-                chapter_num, index, part, para_offset, recurring_names, word_re, content_blacklist
+                chapter_num, index, scene.parts, para_offset, recurring_names, word_re, content_blacklist
             )
             implicit_breaks.extend(part_breaks)
             measured = measured_chapters.get(chapter_num) if not scene_breaks else None
             if measured is None or measured.title != title:
-                measured = analyzer.measure_unit(part)
+                measured = analyzer.measure_unit(part, projection=scene)
             if measured is None or measured.words == 0:
                 continue
             identifier = f"{chapter_num}:{index}"
@@ -417,28 +417,23 @@ def scene_report(
                             "below" if bounds[0] is not None and value < bounds[0] else
                             "above" if bounds[1] is not None and value > bounds[1] else "within")
                 comparisons[field] = {"lower": bounds[0], "upper": bounds[1], "position": position}
-            scene_prose = prose_text(part, _front_matter=False)
             scene_sentences = [
-                s for s in split_prose_sentences(scene_prose, resolved.key)
-                if word_re.search(s)
+                (start, end) for start, end in split_prose_sentence_spans(scene.text, resolved.key)
+                if word_re.search(scene.text[start:end])
             ]
-            entry_sentence = scene_sentences[0] if scene_sentences else ""
-            exit_sentence = scene_sentences[-1] if scene_sentences else ""
-            entry_hook_type = classify_scene_hook(
-                entry_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
-            )
-            exit_hook_type = classify_scene_hook(
-                exit_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
-            )
-            exit_is_dialogue = bool(dialogue_re.search(exit_sentence)) if exit_sentence else False
+            first = scene_sentences[0] if scene_sentences else (0, 0)
+            last = scene_sentences[-1] if scene_sentences else (0, 0)
+            exit_sentence = scene.text[last[0]:last[1]]
+            entry_hook_type = _classify_span_hook(scene.text, first, scene.analysis, filter_verbs_re)
+            exit_hook_type = _classify_span_hook(scene.text, last, scene.analysis, filter_verbs_re)
             exit_hook_score, _, _ = _hook_score(
                 exit_sentence,
-                exit_is_dialogue,
+                exit_hook_type == "dialogue",
                 word_re,
                 hook_short_sentence=config.hook_short_sentence,
             )
             asl_shift, dialogue_shift, scene_dynamic = _intra_scene_dynamics(
-                scene_sentences, measured.words, word_re, dialogue_re
+                scene, scene_sentences, measured.words, word_re,
             )
             entry_counts[entry_hook_type] = entry_counts.get(entry_hook_type, 0) + 1
             exit_counts[exit_hook_type] = exit_counts.get(exit_hook_type, 0) + 1

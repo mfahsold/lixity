@@ -100,7 +100,8 @@ async function frames(page) {
           return node.classList.contains('flash') && node.classList.contains('reader-return-target');
         }, await paragraph.getAttribute('id'));
         assert.equal(await page.locator('#analysis-evidence-status').isVisible(), true);
-        assert.match(await page.locator('#analysis-evidence-status').textContent(), /Only the paragraph value is available/,
+        assert.equal(await page.locator('#analysis-evidence-status').textContent(),
+          await page.evaluate(() => uiLabel('evidence_unavailable')),
           'The fixture\'s asynchronously rendered evidence warning is present before the expiry baseline');
         // The arrival owner waits for scrollports and async legend layout to
         // settle. Measure cue expiry from that committed arrival, not mid-jump.

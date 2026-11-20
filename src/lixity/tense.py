@@ -21,6 +21,7 @@ from .language_data import (
     PROFILE_DATA,
 )
 from .models import CorpusConfig
+from .quotation import QuotationAnalysis
 
 _WORD = re.compile(r"\w+")
 _BLANK_LINE = re.compile(r"\n\s*\n")
@@ -73,7 +74,7 @@ class TenseMatcher:
         self._spanish = language.key == "es"
         self._model = config.tense_model
         self._scope = config.tense_scope
-        self._quotation = compile_pattern(language.dialogue_regex)
+        self._quotation = compile_pattern(config.dialogue_regex) if config.dialogue_regex is not None else None
         model_language = self._model.removeprefix("stanza:").split("_", 1)[0] if self._model else language.key
         if self._model and model_language != language.key:
             raise ValueError("The selected grammatical tense model does not match the explicit analysis language")
@@ -272,20 +273,30 @@ class TenseMatcher:
                 previous_end = c_end
         return constructions
 
-    def count(self, text: str) -> tuple[int, int]:
+    def count(self, text: str, *, quotation: QuotationAnalysis | None = None) -> tuple[int, int]:
         """Return present/past counts, preserving custom capture/zero-width cues."""
-        present, past = self.spans(text)
+        present, past = self.spans(text, quotation=quotation)
         return len(present), len(past)
 
-    def parts(self, parts: Sequence[str]) -> list[dict[str, Any] | None]:
+    def parts(self, parts: Sequence[str], *, quotation: QuotationAnalysis | None = None) -> list[dict[str, Any] | None]:
         """Resolve shared quotation context before counting individual paragraphs."""
         if self._model is None:
             return [None] * len(parts)
         from .grammatical_tense import grammatical_parts
 
-        return list(grammatical_parts(parts, self._model, self._scope, self._quotation))
+        return list(grammatical_parts(parts, self._model, self._scope, self._quotation, quotation=quotation))
 
-    def spans(self, text: str, *, observation: dict[str, Any] | None = None) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    def observation(self, text: str, quotation: QuotationAnalysis) -> dict[str, Any] | None:
+        """Attach one paragraph's grammatical result to shared quotation context."""
+        if self._model is None:
+            return None
+        from .grammatical_tense import grammatical_observation
+
+        return grammatical_observation(text, self._model, self._scope, self._quotation,
+                                       quotation_spans=quotation.quote_ranges, unclear_spans=quotation.unclear)
+
+    def spans(self, text: str, *, observation: dict[str, Any] | None = None,
+              quotation: QuotationAnalysis | None = None) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
         """Return effective cue ranges, including undrawable zero-width cues.
 
         Ranges address the supplied counting text. A perfect construction owns
@@ -294,7 +305,7 @@ class TenseMatcher:
         if self._model is not None:
             spans: dict[str, list[tuple[int, int]]] = {"present": [], "past": []}
             parts = text.split("\n\n")
-            observations = [observation] if observation is not None else self.parts(parts)
+            observations = [observation] if observation is not None else self.parts(parts, quotation=quotation)
             offset = 0
             for part, result in zip(parts, observations, strict=True):
                 if result is None:

@@ -43,19 +43,23 @@ and a block without terminal punctuation stays one fragment unit. This bounded
 Markdown policy is not a complete CommonMark parser. Visible prose beneath a
 leading document title (`# …`) before the first chapter contributes to global
 metrics but not chapter-only reports.
+When no document title precedes the chapters, opening prose is measured as
+part of the opening chapter. Sentence punctuation and soft wraps help
+distinguish prose from a bare title line, which retains its title role.
 Paragraph profiles intentionally cover body paragraphs and list items only,
 retaining their source line anchors; they omit blockquotes.
 
 The global function-word share is `100 × matching function-word tokens / all
 counted tokens` in that same corpus prose scope. Its overview tile uses the
 corpus measurement, rather than an unweighted mean of paragraph percentages.
-The additive `CorpusMetrics.function_word_pct` field is `null` when absent from
-an older payload; the UI reports that value as unavailable instead of estimating
-it from the narrower chapter or paragraph scope.
+The `CorpusMetrics.function_word_pct` field is `null` when the language profile
+has no function-word list, the corpus has no counted tokens, or an older payload
+omits the field. The UI reports the missing measurement explicitly.
 
 Configured `word_regex` flags are respected across analysis surfaces; cue
-patterns retain their separate case-insensitive contract. A word pattern may
-have zero capturing groups (each whole match is a token) or one (its capture
+patterns retain their separate case-insensitive contract. The cue pattern
+selects the hits and the word pattern supplies the density denominator. A word
+pattern may have zero capturing groups (each whole match is a token) or one (its capture
 is the token). Multiple capturing groups are rejected with a configuration
 error; use noncapturing `(?:...)` groups for additional regex structure.
 English and German
@@ -69,11 +73,19 @@ token, vocabulary, cue and syllable measurements. Configured word/cue patterns
 operate on that canonical counting text; their flags are unchanged. Document
 boundary patterns and appendix markers still address the original source. Manuscript
 bytes, displayed quotations, line anchors and source hashes are not normalized.
+Appendix examples inside fenced code or within a longer HTML comment leave
+the following prose in scope. A whole comment configured as the marker can
+still end the analysis.
 Literal evidence maps complete canonical clusters back to original codepoint
 ranges; ambiguous inner-cluster cuts retain counts with unavailable mapping.
 Legacy raw/clean character counts still describe original codepoints, not
 grapheme clusters. This is canonical equivalence, not general linguistic word
 segmentation; see [Unicode UAX #29](https://www.unicode.org/reports/tr29/).
+
+Sentence-length measurements apply the word pattern to each recognized sentence
+and average the resulting nonempty lengths. Paragraph totals apply the pattern
+to the paragraph. Boundary-sensitive custom patterns can yield different totals
+at those scopes.
 
 The global UI word count uses the corpus token measurement, matching its sentence
 and ASL values. Paragraph/chapter profile views remain narrower: pre-chapter
@@ -725,12 +737,19 @@ attribution or historical-accuracy judgment.
 ## 9. Paragraph layers (within-chapter colouring)
 
 Each chapter is its own reference: robust $z$ of the paragraph value against
-that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs, else
-skipped). Per-1,000-word rate layers in `layer_stats()` require at least
-`MIN_PARAGRAPH_LAYER_WORDS = 5` words (`asl` and `dialogue_pct` keep
-`min_words = 1`) so 1–4 word paragraphs do not spike rate layers. Layer fill uses
-the absolute value span (min–max per dimension); the ring marks
-$\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
+that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs).
+`layer_stats()` requires at least five words per paragraph for the function-word
+share and pattern rates. Sentence length and quoted-word share need at least
+one word. Color shows the direction and magnitude of the chapter-local score.
+A paragraph is marked at $\lvert z \rvert \ge 1.5$ after rounding $z$ to two
+decimal places.
+
+Paragraph evidence draws on the same counting projection as the profile. A
+known rule may find zero matches. A missing rule in the effective profile
+leaves its evidence count unknown and its reader comparison unavailable.
+Explicitly configured empty cue patterns count zero. If counted contributions
+cannot map back to the displayed text, the count remains available and only the
+mapped contributions yield highlights.
 
 The **Signal-group comparison** (command `showing`) standardizes each raw signal
 against the manuscript's chapter median/MAD, then averages each group with equal
@@ -742,7 +761,9 @@ overflow or underflow; the median-centred population-deviation formula is unchan
 The `tell_z`/`show_z` names are
 machine identities, not evidence for a validated narrative-distance construct.
 Fewer than three sufficiently long chapters leave component scores and means
-unavailable. With sufficient chapters, a constant component has zero relative
+unavailable. Both groups also require the counting rules for all of their
+components. For example, a language-neutral profile with no word-pattern rules
+has no group scores. With sufficient chapters, a constant component has zero relative
 variation. `most_telling` and `most_showing` are empty when balances are
 unavailable or identical; chapter-order ties are not evidence of a ranking.
 These signals describe relative patterns, not prose quality.
@@ -927,10 +948,26 @@ passive metric. A zero remains zero detected cues, not proof of active voice.
 
 Cue patterns (including `dialogue_regex`) use the case-insensitive cue
 contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
-For a configured quotation pattern, word counts use the full match when there
-are no capture groups and the first capture group otherwise. An unmatched
-optional first group contributes no words. Overlapping matches can count words
-more than once in quote-word and turn totals; paragraph shares use their union.
+Quotation boundaries are recognized over chapter-bounded semantic prose. Blank
+paragraphs can continue a paired quotation. Chapters, explicit scene breaks
+and separate Markdown quote blocks bound recognition. Physical line starts
+survive paragraph folding for language profiles that accept marked replies.
+An open or mismatched delimiter marks an uncertain region. Recognized ranges
+and uncertainty project to paragraph evidence through the same source map.
+
+For a configured quotation pattern, the full match selects the quotation when
+there are no capture groups. Otherwise, the first group selects it. An unmatched
+optional first group supplies an empty turn. The word share counts a subset of
+the word matches from the current scope. The effective word range is the single
+word capture if present, or the full match. A word contributes once if its
+nonempty range is fully contained in the union of recognized passages.
+Separate `turn_words` may count a word in each overlapping custom turn. Corpus,
+chapter, scene and paragraph denominators follow their documented prose scopes.
+The corpus metric tokenizes the full supported prose. The separate dialogue
+report sums independently measured chapters. Custom word patterns anchored to
+the start of a scope can produce different totals for these two measurements.
+Classification and character attribution require additional evidence beyond
+punctuation.
 
 **`[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
 - **Syllables (`syllables.py`):** `count_it()` strips silent `u` in `que/qui/gue/gui` and merges rising `[iu]` + vowel diphthongs; `count_de()` applies `DE_CLEAN` with an empty-word guard and normalizes `qu -> k`; `count_fr()` adds exceptions for `-ment` mute-verb forms (`FR_MENT_MUTE_VERBS`), `souvent` (`FR_NON_MUTE_ENT`), and `-éC+ent` endings (`FR_PENULTIMATE_E_ACUTE_ENT`); `count_en()` preserves `-Cle(d|s)` syllabic `l` endings (`table`/`bottled`/`handles`).
@@ -1224,7 +1261,7 @@ they do not estimate literary quality or a reader's experienced immersion.
   reports each metric's `{observed, low, high, position}` where `position` is
   `"below"`, `"within"`, `"above"`, or `"unavailable"`.
 - **Paragraph inline evidence layers (`paragraph_evidence.py`):** each
-  paragraph's `evidence[idx]["layers"]` exposes three additional deterministic
+  paragraph's `evidence[idx]["layers"]` includes four additional deterministic
   annotation layers:
   - `sticky` (`kind: "sentence"`): character spans (`{start, end, count: 1, words}`)
     for sentences with `words >= config.sticky_min_words` and
@@ -1235,8 +1272,10 @@ they do not estimate literary quality or a reader's experienced immersion.
     `status: "unavailable"`, `reason: "language_unavailable"` when the language
     has no dialogue tag verb list.
   - `echo` (`kind: "word"`): character spans (`{start, end, count: 1}`) for
-    non-function content words of length `>= 4` repeated `>= 2` times within
-    the same paragraph.
+    words of length `>= 4` repeated `>= 2` times in the same paragraph. The
+    function-word list excludes matching words where the profile provides one.
+  - `indirect_speech` (`kind: "pattern"`): character spans for language-specific
+    language-profile cues for reported speech or thought outside detected quotations.
 - **Deep dialogue analytics (`dialogue.py`):** `dialogue_report().to_dict()`
   adds:
   - `voice_separation`: compares Spoken Dialogue against Narrative Prose via

@@ -228,17 +228,22 @@ def split_sentences(text: str, language_key: str = "generic") -> list[str]:
             for start, end in _sentence_spans(protected)]
 
 
-def split_prose_sentences(text: str, language_key: str = "generic") -> list[str]:
-    """Splits multi-paragraph prose without ever crossing a blank line.
+def split_prose_sentence_spans(text: str, language_key: str = "generic") -> list[tuple[int, int]]:
+    """Return sentence ranges in prose, with each blank line sealing a block.
 
-    ``split_sentences`` receives whole chapters here, so an unterminated
-    block (a stage note, a salutation, a sign) would otherwise merge into
-    the next block's sentence and inflate its measured length. Splitting
-    every semantic block on its own keeps fragments local: a block without
-    terminal punctuation stays one fragment unit, matching paragraph
-    profiles and scene measurements.
+    A block without terminal punctuation stays one fragment unit, matching
+    paragraph profiles and scene measurements.
     """
-    sentences: list[str] = []
-    for block in _BLOCK_BOUNDARY_RE.split(text):
-        sentences.extend(split_sentences(block, language_key))
-    return sentences
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for boundary in _BLOCK_BOUNDARY_RE.finditer(text):
+        spans.extend((start + a, start + b)
+                     for a, b in split_sentence_spans(text[start:boundary.start()], language_key))
+        start = boundary.end()
+    spans.extend((start + a, start + b) for a, b in split_sentence_spans(text[start:], language_key))
+    return spans
+
+
+def split_prose_sentences(text: str, language_key: str = "generic") -> list[str]:
+    """Split multi-paragraph prose without crossing blank lines."""
+    return [text[start:end] for start, end in split_prose_sentence_spans(text, language_key)]

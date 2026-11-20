@@ -60,6 +60,16 @@ def test_scene_overview_links_reach_all_measurements_inside_one_closed_disclosur
     assert "15:1" in "".join(planned.itertext())
 
 
+def test_scene_panel_explains_chapter_fallback_when_no_separators_are_present():
+    config = CorpusConfig()
+    labels = get_language_profile("en").labels
+    text = "## Chapter\n\nThe door opens.\n\nThe wind rises."
+    with_chapters = scene_report(text, config)
+    with_scenes = scene_report(text.replace("\n\nThe wind", "\n\n---\n\nThe wind"), config)
+    assert labels["pacing_units_note"] in render_scenes_panel(with_chapters, labels)
+    assert labels["pacing_units_note"] not in render_scenes_panel(with_scenes, labels)
+
+
 @pytest.mark.parametrize("count", (16, 17))
 def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(count):
     text = "\n\n".join(
@@ -78,11 +88,22 @@ def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(c
         link = row.find("a")
         assert link.attrib["href"] == row.attrib["data-jump"]
         assert link.attrib["data-layer"] == "dialogue"
-    assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Quoted span")
-    assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Quoted spans"
+    assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Recognized span")
+    assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Recognized spans"
     details = panel.find("./details[@class='panel-disclosure dialogue-measurements']")
     assert details is not None and "open" not in details.attrib
     assert len(details.findall(".//tbody/tr")) == count
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_dialogue_summary_names_and_counts_the_words_in_marked_speech(locale):
+    labels = get_language_profile(locale).labels
+    report = dialogue_report("—Ven aquí.\nLa puerta se cerró.", CorpusConfig(language="es")).to_dict()
+    panel = ElementTree.fromstring(render_dialogue_panel(report, labels, locale))  # noqa: S314
+    summary = panel.findall("./div[@class='kpi-row']/div")
+    assert summary[1].findtext("b") == "2"
+    assert summary[1].findtext("span") == labels["measurement_quoted_words"] == labels["dialogue"]
+    assert summary[2].findtext("span/span") == labels["analysis_dialogue_share"]
 
 
 @pytest.mark.parametrize("locale", LOCALES)
@@ -94,7 +115,7 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     help_texts = [span.attrib["data-help"] for span in panel.findall(".//span[@class='help']")]
     assert labels.get("help_pacing_hook") and labels["help_pacing_hook"].replace("{max_words}", "8") in help_texts
     assert labels.get("help_pacing_cohesion") in help_texts
-    assert labels.get("help_pacing_monotony") in help_texts
+    assert labels["help_pacing_monotony"].replace("{min_run}", "3") in help_texts
     details = panel.find("./details[@class='panel-disclosure pacing-measurements']")
     assert details is not None and "open" not in details.attrib
     assert len(details.findall(".//tbody/tr")) == 1
@@ -108,6 +129,30 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     assert details.find(".//tbody/tr").findall("td")[2].text == "3"
     sparkline = details.find(".//span[@class='sparkline']")
     assert sparkline is not None and sparkline.text
+
+
+def test_narration_explains_the_configured_quotation_and_closing_lengths():
+    from lixity.pipeline import analyze_document, supplementary_reports
+    from lixity.style_fingerprint import FingerprintThresholds
+
+    text = '## Chapter\n\n"Stay here." She watched the room. She felt cold. She waited. "I will return when the rain stops."'
+    config = CorpusConfig(short_turn_max_words=3, long_turn_min_words=7, hook_short_sentence=5, monotony_min_run=4)
+    analysis = analyze_document(text, config, FingerprintThresholds())
+    reports = supplementary_reports(text, config, analysis)
+    assert reports["dialogue"]["short_turns"] == reports["dialogue"]["long_turns"] == 1
+    assert reports["pacing"]["chapter_list"][0]["hook_score"] == 1
+    assert reports["pacing"]["repeated_start_runs"] == 0
+    labels = get_language_profile("en").labels
+    dialogue = render_dialogue_panel(reports["dialogue"], labels, "en")
+    pacing = render_pacing_panel(reports["pacing"], labels, "en")
+    assert "Short spans (≤ 3 words)" in dialogue
+    assert "Long spans (≥ 7 words)" in dialogue
+    assert "1–3 words" in dialogue
+    assert "1–5 words" in pacing
+    assert "4 or more consecutive sentences" in pacing
+    assert "≥ 3" not in pacing
+    assert "≤ 12 words" not in dialogue
+    assert "1–8 words" not in pacing
 
 
 def test_pacing_sticky_examples_explain_measured_counts_without_guessing_a_rule():
@@ -168,6 +213,16 @@ def test_showing_panel_renders_immersion_pills_in_all_locales(locale):
     assert len(pills) == 2
     assert any(labels["show_sensory"] in "".join(p.itertext()) for p in pills)
     assert any(labels["show_immersion"] in "".join(p.itertext()) for p in pills)
+
+
+def test_word_patterns_keep_supported_examples_when_comparison_is_unavailable():
+    labels = get_language_profile("de").labels
+    report = {"chapter_list": [{"chapter_num": 1, "title": "Ankunft", "comparable": False}]}
+    panel = ElementTree.fromstring(render_showing_panel(  # noqa: S314
+        report, labels, "de", available_layers=frozenset({"asl", "dialogue", "echo"}),
+    ))
+    assert labels["layer_language_unavailable"] in "".join(panel.itertext())
+    assert [button.attrib["data-layer"] for button in panel.findall(".//button[@data-pattern-jump]")] == ["dialogue"]
 
 
 @pytest.mark.parametrize("locale", LOCALES)
@@ -458,16 +513,26 @@ def test_characters_panel_surfaces_character_voices(locale):
 
 
 @pytest.mark.parametrize("locale", LOCALES)
-def test_inline_evidence_layers_includes_indirect_speech(locale):
-    from lixity.ui.manuscript_reader import INLINE_EVIDENCE_LAYERS, inline_evidence_controls
+def test_reader_metric_options_match_available_measurements_and_reference(locale):
+    from lixity.ui.manuscript_reader import reading_metric_control
+    from lixity.ui.metric_reference import METRIC_REFERENCE_ENTRIES
 
-    assert "indirect_speech" in INLINE_EVIDENCE_LAYERS
     labels = get_language_profile(locale).labels
-    assert labels["evidence_layer_indirect_speech"]
-    assert labels["reading_help_evidence_indirect_speech"]
-    html = inline_evidence_controls(labels)
-    assert 'data-evidence-layer="indirect_speech"' in html
-    assert labels["evidence_layer_indirect_speech"] in html
+    control = reading_metric_control(labels, locale, {}, include_evidence=True, report=False)
+    select = ElementTree.fromstring(control).find("select")  # noqa: S314
+    options = {item.attrib["value"]: item for item in select.findall(".//option")}
+    assert list(options) == ["", "asl", "function", "sticky", "dialogue", "dialogue_tag", "indirect_speech",
+                             "filter", "sensory", "echo", "passive", "modal", "nominal"]
+    for key, item in options.items():
+        if key:
+            assert item.attrib["data-reference"] == f"measure-{key}"
+            assert item.attrib["data-reference"] in METRIC_REFERENCE_ENTRIES
+            inline = item.attrib.get("data-inline-evidence") == "1"
+            assert item.text == labels[("evidence_layer_" if inline else "layer_") + key]
+            assert item.attrib["data-hint"] == labels[("reading_help_evidence_" if inline else "layer_hint_") + key]
+
+    report = reading_metric_control(labels, locale, {}, include_evidence=False, report=True)
+    assert 'data-inline-evidence="1"' not in report
 
 
 @pytest.mark.parametrize("locale", LOCALES)

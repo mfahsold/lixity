@@ -25,11 +25,15 @@ const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').
 const homeRoutes = new Set(['', ...['de', 'fr', 'es', 'it', 'pt', 'nl'].map(lang => `index-${lang}.html`)]);
 const publicationRoutes = new Set(['demo/reader/index.html', 'demo/companion/index.html']);
 const publicationAnalysisRoutes = new Set(['demo/reader/analysis.html']);
+const metricReferenceRoutes = new Set(['de', 'en', 'es', 'fr', 'it', 'nl', 'pt']
+  .map(locale => `guides/metrics/${locale}.html`));
 for (const route of publicationRoutes) assert.ok(routes.includes(route), `Missing curated public example: ${route}`);
 for (const route of publicationAnalysisRoutes) assert.ok(routes.includes(route), `Missing curated analysis: ${route}`);
+for (const route of metricReferenceRoutes) assert.ok(routes.includes(route), `Missing metric reference: ${route}`);
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set([...homeRoutes, 'guides/first-look.html', 'guides/first-look-de.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'demo/report.html',
-  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
+  'sandbox/index.html', 'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/manuscript-reading-workbench.html', ...publicationRoutes, ...publicationAnalysisRoutes,
+  ...metricReferenceRoutes]);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
   'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html', ...publicationRoutes, ...publicationAnalysisRoutes]);
 let origin;
@@ -1078,6 +1082,54 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
   }
 }
 
+async function checkSandboxReferences(page, locale) {
+  const references = {
+    rhythm: ['pacing', 'Satzlängen messen', 'How sentence lengths are measured'],
+    echo: ['measure-echo', 'Wiederholungen in der App', 'Repetitions in the app'],
+    dialogue: ['measure-dialogue', 'Wörter in Zitaten zählen', 'How words in quotes are counted'],
+    sticky: ['measure-sticky', 'Funktionswortfilter erklärt', 'How the function-word filter works']
+  };
+  for (const [key, [section, de, en]] of Object.entries(references)) {
+    const link = page.locator(`[data-metric-reference="${key}"]`);
+    await expect(link).toBeVisible();
+    await expect(link).toHaveText(locale === 'de' ? de : en);
+    await expect(link).toHaveAttribute('href', `../guides/metrics/${locale}.html#${section}`);
+    await expect(link).toHaveAttribute('target', '_blank');
+  }
+}
+
+async function checkSandboxOverlappingHighlights(page) {
+  const indirect = 'Er sagte, dass wir es in der Stadt gestern gesehen haben';
+  const quotation = '"den alten Flur"';
+  const quoteSentence = `In der Stadt haben wir ${quotation} auch gestern gesehen`;
+  const passage = `${indirect}. ${indirect}. ${quoteSentence}. quot quot quot & <weiter>.`;
+  await page.locator('#input').fill(passage);
+  const preview = page.locator('#preview');
+  const sticky = preview.locator('.sticky-sent');
+  await expect(page.locator('#k-sticky')).toHaveText('3');
+  await expect(page.locator('#k-indirect')).toHaveText('2');
+  await expect(sticky).toHaveText([indirect, indirect, 'In der Stadt haben wir', quotation, 'auch gestern gesehen']);
+  await expect(preview.locator('.dlg-seg > .sticky-sent')).toHaveText(quotation);
+  await expect(sticky.locator('mark.indirect')).toHaveText(['sagte, dass', 'sagte, dass']);
+  assert.equal(await preview.textContent(), passage, 'Layering highlights retains the original passage');
+  assert.equal((await preview.locator('mark.echo').allTextContents()).filter(word => word === 'quot').length, 3,
+    'Echo highlights match source words and leave escaped quotation marks intact');
+
+  const stickyFilter = page.locator('#flt-sticky');
+  const indirectFilter = page.locator('#flt-indirect');
+  const indirectMark = sticky.locator('mark.indirect').first();
+  const indirectColor = await indirectMark.evaluate(mark => getComputedStyle(mark).backgroundColor);
+  await expect(sticky.first()).toHaveCSS('text-decoration-line', 'underline');
+  await stickyFilter.click();
+  await expect(sticky.first()).toHaveCSS('text-decoration-line', 'none');
+  await expect(indirectMark).toHaveCSS('background-color', indirectColor);
+  await indirectFilter.click();
+  await expect(indirectMark).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await stickyFilter.click();
+  await expect(sticky.first()).toHaveCSS('text-decoration-line', 'underline');
+  await indirectFilter.click();
+}
+
 (async () => {
   let browser;
   // Chromium's native download requests bypass Playwright routing. Serve only
@@ -1169,6 +1221,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           // mounts continuous prose. Content pages need a readable article.
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
           const publication = publicationRoutes.has(route) || publicationAnalysisRoutes.has(route);
+          const metricReference = metricReferenceRoutes.has(route);
+          if (route === 'sandbox/index.html') {
+            await checkSandboxReferences(page, await page.locator('html').getAttribute('lang'));
+          }
           if (route === 'sandbox/index.html' && javaScriptEnabled) {
             await expect(page.locator('#direct-speech-btn')).toBeVisible();
             await expect(page.locator('#k-sticky')).toBeVisible();
@@ -1183,11 +1239,35 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
             await echo.click();
             await expect(echo).toHaveAttribute('aria-pressed', 'true');
             assert.ok(await page.locator('#preview mark.focus-echo').count() >= 3, 'Sandbox highlights the draft repetition');
+            await checkSandboxOverlappingHighlights(page);
+            const passage = 'In der Stadt haben wir ihn gestern gesehen. In der Stadt haben wir ihn gesehen.';
+            await page.locator('#input').fill(passage);
+            await expect(page.locator('#k-sticky')).toHaveText('1');
+            await expect(page.locator('#preview .sticky-sent')).toHaveText('In der Stadt haben wir ihn gestern gesehen');
             const language = await page.locator('html').getAttribute('lang');
+            const switchedLanguage = language === 'de' ? 'en' : 'de';
             await page.locator('#lang-toggle').click();
-            await expect(page.locator('html')).toHaveAttribute('lang', language === 'de' ? 'en' : 'de');
+            await expect(page.locator('html')).toHaveAttribute('lang', switchedLanguage);
+            await checkSandboxReferences(page, switchedLanguage);
+            const [guide] = await Promise.all([page.waitForEvent('popup'),
+              page.locator('[data-metric-reference="sticky"]').click()]);
+            try {
+              await expect(guide).toHaveURL(origin + `/lixity/guides/metrics/${switchedLanguage}.html#measure-sticky`);
+              await expect(guide.locator('#measure-sticky:target')).toBeVisible();
+              assert.equal(await guide.evaluate(() => window.opener), null);
+              await expect(page.locator('#input')).toHaveValue(passage);
+            } finally {
+              await guide.close();
+            }
           }
-          if (!dashboard && !publication && route !== 'sandbox/index.html') {
+          if (metricReference) {
+            await expect(page.locator('html')).toHaveAttribute('lang', path.basename(route, '.html'));
+            await expect(page.locator('script')).toHaveCount(0);
+            const section = page.locator('nav a[href="#sticky"]');
+            await section.focus();
+            await page.keyboard.press('Enter');
+            await expect(page.locator('#sticky:target')).toBeVisible();
+          } else if (!dashboard && !publication && route !== 'sandbox/index.html') {
             const themeControl = page.locator('#themeToggle');
             if (javaScriptEnabled) await expect(themeControl).toBeVisible();
             else await expect(themeControl).toBeHidden();
@@ -1222,7 +1302,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           const overflowingCells = await page.locator('.guide table td, .guide table th').evaluateAll(cells =>
             cells.filter(cell => cell.scrollWidth > cell.clientWidth + 1).map(cell => cell.textContent));
           assert.deepEqual(overflowingCells, [], `${route}: guide table text must stay inside its own column at ${width}px`);
-          if (route !== 'sandbox/index.html') {
+          if (route !== 'sandbox/index.html' && !metricReference) {
             await checkReturnNavigation(page, route,
               colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
           }

@@ -12,8 +12,8 @@ from ..format import num as format_num
 from ..format import pct as format_pct
 from ..models import CorpusMetrics
 from ..motifs import MAX_DISPLAY_OCCURRENCES
-from ..pacing import HOOK_SHORT_SENTENCE, sentence_group_intervals
-from ..showing import MIN_COMPARISON_CHAPTERS
+from ..pacing import HOOK_SHORT_SENTENCE, MONOTONY_MIN_RUN, sentence_group_intervals
+from ..showing import COMPARISON_LAYERS, MIN_COMPARISON_CHAPTERS
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
 from .components import (
@@ -29,6 +29,7 @@ from .components import (
     kpi,
     kpi_row,
     label,
+    metric_reference_link,
     panel_formatters,
     panel_guide,
     panel_label,
@@ -68,6 +69,8 @@ def render_scenes_panel(
     parts = [panel_start("scenes", labels, "panel_scenes"),
              f'<p class="hint">{L("scene_guidance")}</p>',
              f'<p class="hint">{L("scene_support")}</p>']
+    if items and scenes.get("scenes_are_chapters"):
+        parts.append(f'<p class="ctl-note">{L("pacing_units_note")}</p>')
     # Keep comparisons visible, with one reversible catalogue for the detailed
     # tables rather than a second full list of scene summaries in the overview.
     asl_unit = esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])["asl"])
@@ -340,6 +343,9 @@ def render_sentence_dist_panel(
         if embedded
         else [panel_start("dist", labels, "sentence_dist")]
     )
+    reference = metric_reference_link(labels, "dist") if embedded else ""
+    if reference:
+        parts.append(f'<p class="ctl-note">{reference}</p>')
     parts.append(panel_guide(L("analysis_sentence_dist_guide")))
     if d._word_bounds is None:
         parts.append(f'<p class="ctl-note">{L("sentence_group_bounds_unavailable")}</p>')
@@ -389,23 +395,27 @@ def render_dialogue_panel(
 
     L, N, P = panel_formatters(labels, language_key)
 
+    summary_tiles = [kpi(N(dialogue.get("turns", 0), 0), L("dlg_turns"))]
+    if "dialogue_words" in dialogue:
+        summary_tiles.append(kpi(N(dialogue["dialogue_words"], 0), L("measurement_quoted_words")))
+    summary_tiles.append(
+        kpi(P(dialogue.get("dialogue_pct", 0.0)),
+            help_term(labels, "dialogue", L("analysis_dialogue_share"))),
+    )
     parts = [
         panel_start("dialogue", labels, "panel_dialogue"),
         panel_guide(L("analysis_dialogue_guide")),
-        kpi_row([
-            kpi(N(dialogue.get("turns", 0), 0), L("dlg_turns")),
-            kpi(P(dialogue.get("dialogue_pct", 0.0)),
-                help_term(labels, "dialogue", L("analysis_dialogue_share"))),
-        ]),
+        kpi_row(summary_tiles),
     ]
     tiles = [
         kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters"),
         kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"),
     ]
+    short_words = N(dialogue.get("short_turn_max_words", SHORT_TURN_MAX_WORDS), 0)
+    long_words = N(dialogue.get("long_turn_min_words", LONG_TURN_MIN_WORDS), 0)
+    short_label = esc(label(labels, "dlg_short_turns").replace("{max_words}", short_words))
+    long_label = esc(label(labels, "dlg_long_turns").replace("{min_words}", long_words))
     if "short_turn_pct" in dialogue:
-        short_label = esc(
-            label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
-        )
         tiles.append(
             kpi(
                 P(float(dialogue.get("short_turn_pct", 0.0))),
@@ -413,14 +423,11 @@ def render_dialogue_panel(
                     labels,
                     "dlg_short_turns",
                     short_label,
-                    fields={"max_words": str(SHORT_TURN_MAX_WORDS)},
+                    fields={"max_words": short_words},
                 ),
             )
         )
     if "long_turns" in dialogue:
-        long_label = esc(
-            label(labels, "dlg_long_turns").replace("{min_words}", str(LONG_TURN_MIN_WORDS))
-        )
         tiles.append(
             kpi(
                 N(int(dialogue.get("long_turns", 0)), 0),
@@ -428,7 +435,7 @@ def render_dialogue_panel(
                     labels,
                     "dlg_long_turns",
                     long_label,
-                    fields={"min_words": str(LONG_TURN_MIN_WORDS)},
+                    fields={"min_words": long_words},
                 ),
             )
         )
@@ -515,12 +522,6 @@ def render_dialogue_panel(
         if any("short_turn_pct" in ch or "dialogue_asl" in ch for ch in dialogue_chapters):
             has_ch_tags = any("dialogue_tags_per_1000" in ch for ch in dialogue_chapters)
             has_ch_indirect = any("indirect_speech_per_1000" in ch for ch in dialogue_chapters)
-            short_col = esc(
-                label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
-            )
-            long_col = esc(
-                label(labels, "dlg_long_turns").replace("{min_words}", str(LONG_TURN_MIN_WORDS))
-            )
             tags_th = f'<th scope="col" class="num">{L("dlg_tags_per_1000")}</th>' if has_ch_tags else ""
             indirect_th = f'<th scope="col" class="num">{L("dlg_indirect_speech_per_1000")}</th>' if has_ch_indirect else ""
             parts.append(details_start(f'{L("dlg_chapter_details")} ({len(dialogue_chapters)})',
@@ -530,8 +531,8 @@ def render_dialogue_panel(
                 + "<thead><tr>"
                 f'<th scope="col">{L("chapter")}</th>'
                 f'<th scope="col" class="num">{L("dlg_turns")}</th>'
-                f'<th scope="col" class="num">{short_col}</th>'
-                f'<th scope="col" class="num">{long_col}</th>'
+                f'<th scope="col" class="num">{short_label}</th>'
+                f'<th scope="col" class="num">{long_label}</th>'
                 f'<th scope="col" class="num">{L("dlg_dialogue_asl")}</th>'
                 f'<th scope="col" class="num">{L("dlg_narration_asl")}</th>'
                 f'<th scope="col" class="num">{L("dlg_voice_contrast")}</th>'
@@ -876,9 +877,10 @@ def render_pacing_panel(
     tiles: list[str] = []
     tiles.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
     tiles.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
+    hook_words = N(pacing.get("hook_short_sentence", HOOK_SHORT_SENTENCE), 0)
     tiles.append(kpi(N(pacing.get("hook_score_mean", 0.0), 2),
                      help_term(labels, "pacing_hook", L("pac_hook_mean"),
-                               fields={"max_words": str(HOOK_SHORT_SENTENCE)})))
+                               fields={"max_words": hook_words})))
     if "sentence_overlap_pct" in pacing:
         tiles.append(kpi(P(float(pacing.get("sentence_overlap_pct", 0.0))), L("pac_cohesion")))
     if "repeated_start_runs" in pacing:
@@ -933,6 +935,8 @@ def render_pacing_panel(
     )):
         has_sticky_ch = pacing.get("sticky_available", True) and any("sticky_sentence_pct" in ch for ch in chapters_pacing)
         sticky_th = f'<th scope="col" class="num">{L("pac_sticky_pct")}</th>' if has_sticky_ch else ""
+        monotony_min_run = N(pacing.get("monotony_min_run", MONOTONY_MIN_RUN), 0)
+        monotony_help = help_term(labels, "pacing_monotony", L("pac_monotony"), fields={"min_run": monotony_min_run})
         parts.append(
             table_wrap_start(label(labels, "pac_chapter_details"))
             + "<thead><tr>"
@@ -941,7 +945,7 @@ def render_pacing_panel(
             f'<th scope="col" class="spark">{help_term(labels, "pacing_sparkline", L("pac_sparkline"))}</th>'
             f'<th scope="col" class="num">{L("pac_hook")}</th>'
             f'<th scope="col" class="num">{help_term(labels, "pacing_cohesion", L("pac_cohesion"))}</th>'
-            f'<th scope="col" class="num">{help_term(labels, "pacing_monotony", L("pac_monotony"))}</th>'
+            f'<th scope="col" class="num">{monotony_help}</th>'
             f"{sticky_th}"
             "</tr></thead><tbody>"
         )
@@ -983,6 +987,9 @@ def render_pacing_panel(
             )
         )
         parts.append(f'<p class="ctl-note">{L("pac_sticky_read")}</p>')
+        reference = metric_reference_link(labels, "sticky")
+        if reference:
+            parts.append(f'<p class="ctl-note">{reference}</p>')
         rule = pacing.get("sticky_rule")
         if isinstance(rule, Mapping) and rule.get("min_words") is not None and rule.get("min_pct") is not None:
             thresholds = label(labels, "pac_sticky_rule").format(
@@ -1274,6 +1281,7 @@ def render_showing_panel(
     language_key: str = "generic",
     *,
     short_sentence_max: int | None = None,
+    available_layers: frozenset[str] | None = None,
 ) -> str:
     """Render the manuscript-relative signal groups without a narrative verdict."""
     if not (showing and showing.get("chapter_list")):
@@ -1310,6 +1318,7 @@ def render_showing_panel(
         f'<button type="button" class="ctl ctl-sm showing-pattern-jump" '
         f'data-pattern-jump="1" data-layer="{layer_key}">{L(label_key)}</button>'
         for layer_key, label_key in pattern_layers
+        if available_layers is None or layer_key in available_layers
     )
     if short_sentence_max is not None:
         pattern_buttons += (
@@ -1326,6 +1335,9 @@ def render_showing_panel(
             hidden=True,
         )
     )
+    if available_layers is not None and not COMPARISON_LAYERS.issubset(available_layers):
+        parts.append(f'<p class="ctl-note">{L("layer_language_unavailable")}</p></section>')
+        return "".join(parts)
     if not comparable:
         note = L("showing_unavailable_note").replace("{min_chapters}", str(MIN_COMPARISON_CHAPTERS))
         parts.append(f'<p class="ctl-note">{note}</p></section>')

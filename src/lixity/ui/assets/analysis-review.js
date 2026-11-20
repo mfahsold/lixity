@@ -45,6 +45,7 @@
   }
   function failed() {
     accepted = null;
+    setRevisionDelta(null);
     controls(true);
     rows.forEach(function(row) {
       row.dataset.reviewState = "unknown";
@@ -81,20 +82,16 @@
     });
     controls(false);
     reload.hidden = true;
-    apply();
     return true;
   }
-  function renderChapterDeltas(deltaRes) {
+  function setRevisionDelta(deltaRes) {
+    revisionDelta = deltaRes;
+    document.querySelectorAll("#heatmap .chapter-delta-badge").forEach(function(badge) { badge.remove(); });
     if (!deltaRes || !deltaRes.has_baseline || !Array.isArray(deltaRes.chapter_deltas)) return;
     deltaRes.chapter_deltas.forEach(function(ch) {
       var row = document.getElementById("heatmap-ch-" + ch.num);
       var cell = row && row.querySelector("td.ch");
-      if (!cell) return;
-      var existing = cell.querySelector(".chapter-delta-badge");
-      if (ch.match_status && ch.match_status !== "matched") {
-        if (existing) existing.remove();
-        return;
-      }
+      if (!cell || (ch.match_status && ch.match_status !== "matched")) return;
       var parts = [];
       if (typeof ch.words_delta === "number" && ch.words_delta !== 0) {
         parts.push((ch.words_delta > 0 ? "↑ +" : "↓ ") + ch.words_delta + " W");
@@ -102,18 +99,13 @@
       if (typeof ch.asl_delta === "number" && Math.abs(ch.asl_delta) >= 0.1) {
         parts.push("Δ " + (ch.asl_delta > 0 ? "+" : "") + ch.asl_delta.toFixed(1) + " ASL");
       }
-      if (!parts.length) {
-        if (existing) existing.remove();
-        return;
-      }
-      if (!existing) {
-        existing = document.createElement("span");
-        existing.className = "badge chapter-delta-badge";
-        existing.style.marginInlineStart = "6px";
-        existing.style.opacity = "0.85";
-        cell.append(" ", existing);
-      }
-      existing.textContent = parts.join(" · ");
+      if (!parts.length) return;
+      var badge = document.createElement("span");
+      badge.className = "badge chapter-delta-badge";
+      badge.style.marginInlineStart = "6px";
+      badge.style.opacity = "0.85";
+      badge.textContent = parts.join(" · ");
+      cell.append(badge);
     });
   }
   async function load() {
@@ -121,16 +113,17 @@
     pending = true; controls(true);
     status.textContent = label("loading"); status.className = "ctl-status";
     var selected = token();
+    var query = "?project_token=" + encodeURIComponent(selected);
     var [data, deltaRes] = await Promise.all([
-      jsonApi(API + "/analysis-review?project_token=" + encodeURIComponent(selected)),
-      jsonApi(API + "/manuscript-delta").catch(function() { return null; }),
+      jsonApi(API + "/analysis-review" + query),
+      jsonApi(API + "/manuscript-delta" + query).catch(function() { return null; }),
     ]);
     pending = false;
-    if (deltaRes && deltaRes.ok) {
-      revisionDelta = deltaRes;
-      renderChapterDeltas(deltaRes);
-    }
     if (selected !== token() || !accept(data)) {failed(); return;}
+    var matchesSource = deltaRes && deltaRes.ok && deltaRes.schema_version === "lixity-timeline/1" &&
+      deltaRes.current && deltaRes.current.revision === accepted.source_sha256;
+    setRevisionDelta(matchesSource ? deltaRes : null);
+    apply();
     status.textContent = "";
   }
   function passageRow(passage) {
@@ -186,6 +179,7 @@
     }).then(function(data) {
       pending = false;
       if (selected !== token() || !accept(data)) {failed(); return;}
+      apply();
       window.LixityComponents.setStatus(status, label("saved"), "ok");
       if (row.hidden) next.focus();
     });

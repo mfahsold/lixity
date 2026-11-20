@@ -7,7 +7,7 @@ from html import escape
 from typing import Literal
 
 from ..manuscript_document import BlockKind, _protected_source, manuscript_blocks
-from ..markdown_parser import _without_comments
+from ..markdown_parser import _chapter_spans, _without_comments
 from ..models import CorpusConfig
 from ..style_profile import ParagraphProfile
 
@@ -29,6 +29,7 @@ class ReaderBlock:
     level: int = 3
     profile_index: int | None = None
     is_chapter: bool = False
+    chapter_num: int | None = None
 
 
 def reader_block_html(block: ReaderBlock, *, heading_level: int = 3) -> str:
@@ -85,6 +86,7 @@ def reader_blocks(
                 "paragraph", "\n".join(literal_lines[first - 1:last]), first, last,
             ))
 
+    chapter_numbers = {line: number for number, _, _, line in _chapter_spans(text, config)}
     for block in manuscript_blocks(text, config):
         first = bisect_left(ends, block.start_line)
         last = bisect_right(starts, block.end_line)
@@ -92,6 +94,7 @@ def reader_blocks(
             result.append(ReaderBlock(
                 block.kind, block.text, block.start_line, block.end_line,
                 level=block.level, is_chapter=block.is_chapter,
+                chapter_num=chapter_numbers.get(block.start_line) if block.is_chapter else None,
             ))
             continue
         cursor = block.start_line

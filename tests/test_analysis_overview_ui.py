@@ -3,6 +3,7 @@
 import copy
 import re
 import unittest
+from xml.etree import ElementTree
 
 from lixity.models import CorpusConfig, CorpusMetrics
 from lixity.pipeline import analyze_document
@@ -134,7 +135,7 @@ class TestAnalysisOverview(unittest.TestCase):
         panel = html.split('id="matrix"', 1)[1].split("</section>", 1)[0]
         self.assertIn('<details class="panel-disclosure analysis-coverage">', panel)
         self.assertIn("words per sentence", panel)
-        self.assertIn("30 in every 100 words", panel)
+        self.assertIn("30 of every 100 words are in recognized quotes or marked speech", panel)
         self.assertIn("What is counted", panel)
         self.assertIn("blockquotes", panel)
 
@@ -151,22 +152,24 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertIsNotNone(first_option)
         self.assertEqual(first_option.group(1), "None")
 
-        # Check optgroups
-        optgroups = re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', select_body, re.DOTALL)
+        optgroups = ElementTree.fromstring(f"<select>{select_body}</select>").findall("optgroup")  # noqa: S314
         self.assertEqual(len(optgroups), 3)
         expected_groups = [
-            ("Sentence &amp; Rhythm", ("asl", "function")),
-            ("Voice &amp; Dialogue", ("dialogue", "filter", "sensory")),
-            ("Grammar &amp; Style", ("passive", "modal", "nominal")),
+            ("Sentence & Rhythm", ("asl", "function")),
+            ("Voice & Dialogue", ("dialogue", "filter", "sensory")),
+            ("Grammar & Style", ("passive", "modal", "nominal")),
         ]
-        for (expected_label, expected_members), (actual_label, group_content) in zip(expected_groups, optgroups, strict=True):
-            self.assertEqual(actual_label, expected_label)
-            options = re.findall(r'<option value="([^"]+)" data-hint="([^"]*)" data-unit="([^"]*)" data-comparable="(\d+)">', group_content)
-            actual_keys = tuple(opt[0] for opt in options)
+        for (expected_label, expected_members), group in zip(expected_groups, optgroups, strict=True):
+            self.assertEqual(group.attrib["label"], expected_label)
+            options = group.findall("option")
+            actual_keys = tuple(option.attrib["value"] for option in options)
             self.assertEqual(actual_keys, expected_members)
-            for key, hint, _unit, comparable in options:
-                self.assertTrue(len(hint) > 0, f"Hint should not be empty for {key}")
-                self.assertTrue(int(comparable) >= 0)
+            for option in options:
+                key = option.attrib["value"]
+                self.assertTrue(option.attrib["data-hint"], f"Hint should not be empty for {key}")
+                self.assertTrue(option.attrib["data-unit"])
+                self.assertGreaterEqual(int(option.attrib["data-comparable"]), 0)
+                self.assertEqual(option.attrib["data-reference"], f"measure-{key}")
 
     def test_reader_analysis_switches_render_pill_toggles_with_accessible_controls(self):
         html = self.render()

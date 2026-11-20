@@ -302,7 +302,7 @@ class ChapterMetrics(BaseModel):
     words: int = Field(description="Net word count of the chapter excluding Markdown comments.")
     sentences: int = Field(description="Count of sense units / sentences in the chapter.")
     asl: float = Field(description="Average sentence length (ASL) in words.")
-    dialog_pct: float = Field(description="Percentage of direct dialogue in the text.")
+    dialog_pct: float = Field(description="Share of counted words in recognized quotations or marked speech.")
     ttr: float = Field(description="Type-Token Ratio of the chapter (lexical density).")
     motif_counts: dict[str, int] = Field(
         default_factory=dict,
@@ -408,8 +408,8 @@ class CorpusMetrics(BaseModel):
         description="Name of the applied readability formula (e.g., Amstad, Kandel-Moles).",
     )
     lix: float = Field(description="Läsbarhetsindex (LIX = ASL + % long words > 6 letters).")
-    dialog_words: int = Field(description="Word count in direct speech.")
-    dialog_ratio: float = Field(description="Percentage of direct dialogue in narrative prose.")
+    dialog_words: int = Field(description="Counted words in recognized quotations or marked speech.")
+    dialog_ratio: float = Field(description="Share of counted prose words in recognized quotations or marked speech.")
     total_paragraphs: int = Field(description="Total count of narrative prose paragraphs.")
     avg_paragraph_len: float = Field(description="Average paragraph length in words.")
     single_line_paragraphs: int = Field(

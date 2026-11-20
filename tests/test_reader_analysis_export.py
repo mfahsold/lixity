@@ -49,6 +49,19 @@ def test_selected_analysis_is_physical_and_capped(tmp_path, sections):
     assert sizes['total_html_bytes'] == sizes['html_bytes'] + sizes['analysis_html_bytes']
 
 
+def test_condensed_analysis_uses_counted_tokens_and_localized_reference(tmp_path):
+    project = tmp_path / 'project'
+    manuscript = _publication_project(project)
+    manuscript.write_text('## Eins\n\nMara — wartete.\n', encoding='utf-8')
+    bundle = prepare_site(project, mode='reader', publication_profile='readers',
+                          analysis_sections=['chapters', 'language'])
+    page = bundle.files['analysis.html'].decode()
+    assert '<dt>Wörter</dt><dd>2</dd>' in page
+    assert 'Flesch Reading Ease (Amstad)' in page
+    assert '/guides/metrics/de.html#measurements' in page
+    assert '/guides/metrics/de.html#matrix' in page
+
+
 def test_default_and_incompatible_options_remain_explicit(tmp_path):
     project = tmp_path / 'project'
     _publication_project(project)

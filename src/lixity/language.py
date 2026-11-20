@@ -68,6 +68,10 @@ class LanguageProfile:
 # The effective profile after config overrides is structurally the same object.
 ResolvedLanguage = LanguageProfile
 
+# Built-in single-word cue expressions use these boundaries, independently of
+# the configurable word counts used as their denominators.
+CUE_WORD_RE = re.compile(r"\w+")
+
 
 FUNCTION_CATEGORIES = (
     "articles",

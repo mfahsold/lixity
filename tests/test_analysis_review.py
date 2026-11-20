@@ -270,6 +270,65 @@ def test_native_context_guards_and_static_state_exclusion(project):
     assert b'data-review-capable="true"' not in bundle.files["index.html"]
 
 
+def test_manuscript_delta_can_bind_measurements_to_the_review_page(project):
+    from lixity.server.pdf_context import manuscript_pdf_token
+
+    source = project / "manuscript.md"
+    settings = project / "lixity.toml"
+    handler = make_handler(project, source_input=source)
+    handler.refresh()
+
+    def review_query():
+        token = manuscript_pdf_token(str(source), project_root=project, language=handler.language,
+                                    title=handler.title, thresholds=handler.thresholds)
+        return "?" + urlencode({"project_token": token})
+
+    with LoopbackServer(handler) as server:
+        query = review_query()
+        review = server.request("/api/analysis-review" + query)
+        assert review.status == 200
+        original = server.request("/api/manuscript-delta" + query)
+        assert original.status == 200
+        settings.write_text(settings.read_text() + 'word_regex = "[A-Z][a-z]+"\n')
+        assert server.request("/api/manuscript-delta" + query).status == 409
+        assert server.request("/api/manuscript-delta?project_token=").status == 400
+
+        unbound = server.request("/api/manuscript-delta")
+        assert unbound.status == 200
+        assert unbound.json["current"]["revision"] == review.json["source_sha256"]
+        assert unbound.json["current"]["asl"] == 1.0
+        assert original.json["current"]["asl"] != unbound.json["current"]["asl"]
+        assert server.request("/api/manuscript-delta" + review_query()).json == unbound.json
+
+
+@pytest.mark.parametrize("route", ["analysis-review", "manuscript-delta"])
+def test_native_analysis_reads_recheck_project_settings_before_response(project, monkeypatch, route):
+    from lixity.manuscript_editing import ManuscriptStore
+    from lixity.server import routes_analysis_review
+    from lixity.server.pdf_context import manuscript_pdf_token
+
+    source = project / "manuscript.md"
+    settings = project / "lixity.toml"
+    handler = make_handler(project, source_input=source)
+    handler.refresh()
+    token = manuscript_pdf_token(str(source), project_root=project, language=handler.language,
+                                title=handler.title, thresholds=handler.thresholds)
+    owner, operation = ((routes_analysis_review, "review_analysis") if route == "analysis-review"
+                        else (ManuscriptStore, "delta"))
+    measure = getattr(owner, operation)
+
+    def change_settings_during_read(*args, **kwargs):
+        result = measure(*args, **kwargs)
+        settings.write_text(settings.read_text() + 'word_regex = "[A-Z][a-z]+"\n')
+        return result
+
+    monkeypatch.setattr(owner, operation, change_settings_during_read)
+    with LoopbackServer(handler) as server:
+        response = server.request(f"/api/{route}?" + urlencode({"project_token": token}))
+        assert response.status == 409
+        assert not response.json["ok"]
+
+
 @pytest.fixture
 def model_project(tmp_path, monkeypatch):
     from lixity import grammatical_tense

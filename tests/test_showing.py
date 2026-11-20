@@ -129,6 +129,24 @@ def test_zero_mad_fallback_preserves_representable_variation_at_large_offsets():
 
 
 class TestShowingReport(unittest.TestCase):
+    def test_unconfigured_pattern_rules_do_not_produce_a_chapter_comparison(self):
+        from lixity.analyzer import CorpusAnalyzer
+
+        config = CorpusConfig(language="generic")
+        text = "\n\n".join(f"## {index}\n\n{prose * 44}" for index, prose in enumerate((
+            '"The old gate waits for us." ',
+            "Rain fell. The sky cleared. ",
+            "Behind the gate the old cart still stood in the middle of the road. ",
+        ), 1))
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        self.assertIsNone(metrics.function_word_pct)
+        report = showing_report(text, config, metrics=metrics).to_dict()
+        self.assertEqual(report["chapters"], 3)
+        self.assertEqual(report["comparable_chapters"], 0)
+        self.assertTrue(all(row["balance"] is None for row in report["chapter_list"]))
+        self.assertIsNone(report["balance_mean"])
+        self.assertEqual(report["most_showing"], [])
+
     def test_dialogue_chapter_shows_more(self):
         report = showing_report(TEXT, DE)
         by_num = {c.chapter_num: c for c in report.chapter_list}

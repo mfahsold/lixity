@@ -291,12 +291,13 @@ class TestJsDomContract(unittest.TestCase):
             parse_markdown_blocks("## Opening\n\nA bird crosses the garden.\n\nRain falls.\n")
         )
         paragraphs[0].severity = 2
+        paragraphs[0].mixed = True
         paragraphs[1].severity = 3
         chapters[0].flagged = 2
         html = render_dashboard(chapters, paragraphs)
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('data-target="p-0"', review)
-        self.assertIn("Ch. 1, line 3", review)
+        self.assertIn("Ch. 1, line 3. Present and past in the same paragraph.", review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
         """Section links retain real panel anchors without becoming tabs."""

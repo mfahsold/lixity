@@ -212,12 +212,6 @@ class TestPagesStaging(unittest.TestCase):
         self.assertLess(len(document.encode("utf-8")), 8_000, "The old URL is a compatibility page, not a second workspace")
 
     def test_sitemap_covers_published_html_canonicals(self):
-        class Canonicals(HTMLParser):
-            def handle_starttag(self, tag, attrs):
-                values = dict(attrs)
-                if tag == "link" and values.get("rel") == "canonical":
-                    canonical_urls.append(values["href"])
-
         docs = Path(__file__).resolve().parents[1] / "docs"
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "site"
@@ -226,7 +220,11 @@ class TestPagesStaging(unittest.TestCase):
             for page in output.rglob("*.html"):
                 if page.relative_to(output).as_posix() == "demo/research.html":
                     continue  # The tested compatibility redirect shares the report's canonical.
-                Canonicals().feed(page.read_text(encoding="utf-8"))
+                head = PageHead()
+                head.feed(page.read_text(encoding="utf-8"))
+                directives = {rule.strip().lower() for policy in head.meta.get("robots", []) for rule in policy.split(",")}
+                if "noindex" not in directives:
+                    canonical_urls.extend(link["href"] for link in head.links if link.get("rel") == "canonical")
             # This XML is maintained repository content, never an imported document.
             listed = [node.text for node in ET.parse(output / "sitemap.xml")  # noqa: S314
                       .findall("{*}url/{*}loc")]
@@ -388,12 +386,21 @@ class TestPagesStaging(unittest.TestCase):
                 stage(docs, root / "site")
 
     def test_published_html_head_contract(self):
+        from lixity.status import LANGUAGE_CODES
+        from lixity.ui.metric_reference import (
+            METRIC_REFERENCE_ENTRIES,
+            METRIC_REFERENCE_SECTIONS,
+            metric_reference_document,
+        )
+
         docs = Path(__file__).resolve().parents[1] / "docs"
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "site"
             stage(docs, output)
             pages = sorted(output.rglob("*.html"))
             self.assertTrue(pages, "Staged pages expected")
+            references = {f"guides/metrics/{code}.html": code for code in LANGUAGE_CODES if code != "generic"}
+            self.assertLessEqual(references.keys(), {page.relative_to(output).as_posix() for page in pages})
             sitemap = {node.find("{*}loc").text: node.find("{*}lastmod").text
                        for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314
             for page in pages:
@@ -405,6 +412,19 @@ class TestPagesStaging(unittest.TestCase):
                 head.feed(page.read_text(encoding="utf-8"))
                 canonical = SITE + ("" if relative == "index.html" else relative)
                 self.assertEqual([item["href"] for item in head.links if item.get("rel") == "canonical"], [canonical])
+                if relative in references:
+                    language = references[relative]
+                    rendered = metric_reference_document(language)
+                    self.assertEqual(page.read_bytes(), rendered.encode("utf-8"))
+                    self.assertIn(f'<html lang="{language}">', rendered)
+                    self.assertNotIn(canonical, sitemap)
+                    self.assertEqual(head.meta["robots"], ["noindex,follow"])
+                    self.assertNotRegex(rendered, r"\{\w+\}|<script\b")
+                    ids = re.findall(r'\bid="([^"]+)"', rendered)
+                    self.assertEqual(len(ids), len(set(ids)))
+                    self.assertLessEqual(METRIC_REFERENCE_ENTRIES | METRIC_REFERENCE_SECTIONS, set(ids))
+                    self.assertEqual(set(re.findall(r'\bhref="#([^"]+)"', rendered)), METRIC_REFERENCE_SECTIONS)
+                    continue  # The app's linked reference is a utility document, shared with Pages.
                 for key in ("description", "og:title", "og:description", "og:url", "twitter:title",
                             "twitter:description", "twitter:card"):
                     self.assertEqual(len(head.meta.get(key, [])), 1, f"{relative}: one {key}")

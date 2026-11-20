@@ -3,28 +3,60 @@
 from collections.abc import Mapping, Sequence
 from html import escape
 
+from ..style_fingerprint import FEATURE_UNITS, LAYER_FEATURES, ParagraphLayerData
 from ..style_profile import ChapterProfile
-from .components import close_button, compact_control, label, panel_label, ui_icon
+from .components import (
+    close_button,
+    compact_control,
+    help_term,
+    label,
+    metric_reference_link,
+    panel_label,
+    ui_icon,
+)
 from .manuscript_document import ReaderBlock
 
-INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
+_LAYER_GROUPS = (
+    ("layer_group_rhythm", ("asl", "function", "sticky")),
+    ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
+    ("layer_group_grammar", ("passive", "modal", "nominal")),
+)
 
 
-def inline_evidence_controls(labels: Mapping[str, str] | None) -> str:
-    """Render inline evidence layer toggle chips for the reader analysis bar."""
+def reading_metric_control(
+    labels: Mapping[str, str] | None, language: str, comparisons: ParagraphLayerData, *,
+    available: frozenset[str] | None = None, include_evidence: bool, report: bool,
+) -> str:
+    """Render the shared metric selector from the prepared analysis."""
     text = panel_label(labels)
+    units = FEATURE_UNITS.get(language, FEATURE_UNITS["en"])
 
-    chips = "".join(
-        f'<button type="button" class="ctl reader-evidence-chip" '
-        f'data-evidence-layer="{layer_key}" aria-pressed="false" '
-        f'data-help="{text("reading_help_evidence_" + layer_key)}">'
-        f'<span class="evidence-chip-swatch evidence-chip-swatch-{layer_key}" aria-hidden="true"></span>'
-        f'<span>{text("evidence_layer_" + layer_key)}</span></button>'
-        for layer_key in INLINE_EVIDENCE_LAYERS
-    )
+    def option(key: str) -> str:
+        inline = key not in LAYER_FEATURES
+        if inline and not include_evidence:
+            return ""
+        title = text(("evidence_layer_" if inline else "layer_") + key)
+        unavailable = available is not None and key not in available
+        if unavailable:
+            title = f'{text("metric_context_missing")} · {title}'
+        hint = text(("reading_help_evidence_" if inline else "layer_hint_") + key)
+        unit = "" if inline else escape(units[LAYER_FEATURES[key]])
+        capability = ' data-available="0"' if unavailable else ""
+        inline_attr = ' data-inline-evidence="1"' if inline else ""
+        return (f'<option value="{key}" data-hint="{hint}" data-unit="{unit}" '
+                f'data-comparable="{len(comparisons.get(key, {}))}" data-reference="measure-{key}"'
+                f'{capability}{inline_attr}>{title}</option>')
+
+    groups = "".join(f'<optgroup label="{text(group)}">{"".join(map(option, keys))}</optgroup>'
+                     for group, keys in _LAYER_GROUPS)
+    additional = "".join(option(key) for key in LAYER_FEATURES
+                         if not any(key in keys for _, keys in _LAYER_GROUPS))
+    title = help_term(labels, "layer", text("style_layer")) if report else text("analysis_measure")
     return (
-        f'<div class="reader-inline-evidence-layers" id="reader-inline-evidence-layers" '
-        f'role="group" aria-label="{text("reading_inline_evidence")}">{chips}</div>'
+        f'<label class="metric-layer-control"><span>{title}</span> '
+        f'<select class="ctl" id="style-layer" aria-label="{text("analysis_measure")}" '
+        f'data-help="{text("reading_help_measure")}">'
+        f'<option value="">{text("layer_off")}</option>{groups}{additional}</select></label>'
     )
 
 
@@ -50,12 +82,16 @@ def reading_controls(
             choices = []
             for block in source_chapters:
                 chapter = profiled.get(block.start_line)
-                target = f"ch-{chapter.num}" if chapter else f"source-{block.start_line}"
-                title = f"{chapter.num}. {chapter.title}" if chapter else block.text
-                choices.append(f'<option value="{target}">{escape(title)}</option>')
+                number = chapter.num if chapter else block.chapter_num
+                target = f"ch-{number}" if number is not None else f"source-{block.start_line}"
+                title = chapter.title if chapter else block.text
+                numbered_title = f"{number}. {title}" if number is not None else title
+                choices.append(f'<option value="{target}">{escape(numbered_title)}</option>')
             options = "".join(choices)
         if not reader_document[0].is_chapter and source_chapters:
-            options = f'<option value="reader-preface">{text("reading_view")}</option>' + options
+            target = (f"ch-{chapters[0].num}" if chapters and chapters[0].start_line < source_chapters[0].start_line
+                      else "reader-preface")
+            options = f'<option value="{target}">{text("reading_view")}</option>' + options
     help_icon = ui_icon("help-circle")
     appearance_summary = compact_control(
         label(labels, "reading_appearance"), "type", tag="summary",
@@ -133,10 +169,12 @@ def reading_controls(
         f'<strong>{text("analysis_guide_title")}</strong>'
         f'<p>{text("analysis_guide_intro")}</p>'
         '<p class="ctl-note" id="reader-analysis-guide-state" role="status" aria-live="polite"></p>'
+        '<p class="ctl-note" id="reader-metric-definition" hidden></p>'
         f'<ol><li><button type="button" class="ctl" data-analysis-guide-action="choose">{text("analysis_guide_choose")}</button></li>'
         f'<li><button type="button" class="ctl" data-analysis-guide-action="example" disabled>{text("analysis_guide_count")}</button></li>'
         f'<li><button type="button" class="ctl" data-analysis-guide-action="explore">{text("reading_explore_passage")}</button></li></ol>'
         f'<p class="ctl-note">{text("analysis_guide_compare")}</p>'
+        f'<p class="ctl-note">{metric_reference_link(labels, "measurements", element_id="reader-metric-reference")}</p>'
         '</div></details></div>'
         f'{overview_btn}'
         f'{companion_controls}'

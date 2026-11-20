@@ -183,7 +183,7 @@ def test_quote_capture_contract_does_not_exclude_reporting_clause(monkeypatch):
     assert [g["scope"] for g in result["groups"]] == ["narration","quotation"]
 
 
-def test_quotation_context_stops_at_chapter_boundary_and_includes_block_quotes(monkeypatch):
+def test_quotation_context_stops_at_chapter_and_markdown_quote_boundaries(monkeypatch):
     from lixity import grammatical_tense
     from lixity.grammatical_tense import VerbGroup
     from lixity.pipeline import analyze_document
@@ -200,11 +200,12 @@ def test_quotation_context_stops_at_chapter_boundary_and_includes_block_quotes(m
     # Unmatched quote marks in different chapters must not form one quotation.
     text = '## One\n\n„Es war gut.\n\n## Two\n\nEs war gut.“\n\nSie übt.\n'
     result = analyze_document(text,config,FingerprintThresholds())
-    assert [(p.present_hits,p.past_hits) for p in result.paragraphs] == [(0,1),(0,1),(1,0)]
-    # The profile omits blockquote paragraphs, but retains their quotation context.
+    assert [(p.present_hits,p.past_hits) for p in result.paragraphs] == [(0,0),(0,1),(1,0)]
+    assert result.paragraphs[0].tense_analysis["groups"][0]["scope"] == "unresolved"
+    # An open mark inside a Markdown blockquote cannot claim the body text.
     text = '## One\n\n> „Es war gut.\n\nSie übt.“\n\nSie übt.\n'
     result = analyze_document(text,config,FingerprintThresholds())
-    assert [(p.present_hits,p.past_hits) for p in result.paragraphs] == [(0,0),(1,0)]
+    assert [(p.present_hits,p.past_hits) for p in result.paragraphs] == [(1,0),(1,0)]
 
 
 def test_native_startup_model_override_is_consumed_without_writing_project(tmp_path):

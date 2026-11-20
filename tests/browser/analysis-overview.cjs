@@ -61,6 +61,14 @@ async function textLines(locator) {
   });
 }
 
+async function assertMetricLink(link, href, label) {
+  assert.ok(await link.isVisible(), `Visible measurement reference for ${href}`);
+  assert.equal(await link.evaluate(node => node.href), new URL(href, link.page().url()).href);
+  assert.equal((await link.textContent()).trim(), label);
+  assert.equal(await link.getAttribute('target'), '_blank');
+  assert.ok(await link.evaluate(node => node.relList.contains('noopener')));
+}
+
 async function pinnedIdentity(page, panel, cellIndex) {
   const region = page.locator(`#${panel} .table-wrap`).first();
   await region.scrollIntoViewIfNeeded();
@@ -94,10 +102,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
       });
       await page.addInitScript(() => localStorage.setItem('lixity:hide-review-guide', '1'));
       await page.goto('http://lixity.test/');
+      const guideBase = `/guides/metrics/${locale}.html`;
+      const guideLabel = await page.evaluate(() => uiLabel('metric_reference_link'));
+      assert.equal(await page.locator('body').getAttribute('data-metric-guide'), guideBase);
       assert.equal(await page.title(), 'Synthetic analysis overview – ' +
         (await page.locator('.workspace-shell .product-name').textContent()).trim(),
         'Browser history identifies the manuscript and product without repeating an analysis slogan');
       await page.locator('#workbench-overview-open').click();
+      await assertMetricLink(page.locator('#analysis-review-body > p a[href*="/guides/metrics/"]'),
+        `${guideBase}#analysis-review`, guideLabel);
       const navigation = page.locator('[data-analysis-workflows]');
       const entries = navigation.locator('[data-analysis-workflow]');
       const visiblePanels = () => page.locator('#manuscript-analysis-panels > :visible').count();
@@ -133,6 +146,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
       if ((locale === 'en' || locale === 'de') && [1440, 320].includes(width)) {
         assert.equal(await page.locator('#dimensions').isVisible(), false, 'Style measurements start concealed');
         await selectSection('style');
+        await page.locator('#style-tab-heatmap').click();
+        await page.locator('#heatmap [data-metric-feature="asl"]').first().press('Enter');
+        const context = page.locator('#analysis-metric-context');
+        const reference = context.locator('#metric-context-reference-link');
+        await assertMetricLink(reference, `${guideBase}#measure-asl`, guideLabel);
+        await context.locator('#metric-context-details > summary').click();
+        await context.locator('[data-metric-row="dialog_pct"] button').click();
+        await assertMetricLink(reference, `${guideBase}#measure-dialog_pct`, guideLabel);
+        await page.keyboard.press('Escape');
         await page.locator('#style-tab-dimensions').click();
         assert.equal(await page.locator('#dimensions').isVisible(), true, 'The comparison workflow reveals the style space');
         assert.equal(await page.locator('#style-tab-dimensions').getAttribute('aria-selected'), 'true');
@@ -152,12 +174,18 @@ async function pinnedIdentity(page, panel, cellIndex) {
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
       for (const target of ['flags','pacing','scenes','dialogue','showing','characters','motifs','style','matrix']) {
         await selectSection(target);
+        await assertMetricLink(page.locator(`#${target} > p a[href*="/guides/metrics/"]`),
+          `${guideBase}#${target}`, guideLabel);
+        if (target === 'pacing') {
+          await assertMetricLink(page.locator('#pacing #dist > p a[href*="/guides/metrics/"]'),
+            `${guideBase}#dist`, guideLabel);
+        }
       }
       await selectSection('showing');
       const signalPanel = page.locator('#showing');
       const signalMethod = signalPanel.locator('details.signal-method');
       const signalSummary = signalMethod.locator('summary');
-      const signalBrief = signalPanel.locator(':scope > p.ctl-note').first();
+      const signalBrief = signalPanel.locator(':scope > p.ctl-note:not(:has(a[href*="/guides/metrics/"]))').first();
       const measurementsBefore = await signalPanel.locator('.kpi-row').textContent();
       assert.equal(await signalMethod.evaluate(element=>element.open), false);
       assert.ok(await signalBrief.isVisible(), `${locale}: comparison limits remain visible`);
@@ -195,6 +223,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
       await selectSection('analysis-measurements');
       const measurements = page.locator('#analysis-measurements');
       assert.equal(await measurements.getAttribute('open'), '', 'Selecting measurements opens the overview');
+      await assertMetricLink(measurements.locator('.kpis > p a[href*="/guides/metrics/"]'),
+        `${guideBase}#measurements`, guideLabel);
       assert.ok(await measurements.locator('.kpi').first().isVisible());
       assert.equal(await page.locator('#flags').isVisible(), false, 'The measurement view does not also expand flag review');
       const summary = measurements.locator(':scope > summary');
@@ -295,6 +325,10 @@ async function pinnedIdentity(page, panel, cellIndex) {
     const report = await browser.newPage({viewport: {width: 320, height: 900}, javaScriptEnabled: false});
     await report.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.standalone}));
     await report.goto('http://lixity.test/');
+    const publicGuide = 'https://mfahsold.github.io/lixity/guides/metrics/en.html';
+    assert.equal(await report.locator('body').getAttribute('data-metric-guide'), publicGuide);
+    await assertMetricLink(report.locator('#pacing > p a[href*="/guides/metrics/"]'),
+      `${publicGuide}#pacing`, 'How it’s measured');
     assert.equal(await report.locator('#analysis-measurements').getAttribute('open'), '');
     assert.ok(await report.locator('#analysis-measurements .kpi').first().isVisible(), 'Standalone reports retain visible measurements without JavaScript');
     assert.ok(await report.locator('#readability-measurements').isVisible(), 'Standalone reports show formula inputs without JavaScript');

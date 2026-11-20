@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/metrics/fr.html">
+<title>Ce que mesure Lixity</title>
+<style>
+/* Canonical foundation shared by bundled dashboards and staged Pages. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f2f4fa, #0c1017);
+  --surface: light-dark(#ffffff, #121822);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #9ba7b8);
+  --muted: light-dark(#56647b, #8a96a8);
+  --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
+  --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
+  --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
+  --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
+  /* Solid metric spans use this role; saved research uses neutral dotted borders. */
+  --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
+  /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
+  --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
+  --analysis-comparison-negative: light-dark(#2b6cb0, #7ba7d0);
+  --analysis-comparison-positive: light-dark(#c05621, #e8b07a);
+  /* Binary axis cutoff in the style space; not the signed comparison scale. */
+  --style-space-threshold: light-dark(#b45309, #fbbf24);
+  --style-space-selection: var(--fg);
+  --present: light-dark(#2d8664, #34d399);
+  --present-light: light-dark(#e6f4ea, #064e3b);
+  --past: light-dark(#b57635, #fbbf24);
+  --past-light: light-dark(#fef3e2, #451a03);
+  --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
+  --neutral: light-dark(#d8dee6, #2c323d);
+  --flag: light-dark(#c0392b, #f87171);
+  --flag-strong: light-dark(#dc2626, #f87171);
+  --flag-light: light-dark(#fce8e6, #450a0a);
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
+  --on-action: #ffffff;
+  /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
+     inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
+     large surfaces --radius-lg; only true pills (badges, status chips, tracks)
+     use --radius-pill. Rules never hard-code a radius. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
+  --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease-out: var(--ease);
+  --dur-fast: 140ms;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Shared type scale: caption, metadata, controls, body, subhead, heading, display. */
+  --text-caption: .75rem;
+  --text-note: .8125rem;
+  --text-micro: var(--text-note);
+  --text-small: var(--text-note);
+  --text-control: .875rem;
+  --text-section-title: var(--text-body);
+  --text-body: 1rem;
+  --text-subhead: 1.125rem;
+  --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-display: clamp(2.1rem, 4vw, 3.35rem);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-strong: 650;
+  --weight-bold: 700;
+  --line-tight: 1.4;
+  --line-body: 1.6;
+  --line-compact: 1.5;
+  --line-control: 1.35;
+  --line-reading: 1.7;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --panel-padding: 1.25rem;
+  --section-gap: 1.5rem;
+
+  --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-alt: light-dark(#f7f9fc, #161d29);
+  --surface-raised: light-dark(#f2f4fa, #1a2230);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
+  --glass-blur: 12px;
+  --glass-blur-sm: 8px;
+  --glass-blur-lg: 16px;
+  --z-sticky: 14;
+  --z-popover: 220;
+  --z-modal: 1000;
+  --z-tooltip: 10000;
+  --sticky-clearance: 4.5rem;
+
+  /* Editorial & status markers */
+  --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);
+  --marker-pruefen-fg: light-dark(#0369a1, #7dd3fc);
+  --marker-sachcheck-bg: light-dark(#fef3c7, #451a03);
+  --marker-sachcheck-fg: light-dark(#92400e, #fde68a);
+  --marker-todo-bg: light-dark(#f3e8ff, #3b0764);
+  --marker-todo-fg: light-dark(#6b21a6, #d8b4fe);
+  --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
+  --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
+
+  --fg-heading: light-dark(#19263d, #ffffff);
+  --status-success-fg: light-dark(#166534, #86efac);
+  --status-success-bg: light-dark(#e6f4ea, #14532d);
+  --status-success-border: light-dark(#b7ddc1, #24734b);
+  --status-warning-fg: light-dark(#854d0e, #fde68a);
+  --status-warning-bg: light-dark(#fff7ed, #713f12);
+  --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-neutral-fg: var(--muted);
+  --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  --status-neutral-border: var(--line);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root { --shadow-modal: 0 28px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08); } }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); }
+main { max-inline-size: 70ch; margin-inline: auto; padding: var(--space-5); overflow-wrap: anywhere; }
+header, section, footer { margin-block: 0 var(--section-gap); }
+section { padding: var(--panel-padding); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+h1, h2 { margin-block: 0 var(--space-3); line-height: var(--line-tight); }
+h1 { font: var(--weight-bold) var(--text-display)/var(--line-tight) var(--font-title); }
+h2 { font-size: var(--text-heading); }
+p { margin-block: 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; padding: 0; }
+nav a { display: inline-block; padding-block: var(--space-1); }
+dl { margin-block: var(--space-3) 0; }
+dl > div { border-block-start: 1px solid var(--line); padding-block: var(--space-3); }
+dl > div:last-child { padding-block-end: 0; }
+dt { font-weight: var(--weight-bold); }
+dd { margin: 0; }
+section > :last-child, dd > :last-child { margin-block-end: 0; }
+[id] { scroll-margin-block-start: var(--space-4); }
+section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Ce que mesure Lixity</h1>
+<p>Les seuils indiqués ici sont les valeurs par défaut. Votre projet peut utiliser d’autres seuils, listes de mots ou règles de détection.</p>
+<nav aria-label="Analyse">
+<ul>
+<li><a href="#analysis-review">Aide à l’analyse</a></li>
+<li><a href="#measurements">Mesures du manuscrit</a></li>
+<li><a href="#flags">Passages signalés</a></li>
+<li><a href="#pacing">Rythme des phrases</a></li>
+<li><a href="#dist">Longueurs de phrase</a></li>
+<li><a href="#sticky">Phrases riches en mots-outils</a></li>
+<li><a href="#dialogue">Citations et répliques signalées</a></li>
+<li><a href="#showing">Mots et guillemets</a></li>
+<li><a href="#motifs">Motifs &amp; répétitions</a></li>
+<li><a href="#characters">Mentions des personnages</a></li>
+<li><a href="#scenes">Scènes &amp; registres de style</a></li>
+<li><a href="#style">Style</a></li>
+<li><a href="#matrix">Matrice des chapitres</a></li>
+<li><a href="#register-targets">Registres des chapitres (facultatif)</a></li>
+<li><a href="#revisions">Comparer les versions</a></li>
+</ul>
+</nav>
+</header>
+<section id="analysis-review" aria-labelledby="heading-analysis-review">
+<h2 id="heading-analysis-review">Aide à l’analyse</h2>
+<p>Choisissez une mesure dans le manuscrit et ouvrez un passage marqué. Lisez tout le paragraphe. Comment ce motif s’accorde-t-il avec la voix, la scène ou le changement d’interlocuteur ?</p>
+<p>Examinez les écarts en contexte. Les mesures servent de repères éditoriaux.</p>
+</section>
+<section id="measurements" aria-labelledby="heading-measurements">
+<h2 id="heading-measurements">Mesures du manuscrit</h2>
+<p>Ces formules décrivent la diversité du vocabulaire de différentes façons. Compare des chapitres de longueur et de voix narrative similaires.</p>
+<dl>
+<div id="measure-words"><dt>Mots analysés</dt><dd><p>Mots de la prose analysée, préambule, listes et citations en bloc inclus. Les profils de paragraphes peuvent couvrir moins de texte.</p></dd></div>
+<div id="measure-asl"><dt>Nombre moyen de mots par phrase</dt><dd><p>Nombre moyen de mots par phrase détectée. Décrit la longueur, pas le suspense ni le rythme du récit.</p><p>Une phrase de 8 mots et une de 16 mots donnent une moyenne de 12 mots par phrase. La répartition indique aussi la fréquence des phrases courtes et longues.</p></dd></div>
+<div id="measure-ttr"><dt>TTR</dt><dd><p>Formes de mots distinctes divisées par les mots comptés. Le rapport baisse souvent avec la longueur ; comparer des longueurs et thèmes similaires.</p></dd></div>
+<div id="measure-yules"><dt>Yule’s K</dt><dd><p>K élevé = domination accrue des formes fréquentes ; K = 0 si chaque forme apparaît une fois. Longueur et contexte influencent la comparaison ; pas une note de qualité.</p></dd></div>
+<div id="measure-hd_d"><dt>HD-D</dt><dd><p>Part attendue de formes de mots différentes dans un tirage de 42 mots : 0,5 signifie 21 formes différentes en moyenne. Calcul exact, sans simulation de tirages. Le sujet et la façon de compter les mots influencent toujours les comparaisons.</p><p>Le calcul du HD-D exige au moins 100 mots.</p></dd></div>
+<div id="measure-guiraud_r"><dt><span id="measure-guiraud"></span>Guiraud R</dt><dd><p>Nombre de formes de mots différentes divisé par la racine carrée du nombre de mots (V/√N). Un même vocabulaire donne une valeur plus basse dans un passage plus long ; comparez des longueurs et des sujets similaires.</p></dd></div>
+<div id="measure-mtld"><dt>MTLD</dt><dd><p>Estime la longueur des séquences avant que les formes répétées ramènent le rapport de diversité à 0,72 ou moins, en faisant la moyenne des deux sens de lecture. La dernière séquence incomplète compte proportionnellement ; plus élevé signifie des séquences variées plus longues. Le minimum de 100 mots ne garantit pas la fiabilité.</p></dd></div>
+<div id="measure-mattr"><dt>MATTR</dt><dd><p>Part moyenne de formes de mots différentes dans des fenêtres de 50 mots qui se chevauchent. Plus élevé signifie plus de formes par fenêtre ; les comparaisons demandent la même taille de fenêtre et des sujets comparables.</p></dd></div>
+<div id="measure-maas_a2"><dt><span id="measure-maas"></span>Maas a²</dt><dd><p>Met en relation la taille du vocabulaire et la longueur du texte. Selon cette formule, des valeurs plus basses indiquent une moindre concentration sur les formes répétées ; comparez des contextes textuels similaires. Indisponible pour les textes courts.</p></dd></div>
+<div id="measure-flesch"><dt>Flesch</dt><dd><p>Formule propre à la langue : mots par phrase et syllabes estimées par mot. Plus élevé = lecture plus facile selon ce modèle ; ni note de qualité ni test de compréhension.</p></dd></div>
+<div id="measure-lix"><dt>LIX</dt><dd><p>Longueur moyenne des phrases plus pourcentage de mots de plus de 6 caractères. Plus élevé = phrases ou mots plus longs ; ni âge de lecture ni note de qualité.</p></dd></div>
+<div id="measure-long_word_pct"><dt><span id="measure-long_words"></span>Mots longs</dt><dd><p>Part des mots comptés dépassant le seuil configuré pour les mots longs. C’est un élément du LIX, pas le score LIX lui-même. La longueur ne prouve ni difficulté ni qualité.</p></dd></div>
+</dl>
+</section>
+<section id="flags" aria-labelledby="heading-flags">
+<h2 id="heading-flags">Passages signalés</h2>
+<p>Paragraphes présentant des indices de changement ou de mélange de temps. Heuristique à examiner en contexte.</p>
+<p>Lisez aussi les paragraphes voisins. Un changement de temps peut appartenir à un retour en arrière ou à une réplique. Le repérage porte uniquement sur les temps verbaux.</p>
+<dl>
+<div id="measure-severity"><dt>Flags selon sévérité</dt><dd><p>0 = neutre, 1 = à surveiller, 2 = notable, 3 = forte différence (changement et mélange). Heuristique, pas un verdict d&#x27;erreur.</p><p>Seuil des indices de temps : 1 = tous les niveaux, 2 = par défaut, 3 = écarts les plus marqués uniquement.</p></dd></div>
+<div id="measure-chapter_tense"><dt>Temps verbaux et changements</dt><dd><p>Temps dominant selon les marqueurs de langue : passé, présent, mixte ou neutre. Une heuristique, pas un jugement grammatical.</p><p>Neutre : trop peu de marqueurs temporels pour statuer.</p></dd></div>
+</dl>
+</section>
+<section id="pacing" aria-labelledby="heading-pacing">
+<h2 id="heading-pacing">Rythme des phrases</h2>
+<p>Plus la barre est longue, plus les phrases sont longues en moyenne. Ouvrez deux chapitres dont les barres diffèrent et lisez un paragraphe de chacun à voix haute. Quel effet le dialogue, l’action et les changements de paragraphe ont-ils sur le rythme ?</p>
+<dl>
+<div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Variation de la longueur des phrases</dt><dd><p>Variation des longueurs de phrase par rapport à leur moyenne. 0 = longueurs égales ; plus élevé = plus de variation. Pas une note de qualité.</p></dd></div>
+<div id="measure-pacing_cohesion"><dt>Reprise entre phrases voisines</dt><dd><p>Part des paires de phrases voisines d’un même paragraphe qui partagent au moins un mot lexical.</p></dd></div>
+<div id="measure-pacing_monotony"><dt>Débuts de phrase répétés</dt><dd><p>Nombre de séquences où 3 phrases consécutives ou plus d’un même paragraphe commencent par le même mot. Signale soit une anaphore volontaire, soit une répétition involontaire en attaque de phrase.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Indices de fin</dt><dd><p>Heuristique de 0 à 3 : un point pour une phrase finale de 1 à 8 mots, une fin en ?, ! ou … et des paroles citées détectées. Ce n’est pas une mesure validée du suspense ou de la qualité.</p></dd></div>
+<div id="measure-start_entropy"><dt>Entropie des débuts</dt><dd><p>Diversité du premier mot compté des phrases détectées. Des débuts répétés comme « je » font baisser la valeur ; des débuts variés l&#x27;augmentent. La répétition peut être voulue.</p></dd></div>
+<div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Débuts en « je »</dt><dd><p>Part des phrases détectées dont le premier mot compté est « je » ou « j » dans les formes élidées reconnues. 50 % signifie que la moitié commence ainsi ; cela peut correspondre à une voix narrative voulue.</p></dd></div>
+</dl>
+</section>
+<section id="dist" aria-labelledby="heading-dist">
+<h2 id="heading-dist">Longueurs de phrase</h2>
+<p>Chaque ligne indique un groupe de longueur, le nombre de phrases qu’il contient et leur part de l’ensemble. Lisez un paragraphe à voix haute et écoutez les variations de longueur.</p>
+<p>Les quatre groupes comptent jusqu’à 6, de 7 à 15, de 16 à 25, puis plus de 25 mots par phrase.</p>
+<dl>
+<div id="measure-staccato_pct"><dt><span id="measure-staccato"></span>Part de phrases courtes</dt><dd><p>Part des phrases détectées de 6 mots ou moins. La longueur seule ne mesure pas le rythme d’une scène.</p></dd></div>
+<div id="measure-kaskade_pct"><dt><span id="measure-kaskade"></span>Phrases longues</dt><dd><p>Part des phrases détectées de plus de 25 mots. Mesure la longueur, pas l’imbrication syntaxique.</p></dd></div>
+</dl>
+</section>
+<section id="sticky" aria-labelledby="heading-sticky">
+<h2 id="heading-sticky">Phrases riches en mots-outils</h2>
+<p>La vue d’ensemble montre la part des phrases reconnues qui correspondent au filtre. Pour une phrase, la valeur indique sa propre part de mots-outils.</p>
+<p>Les articles et les pronoms sont des mots-outils. Ouvrez un exemple et lisez le paragraphe où il figure.</p>
+<dl>
+<div id="measure-sticky"><dt>Part des phrases riches en mots-outils</dt><dd><p>Le filtre retient les phrases d’au moins 8 mots avec au moins 45 % de mots-outils.</p><p>Cinq mots sur huit représentent 62,5 %. Une phrase simple peut donc être marquée. Relisez le paragraphe pour vérifier si le fil du récit et les renvois sont clairs.</p></dd></div>
+<div id="measure-function"><dt><span id="measure-function_word_pct"></span><span id="measure-function_words"></span>Mots-outils</dt><dd><p>Part des mots de la liste grammaticale propre à la langue, tels les articles et pronoms. Plus élevé = plus de mots listés, pas moins de sens.</p><p>Comprend-on à quoi renvoient des mots comme « elle », « le » ou « cela » ?</p></dd></div>
+</dl>
+</section>
+<section id="dialogue" aria-labelledby="heading-dialogue">
+<h2 id="heading-dialogue">Citations et répliques signalées</h2>
+<p>Les paramètres de langue ou de projet définissent les signes reconnus. Les barres montrent la part des mots pour chaque chapitre.</p>
+<p>20 % signifie qu’environ un mot sur cinq se trouve dans une citation ou une réplique reconnue. Lisez le passage pour savoir qui parle, pense ou est cité.</p>
+<dl>
+<div id="measure-dialogue"><dt><span id="measure-dialog_pct"></span>Mots dans les citations et les répliques signalées</dt><dd><p>Part des mots entièrement compris dans une citation ou une réplique reconnue. Les titres ou les pensées peuvent employer les mêmes signes.</p><p>Lisez le passage à voix haute. Si un personnage parle, les mots lui ressemblent-ils et conviennent-ils à la situation ?</p></dd></div>
+<div id="measure-dlg_short_turns"><dt>Citations courtes (≤ 12 mots)</dt><dd><p>Part des passages reconnus de 1 à 12 mots. Lisez le passage pour savoir si quelqu’un parle.</p></dd></div>
+<div id="measure-dlg_long_turns"><dt>Citations longues (≥ 80 mots)</dt><dd><p>Passages reconnus de 80 mots ou plus. Relisez les longs monologues ou passages explicatifs dans leur contexte.</p></dd></div>
+<div id="measure-dlg_voice_contrast"><dt>Écart de longueur des phrases</dt><dd><p>Mots par phrase dans les citations et répliques reconnues moins les mots par phrase dans le reste du texte sans ambiguïté. Un résultat négatif indique des phrases plus courtes dans les passages signalés. Il faut des phrases exploitables des deux côtés.</p></dd></div>
+<div id="measure-dialogue_tag"><dt>Verbes d’incise</dt><dd><p>Surligne des formes comme « dit » ou « demanda » près des citations et des répliques reconnues.</p><p>Lisez le passage signalé et son incise. Savez-vous qui parle ?</p></dd></div>
+<div id="measure-indirect_speech"><dt>Discours indirect</dt><dd><p>Lixity surligne des indices de paroles ou de pensées rapportées hors des citations reconnues.</p><p>Lisez cette phrase avec la précédente. De qui rapporte-t-on les paroles ou la pensée ?</p></dd></div>
+</dl>
+</section>
+<section id="showing" aria-labelledby="heading-showing">
+<h2 id="heading-showing">Mots et guillemets</h2>
+<p>Les occurrences sont rapportées à 1 000 mots pour comparer des chapitres de longueurs différentes. Lisez le passage pour comprendre le rôle du mot repéré.</p>
+<dl>
+<div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Filtres de perception</dt><dd><p>Occurrences du motif configuré pour la perception, les pensées et les souvenirs, pour 1 000 mots. Lisez le passage pour identifier qui perçoit ou pense.</p><p>Comprend-on qui perçoit quelque chose, se souvient ou réfléchit ici ?</p></dd></div>
+<div id="measure-sensory"><dt><span id="measure-sensory_density"></span>Densité sensorielle</dt><dd><p>Occurrences du motif sensoriel configuré pour 1 000 mots. Lisez le passage pour repérer ce qui s’entend, se voit ou se ressent.</p><p>Quelle sensation précise ressort du passage, par exemple un son ou une odeur ?</p></dd></div>
+<div id="measure-modal"><dt><span id="measure-modal_density"></span><span id="measure-modals"></span>Modaux</dt><dd><p>Marqueurs modaux pour 1 000 mots. Ne distingue pas les sens, comme possibilité et obligation, et ne mesure pas la certitude.</p><p>Le contexte permet-il de comprendre ce qui est possible, nécessaire ou permis, et pour qui ?</p></dd></div>
+<div id="measure-nominal"><dt><span id="measure-nominalization_density"></span>Suffixes de noms</dt><dd><p>Occurrences du motif de style nominal configuré pour 1 000 mots. Par défaut, il repère des terminaisons comme -tion, -ment et -ité. Lisez le passage pour voir quelle action ou qualité le nom désigne.</p><p>Si un nom résume une action, comprend-on encore ce qui se passe ?</p></dd></div>
+<div id="measure-passive"><dt><span id="measure-passive_density"></span>Motifs de passif</dt><dd><p>Motifs proches du passif pour 1 000 mots. Heuristique : les participes adjectivaux et d’autres emplois peuvent compter ; certains passifs sont manqués.</p><p>S’il y a une tournure passive, vérifiez si le lecteur a besoin de savoir qui agit.</p></dd></div>
+<div id="measure-adjective_density"><dt>Suffixes d’adjectifs</dt><dd><p>Mots avec certaines terminaisons adjectivales pour 1 000 mots. Heuristique : d’autres terminaisons sont ignorées et d’autres classes de mots peuvent correspondre.</p></dd></div>
+</dl>
+</section>
+<section id="motifs" aria-labelledby="heading-motifs">
+<h2 id="heading-motifs">Motifs &amp; répétitions</h2>
+<p>Un motif du projet compte les correspondances avec une règle de recherche enregistrée. La recherche de répétitions repère des suites de mots récurrentes. Relisez chaque passage pour voir si « à la fenêtre » forme un motif, situe la scène ou se répète par hasard.</p>
+<dl>
+<div id="measure-echo"><dt>Échos lexicaux</dt><dd><p>Lixity compte chaque occurrence d’un mot de quatre caractères ou plus qui se répète dans le même paragraphe et ne figure pas dans la liste des mots-outils. La casse est ignorée.</p><p>Lisez chaque occurrence à la suite. La répétition sert-elle à relier les passages ou à mettre une idée en valeur ?</p></dd></div>
+</dl>
+</section>
+<section id="characters" aria-labelledby="heading-characters">
+<h2 id="heading-characters">Mentions des personnages</h2>
+<p>Les noms cités sont comptés, sans déduire une présence dans la scène. Les motifs peuvent se chevaucher : une mention peut compter pour plusieurs personnages. Les points de vue sont déclarés par l’auteur.</p>
+<p>Saisissez les noms ou les formes de noms dans le projet. Si un nom disparaît pendant plusieurs chapitres, vérifiez si des pronoms désignent encore le personnage.</p>
+<dl>
+<div id="measure-chr_gap"><dt>Écart interne</dt><dd><p>Plus longue suite de chapitres sans mention entre la première et la dernière mention.</p></dd></div>
+<div id="measure-chr_share"><dt>Part des chapitres</dt><dd><p>Part de tous les chapitres où le nom est mentionné au moins une fois.</p></dd></div>
+<div id="measure-chr_voices"><dt>Voix des personnages vs narrateur</dt><dd><p>Attribution déterministe à un seul locuteur par fenêtre adjacente (tours ambigus ignorés). Comparaison descriptive, sans jugement de style.</p></dd></div>
+<div id="measure-chr_interactions"><dt>Interactions entre personnages</dt><dd><p>Échanges déterministes entre tours de parole adjacents attribués et cooccurrence par chapitre. Signal descriptif, sans jugement.</p></dd></div>
+</dl>
+</section>
+<section id="scenes" aria-labelledby="heading-scenes">
+<h2 id="heading-scenes">Scènes &amp; registres de style</h2>
+<p>Chaque scène est mesurée séparément. Les registres et plages cibles sont des choix du projet, pas des jugements de qualité. Sans séparateurs, les chapitres servent de scènes. Définissez les affectations et cibles dans lixity.toml.</p>
+<p>Les nombres de mots et phrases indiquent la taille de l’échantillon. HD-D nécessite 100 mots ; la variation des phrases en nécessite au moins deux. Les erreurs types sont des approximations, pas des intervalles de confiance validés. Un tiret signifie indisponible ; un zéro observé ne prouve pas la certitude.</p>
+<p>Indices descriptifs de transition (temps, lieu, personnage) dans les scènes explicites ; aucune prescription structurelle.</p>
+</section>
+<section id="style" aria-labelledby="heading-style">
+<h2 id="heading-style">Style</h2>
+<p>Comparez un chapitre aux valeurs typiques des chapitres mesurables du même manuscrit. Regardez d’abord la valeur brute et la quantité de texte. Un chapitre épistolaire peut avoir une voix voulue distincte.</p>
+<p>Par défaut, chaque mesure demande au moins 2 chapitres mesurables. Si toutes les valeurs sont identiques, la dispersion nécessaire à la comparaison est absente.</p>
+<p>Un signe plus indique une valeur supérieure à celle qui est typique de ce manuscrit. Un signe moins indique une valeur inférieure. Sélectionnez une case pour voir les valeurs dans leur unité, par exemple en mots par phrase, puis lire le chapitre.</p>
+<dl>
+<div id="measure-heatmap"><dt>Radiographie stylistique (Heatmap)</dt><dd><p>Caractéristiques des chapitres comparées à la médiane du manuscrit, ajustées à la dispersion et à l’incertitude de mesure estimée. Bleu = en dessous, orange = au-dessus. Cliquer pour une explication et l’accès au chapitre. Pas de comparaison (–) sous 100 mots, ni sous 5 phrases pour leur distribution.</p></dd></div>
+<div id="measure-fingerprint"><dt>Empreinte stylistique</dt><dd><p>La médiane de chaque caractéristique décrit un chapitre typique du manuscrit. Les écarts peuvent refléter des changements volontaires de voix ou de registre.</p></dd></div>
+<div id="measure-passport"><dt>Référence de style</dt><dd><p>Bandes descriptives du style du manuscrit (médiane ± 2σ). Des changements volontaires de voix ou de registre peuvent en sortir ; aucune consigne de réécriture.</p></dd></div>
+<div id="measure-consistency"><dt>Comparaisons dans le seuil</dt><dd><p>Part des comparaisons mesurables entre chapitres et caractéristiques dans la limite d’écart choisie. Pas une note de qualité. Données insuffisantes : –.</p></dd></div>
+<div id="measure-dimensions"><dt>Projection des rangs des caractéristiques</dt><dd><p>Projection exploratoire des rangs standardisés des chapitres aux mesures complètes. La proximité concerne les axes affichés. Les parts de variance viennent de la matrice de rangs régularisée, pas de registres littéraires établis. Les chapitres incomplets sont omis.</p></dd></div>
+<div id="measure-structural"><dt>Diagnostics structurels et dérive stylistique</dt><dd><p>Compare les profils des chapitres par segmentation exacte à coût protégé, tendances de rang et distributions initiales/finales. Les changements proposés sont exploratoires, sans preuve de significativité ni d&#x27;intention.</p></dd></div>
+<div id="measure-fdr"><dt>FDR</dt><dd><p>Quand de nombreuses caractéristiques de chapitres sont comparées, une règle nominale de tests multiples signale une sélection à examiner. Lisez ces signaux avec leur ampleur et le contexte du texte ; les taux d&#x27;erreur pour les chapitres ne sont pas calibrés.</p></dd></div>
+</dl>
+</section>
+<section id="matrix" aria-labelledby="heading-matrix">
+<h2 id="heading-matrix">Matrice des chapitres</h2>
+<p>Chaque ligne résume un chapitre. Un tiret indique une valeur de comparaison indisponible. Ouvrez un passage signalé et vérifiez l’effet de ce motif dans le chapitre.</p>
+<dl>
+<div id="measure-chapter_flags"><dt>Passages signalés</dt><dd><p>Nombre de paragraphes atteignant le seuil de gravité actif. Des pistes de révision, ni erreurs ni résultats FDR.</p></dd></div>
+<div id="measure-chapter_deviation"><dt>écart</dt><dd><p>Nombre de caractéristiques au-dessus du seuil d’écart. 0 = aucun dépassement ; – = comparaison indisponible. Ni sélection FDR ni note de qualité.</p></dd></div>
+<div id="measure-layer"><dt>À propos de cette comparaison</dt><dd><p>Valeurs des paragraphes par rapport à la médiane du chapitre : bleu = plus bas, orange = plus haut. Cercle = écart |z| ≥ 1,5 ; pas une note de qualité.</p></dd></div>
+</dl>
+</section>
+<section id="register-targets" aria-labelledby="heading-register-targets">
+<h2 id="heading-register-targets">Registres des chapitres (facultatif)</h2>
+<p>Regroupe les chapitres à voix distincte (lettres, autre narrateur). Ces chapitres ignorent les alertes FDR tout en gardant des valeurs z sur le livre. Des traits, pas une note.</p>
+<p>Les cibles des scènes sont définies séparément dans lixity.toml. Les filtres d’analyse modifient l’affichage, pas la référence de comparaison.</p>
+</section>
+<section id="revisions" aria-labelledby="heading-revisions">
+<h2 id="heading-revisions">Comparer les versions</h2>
+<p>La comparaison applique les mêmes réglages au texte confirmé, au fichier actuel et au brouillon. Si la moyenne passe de 12 à 8, l’écart est de −4 mots par phrase. Lisez les modifications pour voir si des phrases longues ont disparu ou si des phrases courtes ont été ajoutées. Une lacune dans l’historique indique l’absence de mesures comparables.</p>
+<p>Les changements par chapitre ne s’affichent que lorsque la correspondance entre chapitres est claire.</p>
+</section>
+<footer><a href="https://mfahsold.github.io/lixity/METHODS.md" hreflang="en">Formules, groupes de référence et limites statistiques</a></footer>
+</main>
+</body>
+</html>

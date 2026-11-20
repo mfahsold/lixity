@@ -14,6 +14,7 @@ from lixity.models import CorpusConfig
 from lixity.motifs import motif_report
 from lixity.pipeline import resolve_document_config
 from lixity.server.views import build_server_dashboard
+from lixity.site import docs_url
 
 TEXT = "## One\n\nA door opens. Another door closes. A window shines.\n"
 
@@ -66,6 +67,13 @@ def test_project_patterns_agree_in_metrics_api_cli_native_and_build(tmp_path, ca
     assert custom_search is not None and custom_search.find("form[@id='motif-custom-search']") is not None
     assert static_root.find(".//form[@id='motif-custom-search']") is None
     root.remove(custom_search)
+    native_reference = root.find("./p[@class='ctl-note']/a")
+    static_reference = static_root.find("./p[@class='ctl-note']/a")
+    assert native_reference is not None and static_reference is not None
+    expected_path = "/guides/metrics/en.html#motifs"
+    assert native_reference.get("href") == expected_path
+    assert static_reference.get("href") == docs_url(expected_path)
+    native_reference.set("href", docs_url(expected_path))
     assert ElementTree.tostring(static_root) == ElementTree.tostring(root)
     assert all((tmp_path / name).read_bytes() == content for name, content in before.items())
 

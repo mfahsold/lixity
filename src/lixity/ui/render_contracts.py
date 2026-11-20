@@ -103,3 +103,4 @@ class DashboardRenderInput:
     fingerprint: StyleFingerprint | None = None
     paragraph_evidence: Mapping[int, Mapping[str, Any]] | None = None
     content: DashboardContent = field(default_factory=DashboardContent)
+    paragraph_available_layers: frozenset[str] | None = None

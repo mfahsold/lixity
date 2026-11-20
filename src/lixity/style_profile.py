@@ -13,6 +13,7 @@ from .markdown_parser import counting_inline_text, strip_inline_markup
 from .math_core import per_mille, percent
 from .models import CorpusConfig
 from .paragraph_evidence import ParagraphEvidence, ParagraphMatcher
+from .quotation_projection import QuotedProse, project_quotations
 from .status import (
     FLAG_MIN_SEVERITY,
     TENSE_MIXED,
@@ -263,43 +264,9 @@ class ParagraphProfiler:
         """Project the exact profile text/anchors without linguistic measurements."""
         return [paragraph for _chapter, paragraph, _raw in self._profile_texts(blocks)]
 
-    def _grammatical_contexts(self, blocks: list[dict[str, Any]],
-                             entries: list[tuple[_ProfileChapter, ParagraphText, str]]) -> list[dict[str, Any] | None]:
-        """Use chapter-bounded canonical prose for quotation context, including block quotes."""
-        observations: list[dict[str, Any] | None] = [None] * len(entries)
-        if self.config.tense_model is None:
-            return observations
-        indices = {(paragraph.start_line, paragraph.end_line, raw): i
-                   for i, (_, paragraph, raw) in enumerate(entries)}
-        parts: list[str] = []
-        owners: list[int | None] = []
-
-        def flush() -> None:
-            for owner, observation in zip(owners, self._tense.parts(parts), strict=True):
-                if owner is not None:
-                    observations[owner] = observation
-            parts.clear()
-            owners.clear()
-
-        for block in blocks:
-            kind = block.get("type")
-            if kind == "h2":
-                flush()
-                if block.get("text", "").strip() == self._appendix_title:
-                    break
-            values = block.get("paras", []) if kind == "quote_block" else [block.get("text", "")] if kind in ("p", "list_item") else []
-            for raw in values:
-                clean = counting_inline_text(raw)
-                owner = indices.get((block.get("start_line", 0), block.get("end_line", 0), raw)) if kind != "quote_block" else None
-                if clean or owner is not None:
-                    parts.append(clean)
-                    owners.append(owner)
-        flush()
-        return observations
-
     def profile_blocks(
         self, blocks: list[dict[str, Any]], *, evidence: dict[int, ParagraphEvidence] | None = None,
-        include_reader_details: bool = False,
+        include_reader_details: bool = False, projection: QuotedProse | None = None,
     ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
         """Builds paragraph and chapter profiles from semantic blocks (with line anchors)."""
         paragraphs: list[ParagraphProfile] = []
@@ -307,6 +274,7 @@ class ParagraphProfiler:
 
         chapter: _ProfileChapter | None = None
         chapter_paragraphs: list[ParagraphProfile] = []
+        chapter_sentence_words = 0
         chapter_dialogue_words = 0
         chapter_function_words = 0
         prev_dominant: str | None = None
@@ -331,26 +299,30 @@ class ParagraphProfiler:
                     past_hits=past,
                     dominant=self._dominant(present, past),
                     flagged=sum(1 for p in chapter_paragraphs if p.is_flagged),
-                    asl=round(total_words / total_sentences, 2) if total_sentences else 0.0,
+                    asl=round(chapter_sentence_words / total_sentences, 2) if total_sentences else 0.0,
                     dialog_pct=round(percent(chapter_dialogue_words, total_words), 1),
                     function_word_pct=round(percent(chapter_function_words, total_words), 1),
                 )
             )
 
         entries = list(self._profile_texts(blocks))
-        observations = self._grammatical_contexts(blocks, entries)
-        for (current_chapter, paragraph, raw_text), observation in zip(entries, observations, strict=True):
+        quoted = projection or project_quotations(blocks, self.config, self.lang)
+        for current_chapter, paragraph, raw_text in entries:
             if current_chapter is not chapter:
                 close_chapter()
                 chapter = current_chapter
                 chapter_paragraphs = []
+                chapter_sentence_words = 0
                 chapter_dialogue_words = 0
                 chapter_function_words = 0
                 prev_dominant = None
 
             clean = counting_inline_text(raw_text)
+            quotation = quoted.paragraph_analysis(paragraph.start_line)
+            observation = self._tense.observation(clean, quotation)
 
-            counts = self._matcher.count(clean)
+            counts = self._matcher.count(clean, quotation=quotation)
+            chapter_sentence_words += counts.sentence_words
             chapter_dialogue_words += counts.dialogue
             chapter_function_words += counts.function
             words = counts.words
@@ -401,7 +373,7 @@ class ParagraphProfiler:
                 mixed=mixed,
                 switch=switch,
                 severity=severity,
-                asl=round(words / len(sentences), 2) if sentences else 0.0,
+                asl=round(counts.sentence_words / len(sentences), 2) if sentences else 0.0,
                 dialogue_pct=round(dialogue_pct, 1),
                 function_word_pct=round(function_word_pct, 1),
                 filter_density=round(filter_density, 1),
@@ -417,6 +389,7 @@ class ParagraphProfiler:
                 evidence[len(paragraphs)] = self._matcher.evidence(
                     clean, paragraph.text, counts, tense_spans=tense_spans,
                     include_reader_details=include_reader_details,
+                    quotation=quotation,
                 )
                 evidence[len(paragraphs)]["tense"]["trigger"] = profile.tense_trigger
                 if profile.tense_analysis is not None:

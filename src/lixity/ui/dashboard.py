@@ -63,6 +63,8 @@ from .components import (
     license_terms,
     line_label,
     manuscript_pdf_controls,
+    metric_reference_base,
+    metric_reference_link,
     pane_ribbon,
     panel_formatters,
     panel_guide,
@@ -87,7 +89,7 @@ from .heatmap import (
     render_style_passport_panel,
 )
 from .manuscript_document import ReaderBlock, reader_block_html
-from .manuscript_reader import INLINE_EVIDENCE_LAYERS, reading_controls
+from .manuscript_reader import reading_controls, reading_metric_control
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -186,7 +188,7 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 # workspace controls; classic reports must not ship their dormant editors.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
-    "audio-take.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
+    "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
     _PASSAGE_NAVIGATION_SCRIPT,
 ))
 _REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css"})
@@ -276,6 +278,7 @@ def render_analysis(
             metrics=analysis.metrics, fingerprint=analysis.fingerprint,
             paragraph_evidence=analysis.evidence,
             content=content or DashboardContent(),
+            paragraph_available_layers=analysis.paragraph_available_layers,
         ),
         presentation,
     )
@@ -429,13 +432,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     motifs = data.content.motifs
     showing = data.content.showing
     title = options.title
-    labels = options.labels
     language_name = options.language_name
     language_key = options.language_key
     tense_available = options.tense_available
     engine_name = options.engine_name
     controls = options.controls
     read_only = options.read_only
+    guide_base = metric_reference_base(language_key, local=controls and not read_only)
+    labels = {**(options.labels or {}), "_metric_reference_base": guide_base}
     api_base = options.api_base
     manuscript_name = options.manuscript_name
     current_language = options.current_language
@@ -564,11 +568,15 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     )
 
     layer_data = data.paragraph_layers
+    available_layers = data.paragraph_available_layers
 
     def _layer_text(key: str, value: float) -> str:
         field = LAYER_FEATURES[key]
         units = FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])
         return f"{label(labels, 'layer_' + key)}: {N(value, 1)} {units[field]}"
+
+    def measured(key: str) -> bool:
+        return available_layers is None or key in available_layers
 
     def _layer_tip(key: str, value: float, z: float) -> str:
         direction = label(labels, "layer_above" if z > 0 else "layer_below" if z < 0 else "layer_at")
@@ -601,6 +609,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f"<style>{_bundle((_CSS_FILES if controls else _REPORT_CSS_FILES) + (('speech-player.css',) if speech_enabled else ()))}</style>",
         "</head>",
         f'<body id="top" class="{body_class}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'data-metric-guide="{esc(guide_base)}" '
         f'data-read-only="{str(read_only).lower()}" '
         f'data-speech-capable="{str(speech_enabled).lower()}" '
         f'data-speech-render-capable="{str(speech_enabled and action_enabled("speech-render")).lower()}" '
@@ -1096,55 +1105,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'aria-label="{L("layer_next")}" title="{L("layer_next")}">↓</button></div>'
     )
     if paragraphs:
-        layer_groups = (
-            ("layer_group_rhythm", ("asl", "function", "sticky")),
-            ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
-            ("layer_group_grammar", ("passive", "modal", "nominal")),
-        )
-        grouped_members = {m for _, members in layer_groups for m in members}
-        grouped_layer_options = []
-        for group_label_key, members in layer_groups:
-            options_parts = []
-            for layer_key in members:
-                if layer_key in LAYER_FEATURES:
-                    options_parts.append(
-                        f'<option value="{layer_key}" '
-                        f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-                        f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
-                        f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
-                        f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-                    )
-                elif layer_key in INLINE_EVIDENCE_LAYERS:
-                    options_parts.append(
-                        f'<option value="{layer_key}" '
-                        f'data-hint="{esc(label(labels, "reading_help_evidence_" + layer_key), quote=True)}" '
-                        f'data-unit="" data-comparable="0" data-inline-evidence="1">'
-                        f"{esc(label(labels, 'evidence_layer_' + layer_key))}</option>"
-                    )
-            options_html = "".join(options_parts)
-            if options_html:
-                grouped_layer_options.append(f'<optgroup label="{L(group_label_key)}">{options_html}</optgroup>')
-
-        remaining_options = "".join(
-            f'<option value="{layer_key}" '
-            f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-            f'data-unit="{esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])[LAYER_FEATURES[layer_key]], quote=True)}" '
-            f'data-comparable="{len(layer_data.get(layer_key, {}))}">'
-            f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-            for layer_key in LAYER_FEATURES
-            if layer_key not in grouped_members
-        )
-        if remaining_options:
-            grouped_layer_options.append(remaining_options)
-
-        metric_control = (
-            '<label class="metric-layer-control">'
-            f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
-            f'<select class="ctl" id="style-layer" aria-label="{L("analysis_measure")}" '
-            f'data-help="{L("reading_help_measure")}">'
-            f'<option value="">{L("layer_off")}</option>'
-            + "".join(grouped_layer_options)
-            + "</select></label>"
+        metric_control = reading_metric_control(
+            labels, language_key, layer_data, available=available_layers,
+            include_evidence=bool(paragraph_evidence), report=not controls,
         )
     scenes_panel = render_scenes_panel(scenes, labels, language_key)
     motifs_panel = render_motifs_panel(
@@ -1232,7 +1195,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                if not controls else "") + '</div>'
         )
         parts.append(
-            '<div id="analysis-review-body">' + panel_guide(manuscript_intro) + '<div class="review-routes">'
+            '<div id="analysis-review-body">' + panel_guide(manuscript_intro)
+            + f'<p class="ctl-note">{metric_reference_link(labels, "analysis-review")}</p><div class="review-routes">'
         )
         if paragraphs:
             candidates = flagged
@@ -1243,16 +1207,21 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
             first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
             if candidates:
+                reason_key = (
+                    "reading_tense_" + first.tense_trigger
+                    if first.tense_trigger != "none" else "reading_tense_flag"
+                )
                 reason_text = esc(
                     label(labels, "review_passage_candidate").format(
                         chapter=first.chapter_num,
                         line=first.start_line,
                         severity=first.severity,
                         words=first.words,
+                        reason=label(labels, reason_key),
                     )
                 )
             else:
-                reason_text = L("review_passage_unflagged")
+                reason_text = L("review_passage_unflagged" if tense_available else "no_tense")
             parts.append(
                 f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
                 'aria-describedby="review-passage-reason" '
@@ -1392,6 +1361,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
         f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
     )
+    parts.append(f'<p class="ctl-note" id="layer-language-unavailable" role="status" hidden>{L("layer_language_unavailable")}</p>')
     parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
                  f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
                  '<p class="ctl-note" id="analysis-evidence-instruction"></p>'
@@ -1413,10 +1383,16 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if not (has_reading and controls and paragraphs):
         parts.append(layer_navigation)
     parts.append('</div>')
-    parts.append(f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
-                 '<p id="layer-comparison-hint"></p><p id="layer-evidence-hint"></p>'
-                 f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
-                 f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>')
+    layer_reference = (
+        metric_reference_link(labels, "measurements", element_id="layer-metric-reference") if not controls else ""
+    )
+    parts.append(
+        f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
+        '<p id="layer-comparison-hint"></p><p id="layer-evidence-hint"></p>'
+        f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
+        + (f'<p class="ctl-note">{layer_reference}</p>' if layer_reference else '')
+        + f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>'
+    )
     parts.append("</div>")
 
     if not tense_available:
@@ -1520,20 +1496,29 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     f'data-markers="{int(can_edit)}"{flag_attrs}>'
                 )
                 anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
-                stats = (
-                    f"{label(labels, 'present')} {p.present_hits} · {label(labels, 'past')} {p.past_hits} · "
-                    f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
-                    f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
-                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'layer_sensory')} {N(p.sensory_density, 1)} · "
-                    f"{label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
-                    f"{label(labels, 'feat_nominal')} {N(p.nominal_density, 1)} · {label(labels, 'feat_passive')} {N(p.passive_density, 1)} · "
-                    f"{p.words} {label(labels, 'words')}"
-                )
+                stats = " · ".join((
+                    f"{label(labels, 'present')} {p.present_hits if tense_available else '–'}",
+                    f"{label(labels, 'past')} {p.past_hits if tense_available else '–'}",
+                    *(
+                        f"{label(labels, title)} {value if measured(key) else '–'}"
+                        for key, title, value in (
+                            ("asl", "ASL", N(p.asl, 1)),
+                            ("dialogue", "dialogue", P(p.dialogue_pct)),
+                            ("function", "function_words", P(p.function_word_pct)),
+                            ("filter", "feat_filter", N(p.filter_density, 1)),
+                            ("sensory", "layer_sensory", N(p.sensory_density, 1)),
+                            ("modal", "feat_modal", N(p.modal_density, 1)),
+                            ("nominal", "feat_nominal", N(p.nominal_density, 1)),
+                            ("passive", "feat_passive", N(p.passive_density, 1)),
+                        )
+                    ),
+                    f"{p.words} {label(labels, 'words')}",
+                ))
                 paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
                 if paragraph_evidence is not None and idx in paragraph_evidence:
                     paragraph_content[f"p-{idx}"].append(paragraph_evidence[idx])
                     paragraph_content[f"p-{idx}"].append({
-                        key: _layer_text(key, getattr(p, attribute)) if p.words > 0 else None
+                        key: _layer_text(key, getattr(p, attribute)) if p.words > 0 and measured(key) else None
                         for key, attribute in LAYER_PARAGRAPH_ATTR.items()
                     })
                 # The fallback preserves the full offline report without JavaScript.
@@ -1561,6 +1546,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if reader_document is not None:
         parts[main_start:] = ['<main id="chapters" role="main" tabindex="-1">']
         section_open = False
+        first_heading = next((block.start_line for block in reader_document if block.is_chapter), None)
+        implicit = chapters[0] if chapters and (first_heading is None or chapters[0].start_line < first_heading) else None
         for block in reader_document:
             if block.is_chapter:
                 if section_open:
@@ -1569,12 +1556,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 if header:
                     parts.append(header)
                 else:
-                    parts.append(f'<section class="chapter" id="source-{block.start_line}" data-start="{block.start_line}" data-end="{block.end_line}">'
+                    target = f"ch-{block.chapter_num}" if block.chapter_num is not None else f"source-{block.start_line}"
+                    parts.append(f'<section class="chapter" id="{target}" data-start="{block.start_line}" data-end="{block.end_line}">'
                                  f'<div class="chapter-head"><h2>{esc(block.text)}</h2></div>')
                 section_open = True
                 continue
             if not section_open:
-                implicit = chapters[0] if chapters and not any(item.is_chapter for item in reader_document) else None
                 if implicit:
                     parts.append(f'<section class="chapter reader-preface" id="ch-{implicit.num}" data-start="{implicit.start_line}" data-end="{implicit.end_line}">'
                                  '<span id="reader-preface"></span>')
@@ -1737,6 +1724,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     parts.append(details_start(L("analysis_measurements"), element_id="analysis-measurements", opened=not controls))
     parts.append('<section class="kpis">')
+    parts.append(f'<p class="ctl-note">{metric_reference_link(labels, "measurements")}</p>')
     parts.append(kpi_group(scope_tiles, label(labels, "group_scope")))
     parts.append(kpi_group(rhythm_tiles, label(labels, "group_rhythm"), hint=label(labels, "measurement_rhythm_guide")))
     parts.append(kpi_group(
@@ -1849,7 +1837,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
     else:
-        parts.append(empty_state(label(labels, "flags_empty")))
+        parts.append(empty_state(label(labels, "flags_empty" if tense_available else "no_tense")))
+        if has_pacing:
+            parts.append(f'<a class="ctl ctl-sm" href="#pacing" data-jump="#pacing">{L("review_rhythm_action")}</a>')
     parts.append("</section>")
 
     # --- Work markers (editor-visible, right after flagged passages) -------
@@ -1867,6 +1857,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     sentence_bounds = metrics.sentence_dist._word_bounds if metrics is not None else None
     parts.append(render_showing_panel(
         showing, labels, language_key, short_sentence_max=sentence_bounds[0] if sentence_bounds else None,
+        available_layers=available_layers,
     ))
     parts.append(render_characters_panel(characters, chapters, labels, language_key))
     parts.append(motifs_panel)

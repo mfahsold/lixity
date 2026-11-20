@@ -99,6 +99,9 @@ an identifiable match across versions. Shares appear as percentages and
 their changes as percentage points. For example, a dialogue share rising
 from 25% to 50% increases by 25 percentage points. If measurement is
 unavailable, the text remains available for comparison and editing.
+When a measurement rule changes, history keeps its recorded values. A comparison
+recomputes older versions from their retained source under the current rule.
+If the source is unavailable, the affected comparison has a gap.
 
 **Use as draft** changes only the editor buffer and leaves saving paused.
 **Save this draft** applies the reviewed result against the captured file
@@ -184,6 +187,38 @@ Open the file in a browser for offline analysis navigation. It embeds manuscript
 text and measurements, so treat it as manuscript material when sharing. Project
 settings, manuscript writes and research actions require a compatible local
 server; start the installed workspace with `lixity service start --open`.
+
+**How it’s measured** opens the measurement reference in the interface
+language from the overview, evidence card, chapter inspector or version
+comparison. The reference gives the counting scope, defaults and examples.
+The local app serves it offline. Exported reports link to the public reference.
+Read the [English measurement reference](guides/metrics/en.html) to browse all
+sections.
+
+In the manuscript, **Metric** offers eight paragraph measurements with a
+within-chapter comparison: sentence length, function words, quoted text,
+perception and thought cues, sensory cues, passive patterns, modal forms and
+nominal-style patterns. The function-word sentence filter, dialogue tags,
+indirect-speech cues and repeated words show text evidence. The selected
+metric's help links directly to its method. The reader separates a measured
+zero, missing language rules and a measured count without exact text ranges.
+Reports without paragraph evidence omit the four evidence-only options.
+
+Lixity computes these choices and their text ranges from the current source and
+project settings. The browser stores the selected metric as a display preference.
+SQLite retains selected aggregate measurements for saved versions. Explicit
+tense review decisions are stored separately in `.lixity/analysis-review.json`.
+The review overview checks the same project configuration and source revision
+before showing saved-version deltas alongside the current analysis. It passes
+the current project token to `GET /api/manuscript-delta`; stale tokens receive a
+conflict response.
+
+**Words in quotes and marked speech** shows the counted words in the selection
+and their share of the paragraph. A quote can continue across paragraphs in the
+same chapter and scene. The evidence card identifies the recognized marks and
+reports uncertain boundaries. A project's `dialogue_regex` can declare other
+quotation or reply markers. The editor labels a version delta with the
+date of its actual baseline.
 
 Use Zotero to manage your source library and Lixity to retain selected evidence,
 record claims and decisions, and link them to manuscript passages. The

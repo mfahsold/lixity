@@ -36,6 +36,19 @@
   }
   function message(key) { return uiLabel(key); }
   function setStatus(value) { if (status && status.textContent !== value) status.textContent = value; }
+  function evidenceIssue(record, layer) {
+    if (select.selectedOptions[0]?.dataset.available === "0") return "layer_language_unavailable";
+    if (record.error) return record.error;
+    if (!layer) return "evidence_unavailable";
+    var value = layer.value;
+    if (value.status === "partial") return "evidence_partial";
+    if (value.reason === "quotation_context_unresolved") return "evidence_quotation_unresolved";
+    if (value.denominator === 0) return "evidence_quotation_no_words";
+    if (value.status !== "unavailable") return null;
+    if (value.reason === "language_unavailable") return "layer_language_unavailable";
+    if (value.reason === "source_mismatch") return "evidence_mismatch";
+    return value.count === null ? "evidence_unavailable" : "evidence_unmapped";
+  }
   function clearSelectionHighlights() {
     if (!supported) return;
     CSS.highlights.delete("lixity-analysis-current");
@@ -143,6 +156,7 @@
               count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
               sticky:key === "sticky" ? stickyDetails(span, value.sticky_rule, offsets) : null,
               quotation_context:qctx,
+              quotation_marker:typeof span.quotation_marker === "string" ? span.quotation_marker : "",
               start:offsets[span.start], end:offsets[span.end],
               quote:record.text.slice(offsets[span.start], offsets[span.end])};
           });
@@ -162,17 +176,20 @@
   async function refresh() {
     var generation = ++epoch, key = select.value;
     if (!enabled()) { clearHighlight(); setStatus(""); return; }
+    if (select.selectedOptions[0]?.dataset.available === "0") {
+      clearHighlight(); setStatus(message("layer_language_unavailable")); return;
+    }
     var panels = Array.from(visible).filter(shown);
     var prepared = await Promise.all(panels.map(prepare));
     if (generation !== epoch || !enabled() || key !== select.value) return;
-    var ranges = [], failures = [], partial = false;
+    var ranges = [], issues = new Set(), measured = false;
     prepared.forEach(function(record) {
       if (records.get(record.panel) !== record || !shown(record.panel)) return;
       var layer = record.layers[key];
-      if (record.error) failures.push(record.error);
-      else if (!layer || layer.value.status === "unavailable") failures.push("evidence_unavailable");
-      else {
-        partial = partial || layer.value.status === "partial";
+      var issue = evidenceIssue(record, layer);
+      if (issue) issues.add(issue);
+      if (layer && (!issue || issue === "evidence_partial" || issue === "evidence_quotation_unresolved")) {
+        measured = true;
         layer.spans.forEach(function(span) { ranges.push(span.range); });
       }
     });
@@ -184,9 +201,12 @@
         CSS.highlights.delete("lixity-analysis-evidence");
       }
     }
-    setStatus(!supported ? message("evidence_unsupported") : failures.includes("evidence_mismatch") ? message("evidence_mismatch") :
-      failures.includes("evidence_verification_unavailable") ? message("evidence_verification_unavailable") :
-      partial ? message("evidence_partial") : failures.length ? message("evidence_unavailable") : "");
+    if (issues.has("evidence_unmapped") && ranges.length) issues.add("evidence_partial");
+    var notice = ["evidence_mismatch", "evidence_verification_unavailable", "layer_language_unavailable",
+      "evidence_partial", "evidence_quotation_unresolved", "evidence_unmapped", "evidence_quotation_no_words",
+      "evidence_unavailable"].find(function(issue) { return issues.has(issue); });
+    if (!notice && measured && !ranges.length) notice = "evidence_no_visible_matches";
+    setStatus(!supported ? message("evidence_unsupported") : notice ? message(notice) : "");
   }
   function position(rect) {
     host.style.left = "8px"; host.style.top = "8px";
@@ -252,33 +272,38 @@
   function paint() {
     if (!card) return;
     var record = card.record, layer = record.layers[select.value];
-    var spans = layer ? layer.spans : [], span = spans[card.index];
+    var warning = evidenceIssue(record, layer);
+    var stale = warning === "evidence_mismatch";
+    var valueAllowed = !stale && warning !== "layer_language_unavailable";
+    var spans = valueAllowed && layer ? layer.spans : [], span = spans[card.index];
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
     var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
     var content = paragraphContent[record.panel.id], summaries = content[4];
     var key = select.value;
+    var metricGuide = document.body.dataset.metricGuide;
     var sticky = span && span.sticky;
     var quoteCtx = span && (span.quotation_context || "unknown");
     var normalizedQuote = span && span.quote ? span.quote.normalize().toLowerCase() : "";
     var sameWordSpans = normalizedQuote && key === "echo"
       ? spans.filter(function(item) { return item.quote.normalize().toLowerCase() === normalizedQuote; })
       : [];
-    var hasMetricSummary = Boolean(summaries && typeof summaries[select.value] === "string");
+    var hasMetricSummary = Boolean(valueAllowed && summaries && typeof summaries[key] === "string");
     var summary = hasMetricSummary ? summaries[key] : "";
-    var allParagraphValues = content[2] && content[2] !== summary ? content[2] : "";
-    var canEditPassage = Boolean(window.LixityManuscriptEditor && typeof window.LixityManuscriptEditor.openAtLine === "function" &&
+    var allParagraphValues = !stale && content[2] && content[2] !== summary ? content[2] : "";
+    var canEditPassage = Boolean(!stale && window.LixityManuscriptEditor && typeof window.LixityManuscriptEditor.openAtLine === "function" &&
       record.panel.dataset.start && Number(record.panel.dataset.start) > 0);
-    var warning = record.error || (!layer || layer.value.status === "unavailable" ? "evidence_unavailable" :
-      layer.value.status === "partial" ? "evidence_partial" : null);
     host.setAttribute("role", "dialog"); host.setAttribute("aria-modal", "false");
     host.setAttribute("aria-labelledby", "analysis-evidence-title");
     var sentenceWords = span && layer.value.kind === "sentence" && span.words !== null;
+    var countKnown = valueAllowed && !record.error && layer && layer.value.count !== null && layer.value.denominator !== 0;
+    var share = countKnown && key === "dialogue" && Number.isSafeInteger(layer.value.denominator) && layer.value.denominator >= layer.value.count
+      ? uiCountFormat("evidence_quotation_share", layer.value.denominator, {quoted:layer.value.count}) : "";
     var counted = span ? (sentenceWords ? span.words : span.count) :
-      !record.error && layer && layer.value.status !== "unavailable" && layer.value.count === 0 ? 0 : null;
+      countKnown ? layer.value.count : null;
     var unitKey = sentenceWords || layer && layer.value.kind === "dialogue" ? "words" :
       layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
     var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
-    var comparison = info && Number.isFinite(info[2]) ? info : null;
+    var comparison = valueAllowed && info && Number.isFinite(info[2]) ? info : null;
     var zFmt = zFormatters[lang] || (zFormatters[lang] = new Intl.NumberFormat(lang, {
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
@@ -315,7 +340,7 @@
       ${span ? html`<section class="analysis-evidence-explanation">
         <strong class="analysis-evidence-scope">${message("evidence_reason_heading")}</strong>
         ${matchSummary ? html`<p class="analysis-evidence-value">${matchSummary}</p>` : null}
-        <p>${reason}</p>
+        <p>${span.quotation_marker ? uiFormat("evidence_quotation_marker", {marker:span.quotation_marker}) : reason}</p>
         ${sticky && sticky.ranges.length ? html`<p class="analysis-evidence-key-note">
           <mark class="analysis-evidence-contribution">${message("evidence_sticky_key")}</mark>
         </p>` : null}
@@ -323,9 +348,11 @@
         <strong class="analysis-evidence-scope">${message("evidence_review_heading")}</strong>
         <p>${message("evidence_review_" + key)}</p>
       </section>` : null}
-      ${summary || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
+      ${metricGuide ? html`<p class="ctl-note"><a href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
+      ${summary || share || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
         ${summary ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
         <p class="analysis-evidence-value">${summary}</p>` : null}
+        ${share ? html`<p class="ctl-note">${share}</p>` : null}
         ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0], "--evidence-comparison-position":marker + "%"}}>
           <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
           <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
@@ -348,9 +375,9 @@
           window.LixityManuscriptEditor.openAtLine(targetLine);
         }}>${message("evidence_edit_passage")}</button>
       </div>` : null}
-      <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
-        ${!comparison && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
-        ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
+      <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("analysis_coverage")}</summary>
+        ${valueAllowed && !comparison && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
+        ${countKnown ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
         ${key === "sticky" ? html`<p>${message("evidence_reason_function")}</p>` : null}
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/metrics/it.html">
+<title>Che cosa misura Lixity</title>
+<style>
+/* Canonical foundation shared by bundled dashboards and staged Pages. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f2f4fa, #0c1017);
+  --surface: light-dark(#ffffff, #121822);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #9ba7b8);
+  --muted: light-dark(#56647b, #8a96a8);
+  --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
+  --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
+  --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
+  --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
+  /* Solid metric spans use this role; saved research uses neutral dotted borders. */
+  --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
+  /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
+  --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
+  --analysis-comparison-negative: light-dark(#2b6cb0, #7ba7d0);
+  --analysis-comparison-positive: light-dark(#c05621, #e8b07a);
+  /* Binary axis cutoff in the style space; not the signed comparison scale. */
+  --style-space-threshold: light-dark(#b45309, #fbbf24);
+  --style-space-selection: var(--fg);
+  --present: light-dark(#2d8664, #34d399);
+  --present-light: light-dark(#e6f4ea, #064e3b);
+  --past: light-dark(#b57635, #fbbf24);
+  --past-light: light-dark(#fef3e2, #451a03);
+  --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
+  --neutral: light-dark(#d8dee6, #2c323d);
+  --flag: light-dark(#c0392b, #f87171);
+  --flag-strong: light-dark(#dc2626, #f87171);
+  --flag-light: light-dark(#fce8e6, #450a0a);
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
+  --on-action: #ffffff;
+  /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
+     inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
+     large surfaces --radius-lg; only true pills (badges, status chips, tracks)
+     use --radius-pill. Rules never hard-code a radius. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
+  --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease-out: var(--ease);
+  --dur-fast: 140ms;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Shared type scale: caption, metadata, controls, body, subhead, heading, display. */
+  --text-caption: .75rem;
+  --text-note: .8125rem;
+  --text-micro: var(--text-note);
+  --text-small: var(--text-note);
+  --text-control: .875rem;
+  --text-section-title: var(--text-body);
+  --text-body: 1rem;
+  --text-subhead: 1.125rem;
+  --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-display: clamp(2.1rem, 4vw, 3.35rem);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-strong: 650;
+  --weight-bold: 700;
+  --line-tight: 1.4;
+  --line-body: 1.6;
+  --line-compact: 1.5;
+  --line-control: 1.35;
+  --line-reading: 1.7;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --panel-padding: 1.25rem;
+  --section-gap: 1.5rem;
+
+  --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-alt: light-dark(#f7f9fc, #161d29);
+  --surface-raised: light-dark(#f2f4fa, #1a2230);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
+  --glass-blur: 12px;
+  --glass-blur-sm: 8px;
+  --glass-blur-lg: 16px;
+  --z-sticky: 14;
+  --z-popover: 220;
+  --z-modal: 1000;
+  --z-tooltip: 10000;
+  --sticky-clearance: 4.5rem;
+
+  /* Editorial & status markers */
+  --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);
+  --marker-pruefen-fg: light-dark(#0369a1, #7dd3fc);
+  --marker-sachcheck-bg: light-dark(#fef3c7, #451a03);
+  --marker-sachcheck-fg: light-dark(#92400e, #fde68a);
+  --marker-todo-bg: light-dark(#f3e8ff, #3b0764);
+  --marker-todo-fg: light-dark(#6b21a6, #d8b4fe);
+  --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
+  --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
+
+  --fg-heading: light-dark(#19263d, #ffffff);
+  --status-success-fg: light-dark(#166534, #86efac);
+  --status-success-bg: light-dark(#e6f4ea, #14532d);
+  --status-success-border: light-dark(#b7ddc1, #24734b);
+  --status-warning-fg: light-dark(#854d0e, #fde68a);
+  --status-warning-bg: light-dark(#fff7ed, #713f12);
+  --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-neutral-fg: var(--muted);
+  --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  --status-neutral-border: var(--line);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root { --shadow-modal: 0 28px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08); } }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); }
+main { max-inline-size: 70ch; margin-inline: auto; padding: var(--space-5); overflow-wrap: anywhere; }
+header, section, footer { margin-block: 0 var(--section-gap); }
+section { padding: var(--panel-padding); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+h1, h2 { margin-block: 0 var(--space-3); line-height: var(--line-tight); }
+h1 { font: var(--weight-bold) var(--text-display)/var(--line-tight) var(--font-title); }
+h2 { font-size: var(--text-heading); }
+p { margin-block: 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; padding: 0; }
+nav a { display: inline-block; padding-block: var(--space-1); }
+dl { margin-block: var(--space-3) 0; }
+dl > div { border-block-start: 1px solid var(--line); padding-block: var(--space-3); }
+dl > div:last-child { padding-block-end: 0; }
+dt { font-weight: var(--weight-bold); }
+dd { margin: 0; }
+section > :last-child, dd > :last-child { margin-block-end: 0; }
+[id] { scroll-margin-block-start: var(--space-4); }
+section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Che cosa misura Lixity</h1>
+<p>Le soglie riportate qui sono quelle predefinite. Il progetto può usare soglie, elenchi di parole o criteri di rilevamento diversi.</p>
+<nav aria-label="Analisi">
+<ul>
+<li><a href="#analysis-review">Guida all’analisi</a></li>
+<li><a href="#measurements">Misure del manoscritto</a></li>
+<li><a href="#flags">Passaggi segnalati</a></li>
+<li><a href="#pacing">Ritmo delle frasi</a></li>
+<li><a href="#dist">Lunghezze di frase</a></li>
+<li><a href="#sticky">Frasi con molte parole funzionali</a></li>
+<li><a href="#dialogue">Citazioni e battute segnalate</a></li>
+<li><a href="#showing">Parole e citazioni</a></li>
+<li><a href="#motifs">Motivi e ripetizioni</a></li>
+<li><a href="#characters">Menzioni dei personaggi</a></li>
+<li><a href="#scenes">Scene e registri di stile</a></li>
+<li><a href="#style">Stile</a></li>
+<li><a href="#matrix">Matrice dei capitoli</a></li>
+<li><a href="#register-targets">Registri dei capitoli (facoltativo)</a></li>
+<li><a href="#revisions">Confronta versioni</a></li>
+</ul>
+</nav>
+</header>
+<section id="analysis-review" aria-labelledby="heading-analysis-review">
+<h2 id="heading-analysis-review">Guida all’analisi</h2>
+<p>Scegli una misura nel manoscritto e apri un passaggio evidenziato. Leggi tutto il paragrafo. Come si accorda il motivo con la voce, la scena o il cambio di interlocutore?</p>
+<p>Esamina le variazioni nel contesto. Le metriche fungono da guida editoriale.</p>
+</section>
+<section id="measurements" aria-labelledby="heading-measurements">
+<h2 id="heading-measurements">Misure del manoscritto</h2>
+<p>Queste formule descrivono la varietà lessicale in modi diversi. Confronta capitoli di lunghezza e voce narrativa simili.</p>
+<dl>
+<div id="measure-words"><dt>Parole analizzate</dt><dd><p>Parole della prosa analizzata, inclusi preambolo, elenchi e citazioni in blocco. I profili dei paragrafi possono coprire meno testo.</p></dd></div>
+<div id="measure-asl"><dt>Media di parole per frase</dt><dd><p>Media delle parole per frase rilevata. Descrive la lunghezza, non la suspense o il ritmo narrativo.</p><p>Una frase di 8 parole e una di 16 danno una media di 12 parole per frase. La distribuzione mostra anche la frequenza delle frasi brevi e lunghe.</p></dd></div>
+<div id="measure-ttr"><dt>TTR</dt><dd><p>Forme distinte divise per le parole contate. Il rapporto tende a scendere nei brani lunghi; confrontare lunghezze e temi simili.</p></dd></div>
+<div id="measure-yules"><dt>Yule’s K</dt><dd><p>K maggiore = maggiore predominio delle forme frequenti; K = 0 se ogni forma compare una volta. Lunghezza e contesto influiscono sul confronto; non è un voto di qualità.</p></dd></div>
+<div id="measure-hd_d"><dt>HD-D</dt><dd><p>Quota attesa di forme di parola diverse in un&#x27;estrazione di 42 parole: 0,5 significa in media 21 forme diverse. Calcolo esatto, senza simulare campioni. L&#x27;argomento e il modo di contare le parole influenzano comunque i confronti.</p><p>HD-D richiede almeno 100 parole.</p></dd></div>
+<div id="measure-guiraud_r"><dt><span id="measure-guiraud"></span>Guiraud R</dt><dd><p>Forme di parola diverse divise per la radice quadrata del numero di parole (V/√N). Lo stesso vocabolario dà un valore più basso in un passaggio più lungo; confronta lunghezze e argomenti simili.</p></dd></div>
+<div id="measure-mtld"><dt>MTLD</dt><dd><p>Stima la lunghezza delle sequenze prima che le forme ripetute portino il rapporto di varietà a 0,72 o meno, facendo la media delle due direzioni di lettura. L&#x27;ultima sequenza incompleta conta in proporzione; un valore più alto indica sequenze varie più lunghe. Il minimo di 100 parole non garantisce l&#x27;affidabilità.</p></dd></div>
+<div id="measure-mattr"><dt>MATTR</dt><dd><p>Quota media di forme di parola diverse in finestre sovrapposte di 50 parole. Un valore più alto indica più forme per finestra; i confronti richiedono finestre della stessa dimensione e argomenti comparabili.</p></dd></div>
+<div id="measure-maas_a2"><dt><span id="measure-maas"></span>Maas a²</dt><dd><p>Mette in relazione la dimensione del vocabolario e la lunghezza del testo. Secondo questa formula, valori più bassi indicano una minore concentrazione su forme di parola ripetute; confronta contesti testuali simili. Non disponibile per testi brevi.</p></dd></div>
+<div id="measure-flesch"><dt>Flesch</dt><dd><p>Formula della lingua basata su parole per frase e sillabe stimate per parola. Più alto = lettura più facile nel modello; non valuta qualità o comprensione.</p></dd></div>
+<div id="measure-lix"><dt>LIX</dt><dd><p>Lunghezza media delle frasi più percentuale di parole con oltre 6 caratteri. Più alto = frasi o parole più lunghe; non indica età o qualità.</p></dd></div>
+<div id="measure-long_word_pct"><dt><span id="measure-long_words"></span>Parole lunghe</dt><dd><p>Quota di parole contate che superano la soglia configurata per le parole lunghe. È un componente di LIX, non il punteggio LIX. La lunghezza non dimostra difficoltà né qualità.</p></dd></div>
+</dl>
+</section>
+<section id="flags" aria-labelledby="heading-flags">
+<h2 id="heading-flags">Passaggi segnalati</h2>
+<p>Paragrafi con indizi di cambio o mescolanza dei tempi verbali. Euristica da esaminare nel contesto.</p>
+<p>Leggi anche i paragrafi vicini. Un cambio di tempo verbale può far parte di un flashback o di una battuta. Il controllo riguarda solo i tempi verbali.</p>
+<dl>
+<div id="measure-severity"><dt>Flag da gravità</dt><dd><p>0 = neutro, 1 = osservare, 2 = notevole, 3 = differenza marcata (cambio e mescolanza). Euristica, non un giudizio di errore.</p><p>Soglia degli indizi temporali: 1 = tutti i livelli, 2 = predefinita, 3 = solo gli scarti maggiori.</p></dd></div>
+<div id="measure-chapter_tense"><dt>Tempi verbali e variazioni</dt><dd><p>Tempo dominante dai marcatori linguistici: passato, presente, misto o neutro. Euristica, non giudizio grammaticale.</p><p>Neutro: troppi pochi marcatori temporali per decidere.</p></dd></div>
+</dl>
+</section>
+<section id="pacing" aria-labelledby="heading-pacing">
+<h2 id="heading-pacing">Ritmo delle frasi</h2>
+<p>Più lunga è la barra, più lunghe sono in media le frasi. Apri due capitoli con barre di lunghezza diversa e leggi a voce alta un paragrafo di ciascuno. In che modo il dialogo, l’azione e i cambi di paragrafo influiscono sul ritmo?</p>
+<dl>
+<div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Variazione della lunghezza delle frasi</dt><dd><p>Variazione delle lunghezze delle frasi rispetto alla media. 0 = lunghezze uguali; più alto = più variazione. Non è un voto di qualità.</p></dd></div>
+<div id="measure-pacing_cohesion"><dt>Ripresa tra frasi adiacenti</dt><dd><p>Quota di coppie di frasi consecutive nello stesso paragrafo che condividono almeno una parola di contenuto.</p></dd></div>
+<div id="measure-pacing_monotony"><dt>Inizi di frase ripetuti</dt><dd><p>Numero di sequenze in cui 3 o più frasi consecutive dello stesso paragrafo iniziano con la stessa parola. Segnala possibili anafore intenzionali o ripetizioni involontarie a inizio frase.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Indizi finali</dt><dd><p>Euristica da 0 a 3: un punto per una frase finale di 1–8 parole, terminazione in ?, ! o … e discorso citato rilevato. Non è una misura validata di suspense o qualità.</p></dd></div>
+<div id="measure-start_entropy"><dt>Entropia degli inizi</dt><dd><p>Varietà della prima parola contata nelle frasi rilevate. Inizi ripetuti come «io» riducono il valore; inizi diversi lo aumentano. La ripetizione può essere intenzionale.</p></dd></div>
+<div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Inizi in «io»</dt><dd><p>Quota di frasi rilevate la cui prima parola contata è «io». 50% significa che la metà inizia così; può far parte di una voce narrativa intenzionale.</p></dd></div>
+</dl>
+</section>
+<section id="dist" aria-labelledby="heading-dist">
+<h2 id="heading-dist">Lunghezze di frase</h2>
+<p>Ogni riga mostra una fascia di lunghezza, il numero di frasi che contiene e la loro quota sul totale. Leggi un paragrafo ad alta voce e ascolta le variazioni di lunghezza.</p>
+<p>I quattro gruppi contano fino a 6, da 7 a 15, da 16 a 25 e oltre 25 parole per frase.</p>
+<dl>
+<div id="measure-staccato_pct"><dt><span id="measure-staccato"></span>Quota di frasi brevi</dt><dd><p>Quota di frasi rilevate con al massimo 6 parole. La sola lunghezza non misura il ritmo di una scena.</p></dd></div>
+<div id="measure-kaskade_pct"><dt><span id="measure-kaskade"></span>Frasi lunghe</dt><dd><p>Quota di frasi rilevate con oltre 25 parole. Misura la lunghezza, non l’annidamento sintattico.</p></dd></div>
+</dl>
+</section>
+<section id="sticky" aria-labelledby="heading-sticky">
+<h2 id="heading-sticky">Frasi con molte parole funzionali</h2>
+<p>Il riepilogo mostra la quota di frasi rilevate che rientrano nel filtro. Il valore di una frase indica la sua quota di parole funzionali.</p>
+<p>Articoli e pronomi sono esempi di parole funzionali. Apri un esempio e leggi il paragrafo in cui compare.</p>
+<dl>
+<div id="measure-sticky"><dt>Quota di frasi con molte parole funzionali</dt><dd><p>Il filtro seleziona frasi di almeno 8 parole con almeno il 45 % di parole funzionali.</p><p>Cinque parole su otto sono il 62,5%. Anche una frase semplice può essere segnalata. Rileggi il paragrafo e verifica che siano chiari il filo del discorso e i riferimenti.</p></dd></div>
+<div id="measure-function"><dt><span id="measure-function_word_pct"></span><span id="measure-function_words"></span>Parole funzione</dt><dd><p>Quota di parole dell’elenco funzionale della lingua, come articoli e pronomi. Più alto = più parole dell’elenco, non meno contenuto.</p><p>Si capisce a che cosa rimandano parole come «lei», «lo» o «questo»?</p></dd></div>
+</dl>
+</section>
+<section id="dialogue" aria-labelledby="heading-dialogue">
+<h2 id="heading-dialogue">Citazioni e battute segnalate</h2>
+<p>Le impostazioni della lingua o del progetto determinano i segni riconosciuti. Le barre mostrano la quota di parole per capitolo.</p>
+<p>Il 20% significa che circa una parola su cinque si trova in una citazione o battuta riconosciuta. Leggi il passo per vedere chi parla, pensa o viene citato.</p>
+<dl>
+<div id="measure-dialogue"><dt><span id="measure-dialog_pct"></span>Parole in citazioni e battute segnalate</dt><dd><p>Quota di parole interamente comprese in citazioni o battute riconosciute. Anche titoli o pensieri possono usare gli stessi segni.</p><p>Leggi il passo ad alta voce. Se parla un personaggio, le parole sono adatte a lui e alla situazione?</p></dd></div>
+<div id="measure-dlg_short_turns"><dt>Citazioni brevi (≤ 12 parole)</dt><dd><p>Quota di passi riconosciuti con 1–12 parole. Leggi il passo per vedere se qualcuno parla.</p></dd></div>
+<div id="measure-dlg_long_turns"><dt>Citazioni lunghe (≥ 80 parole)</dt><dd><p>Passi riconosciuti di almeno 80 parole. Leggi i monologhi lunghi o i passi esplicativi nel loro contesto.</p></dd></div>
+<div id="measure-dlg_voice_contrast"><dt>Differenza di lunghezza delle frasi</dt><dd><p>Parole per frase nelle citazioni e battute riconosciute meno parole per frase nel resto del testo privo di ambiguità. Un valore negativo indica frasi più brevi nei passi segnalati. Servono frasi utilizzabili in entrambi i gruppi.</p></dd></div>
+<div id="measure-dialogue_tag"><dt>Verbi dichiarativi</dt><dd><p>Evidenzia forme come «disse» o «chiese» vicino a citazioni e battute riconosciute.</p><p>Leggi il passo segnalato insieme all’inciso del dialogo. Si capisce chi parla?</p></dd></div>
+<div id="measure-indirect_speech"><dt>Discorso indiretto</dt><dd><p>Lixity evidenzia indizi di parole o pensieri riferiti fuori dalle citazioni riconosciute.</p><p>Leggi questa frase insieme alla precedente. Si capisce di chi sono le parole o il pensiero riportati?</p></dd></div>
+</dl>
+</section>
+<section id="showing" aria-labelledby="heading-showing">
+<h2 id="heading-showing">Parole e citazioni</h2>
+<p>Le occorrenze sono riportate per 1.000 parole per confrontare capitoli di lunghezze diverse. Leggi il passaggio per capire il ruolo della parola segnalata.</p>
+<dl>
+<div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Filtri percettivi</dt><dd><p>Corrispondenze al motivo configurato per percezioni, pensieri e ricordi ogni 1.000 parole. Leggi il passo per capire chi percepisce o pensa.</p><p>È chiaro chi qui percepisce qualcosa, ricorda o sta pensando?</p></dd></div>
+<div id="measure-sensory"><dt><span id="measure-sensory_density"></span>Densità sensoriale</dt><dd><p>Corrispondenze al motivo sensoriale configurato ogni 1.000 parole. Leggi il passo e osserva quali dettagli si possono udire, vedere o percepire.</p><p>Quale impressione concreta trasmette il passo, per esempio un suono o un odore?</p></dd></div>
+<div id="measure-modal"><dt><span id="measure-modal_density"></span><span id="measure-modals"></span>Modali</dt><dd><p>Marcatori modali ogni 1.000 parole. Non distingue significati come possibilità e obbligo e non misura la certezza.</p><p>Il contesto chiarisce che cosa è possibile, necessario o consentito, e per chi?</p></dd></div>
+<div id="measure-nominal"><dt><span id="measure-nominalization_density"></span>Suffissi dei nomi</dt><dd><p>Corrispondenze al motivo configurato per lo stile nominale ogni 1.000 parole. Il motivo predefinito cerca terminazioni come -zione, -mento e -ità. Leggi il passo e osserva quale azione o qualità indica il nome.</p><p>Se un sostantivo riassume un’azione, si capisce ancora che cosa succede?</p></dd></div>
+<div id="measure-passive"><dt><span id="measure-passive_density"></span>Schemi di passivo</dt><dd><p>Schemi vicini al passivo ogni 1.000 parole. Euristica: possono contare participi aggettivali e altri usi; alcune forme passive sfuggono.</p><p>Se c’è una costruzione passiva, verifica se il lettore ha bisogno di sapere chi agisce.</p></dd></div>
+<div id="measure-adjective_density"><dt>Suffissi aggettivali</dt><dd><p>Parole con desinenze aggettivali selezionate ogni 1.000 parole. Euristica: omette altre desinenze e può includere altre classi di parole.</p></dd></div>
+</dl>
+</section>
+<section id="motifs" aria-labelledby="heading-motifs">
+<h2 id="heading-motifs">Motivi e ripetizioni</h2>
+<p>Un motivo di progetto conta le corrispondenze con un criterio di ricerca salvato. La ricerca di ripetizioni trova sequenze di parole ricorrenti. Rileggi i passaggi per capire se «alla finestra» è un motivo, un riferimento al luogo o una ripetizione involontaria.</p>
+<dl>
+<div id="measure-echo"><dt>Echi lessicali</dt><dd><p>Lixity conta ogni occorrenza di una parola di almeno quattro caratteri ripetuta nello stesso paragrafo ed esclusa dalla lista delle parole funzionali. Maiuscole e minuscole valgono allo stesso modo.</p><p>Leggi a turno ogni occorrenza. La ripetizione serve a collegare i passi o a dare risalto a un’idea?</p></dd></div>
+</dl>
+</section>
+<section id="characters" aria-labelledby="heading-characters">
+<h2 id="heading-characters">Menzioni dei personaggi</h2>
+<p>Si contano i nomi nel testo, senza dedurre la presenza nella scena. I modelli possono sovrapporsi: una menzione può contare per più personaggi. La prospettiva è dichiarata dall’autore.</p>
+<p>Inserisci i nomi o le loro forme nel progetto. Se un nome non compare per diversi capitoli, verifica se il personaggio viene ancora indicato con pronomi.</p>
+<dl>
+<div id="measure-chr_gap"><dt>Intervallo interno</dt><dd><p>Sequenza più lunga di capitoli senza menzioni tra la prima e l’ultima menzione.</p></dd></div>
+<div id="measure-chr_share"><dt>Copertura delle menzioni</dt><dd><p>Quota di tutti i capitoli in cui il nome è menzionato almeno una volta.</p></dd></div>
+<div id="measure-chr_voices"><dt>Voci dei personaggi vs. narratore</dt><dd><p>Attribuzione deterministica a singolo parlante su finestra adiacente (turni ambigui esclusi). Confronto descrittivo, non valutativo.</p></dd></div>
+<div id="measure-chr_interactions"><dt>Interazioni tra personaggi</dt><dd><p>Scambi deterministici tra turni adiacenti attribuiti e cooccorrenza nei capitoli. Segnale descrittivo, non valutativo.</p></dd></div>
+</dl>
+</section>
+<section id="scenes" aria-labelledby="heading-scenes">
+<h2 id="heading-scenes">Scene e registri di stile</h2>
+<p>Ogni scena viene misurata separatamente. Registri e intervalli obiettivo sono scelte del progetto, non giudizi di qualità. Senza separatori, i capitoli fungono da scene. Impostate assegnazioni e obiettivi in lixity.toml.</p>
+<p>I conteggi di parole e frasi mostrano la dimensione del campione. HD-D richiede 100 parole; la variazione richiede almeno due frasi. Gli errori standard sono approssimazioni, non intervalli di confidenza validati. Un trattino indica indisponibilità; uno zero osservato non dimostra certezza.</p>
+<p>Segnali puramente descrittivi di transizione (tempo, luogo, personaggio) nelle scene esplicite; nessuna prescrizione strutturale.</p>
+</section>
+<section id="style" aria-labelledby="heading-style">
+<h2 id="heading-style">Stile</h2>
+<p>Confronta un capitolo con i valori tipici dei capitoli misurabili dello stesso manoscritto. Parti dal dato originale e dalla quantità di testo. Un capitolo in forma di lettera può avere volutamente una voce diversa.</p>
+<p>Per impostazione predefinita servono almeno 2 capitoli misurabili per ogni misura. Se tutti i valori coincidono, manca la dispersione necessaria per il confronto.</p>
+<p>Un segno più indica un valore superiore a quello tipico del manoscritto. Un segno meno ne indica uno inferiore. Seleziona una cella per vedere i valori nelle loro unità, per esempio in parole per frase, e leggere il capitolo.</p>
+<dl>
+<div id="measure-heatmap"><dt>Radiografia di stile (Heatmap)</dt><dd><p>Caratteristiche dei capitoli rispetto alla mediana del manoscritto, con correzione per dispersione e incertezza stimata. Blu = sotto, arancione = sopra. Clic per la spiegazione e l’accesso al capitolo. Nessun confronto (–) sotto 100 parole, né sotto 5 frasi per la loro distribuzione.</p></dd></div>
+<div id="measure-fingerprint"><dt>Impronta di stile</dt><dd><p>La mediana di ogni caratteristica descrive un capitolo tipico del manoscritto. Le differenze possono riflettere cambi voluti di voce o registro.</p></dd></div>
+<div id="measure-passport"><dt>Riferimento di stile</dt><dd><p>Fasce descrittive dello stile del manoscritto (mediana ± 2σ). Cambi intenzionali di voce o registro possono differire; non sono obblighi di scrittura.</p></dd></div>
+<div id="measure-consistency"><dt>Confronti entro la soglia</dt><dd><p>Quota dei confronti misurabili tra capitoli e caratteristiche entro il limite di deviazione scelto. Non è un voto di qualità. Dati insufficienti: –.</p></dd></div>
+<div id="measure-dimensions"><dt>Proiezione dei ranghi delle caratteristiche</dt><dd><p>Proiezione esplorativa dei ranghi standardizzati dei capitoli completi. La vicinanza riguarda gli assi mostrati. Le quote di varianza provengono dalla matrice regolarizzata, non da registri letterari accertati. I capitoli incompleti sono omessi.</p></dd></div>
+<div id="measure-structural"><dt>Diagnostica strutturale e deriva stilistica</dt><dd><p>Confronta i capitoli con segmentazione esatta a costo protetto, tendenze dei ranghi e distribuzioni iniziali/finali. I cambiamenti proposti sono esplorativi; non dimostrano significatività o intenzione.</p></dd></div>
+<div id="measure-fdr"><dt>FDR</dt><dd><p>Quando si confrontano molte caratteristiche dei capitoli, una regola nominale per test multipli segnala una selezione da esaminare. Leggi questi segnali insieme alla loro entità e al contesto del testo; i tassi d&#x27;errore per i capitoli non sono calibrati.</p></dd></div>
+</dl>
+</section>
+<section id="matrix" aria-labelledby="heading-matrix">
+<h2 id="heading-matrix">Matrice dei capitoli</h2>
+<p>Ogni riga riassume un capitolo. Un trattino indica che manca il dato di confronto. Apri un passaggio segnalato e verifica l’effetto del motivo nel capitolo.</p>
+<dl>
+<div id="measure-chapter_flags"><dt>Passaggi segnalati</dt><dd><p>Numero di paragrafi che raggiungono la soglia di gravità attiva. Indicazioni di revisione, non errori né risultati FDR.</p></dd></div>
+<div id="measure-chapter_deviation"><dt>scarto</dt><dd><p>Numero di caratteristiche oltre la soglia di deviazione. 0 = nessuna; – = confronto non disponibile. Non è una selezione FDR né un voto di qualità.</p></dd></div>
+<div id="measure-layer"><dt>Informazioni sul confronto</dt><dd><p>Valori dei paragrafi rispetto alla mediana del capitolo: blu = minore, arancione = maggiore. Anello = scarto |z| ≥ 1,5; non è un voto di qualità.</p></dd></div>
+</dl>
+</section>
+<section id="register-targets" aria-labelledby="heading-register-targets">
+<h2 id="heading-register-targets">Registri dei capitoli (facoltativo)</h2>
+<p>Raggruppa capitoli con voce distinta (lettere o altro narratore). Esclusi da FDR; i valori z restano sul libro intero. Tratti, non qualità.</p>
+<p>Gli obiettivi di scena si impostano separatamente in lixity.toml. I filtri dell’analisi modificano la vista, non il riferimento del confronto.</p>
+</section>
+<section id="revisions" aria-labelledby="heading-revisions">
+<h2 id="heading-revisions">Confronta versioni</h2>
+<p>Il confronto misura con le stesse impostazioni il testo confermato, il file attuale e la bozza. Se la media passa da 12 a 8, la variazione è di −4 parole per frase. Leggi le modifiche per vedere se sono state tolte frasi lunghe o aggiunte frasi brevi. Le lacune nella cronologia indicano che mancano misure comparabili.</p>
+<p>Le variazioni per capitolo vengono mostrate solo quando è chiaro quale capitolo corrisponde a quale.</p>
+</section>
+<footer><a href="https://mfahsold.github.io/lixity/METHODS.md" hreflang="en">Formule, gruppi di riferimento e limiti statistici</a></footer>
+</main>
+</body>
+</html>

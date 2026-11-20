@@ -31,9 +31,9 @@ from hashlib import sha256
 from itertools import pairwise
 from typing import Any
 
-from .language import compile_pattern, compile_word_pattern, quotation_texts, resolve_language
+from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
-from .markdown_parser import prose_paragraphs, prose_text, split_chapters, split_scenes
+from .markdown_parser import split_chapters, split_scenes
 from .models import (
     DEFAULT_HOOK_SHORT_SENTENCE,
     DEFAULT_MONOTONY_MIN_RUN,
@@ -41,7 +41,9 @@ from .models import (
     DEFAULT_STICKY_MIN_WORDS,
     CorpusConfig,
 )
-from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
+from .quotation import QuotationAnalysis, count_quoted_words, scan_quotations
+from .quotation_projection import quoted_prose
+from .sentences import SHORT_SENTENCE_MAX, split_prose_sentence_spans, split_prose_sentences
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
 HOOK_SHORT_SENTENCE = DEFAULT_HOOK_SHORT_SENTENCE
@@ -162,8 +164,9 @@ _REFLECTION_CUE_RE = re.compile(
 def classify_scene_hook(
     sentence: str,
     *,
-    dialogue_re: re.Pattern[str],
     filter_verbs_re: re.Pattern[str],
+    dialogue_re: re.Pattern[str] | None = None,
+    is_dialogue: bool | None = None,
 ) -> str:
     """Classify a scene entry or exit sentence into a heuristic hook category.
 
@@ -173,7 +176,12 @@ def classify_scene_hook(
     stripped = sentence.strip()
     if not stripped:
         return "unknown"
-    if dialogue_re.search(stripped) or stripped.startswith(('"', "»", "«", "„", "“", "—", "–")):
+    if is_dialogue is None:
+        quotation = scan_quotations(stripped, "generic", pattern=dialogue_re)
+        is_dialogue = bool(quotation.spans)
+        if not is_dialogue and quotation.unclear:
+            return "unknown"
+    if is_dialogue:
         return "dialogue"
     if stripped.rstrip("\"'»«“”\u2018\u2019)] \t").endswith("?"):
         return "question"
@@ -378,7 +386,7 @@ def _scene_stats(
     index: int,
     chapter_num: int,
     word_re: re.Pattern[str],
-    dialogue_re: re.Pattern[str],
+    quotation: QuotationAnalysis,
     filter_verbs_re: re.Pattern[str],
     language_key: str,
     function_words: frozenset[str],
@@ -389,14 +397,21 @@ def _scene_stats(
     sticky_min_words: int = DEFAULT_STICKY_MIN_WORDS,
     include_sticky_identity: bool = False,
 ) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
-    scene_text = prose_text(scene_text, _front_matter=False)
     words = len(word_re.findall(scene_text))
     if not words:
         return None
-    sentences = [s for s in split_prose_sentences(scene_text, language_key) if word_re.findall(s)]
-    sentence_tokens = [[w.lower() for w in word_re.findall(s)] for s in sentences]
+    sentence_spans: list[tuple[int, int]] = []
+    sentences: list[str] = []
+    sentence_tokens: list[list[str]] = []
+    for start, end in split_prose_sentence_spans(scene_text, language_key):
+        sentence = scene_text[start:end]
+        tokens = word_re.findall(sentence)
+        if tokens:
+            sentence_spans.append((start, end))
+            sentences.append(sentence)
+            sentence_tokens.append([word.lower() for word in tokens])
     sentence_lengths = [len(tokens) for tokens in sentence_tokens]
-    dialogue_words = sum(len(word_re.findall(m)) for m in quotation_texts(dialogue_re, scene_text))
+    dialogue_words = count_quoted_words(scene_text, word_re, quotation.spans)
     short = sum(1 for length in sentence_lengths if length <= short_sentence_max)
 
     glue_pcts: list[float] = []
@@ -424,18 +439,14 @@ def _scene_stats(
                     item["_sentence_key"] = sha256(sentence.strip().encode("utf-8")).hexdigest()
                 sticky_items.append(item)
 
-    entry_sentence = sentences[0] if sentences else ""
     exit_sentence = sentences[-1] if sentences else ""
-    entry_hook_type = classify_scene_hook(
-        entry_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
-    )
-    exit_hook_type = classify_scene_hook(
-        exit_sentence, dialogue_re=dialogue_re, filter_verbs_re=filter_verbs_re
-    )
-    exit_is_dialogue = bool(dialogue_re.search(exit_sentence)) if exit_sentence else False
+    entry_span = sentence_spans[0] if sentence_spans else (0, 0)
+    exit_span = sentence_spans[-1] if sentence_spans else (0, 0)
+    entry_hook_type = _classify_span_hook(scene_text, entry_span, quotation, filter_verbs_re)
+    exit_hook_type = _classify_span_hook(scene_text, exit_span, quotation, filter_verbs_re)
     exit_hook_score, _, _ = _hook_score(
         exit_sentence,
-        exit_is_dialogue,
+        exit_hook_type == "dialogue",
         word_re,
         hook_short_sentence=hook_short_sentence,
     )
@@ -456,12 +467,24 @@ def _scene_stats(
     return stats, glue_pcts, sticky_items
 
 
-def _closing_sentence(body: str, language_key: str) -> str:
-    sentences = split_prose_sentences(body, language_key)
-    for sentence in reversed(sentences):
-        if sentence.strip():
-            return sentence.strip()
-    return ""
+def _span_overlaps_quotation(bounds: tuple[int, int], quotation: QuotationAnalysis) -> bool:
+    """Check quote context against original sentence ranges in canonical prose."""
+    start, end = bounds
+    return any(start < span.end and span.start < end for span in quotation.spans)
+
+
+def _classify_span_hook(
+    text: str, bounds: tuple[int, int], quotation: QuotationAnalysis,
+    filter_verbs_re: re.Pattern[str],
+) -> str:
+    """Classify a passage from the projected quote and uncertainty ranges."""
+    start, end = bounds
+    if start == end:
+        return "unknown"
+    in_quote = _span_overlaps_quotation(bounds, quotation)
+    if not in_quote and any(start < b and a < end for a, b in quotation.unclear):
+        return "unknown"
+    return classify_scene_hook(text[start:end], is_dialogue=in_quote, filter_verbs_re=filter_verbs_re)
 
 
 def _hook_score(
@@ -485,7 +508,7 @@ def _hook_score(
 
 
 def _chapter_flow_stats(
-    body: str,
+    paragraphs: Sequence[str],
     word_re: re.Pattern[str],
     language_key: str,
     function_words: frozenset[str],
@@ -497,7 +520,7 @@ def _chapter_flow_stats(
     adjacent_pairs = 0
     linked_pairs = 0
     has_function_lexicon = bool(function_words)
-    for paragraph in prose_paragraphs(body, _front_matter=False):
+    for paragraph in paragraphs:
         sentences = [
             s
             for s in split_prose_sentences(paragraph, language_key)
@@ -546,7 +569,6 @@ def pacing_report(
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
-    dialogue_re = compile_pattern(resolved.dialogue_regex)
     filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     sticky_available = bool(resolved.function_words)
 
@@ -566,7 +588,8 @@ def pacing_report(
     all_corpus_sentence_lengths: list[int] = []
 
     for number, title, body in split_chapters(text, config):
-        clean = prose_text(body, _front_matter=False)
+        chapter = quoted_prose(body, config, language=resolved, chapter_body=True)
+        clean = chapter.text
         words = len(word_re.findall(clean))
         if not words:
             continue
@@ -575,12 +598,13 @@ def pacing_report(
         scenes: list[SceneStats] = []
         chapter_glue_pcts: list[float] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
+            scene = quoted_prose(scene_text, config, language=resolved, chapter_body=True) if scene_breaks else chapter
             scene_result = _scene_stats(
-                scene_text,
+                scene.text,
                 index,
                 number,
                 word_re,
-                dialogue_re,
+                scene.analysis,
                 filter_verbs_re,
                 resolved.key,
                 resolved.function_words,
@@ -613,15 +637,17 @@ def pacing_report(
             if scene_sentences
             else 0.0
         )
-        dialogue_words = sum(scene.dialogue_pct * scene.words for scene in scenes) / 100.0
+        dialogue_words = count_quoted_words(clean, word_re, chapter.analysis.spans)
         staccato = (
             sum(scene.staccato_pct * scene.sentences for scene in scenes) / scene_sentences
             if scene_sentences
             else 0.0
         )
 
-        closing = _closing_sentence(clean, resolved.key)
-        closing_is_dialogue = bool(dialogue_re.search(closing))
+        sentence_spans = split_prose_sentence_spans(clean, resolved.key)
+        closing_span = sentence_spans[-1] if sentence_spans else (0, 0)
+        closing = clean[closing_span[0]:closing_span[1]]
+        closing_is_dialogue = bool(sentence_spans and _span_overlaps_quotation(closing_span, chapter.analysis))
         hook, closing_words, terminal = _hook_score(
             closing,
             closing_is_dialogue,
@@ -629,7 +655,7 @@ def pacing_report(
             hook_short_sentence=config.hook_short_sentence,
         )
         repeated_runs, adjacent_pairs, linked_pairs = _chapter_flow_stats(
-            body,
+            chapter.parts,
             word_re,
             resolved.key,
             resolved.function_words,
@@ -637,11 +663,7 @@ def pacing_report(
         )
         overlap_pct = (linked_pairs / adjacent_pairs * 100.0) if adjacent_pairs else 0.0
 
-        all_sentences = [
-            s for s in split_prose_sentences(clean, resolved.key)
-            if word_re.search(s)
-        ]
-        sentence_lengths = [len(word_re.findall(s)) for s in all_sentences]
+        sentence_lengths = [length for start, end in sentence_spans if (length := len(word_re.findall(clean[start:end])))]
         all_corpus_sentence_lengths.extend(sentence_lengths)
         chapter_rhythm = compute_rhythm_profile(
             sentence_lengths, short_sentence_max=config.short_sentence_max

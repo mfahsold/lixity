@@ -238,7 +238,14 @@
     }
   } catch (_) { /* A malformed preference never changes manuscript data. */ }
   if (metric && preferences.metric !== null) metric.value = preferences.metric;
-  if (evidenceToggle) evidenceToggle.checked = Boolean(metric && metric.value && preferences.evidenceByMetric[metric.value]);
+  function restoreEvidencePreference() {
+    if (!metric || !evidenceToggle) return;
+    var selected = metric.selectedOptions[0];
+    var saved = preferences.evidenceByMetric[metric.value];
+    evidenceToggle.checked = typeof saved === "boolean" ? saved :
+      Boolean(selected && selected.dataset.inlineEvidence === "1" && selected.dataset.available !== "0");
+  }
+  restoreEvidencePreference();
   if (comparisonToggle) comparisonToggle.checked = preferences.comparison;
   function rememberAnalysis() {
     if (metric) preferences.metric = metric.value;
@@ -252,7 +259,7 @@
     metric.dispatchEvent(new Event("change", {bubbles:true}));
   }
   function selectMetricPreference() {
-    if (metric && evidenceToggle) evidenceToggle.checked = Boolean(metric.value && preferences.evidenceByMetric[metric.value]);
+    restoreEvidencePreference();
     rememberAnalysis();
   }
   // Restore before the dashboard's change listener updates the visible overlay.
@@ -1094,16 +1101,6 @@
     });
     return ranges;
   }
-  function fallbackDialogueSpans(text) {
-    if (typeof text !== "string" || !text) return [];
-    var spans = [], re = /[„"«»“”][^„"«»“”\n]{1,1200}[“"»«”]/g, m;
-    while ((m = re.exec(text)) !== null) {
-      var cpStart = Array.from(text.slice(0, m.index)).length;
-      var cpEnd = cpStart + Array.from(m[0]).length;
-      spans.push({start: cpStart, end: cpEnd});
-    }
-    return spans;
-  }
   function applyDirectSpeech() {
     directSpeechFrame = 0;
     var hasHighlight = Boolean(window.CSS && CSS.highlights && window.Highlight);
@@ -1120,13 +1117,10 @@
       var content = typeof paragraphContent !== "undefined" ? paragraphContent[panel.id] : null;
       var text = content && typeof content[0] === "string" ? content[0] : "";
       var evidence = content && content[3];
-      var summaries = content && content[4];
-      var spans = evidence && evidence.layers && evidence.layers.dialogue && Array.isArray(evidence.layers.dialogue.spans)
-        ? evidence.layers.dialogue.spans
-        : null;
-      var hasSummaryDlg = summaries && typeof summaries.dialogue === "string" && parseFloat(summaries.dialogue) > 0;
-      if (!spans) spans = fallbackDialogueSpans(text);
-      if (spans.length > 0 || hasSummaryDlg) {
+      var dialogue = evidence && evidence.layers && evidence.layers.dialogue;
+      if (!dialogue || !Array.isArray(dialogue.quotation_ranges)) return;
+      var spans = dialogue.quotation_ranges.map(function(pair) {return {start:pair[0], end:pair[1]};});
+      if (spans.length > 0) {
         var totalCp = Array.from(text.trim()).length;
         var dlgCp = spans.reduce(function(acc, s) { return acc + Math.max(0, (s.end || 0) - (s.start || 0)); }, 0);
         if (spans.length > 0 && totalCp > 0 && dlgCp >= totalCp - 4) {
@@ -1140,7 +1134,7 @@
             ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
           }
         }
-      } else {
+      } else if (dialogue.reason !== "quotation_context_unresolved") {
         panel.classList.add("direct-speech-narrative");
       }
     });

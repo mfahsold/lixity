@@ -35,6 +35,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
             labels=labels, language_key=locale, title='Synthetic narration coverage', controls=True,
             paragraph_evidence=analysis.evidence),
         'turns': labels['dlg_turns'], 'unit': FEATURE_UNITS[locale]['asl'], 'words': labels['words'],
+        'quoted_words': labels['measurement_quoted_words'],
         'counted_text': labels['legend_counted_text'],
         'hook_help': labels['help_pacing_hook'].replace('{max_words}', '8'),
         'scale': labels['pacing_scale'],
@@ -63,8 +64,11 @@ print(json.dumps(documents))
         const rows = chart.locator('.row');
         assert.deepEqual(await rows.evaluateAll(items => items.map(item => item.dataset.jump)),
           Array.from({length: 17}, (_, index) => '#ch-' + (index + 1)));
-        assert.equal(await page.locator('#dialogue > .kpi-row .kpi').count(), 2);
-        assert.equal(await page.locator('#dialogue .kpi b').first().textContent(), '136');
+        const summary = page.locator('#dialogue > .kpi-row .kpi');
+        assert.equal(await summary.count(), 3);
+        assert.equal(await summary.first().locator('b').textContent(), '136');
+        assert.equal(await summary.nth(1).locator('b').textContent(), '272');
+        assert.equal(await summary.nth(1).locator('span').textContent(), fixture.quoted_words);
         assert.ok((await page.locator('#dialogue > .panel-guide').last().textContent()).includes(fixture.counted_text));
         const corpusDetails = page.locator('#dialogue-corpus-details');
         assert.equal(await corpusDetails.locator('.kpi-row').isVisible(), false);
@@ -124,6 +128,10 @@ print(json.dumps(documents))
         await sticky.locator('summary').focus();
         await page.keyboard.press('Enter');
         assert.equal(await sticky.evaluate(detail => detail.open), true);
+        const stickyReference = sticky.locator('a[href*="/guides/metrics/"]');
+        assert.ok(await stickyReference.isVisible());
+        assert.equal(await stickyReference.getAttribute('href'), `/guides/metrics/${locale}.html#sticky`);
+        assert.equal(await stickyReference.textContent(), await page.evaluate(() => uiLabel('metric_reference_link')));
         assert.ok((await sticky.textContent()).includes(fixture.sticky_rule));
         assert.ok((await sticky.locator('li').textContent()).includes(fixture.sticky_evidence));
         assert.equal(await sticky.locator('li a').getAttribute('href'), '#ch-17');

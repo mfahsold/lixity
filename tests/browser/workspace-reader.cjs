@@ -263,14 +263,16 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
         assert.equal(await navigationToggle.getAttribute('aria-expanded'), 'true');
         assert.equal(await page.locator('.workspace-shell').evaluate(node => node.getBoundingClientRect().width), originalWidth);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        // Locator clicks can scroll the sticky control into view before sending input.
+        await navigationToggle.evaluate(node => node.focus({preventScroll: true}));
         const beforeNavigationToggle = await page.evaluate(() => {
           const anchor = LixityReader.capture();
           return {id: anchor.panel.id, top: anchor.panel.getBoundingClientRect().top};
         });
-        await navigationToggle.click();
+        await page.keyboard.press('Space');
         assert.equal(await navigation.isVisible(), false, 'Only the navigation toggle collapses navigation');
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-        await navigationToggle.click();
+        await page.keyboard.press('Space');
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const restoredNavigationTop = await page.evaluate(id => document.getElementById(id).getBoundingClientRect().top,
           beforeNavigationToggle.id);

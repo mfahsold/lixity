@@ -154,19 +154,30 @@ class EditingRoutesMixin(ResponseMixin):
         if not self._require_same_origin():
             return
         query = self._parse_query(
-            optional=("base", "target"),
-            non_empty=("base", "target"),
-            error_message="Expected optional base and target revision parameters",
+            optional=("base", "target", "project_token"),
+            non_empty=("base", "target", "project_token"),
+            error_message="Expected optional base, target and selected-project token parameters",
         )
         if query is None:
             return
         try:
             with self._workspace_lock:
+                token = query.get("project_token")
+                context = None
+                stale_message = "Selected analysis changed; refresh before comparing"
+                if token is not None:
+                    context = self._capture_manuscript_context(
+                        token, require_readable=False, stale_message=stale_message,
+                    )
+                    if context is None:
+                        return
                 store = self._editor_store()
                 result = store.delta(
                     base_revision=query.get("base"),
                     target_revision=query.get("target"),
                 )
+                if context is not None and not self._manuscript_context_still_current(context, stale_message=stale_message):
+                    return
                 self._ok(result)
         except (ValueError, OSError, sqlite3.Error) as exc:
             self._error(str(exc), 400)

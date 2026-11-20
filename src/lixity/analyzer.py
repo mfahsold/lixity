@@ -32,19 +32,18 @@ from .diversity import (
     yules_k as yules_k_value,
 )
 from .language import (
+    CUE_WORD_RE,
     compile_pattern,
     compile_word_pattern,
     count_nominal_matches,
-    quotation_texts,
     resolve_language,
 )
 from .language_data import READABILITY
 from .markdown_parser import (
-    COMMENT_STRIP_RE,
+    before_appendix,
     chapter_heading_spans,
-    prose_paragraphs,
-    prose_text,
     split_chapters,
+    strip_html_comments,
 )
 from .math_core import binomial_se_percent, per_mille, percent, poisson_se_per_mille
 from .models import (
@@ -53,16 +52,16 @@ from .models import (
     CorpusMetrics,
     SentenceDistribution,
 )
+from .quotation import count_quoted_words
+from .quotation_projection import QuotedProse, quoted_prose
 from .sentences import split_prose_sentences
 from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
 from .tense import TenseMatcher
 
-_RE_HTML_COMMENT = COMMENT_STRIP_RE
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 _RE_DASHES = re.compile(r"[–—]")
 _RE_ELLIPSES = re.compile(r"(?:…|\.{3})")
-_RE_WORD_TOKEN = re.compile(r"\w+")
 
 
 @dataclass(frozen=True)
@@ -109,7 +108,6 @@ class CorpusAnalyzer:
         self._tense = TenseMatcher(self.config, self.lang)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
         self._word_re = compile_word_pattern(self.lang.word_regex)
-        self._dialogue_re = compile_pattern(self.lang.dialogue_regex)
         # Style heuristics (self-calibrating house-style fingerprint)
         self._passive_re = compile_pattern(self.lang.passive_regex)
         self._nominal_re = compile_pattern(self.lang.nominal_regex)
@@ -148,21 +146,19 @@ class CorpusAnalyzer:
         self._cue_cache: dict[str, tuple[bool, bool, bool, bool]] = {}
 
     def _classify_cue_token(self, token: str) -> tuple[bool, bool, bool, bool]:
-        """Classify a lowercase \\w+ token as (filter, sensory, nominal, adjective)."""
+        """Classify a cue word as (filter, sensory, nominal, adjective)."""
         hit = self._cue_cache.get(token)
         if hit is None:
             hit = (
                 self._filter_re.fullmatch(token) is not None,
                 self._sensory_re.fullmatch(token) is not None,
-                self._nominal_re.fullmatch(token) is not None and token not in self._nominal_exclusions,
+                self._nominal_re.fullmatch(token) is not None and token.lower() not in self._nominal_exclusions,
                 self._adjective_re.fullmatch(token) is not None,
             )
             self._cue_cache[token] = hit
         return hit
 
-    def _count_cue_tokens(
-        self, text: str, lower_tokens: Sequence[str] | None = None
-    ) -> tuple[int, int, int, int]:
+    def _count_cue_tokens(self, text: str) -> tuple[int, int, int, int]:
         """Return (filter, sensory, nominal, adjective) match counts for text."""
         if not self._fast_cues:
             return (
@@ -172,12 +168,7 @@ class CorpusAnalyzer:
                 len(self._adjective_re.findall(text)),
             )
         f_cnt = s_cnt = n_cnt = a_cnt = 0
-        token_items = (
-            Counter(lower_tokens).items()
-            if lower_tokens is not None
-            else Counter(w.lower() for w in _RE_WORD_TOKEN.findall(text)).items()
-        )
-        for word, count in token_items:
+        for word, count in Counter(CUE_WORD_RE.findall(text)).items():
             is_f, is_s, is_n, is_a = self._classify_cue_token(word)
             if is_f:
                 f_cnt += count
@@ -416,7 +407,7 @@ class CorpusAnalyzer:
             kaskade_pct=_pct(complex_),
         )
 
-    def _paragraph_stats(self, paragraphs: list[str]) -> tuple[int, float, int]:
+    def _paragraph_stats(self, paragraphs: Sequence[str]) -> tuple[int, float, int]:
         """(prose paragraphs, average words per paragraph, one-liner count)."""
         lengths = [len(p.split()) for p in paragraphs]
         total = len(lengths)
@@ -441,19 +432,20 @@ class CorpusAnalyzer:
             "ellipses": len(_RE_ELLIPSES.findall(text)),
         }
 
-    def measure_unit(self, text: str) -> ChapterMetrics | None:
+    def measure_unit(self, text: str, *, projection: QuotedProse | None = None) -> ChapterMetrics | None:
         """Measure one prose unit using the chapter feature engine once.
 
         This omits corpus-level readability, cross-chapter divergence and title
         parsing. It is useful for scenes already segmented by the shared parser.
         """
-        return self._chapter_metrics(1, "", text, self.long_word_min())[0]
+        return self._chapter_metrics(1, "", text, self.long_word_min(), projection=projection)[0]
 
     def _chapter_metrics(
-        self, num: int, title: str, body: str, lw_min: int
+        self, num: int, title: str, body: str, lw_min: int, *, projection: QuotedProse | None = None,
     ) -> tuple[ChapterMetrics | None, list[str]]:
         """Per-chapter metrics (style features, uncertainty, tense, JSD input)."""
-        cl_b = prose_text(body, _front_matter=False)
+        prose = projection or quoted_prose(body, self.config, language=self.lang, chapter_body=True)
+        cl_b = prose.text
         c_words = self._word_re.findall(cl_b)
         if not c_words:
             return None, []
@@ -463,8 +455,7 @@ class CorpusAnalyzer:
         c_sentences = split_prose_sentences(cl_b, self.lang.key)
         stats = self._sentence_stats(c_sentences)
 
-        c_dial = quotation_texts(self._dialogue_re, cl_b)
-        c_dial_words = sum(len(self._word_re.findall(m)) for m in c_dial)
+        c_dial_words = count_quoted_words(cl_b, self._word_re, prose.analysis.quote_ranges)
         c_dial_pct = (c_dial_words / n_cw) * 100.0 if n_cw else 0.0
         c_ttr = len(set(c_lower)) / n_cw if n_cw else 0.0
         c_signals = {
@@ -475,8 +466,8 @@ class CorpusAnalyzer:
             m_name: len(m_re.findall(cl_b))
             for m_name, m_re in self._compiled_motifs.items()
         }
-        c_fil, c_sensory_cnt, c_nominal_cnt, c_adjective_cnt = self._count_cue_tokens(cl_b, lower_tokens=c_lower)
-        dominance = dominance_from_hits(*self._tense.count(cl_b))
+        c_fil, c_sensory_cnt, c_nominal_cnt, c_adjective_cnt = self._count_cue_tokens(cl_b)
+        dominance = dominance_from_hits(*self._tense.count(cl_b, quotation=prose.analysis))
 
         c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sentences)
         c_passive_cnt = len(self._passive_re.findall(cl_b))
@@ -549,7 +540,7 @@ class CorpusAnalyzer:
         )
         return chapter, c_lower
 
-    def analyze_text(self, full_text: str) -> CorpusMetrics:
+    def analyze_text(self, full_text: str, *, projection: QuotedProse | None = None) -> CorpusMetrics:
         """
         Performs the complete stylometric and quantitative analysis on
         a passed text string.
@@ -569,12 +560,9 @@ class CorpusAnalyzer:
             CorpusMetrics object with all computed metrics.
         """
         # 1. Main text vs. appendix, comments removed
-        if self.config.appendix_marker and self.config.appendix_marker in full_text:
-            main_text, _ = full_text.split(self.config.appendix_marker, 1)
-        else:
-            main_text = full_text
-        cleaned_full = _RE_HTML_COMMENT.sub("", full_text)
-        cleaned_main = _RE_HTML_COMMENT.sub("", main_text)
+        main_text = before_appendix(full_text, self.config)
+        cleaned_full = strip_html_comments(full_text)
+        cleaned_main = strip_html_comments(main_text)
         # Configured chapter headings are metadata, just like Markdown headings.
         # Retain line separators so removing one never joins adjacent prose.
         prose_parts: list[str] = []
@@ -592,8 +580,9 @@ class CorpusAnalyzer:
         clean_chars = len(legacy_clean_main)
         # Token-based measurements share the supported semantic-block scope.
         # Legacy whitespace words/chars intentionally retain their own contract.
-        prose_units = prose_paragraphs(main_text, self.config)
-        prose_main = "\n\n".join(prose_units)
+        prose = projection or quoted_prose(main_text, self.config, language=self.lang)
+        prose_units = prose.parts
+        prose_main = prose.text
 
         # 2. Tokenisation
         tokens = self._word_re.findall(prose_main)
@@ -625,8 +614,7 @@ class CorpusAnalyzer:
             lix = stats.asl + (long_words / n_tokens) * 100.0
 
         # 6. Dialogue ratio
-        dialog_matches = quotation_texts(self._dialogue_re, prose_main)
-        dialog_words = sum(len(self._word_re.findall(m)) for m in dialog_matches)
+        dialog_words = count_quoted_words(prose_main, self._word_re, prose.analysis.quote_ranges)
         dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 
         # 7. Paragraph economy, punctuation, signals
@@ -636,7 +624,7 @@ class CorpusAnalyzer:
             name: len(s_re.findall(prose_main))
             for name, s_re in self._compiled_signals.items()
         }
-        filter_cnt, sensory_cnt, nominal_cnt, adjective_cnt = self._count_cue_tokens(prose_main, lower_tokens=lower_tokens)
+        filter_cnt, sensory_cnt, nominal_cnt, adjective_cnt = self._count_cue_tokens(prose_main)
 
         # 8. Style densities (per 1,000 tokens, length-comparable)
         passive_density = self._density(len(self._passive_re.findall(prose_main)), n_tokens)
@@ -704,7 +692,8 @@ class CorpusAnalyzer:
             sentence_cv=stats.cv,
             start_entropy=start_entropy,
             first_person_start_rate=first_person_start_rate,
-            function_word_pct=percent(sum(token in self.lang.function_words for token in lower_tokens), n_tokens),
+            function_word_pct=(percent(sum(token in self.lang.function_words for token in lower_tokens), n_tokens)
+                               if n_tokens and self.lang.function_words else None),
             passive_density=passive_density,
             nominalization_density=nominalization_density,
             adjective_density=adjective_density,

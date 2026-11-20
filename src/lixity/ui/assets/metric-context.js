@@ -11,6 +11,7 @@
   var trigger = null, chapterKey = null, selectedFeature = null, returnFocus = true;
   var body = document.getElementById("metric-context-values");
   var read = document.getElementById("metric-context-read");
+  var reference = document.getElementById("metric-context-reference-link");
   var details = document.getElementById("metric-context-details");
   function text(id, value) { document.getElementById(id).textContent = value; }
   function measurement(value, unit) {
@@ -32,6 +33,7 @@
     text("metric-context-sample", chapter.sample);
     text("metric-context-definition", meta.help +
       (chapter.values[feature].reason ? " " + chapter.values[feature].reason : ""));
+    if (reference) reference.hash = "measure-" + feature;
     text("metric-context-value", measurement(chapter.values[feature].value, meta.unit));
     text("metric-context-typical", measurement(meta.median, meta.unit));
     document.getElementById("metric-context-no-layer").hidden = Boolean(meta.layer);

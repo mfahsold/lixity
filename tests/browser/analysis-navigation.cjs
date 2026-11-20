@@ -33,7 +33,7 @@ text = '\\n\\n'.join(
     for chapter in range(1, 5))
 text += '\\n\\n## Brief chapter\\n\\nRain.'
 config = CorpusConfig(language='en', chapter_regex=r'(?m)^##\\s+')
-analysis = analyze_document(text, config, resolve_thresholds(project_config={}))
+analysis = analyze_document(text, config, resolve_thresholds(project_config={}), include_evidence=True)
 analysis.paragraphs[0].severity = 3
 analysis.chapters[0].flagged = sum(paragraph.is_flagged for paragraph in analysis.paragraphs
                                 if paragraph.chapter_num == analysis.chapters[0].num)
@@ -50,7 +50,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]},
         language_key=locale, controls=True, enabled_actions=['analyze', 'research-reader'],
         manuscript_pdf_token='synthetic-navigation-project',
-        reader_document=reader_blocks(text, config, analysis.paragraphs))
+        reader_document=reader_blocks(text, config, analysis.paragraphs), paragraph_evidence=analysis.evidence)
 print(json.dumps(result))
 `, {root});
 
@@ -377,14 +377,43 @@ async function finish(page, errors, writes) {
       await check('keyboard manuscript destinations ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, 'en', width);
         try {
+          if (width === 320) await page.setViewportSize({width, height: 480});
           await openOverview(page);
           await openAnalysisSection(page, 'flags');
           const flag = page.locator('#flags .flag-row').first(), paragraph = await flag.getAttribute('data-target');
           const read = flag.locator('.triage-read-cell button');
           await read.focus(); await read.press('Enter'); await settle(page);
-          assert.equal(await page.locator('#' + paragraph).isVisible(), true);
+          const passage = page.locator('#' + paragraph);
+          assert.equal(await passage.isVisible(), true);
           assert.equal(await page.evaluate(() => document.activeElement.id), paragraph,
             'The explicit keyboard reading action focuses the revealed paragraph');
+          const inspector = page.locator('#reader-inspector');
+          assert.equal(await inspector.isVisible(), width !== 320,
+            'The triage jump opens an adjacent inspector only when it can be seen beside the paragraph');
+          if (width === 320) {
+            assert.equal(await passage.locator('.ptext-inner > p').evaluate(prose => {
+              const top = prose.getBoundingClientRect().top;
+              return top >= readingViewportTop() - 1 && top < innerHeight;
+            }), true, 'The target text starts below the sticky reader controls and inside the viewport');
+            await page.keyboard.press('Tab');
+            assert.equal(await passage.locator('[data-reader-paragraph]').evaluate(node => node === document.activeElement), true);
+            await page.keyboard.press('Tab');
+            const reason = passage.locator('[data-reader-flag]');
+            assert.equal(await reason.evaluate(node => node === document.activeElement), true,
+              'The next passage control opens the reason for this tense finding');
+            await reason.press('Enter'); await settle(page);
+            assert.equal(await inspector.locator('.reader-passage-flag').isVisible(), true);
+            const close = inspector.locator('#reader-inspector-close');
+            assert.equal(await close.evaluate(node => {
+              const bounds = node.getBoundingClientRect();
+              return node === document.activeElement && node.contains(document.elementFromPoint(
+                bounds.left + bounds.width / 2, bounds.top + bounds.height / 2));
+            }), true, 'Opening the local reason scrolls to the inspector and focuses its visible close control');
+            await close.press('Enter'); await settle(page);
+            assert.equal(await inspector.isVisible(), false);
+            assert.equal(await reason.evaluate(node => node === document.activeElement), true,
+              'Closing the inspector returns focus to the local reason');
+          }
           await openOverview(page);
           await openAnalysisSection(page, 'matrix');
           const chapter = page.locator('#matrix tbody [data-jump]').last(), target = await chapter.getAttribute('data-jump');
@@ -534,6 +563,21 @@ async function finish(page, errors, writes) {
           await page.locator('#style-layer').selectOption('');
           const none = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(none, off, 'Analysis on without a metric is distinct from Analysis off');
+          const reference = page.locator('#reader-metric-reference');
+          assert.equal(await reference.evaluate(link => link.hash), '#measurements');
+          const measures = await page.locator('#style-layer option').evaluateAll(options =>
+            options.filter(option => option.value).map(option => ({
+              value:option.value, title:option.textContent, unit:option.dataset.unit, hint:option.dataset.hint
+            })));
+          assert.equal(measures.length, 12);
+          for (const measure of measures) {
+            await page.locator('#style-layer').selectOption(measure.value);
+            assert.equal(await reference.evaluate(link => link.hash), '#measure-' + measure.value);
+            const description = await page.locator('#reader-analysis-guide-state').textContent();
+            assert.ok(description.includes(measure.title), `${locale}: ${measure.value} uses its localized title`);
+            if (!measure.unit) assert.equal(description, measure.title, `${locale}: evidence-only metrics need no empty unit`);
+            assert.equal(await page.locator('#reader-metric-definition').textContent(), measure.hint);
+          }
           await page.locator('#style-layer').selectOption('asl');
           const selected = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(selected, none);

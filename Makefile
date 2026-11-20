@@ -106,6 +106,7 @@ docs-generated-check: ## Check generated version pins, documentation bundle and 
 	$(SCRIPT_PYTHON) scripts/build_llms_full.py --check
 	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py --check
 	$(SCRIPT_PYTHON) scripts/build_public_site.py --check
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/build_metric_reference.py --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
 	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
@@ -115,6 +116,7 @@ docs-sync: ## Synchronize documentation version references to match __version__
 	$(SCRIPT_PYTHON) scripts/build_llms_full.py
 	$(SCRIPT_PYTHON) scripts/build_guide_markdown.py
 	$(SCRIPT_PYTHON) scripts/build_public_site.py
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/build_metric_reference.py
 
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main

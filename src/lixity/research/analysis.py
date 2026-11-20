@@ -12,7 +12,7 @@ from .._version import __version__
 from ..analyzer import CorpusAnalyzer
 from ..config import THRESHOLD_KEYS, resolve_thresholds
 from ..language import compile_word_pattern, resolve_language
-from ..markdown_parser import chapter_heading_spans, prose_text, split_chapters
+from ..markdown_parser import before_appendix, chapter_heading_spans, prose_text, split_chapters
 from ..models import SCHEMA_VERSION, CorpusConfig
 from ..pipeline import analyze_document
 from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
@@ -302,13 +302,10 @@ def compare_source_to_manuscript(
     # body segmentation used for the chapter trace, so titles, front matter,
     # and the configured scholarly appendix cannot inflate lexical overlap.
     def comparison_prose(text: str, config: CorpusConfig) -> tuple[list[tuple[int, str, str]], str]:
-        headings = chapter_heading_spans(text, config)
-        chapters = split_chapters(text[headings[0][0]:], config) if headings else []
-        if chapters:
-            bodies = [body for _, _, body in chapters]
-        else:
-            main_text = text.split(config.appendix_marker, 1)[0] if config.appendix_marker else text
-            bodies = [main_text]
+        main_text = before_appendix(text, config)
+        headings = chapter_heading_spans(main_text, config)
+        chapters = split_chapters(main_text[headings[0][0]:], config) if headings else []
+        bodies = [body for _, _, body in chapters] if chapters else [main_text]
         prose = "\n\n".join(prose_text(body, _front_matter=not chapters) for body in bodies)
         return chapters, prose
 

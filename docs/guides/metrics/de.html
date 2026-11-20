@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/metrics/de.html">
+<title>Was Lixity misst</title>
+<style>
+/* Canonical foundation shared by bundled dashboards and staged Pages. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f2f4fa, #0c1017);
+  --surface: light-dark(#ffffff, #121822);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #9ba7b8);
+  --muted: light-dark(#56647b, #8a96a8);
+  --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
+  --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
+  --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
+  --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
+  /* Solid metric spans use this role; saved research uses neutral dotted borders. */
+  --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
+  /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
+  --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
+  --analysis-comparison-negative: light-dark(#2b6cb0, #7ba7d0);
+  --analysis-comparison-positive: light-dark(#c05621, #e8b07a);
+  /* Binary axis cutoff in the style space; not the signed comparison scale. */
+  --style-space-threshold: light-dark(#b45309, #fbbf24);
+  --style-space-selection: var(--fg);
+  --present: light-dark(#2d8664, #34d399);
+  --present-light: light-dark(#e6f4ea, #064e3b);
+  --past: light-dark(#b57635, #fbbf24);
+  --past-light: light-dark(#fef3e2, #451a03);
+  --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
+  --neutral: light-dark(#d8dee6, #2c323d);
+  --flag: light-dark(#c0392b, #f87171);
+  --flag-strong: light-dark(#dc2626, #f87171);
+  --flag-light: light-dark(#fce8e6, #450a0a);
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
+  --on-action: #ffffff;
+  /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
+     inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
+     large surfaces --radius-lg; only true pills (badges, status chips, tracks)
+     use --radius-pill. Rules never hard-code a radius. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
+  --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease-out: var(--ease);
+  --dur-fast: 140ms;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Shared type scale: caption, metadata, controls, body, subhead, heading, display. */
+  --text-caption: .75rem;
+  --text-note: .8125rem;
+  --text-micro: var(--text-note);
+  --text-small: var(--text-note);
+  --text-control: .875rem;
+  --text-section-title: var(--text-body);
+  --text-body: 1rem;
+  --text-subhead: 1.125rem;
+  --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-display: clamp(2.1rem, 4vw, 3.35rem);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-strong: 650;
+  --weight-bold: 700;
+  --line-tight: 1.4;
+  --line-body: 1.6;
+  --line-compact: 1.5;
+  --line-control: 1.35;
+  --line-reading: 1.7;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --panel-padding: 1.25rem;
+  --section-gap: 1.5rem;
+
+  --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-alt: light-dark(#f7f9fc, #161d29);
+  --surface-raised: light-dark(#f2f4fa, #1a2230);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
+  --glass-blur: 12px;
+  --glass-blur-sm: 8px;
+  --glass-blur-lg: 16px;
+  --z-sticky: 14;
+  --z-popover: 220;
+  --z-modal: 1000;
+  --z-tooltip: 10000;
+  --sticky-clearance: 4.5rem;
+
+  /* Editorial & status markers */
+  --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);
+  --marker-pruefen-fg: light-dark(#0369a1, #7dd3fc);
+  --marker-sachcheck-bg: light-dark(#fef3c7, #451a03);
+  --marker-sachcheck-fg: light-dark(#92400e, #fde68a);
+  --marker-todo-bg: light-dark(#f3e8ff, #3b0764);
+  --marker-todo-fg: light-dark(#6b21a6, #d8b4fe);
+  --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
+  --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
+
+  --fg-heading: light-dark(#19263d, #ffffff);
+  --status-success-fg: light-dark(#166534, #86efac);
+  --status-success-bg: light-dark(#e6f4ea, #14532d);
+  --status-success-border: light-dark(#b7ddc1, #24734b);
+  --status-warning-fg: light-dark(#854d0e, #fde68a);
+  --status-warning-bg: light-dark(#fff7ed, #713f12);
+  --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-neutral-fg: var(--muted);
+  --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  --status-neutral-border: var(--line);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root { --shadow-modal: 0 28px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08); } }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); }
+main { max-inline-size: 70ch; margin-inline: auto; padding: var(--space-5); overflow-wrap: anywhere; }
+header, section, footer { margin-block: 0 var(--section-gap); }
+section { padding: var(--panel-padding); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+h1, h2 { margin-block: 0 var(--space-3); line-height: var(--line-tight); }
+h1 { font: var(--weight-bold) var(--text-display)/var(--line-tight) var(--font-title); }
+h2 { font-size: var(--text-heading); }
+p { margin-block: 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; padding: 0; }
+nav a { display: inline-block; padding-block: var(--space-1); }
+dl { margin-block: var(--space-3) 0; }
+dl > div { border-block-start: 1px solid var(--line); padding-block: var(--space-3); }
+dl > div:last-child { padding-block-end: 0; }
+dt { font-weight: var(--weight-bold); }
+dd { margin: 0; }
+section > :last-child, dd > :last-child { margin-block-end: 0; }
+[id] { scroll-margin-block-start: var(--space-4); }
+section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Was Lixity misst</h1>
+<p>Die Zahlen in dieser Übersicht sind Voreinstellungen. Im Projekt können andere Grenzen, Wortlisten oder Erkennungsmuster gelten.</p>
+<nav aria-label="Analyse">
+<ul>
+<li><a href="#analysis-review">Analysehilfe</a></li>
+<li><a href="#measurements">Manuskript in Zahlen</a></li>
+<li><a href="#flags">Auffälligkeiten</a></li>
+<li><a href="#pacing">Satzrhythmus</a></li>
+<li><a href="#dist">Satzlängen</a></li>
+<li><a href="#sticky">Sätze mit vielen Funktionswörtern</a></li>
+<li><a href="#dialogue">Zitate und markierte Rede</a></li>
+<li><a href="#showing">Wortmuster &amp; Zitate</a></li>
+<li><a href="#motifs">Motive &amp; Wiederholungen</a></li>
+<li><a href="#characters">Namensnennungen</a></li>
+<li><a href="#scenes">Szenen &amp; Stilregister</a></li>
+<li><a href="#style">Stil</a></li>
+<li><a href="#matrix">Kapitelmatrix</a></li>
+<li><a href="#register-targets">Kapitelregister (optional)</a></li>
+<li><a href="#revisions">Fassungen vergleichen</a></li>
+</ul>
+</nav>
+</header>
+<section id="analysis-review" aria-labelledby="heading-analysis-review">
+<h2 id="heading-analysis-review">Analysehilfe</h2>
+<p>Wähle im Manuskript einen Messwert und öffne eine markierte Stelle. Lies den ganzen Absatz. Welche Wirkung passt zur Stimme, zur Szene oder zum Sprecherwechsel?</p>
+<p>Auffälligkeiten im Fließtext prüfen. Messwerte dienen als Orientierung für den Lektoratsblick.</p>
+</section>
+<section id="measurements" aria-labelledby="heading-measurements">
+<h2 id="heading-measurements">Manuskript in Zahlen</h2>
+<p>Die Kennzahlen erfassen Wortvielfalt auf unterschiedliche Weise. Vergleiche Kapitel mit ähnlicher Länge und Erzählstimme.</p>
+<dl>
+<div id="measure-words"><dt>Analysierte Wörter</dt><dd><p>Wörter der analysierten Prosa, einschließlich Vorspann, Listen und Zitatblöcken. Absatzprofile können weniger Text abdecken.</p></dd></div>
+<div id="measure-asl"><dt>Wörter pro Satz im Schnitt</dt><dd><p>Mittlere Wortzahl je erkanntem Satz. Beschreibt Satzlänge, nicht Spannung oder Erzähltempo.</p><p>Ein Satz mit 8 und einer mit 16 Wörtern ergeben 12 Wörter pro Satz im Schnitt. Die Verteilung zeigt zusätzlich, wie oft kurze und lange Sätze vorkommen.</p></dd></div>
+<div id="measure-ttr"><dt>TTR</dt><dd><p>Verschiedene Wortformen geteilt durch gezählte Wörter. Längere Passagen senken den Anteil oft; ähnliche Längen und Themen vergleichen.</p></dd></div>
+<div id="measure-yules"><dt>Yule’s K</dt><dd><p>Höheres K = stärkere Konzentration auf häufige Wortformen; K = 0, wenn jede Form nur einmal vorkommt. Länge und Kontext beeinflussen den Vergleich; keine Qualitätsnote.</p></dd></div>
+<div id="measure-hd_d"><dt>HD-D</dt><dd><p>Erwarteter Anteil verschiedener Wortformen in einer Ziehung von 42 Wörtern: 0,5 bedeutet im Mittel 21 verschiedene Formen. Exakt berechnet, ohne Stichprobensimulation. Thema und Wortzählung beeinflussen Vergleiche weiterhin.</p><p>Für HD-D braucht Lixity mindestens 100 Wörter.</p></dd></div>
+<div id="measure-guiraud_r"><dt><span id="measure-guiraud"></span>Guiraud R</dt><dd><p>Verschiedene Wortformen geteilt durch die Quadratwurzel der Wortzahl (V/√N). Derselbe Wortschatz ergibt in einer längeren Passage einen niedrigeren Wert; ähnliche Längen und Themen vergleichen.</p></dd></div>
+<div id="measure-mtld"><dt>MTLD</dt><dd><p>Schätzt die Lauflänge, bis wiederholte Wortformen die Vielfaltquote auf 0,72 oder darunter bringen, gemittelt über beide Leserichtungen. Der letzte unvollständige Lauf zählt anteilig; höher bedeutet längere vielfältige Läufe. Die Mindestmenge von 100 Wörtern garantiert keine Verlässlichkeit.</p></dd></div>
+<div id="measure-mattr"><dt>MATTR</dt><dd><p>Mittlerer Anteil verschiedener Wortformen in überlappenden Fenstern von 50 Wörtern. Höher bedeutet mehr Formen je Fenster; Fenstergröße und Themen müssen vergleichbar sein.</p></dd></div>
+<div id="measure-maas_a2"><dt><span id="measure-maas"></span>Maas a²</dt><dd><p>Setzt Wortschatzgröße und Textlänge ins Verhältnis. Niedrigere Werte bedeuten nach dieser Formel weniger Konzentration auf wiederholte Wortformen; ähnliche Textkontexte vergleichen. Kurze Texte sind nicht verfügbar.</p></dd></div>
+<div id="measure-flesch"><dt>Flesch</dt><dd><p>Lesbarkeitsformel aus Wörtern je Satz und geschätzten Silben je Wort, je nach Sprachprofil. Höher = im Modell leichter lesbar; keine Qualitäts- oder Verständnisbewertung.</p></dd></div>
+<div id="measure-lix"><dt>LIX</dt><dd><p>Mittlere Satzlänge plus Prozentanteil der Wörter mit mehr als 6 Zeichen. Höher = längere Sätze oder Wörter; keine Alters- oder Qualitätsbewertung.</p></dd></div>
+<div id="measure-long_word_pct"><dt><span id="measure-long_words"></span>Langwörter</dt><dd><p>Anteil gezählter Wörter über der eingestellten Langwortgrenze. Das ist ein Bestandteil von LIX, nicht der LIX-Wert selbst. Wortlänge belegt weder Schwierigkeit noch Qualität.</p></dd></div>
+</dl>
+</section>
+<section id="flags" aria-labelledby="heading-flags">
+<h2 id="heading-flags">Auffälligkeiten</h2>
+<p>Absätze mit Hinweisen auf Tempuswechsel oder -mischung. Heuristik zur Prüfung im Textkontext.</p>
+<p>Lies am Übergang auch die Nachbarabsätze. Ein Wechsel kann zu einer Rückblende oder zu wörtlicher Rede gehören. Die Prüfung erfasst nur Tempusmuster.</p>
+<dl>
+<div id="measure-severity"><dt>Hinweise ab Stufe</dt><dd><p>0 = unauffällig, 1 = beobachten, 2 = auffällig, 3 = starke Abweichung (Wechsel und Mischung). Heuristik, kein Fehlerurteil.</p><p>Schwelle für Tempushinweise: 1 = alle Stufen, 2 = Voreinstellung, 3 = nur starke Abweichungen.</p></dd></div>
+<div id="measure-chapter_tense"><dt>Tempus-Marker &amp; Zeitformen</dt><dd><p>Vorherrschendes Tempus nach Sprachmarkern: Vergangenheit, Präsens, gemischt oder neutral. Heuristik, kein grammatisches Urteil.</p><p>Neutral: zu wenige Tempusmarker für eine Aussage.</p></dd></div>
+</dl>
+</section>
+<section id="pacing" aria-labelledby="heading-pacing">
+<h2 id="heading-pacing">Satzrhythmus</h2>
+<p>Längere Balken bedeuten längere Sätze im Durchschnitt. Öffnen Sie zwei Kapitel mit unterschiedlich langen Balken und lesen Sie je einen Absatz laut. Wie verändern Dialog, Handlung und Absatzwechsel das Tempo?</p>
+<dl>
+<div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Schwankung der Satzlänge</dt><dd><p>Schwankung der Satzlängen relativ zum Mittel. 0 = gleich lange Sätze; höher = mehr Variation. Keine Qualitätsbewertung.</p></dd></div>
+<div id="measure-pacing_cohesion"><dt>Wortbrücke Folgesätze</dt><dd><p>Anteil benachbarter Satzpaare im selben Absatz mit mindestens einem gemeinsamen Inhaltswort.</p></dd></div>
+<div id="measure-pacing_monotony"><dt>Gleiche Satzanfänge</dt><dd><p>Anzahl der Ketten, in denen 3 oder mehr aufeinanderfolgende Sätze desselben Absatzes mit demselben Wort beginnen. Markiert Stellen für bewusste Anaphern oder unbeabsichtigte Satzanfangs-Wiederholungen.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Schlussmerkmale</dt><dd><p>Heuristik von 0–3: je ein Punkt für einen Schlusssatz mit 1–8 Wörtern, Schlusszeichen ?, ! oder … und erkannte wörtliche Rede. Kein validiertes Maß für Spannung oder Qualität.</p></dd></div>
+<div id="measure-start_entropy"><dt>Satzanfangs-Entropie</dt><dd><p>Vielfalt des ersten gezählten Wortes erkannter Sätze. Wiederholte Anfänge wie »Ich« senken den Wert, unterschiedliche erhöhen ihn. Wiederholung kann beabsichtigt sein.</p></dd></div>
+<div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Ich-Anfänge</dt><dd><p>Anteil erkannter Sätze, deren erstes gezähltes Wort »ich« ist. 50% bedeuten, dass die Hälfte so beginnt; das kann zur beabsichtigten Erzählstimme gehören.</p></dd></div>
+</dl>
+</section>
+<section id="dist" aria-labelledby="heading-dist">
+<h2 id="heading-dist">Satzlängen</h2>
+<p>Jede Zeile zeigt eine Satzlängengruppe, die Zahl ihrer Sätze und ihren Anteil an allen Sätzen. Lesen Sie einen Absatz laut und achten Sie darauf, wie sich die Satzlänge ändert.</p>
+<p>Die vier Gruppen zählen bis 6, von 7 bis 15, von 16 bis 25 sowie mehr als 25 Wörter je Satz.</p>
+<dl>
+<div id="measure-staccato_pct"><dt><span id="measure-staccato"></span>Anteil kurzer Sätze</dt><dd><p>Anteil erkannter Sätze mit höchstens 6 Wörtern. Satzlänge allein misst kein Szenentempo.</p></dd></div>
+<div id="measure-kaskade_pct"><dt><span id="measure-kaskade"></span>Lange Sätze</dt><dd><p>Anteil erkannter Sätze mit mehr als 25 Wörtern. Misst Satzlänge, keine syntaktische Verschachtelung.</p></dd></div>
+</dl>
+</section>
+<section id="sticky" aria-labelledby="heading-sticky">
+<h2 id="heading-sticky">Sätze mit vielen Funktionswörtern</h2>
+<p>Der Überblick zeigt, wie viele der erkannten Sätze zum Filter passen. Der Wert am einzelnen Satz zeigt den Anteil der Funktionswörter in diesem Satz.</p>
+<p>Artikel und Pronomen sind Beispiele für Funktionswörter. Öffnen Sie einen Beispielsatz und lesen Sie den Absatz, in dem er steht.</p>
+<dl>
+<div id="measure-sticky"><dt>Anteil der Sätze mit vielen Funktionswörtern</dt><dd><p>Der Filter erfasst Sätze ab 8 Wörtern mit mindestens 45 % Funktionswörtern.</p><p>Fünf von acht Wörtern ergeben 62,5 %. So kann auch ein einfacher Hauptsatz markiert sein: «In der Stadt haben wir ihn gestern gesehen.» Lies ihn im Absatz und achte auf den Gedankengang und die Bezüge.</p></dd></div>
+<div id="measure-function"><dt><span id="measure-function_word_pct"></span><span id="measure-function_words"></span>Funktionswörter</dt><dd><p>Anteil der Wörter aus der sprachspezifischen Funktionswortliste, etwa Artikel und Pronomen. Höher = mehr Listentreffer, nicht weniger Inhalt.</p><p>Ist bei Wörtern wie „sie“, „das“ oder „damit“ klar, worauf sie sich beziehen?</p></dd></div>
+</dl>
+</section>
+<section id="dialogue" aria-labelledby="heading-dialogue">
+<h2 id="heading-dialogue">Zitate und markierte Rede</h2>
+<p>Die Sprach- oder Projekteinstellungen legen fest, welche Zeichen erkannt werden. Die Balken zeigen den Wortanteil je Kapitel.</p>
+<p>20 % bedeutet etwa jedes fünfte Wort in einem erkannten Zitat oder in markierter Rede. Lies die Stelle, um zu sehen, wer spricht, denkt oder zitiert wird.</p>
+<dl>
+<div id="measure-dialogue"><dt><span id="measure-dialog_pct"></span>Wörter in Zitaten und markierter Rede</dt><dd><p>Anteil der Wörter, die vollständig in erkannten Zitaten oder markierter Rede liegen. Auch Titel oder Gedanken können dieselben Zeichen tragen.</p><p>Lies die Stelle laut. Wenn eine Figur spricht, passen die Worte zu ihr und zur Situation?</p></dd></div>
+<div id="measure-dlg_short_turns"><dt>Kurze Zitate (≤ 12 Wörter)</dt><dd><p>Anteil der erkannten Abschnitte mit 1–12 Wörtern. Im Text siehst du, ob jemand spricht.</p></dd></div>
+<div id="measure-dlg_long_turns"><dt>Lange Zitate (≥ 80 Wörter)</dt><dd><p>Erkannte Abschnitte ab 80 Wörtern. Lies längere Monologe oder erklärende Stellen im Zusammenhang.</p></dd></div>
+<div id="measure-dlg_voice_contrast"><dt>Unterschied in der Satzlänge</dt><dd><p>Wörter je Satz in erkannten Zitaten und markierter Rede minus Wörter je Satz im übrigen eindeutigen Text. Ein negativer Wert zeigt kürzere Sätze an den markierten Stellen. Der Vergleich braucht verwertbare Sätze auf beiden Seiten.</p></dd></div>
+<div id="measure-dialogue_tag"><dt>Verben der Redebegleitung</dt><dd><p>Markiert Muster wie „sagte“ oder „fragte“ nahe erkannten Zitaten und markierter Rede.</p><p>Lies die markierte Stelle mit der Redebegleitung. Ist klar, wer spricht?</p></dd></div>
+<div id="measure-indirect_speech"><dt>Indirekte Rede</dt><dd><p>Lixity markiert Wortmuster für wiedergegebene Rede oder Gedanken außerhalb erkannter Zitate.</p><p>Lies den Satz mit dem davor. Ist erkennbar, wessen Aussage oder Gedanke wiedergegeben wird?</p></dd></div>
+</dl>
+</section>
+<section id="showing" aria-labelledby="heading-showing">
+<h2 id="heading-showing">Wortmuster &amp; Zitate</h2>
+<p>Die Listen zählen Treffer von Wortmustern je 1.000 Wörter. Das macht Kapitel unterschiedlicher Länge leichter vergleichbar. Lies die Fundstelle, um zu erkennen, was das Wort dort leistet.</p>
+<dl>
+<div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Perzeptionsfilter</dt><dd><p>Treffer des eingestellten Wortmusters für Wahrnehmung, Gedanken und Erinnerungen je 1.000 Wörter. Lies die Stelle und prüfe, wessen Wahrnehmung oder Gedanke hier erzählt wird.</p><p>Ist klar, wer hier etwas wahrnimmt, sich erinnert oder nachdenkt?</p></dd></div>
+<div id="measure-sensory"><dt><span id="measure-sensory_density"></span>Sensorische Dichte</dt><dd><p>Treffer des eingestellten Wortmusters für Sinneseindrücke je 1.000 Wörter. Lies die Stelle und prüfe, welche Details hörbar, sichtbar oder spürbar werden.</p><p>Welcher konkrete Sinneseindruck kommt beim Lesen an, etwa ein Geräusch oder ein Geruch?</p></dd></div>
+<div id="measure-modal"><dt><span id="measure-modal_density"></span><span id="measure-modals"></span>Modalverben</dt><dd><p>Modalwort-Treffer je 1.000 Wörter. Unterscheidet etwa Möglichkeit und Verpflichtung nicht; misst keine Gewissheit.</p><p>Wird im Zusammenhang klar, was möglich, nötig oder erlaubt ist und für wen?</p></dd></div>
+<div id="measure-nominal"><dt><span id="measure-nominalization_density"></span>Nomen-Endungen</dt><dd><p>Treffer des eingestellten Musters für Nominalstil je 1.000 Wörter. Standardmäßig zählen Endungen wie -ung, -heit oder -keit. Lies die Stelle und prüfe, welche Handlung oder Eigenschaft das Nomen benennt.</p><p>Wenn ein Begriff einen Vorgang zusammenfasst, ist dann klar, was passiert?</p></dd></div>
+<div id="measure-passive"><dt><span id="measure-passive_density"></span>Passivmuster</dt><dd><p>Passivnahe Wortmuster je 1.000 Wörter. Heuristik: Auch Adjektive, Zukunft oder Werden können zählen; manche Passivformen fehlen.</p><p>Falls hier ein Passiv steht, prüfe, ob für die Szene klar sein muss, wer handelt.</p></dd></div>
+<div id="measure-adjective_density"><dt>Adjektiv-Endungen</dt><dd><p>Wörter mit ausgewählten Adjektiv-Endungen je 1.000 Wörter. Heuristik: Andere Endungen fehlen; auch andere Wortarten können passen.</p></dd></div>
+</dl>
+</section>
+<section id="motifs" aria-labelledby="heading-motifs">
+<h2 id="heading-motifs">Motive &amp; Wiederholungen</h2>
+<p>Ein Projektmotiv zählt Treffer eines hinterlegten Suchmusters. Die Wiederholungssuche findet wiederkehrende Wortfolgen. Beim Lesen zeigt sich, ob etwa «am Fenster» als Leitmotiv, Ortsangabe oder unbeabsichtigte Wiederholung wirkt.</p>
+<dl>
+<div id="measure-echo"><dt>Wortwiederholungen</dt><dd><p>Lixity zählt jedes Vorkommen eines Worts ab vier Zeichen, das sich im selben Absatz wiederholt und auf der Funktionswortliste fehlt. Groß- und Kleinschreibung zählen gleich.</p><p>Lies die Fundstellen nacheinander. Soll die Wiederholung die Stellen verbinden oder einen Gedanken betonen?</p></dd></div>
+</dl>
+</section>
+<section id="characters" aria-labelledby="heading-characters">
+<h2 id="heading-characters">Namensnennungen</h2>
+<p>Zählt Namen im Text, nicht die Anwesenheit in einer Szene. Namensmuster können sich überschneiden; eine Nennung kann bei mehreren Figuren zählen. Perspektivkapitel stammen aus den Projektangaben.</p>
+<p>Hinterlege die Namen oder Namensmuster der Figuren im Projekt. Bei einer längeren Lücke in den Namensnennungen kannst du im Text prüfen, ob die Figur weiter über Pronomen auftaucht.</p>
+<dl>
+<div id="measure-chr_gap"><dt>Interne Lücke</dt><dd><p>Längste Folge von Kapiteln ohne Nennung zwischen der ersten und letzten Nennung.</p></dd></div>
+<div id="measure-chr_share"><dt>Nennungsanteil</dt><dd><p>Anteil aller Kapitel, in denen der Name mindestens einmal genannt wird.</p></dd></div>
+<div id="measure-chr_voices"><dt>Figurenstimmen vs. Erzählerstimme</dt><dd><p>Deterministische Einzelsprecher-Zuordnung im angrenzenden Fenster (mehrdeutige Züge ausgelassen). Deskriptiver Vergleich, keine Stilwertung.</p></dd></div>
+<div id="measure-chr_interactions"><dt>Figuren-Interaktionen</dt><dd><p>Deterministische Sprecherwechsel zwischen direkt aufeinanderfolgenden zugeordneten Redezügen sowie gemeinsame Kapitelpräsenz. Deskriptives Signal, keine Wertung.</p></dd></div>
+</dl>
+</section>
+<section id="scenes" aria-labelledby="heading-scenes">
+<h2 id="heading-scenes">Szenen &amp; Stilregister</h2>
+<p>Jede Szene wird einzeln gemessen. Register und Zielbereiche sind Vorgaben des Projekts, keine Qualitätsurteile. Ohne Szenentrenner dienen Kapitel als Szenen. Zuordnungen und Ziele werden in lixity.toml festgelegt.</p>
+<p>Wort- und Satzzahlen zeigen die Datenbasis. HD-D fehlt unter 100 Wörtern; Satzvariation fehlt bei nur einem Satz. Standardfehler sind Näherungen, keine validierten Konfidenzintervalle. Ein Strich bedeutet nicht verfügbar; auch ein beobachteter Nullwert belegt keine Sicherheit.</p>
+<p>Rein deskriptive Übergangssignale (Zeit, Ort, Figur) innerhalb expliziter Szenen; keine Strukturvorgabe.</p>
+</section>
+<section id="style" aria-labelledby="heading-style">
+<h2 id="heading-style">Stil</h2>
+<p>Vergleiche ein Kapitel mit den typischen Werten messbarer Kapitel desselben Manuskripts. Prüfe zunächst den Rohwert und die Textmenge. Ein Briefkapitel darf sich bewusst vom Erzähltext abheben.</p>
+<p>Für den Vergleich braucht ein Merkmal standardmäßig mindestens 2 messbare Kapitel. Sind ihre Werte gleich, fehlt die Streuung für den Vergleich.</p>
+<p>Plus bedeutet mehr als für dieses Manuskript typisch, Minus bedeutet weniger. Wähle eine Zelle, um die Werte in ihrer Einheit zu sehen, etwa in Wörtern je Satz, und das Kapitel zu lesen.</p>
+<dl>
+<div id="measure-heatmap"><dt>Stil-Röntgen (Heatmap)</dt><dd><p>Kapitelmerkmale im Vergleich zum Manuskriptmedian, angepasst an Streuung und geschätzte Messunsicherheit. Blau = darunter, Orange = darüber. Klick für Erklärung und Zugang zum Kapitel. Kein Vergleich (–) unter 100 Wörtern; bei Satzverteilungsmerkmalen auch unter 5 Sätzen.</p></dd></div>
+<div id="measure-fingerprint"><dt>Stil-Fingerabdruck</dt><dd><p>Der Median je Merkmal beschreibt ein typisches Kapitel dieses Manuskripts. Unterschiede können beabsichtigte Stimmen- oder Registerwechsel sein.</p></dd></div>
+<div id="measure-passport"><dt>Stilreferenz</dt><dd><p>Deskriptive Stilbänder des Manuskripts (Median ± 2σ). Absichtliche Stimmen- und Registerwechsel können davon abweichen; keine Schreibvorgabe.</p></dd></div>
+<div id="measure-consistency"><dt>Vergleiche innerhalb der Schwelle</dt><dd><p>Anteil messbarer Kapitel-Merkmal-Vergleiche innerhalb der gewählten Abweichungsgrenze. Keine Qualitätsnote. Zu wenig Daten: –.</p></dd></div>
+<div id="measure-dimensions"><dt>Projektion der Merkmalsränge</dt><dd><p>Explorative Projektion standardisierter Merkmalsränge vollständig gemessener Kapitel. Nähe gilt für die gezeigten Achsen. Die Varianzanteile stammen aus der regularisierten Rangmatrix; keine nachgewiesenen literarischen Register. Fehlende Kapitel werden ausgelassen.</p></dd></div>
+<div id="measure-structural"><dt>Strukturelle Diagnostik &amp; Stil-Drift</dt><dd><p>Vergleicht Kapitelmuster durch exakte Segmentierung mit abgesicherten Kosten, Rangtrends und frühe/späte Verteilungen. Mögliche Veränderungen sind explorativ; sie belegen weder Signifikanz noch Absicht.</p></dd></div>
+<div id="measure-fdr"><dt>FDR</dt><dd><p>Bei vielen Kapitelvergleichen markiert eine nominale Mehrfachtest-Regel eine Prüfauswahl. Die Signale mit ihrer Stärke und dem Textkontext lesen; Fehlerraten für Kapiteldaten sind nicht kalibriert.</p></dd></div>
+</dl>
+</section>
+<section id="matrix" aria-labelledby="heading-matrix">
+<h2 id="heading-matrix">Kapitelmatrix</h2>
+<p>Jede Zeile fasst ein Kapitel zusammen. Ein Strich steht für einen fehlenden Vergleichswert. Öffne eine markierte Stelle und prüfe, ob das Muster zur Funktion des Kapitels passt.</p>
+<dl>
+<div id="measure-chapter_flags"><dt>Auffälligkeiten</dt><dd><p>Anzahl der Absätze ab der aktiven Schwereschwelle. Prüfhinweise, keine Fehlerzahl und keine FDR-Ergebnisse.</p></dd></div>
+<div id="measure-chapter_deviation"><dt>Abweichung</dt><dd><p>Anzahl der Merkmale über der Abweichungsschwelle. 0 = keine Überschreitung; – = kein Vergleich. Keine FDR-Auswahl oder Qualitätsbewertung.</p></dd></div>
+<div id="measure-layer"><dt>Zum Vergleich</dt><dd><p>Absatzwerte relativ zum Kapitelmedian: Blau = niedriger, Orange = höher. Ring = Abweichung |z| ≥ 1,5; keine Qualitätsbewertung.</p></dd></div>
+</dl>
+</section>
+<section id="register-targets" aria-labelledby="heading-register-targets">
+<h2 id="heading-register-targets">Kapitelregister (optional)</h2>
+<p>Bündelt Kapitel mit eigener Stimme (z. B. Briefe oder Neben-Erzähler). Zugeordnete Kapitel überspringen FDR-Marken; z-Werte vergleichen weiter mit dem Buch. Keine Qualitätsnote.</p>
+<p>Szenenziele werden getrennt in lixity.toml festgelegt. Analysefilter ändern nur die Anzeige, nicht die Vergleichsbasis.</p>
+</section>
+<section id="revisions" aria-labelledby="heading-revisions">
+<h2 id="heading-revisions">Fassungen vergleichen</h2>
+<p>Im Fassungsvergleich werden bestätigter Text, aktuelle Datei und Entwurf mit denselben Einstellungen gemessen. Sinkt die mittlere Satzlänge von 12 auf 8 Wörter, beträgt die Änderung −4 Wörter pro Satz. Schau im Textvergleich, ob beispielsweise lange Sätze gestrichen oder kurze ergänzt wurden. Lücken im gespeicherten Verlauf bedeuten fehlende vergleichbare Messwerte.</p>
+<p>Kapiteländerungen werden erst angezeigt, wenn klar ist, welches Kapitel welchem entspricht.</p>
+</section>
+<footer><a href="https://mfahsold.github.io/lixity/METHODS.md" hreflang="en">Formeln, Bezugsgrößen und statistische Grenzen</a></footer>
+</main>
+</body>
+</html>

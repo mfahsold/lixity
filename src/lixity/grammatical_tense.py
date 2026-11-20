@@ -17,9 +17,10 @@ from typing import Any
 
 from .linguistic_models import SyntaxToken, parse_tokens, parser_language, validate_tokens
 from .linguistic_models import model_identity as _parser_identity
+from .quotation import QuotationAnalysis, scan_quotations
 from .verb_grammar import SUPPORTED_LANGUAGES, VerbGroup, classify_german, classify_other, is_finite
 
-POLICY = "multilingual-verb-groups/1"
+POLICY = "multilingual-verb-groups/2"
 _LOCK = RLock()
 _CACHE: OrderedDict[tuple[str, str], tuple[VerbGroup, ...]] = OrderedDict()
 _MAX_CACHE_CHARS = 1_000_000
@@ -123,20 +124,20 @@ def analyze_verbs(text: str, model: str) -> tuple[VerbGroup, ...]:
         return result
 
 
-def _quotation_spans(text: str, pattern: re.Pattern[str]) -> list[tuple[int, int]]:
-    """Match the existing dialogue counter's single-capture convention."""
-    group = 1 if pattern.groups == 1 else 0
-    return [match.span(group) for match in pattern.finditer(text) if match.start(group) >= 0]
-
-
-def grammatical_observation(text: str, model: str, scope: str, quotation_regex: re.Pattern[str], *,
-                            quotation_spans: list[tuple[int, int]] | None = None) -> dict[str, Any]:
+def grammatical_observation(text: str, model: str, scope: str, quotation_regex: re.Pattern[str] | None, *,
+                            quotation_spans: Sequence[tuple[int, int]] | None = None,
+                            unclear_spans: Sequence[tuple[int, int]] = ()) -> dict[str, Any]:
     """Keep all verb groups, scope exclusions and unresolved analyses inspectable."""
-    quotes = quotation_spans if quotation_spans is not None else _quotation_spans(text, quotation_regex)
+    if quotation_spans is None:
+        analysis = scan_quotations(text, "generic" if quotation_regex is not None else parser_language(model),
+                                   pattern=quotation_regex)
+        quotation_spans, unclear_spans = analysis.quote_ranges, analysis.unclear
     groups = []
     for group in analyze_verbs(text, model):
-        quoted = [any(start <= a and b <= end for start, end in quotes) for a, b in group.components]
-        context = "quotation" if all(quoted) else "narration" if not any(quoted) else "unresolved"
+        quoted = [any(start <= a and b <= end for start, end in quotation_spans) for a, b in group.components]
+        intersects = any(a < end and b > start for a, b in group.components
+                         for start, end in (*quotation_spans, *unclear_spans))
+        context = "quotation" if all(quoted) else "unresolved" if intersects else "narration"
         selected = scope == "all" or context == "narration"
         bucket = ("present" if group.tense == "present" else "past" if group.tense in
                   ("preterite", "imperfect", "perfect", "pluperfect", "anterior_perfect") else None) if group.mood in ("indicative", "unmarked") else None
@@ -146,14 +147,21 @@ def grammatical_observation(text: str, model: str, scope: str, quotation_regex: 
 
 
 def grammatical_parts(parts: Sequence[str], model: str, scope: str,
-                      quotation_regex: re.Pattern[str]) -> list[dict[str, Any]]:
+                      quotation_regex: re.Pattern[str] | None, *,
+                      quotation: QuotationAnalysis | None = None) -> list[dict[str, Any]]:
     """Parse paragraphs consistently, resolving quotation scope across them first."""
-    quotes = _quotation_spans("\n\n".join(parts), quotation_regex)
+    analysis = quotation or scan_quotations("\n\n".join(parts),
+                                            "generic" if quotation_regex is not None else parser_language(model),
+                                            pattern=quotation_regex)
+    quotes = analysis.quote_ranges
     observations = []
     offset = 0
     for part in parts:
         local = [(max(0, start - offset), min(len(part), end - offset)) for start, end in quotes
                  if start < offset + len(part) and end > offset]
-        observations.append(grammatical_observation(part, model, scope, quotation_regex, quotation_spans=local))
+        unclear = [(max(0, start - offset), min(len(part), end - offset)) for start, end in analysis.unclear
+                   if start < offset + len(part) and end > offset]
+        observations.append(grammatical_observation(part, model, scope, quotation_regex,
+                                                   quotation_spans=local, unclear_spans=unclear))
         offset += len(part) + 2
     return observations

@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import Any
+from unicodedata import normalize
 
 from .analyzer import CorpusAnalyzer
 from .corridors import evaluate_genre_corridor, pacing_corridor_observation
@@ -18,7 +19,8 @@ from .models import CorpusConfig, CorpusMetrics
 from .motifs import motif_report, resolve_motif_settings
 from .pacing import MEDIUM_SENTENCE_MAX as PACING_MEDIUM_SENTENCE_MAX
 from .pacing import pacing_report, sentence_group_intervals
-from .paragraph_evidence import ParagraphEvidence
+from .paragraph_evidence import ParagraphEvidence, available_paragraph_layers
+from .quotation_projection import QuotedProse, project_quotations
 from .scenes import scene_report_for_display
 from .showing import showing_report
 from .style_fingerprint import (
@@ -45,6 +47,8 @@ class DocumentAnalysis:
     fingerprint: StyleFingerprint
     evidence: dict[int, ParagraphEvidence] | None = None
     paragraph_layers: ParagraphLayerData = field(default_factory=dict)
+    paragraph_available_layers: frozenset[str] = frozenset()
+    projection: QuotedProse | None = field(default=None, repr=False, compare=False)
 
 
 def paragraph_identity(paragraph: ParagraphProfile | ParagraphText) -> dict[str, Any]:
@@ -77,10 +81,12 @@ def profile_document(
     text: str, config: CorpusConfig, thresholds: FingerprintThresholds, *,
     evidence: dict[int, ParagraphEvidence] | None = None,
     include_reader_details: bool = False,
+    _blocks: list[dict[str, Any]] | None = None, _projection: QuotedProse | None = None,
 ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
     profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
     return ParagraphProfiler(config, thresholds=profile_thresholds, sample_text=text).profile_blocks(
-        parse_markdown_blocks(text, config), evidence=evidence, include_reader_details=include_reader_details,
+        _blocks if _blocks is not None else parse_markdown_blocks(text, config, _quote_lines=True),
+        evidence=evidence, include_reader_details=include_reader_details, projection=_projection,
     )
 
 
@@ -107,20 +113,26 @@ def analyze_document(
     started = time.monotonic()
     log_event(logger, "pipeline_analyze", level=logging.DEBUG, stage="start", language=config.language, chars=len(text))
     try:
-        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
+        blocks = parse_markdown_blocks(text, config, _quote_lines=True)
+        analyzer = CorpusAnalyzer(config, sample_text=text)
+        projection = project_quotations(blocks, config, analyzer.lang)
+        metrics = analyzer.analyze_text(text, projection=projection)
         evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
         paragraphs, chapters = profile_document(
             text, config, thresholds, evidence=evidence, include_reader_details=include_evidence,
+            _blocks=blocks, _projection=projection,
         )
         fingerprint = fingerprint_document(text, config, thresholds, metrics)
-        paragraph_layers = prepare_paragraph_layers(paragraphs)
+        available_layers = available_paragraph_layers(analyzer.lang, config=config)
+        paragraph_layers = prepare_paragraph_layers(paragraphs, available_layers=available_layers)
         duration_ms = int((time.monotonic() - started) * 1000)
         log_event(
             logger, "pipeline_analyze", level=logging.DEBUG, stage="completed",
             chapters=len(chapters), paragraphs=len(paragraphs),
             words=metrics.raw_words, duration_ms=duration_ms,
         )
-        return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence, paragraph_layers)
+        return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint, evidence,
+                                paragraph_layers, available_layers, projection)
     except Exception as exc:
         duration_ms = int((time.monotonic() - started) * 1000)
         log_event(logger, "pipeline_analyze", stage="failed", error=type(exc).__name__, duration_ms=duration_ms)
@@ -145,7 +157,8 @@ def _attach_sticky_locations(
             if words is None or function_words is None:
                 continue
             quote = paragraph.text[span["start"]:span["end"]].strip()
-            digest = sha256(quote.encode("utf-8")).hexdigest()
+            # Pacing hashes the NFC counting text; the reader keeps source codepoints.
+            digest = sha256(normalize("NFC", quote).encode("utf-8")).hexdigest()
             identity = (paragraph.chapter_num, digest, words, function_words)
             candidates[identity].append((idx, paragraph.start_line, span_idx))
     sticky_items = [dict(item) for item in pacing_dict["sticky_items"]]
@@ -231,6 +244,8 @@ def supplementary_reports(
     pacing_obj = pacing_report(text, config, _include_sticky_identity=analysis.evidence is not None)
     pacing_dict = pacing_obj.to_dict()
     pacing_dict["rhythm_word_bounds"] = (config.short_sentence_max, PACING_MEDIUM_SENTENCE_MAX)
+    pacing_dict["hook_short_sentence"] = config.hook_short_sentence
+    pacing_dict["monotony_min_run"] = config.monotony_min_run
     pacing_dict["sticky_rule"] = {
         "min_words": config.sticky_min_words,
         "min_pct": config.sticky_glue_pct,
@@ -239,9 +254,10 @@ def supplementary_reports(
     _attach_sentence_group_locations(pacing_dict, config, analysis)
     motifs_dict = motif_report(
         text, config=config, _paragraphs=analysis.paragraphs if analysis.evidence is not None else None,
+        _projection=analysis.projection,
     ).to_display_dict()
     reports: dict[str, Any] = {
-        "dialogue": dialogue_report(text, config).to_dict(),
+        "dialogue": dialogue_report(text, config).to_display_dict(config),
         "pacing": pacing_dict,
         "motifs": motifs_dict,
         "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),

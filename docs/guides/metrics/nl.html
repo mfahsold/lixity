@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/metrics/nl.html">
+<title>Wat Lixity meet</title>
+<style>
+/* Canonical foundation shared by bundled dashboards and staged Pages. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f2f4fa, #0c1017);
+  --surface: light-dark(#ffffff, #121822);
+  --fg: light-dark(#19263d, #eef2f8);
+  --fg-secondary: light-dark(#465570, #9ba7b8);
+  --muted: light-dark(#56647b, #8a96a8);
+  --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
+  --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
+  --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
+  --accent: light-dark(#2949cc, #b4c3ff);
+  --accent-hover: light-dark(#203ba6, #d5deff);
+  --accent-light: light-dark(#e9edff, #242f51);
+  --accent-focus: light-dark(rgba(43, 92, 143, 0.25), rgba(74, 138, 212, 0.35));
+  /* Solid metric spans use this role; saved research uses neutral dotted borders. */
+  --analysis-evidence-color: light-dark(#6f45a5, #c9afff);
+  /* z_color positions across the fixed -2.5 to +2.5 comparison range. */
+  --analysis-comparison-gradient: linear-gradient(90deg in srgb, #2b6cb0 0%, #7ba7d0 30%, #e5e7eb 50%, #e8b07a 70%, #c05621 100%);
+  --analysis-comparison-negative: light-dark(#2b6cb0, #7ba7d0);
+  --analysis-comparison-positive: light-dark(#c05621, #e8b07a);
+  /* Binary axis cutoff in the style space; not the signed comparison scale. */
+  --style-space-threshold: light-dark(#b45309, #fbbf24);
+  --style-space-selection: var(--fg);
+  --present: light-dark(#2d8664, #34d399);
+  --present-light: light-dark(#e6f4ea, #064e3b);
+  --past: light-dark(#b57635, #fbbf24);
+  --past-light: light-dark(#fef3e2, #451a03);
+  --mixed: #70638e;
+  /* Badge text needs stronger contrast than the unchanged chart colors. */
+  --present-ink: light-dark(#23694e, #34d399);
+  --past-ink: light-dark(#805323, #fbbf24);
+  --mixed-ink: light-dark(#604f7e, #c9b7e7);
+  --neutral: light-dark(#d8dee6, #2c323d);
+  --flag: light-dark(#c0392b, #f87171);
+  --flag-strong: light-dark(#dc2626, #f87171);
+  --flag-light: light-dark(#fce8e6, #450a0a);
+  --action-bg: #2949cc;
+  --action-hover: #203ba6;
+  --on-action: #ffffff;
+  /* One radius ladder. Inline bits use --radius-xs, every control (buttons,
+     inputs, selects, tabs) --radius-sm, cards and panels --radius, modals and
+     large surfaces --radius-lg; only true pills (badges, status chips, tracks)
+     use --radius-pill. Rules never hard-code a radius. */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
+  --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease-out: var(--ease);
+  --dur-fast: 140ms;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* Shared type scale: caption, metadata, controls, body, subhead, heading, display. */
+  --text-caption: .75rem;
+  --text-note: .8125rem;
+  --text-micro: var(--text-note);
+  --text-small: var(--text-note);
+  --text-control: .875rem;
+  --text-section-title: var(--text-body);
+  --text-body: 1rem;
+  --text-subhead: 1.125rem;
+  --text-heading: clamp(1.375rem, 2.2vw, 1.75rem);
+  --text-display: clamp(2.1rem, 4vw, 3.35rem);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-strong: 650;
+  --weight-bold: 700;
+  --line-tight: 1.4;
+  --line-body: 1.6;
+  --line-compact: 1.5;
+  --line-control: 1.35;
+  --line-reading: 1.7;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --panel-padding: 1.25rem;
+  --section-gap: 1.5rem;
+
+  --bg-subtle: light-dark(#e9edf6, #0e141e);
+  --surface-alt: light-dark(#f7f9fc, #161d29);
+  --surface-raised: light-dark(#f2f4fa, #1a2230);
+  --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
+  --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
+  --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));
+  --line-glass: light-dark(rgba(226, 229, 223, 0.75), rgba(255, 255, 255, 0.08));
+  --glass-blur: 12px;
+  --glass-blur-sm: 8px;
+  --glass-blur-lg: 16px;
+  --z-sticky: 14;
+  --z-popover: 220;
+  --z-modal: 1000;
+  --z-tooltip: 10000;
+  --sticky-clearance: 4.5rem;
+
+  /* Editorial & status markers */
+  --marker-pruefen-bg: light-dark(#e0f2fe, #082f49);
+  --marker-pruefen-fg: light-dark(#0369a1, #7dd3fc);
+  --marker-sachcheck-bg: light-dark(#fef3c7, #451a03);
+  --marker-sachcheck-fg: light-dark(#92400e, #fde68a);
+  --marker-todo-bg: light-dark(#f3e8ff, #3b0764);
+  --marker-todo-fg: light-dark(#6b21a6, #d8b4fe);
+  --marker-achtung-bg: light-dark(#fee2e2, #450a0a);
+  --marker-achtung-fg: light-dark(#991b1b, #fca5a5);
+
+  --fg-heading: light-dark(#19263d, #ffffff);
+  --status-success-fg: light-dark(#166534, #86efac);
+  --status-success-bg: light-dark(#e6f4ea, #14532d);
+  --status-success-border: light-dark(#b7ddc1, #24734b);
+  --status-warning-fg: light-dark(#854d0e, #fde68a);
+  --status-warning-bg: light-dark(#fff7ed, #713f12);
+  --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-neutral-fg: var(--muted);
+  --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
+  --status-neutral-border: var(--line);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root { --shadow-modal: 0 28px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08); } }
+
+body { margin: 0; background: var(--bg); color: var(--fg); font: var(--text-body)/var(--line-body) var(--font); }
+main { max-inline-size: 70ch; margin-inline: auto; padding: var(--space-5); overflow-wrap: anywhere; }
+header, section, footer { margin-block: 0 var(--section-gap); }
+section { padding: var(--panel-padding); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+h1, h2 { margin-block: 0 var(--space-3); line-height: var(--line-tight); }
+h1 { font: var(--weight-bold) var(--text-display)/var(--line-tight) var(--font-title); }
+h2 { font-size: var(--text-heading); }
+p { margin-block: 0 var(--space-3); }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:hover { color: var(--accent-hover); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+nav ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; padding: 0; }
+nav a { display: inline-block; padding-block: var(--space-1); }
+dl { margin-block: var(--space-3) 0; }
+dl > div { border-block-start: 1px solid var(--line); padding-block: var(--space-3); }
+dl > div:last-child { padding-block-end: 0; }
+dt { font-weight: var(--weight-bold); }
+dd { margin: 0; }
+section > :last-child, dd > :last-child { margin-block-end: 0; }
+[id] { scroll-margin-block-start: var(--space-4); }
+section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Wat Lixity meet</h1>
+<p>De drempels in dit overzicht zijn standaardwaarden. Je project kan andere grenzen, woordenlijsten of herkenningspatronen gebruiken.</p>
+<nav aria-label="Analyse">
+<ul>
+<li><a href="#analysis-review">Analysehulp</a></li>
+<li><a href="#measurements">Manuscriptmetingen</a></li>
+<li><a href="#flags">Gemarkeerde passages</a></li>
+<li><a href="#pacing">Zinsritme</a></li>
+<li><a href="#dist">Zinslengtes</a></li>
+<li><a href="#sticky">Zinnen met veel functiewoorden</a></li>
+<li><a href="#dialogue">Citaten en gemarkeerde replieken</a></li>
+<li><a href="#showing">Woordpatronen en citaten</a></li>
+<li><a href="#motifs">Motieven &amp; herhalingen</a></li>
+<li><a href="#characters">Personagevermeldingen</a></li>
+<li><a href="#scenes">Scènes en stijlregisters</a></li>
+<li><a href="#style">Stijl</a></li>
+<li><a href="#matrix">Hoofdstukmatrix</a></li>
+<li><a href="#register-targets">Hoofdstukregisters (optioneel)</a></li>
+<li><a href="#revisions">Versies vergelijken</a></li>
+</ul>
+</nav>
+</header>
+<section id="analysis-review" aria-labelledby="heading-analysis-review">
+<h2 id="heading-analysis-review">Analysehulp</h2>
+<p>Kies een meting in het manuscript en open een gemarkeerde passage. Lees de hele alinea. Hoe past het patroon bij de stem, de scène of de wisseling van spreker?</p>
+<p>Bekijk variaties in context. Metingen dienen als redactionele leidraad.</p>
+</section>
+<section id="measurements" aria-labelledby="heading-measurements">
+<h2 id="heading-measurements">Manuscriptmetingen</h2>
+<p>Deze formules beschrijven woordvariatie op verschillende manieren. Vergelijk hoofdstukken met een vergelijkbare lengte en vertelstem.</p>
+<dl>
+<div id="measure-words"><dt>Geanalyseerde woorden</dt><dd><p>Woorden in het geanalyseerde proza, inclusief inleiding, lijsten en blokcitaten. Alineaprofielen kunnen minder tekst omvatten.</p></dd></div>
+<div id="measure-asl"><dt>Gemiddeld aantal woorden per zin</dt><dd><p>Gemiddeld aantal woorden per herkende zin. Beschrijft lengte, geen spanning of verteltempo.</p><p>Een zin van 8 woorden en een van 16 woorden geven gemiddeld 12 woorden per zin. De verdeling laat ook zien hoe vaak korte en lange zinnen voorkomen.</p></dd></div>
+<div id="measure-ttr"><dt>TTR</dt><dd><p>Verschillende woordvormen gedeeld door getelde woorden. Langere passages verlagen de verhouding vaak; vergelijk vergelijkbare lengtes en soortgelijke onderwerpen.</p></dd></div>
+<div id="measure-yules"><dt>Yule’s K</dt><dd><p>Hogere K = meer overheersing door veelvoorkomende woordvormen; K = 0 als elke vorm één keer voorkomt. Lengte en context beïnvloeden de vergelijking; geen kwaliteitsscore.</p></dd></div>
+<div id="measure-hd_d"><dt>HD-D</dt><dd><p>Verwacht aandeel verschillende woordvormen in een trekking van 42 woorden: 0,5 betekent gemiddeld 21 verschillende vormen. Exact berekend, zonder steekproeven te simuleren. Onderwerp en de manier waarop woorden worden geteld beïnvloeden de vergelijking nog steeds.</p><p>HD-D vereist minstens 100 woorden.</p></dd></div>
+<div id="measure-guiraud_r"><dt><span id="measure-guiraud"></span>Guiraud R</dt><dd><p>Verschillende woordvormen gedeeld door de vierkantswortel van het aantal woorden (V/√N). Dezelfde woordenschat geeft een lagere waarde in een langere passage; vergelijk teksten van vergelijkbare lengte en over vergelijkbare onderwerpen.</p></dd></div>
+<div id="measure-mtld"><dt>MTLD</dt><dd><p>Schat de lengte van woordreeksen totdat herhaalde vormen de verhouding van verschillende vormen tot 0,72 of lager brengen, gemiddeld over beide leesrichtingen. De laatste onvolledige reeks telt naar verhouding mee; hoger betekent langere gevarieerde reeksen. Het minimum van 100 woorden garandeert geen betrouwbaarheid.</p></dd></div>
+<div id="measure-mattr"><dt>MATTR</dt><dd><p>Gemiddeld aandeel verschillende woordvormen in overlappende vensters van 50 woorden. Hoger betekent meer vormen per venster; vergelijkingen vragen dezelfde venstergrootte en vergelijkbare onderwerpen.</p></dd></div>
+<div id="measure-maas_a2"><dt><span id="measure-maas"></span>Maas a²</dt><dd><p>Brengt de omvang van de woordenschat in verband met de tekstlengte. Lagere waarden betekenen volgens deze formule minder concentratie op herhaalde woordvormen; vergelijk soortgelijke tekstcontexten. Niet beschikbaar voor korte teksten.</p></dd></div>
+<div id="measure-flesch"><dt>Flesch</dt><dd><p>Taalformule met woorden per zin en geschatte lettergrepen per woord. Hoger = makkelijker lezen volgens dit model; geen toets van kwaliteit of begrip.</p></dd></div>
+<div id="measure-lix"><dt>LIX</dt><dd><p>Gemiddelde zinslengte plus het percentage woorden met meer dan 6 tekens. Hoger = langere zinnen of woorden; geen leeftijds- of kwaliteitsbeoordeling.</p></dd></div>
+<div id="measure-long_word_pct"><dt><span id="measure-long_words"></span>Lange woorden</dt><dd><p>Aandeel getelde woorden boven de ingestelde grens voor lange woorden. Dit is een onderdeel van LIX, niet de LIX-score zelf. Woordlengte bewijst geen moeilijkheid of kwaliteit.</p></dd></div>
+</dl>
+</section>
+<section id="flags" aria-labelledby="heading-flags">
+<h2 id="heading-flags">Gemarkeerde passages</h2>
+<p>Alinea’s met aanwijzingen voor tijdswisseling of -menging. Heuristiek voor beoordeling in de context.</p>
+<p>Lees ook de alinea’s eromheen. Een wisseling van werkwoordstijd kan bij een terugblik of een citaat horen. Deze controle kijkt alleen naar tijdspatronen.</p>
+<dl>
+<div id="measure-severity"><dt>Vlaggen vanaf ernst</dt><dd><p>0 = neutraal, 1 = observeren, 2 = opvallend, 3 = sterk verschil (wissel en menging). Heuristiek, geen foutoordeel.</p><p>Drempel voor werkwoordtijdsignalen: 1 = alle niveaus, 2 = standaard, 3 = alleen de grootste afwijkingen.</p></dd></div>
+<div id="measure-chapter_tense"><dt>Werkwoordstijden en wisselingen</dt><dd><p>Dominante tijd volgens taalmarkers: verleden, heden, gemengd of neutraal. Een heuristiek, geen grammaticaal oordeel.</p><p>Neutraal: te weinig tijdsmarkers voor een uitspraak.</p></dd></div>
+</dl>
+</section>
+<section id="pacing" aria-labelledby="heading-pacing">
+<h2 id="heading-pacing">Zinsritme</h2>
+<p>Een langere balk betekent gemiddeld langere zinnen. Open twee hoofdstukken met balken van verschillende lengte en lees uit elk een alinea hardop. Hoe beïnvloeden dialogen, handelingen en alineawisselingen het tempo?</p>
+<dl>
+<div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Variatie in zinslengte</dt><dd><p>Variatie in zinslengtes ten opzichte van hun gemiddelde. 0 = gelijke lengtes; hoger = meer variatie. Geen kwaliteitsoordeel.</p></dd></div>
+<div id="measure-pacing_cohesion"><dt>Woordbrug opeenvolgende zinnen</dt><dd><p>Aandeel opeenvolgende zinsparen in dezelfde alinea met minstens één gedeeld inhoudswoord.</p></dd></div>
+<div id="measure-pacing_monotony"><dt>Herhaalde zinsbeginnen</dt><dd><p>Aantal reeksen waarin 3 of meer opeenvolgende zinnen in dezelfde alinea met hetzelfde woord beginnen. Markeert mogelijke bewuste anaforen of onbedoelde herhaling aan het zinsbegin.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Slotkenmerken</dt><dd><p>Heuristiek van 0–3: één punt voor een slotzin van 1–8 woorden, eindteken ?, ! of … en herkende geciteerde spraak. Geen gevalideerde maat voor spanning of kwaliteit.</p></dd></div>
+<div id="measure-start_entropy"><dt>Begin-entropie</dt><dd><p>Variatie in het eerste getelde woord van herkende zinnen. Herhaalde openingen zoals &#x27;ik&#x27; verlagen de waarde; uiteenlopende openingen verhogen die. Herhaling kan bewust zijn.</p></dd></div>
+<div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Beginnen met «ik»</dt><dd><p>Aandeel herkende zinnen waarvan het eerste getelde woord &#x27;ik&#x27; is. 50% betekent dat de helft zo begint; dit kan bij de bedoelde vertelstem horen.</p></dd></div>
+</dl>
+</section>
+<section id="dist" aria-labelledby="heading-dist">
+<h2 id="heading-dist">Zinslengtes</h2>
+<p>Elke regel toont een groep zinslengtes, het aantal zinnen daarin en hun aandeel in het totaal. Lees een alinea hardop en luister waar de zinslengte verandert.</p>
+<p>De vier groepen lopen tot en met 6, van 7 tot 15, van 16 tot 25 en boven 25 woorden per zin.</p>
+<dl>
+<div id="measure-staccato_pct"><dt><span id="measure-staccato"></span>Aandeel korte zinnen</dt><dd><p>Aandeel herkende zinnen met hoogstens 6 woorden. Zinslengte alleen meet geen scènetempo.</p></dd></div>
+<div id="measure-kaskade_pct"><dt><span id="measure-kaskade"></span>Lange zinnen</dt><dd><p>Aandeel herkende zinnen met meer dan 25 woorden. Meet lengte, geen syntactische inbedding.</p></dd></div>
+</dl>
+</section>
+<section id="sticky" aria-labelledby="heading-sticky">
+<h2 id="heading-sticky">Zinnen met veel functiewoorden</h2>
+<p>Het overzicht geeft het aandeel herkende zinnen dat bij het filter past. Bij één zin staat het aandeel functiewoorden in die zin.</p>
+<p>Lidwoorden en voornaamwoorden zijn functiewoorden. Open een voorbeeld en lees de alinea waarin het staat.</p>
+<dl>
+<div id="measure-sticky"><dt>Aandeel zinnen met veel functiewoorden</dt><dd><p>Het filter selecteert zinnen met minstens 8 woorden en minstens 45 % functiewoorden.</p><p>Vijf van de acht woorden is 62,5%. Ook een eenvoudige zin kan dus gemarkeerd zijn. Lees de alinea en kijk of de gedachtegang en de verwijzingen duidelijk zijn.</p></dd></div>
+<div id="measure-function"><dt><span id="measure-function_word_pct"></span><span id="measure-function_words"></span>Functiewoorden</dt><dd><p>Aandeel woorden uit de taalspecifieke functiewoordenlijst, zoals lidwoorden en voornaamwoorden. Hoger = meer lijsttreffers, niet minder betekenis.</p><p>Is duidelijk waar woorden als “zij”, “dat” of “daarmee” hier naar verwijzen?</p></dd></div>
+</dl>
+</section>
+<section id="dialogue" aria-labelledby="heading-dialogue">
+<h2 id="heading-dialogue">Citaten en gemarkeerde replieken</h2>
+<p>Taal- of projectinstellingen bepalen welke tekens Lixity herkent. De balken tonen het aandeel woorden per hoofdstuk.</p>
+<p>20% betekent dat ongeveer een op de vijf woorden in een herkend citaat of gemarkeerde repliek valt. Lees de passage om te zien wie spreekt, denkt of wordt geciteerd.</p>
+<dl>
+<div id="measure-dialogue"><dt><span id="measure-dialog_pct"></span>Woorden in citaten en gemarkeerde replieken</dt><dd><p>Aandeel woorden dat volledig binnen herkende citaten of gemarkeerde replieken valt. Titels of gedachten kunnen dezelfde tekens gebruiken.</p><p>Lees de passage hardop. Als er een personage spreekt, passen de woorden bij het personage en de situatie?</p></dd></div>
+<div id="measure-dlg_short_turns"><dt>Korte citaten (≤ 12 woorden)</dt><dd><p>Aandeel herkende passages met 1–12 woorden. Lees de passage om te zien of iemand spreekt.</p></dd></div>
+<div id="measure-dlg_long_turns"><dt>Lange citaten (≥ 80 woorden)</dt><dd><p>Herkende passages met 80 woorden of meer. Lees lange monologen of verklarende passages in hun context.</p></dd></div>
+<div id="measure-dlg_voice_contrast"><dt>Verschil in zinslengte</dt><dd><p>Woorden per zin in herkende citaten en gemarkeerde replieken min woorden per zin in de overige tekst zonder onduidelijke passages. Een negatieve waarde wijst op kortere zinnen in gemarkeerde passages. Beide groepen moeten bruikbare zinnen bevatten.</p></dd></div>
+<div id="measure-dialogue_tag"><dt>Werkwoorden bij citaten</dt><dd><p>Markeert patronen zoals “zei” of “vroeg” bij herkende citaten en gemarkeerde replieken.</p><p>Lees de gemarkeerde passage met de spreekaanduiding. Is duidelijk wie spreekt?</p></dd></div>
+<div id="measure-indirect_speech"><dt>Indirecte rede</dt><dd><p>Lixity markeert aanwijzingen voor weergegeven woorden of gedachten buiten herkende citaten.</p><p>Lees de zin samen met de vorige. Is duidelijk van wie de weergegeven woorden of gedachte zijn?</p></dd></div>
+</dl>
+</section>
+<section id="showing" aria-labelledby="heading-showing">
+<h2 id="heading-showing">Woordpatronen en citaten</h2>
+<p>De aantallen zijn omgerekend naar 1.000 woorden, zodat je hoofdstukken van verschillende lengtes kunt vergelijken. Lees de passage om te zien wat het gemarkeerde woord daar doet.</p>
+<dl>
+<div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Perceptiefilters</dt><dd><p>Treffers van het ingestelde patroon voor waarnemingen, gedachten en herinneringen per 1.000 woorden. Lees de passage om te zien wie iets waarneemt of denkt.</p><p>Is duidelijk wie hier iets opmerkt, zich iets herinnert of nadenkt?</p></dd></div>
+<div id="measure-sensory"><dt><span id="measure-sensory_density"></span>Zintuiglijke dichtheid</dt><dd><p>Treffers van het ingestelde patroon voor zintuiglijke indrukken per 1.000 woorden. Lees de passage om te zien welke details je kunt horen, zien of voelen.</p><p>Welke concrete indruk geeft de passage, bijvoorbeeld een geluid of een geur?</p></dd></div>
+<div id="measure-modal"><dt><span id="measure-modal_density"></span><span id="measure-modals"></span>Modale werkwoorden</dt><dd><p>Modale woordmarkers per 1.000 woorden. Onderscheidt betekenissen zoals mogelijkheid en verplichting niet en meet geen zekerheid.</p><p>Maakt de context duidelijk wat mogelijk, verplicht of toegestaan is en voor wie?</p></dd></div>
+<div id="measure-nominal"><dt><span id="measure-nominalization_density"></span>Naamwoorduitgangen</dt><dd><p>Treffers van het ingestelde patroon voor naamwoordstijl per 1.000 woorden. Standaard zoekt het naar uitgangen zoals -ing, -heid en -schap. Lees de passage om te zien welke handeling of eigenschap het naamwoord aanduidt.</p><p>Als een zelfstandig naamwoord een handeling samenvat, is dan nog duidelijk wat er gebeurt?</p></dd></div>
+<div id="measure-passive"><dt><span id="measure-passive_density"></span>Passiefpatronen</dt><dd><p>Passiefpatronen per 1.000 woorden. Heuristiek: ook bijvoeglijke deelwoorden en andere toepassingen kunnen tellen; sommige passiefvormen ontbreken.</p><p>Staat de zin in de lijdende vorm? Kijk dan of de lezer moet weten wie iets doet.</p></dd></div>
+<div id="measure-adjective_density"><dt>Bijvoeglijke uitgangen</dt><dd><p>Woorden met geselecteerde bijvoeglijke uitgangen per 1.000 woorden. Heuristiek: andere uitgangen ontbreken; ook andere woordsoorten kunnen passen.</p></dd></div>
+</dl>
+</section>
+<section id="motifs" aria-labelledby="heading-motifs">
+<h2 id="heading-motifs">Motieven &amp; herhalingen</h2>
+<p>Een projectmotief telt treffers van een opgeslagen zoekpatroon. De zoekfunctie voor herhalingen zoekt terugkerende woordreeksen. Lees de passages om te zien of «bij het raam» als motief werkt, de plaats aangeeft of onbedoeld terugkomt.</p>
+<dl>
+<div id="measure-echo"><dt>Woordecho’s</dt><dd><p>Lixity telt elk voorkomen van een woord van minstens vier tekens dat in dezelfde alinea terugkomt en niet in de functiewoordenlijst staat. Hoofdletters maken geen verschil.</p><p>Lees de vindplaatsen achter elkaar. Is de herhaling bedoeld om passages te verbinden of een idee te benadrukken?</p></dd></div>
+</dl>
+</section>
+<section id="characters" aria-labelledby="heading-characters">
+<h2 id="heading-characters">Personagevermeldingen</h2>
+<p>Telt namen in de tekst, zonder aanwezigheid in een scène af te leiden. Naampatronen kunnen overlappen: één vermelding kan bij meerdere figuren tellen. Perspectiefhoofdstukken zijn door de auteur opgegeven.</p>
+<p>Voer namen of naampatronen in het project in. Als een naam een paar hoofdstukken wegvalt, kijk dan of de figuur via voornaamwoorden nog aanwezig is.</p>
+<dl>
+<div id="measure-chr_gap"><dt>Interne tussenruimte</dt><dd><p>Langste reeks hoofdstukken zonder vermelding tussen de eerste en laatste vermelding.</p></dd></div>
+<div id="measure-chr_share"><dt>Dekking van vermeldingen</dt><dd><p>Aandeel van alle hoofdstukken waarin de naam minstens eenmaal voorkomt.</p></dd></div>
+<div id="measure-chr_voices"><dt>Personagestemmen vs. verteller</dt><dd><p>Deterministische toewijzing aan één spreker in aangrenzend venster (dubbelzinnige beurten overgeslagen). Descriptieve vergelijking.</p></dd></div>
+<div id="measure-chr_interactions"><dt>Personage-interacties</dt><dd><p>Deterministische sprekerwisselingen tussen opeenvolgende toegewezen beurten en gedeelde hoofdstukken. Descriptief signaal, geen oordeel.</p></dd></div>
+</dl>
+</section>
+<section id="scenes" aria-labelledby="heading-scenes">
+<h2 id="heading-scenes">Scènes en stijlregisters</h2>
+<p>Elke scène wordt afzonderlijk gemeten. Registers en doelbereiken zijn projectkeuzes, geen kwaliteitsoordelen. Zonder scheidingen dienen hoofdstukken als scènes. Stel toewijzingen en doelen in lixity.toml in.</p>
+<p>Woord- en zinsaantallen tonen de steekproefgrootte. HD-D vereist 100 woorden; zinsvariatie vereist twee zinnen. Standaardfouten zijn benaderingen, geen gevalideerde betrouwbaarheidsintervallen. Een streepje betekent niet beschikbaar; een waargenomen nul bewijst geen zekerheid.</p>
+<p>Puur descriptieve overgangssignalen (tijd, plaats, personage) binnen expliciete scènes; geen structureel voorschrift.</p>
+</section>
+<section id="style" aria-labelledby="heading-style">
+<h2 id="heading-style">Stijl</h2>
+<p>Vergelijk een hoofdstuk met de kenmerkende waarden van meetbare hoofdstukken uit hetzelfde manuscript. Begin bij de ruwe waarde en de hoeveelheid tekst. Een briefhoofdstuk kan bewust anders klinken.</p>
+<p>De standaard is minstens 2 meetbare hoofdstukken per meting. Bij gelijke waarden ontbreekt de spreiding die nodig is voor de vergelijking.</p>
+<p>Een plusteken betekent hoger dan gebruikelijk voor dit manuscript. Een minteken betekent lager. Selecteer een cel om de waarden in hun eigen eenheid te zien, zoals woorden per zin, en het hoofdstuk te lezen.</p>
+<dl>
+<div id="measure-heatmap"><dt>Stijl-röntgen (Heatmap)</dt><dd><p>Hoofdstukken vergeleken met de manuscriptmediaan per kenmerk, gecorrigeerd voor spreiding en geschatte meetonzekerheid. Blauw = lager, oranje = hoger. Klik voor uitleg en toegang tot het hoofdstuk. Geen vergelijking (–) onder 100 woorden; voor zinsverdeling ook onder 5 zinnen.</p></dd></div>
+<div id="measure-fingerprint"><dt>Stijlvingerafdruk</dt><dd><p>De mediaan per kenmerk beschrijft een typisch hoofdstuk van dit manuscript. Verschillen kunnen bewuste wisselingen van stem of register weerspiegelen.</p></dd></div>
+<div id="measure-passport"><dt>Stijlreferentie</dt><dd><p>Beschrijvende stijlbanden van het manuscript (mediaan ± 2σ). Bewuste wisselingen van stem of register kunnen afwijken; geen schrijfeisen.</p></dd></div>
+<div id="measure-consistency"><dt>Vergelijkingen binnen de grens</dt><dd><p>Aandeel meetbare vergelijkingen per hoofdstuk en kenmerk binnen de gekozen afwijkingsgrens. Geen kwaliteitsscore. Onvoldoende gegevens: –.</p></dd></div>
+<div id="measure-dimensions"><dt>Projectie van kenmerkrangen</dt><dd><p>Verkennende projectie van gestandaardiseerde kenmerkrangen van volledige hoofdstukken. Nabijheid geldt voor de getoonde assen. Variantieaandelen komen uit de geregulariseerde rangmatrix, niet uit aangetoonde literaire registers. Onvolledige hoofdstukken worden weggelaten.</p></dd></div>
+<div id="measure-structural"><dt>Structurele diagnostiek en stijldrift</dt><dd><p>Vergelijkt hoofdstukpatronen via exacte segmentatie met beveiligde kosten, rangtrends en vroege/late verdelingen. Voorgestelde veranderingen zijn verkennend; ze bewijzen geen significantie of auteursintentie.</p></dd></div>
+<div id="measure-fdr"><dt>FDR</dt><dd><p>Bij het vergelijken van veel kenmerken van hoofdstukken markeert een nominale regel voor meervoudig toetsen een selectie voor beoordeling. Lees deze signalen samen met hun omvang en de tekstcontext; foutpercentages voor hoofdstukken zijn niet gekalibreerd.</p></dd></div>
+</dl>
+</section>
+<section id="matrix" aria-labelledby="heading-matrix">
+<h2 id="heading-matrix">Hoofdstukmatrix</h2>
+<p>Elke rij vat één hoofdstuk samen. Een streepje geeft aan dat een vergelijkingswaarde ontbreekt. Open een gemarkeerde passage en kijk welk effect het patroon in het hoofdstuk heeft.</p>
+<dl>
+<div id="measure-chapter_flags"><dt>Gemarkeerde passages</dt><dd><p>Aantal alinea’s dat de actieve ernstgrens bereikt. Revisieaanwijzingen, geen fouten of FDR-resultaten.</p></dd></div>
+<div id="measure-chapter_deviation"><dt>afwijking</dt><dd><p>Aantal kenmerken boven de afwijkingsdrempel. 0 = geen overschrijding; – = geen vergelijking. Geen FDR-selectie of kwaliteitsoordeel.</p></dd></div>
+<div id="measure-layer"><dt>Over deze vergelijking</dt><dd><p>Alineawaarden ten opzichte van de hoofdstukmediaan: blauw = lager, oranje = hoger. Ring = afwijking |z| ≥ 1,5; geen kwaliteitsoordeel.</p></dd></div>
+</dl>
+</section>
+<section id="register-targets" aria-labelledby="heading-register-targets">
+<h2 id="heading-register-targets">Hoofdstukregisters (optioneel)</h2>
+<p>Groepeert hoofdstukken met een eigen stem (brieven, andere verteller). Vrijgesteld van FDR; z-waarden blijven relatief aan het boek. Kenmerken, geen score.</p>
+<p>Scènedoelen worden apart ingesteld in lixity.toml. Analysefilters wijzigen de weergave, niet de vergelijkingsbasis.</p>
+</section>
+<section id="revisions" aria-labelledby="heading-revisions">
+<h2 id="heading-revisions">Versies vergelijken</h2>
+<p>De vergelijking meet de bevestigde tekst, het huidige bestand en het concept met dezelfde instellingen. Daalt het gemiddelde van 12 naar 8, dan is het verschil −4 woorden per zin. Lees de wijzigingen om te zien of lange zinnen zijn geschrapt of korte zinnen zijn toegevoegd. Gaten in de bewaarde geschiedenis wijzen op ontbrekende vergelijkbare metingen.</p>
+<p>Wijzigingen per hoofdstuk worden pas getoond wanneer duidelijk is welk hoofdstuk met welk overeenkomt.</p>
+</section>
+<footer><a href="https://mfahsold.github.io/lixity/METHODS.md" hreflang="en">Formules, referentiegroepen en statistische grenzen</a></footer>
+</main>
+</body>
+</html>

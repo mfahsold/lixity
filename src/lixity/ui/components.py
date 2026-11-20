@@ -32,8 +32,10 @@ from ..language_data import (
     SCENE_LABELS,
     UI_LABELS,
 )
-from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
+from ..site import docs_url
+from ..status import LANGUAGE_CODES, TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
 from ..workspace_labels import workspace_labels_for
+from .metric_reference import METRIC_REFERENCE_PATH
 
 _DEFAULT_LABELS = {
     **GUIDANCE_LABELS["en"],
@@ -340,6 +342,33 @@ def license_terms(labels: Mapping[str, str] | None) -> str:
     )
 
 
+_PANEL_REFERENCES = {
+    "flags": "flags", "pacing": "pacing", "dist": "dist", "dialogue": "dialogue",
+    "characters": "characters", "showing": "showing", "motifs": "motifs", "scenes": "scenes",
+    "matrix": "matrix", "heatmap": "matrix", "style": "style", "bands": "style",
+    "dimensions": "style", "structural": "style", "register-targets": "register-targets",
+}
+
+
+def metric_reference_base(language: str, *, local: bool = False) -> str:
+    """Choose the same reference language in the app and published reports."""
+    locale = language if language in LANGUAGE_CODES and language != "generic" else "en"
+    path = f"{METRIC_REFERENCE_PATH}{locale}.html"
+    return path if local else docs_url(path)
+
+
+def metric_reference_link(labels: Mapping[str, str] | None, section: str, *, element_id: str = "") -> str:
+    """Link to the method in the dashboard's language without leaving the workspace."""
+    base = (labels or {}).get("_metric_reference_base")
+    if not base:
+        return ""
+    identifier = f' id="{esc(element_id)}"' if element_id else ""
+    return (
+        f'<a{identifier} href="{esc(base + "#" + section)}" target="_blank" rel="noopener noreferrer">'
+        f'{esc(label(labels, "metric_reference_link"))}</a>'
+    )
+
+
 def panel_start(
     panel_id: str,
     labels: Mapping[str, str] | None,
@@ -360,9 +389,12 @@ def panel_start(
     if badge_html:
         heading_inner = f"{heading_inner} {badge_html}"
     h_id = f' id="{esc(heading_id, quote=True)}"' if heading_id else ""
+    section = _PANEL_REFERENCES.get(panel_id)
+    reference = metric_reference_link(labels, section) if section else ""
     return (
         f'<section class="{esc(classes, quote=True)}" id="{esc(panel_id, quote=True)}"{attrs}>'
         f'<h2{h_id}>{heading_inner}</h2>'
+        + (f'<p class="ctl-note">{reference}</p>' if reference else "")
     )
 
 

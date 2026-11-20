@@ -17,6 +17,8 @@ from urllib.parse import parse_qs, unquote, urlparse
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..speech_status import native_worker_inventory
+from ..status import LANGUAGE_CODES
+from ..ui.metric_reference import METRIC_REFERENCE_PATH, metric_reference_document
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome
 from .constants import (
@@ -176,6 +178,12 @@ class LixityServerHandler(
         if registry is not None and not getattr(self, "_workspace_dispatched", False) and registry.dispatch(self, "GET"):
             return
         path = self.path.split("?", 1)[0]
+        if path.startswith(METRIC_REFERENCE_PATH) and path.endswith(".html"):
+            language = path[len(METRIC_REFERENCE_PATH):-5]
+            if language in LANGUAGE_CODES and language != "generic":
+                self._send(200, metric_reference_document(language).encode("utf-8"), "text/html; charset=utf-8",
+                           headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"})
+                return
         if path in ("/", "/index.html"):
             with self._workspace_lock:
                 outcome = self.refresh_when_source_changed()

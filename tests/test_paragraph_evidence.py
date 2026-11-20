@@ -7,6 +7,7 @@ from hashlib import sha256
 
 import pytest
 
+from lixity.manuscript_editing import analyze_manuscript_snapshot
 from lixity.models import CorpusConfig
 from lixity.pipeline import analyze_document, profile_document
 from lixity.style_fingerprint import FingerprintThresholds
@@ -104,6 +105,20 @@ def test_reader_sticky_details_use_sentence_local_captures_without_changing_cli_
     assert [set(span) for span in layer["spans"]] == [{"start", "end", "count", "words"}] * 2
 
 
+def test_profile_asl_averages_the_same_sentence_local_words_as_literal_evidence():
+    text = "## Example\n\nA quiet morning. It waits.\n\nIt waits again.\n\n## Next\n\nA fox runs.\n"
+    config = CorpusConfig(language="en", word_regex=r"(?m)(^\w+|\bwaits\b)")
+    analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    assert analysis.evidence is not None
+    assert [p.words for p in analysis.paragraphs] == [2, 2, 1]
+    assert [p.asl for p in analysis.paragraphs] == [1.5, 2.0, 1.0]
+    assert [span["words"] for span in analysis.evidence[0]["layers"]["asl"]["spans"]] == [1, 2]
+    assert [chapter.asl for chapter in analysis.chapters] == [1.67, 1.0]
+    assert [chapter.asl for chapter in analysis.metrics.chapters] == pytest.approx([5 / 3, 1.0])
+    snapshot = analyze_manuscript_snapshot(text, config=config)
+    assert [chapter["asl"] for chapter in snapshot["chapter_metrics"]] == [1.67, 1.0]
+
+
 def test_capturing_custom_patterns_keep_full_matches_and_nominal_exclusions():
     paragraphs, evidence = build(
         '## Example\n\nI THINK I was seen. "You can go."\n',
@@ -117,6 +132,25 @@ def test_capturing_custom_patterns_keep_full_matches_and_nominal_exclusions():
     assert slices(paragraph, layers["dialogue"]) == [("You can go.", 3)]
     assert layers["dialogue"]["count"] == 3
     assert layers["dialogue"]["kind"] == "dialogue"
+
+
+@pytest.mark.parametrize("overrides", ({}, {"adjective_regex": ""}, {"nominal_regex": r"\bI can\b"}))
+def test_default_cues_keep_matches_when_word_denominator_or_other_cues_change(overrides):
+    text = "## Example\n\nI THINK and THİNK. I can hear a whİsper.\n"
+    config = CorpusConfig(language="en", word_regex=r"\b[a-z]+\b", **overrides)
+    analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    assert analysis.evidence is not None
+    paragraph = analysis.paragraphs[0]
+    chapter = analysis.metrics.chapters[0]
+    layers = analysis.evidence[0]["layers"]
+    assert paragraph.words == chapter.words == analysis.metrics.tokens == 4
+    assert analysis.metrics.filter_count == 2
+    assert paragraph.filter_density == chapter.filter_density == 500.0
+    assert paragraph.sensory_density == chapter.sensory_density == 250.0
+    assert slices(paragraph, layers["filter"]) == [("THINK", 1), ("THİNK", 1)]
+    assert slices(paragraph, layers["sensory"]) == [("whİsper", 1)]
+    if "nominal_regex" in overrides:
+        assert slices(paragraph, layers["nominal"]) == [("I can", 1)]
 
 
 def test_inline_code_and_link_destinations_are_not_silently_counted_or_guessed():
@@ -219,7 +253,7 @@ def test_pipeline_collects_evidence_only_when_requested_from_the_profile_pass():
     assert "text" not in result.evidence[0]
 
 
-@pytest.mark.parametrize("language", ["de", "fr", "es", "it", "pt", "nl", "generic"])
+@pytest.mark.parametrize("language", ["de", "en", "fr", "es", "it", "pt", "nl", "generic"])
 def test_all_resolved_languages_keep_count_coverage_invariants(language):
     text = '## Example\n\n"The station can wait." I think the door was opened.\n'
     config = CorpusConfig(language=language)
@@ -227,7 +261,7 @@ def test_all_resolved_languages_keep_count_coverage_invariants(language):
     module = importlib.import_module("lixity.paragraph_evidence")
     evidence = module.paragraph_evidence(text, config, paragraphs)[0]
     for name, layer in evidence["layers"].items():
-        if language == "generic" and name in {"sticky", "dialogue_tag", "indirect_speech"}:
+        if language == "generic" and name not in {"asl", "dialogue", "echo"}:
             assert layer["status"] == "unavailable" and layer["reason"] == "language_unavailable"
             assert layer["count"] is None and layer["mapped_count"] == 0 and layer["spans"] == []
             continue
@@ -265,18 +299,35 @@ def test_sticky_dialogue_tag_and_echo_evidence_layers():
     assert all(len(w) >= 4 for w in echo_words)
 
 
-def test_sticky_and_dialogue_tag_unavailable_for_generic_language():
-    text = '## Example\n\nIt was in the back of the house. "Wait," she whispered. Lantern and lantern.\n'
+@pytest.mark.parametrize("suffix", ["", " `inline example`"])
+def test_generic_evidence_preserves_unknown_capabilities_and_measured_counts(suffix):
+    text = f'## Example\n\n"Wait here." Lantern and lantern.{suffix}\n'
     config = CorpusConfig(language="generic")
-    paragraphs, _ = profile_document(text, config, FingerprintThresholds())
-    module = importlib.import_module("lixity.paragraph_evidence")
-    layers = module.paragraph_evidence(text, config, paragraphs)[0]["layers"]
-    assert layers["sticky"]["status"] == "unavailable"
-    assert layers["sticky"]["count"] is None
-    assert layers["dialogue_tag"]["status"] == "unavailable"
-    assert layers["dialogue_tag"]["count"] is None
-    assert layers["echo"]["status"] == "available"
-    assert layers["echo"]["count"] == 2
+    analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    assert analysis.paragraph_available_layers == {"asl", "dialogue", "echo"}
+    assert analysis.paragraph_layers.keys() == {"asl", "dialogue"}
+    assert analysis.evidence is not None
+    for key, layer in analysis.evidence[0]["layers"].items():
+        if key in analysis.paragraph_available_layers:
+            assert layer["count"] == 2
+            assert layer["status"] == ("unavailable" if suffix else "available")
+            if suffix:
+                assert layer["reason"] == "inline_mapping_unavailable"
+        else:
+            assert (layer["status"], layer["count"], layer["reason"]) == ("unavailable", None, "language_unavailable")
+
+
+def test_generic_paragraph_capabilities_use_configured_rules():
+    text = "## Example\n\nA lantern glows.\n"
+    config = CorpusConfig(language="generic", filter_verbs_regex=r"\bglows\b", passive_regex="")
+    analysis = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    assert analysis.paragraph_available_layers == {"asl", "dialogue", "echo", "filter", "passive"}
+    assert analysis.paragraph_layers.keys() == {"asl", "dialogue", "filter", "passive"}
+    assert analysis.evidence is not None
+    layers = analysis.evidence[0]["layers"]
+    assert slices(analysis.paragraphs[0], layers["filter"]) == [("glows", 1)]
+    assert layers["passive"]["status"] == "available" and layers["passive"]["count"] == 0
+    assert layers["sensory"]["status"] == "unavailable" and layers["sensory"]["count"] is None
 
 
 def test_precomputed_quotation_context_on_non_sentence_non_dialogue_spans():

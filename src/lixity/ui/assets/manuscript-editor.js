@@ -82,10 +82,11 @@
   const note = document.createElement('p'); note.className = 'ctl-note'; note.textContent = text(14);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
   const pulseWords = [
-    'editor_pulse_words', 'editor_pulse_today', 'editor_pulse_asl', 'editor_pulse_dialogue',
+    'editor_pulse_words', 'editor_pulse_since', 'editor_pulse_asl', 'editor_pulse_dialogue',
     'editor_pulse_revisions', 'editor_pulse_title', 'editor_pulse_baseline',
     'editor_pulse_entropy', 'editor_pulse_sticky', 'editor_pulse_indirect',
   ].map(L);
+  const pulseDate = new Intl.DateTimeFormat(language, {dateStyle: 'medium'});
   const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
   const pulseBtn = document.createElement('button'); pulseBtn.type = 'button'; pulseBtn.id = 'manuscript-session-pulse'; pulseBtn.className = 'ctl manuscript-pulse-btn';
   pulseBtn.setAttribute('aria-expanded', 'false');
@@ -266,6 +267,15 @@
   const comparisonBody = document.createElement('div'); comparisonBody.className = 'modal-body';
   const comparisonNote = document.createElement('p'); comparisonNote.className = 'ctl-note';
   comparisonNote.textContent = comparisonWords[7] + ' ' + L('editor_compare_metrics_reference');
+  const metricGuide = document.body.dataset.metricGuide;
+  if (metricGuide) {
+    const reference = document.createElement('a');
+    reference.href = metricGuide + '#revisions';
+    reference.target = '_blank';
+    reference.rel = 'noopener noreferrer';
+    reference.textContent = L('metric_reference_link');
+    comparisonNote.append(' ', reference);
+  }
   const comparisonGrid = document.createElement('div'); comparisonGrid.className = 'manuscript-comparison-grid';
   const comparisonFields = ['base','current','draft'].map((name, index) => {
     const label = document.createElement('label'); label.textContent = comparisonWords[index+2];
@@ -434,7 +444,7 @@
     retry.hidden = state === 'saved' || state === 'saving';
     reload.hidden = !paused;
   }
-  let latestTimeline = [];
+  let pulseGeneration = 0;
   let sessionBaselineLines = [];
   let gutterRaf = 0;
   function markEditedLines() {
@@ -468,8 +478,7 @@
     if (!snap) return '';
     const parts = [fmtNum(snap.words, 0) + ' ' + pulseWords[0]];
     if (deltas && deltas.words !== null && deltas.words !== undefined && deltas.words !== 0) {
-      const change = fmtSigned(deltas.words, 0);
-      parts[0] += comparison ? ' (Δ ' + change + ')' : ' (' + change + ' ' + pulseWords[1] + ')';
+      parts[0] += ' (Δ ' + fmtSigned(deltas.words, 0) + ')';
     }
     if (snap.asl !== null && snap.asl !== undefined) {
       const averageLabel = comparison ? L('measurement_words_per_sentence') : pulseWords[2];
@@ -646,21 +655,36 @@
       '</svg>';
   }
   async function refreshPulse() {
+    const generation = ++pulseGeneration;
+    const {document: documentId, revision} = snapshot;
+    const isCurrent = () => generation === pulseGeneration &&
+      snapshot.document === documentId && snapshot.revision === revision;
     try {
       const [deltaRes, tlRes] = await Promise.all([
         request('/manuscript-delta'),
         request('/manuscript-timeline?limit=14'),
       ]);
-      latestTimeline = tlRes.revisions || [];
-      if (!deltaRes.current) {pulseWrap.hidden = true; return;}
+      if (!isCurrent()) return;
+      if (deltaRes.document !== documentId || tlRes.document !== documentId ||
+          deltaRes.current?.revision !== revision || !Array.isArray(tlRes.revisions)) {
+        pulseWrap.hidden = true;
+        return;
+      }
+      const revisions = tlRes.revisions;
       pulseBtn.textContent = formatMetricsLine(deltaRes.current, deltaRes.has_baseline ? deltaRes.deltas : null);
+      if (deltaRes.has_baseline && Number.isFinite(deltaRes.base?.created_at)) {
+        const baselineDate = new Date(deltaRes.base.created_at * 1000);
+        if (Number.isFinite(baselineDate.getTime())) {
+          pulseBtn.append(' · ' + pulseWords[1].replace('{date}', pulseDate.format(baselineDate)));
+        }
+      }
       pulseWrap.hidden = false;
       const head = document.createElement('div');
-      head.textContent = pulseWords[5] + ' (' + String(latestTimeline.length) + ' ' + pulseWords[4] + ')';
+      head.textContent = pulseWords[5] + ' (' + String(revisions.length) + ' ' + pulseWords[4] + ')';
       pulsePopover.replaceChildren(head);
-      if (latestTimeline.length >= 2) {
+      if (revisions.length >= 2) {
         const chart = document.createElement('div');
-        chart.innerHTML = renderSparklineSvg(latestTimeline);
+        chart.innerHTML = renderSparklineSvg(revisions);
         pulsePopover.append(chart);
       } else {
         const noteEl = document.createElement('div');
@@ -668,7 +692,7 @@
         pulsePopover.append(noteEl);
       }
     } catch (_) {
-      pulseWrap.hidden = true;
+      if (isCurrent()) pulseWrap.hidden = true;
     }
   }
   async function request(path, payload, {signal} = {}) {
