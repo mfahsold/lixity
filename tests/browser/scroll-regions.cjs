@@ -41,30 +41,54 @@ for count in (6, 24):
 print(json.dumps(documents))
 `, {root});
 
+async function assertFinalRowVisible(chart, name) {
+  const geometry = await chart.evaluate(element => {
+    const row = element.lastElementChild.getBoundingClientRect();
+    const top = element.getBoundingClientRect().top + element.clientTop;
+    return {rowTop: row.top, rowBottom: row.bottom, top, bottom: top + element.clientHeight,
+      scrollTop: element.scrollTop, scrollHeight: element.scrollHeight};
+  });
+  assert.ok(geometry.rowTop >= geometry.top - 1 && geometry.rowBottom <= geometry.bottom + 1,
+    `${name}: final row is fully visible inside its scrollport: ${JSON.stringify(geometry)}`);
+}
+
 async function lastBarIsFullyPainted(chart, name) {
+  const page = chart.page();
+  await chart.scrollIntoViewIfNeeded();
+  // Input has been verified separately. Expose the whole last row before
+  // measuring the raster; focusing its link can leave the stacked bar clipped.
+  await chart.evaluate(element => { element.scrollTop = element.scrollHeight; });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  await assertFinalRowVisible(chart, name);
   const last = chart.locator('.row .bar i').last();
   const point = await last.evaluate(element => {
     const box = element.getBoundingClientRect();
-    const host = element.closest('.dist').getBoundingClientRect();
-    return {x: box.left - host.left + Math.min(8, box.width / 2),
-      y: box.top - host.top + box.height / 2,
-      color: getComputedStyle(element).backgroundColor};
+    return {x: Math.floor(box.left + Math.min(8, box.width / 2)),
+      y: Math.floor(box.top + box.height / 2), color: getComputedStyle(element).backgroundColor,
+      bar: box.toJSON(), viewport: [innerWidth, innerHeight]};
   });
-  const image = await chart.screenshot({animations: 'disabled'});
+  // A viewport capture uses the same CSS-pixel coordinates as the DOM and
+  // does not scroll the chart again after the sample point has been measured.
+  const image = await page.screenshot({animations: 'disabled', scale: 'css'});
   if (name.includes('-en-') || name.includes('-de-')) fs.writeFileSync(path.join(artifacts, name + '.png'), image);
-  const pixel = await chart.page().evaluate(async ({image, x, y}) => {
+  const {pixel, size} = await page.evaluate(async ({image, x, y}) => {
     const picture = new Image();
     picture.src = 'data:image/png;base64,' + image;
     await picture.decode();
+    const size = [picture.width, picture.height];
+    if (x < 0 || y < 0 || x >= picture.width || y >= picture.height) return {pixel: null, size};
     const canvas = document.createElement('canvas');
     canvas.width = picture.width; canvas.height = picture.height;
     const context = canvas.getContext('2d');
     context.drawImage(picture, 0, 0);
-    return Array.from(context.getImageData(Math.floor(x), Math.floor(y), 1, 1).data);
+    return {pixel: Array.from(context.getImageData(x, y, 1, 1).data), size};
   }, {image: image.toString('base64'), ...point});
   const expected = point.color.match(/[\d.]+/g).slice(0, 3).map(Number);
-  assert.ok(expected.every((channel, index) => Math.abs(channel - pixel[index]) <= 2),
-    `${name}: the final data bar must retain its full colour, not fade like hidden content: ${JSON.stringify({expected, pixel})}`);
+  assert.ok(pixel && pixel[3] === 255 && expected.every((channel, index) => Math.abs(channel - pixel[index]) <= 2),
+    `${name}: the final data bar must retain its full colour: ${JSON.stringify({expected, pixel, size, point})}`);
 }
 
 async function touchScroll(page, chart) {
@@ -112,6 +136,7 @@ async function scrollInput(chart, action) {
         for (const panel of ['pacing', 'showing']) {
           await openAnalysisSection(page, panel);
           const chart = page.locator(`#${panel} .dist.scrollable`);
+          const name = `${panel}-${count}-${locale}-${width}-${theme}`;
           assert.equal(await chart.locator('.row').count(), count);
           await chart.scrollIntoViewIfNeeded();
           const dimensions = await chart.evaluate(element => ({height: element.clientHeight, content: element.scrollHeight}));
@@ -139,8 +164,9 @@ async function scrollInput(chart, action) {
                 return {top: element.scrollTop, height: element.clientHeight, content: element.scrollHeight,
                   y: box.y, pageTop: window.scrollY, hit: hit && hit.className};
               });
-              throw new Error(`${panel}-${count}-${locale}-${width}-${theme}: wheel did not reach the final row: ${JSON.stringify(state)}`, {cause: error});
+              throw new Error(`${name}: wheel did not reach the final row: ${JSON.stringify(state)}`, {cause: error});
             });
+            await assertFinalRowVisible(chart, name);
             if (width === 320 && locale === 'en' && theme === 'dark') {
               await scrollInput(chart, () => chart.evaluate(element => { element.scrollTop = 0; }));
               await scrollInput(chart, () => touchScroll(page, chart));
@@ -152,11 +178,7 @@ async function scrollInput(chart, action) {
           await chart.locator('.row a.chapter-link').last().focus();
           await page.evaluate(() => document.activeElement.blur());
           await page.mouse.move(0, 0);
-          await lastBarIsFullyPainted(chart, `${panel}-${count}-${locale}-${width}-${theme}`);
-          assert.ok(await chart.evaluate(element => {
-            const last = element.lastElementChild.getBoundingClientRect(), box = element.getBoundingClientRect();
-            return last.bottom <= box.bottom + 1;
-          }), 'The final row remains entirely visible at the scroll end');
+          await lastBarIsFullyPainted(chart, name);
         }
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.close();

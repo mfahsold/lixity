@@ -37,6 +37,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
             retainedFocus: document.activeElement === next,
             status: bar.querySelector('[role=status]').textContent,
             insets: [getComputedStyle(bar).paddingInlineStart, getComputedStyle(bar).paddingInlineEnd],
+            touchWidth: next.getBoundingClientRect().width,
             touchHeight: next.getBoundingClientRect().height,
             fits: bar.scrollWidth <= bar.clientWidth + 1,
           };
@@ -48,7 +49,8 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.equal(navigation.status, 'Another verified passage');
         assert.equal(navigation.insets[0], navigation.insets[1]);
         assert.ok(parseFloat(navigation.insets[0]) >= 8);
-        assert.ok(navigation.touchHeight >= 44, 'Passage navigation remains touchable');
+        assert.ok(navigation.touchWidth >= 44 && navigation.touchHeight >= 44,
+          `Passage navigation remains touchable at ${width}px: ${navigation.touchWidth} × ${navigation.touchHeight}`);
         assert.equal(navigation.fits, true);
       }
       if (width >= 1440) {
