@@ -777,6 +777,7 @@ def main() -> int:
     subprocess.run(  # noqa: S603
         [node, str(BASE_DIR / "scripts/capture_screenshots.cjs"), str(manifest)], check=True,
         timeout=420,
+        env={**os.environ, "PYTHON_BIN": os.environ.get("PYTHON_BIN") or sys.executable},
     )
     webp_jobs = [
         (Path(str(capture["target"])), Path(str(capture.get("finalTarget", capture["target"]))))
