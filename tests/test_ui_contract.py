@@ -322,11 +322,36 @@ class TestJsDomContract(unittest.TestCase):
 
     def test_analysis_navigation_omits_unavailable_narrative_panels(self):
         """An empty optional report must not create a dead navigation target."""
-        html = render_dashboard([], [], characters={"figures": []},
-                                pacing={"chapter_list": []}, showing={"chapter_list": []})
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks("## Opening\n\nRain falls.\n"))
+        html = render_dashboard(chapters, paragraphs, characters={"figures": []},
+                                pacing={"chapter_list": []}, showing={"chapter_list": []},
+                                motifs={"chapters": 1}, scenes={"baselines": {}}, controls=True)
         targets = re.findall(r'data-section-link="([^"]+)"', html)
-        for target in ("characters", "pacing", "showing"):
+        for target in ("characters", "pacing", "showing", "motifs", "scenes"):
             self.assertNotIn(target, targets)
+            self.assertNotIn(f'data-analysis-section-target="{target}"', html)
+
+    def test_completed_empty_narrative_reports_have_native_and_static_targets(self):
+        from lixity.motifs import motif_report
+        from lixity.scenes import scene_report
+
+        text = "## Opening\n\nRain falls across the quiet garden. A lantern flickers."
+        config = CorpusConfig(language="en")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+        motifs = motif_report(text, config=config).to_dict()
+        scenes = scene_report("", config)
+        labels = get_language_profile("en").labels
+        for controls in (False, True):
+            html = render_dashboard(chapters, paragraphs, motifs=motifs, scenes=scenes, controls=controls)
+            for target, message in (("scenes", "scene_no_measurements"), ("motifs", "motifs_no_findings")):
+                with self.subTest(controls=controls, target=target):
+                    self.assertIn(f'href="#{target}" data-jump="#{target}" data-section-link="{target}"', html)
+                    self.assertEqual(f'data-analysis-section-target="{target}"' in html, controls)
+                    self.assertIn(f'<section class="panel" id="{target}">', html)
+                    panel = html.split(f'id="{target}">', 1)[1].split("</section>", 1)[0]
+                    self.assertIn(labels[message], panel)
+                    self.assertNotIn("<table", panel)
 
 
     def test_analysis_section_nav_follows_the_registry(self):
@@ -517,7 +542,7 @@ class TestJsDomContract(unittest.TestCase):
         html = (
             _full_dashboard()
             + _full_dashboard(("manuscript-pdf", "research-reader"))
-            + _full_dashboard(("analysis-review",))
+            + _full_dashboard(("analysis-review", "motif-search"))
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
@@ -656,7 +681,7 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn("var INTERACTIVE = \"[data-jump], [data-line], [role='button']", script)
         self.assertIn("event.target.closest(INTERACTIVE)", script)
         # Focus visibility covers every [role="button"] target.
-        self.assertIn('[role="button"]):focus-visible', css)
+        self.assertRegex(css, r'\[role="button"\][^\{]*:focus-visible')
         # Rows and band rows are announced as buttons and focusable.
         self.assertIn('class="row-link" data-line=', html)
         self.assertIn('role="button" tabindex="0"', html)
@@ -1295,6 +1320,52 @@ class TestUiConsolidationAndSecurityContracts(unittest.TestCase):
             css = (UI_DIR / "assets" / name).read_text(encoding="utf-8")
             for retired_var in ("--radius-md", "--radius-full", "--fg-muted", "--surface-sunken"):
                 self.assertNotIn(retired_var, css, f"{name} still uses {retired_var}")
+
+    def test_canonical_ui_builders_and_js_centralization(self):
+        from lixity.ui.components import (
+            action_strip,
+            badge,
+            close_button,
+            compact_control,
+            dist_row,
+            empty_state,
+            form_field,
+            modal_footer,
+            panel_start,
+            status_banner,
+            table_wrap_start,
+        )
+
+        self.assertIn('class="panel extra"', panel_start("p1", WORKSPACE_LABELS["en"], "panel_flags", extra_class="extra", badge_html=badge("3")))
+        self.assertIn('class="badge badge-warn"', badge("A<B", variant="warn"))
+        self.assertIn('tabindex="0" role="region" aria-label="Markers"', table_wrap_start("Markers"))
+        self.assertIn('role="alert" aria-live="assertive" hidden="hidden"', status_banner("s1", role="alert", aria_live="assertive", hidden=True))
+        self.assertIn('class="structural-empty"', empty_state("None", css_class="structural-empty", badge_text="–"))
+        self.assertIn('class="reader-control-label"', compact_control("Focus", "maximize-2", control_id="btn-f", pressed=False))
+        self.assertIn('aria-keyshortcuts="Escape"', close_button("Close", control_id="btn-c"))
+        self.assertIn('class="setting-field custom"', form_field("f1", "Label", '<input id="f1"/>', extra_class="custom"))
+        self.assertIn('data-layer="asl"', dist_row(1, "Ch 1", 50.0, "10.0", layer="asl"))
+        self.assertIn('class="row strip"', action_strip("<button/>", css_class="row strip", hidden=True))
+        self.assertIn('class="modal-footer"', modal_footer("<button/>", footer_id="mf"))
+
+        component_layer = (UI_DIR / "assets" / "component-layer.js").read_text(encoding="utf-8")
+        for helper in ("postJson:", "el:", "cpOffsets:", "utf16ToCp:", "literalWhitespaceRegex:", "scrollIntoViewSafe:", "ensureJumpBar:", "renderJumpBar:"):
+            self.assertIn(helper, component_layer)
+
+        dashboard_js = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
+        navigation_js = (UI_DIR / "assets" / "analysis-passage-navigation.js").read_text(encoding="utf-8")
+        self.assertIn('"/motif-search"', navigation_js)
+        self.assertNotIn('"/motif-search"', dashboard_js)
+        self.assertNotIn("function buildCustomRegex", navigation_js)
+        self.assertNotIn("function cpOffsets", navigation_js)
+
+        evidence_js = (UI_DIR / "assets" / "analysis-evidence.js").read_text(encoding="utf-8")
+        self.assertIn("span.quotation_context", evidence_js)
+        self.assertNotIn("function quotationContext", evidence_js)
+
+        rendered = _full_dashboard()
+        self.assertIn('class="ctl ctl-sm" id="style-layer"', rendered)
+        self.assertIn('class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset"', rendered)
 
 
 if __name__ == "__main__":

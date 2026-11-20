@@ -4,7 +4,7 @@
   position: sticky; top: 0; z-index: 12; display: flex; flex-wrap: wrap;
   align-items: center; gap: .4rem; padding: .35rem .5rem;
   max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain;
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  background: var(--surface);
   /* Fixed settings panels must escape this bounded toolbar scrollport. */
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
@@ -138,7 +138,8 @@
 .reader-outlier-navigation {
   display: inline-flex;
   align-items: center;
-  height: 32px;
+  height: 2rem;
+  min-height: 2rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -190,7 +191,7 @@
   user-select: none;
 }
 .reader-evidence-toggle, .reader-comparison-toggle {
-  display: inline-flex; gap: .45rem; align-items: center; min-height: 32px;
+  display: inline-flex; gap: .45rem; align-items: center; min-height: 2rem;
   padding: .2rem .65rem; border-radius: var(--radius-pill);
   border: 1px solid var(--line); background: var(--surface);
   font-size: var(--text-note); color: var(--fg-secondary);
@@ -205,8 +206,8 @@
   color: var(--fg); font-weight: 500;
 }
 .reader-evidence-toggle input, .reader-comparison-toggle input { flex-shrink: 0; margin: 0; accent-color: var(--accent); }
-.analysis-evidence-key { text-decoration: underline; text-decoration-color: var(--analysis-evidence-color); text-decoration-thickness: 2px; text-underline-offset: .2em; }
-.analysis-comparison-key { border-inline-start: 3px solid var(--accent); padding-inline-start: .4rem; }
+.analysis-evidence-key { padding-inline: .1rem; text-decoration: underline; text-decoration-color: var(--analysis-evidence-color); text-decoration-thickness: 2px; text-underline-offset: .2em; }
+.analysis-comparison-key { border-inline-start: 3px solid var(--accent); padding-inline: .5rem .25rem; margin-inline-start: .1rem; }
 #analysis-evidence-status:empty { display: none; }
 .reader-paragraph-actions { display: none; }
 .reader-review-flag { display: none; }
@@ -239,9 +240,7 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
   padding: .35rem var(--space-3);
   max-width: 100%;
   margin-inline: 0;
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
-  backdrop-filter: blur(var(--glass-blur-sm, 8px));
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
@@ -253,7 +252,7 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 }
 .manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
 .manuscript-reading :is(.chapter, .ptext) {
-  scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + 4.5rem);
+  scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + 5.5rem);
 }
 .manuscript-reading #chapters {
   max-width: min(100%, calc(var(--reader-measure, 68ch) + 4rem));
@@ -328,6 +327,7 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
 .reader-focus .workspace-reader-layout.is-open { display: block; }
 .reader-focus .reader-controls { display: none; }
 @media (max-width: 600px) {
+  .manuscript-reading .toolbar { position: static; }
   .manuscript-reader-controls { gap: .25rem; padding: .25rem .35rem; }
   .reader-chapter { flex: 1 1 8rem; width: 8rem; max-width: none; }
   .reader-size-controls { margin-left: auto; }
@@ -434,7 +434,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-tense-cues { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .reader-tense-cue { min-height: 2rem; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: start; }
 .reader-tense-group > details, .reader-tense-counts, .reader-tense-help { margin-block-start: var(--space-2); }
-.reader-tense-group summary, .reader-tense-counts > summary, .reader-tense-help > summary { min-height: 2.75rem; align-content: center; cursor: pointer; font-size: var(--text-small); }
+.reader-tense-group summary, .reader-tense-counts > summary, .reader-tense-help > summary { cursor: pointer; font-size: var(--text-small); }
 .manuscript-reading :is(.reader-review-flag, .manuscript-link-related) {
   vertical-align: top; min-height: 2.75rem; font-size: var(--text-control);
   margin-block: var(--space-2) 0; margin-inline: 0 var(--space-2);
@@ -573,6 +573,15 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .manuscript-reader-controls > button.ctl,
   .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
   .manuscript-reader-controls .reader-controls > button.ctl { padding-inline: .35rem; }
+}
+@container reader-tools (max-width: 46rem) {
+  .manuscript-reader-controls { gap: .15rem; padding: .25rem .35rem; }
+  .manuscript-reader-controls select.reader-chapter { flex: 0 1 7.5rem; min-width: 5.5rem; max-width: 7.5rem; }
+  .manuscript-reader-controls :is(#reader-focus, #reader-teleprompter, #reader-direct-speech, #reader-speech, #workbench-overview-open, #manuscript-write, #workspace-reader-toggle),
+  .reader-analysis-guide > summary { min-width: 2.15rem; padding-inline: .25rem; }
+  .manuscript-reader-controls .reader-settings > summary { padding: .3rem 1.15rem .3rem .4rem; }
+  .manuscript-reader-controls .reader-settings > summary::after { inset-inline-end: .35rem; }
+  .manuscript-reader-controls .analysis-toggle { padding-inline: .45rem; gap: .3rem; }
 }
 body.lixity-workspace.reader-focus {
   --bg: light-dark(#e9edf4, #080c13);

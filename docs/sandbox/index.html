@@ -185,8 +185,9 @@
         <div class="echo-list" id="echo-list"></div>
       </div>
 
+      <p class="panel-guide" id="dialogue-guide">Blende den Erzähltext mit „Nur Dialoge“ ab und lies die Zitate laut. Lassen sich die Stimmen beim Lesen unterscheiden?</p>
       <div class="filter-bar" id="preview-controls" role="group" aria-label="Markierungen filtern">
-        <button type="button" class="ctl ctl-sm" id="direct-speech-btn" aria-pressed="false" aria-controls="preview">Nur Dialoge [D]</button>
+        <button type="button" class="ctl ctl-sm" id="direct-speech-btn" aria-pressed="false" aria-controls="preview" aria-describedby="dialogue-guide">Nur Dialoge [D]</button>
         <button type="button" class="ctl ctl-sm" id="flt-echo" aria-pressed="true" aria-controls="preview">Wiederholungen</button>
         <button type="button" class="ctl ctl-sm" id="flt-sticky" aria-pressed="true" aria-controls="preview">Viele Funktionswörter</button>
         <button type="button" class="ctl ctl-sm" id="flt-indirect" aria-pressed="true" aria-controls="preview">Indirekte Rede</button>
@@ -216,6 +217,7 @@
             <div class="voice-cell"><strong id="v-dialogue">–</strong><span id="vl-dialogue">Zitate</span></div>
             <div class="voice-cell"><strong id="v-contrast">–</strong><span id="vl-contrast">Zitate minus Erzähltext</span></div>
           </div>
+          <p class="panel-guide" id="voice-guide">Bei −3 sind die Sätze in Zitaten im Schnitt drei Wörter kürzer als im Erzähltext.</p>
         </div>
       </details>
     </section>
@@ -290,12 +292,14 @@
       preset: 'Beispiele', draftBtn: 'Rohentwurf', clear: 'Leeren',
       openFile: '.txt / .md öffnen', copyMd: 'Bericht kopieren', copied: 'Markdown-Bericht kopiert',
       previewControls: 'Markierungen filtern', directSpeech: 'Nur Dialoge [D]', fltEcho: 'Wiederholungen', fltSticky: 'Viele Funktionswörter', fltIndirect: 'Indirekte Rede',
+      dialogueGuide: 'Blende den Erzähltext mit „Nur Dialoge“ ab und lies die Zitate laut. Lassen sich die Stimmen beim Lesen unterscheiden?',
       words: 'Wörter', sents: 'Sätze', asl: 'Wörter pro Satz im Schnitt', dlg: 'Anteil der Wörter in Zitaten',
       cv: 'Streuung der Satzlängen', entropy: 'Längen-Entropie (Bit)',
       sticky: 'Sätze mit vielen Funktionswörtern', indirect: 'Hinweise auf indirekte Rede',
       moreTitle: 'Weitere Werte zu Rhythmus und Dialog',
       moreGuide: 'Bei höherer Streuung liegen die Satzlängen weiter auseinander. Die Entropie steigt, wenn sich die Sätze gleichmäßiger auf die drei Längengruppen verteilen.',
       voiceTitle: 'Wörter pro Satz im Schnitt', vNar: 'Erzähltext', vDlg: 'Zitate', vCon: 'Zitate minus Erzähltext',
+      voiceGuide: 'Bei −3 sind die Sätze in Zitaten im Schnitt drei Wörter kürzer als im Erzähltext.',
       rhythm: 'Kurze und lange Sätze', s: 'Kurz (≤ 7 Wörter)', m: 'Mittel (8–24 Wörter)', c: 'Lang (≥ 25 Wörter)',
       rhythmGuide: 'Der Balken zeigt, wie sich deine Sätze auf die drei Längengruppen verteilen. Passt dieser Wechsel zur Szene?',
       sparkTitle: 'Satz für Satz', sparkHover: 'Je höher der Balken, desto länger der Satz.', sparkSentence: 'Satz', sparkWords: 'Wörter',
@@ -334,12 +338,14 @@
       preset: 'Examples', draftBtn: 'German draft', clear: 'Clear',
       openFile: 'Open .txt / .md', copyMd: 'Copy report', copied: 'Markdown report copied',
       previewControls: 'Filter highlights', directSpeech: 'Dialogue only [D]', fltEcho: 'Repeated words', fltSticky: 'Many function words', fltIndirect: 'Indirect speech',
+      dialogueGuide: 'Use “Dialogue only” to dim the narration, then read the quotations aloud. Can you tell the voices apart?',
       words: 'Words', sents: 'Sentences', asl: 'Average words per sentence', dlg: 'Share of words in quotes',
       cv: 'Variation in sentence length', entropy: 'Length entropy (bits)',
       sticky: 'Sentences with many function words', indirect: 'Possible indirect speech',
       moreTitle: 'More about rhythm and dialogue',
       moreGuide: 'Higher variation means sentence lengths are farther apart. Entropy increases when sentences are distributed more evenly across the three length groups.',
       voiceTitle: 'Average words per sentence', vNar: 'Narration', vDlg: 'Quotes', vCon: 'Quotes minus narration',
+      voiceGuide: 'At −3, sentences in quotations are three words shorter on average than sentences in the narration.',
       rhythm: 'Short and long sentences', s: 'Short (≤ 7 words)', m: 'Medium (8–24 words)', c: 'Long (≥ 25 words)',
       rhythmGuide: 'The bar shows how many of your sentences fall into each length group. Does the mix fit the scene?',
       sparkTitle: 'Sentence by sentence', sparkHover: 'A taller bar means a longer sentence.', sparkSentence: 'Sentence', sparkWords: 'words',
@@ -614,6 +620,7 @@
     el('copy-md-btn').textContent = t.copyMd;
     el('preview-controls').setAttribute('aria-label', t.previewControls);
     el('direct-speech-btn').textContent = t.directSpeech;
+    el('dialogue-guide').textContent = t.dialogueGuide;
     el('flt-echo').textContent = t.fltEcho;
     el('flt-sticky').textContent = t.fltSticky;
     el('flt-indirect').textContent = t.fltIndirect;
@@ -631,6 +638,7 @@
     el('vl-narration').textContent = t.vNar;
     el('vl-dialogue').textContent = t.vDlg;
     el('vl-contrast').textContent = t.vCon;
+    el('voice-guide').textContent = t.voiceGuide;
     el('rhythm-title').textContent = t.rhythm;
     el('rhythm-guide').textContent = t.rhythmGuide;
     el('spark-title').textContent = t.sparkTitle;

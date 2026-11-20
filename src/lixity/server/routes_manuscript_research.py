@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import re
-import warnings
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
 
-from ..config import load_project_config
+from ..config import load_project_config, read_explicit_project_config
 from ..research import api as research_api
 from ..research.manuscript import ManuscriptLinkExistsError
 from ..research.repository import ResearchConflictError, ResearchError
+from .middleware import load_selected_project_config
 from .pdf_context import manuscript_pdf_token
 from .routes_research import ResearchRoutesMixin
 
@@ -31,9 +30,12 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                                        language=self.language, title=self.title, thresholds=self.thresholds)
         if token != current:
             raise ResearchConflictError("Selected manuscript or settings changed; refresh before continuing")
-        with warnings.catch_warnings():
-            warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
-            settings = load_project_config(source)
+        settings = load_selected_project_config(
+            source,
+            strict_warnings=True,
+            explicit_loader=read_explicit_project_config,
+            implicit_loader=load_project_config,
+        )
         return root, source, settings
 
     def _handle_manuscript_claim_link(self, payload: dict[str, Any]) -> None:
@@ -78,46 +80,47 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 self._research_error(exc)
 
     def _handle_manuscript_claim_review(self) -> None:
-        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-        if (set(query) - {"research_token", "project_token"}
-                or any(len(query.get(key, [])) != 1 for key in ("research_token", "project_token"))):
-            self._json({"ok": False, "message": "Choose one selected manuscript and research context"}, 400)
+        query = self._parse_query(
+            required=("research_token", "project_token"),
+            error_message="Choose one selected manuscript and research context",
+        )
+        if query is None:
             return
         with self._workspace_lock:
-            if not self._research_context_matches(query["research_token"][0]):
+            if not self._research_context_matches(query["research_token"]):
                 return
             try:
-                root, source, settings = self._manuscript_context(query["project_token"][0])
+                root, source, settings = self._manuscript_context(query["project_token"])
                 result = research_api.review_manuscript_links(
                     root, source, language=self.language, project_config=settings, include_context=True,
                 )
-                self._json({"ok": True, **result})
+                self._ok(result)
             except ResearchConflictError as exc:
-                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
+                self._error(str(exc), 409, error_code="stale-context")
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+                self._error(str(exc), 400)
 
     def _handle_manuscript_terms_review(self) -> None:
-        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-        if (set(query) - {"research_token", "project_token", "term"}
-                or any(len(query.get(key, [])) != 1 for key in ("research_token", "project_token"))
-                or len(query.get("term", [])) > 1):
-            self._json({"ok": False, "message": "Choose one selected manuscript and research context"}, 400)
+        query = self._parse_query(
+            required=("research_token", "project_token"),
+            optional=("term",),
+            error_message="Choose one selected manuscript and research context",
+        )
+        if query is None:
             return
         with self._workspace_lock:
-            if not self._research_context_matches(query["research_token"][0]):
+            if not self._research_context_matches(query["research_token"]):
                 return
             try:
-                root, source, settings = self._manuscript_context(query["project_token"][0])
-                selected_term = query.get("term", [None])[0]
+                root, source, settings = self._manuscript_context(query["project_token"])
                 result = research_api.review_manuscript_terms(
-                    root, source, term=selected_term, language=self.language, project_config=settings,
+                    root, source, term=query.get("term"), language=self.language, project_config=settings,
                 )
-                self._json({"ok": True, **result})
+                self._ok(result)
             except ResearchConflictError as exc:
-                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
+                self._error(str(exc), 409, error_code="stale-context")
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+                self._error(str(exc), 400)
 
     def _handle_manuscript_claim_reanchor(self, payload: dict[str, Any]) -> None:
         allowed = {"project_id", "research_token", "project_token", "expected_snapshot",
@@ -156,24 +159,26 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 self._research_error(exc)
 
     def _handle_manuscript_claim_links(self) -> None:
-        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-        retracted = query.get("include_retracted", ["false"])
-        if (set(query) - {"research_token", "claim_id", "include_retracted"}
-                or len(query.get("research_token", [])) != 1
-                or len(query.get("claim_id", [])) > 1 or len(retracted) != 1
-                or retracted[0] not in ("true", "false")):
-            self._json({"ok": False, "message": "Choose one research context and optional claim filter"}, 400)
+        query = self._parse_query(
+            required=("research_token",),
+            optional=("claim_id", "include_retracted"),
+            error_message="Choose one research context and optional claim filter",
+        )
+        if query is None:
+            return
+        retracted = query.get("include_retracted", "false")
+        if retracted not in ("true", "false"):
+            self._error("Choose one research context and optional claim filter", 400)
             return
         with self._workspace_lock:
-            if not self._research_context_matches(query["research_token"][0]):
+            if not self._research_context_matches(query["research_token"]):
                 return
-            root = self.get_research_root()
-            if root is None or not (root / "research").is_dir():
-                self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            root = self._require_research_root()
+            if root is None:
                 return
             try:
-                self._json({"ok": True, **research_api.list_manuscript_links(
-                    root, claim_id=query.get("claim_id", [None])[0], include_retracted=retracted[0] == "true",
-                )})
+                self._ok(research_api.list_manuscript_links(
+                    root, claim_id=query.get("claim_id"), include_retracted=retracted == "true",
+                ))
             except (ResearchError, OSError, ValueError, TypeError) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+                self._error(str(exc), 400)

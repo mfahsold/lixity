@@ -1075,7 +1075,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
             flag_min_severity=fp_thresholds.flag_min_severity,
             content=DashboardContent(
                 reader_document=reader_blocks(text, config, analysis.paragraphs),
-                motifs=motif_report(text, config=config).to_dict(),
+                motifs=motif_report(text, config=config, _paragraphs=analysis.paragraphs).to_display_dict(),
                 scenes=scene_report_for_display(
                     text,
                     config,
@@ -1685,7 +1685,7 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             p.add_argument("target", nargs="?", help="Target manuscript file (omit to diff recorded revisions)")
             p.add_argument("--base-rev", default=None, help="Base revision SHA-256 when diffing recorded revisions")
             p.add_argument("--target-rev", default=None, help="Target revision SHA-256 when diffing recorded revisions")
-            p.add_argument("--language", default="en", help="Explicit tokenization language (default: en)")
+            p.add_argument("--language", default=None, help="Explicit tokenization language (default: project setting or en)")
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name in ("style", "dashboard", "serve", "build"):
@@ -2029,14 +2029,23 @@ def _main(argv: list[str] | None = None) -> int:
 
         try:
             base_path = Path(args.base)
-            lang = str(args.language or "en")
+            target_path = Path(args.target) if args.target is not None else base_path
+            proj_cfg = load_project_config(target_path)
+            lang = str(args.language or proj_cfg.get("language") or "en")
             if args.target is not None:
                 base_text = FileUtils.read_file(str(base_path))
-                target_text = FileUtils.read_file(str(Path(args.target)))
-                payload = compare_texts(base_text, target_text, language=lang)
+                target_text = FileUtils.read_file(str(target_path))
+                payload = compare_texts(
+                    base_text, target_text, language=lang, project_config=proj_cfg
+                )
             else:
                 resolved_source = base_path.resolve(strict=True)
-                store = ManuscriptStore(resolved_source.parent, resolved_source, language=lang)
+                store = ManuscriptStore(
+                    resolved_source.parent,
+                    resolved_source,
+                    language=lang,
+                    project_config=proj_cfg,
+                )
                 payload = store.delta(base_revision=args.base_rev, target_revision=args.target_rev)
         except (OSError, ValueError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)

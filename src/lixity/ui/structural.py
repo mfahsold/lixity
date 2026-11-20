@@ -7,7 +7,16 @@ from collections.abc import Mapping, Sequence
 from ..status import ContractKeys
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label, panel_formatters, panel_guide
+from .components import (
+    badge,
+    empty_state,
+    esc,
+    help_term,
+    label,
+    panel_formatters,
+    panel_guide,
+    panel_start,
+)
 from .heatmap import FEATURE_HELP_KEYS as _FEATURE_HELP
 
 
@@ -35,12 +44,13 @@ def style_structural(
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
-    parts: list[str] = ['<section class="panel" id="structural">']
-    parts.append(f"<h2>{help_term(labels, 'structural', translated('panel_structural'))}</h2>")
-    parts.append(panel_guide(translated("structural_guide")))
+    parts: list[str] = [
+        panel_start("structural", labels, "panel_structural", help_key="structural"),
+        panel_guide(translated("structural_guide")),
+    ]
 
     if len(chapters) < 3:
-        parts.append(f'<p class="hint">{translated("structural_min_chapters")}</p>')
+        parts.append(empty_state(translated("structural_min_chapters")))
         parts.append("</section>")
         return "".join(parts)
 
@@ -53,7 +63,7 @@ def style_structural(
     parts.append('<div class="structural-card">')
     parts.append(
         f'<h3><span>{help_term(labels, "changepoints", translated("structural_changepoints_title"))}</span>'
-        f'<span class="badge">{len(changepoints)}</span></h3>'
+        f'{badge(len(changepoints), variant="")}</h3>'
     )
 
     if changepoints:
@@ -77,9 +87,12 @@ def style_structural(
                 link_text = label(labels, "structural_shift_from").replace("{chapter}", str(ch_num))
                 layer_attr = f' data-layer="{esc(layer)}"' if layer else ""
                 shift_links.append(
-                    f'<span class="badge badge-jump" data-jump="#ch-{ch_num}"{layer_attr} '
-                    f'role="button" tabindex="0" title="{esc(feat_label)} · {esc(link_text)}">'
-                    f'{esc(link_text)}</span>'
+                    badge(
+                        link_text,
+                        variant="jump",
+                        extra_attrs=f'data-jump="#ch-{ch_num}"{layer_attr} role="button" tabindex="0" '
+                        f'title="{esc(feat_label)} · {esc(link_text)}"',
+                    )
                 )
 
             parts.append('<div class="structural-item">')
@@ -92,8 +105,11 @@ def style_structural(
     else:
         available = bool(segmentation_measured)
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
-            f'<span>{translated("structural_no_changepoints" if available else "structural_unavailable")}</span></div>'
+            empty_state(
+                translated("structural_no_changepoints" if available else "structural_unavailable"),
+                css_class="structural-empty",
+                badge_text="–",
+            )
         )
     if segmentation_unavailable and segmentation_measured:
         parts.append(f'<p class="hint">{translated("structural_partly_unavailable")}</p>')
@@ -105,7 +121,7 @@ def style_structural(
     parts.append('<div class="structural-card">')
     parts.append(
         f'<h3><span>{help_term(labels, "trends", translated("structural_trends_title"))}</span>'
-        f'<span class="badge">{len(trending_set)}</span></h3>'
+        f'{badge(len(trending_set), variant="")}</h3>'
     )
 
     sorted_trends = sorted(
@@ -128,10 +144,9 @@ def style_structural(
 
             direction_key = "structural_trend_up" if tau > 0 else "structural_trend_down"
             dir_text = label(labels, direction_key)
-            status_badge = (
-                f'<span class="badge badge-warn">{translated("structural_confirmed")}</span>'
-                if is_sig
-                else f'<span class="badge badge-neutral">{translated("structural_tendency")}</span>'
+            status_badge = badge(
+                label(labels, "structural_confirmed" if is_sig else "structural_tendency"),
+                variant="warn" if is_sig else "neutral",
             )
 
             parts.append('<div class="structural-item">')
@@ -150,8 +165,11 @@ def style_structural(
         parts.append('</div>')
     else:
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
-            f'<span>{translated("structural_no_trends" if trends else "structural_unavailable")}</span></div>'
+            empty_state(
+                translated("structural_no_trends" if trends else "structural_unavailable"),
+                css_class="structural-empty",
+                badge_text="–",
+            )
         )
     if diag.get(ContractKeys.TREND_INCOMPLETE):
         parts.append(f'<p class="hint">{translated("structural_partial_trend")}</p>')
@@ -164,7 +182,7 @@ def style_structural(
     parts.append('<div class="structural-card">')
     parts.append(
         f'<h3><span>{help_term(labels, "distribution_shift", translated("structural_distribution_title"))}</span>'
-        f'<span class="badge">{len(shifted_set)}</span></h3>'
+        f'{badge(len(shifted_set), variant="")}</h3>'
     )
 
     if shifted_set:
@@ -184,15 +202,18 @@ def style_structural(
                 f'<div class="structural-meta">'
                 f'<span>W₁={N(w1, 2)}</span> '
                 f'<span>p={N(ks_p, 3)}</span> '
-                f'<span class="badge badge-warn">{translated("structural_confirmed")}</span>'
+                f'{badge(label(labels, "structural_confirmed"), variant="warn")}'
                 f'</div>'
             )
             parts.append('</div>')
         parts.append('</div>')
     else:
         parts.append(
-            f'<div class="structural-empty"><span class="badge badge-neutral">–</span> '
-            f'<span>{translated("structural_no_shifts" if dist_shift else "structural_unavailable")}</span></div>'
+            empty_state(
+                translated("structural_no_shifts" if dist_shift else "structural_unavailable"),
+                css_class="structural-empty",
+                badge_text="–",
+            )
         )
     if distribution_unavailable and dist_shift:
         parts.append(f'<p class="hint">{translated("structural_partly_unavailable")}</p>')

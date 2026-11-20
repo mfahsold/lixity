@@ -20,6 +20,7 @@ from ..style_fingerprint import (
 )
 from .components import (
     attr_json,
+    badge,
     band_chart,
     chapter_link,
     checkbox_field,
@@ -28,9 +29,12 @@ from .components import (
     esc,
     help_term,
     label,
+    modal_footer,
     modal_shell,
     panel_formatters,
     panel_guide,
+    panel_start,
+    table_wrap_start,
 )
 
 FEATURE_HELP_KEYS: dict[str, str] = {
@@ -126,9 +130,11 @@ def render_metric_context(
         f'{esc(label(labels, "metric_context_no_layer"))}</p>'
         + details_start(esc(label(labels, "metric_context_details")), element_id="metric-context-details")
         + f'<p class="ctl-note">{esc(label(labels, "metric_context_hint"))}</p>'
-        '<div class="table-wrap" tabindex="0" role="region" aria-labelledby="metric-context-caption">'
-        '<table><caption id="metric-context-caption">'
-        f'{esc(label(labels, "metric_context_title"))}</caption><thead><tr>'
+        + table_wrap_start(
+            aria_labelledby="metric-context-caption",
+            caption_html=f'<caption id="metric-context-caption">{esc(label(labels, "metric_context_title"))}</caption>',
+        )
+        + '<thead><tr>'
         f'<th scope="col">{esc(label(labels, "register_target"))}</th>'
         f'<th scope="col">{esc(label(labels, "scene_value"))}</th>'
         f'<th scope="col">{esc(label(labels, "metric_context_reference"))}</th>'
@@ -136,11 +142,9 @@ def render_metric_context(
         '</div>'
     )
     close_label = label(labels, "modal_close")
-    footer = (
-        '<div class="modal-footer">'
+    footer = modal_footer(
         f'<button type="button" class="ctl" data-metric-close>{esc(close_label)}</button>'
         f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "dim_read_chapter"))}</a>'
-        '</div>'
     )
     return modal_shell(
         "analysis-metric-context", "metric-context-title", esc(label(labels, "metric_context_title")), body,
@@ -160,15 +164,13 @@ def render_register_targets(
     titles = {chapter.num: chapter.title for chapter in metrics.chapters}
     features = {name: label(labels, key) for name, key, _ in FEATURES}
     units = {name: FEATURE_UNITS.get(language_key, {}).get(name, unit) for name, _key, unit in FEATURES}
-    parts = ['<section class="panel" id="register-targets">',
-             f'<h2>{esc(label(labels, "register_title"))}</h2>',
+    parts = [panel_start("register-targets", labels, "register_title"),
              panel_guide(esc(label(labels, "register_hint"))),
              f'<p class="ctl-note">{esc(label(labels, "register_scope_hint"))}</p>']
     if settings_available:
         parts.append('<p><a class="ctl-link" href="#settings-registers-summary" data-register-settings>'
                      f'{esc(label(labels, "register_edit"))}</a></p>')
-    parts.append('<div class="table-wrap" tabindex="0" role="region" '
-                 f'aria-label="{esc(label(labels, "register_title"))}"><table><thead><tr>')
+    parts.append(table_wrap_start(label(labels, "register_title")) + '<thead><tr>')
     parts.extend(f'<th scope="col">{esc(label(labels, key))}</th>' for key in (
         "chapter", "register_name", "register_target", "register_lower", "register_upper", "scene_value", "status"))
     parts.append('</tr></thead><tbody>')
@@ -216,21 +218,19 @@ def render_heatmap_panel(
                 pov_groups.append((figure["name"], members))
     pov_groups.sort(key=lambda group: group[0])
 
-    parts: list[str] = ['<section class="panel" id="heatmap">']
-    parts.append(
-        "<h2>"
-        + help_term(
-            labels,
+    parts: list[str] = [
+        panel_start(
             "heatmap",
-            L("style_fingerprint"),
-            fields={
+            labels,
+            "style_fingerprint",
+            help_key="heatmap",
+            help_fields={
                 "min_words": str(MIN_COMPARABLE_WORDS),
                 "min_sentences": str(MIN_COMPARABLE_SENTENCES),
             },
-        )
-        + "</h2>"
-    )
-    parts.append(panel_guide(L("heatmap_author_guide")))
+        ),
+        panel_guide(L("heatmap_author_guide")),
+    ]
     parts.append(
         '<div class="z-legend">'
         f'<span>{L("heatmap_lower")}</span><span class="z-gradient" aria-hidden="true"></span>'
@@ -293,17 +293,17 @@ def render_heatmap_panel(
                 f'<div class="chip-row analysis-scope-pills" role="group" '
                 f'aria-label="{L("analysis_scope_register")}" data-sync-select="analysis-scope-register">'
                 f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
-                f'{L("analysis_scope_all")} <span class="badge">{N(len(chapter_numbers), 0)}</span></button>'
+                f'{L("analysis_scope_all")} {badge(N(len(chapter_numbers), 0), variant="")}</button>'
             )
             parts.extend(
                 f'<button type="button" class="ctl ctl-sm" data-value="{register_keys[name]}" aria-pressed="false">'
-                f'{esc(name)} <span class="badge">{N(reg_counts[name], 0)}</span></button>'
+                f'{esc(name)} {badge(N(reg_counts[name], 0), variant="")}</button>'
                 for name in register_names
             )
             if unassigned_count:
                 parts.append(
                     f'<button type="button" class="ctl ctl-sm" data-value="unassigned" aria-pressed="false">'
-                    f'{L("analysis_scope_unassigned")} <span class="badge">{N(unassigned_count, 0)}</span></button>'
+                    f'{L("analysis_scope_unassigned")} {badge(N(unassigned_count, 0), variant="")}</button>'
                 )
             parts.append('</div>')
         if pov_groups:
@@ -311,13 +311,13 @@ def render_heatmap_panel(
                 f'<div class="chip-row analysis-scope-pills" role="group" '
                 f'aria-label="{L("analysis_scope_pov")}" data-sync-select="analysis-scope-pov">'
                 f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
-                f'{L("analysis_scope_all")} <span class="badge">{N(len(chapter_numbers), 0)}</span></button>'
+                f'{L("analysis_scope_all")} {badge(N(len(chapter_numbers), 0), variant="")}</button>'
             )
             for index, (name, members) in enumerate(pov_groups):
                 pov_count = sum(1 for num in chapter_numbers if num in members)
                 parts.append(
                     f'<button type="button" class="ctl ctl-sm" data-value="p-{index}" aria-pressed="false">'
-                    f'{esc(name)} <span class="badge">{N(pov_count, 0)}</span></button>'
+                    f'{esc(name)} {badge(N(pov_count, 0), variant="")}</button>'
                 )
             parts.append('</div>')
         template = label(labels, "analysis_scope_status")
@@ -487,9 +487,10 @@ def render_style_passport_panel(
 
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
-    parts: list[str] = ['<section class="panel" id="bands">']
-    parts.append(f"<h2>{help_term(labels, 'passport', L('style_passport'))}</h2>")
-    parts.append(panel_guide(L("reference_reading")))
+    parts: list[str] = [
+        panel_start("bands", labels, "style_passport", help_key="passport"),
+        panel_guide(L("reference_reading")),
+    ]
     notes = fingerprint.interpretation_texts(labels, language_key)
     parts.append(f'<p class="hint">{esc(notes["selection_limits"])}</p>')
     if "small_sample" in notes:

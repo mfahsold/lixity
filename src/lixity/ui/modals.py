@@ -6,7 +6,18 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from ..language import LANGUAGE_CHOICES, LANGUAGE_PROFILES
-from .components import checkbox_field, esc, help_term, label, modal_shell, panel_label, ui_icon
+from .components import (
+    checkbox_field,
+    close_button,
+    esc,
+    help_term,
+    label,
+    modal_footer,
+    modal_shell,
+    panel_label,
+    status_banner,
+    ui_icon,
+)
 
 
 def _language_author_row(
@@ -68,15 +79,14 @@ def render_project_modals(
             "modal-runtime",
             "runtime-title",
             L("runtime_title"),
-            '<div class="modal-body"><p id="runtime-status" role="status" aria-live="polite"></p>'
-            '<div id="runtime-content"></div>'
+            '<div class="modal-body">'
+            + status_banner("runtime-status", css_class="")
+            + '<div id="runtime-content"></div>'
             f'<p class="ctl-note">{L("runtime_scope_note")}</p></div>',
             close_label=close_lbl,
-            footer_html=(
-                '<div class="modal-footer">'
+            footer_html=modal_footer(
                 f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_close")}</button>'
                 f'<button type="button" class="ctl" id="runtime-refresh">{L("runtime_refresh")}</button>'
-                '</div>'
             ),
         )
     )
@@ -123,7 +133,7 @@ def render_project_modals(
         checkbox_field('<input type="checkbox" id="site-export-sources" disabled/>', L("site_export_sources")),
         '</div>',
         '<div id="site-export-preflight" role="status" aria-live="polite" hidden></div>',
-        '<p class="ctl-status" id="site-export-status" role="status" aria-live="polite"></p>',
+        status_banner("site-export-status"),
         '</form>',
     ]
     parts.append(
@@ -134,10 +144,10 @@ def render_project_modals(
             "".join(site_export_body),
             close_label=close_lbl,
             extra_attrs="data-requires-write",
-            footer_html=(
-                f'<div class="modal-footer"><button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+            footer_html=modal_footer(
+                f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
                 f'<button type="submit" form="site-export-form" class="ctl" id="site-export-check">{L("site_export_check")}</button>'
-                f'<button type="submit" form="site-export-form" class="ctl primary" id="site-export-download">{L("site_export_download")}</button></div>'
+                f'<button type="submit" form="site-export-form" class="ctl primary" id="site-export-download">{L("site_export_download")}</button>'
             ),
         )
     )
@@ -161,7 +171,13 @@ def render_project_modals(
         f'            <span>{L("wizard_drop_sub")}</span>',
         '          </span>',
         '        </button>',
-        '        <p class="ctl-status project-form-status" id="import-project-status" role="alert" aria-live="assertive" hidden></p>',
+        status_banner(
+            "import-project-status",
+            css_class="ctl-status project-form-status",
+            role="alert",
+            aria_live="assertive",
+            hidden=True,
+        ),
         '        <div class="file-preview-card" id="import-preview-box" hidden>',
         '          <div class="fpc-header">',
         f'            <span class="fpc-badge">{L("wizard_recognized")}</span>',
@@ -194,10 +210,10 @@ def render_project_modals(
         '        </div>',
         '</details>',
         '        </div>',
-        '        <div class="modal-footer">',
-        f'          <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>',
-        f'          <button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>{L("wizard_import_action")}</button>',
-        '        </div>',
+        modal_footer(
+            f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+            f'<button type="submit" class="ctl primary" id="btn-submit-import-project" disabled>{L("wizard_import_action")}</button>'
+        ),
         '      </form>',
         '    </div>',
         '    <div class="modal-tab-pane" id="tab-pane-scratch" role="tabpanel" aria-labelledby="tab-btn-scratch" hidden>',
@@ -242,12 +258,18 @@ def render_project_modals(
         f'            <p class="ctl-note" id="new-proj-research-required" hidden>{L("wizard_research_required")}</p>',
         '          </div>',
         '        </div>',
-        '        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>',
+        status_banner(
+            "new-project-status",
+            css_class="ctl-status project-form-status",
+            role="alert",
+            aria_live="assertive",
+            hidden=True,
+        ),
         '        </div>',
-        '        <div class="modal-footer">',
-        f'          <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>',
-        f'          <button type="submit" class="ctl primary" id="btn-submit-create-project">{L("create_project")}</button>',
-        '        </div>',
+        modal_footer(
+            f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+            f'<button type="submit" class="ctl primary" id="btn-submit-create-project">{L("create_project")}</button>'
+        ),
         '      </form>',
         '    </div>',
     ]
@@ -279,12 +301,12 @@ def render_project_modals(
         f'          <button type="button" class="ctl-link recent-projects-clear" data-clear-recent-projects>{L("clear_recent_projects")}</button>',
         '        </div>',
         '        <ul class="recent-projects-list" id="open-project-recent-list" data-recent-project-list></ul>',
-        '        <p class="ctl-status" data-recent-project-status role="status" hidden></p>',
+        status_banner(aria_live="", hidden=True, extra_attrs="data-recent-project-status"),
         '      </div>',
         '      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>',
         '        <div class="project-chooser-heading">',
         f'          <strong id="open-project-chooser-heading">{L("wizard_choose_heading")}</strong>',
-        f'          <button type="button" class="ctl" id="open-project-chooser-close" aria-label="{L("modal_close")}">✕</button>',
+        close_button(close_lbl, control_id="open-project-chooser-close"),
         '        </div>',
         f'        <p class="ctl-note">{L("wizard_choose_location")}</p>',
         f'        <p class="ctl-note project-chooser-current">{L("wizard_choose_current")} <code id="open-project-chooser-path"></code></p>',
@@ -300,7 +322,13 @@ def render_project_modals(
         '      <div class="project-structure-hint mt-2">',
         f'        <span>{L("wizard_switch_prompt")} <button type="button" class="ctl-link" id="link-switch-to-import">{L("wizard_switch_action")}</button></span>',
         '      </div>',
-        '      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>',
+        status_banner(
+            "open-project-status",
+            css_class="ctl-status project-form-status",
+            role="alert",
+            aria_live="assertive",
+            hidden=True,
+        ),
         '    </form>',
     ]
     parts.append(
@@ -311,11 +339,9 @@ def render_project_modals(
             "".join(open_body),
             close_label=close_lbl,
             extra_attrs="data-requires-write",
-            footer_html=(
-                '    <div class="modal-footer">'
-                f'      <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
-                f'      <button type="submit" form="form-project-open" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>'
-                '    </div>'
+            footer_html=modal_footer(
+                f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+                f'<button type="submit" form="form-project-open" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>'
             ),
         )
     )
@@ -350,7 +376,7 @@ def render_project_modals(
         '        <div class="research-details-body" id="research-revision-citations"></div>',
         '      </details>',
         '    </form>',
-        '    <p class="ctl-status" id="research-revision-status" role="alert" aria-live="assertive" hidden></p>',
+        status_banner("research-revision-status", role="alert", aria_live="assertive", hidden=True),
         '    <div id="research-revision-history" class="modal-body research-revision-history" role="tabpanel" aria-labelledby="research-revision-history-tab">',
         '      <div id="research-revision-history-detail"></div>',
         '      <details class="research-details" id="research-revision-versions">',
@@ -367,13 +393,12 @@ def render_project_modals(
             L("research_revision_title"),
             "".join(revision_body),
             close_label=close_lbl,
-            footer_html=(
-                '      <div class="modal-footer" id="research-revision-actions">'
-                f'        <button type="button" class="ctl" id="research-revision-reload" hidden>{L("research_revision_reload")}</button>'
-                f'        <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
-                f'        <button type="button" class="ctl" id="research-revision-batch-add">{L("research_revision_batch_add")}</button>'
-                f'        <button type="submit" form="research-revision-form" class="ctl primary" id="research-revision-save">{L("research_revision_save")}</button>'
-                '      </div>'
+            footer_html=modal_footer(
+                f'<button type="button" class="ctl" id="research-revision-reload" hidden>{L("research_revision_reload")}</button>'
+                f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+                f'<button type="button" class="ctl" id="research-revision-batch-add">{L("research_revision_batch_add")}</button>'
+                f'<button type="submit" form="research-revision-form" class="ctl primary" id="research-revision-save">{L("research_revision_save")}</button>',
+                footer_id="research-revision-actions",
             ),
         )
     )
@@ -386,17 +411,15 @@ def render_project_modals(
             '    <div class="modal-body">'
             f'      <p class="ctl-note">{L("research_revision_batch_help")}</p>'
             '      <ol id="research-revision-batch-list"></ol>'
-            '      <p class="ctl-status" id="research-revision-batch-status" role="status" aria-live="polite" hidden></p>'
-            '    </div>',
+            + status_banner("research-revision-batch-status", hidden=True)
+            + '    </div>',
             close_label=close_lbl,
             extra_attrs="data-requires-write",
-            footer_html=(
-                '    <div class="modal-footer">'
-                f'      <button type="button" class="ctl" id="research-revision-batch-clear">{L("research_revision_batch_clear")}</button>'
-                f'      <button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("research_revision_batch_close")}</button>'
-                f'      <button type="button" class="ctl" id="research-revision-batch-check">{L("research_revision_batch_check")}</button>'
-                f'      <button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>{L("research_revision_batch_apply")}</button>'
-                '    </div>'
+            footer_html=modal_footer(
+                f'<button type="button" class="ctl" id="research-revision-batch-clear">{L("research_revision_batch_clear")}</button>'
+                f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel" if False else "research_revision_batch_close")}</button>'
+                f'<button type="button" class="ctl" id="research-revision-batch-check">{L("research_revision_batch_check")}</button>'
+                f'<button type="button" class="ctl primary" id="research-revision-batch-apply" disabled>{L("research_revision_batch_apply")}</button>'
             ),
         )
     )

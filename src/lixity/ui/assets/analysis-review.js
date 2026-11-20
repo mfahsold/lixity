@@ -90,6 +90,11 @@
       var row = document.getElementById("heatmap-ch-" + ch.num);
       var cell = row && row.querySelector("td.ch");
       if (!cell) return;
+      var existing = cell.querySelector(".chapter-delta-badge");
+      if (ch.match_status && ch.match_status !== "matched") {
+        if (existing) existing.remove();
+        return;
+      }
       var parts = [];
       if (typeof ch.words_delta === "number" && ch.words_delta !== 0) {
         parts.push((ch.words_delta > 0 ? "↑ +" : "↓ ") + ch.words_delta + " W");
@@ -97,7 +102,6 @@
       if (typeof ch.asl_delta === "number" && Math.abs(ch.asl_delta) >= 0.1) {
         parts.push("Δ " + (ch.asl_delta > 0 ? "+" : "") + ch.asl_delta.toFixed(1) + " ASL");
       }
-      var existing = cell.querySelector(".chapter-delta-badge");
       if (!parts.length) {
         if (existing) existing.remove();
         return;
@@ -171,14 +175,18 @@
     if (!choice) {row.querySelector(".triage-choice").focus(); return;}
     var selected = token(), before = accepted;
     pending = true; controls(true);
-    status.textContent = uiLabel("form_saving"); status.className = "ctl-status";
-    jsonApi(API + "/analysis-review", {method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({project_token:selected, observation_id:row.dataset.observationId, status:choice,
-        expected_source_sha256:before.source_sha256, expected_analysis_sha256:before.analysis_sha256,
-        expected_review_sha256:before.review_sha256})}).then(function(data) {
+    window.LixityComponents.setStatus(status, uiLabel("form_saving"), "");
+    window.LixityComponents.postJson(API + "/analysis-review", {
+      project_token: selected,
+      observation_id: row.dataset.observationId,
+      status: choice,
+      expected_source_sha256: before.source_sha256,
+      expected_analysis_sha256: before.analysis_sha256,
+      expected_review_sha256: before.review_sha256
+    }).then(function(data) {
       pending = false;
       if (selected !== token() || !accept(data)) {failed(); return;}
-      status.textContent = label("saved"); status.className = "ctl-status ok";
+      window.LixityComponents.setStatus(status, label("saved"), "ok");
       if (row.hidden) next.focus();
     });
   });

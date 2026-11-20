@@ -7,13 +7,18 @@ response and trust behaviour.
 from __future__ import annotations
 
 import json
+import os
 import secrets
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from html import escape
 from pathlib import Path
-from typing import Any, BinaryIO
+from threading import RLock
+from typing import Any, BinaryIO, TypeVar
+
+from pydantic import BaseModel, ValidationError
 
 from ..log import get_logger
+from ..manuscript_editing import SOURCE_WRITE_LOCK, ManuscriptStore, document_lock
 from ..research.repository import (
     ResearchCleanupError,
     ResearchConflictError,
@@ -23,6 +28,16 @@ from ..ui.components import status_strip
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome, WorkspaceState
 from .constants import DEFAULT_PORT
+from .middleware import (
+    SelectedManuscriptContext,
+    analysis_open_overrides,
+    build_manuscript_store,
+    format_validation_error,
+    parse_single_query_params,
+)
+from .pdf_context import manuscript_pdf_token
+
+_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 class ResponseMixin(WorkspaceState):
@@ -204,19 +219,149 @@ class ResponseMixin(WorkspaceState):
             "application/json; charset=utf-8",
         )
 
+    def _ok(self, payload: Mapping[str, Any] | None = None, code: int = 200) -> None:
+        self._json({"ok": True, **(payload or {})}, code)
+
+    def _error(
+        self,
+        message: str,
+        code: int = 400,
+        *,
+        error_code: str | None = None,
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {"ok": False, "message": str(message)}
+        if error_code is not None:
+            payload["code"] = error_code
+        if extra:
+            payload.update(extra)
+        self._json(payload, code)
+
+    def _parse_query(
+        self,
+        *,
+        required: Collection[str] = (),
+        optional: Collection[str] = (),
+        non_empty: Collection[str] = (),
+        error_message: str | None = None,
+    ) -> dict[str, str] | None:
+        try:
+            return parse_single_query_params(
+                self.path,
+                required=required,
+                optional=optional,
+                non_empty=non_empty,
+                error_message=error_message,
+            )
+        except ValueError as exc:
+            self._error(str(exc), 400)
+            return None
+
+    def _validate_model(
+        self,
+        model_cls: type[_ModelT],
+        payload: Mapping[str, Any],
+        *,
+        error_message: str | None = None,
+    ) -> _ModelT | None:
+        try:
+            return model_cls.model_validate(payload)
+        except ValidationError as exc:
+            self._error(error_message or format_validation_error(exc), 400)
+            return None
+
+    def _document_lock(self) -> RLock:
+        return document_lock(self.source_input) if self.source_input else SOURCE_WRITE_LOCK
+
+    def _editor_store(self) -> ManuscriptStore:
+        return build_manuscript_store(
+            self.workspace_root,
+            self.source_input,
+            language=getattr(self, "language", "en") or "en",
+            project_root=self.get_author_project_root(),
+            overrides=getattr(self, "project_open_overrides", None),
+        )
+
+    def _require_selected_manuscript(
+        self,
+        *,
+        readable: bool = False,
+        missing_message: str = "No readable manuscript is selected",
+    ) -> str | None:
+        source = self.source_input
+        if not source or (readable and not os.path.isfile(source)):
+            self._error(missing_message, 400)
+            return None
+        return source
+
+    def _capture_manuscript_context(
+        self,
+        expected_token: str | None = None,
+        *,
+        require_readable: bool = True,
+        missing_message: str = "No readable manuscript is selected",
+        stale_message: str = "The selected project changed; reload before continuing",
+    ) -> SelectedManuscriptContext | None:
+        with self._workspace_lock:
+            source = self.source_input
+            if not source or (require_readable and not Path(source).is_file()):
+                self._error(missing_message, 400)
+                return None
+            root = self.workspace_root
+            language, title, thresholds = self.language, self.title, self.thresholds
+            token = manuscript_pdf_token(
+                source,
+                project_root=root,
+                language=language,
+                title=title,
+                thresholds=thresholds,
+            )
+            if expected_token is not None and (not token or token != expected_token):
+                self._error(stale_message, 409)
+                return None
+            return SelectedManuscriptContext(
+                source=source,
+                root=root,
+                language=language,
+                title=title,
+                thresholds=thresholds,
+                info=self.dashboard_info,
+                token=token,
+                analysis_overrides=analysis_open_overrides(self.project_open_overrides),
+            )
+
+    def _manuscript_context_still_current(
+        self,
+        context: SelectedManuscriptContext,
+        *,
+        stale_message: str = "The selected project changed; reload before downloading",
+    ) -> bool:
+        with self._workspace_lock:
+            current = manuscript_pdf_token(
+                self.source_input,
+                project_root=self.workspace_root,
+                language=self.language,
+                title=self.title,
+                thresholds=self.thresholds,
+            )
+            if current != context.token or self.dashboard_info is not context.info:
+                self._error(stale_message, 409)
+                return False
+            return True
+
     def _research_error(self, error: Exception, code: int = 400, *, message: str | None = None) -> None:
         """Preserve conflict as 409 and publication/cleanup recovery messages as 500."""
         if isinstance(error, ResearchConflictError):
             code = 409
         elif isinstance(error, (ResearchPublicationError, ResearchCleanupError)):
             code = 500
-        self._json({"ok": False, "message": str(error) if message is None else message}, code)
+        self._error(str(error) if message is None else message, code)
 
     def _require_research_root(self, *, missing_status: int = 404) -> Path | None:
         """Return the initialized research root or respond with the expected 4xx status."""
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
-            self._json({"ok": False, "message": "Research project not initialized"}, missing_status)
+            self._error("Research project not initialized", missing_status)
             return None
         return root
 

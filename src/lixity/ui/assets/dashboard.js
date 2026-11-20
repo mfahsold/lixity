@@ -21,6 +21,10 @@ function selectAnalysisMetric(key) {
 }
 
 function activate(el) {
+  if (el.hasAttribute("data-rhythm-min-words") && typeof window.LixityJumpToRhythmGroup === "function") {
+    window.LixityJumpToRhythmGroup(el);
+    return;
+  }
   if (el.hasAttribute("data-metric-feature") && window.LixityMetricContext &&
       window.LixityMetricContext.open(el)) return;
   // drill-down: carry the context filters on the way to the deeper level
@@ -175,10 +179,13 @@ if (filter) {
       else if (paragraph.querySelector("mark")) paragraph.textContent = structuralText.get(paragraph);
     } else renderParagraphText(paragraph, "");
   }
+  function literalPattern(text) {
+    return window.LixityComponents.literalWhitespaceRegex(text, "i");
+  }
   function mark(paragraph, query, pattern) {
     if (!paragraph.matches(".reader-structural")) { renderParagraphText(paragraph, query); return; }
     var text = structuralText.get(paragraph);
-    var regex = pattern || new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), match = regex.exec(text);
+    var regex = pattern || literalPattern(query), match = regex ? regex.exec(text) : null;
     if (!match) return;
     var index = match.index;
     var hit = document.createElement("mark"); hit.className = "text-hit"; hit.textContent = match[0];
@@ -190,7 +197,7 @@ if (filter) {
     query = input.value.trim();
     hits = [];
     cursor = -1;
-    var pattern = query ? new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
+    var pattern = literalPattern(query);
     var blocks = Array.prototype.slice.call(
       document.querySelectorAll("#chapters .ptext, #chapters .reader-structural")
     );
@@ -451,6 +458,12 @@ function syncEvidenceLegend() {
   var inlineOnly = Boolean(selectedOption && selectedOption.dataset.inlineEvidence === "1");
   var comparison = document.getElementById("layer-comparison-legend");
   if (comparison) comparison.hidden = inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
+  var comparisonControls = comparisonToggle && comparisonToggle.closest(".reader-comparison-controls");
+  if (comparisonControls) comparisonControls.hidden = inlineOnly;
+  var instruction = document.getElementById("analysis-evidence-instruction");
+  if (instruction && layer) instruction.textContent = uiLabel(
+    layer.value === "sticky" ? "evidence_sticky_instruction" : "evidence_open_instruction"
+  );
   if (layerLegend) layerLegend.hidden = !layer || !layer.value || Boolean(legend && legend.hidden && comparison && comparison.hidden);
 }
 
@@ -599,8 +612,7 @@ function jsonApi(url, options, responseType) {
 }
 
 function markerApi(payload) {
-  return jsonApi(API + "/marker-" + payload._action, {method: "POST",
-    headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+  return window.LixityComponents.postJson(API + "/marker-" + payload._action, payload);
 }
 function closeNoteField() {
   var editor = document.querySelector("[data-marker-editor]");
@@ -1522,157 +1534,4 @@ function syncAllSelectPills() {
       syncSelectPills("dim-projection");
     }).observe(dimRetained, { childList: true, characterData: true, subtree: true });
   }
-})();
-
-(function initTriagePills() {
-  var panel = document.getElementById("flags");
-  if (!panel) return;
-  var chapter = document.getElementById("triage-chapter");
-  var severity = document.getElementById("triage-severity");
-  var statusFilter = document.getElementById("triage-status-filter");
-  var progress = document.getElementById("triage-progress");
-  var sevGroup = panel.querySelector('[data-triage-pill-group="severity"]');
-  var statusGroup = panel.querySelector('[data-triage-pill-group="status"]');
-  var rows = Array.from(panel.querySelectorAll(".flag-row"));
-  var numbers = new Intl.NumberFormat(document.documentElement.lang || "en");
-
-  function syncPills() {
-    var chVal = chapter ? chapter.value : "";
-    var sevVal = severity ? severity.value : "";
-    var stVal = statusFilter ? statusFilter.value : "";
-
-    if (sevGroup) {
-      var sevCounts = {};
-      var sevTotal = 0;
-      rows.forEach(function (row) {
-        if (chVal && row.dataset.triageChapter !== chVal) return;
-        if (stVal && row.dataset.reviewState !== stVal) return;
-        sevTotal++;
-        var s = row.dataset.triageSeverity || "";
-        sevCounts[s] = (sevCounts[s] || 0) + 1;
-      });
-      sevGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
-        var val = btn.dataset.value;
-        btn.setAttribute("aria-pressed", String(val === sevVal));
-        var badge = btn.querySelector("[data-pill-count]");
-        if (badge) badge.textContent = numbers.format(val === "" ? sevTotal : (sevCounts[val] || 0));
-      });
-    }
-
-    if (statusGroup) {
-      var stCounts = {};
-      var stTotal = 0;
-      rows.forEach(function (row) {
-        if (chVal && row.dataset.triageChapter !== chVal) return;
-        if (sevVal && row.dataset.triageSeverity !== sevVal) return;
-        stTotal++;
-        var st = row.dataset.reviewState || "";
-        if (st) stCounts[st] = (stCounts[st] || 0) + 1;
-      });
-      statusGroup.querySelectorAll("button[data-value]").forEach(function (btn) {
-        var val = btn.dataset.value;
-        btn.setAttribute("aria-pressed", String(val === stVal));
-        var badge = btn.querySelector("[data-pill-count]");
-        if (badge) badge.textContent = numbers.format(val === "" ? stTotal : (stCounts[val] || 0));
-      });
-    }
-  }
-
-  function ensureRowQuick(row, choice) {
-    if (!row || !choice) return null;
-    var existing = row.querySelector(".triage-quick-actions");
-    if (existing) return existing;
-    var cell = choice.closest("td");
-    if (!cell) return null;
-    var group = document.createElement("div");
-    group.className = "chip-row triage-quick-actions";
-    group.setAttribute("role", "group");
-    if (typeof uiLabel === "function") group.setAttribute("aria-label", uiLabel("triage_status"));
-    Array.from(choice.options).forEach(function (opt) {
-      if (!opt.value) return;
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ctl ctl-sm triage-quick-btn";
-      btn.dataset.triageQuick = opt.value;
-      btn.setAttribute("aria-pressed", "false");
-      btn.disabled = choice.disabled;
-      btn.textContent = opt.textContent;
-      group.appendChild(btn);
-    });
-    cell.appendChild(group);
-    return group;
-  }
-
-  function syncRowQuick(row) {
-    if (!row) return;
-    var choice = row.querySelector(".triage-choice");
-    ensureRowQuick(row, choice);
-    var activeVal = choice && choice.value ? choice.value : (row.dataset.reviewState || "");
-    var isDisabled = !choice || choice.disabled;
-    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
-      btn.disabled = isDisabled;
-      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === activeVal));
-    });
-  }
-
-  function bindPillGroup(group, select) {
-    if (!group || !select) return;
-    group.addEventListener("click", function (event) {
-      var btn = event.target.closest("button[data-value]");
-      if (!btn || btn.disabled) return;
-      if (select.value !== btn.dataset.value) {
-        select.value = btn.dataset.value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      syncPills();
-    });
-  }
-
-  bindPillGroup(sevGroup, severity);
-  bindPillGroup(statusGroup, statusFilter);
-  [chapter, severity, statusFilter].forEach(function (control) {
-    if (control) control.addEventListener("change", syncPills);
-  });
-
-  if (progress) {
-    new MutationObserver(syncPills)
-      .observe(progress, { childList: true, characterData: true, subtree: true });
-  }
-
-  panel.addEventListener("click", function (event) {
-    var quickBtn = event.target.closest(".triage-quick-btn");
-    if (!quickBtn) return;
-    event.stopPropagation();
-    var row = quickBtn.closest(".flag-row");
-    if (!row) return;
-    var choice = row.querySelector(".triage-choice");
-    var save = row.querySelector("[data-triage-save]");
-    var savedState = row.querySelector(".triage-saved-state");
-    if (!choice || choice.disabled || !save) return;
-    var nextVal = quickBtn.dataset.triageQuick;
-    choice.value = nextVal;
-    row.querySelectorAll(".triage-quick-btn").forEach(function (btn) {
-      btn.setAttribute("aria-pressed", String(btn.dataset.triageQuick === nextVal));
-    });
-    if (savedState && typeof uiLabel === "function") {
-      savedState.textContent = uiLabel("triage_" + nextVal);
-    }
-    save.click();
-  });
-
-  var rowObserver = new MutationObserver(function (mutations) {
-    var touched = new Set();
-    mutations.forEach(function (m) {
-      var row = m.target && m.target.closest ? m.target.closest(".flag-row") : null;
-      if (row) touched.add(row);
-    });
-    touched.forEach(syncRowQuick);
-  });
-  rows.forEach(function (row) {
-    rowObserver.observe(row, { attributes: true, attributeFilter: ["data-review-state"] });
-    var choice = row.querySelector(".triage-choice");
-    if (choice) rowObserver.observe(choice, { attributes: true, attributeFilter: ["disabled"] });
-    syncRowQuick(row);
-  });
-  syncPills();
 })();

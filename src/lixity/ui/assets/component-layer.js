@@ -30,6 +30,7 @@
 
   var _cachedLabelsRaw = null;
   var _cachedLabelsMap = {};
+  var jumpBarParts = new WeakMap();
   function readUiLabels() {
     var raw = (typeof document !== "undefined" && document.body && document.body.dataset)
       ? (document.body.dataset.uiLabels || "")
@@ -144,6 +145,132 @@
       } catch (error) {
         return { ok: false, message: String(error), http_status: 0 };
       }
+    },
+    postJson: function (url, payload, options) {
+      var opts = Object.assign({ method: "POST" }, options || {});
+      opts.headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+      opts.body = JSON.stringify(payload == null ? {} : payload);
+      return this.jsonApi(url, opts);
+    },
+    el: function (tag, props) {
+      var node = document.createElement(tag);
+      if (typeof props === "string") {
+        if (props) node.className = props;
+      } else if (props && typeof props === "object") {
+        if (props.className) node.className = props.className;
+        if (props.id) node.id = props.id;
+        if (props.type) node.type = props.type;
+        if (props.text != null) node.textContent = String(props.text);
+        if (props.title != null) node.title = String(props.title);
+        if (props.value != null) node.value = String(props.value);
+        if (props.hidden !== undefined) node.hidden = Boolean(props.hidden);
+        if (props.disabled !== undefined) node.disabled = Boolean(props.disabled);
+        if (props.dataset) {
+          Object.keys(props.dataset).forEach(function (k) {
+            if (props.dataset[k] !== undefined && props.dataset[k] !== null) {
+              node.dataset[k] = String(props.dataset[k]);
+            }
+          });
+        }
+        if (props.attrs) {
+          Object.keys(props.attrs).forEach(function (k) {
+            if (props.attrs[k] !== undefined && props.attrs[k] !== null) {
+              node.setAttribute(k, String(props.attrs[k]));
+            }
+          });
+        }
+        if (props.on) {
+          Object.keys(props.on).forEach(function (evt) {
+            if (typeof props.on[evt] === "function") node.addEventListener(evt, props.on[evt]);
+          });
+        }
+      }
+      for (var i = 2; i < arguments.length; i++) {
+        var child = arguments[i];
+        if (child === null || child === undefined || child === false) continue;
+        if (Array.isArray(child)) {
+          child.forEach(function (item) {
+            if (item !== null && item !== undefined && item !== false) {
+              node.appendChild(typeof item === "string" ? document.createTextNode(item) : item);
+            }
+          });
+        } else {
+          node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+        }
+      }
+      return node;
+    },
+    cpOffsets: function (text) {
+      var offsets = [0], offset = 0;
+      for (var ch of String(text || "")) { offset += ch.length; offsets.push(offset); }
+      return offsets;
+    },
+    utf16ToCp: function (text, utf16Pos) {
+      var str = String(text || ""), cp = 0, i = 0;
+      while (i < utf16Pos && i < str.length) {
+        var code = str.codePointAt(i);
+        i += code > 0xffff ? 2 : 1;
+        cp += 1;
+      }
+      return cp;
+    },
+    literalWhitespaceRegex: function (text, flags) {
+      var trimmed = String(text == null ? "" : text).trim();
+      if (!trimmed) return null;
+      var parts = trimmed.split(/\s+/).map(function (part) {
+        return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      });
+      return new RegExp(parts.join("\\s+"), flags || "i");
+    },
+    scrollIntoViewSafe: function (target, options) {
+      if (!target || typeof target.scrollIntoView !== "function") return;
+      var opts = Object.assign({ block: "start", inline: "nearest" }, options || {});
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduced && (!opts.behavior || opts.behavior === "smooth")) opts.behavior = "auto";
+      target.scrollIntoView(opts);
+    },
+    ensureJumpBar: function (id, className, anchorEl) {
+      var bar = document.getElementById(id);
+      if (bar) return bar;
+      bar = this.el("div", {
+        id: id,
+        className: "passage-jump-bar " + className,
+        hidden: true,
+        attrs: { role: "region" }
+      });
+      var toolbar = anchorEl && anchorEl.closest("#analysis-outline-document")?.querySelector(".toolbar");
+      if (toolbar) toolbar.appendChild(bar);
+      else if (anchorEl && anchorEl.before) anchorEl.before(bar);
+      return bar;
+    },
+    renderJumpBar: function (bar, config) {
+      if (!bar) return;
+      if (!config || !config.visible) {
+        bar.hidden = true;
+        return;
+      }
+      var el = this.el.bind(this);
+      var parts = jumpBarParts.get(bar);
+      if (!parts) {
+        var info = el("span", { attrs: { role: "status" } });
+        var previous = el("button", { type: "button", className: "ctl ctl-sm", text: "←" });
+        var next = el("button", { type: "button", className: "ctl ctl-sm", text: "→" });
+        var close = el("button", { type: "button", className: "ctl ctl-sm" });
+        parts = { info: info, previous: previous, next: next, close: close };
+        jumpBarParts.set(bar, parts);
+        bar.replaceChildren(info, el("div", "passage-jump-actions", previous, next, close));
+      }
+      parts.info.className = "passage-jump-label" + (config.labelClass ? " " + config.labelClass : "");
+      if (parts.info.textContent !== config.label) parts.info.textContent = config.label || "";
+      parts.previous.setAttribute("aria-label", config.prevLabel || _uiLabel("evidence_previous"));
+      parts.next.setAttribute("aria-label", config.nextLabel || _uiLabel("evidence_next"));
+      parts.close.setAttribute("aria-label", config.closeLabel || config.closeText || _uiLabel("evidence_close"));
+      parts.close.textContent = config.closeText || "✕";
+      parts.previous.onclick = config.onPrev || null;
+      parts.next.onclick = config.onNext || null;
+      parts.close.onclick = config.onClose || null;
+      bar.setAttribute("aria-label", config.regionLabel || config.label || _uiLabel("evidence_inspect"));
+      bar.hidden = false;
     },
     html: htm.bind(preact.h),
     icon: function (name, options) {
@@ -402,6 +529,9 @@
         return true;
       }
       if (document.querySelector("#reader-settings[open], #reader-analysis-guide[open]")) return true;
+      if (Array.from(document.querySelectorAll(".passage-jump-bar:not([hidden])")).some(function (bar) {
+        return bar.getClientRects().length > 0;
+      })) return true;
       var ctxMenu = document.getElementById("manuscript-context-menu");
       if (ctxMenu && !ctxMenu.hidden) return true;
       var selTools = document.getElementById("manuscript-selection-tools");
@@ -635,8 +765,7 @@
           document.documentElement.style.setProperty("--pane-ribbon-height", Math.ceil(ribbonHeight) + "px");
         }
       }
-      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      target.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start", inline: "nearest" });
+      window.LixityComponents.scrollIntoViewSafe(target, { behavior: "smooth", block: "start", inline: "nearest" });
       var focusTarget = sel === "#controls"
         ? target.querySelector(":scope > h2, :scope > summary") || target
         : target.querySelector(":scope > summary, :scope > legend, :scope > h2, :scope > h3, :scope > h4, [tabindex='-1']") || target;

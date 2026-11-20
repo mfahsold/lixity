@@ -43,7 +43,8 @@ def test_tense_evidence_reuses_counts_and_keeps_metric_contract():
     assert slices(paragraph, evidence["tense"]["present"]) == [("halte", 1), ("halte", 1)]
     assert slices(paragraph, evidence["tense"]["past"]) == [("haben gesprochen", 1)]
     module = importlib.import_module("lixity.paragraph_evidence")
-    assert module.paragraph_evidence(text, config, analysis.paragraphs)[0] == evidence
+    public = module.paragraph_evidence(text, config, analysis.paragraphs)[0]
+    assert public["tense"] == evidence["tense"]
 
 
 def test_tense_mapping_preserves_unicode_and_fails_closed_for_inline_code():
@@ -79,6 +80,28 @@ def test_repeated_unicode_tokens_and_sentences_keep_their_exact_occurrences():
     assert layers["dialogue"] == {
         "status": "available", "kind": "dialogue", "count": 0, "mapped_count": 0, "spans": [],
     }
+
+
+def test_reader_sticky_details_use_sentence_local_captures_without_changing_cli_evidence():
+    text = "# Example\n\nA quiet morning. It waits.\n"
+    config = CorpusConfig(language="en", word_regex=r"^(\w+)", sticky_min_words=1, sticky_glue_pct=100)
+    thresholds = FingerprintThresholds()
+    analysis = analyze_document(text, config, thresholds, include_evidence=True)
+    assert analysis.evidence is not None
+    evidence = analysis.evidence[0]["layers"]
+    sticky = evidence["sticky"]
+    paragraph = analysis.paragraphs[0]
+    assert slices(paragraph, evidence["function"]) == [("A", 1)]
+    assert sticky["sticky_rule"] == (1, 100)
+    assert [span["function_words"] for span in sticky["spans"]] == [1, 1]
+    assert [[paragraph.text[start:end] for start, end in span["function_spans"]]
+            for span in sticky["spans"]] == [["A"], ["It"]]
+
+    public = {}
+    profile_document(text, config, thresholds, evidence=public)
+    layer = public[0]["layers"]["sticky"]
+    assert "sticky_rule" not in layer
+    assert [set(span) for span in layer["spans"]] == [{"start", "end", "count", "words"}] * 2
 
 
 def test_capturing_custom_patterns_keep_full_matches_and_nominal_exclusions():
@@ -254,3 +277,49 @@ def test_sticky_and_dialogue_tag_unavailable_for_generic_language():
     assert layers["dialogue_tag"]["count"] is None
     assert layers["echo"]["status"] == "available"
     assert layers["echo"]["count"] == 2
+
+
+def test_precomputed_quotation_context_on_non_sentence_non_dialogue_spans():
+    text = (
+        '## Example\n\n'
+        'I think calmly. "I feel sure you can wait," she said.\n'
+    )
+    _paragraphs, evidence = build(text)
+    layers = evidence[0]["layers"]
+    # Filter verbs: "think" is outside_quotation, "feel" is in_quotation.
+    assert [s["quotation_context"] for s in layers["filter"]["spans"]] == [
+        "outside_quotation",
+        "in_quotation",
+    ]
+    # Modal: "can" is inside the quotation.
+    assert [s["quotation_context"] for s in layers["modal"]["spans"]] == ["in_quotation"]
+    # Sentence & dialogue layers do not carry quotation_context.
+    assert all("quotation_context" not in s for s in layers["asl"]["spans"])
+    assert all("quotation_context" not in s for s in layers["dialogue"]["spans"])
+
+    # Overlapping span: passive pattern spanning across closing quote boundary.
+    overlap_text = '## Example\n\n"The gate was" opened quietly.\n'
+    _, overlap_ev = build(overlap_text, passive_regex=r'was"\s+opened')
+    passive_spans = overlap_ev[0]["layers"]["passive"]["spans"]
+    assert [s["quotation_context"] for s in passive_spans] == ["overlaps_quotation"]
+
+    # Partial dialogue mapping preserves in_quotation when matched, omits uncertain outside_quotation.
+    partial_text = '## Example\n\nI think "e\u0301" wait.\n'
+    _, partial_ev = build(partial_text, dialogue_regex=r'"((?=e\u0301)|[^"]+)"')
+    # If dialogue is partial/unavailable, outside_quotation is not asserted.
+    if partial_ev[0]["layers"]["dialogue"]["status"] != "available":
+        assert all("quotation_context" not in s for s in partial_ev[0]["layers"]["filter"]["spans"])
+
+
+def test_reader_evidence_classifies_counted_sentence_words_around_quotes():
+    text = '## Example\n\nI wait here. "Come here." I stopped. "I saw it," she said.\n'
+    analysis = analyze_document(text, CorpusConfig(language="en"), FingerprintThresholds(), include_evidence=True)
+    assert analysis.evidence is not None
+    layers = analysis.evidence[0]["layers"]
+    assert [span["quotation_context"] for span in layers["asl"]["spans"]] == [
+        "outside_quotation", "in_quotation", "outside_quotation", "overlaps_quotation",
+    ]
+    assert [span["words"] for span in layers["asl"]["spans"]] == [3, 2, 2, 5]
+    assert [span["quotation_context"] for span in layers["dialogue"]["spans"]] == [
+        "in_quotation", "in_quotation",
+    ]

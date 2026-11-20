@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from ..io import FileUtils
-from ..manuscript_editing import SOURCE_WRITE_LOCK, document_lock
 from ..markers import add_marker, resolve_marker
 from ._base import ResponseMixin
 
@@ -15,14 +13,15 @@ class MarkerRoutesMixin(ResponseMixin):
     """Handlers for author work markers stored beside the manuscript."""
 
     def _handle_marker(self, action: str, payload: dict[str, Any]) -> None:
-        lock = document_lock(self.source_input) if self.source_input else SOURCE_WRITE_LOCK
-        with lock:
+        with self._document_lock():
             self._handle_marker_locked(action, payload)
 
     def _handle_marker_locked(self, action: str, payload: dict[str, Any]) -> None:
-        src = self.source_input
-        if not src or not os.path.isfile(src):
-            self._json({"ok": False, "message": "No writable manuscript loaded"}, 400)
+        src = self._require_selected_manuscript(
+            readable=True,
+            missing_message="No writable manuscript loaded",
+        )
+        if src is None:
             return
 
         try:

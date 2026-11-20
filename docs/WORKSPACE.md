@@ -10,8 +10,8 @@ The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below describe 0.8.2; optional
-workers and integrations retain their documented setup requirements.
+German coverage prioritized. The installation guide covers setup for optional
+workers and integrations.
 
 | Your next task | Start here |
 | --- | --- |
@@ -92,13 +92,19 @@ If another tab or an external editor changed the file, autosave pauses and keeps
 a recovery draft. **Compare versions** shows the last acknowledged text, the current
 file and an editable candidate side by side. Choose a retained copy first to compare
 that recovery text instead of the live buffer. Revision identities distinguish the
-copies. **Use as draft** changes only the editor buffer and leaves saving paused;
-**Save this draft** deliberately applies the reviewed result against the captured
-file revision. A subsequent external change is rejected again. This is manual
-comparison, not automatic merging or a line-by-line diff. Cancelling an edited
+copies. The local backend measures all three displayed texts under the same
+effective project settings. With automatic language detection, the current
+file provides the language for all three texts. Chapter differences require
+an identifiable match across versions. Shares appear as percentages and
+their changes as percentage points. For example, a dialogue share rising
+from 25% to 50% increases by 25 percentage points. If measurement is
+unavailable, the text remains available for comparison and editing.
+
+**Use as draft** changes only the editor buffer and leaves saving paused.
+**Save this draft** applies the reviewed result against the captured file
+revision. A subsequent external change is rejected again. Cancelling an edited
 comparison asks before discarding it. **Load as draft** remains available for a
-retained copy; loading while the current buffer is dirty downloads that buffer
-instead of replacing it.
+retained copy. Loading while the current buffer is dirty downloads that buffer.
 
 Select literal text within one reader paragraph before returning to writing to
 open that exact editable range. The reader revision, source lines and paragraph
@@ -357,7 +363,7 @@ These routes share existing actions rather than creating separate records:
 
 | Task | Passage route | Other access |
 | --- | --- | --- |
-| Explain counted text | **Explore passage → Explain measurement** | Hover or tap a marked word or sentence |
+| Explain counted text | **Explore passage → Explain measurement** | Hover, click or tap a marked word or sentence |
 | Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
 | Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
 | Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
@@ -372,9 +378,12 @@ including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
 
-The measurement card puts the quotation and its count first, with paragraph
-measurement and chapter comparison in a separate panel. Mapping limits stay
-under **About this comparison**. A word count is not an editorial fault; a
+The measurement card shows the selected quotation and count, the reason for
+the mark and a reading question. Paragraph measurements and chapter comparison
+have their own section. In **Sticky sentences**, a filled highlight identifies
+each counted function word in the selected sentence. In the repeated-word
+view, dashed underlines connect additional occurrences of the selected word.
+Mapping limits appear under **About this comparison**. A word count is not an editorial fault; a
 perception-word match does not establish narrative distance. When exact
 counting/display mapping cannot be verified, the value remains but its evidence
 is explicitly unavailable. Browsers without native text highlighting retain
@@ -627,8 +636,22 @@ The native overview keeps only the selected analysis section visible.
 chapters** to ask where the writing changes, for example where sentences get
 longer or more text appears in quotation marks. The chapter table gives average
 words per sentence and the percentage of words inside recognized quotation marks.
-Under **Explore patterns**, start with pacing, dialogue, sentence lengths or
-recurring word patterns to decide where to read more closely. Choose **Manuscript
+Under **Explore patterns**, the rhythm view puts chapter averages and the
+sentence-length distribution together. Open the examples for a selected chapter
+or length group to read actual sentences. The word-pattern view opens examples
+for the selected pattern and indicates whether the match falls inside recognized
+quotation marks, outside them or across a boundary when the text supports that
+distinction. The examples come from verifiable manuscript paragraphs.
+
+Under **Motifs and repetition**, open a match or highlight related occurrences
+together. The reading toolbar keeps previous and next actions within reach.
+After opening a group of matches by keyboard, press Tab to reach the next
+match. Closing the toolbar returns to the control that opened it for matches
+and sentence examples. The native app also finds literal expressions and optional
+patterns in the selected manuscript. A coverage note identifies counted hits
+that could not be located or were outside the displayed limit.
+
+Choose **Manuscript
 measurements** to see the grouped scope, rhythm and language values immediately.
 Expand the vocabulary and style disclosures for the additional measures.
 Standalone reports open the main measurements by default, including without

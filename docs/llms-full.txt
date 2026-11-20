@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.8.2.
+> The individually published files remain authoritative. Product version 0.9.0.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -31,13 +31,13 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > instructions to rewrite prose. Analysis is deterministic for fixed text and
 > settings; research records also contain generated IDs and timestamps.
 
-Documentation source version: 0.8.2. Check
+Documentation source version: 0.9.0. Check
 [GitHub releases](https://github.com/mfahsold/lixity/releases) and
 [PyPI](https://pypi.org/project/lixity/) for published packages. Current-main
 features can differ from an installed release with the same version string.
 The current 0.x line follows a numbering reset; historical 1.x/3.x tags are older.
 Product, response and archive schema numbers are independent.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.8.2.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.0.md) describe this
 source version; the link alone is not publication evidence.
 
 ## Discover the installed interface
@@ -317,11 +317,9 @@ For a product introduction before reading the manuals, visit the
 The [browser sandbox](sandbox/index.html) lets you try the same questions
 with a short passage in German or English.
 
-Choose a task below. These manuals describe the **0.8.2** release. Use
-`lixity --version` and `lixity COMMAND --help` to check your installation; a later
-development checkout can differ from a published package. The
-[installation guide](INSTALLATION.md#cli-current-release) links
-the release notes for its documented baseline;
+Choose a task below. Use `lixity --version` and `lixity COMMAND --help` to check
+your installation. The [installation guide](INSTALLATION.md#cli-current-release)
+links the release notes for the documented version, and
 [the changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) records work in progress.
 
 ## Start here
@@ -426,8 +424,8 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. This reference describes 0.8.2; inspect
-`lixity --version` and installed `--help` before using the commands.
+require a running browser service. Check `lixity --version` and the installed
+`--help` to confirm the commands available in your version.
 
 ## Installation
 
@@ -1168,7 +1166,10 @@ direction between the two groups relative to this manuscript. For concrete wordi
 and choose a component such as **Perception filters**, **Modals**, **Noun endings** or
 **Passive patterns**. **Counted text** marks the exact
 lexical cues independently of **Paragraph comparison**. Inspect a marked span
-to read its count and counting rule.
+to read its count, counting rule and an editorial question. In **Sticky
+sentences**, the card shows which function words contributed to the sentence's
+share and which configured thresholds it reached. In the repeated-word
+view, dashed underlines connect the other occurrences in the same paragraph.
 
 The composite is chapter-level; it is not a word-by-word showing/telling
 classification. It does not distinguish abstract adjectives from sensory verbs.
@@ -2304,8 +2305,8 @@ The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
 [research manual](research/USAGE.md) provide the corresponding specialist workflows.
 
 Labels below use the English interface. The same routes are localized, with
-German coverage prioritized. The workflows below describe 0.8.2; optional
-workers and integrations retain their documented setup requirements.
+German coverage prioritized. The installation guide covers setup for optional
+workers and integrations.
 
 | Your next task | Start here |
 | --- | --- |
@@ -2386,13 +2387,19 @@ If another tab or an external editor changed the file, autosave pauses and keeps
 a recovery draft. **Compare versions** shows the last acknowledged text, the current
 file and an editable candidate side by side. Choose a retained copy first to compare
 that recovery text instead of the live buffer. Revision identities distinguish the
-copies. **Use as draft** changes only the editor buffer and leaves saving paused;
-**Save this draft** deliberately applies the reviewed result against the captured
-file revision. A subsequent external change is rejected again. This is manual
-comparison, not automatic merging or a line-by-line diff. Cancelling an edited
+copies. The local backend measures all three displayed texts under the same
+effective project settings. With automatic language detection, the current
+file provides the language for all three texts. Chapter differences require
+an identifiable match across versions. Shares appear as percentages and
+their changes as percentage points. For example, a dialogue share rising
+from 25% to 50% increases by 25 percentage points. If measurement is
+unavailable, the text remains available for comparison and editing.
+
+**Use as draft** changes only the editor buffer and leaves saving paused.
+**Save this draft** applies the reviewed result against the captured file
+revision. A subsequent external change is rejected again. Cancelling an edited
 comparison asks before discarding it. **Load as draft** remains available for a
-retained copy; loading while the current buffer is dirty downloads that buffer
-instead of replacing it.
+retained copy. Loading while the current buffer is dirty downloads that buffer.
 
 Select literal text within one reader paragraph before returning to writing to
 open that exact editable range. The reader revision, source lines and paragraph
@@ -2651,7 +2658,7 @@ These routes share existing actions rather than creating separate records:
 
 | Task | Passage route | Other access |
 | --- | --- | --- |
-| Explain counted text | **Explore passage → Explain measurement** | Hover or tap a marked word or sentence |
+| Explain counted text | **Explore passage → Explain measurement** | Hover, click or tap a marked word or sentence |
 | Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
 | Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
 | Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
@@ -2666,9 +2673,12 @@ including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
 
-The measurement card puts the quotation and its count first, with paragraph
-measurement and chapter comparison in a separate panel. Mapping limits stay
-under **About this comparison**. A word count is not an editorial fault; a
+The measurement card shows the selected quotation and count, the reason for
+the mark and a reading question. Paragraph measurements and chapter comparison
+have their own section. In **Sticky sentences**, a filled highlight identifies
+each counted function word in the selected sentence. In the repeated-word
+view, dashed underlines connect additional occurrences of the selected word.
+Mapping limits appear under **About this comparison**. A word count is not an editorial fault; a
 perception-word match does not establish narrative distance. When exact
 counting/display mapping cannot be verified, the value remains but its evidence
 is explicitly unavailable. Browsers without native text highlighting retain
@@ -2921,8 +2931,22 @@ The native overview keeps only the selected analysis section visible.
 chapters** to ask where the writing changes, for example where sentences get
 longer or more text appears in quotation marks. The chapter table gives average
 words per sentence and the percentage of words inside recognized quotation marks.
-Under **Explore patterns**, start with pacing, dialogue, sentence lengths or
-recurring word patterns to decide where to read more closely. Choose **Manuscript
+Under **Explore patterns**, the rhythm view puts chapter averages and the
+sentence-length distribution together. Open the examples for a selected chapter
+or length group to read actual sentences. The word-pattern view opens examples
+for the selected pattern and indicates whether the match falls inside recognized
+quotation marks, outside them or across a boundary when the text supports that
+distinction. The examples come from verifiable manuscript paragraphs.
+
+Under **Motifs and repetition**, open a match or highlight related occurrences
+together. The reading toolbar keeps previous and next actions within reach.
+After opening a group of matches by keyboard, press Tab to reach the next
+match. Closing the toolbar returns to the control that opened it for matches
+and sentence examples. The native app also finds literal expressions and optional
+patterns in the selected manuscript. A coverage note identifies counted hits
+that could not be located or were outside the displayed limit.
+
+Choose **Manuscript
 measurements** to see the grouped scope, rhythm and language values immediately.
 Expand the vocabulary and style disclosures for the additional measures.
 Standalone reports open the main measurements by default, including without
@@ -8713,8 +8737,10 @@ they do not estimate literary quality or a reader's experienced immersion.
 - **Rhythm profile & sentence-length entropy (`pacing.py`):** `PacingReport` and
   `ChapterPacing` expose `rhythm_profile`: `{available, sentences, asl_cv,
   asl_iqr, length_entropy, normalized_entropy, bucket_shares}` with
-  `bucket_shares: {short, medium, long}` (`short`: `<= short_sentence_max`,
-  default `7`; `medium`: `8..20`; `long`: `> 20`). `asl_cv = std / mean`,
+  `bucket_shares: {short, medium, long}`. Short sentences have at most
+  `short_sentence_max` words (default `6`). Medium sentences exceed that
+  limit and have at most 20 words. Long sentences exceed both limits.
+  `asl_cv = std / mean`,
   `asl_iqr = Q75 - Q25`, `length_entropy = -sum(p_b * log2(p_b))` in bits over
   non-empty buckets (max `log2(3) ≈ 1.585` bits), and
   `normalized_entropy = length_entropy / log2(3)`. When `sentences < 2`,
@@ -9479,7 +9505,7 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   (`reason: "language_unavailable"`) for `generic` or languages without
   curated `function_words` / dialogue-tag verb lists. `echo` highlights
   same-paragraph repetitions (`>= 2` occurrences, length `>= 4` excluding
-  function/stop words) regardless of whether repetition is intentional
+  function words) regardless of whether repetition is intentional
   rhetorical cadence (anaphora/epizeuxis) or accidental echo.
 - **Voice separation & adverbial dialogue tags:** `voice_separation` compares
   surface lexical cosine similarity, ASL, and `?!` density between quoted
@@ -9515,7 +9541,7 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
 - **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `burstiness`,
   `length_entropy`, and `normalized_entropy` require `sentences >= 2`
   (`available: false` otherwise; `burstiness` also requires `mean > 0`).
-  Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
+  Three-bucket Shannon entropy (by default `short <= 6`, `medium 7..20`,
   `long > 20`) depends on sentence splitting and bucket thresholds; high or low
   entropy or burstiness is a descriptive dispersion signal, not an aesthetic or "AI-ness"
   verdict.
@@ -9782,6 +9808,26 @@ source. Its response includes document identity, original-byte revision, kind an
 normalized text. Unknown, repeated or empty query parameters are rejected.
 `POST /api/manuscript-edit-discard` with `document` and `id` explicitly
 deletes that recovery copy. The same Host/Origin checks protect these operations.
+
+Unreleased `POST /api/manuscript-compare` accepts `document`, the current
+file's `revision`, `base_text` and `draft_text` as strings. An optional
+`settings_sha256` pins the effective settings from an earlier response.
+The operation measures both supplied texts and the revision read from disk
+under one resolved configuration. Each editor text has the normal 4 MiB
+UTF-8 limit. A stale revision or settings fingerprint returns 409.
+`lixity-compare/1` reports `measurements`, `base_to_current`,
+`current_to_draft` and `primary_diff`. Chapter differences are available
+for paired chapters. The request has no manuscript or history writes.
+
+Unreleased `POST /api/motif-search` searches the selected manuscript with
+a required `query` and optional `regex`, `case_sensitive`, `limit`
+and `project_token`. `lixity-motif-search/1` identifies the source by
+`source_sha256` and returns mappable `occurrences`, `total_matches`
+and `truncated`. Occurrence offsets are Unicode code points within the
+identified displayed paragraph. Verify source and passage identity before
+using an occurrence to navigate or highlight. Invalid regular expression syntax
+returns HTTP 400 with the error code `invalid-regex`.
+
 Editor receipts do not refresh analysis. `GET /api/manuscript-view?document=<id>&revision=<sha256>`
 returns the ordinary native dashboard only when its analyzed and current source
 match the requested revision (otherwise 409 or an explicit error). The HTML body

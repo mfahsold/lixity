@@ -2,6 +2,7 @@
 
 import logging
 import time
+from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from hashlib import sha256
@@ -15,7 +16,8 @@ from .log import get_logger, log_event
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig, CorpusMetrics
 from .motifs import motif_report, resolve_motif_settings
-from .pacing import pacing_report
+from .pacing import MEDIUM_SENTENCE_MAX as PACING_MEDIUM_SENTENCE_MAX
+from .pacing import pacing_report, sentence_group_intervals
 from .paragraph_evidence import ParagraphEvidence
 from .scenes import scene_report_for_display
 from .showing import showing_report
@@ -74,10 +76,11 @@ def document_paragraph_texts(text: str, config: CorpusConfig) -> list[ParagraphT
 def profile_document(
     text: str, config: CorpusConfig, thresholds: FingerprintThresholds, *,
     evidence: dict[int, ParagraphEvidence] | None = None,
+    include_reader_details: bool = False,
 ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
     profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
     return ParagraphProfiler(config, thresholds=profile_thresholds, sample_text=text).profile_blocks(
-        parse_markdown_blocks(text, config), evidence=evidence,
+        parse_markdown_blocks(text, config), evidence=evidence, include_reader_details=include_reader_details,
     )
 
 
@@ -106,7 +109,9 @@ def analyze_document(
     try:
         metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
         evidence: dict[int, ParagraphEvidence] | None = {} if include_evidence else None
-        paragraphs, chapters = profile_document(text, config, thresholds, evidence=evidence)
+        paragraphs, chapters = profile_document(
+            text, config, thresholds, evidence=evidence, include_reader_details=include_evidence,
+        )
         fingerprint = fingerprint_document(text, config, thresholds, metrics)
         paragraph_layers = prepare_paragraph_layers(paragraphs)
         duration_ms = int((time.monotonic() - started) * 1000)
@@ -122,6 +127,95 @@ def analyze_document(
         raise
 
 
+def _attach_sticky_locations(
+    pacing_dict: dict[str, Any], sentence_keys: Sequence[str | None], analysis: DocumentAnalysis,
+) -> None:
+    """Link unique full sentences when both measured scopes agree."""
+    if analysis.evidence is None or not sentence_keys:
+        return
+    candidates: dict[tuple[int, str, int, int], list[tuple[int, int, int]]] = defaultdict(list)
+    for idx, paragraph in enumerate(analysis.paragraphs):
+        ev = analysis.evidence.get(idx)
+        sticky_layer = ev["layers"].get("sticky") if ev else None
+        if not sticky_layer:
+            continue
+        for span_idx, span in enumerate(sticky_layer.get("spans", [])):
+            words = span.get("words")
+            function_words = span.get("function_words")
+            if words is None or function_words is None:
+                continue
+            quote = paragraph.text[span["start"]:span["end"]].strip()
+            digest = sha256(quote.encode("utf-8")).hexdigest()
+            identity = (paragraph.chapter_num, digest, words, function_words)
+            candidates[identity].append((idx, paragraph.start_line, span_idx))
+    sticky_items = [dict(item) for item in pacing_dict["sticky_items"]]
+    for item, key in zip(sticky_items, sentence_keys, strict=True):
+        if key is None:
+            continue
+        matches = candidates.get((item["chapter_num"], key, item["words"], item["glue_words"]), [])
+        if len(matches) == 1:
+            idx, start_line, span_idx = matches[0]
+            item.update(paragraph_id=f"p-{idx}", start_line=start_line, span_index=span_idx)
+    pacing_dict["sticky_items"] = sticky_items
+
+
+def _collect_sentence_group_matches(
+    analysis: DocumentAnalysis,
+    keys: Sequence[str],
+    bounds: Sequence[int] | None,
+) -> dict[str, list[dict[str, Any]]]:
+    if analysis.evidence is None:
+        return {}
+    intervals = sentence_group_intervals(bounds)
+    if len(intervals) != len(keys):
+        return {key: [] for key in keys}
+    buckets: dict[str, list[dict[str, Any]]] = {key: [] for key in keys}
+    for idx in range(len(analysis.paragraphs)):
+        ev = analysis.evidence.get(idx)
+        asl_layer = ev["layers"].get("asl") if ev else None
+        if not asl_layer:
+            continue
+        p_id = f"p-{idx}"
+        for span_idx, span in enumerate(asl_layer.get("spans", [])):
+            words = span.get("words")
+            if not isinstance(words, int):
+                continue
+            for key, interval in zip(keys, intervals, strict=True):
+                if interval is None:
+                    continue
+                min_w, max_w = interval
+                if words >= min_w and (max_w is None or words <= max_w):
+                    buckets[key].append({"paragraph_id": p_id, "span_index": span_idx})
+                    break
+    return buckets
+
+
+def _attach_sentence_group_locations(
+    pacing_dict: dict[str, Any],
+    config: CorpusConfig,
+    analysis: DocumentAnalysis,
+) -> None:
+    """Precompute sentence-length jump targets when paragraph evidence is present."""
+    if analysis.evidence is None:
+        return
+    rhythm_bounds = (config.short_sentence_max, PACING_MEDIUM_SENTENCE_MAX)
+    dist_bounds = getattr(analysis.metrics.sentence_dist, "_word_bounds", None)
+    if dist_bounds is None:
+        dist_bounds = (
+            config.short_sentence_max,
+            config.medium_sentence_max,
+            config.long_sentence_max,
+        )
+    pacing_dict["sentence_group_matches"] = {
+        "rhythm": _collect_sentence_group_matches(
+            analysis, ("short", "medium", "long"), rhythm_bounds
+        ),
+        "distribution": _collect_sentence_group_matches(
+            analysis, ("short", "medium", "long", "very_long"), dist_bounds
+        ),
+    }
+
+
 def supplementary_reports(
     text: str, config: CorpusConfig, analysis: DocumentAnalysis, *,
     scene_settings: Any = None,
@@ -134,12 +228,22 @@ def supplementary_reports(
     still require their own measurements. Character error policies and reader
     document construction remain with the caller. No project settings are read.
     """
-    pacing_obj = pacing_report(text, config)
+    pacing_obj = pacing_report(text, config, _include_sticky_identity=analysis.evidence is not None)
     pacing_dict = pacing_obj.to_dict()
+    pacing_dict["rhythm_word_bounds"] = (config.short_sentence_max, PACING_MEDIUM_SENTENCE_MAX)
+    pacing_dict["sticky_rule"] = {
+        "min_words": config.sticky_min_words,
+        "min_pct": config.sticky_glue_pct,
+    }
+    _attach_sticky_locations(pacing_dict, pacing_obj._sticky_sentence_keys, analysis)
+    _attach_sentence_group_locations(pacing_dict, config, analysis)
+    motifs_dict = motif_report(
+        text, config=config, _paragraphs=analysis.paragraphs if analysis.evidence is not None else None,
+    ).to_display_dict()
     reports: dict[str, Any] = {
         "dialogue": dialogue_report(text, config).to_dict(),
         "pacing": pacing_dict,
-        "motifs": motif_report(text, config=config).to_dict(),
+        "motifs": motifs_dict,
         "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),
         "scenes": scene_report_for_display(
             text, config, scene_settings,

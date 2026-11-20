@@ -15,15 +15,36 @@ device. The report provides counts and locations so the editor can decide.
 
 from __future__ import annotations
 
+import re
+import unicodedata
+from bisect import bisect_left, bisect_right
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from itertools import pairwise
-from typing import Any
+from functools import cached_property
+from itertools import accumulate, pairwise
+from typing import TYPE_CHECKING, Any
 
 from .language import compile_pattern, compile_word_pattern, resolve_language
-from .markdown_parser import prose_text, split_chapters
+from .markdown_parser import (
+    _chapter_spans,
+    chapter_heading_spans,
+    counting_inline_text,
+    parse_markdown_blocks,
+    prose_text,
+    split_chapters,
+    strip_inline_markup,
+)
 from .models import CorpusConfig
+from .paragraph_evidence import (
+    EvidenceSpan,
+    classify_span_quotation_context,
+    extract_paragraph_dialogue_spans,
+)
+from .text_normalization import CountingText, counting_view
+
+if TYPE_CHECKING:
+    from .style_profile import ParagraphProfile, ParagraphText
 
 MIN_PHRASE_COUNT = 3  # a repeated n-gram must occur at least this often
 DEFAULT_PHRASE_SIZE = 3
@@ -32,6 +53,7 @@ DEFAULT_TOP_PHRASES = 10
 DEFAULT_ECHO_WINDOW = 300
 DEFAULT_ECHO_MIN_COUNT = 2
 DEFAULT_TOP_ECHOES = 20
+MAX_DISPLAY_OCCURRENCES = 250
 
 
 def resolve_motif_settings(
@@ -131,6 +153,7 @@ class MotifReport:
     top_words: list[tuple[str, int]] = field(default_factory=list)
     repeated_phrases: list[RepeatedPhrase] = field(default_factory=list)
     echoes: list[Echo] = field(default_factory=list)
+    _locations: dict[str, list[_OccurrenceLocations]] = field(default_factory=dict, repr=False, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -141,6 +164,102 @@ class MotifReport:
             "repeated_phrases": [phrase.to_dict() for phrase in self.repeated_phrases],
             "echoes": [echo.to_dict() for echo in self.echoes],
         }
+
+    def to_display_dict(self) -> dict[str, Any]:
+        """Supply verified reader locations while leaving the public report stable."""
+        report = self.to_dict()
+        for key, locations in self._locations.items():
+            for row, location in zip(report[key], locations, strict=True):
+                row["occurrences"] = location.items
+                row["mapped_occurrence_count"] = location.count
+        return report
+
+
+@dataclass(frozen=True)
+class _ReaderBlock:
+    start: int
+    index: int
+    paragraph: ParagraphProfile | ParagraphText
+    view: CountingText
+    dialogue_re: re.Pattern[str]
+    word_re: re.Pattern[str]
+
+    @cached_property
+    def dialogue_context(self) -> tuple[list[EvidenceSpan], str]:
+        return extract_paragraph_dialogue_spans(
+            self.paragraph.text, self.view.text, self.view, self.dialogue_re, self.word_re
+        )
+
+
+@dataclass
+class _OccurrenceLocations:
+    items: list[dict[str, Any]] = field(default_factory=list)
+    count: int = 0
+
+    def add(self, blocks: Sequence[_ReaderBlock], start: int, end: int) -> None:
+        index = bisect_right(blocks, start, key=lambda block: block.start) - 1
+        if index < 0 or start >= end:
+            return
+        block = blocks[index]
+        left, right = start - block.start, end - block.start
+        mapped = block.view.source_span(left, right)
+        if mapped is None or mapped[0] >= mapped[1]:
+            return
+        self.count += 1
+        if len(self.items) < MAX_DISPLAY_OCCURRENCES:
+            occurrence = _make_occurrence(
+                block.index, block.paragraph, block.view, left, right, dialogue_context=block.dialogue_context
+            )
+            if occurrence is not None:
+                self.items.append(occurrence)
+
+
+def _reader_block_ranges(
+    text: str,
+    config: CorpusConfig,
+    chapter_prose: Mapping[int, str],
+    paragraphs: Sequence[ParagraphProfile | ParagraphText],
+    dialogue_re: re.Pattern[str],
+    word_re: re.Pattern[str],
+) -> dict[int, list[_ReaderBlock]]:
+    """Align the counted chapter projection to exact profiled line anchors."""
+    by_line = {(p.chapter_num, p.start_line, p.end_line): (index, p)
+               for index, p in enumerate(paragraphs)}
+    source = text.split(config.appendix_marker, 1)[0] if config.appendix_marker else text
+    line_offsets = [0, *accumulate(len(line) for line in source.splitlines(keepends=True))]
+    headings = chapter_heading_spans(source, config)
+    heading_lines = [line for _start, _end, line, _title in headings]
+    output: dict[int, list[_ReaderBlock]] = {}
+    for number, _title, body, heading_line in _chapter_spans(text, config):
+        next_heading = bisect_right(heading_lines, heading_line)
+        stop = headings[next_heading][0] if next_heading < len(headings) else len(source)
+        offset = source.rfind(body, line_offsets[heading_line - 1], stop)
+        if offset < 0 or source[offset + len(body):stop].strip():
+            continue
+        line_offset = bisect_left(line_offsets, offset)
+        if line_offsets[line_offset] != offset:
+            continue
+        chunks: list[str] = []
+        projected: list[_ReaderBlock] = []
+        cursor = 0
+        for raw in parse_markdown_blocks(body, _front_matter=False):
+            kind = raw["type"]
+            values = raw["paras"] if kind == "quote_block" else [raw["text"]] if kind in ("p", "list_item") else []
+            for value in values:
+                clean = counting_inline_text(value)
+                if not clean:
+                    continue
+                anchor = (number, line_offset + raw["start_line"], line_offset + raw["end_line"])
+                if kind != "quote_block" and anchor in by_line:
+                    index, paragraph = by_line[anchor]
+                    view = counting_view(paragraph.text)
+                    if paragraph.text == strip_inline_markup(value) and view.text == clean:
+                        projected.append(_ReaderBlock(cursor, index, paragraph, view, dialogue_re, word_re))
+                chunks.append(clean)
+                cursor += len(clean) + 2
+        if "\n\n".join(chunks) == chapter_prose[number]:
+            output[number] = projected
+    return output
 
 
 def _gaps(present: list[int]) -> int:
@@ -160,6 +279,8 @@ def motif_report(
     echo_window: int = DEFAULT_ECHO_WINDOW,
     echo_min_count: int = DEFAULT_ECHO_MIN_COUNT,
     top_echoes: int = DEFAULT_TOP_ECHOES,
+    *,
+    _paragraphs: Sequence[ParagraphProfile | ParagraphText] | None = None,
 ) -> MotifReport:
     """Motif presence and repetition signals (deterministic, offline).
 
@@ -177,20 +298,43 @@ def motif_report(
         number: prose_text(body, _front_matter=False)
         for number, _title, body in chapters
     }
-    chapter_tokens = {
-        number: [token.lower() for token in word_re.findall(body)]
-        for number, body in chapter_bodies.items()
-    }
+    reader_blocks: dict[int, list[_ReaderBlock]] = {}
+    token_spans: dict[int, list[tuple[int, int]]] = {}
+    chapter_tokens: dict[int, list[str]] = {}
+    if _paragraphs is None:
+        chapter_tokens = {number: [token.lower() for token in word_re.findall(body)]
+                          for number, body in chapter_bodies.items()}
+    else:
+        reader_blocks = _reader_block_ranges(
+            text, config, chapter_bodies, _paragraphs, compile_pattern(resolved.dialogue_regex), word_re
+        )
+        token_group = 1 if word_re.groups == 1 else 0
+        for number, body in chapter_bodies.items():
+            words, spans = [], []
+            for match in word_re.finditer(body):
+                words.append((match.group(token_group) or "").lower())
+                spans.append(match.span(token_group))
+            chapter_tokens[number] = words
+            token_spans[number] = spans
     total_words = sum(len(tokens) for tokens in chapter_tokens.values())
 
     motif_items: list[MotifPresence] = []
+    motif_locations: dict[str, _OccurrenceLocations] = {}
     for name, pattern in patterns.items():
         compiled = compile_pattern(pattern)
         per_chapter: dict[int, int] = {}
+        locations = _OccurrenceLocations()
         for number, body in chapter_bodies.items():
-            hits = len(compiled.findall(body))
+            if _paragraphs is None:
+                hits = len(compiled.findall(body))
+            else:
+                hits = 0
+                for match in compiled.finditer(body):
+                    hits += 1
+                    locations.add(reader_blocks.get(number, ()), *match.span())
             if hits:
                 per_chapter[number] = hits
+        motif_locations[name] = locations
         present = sorted(per_chapter)
         mentions = sum(per_chapter.values())
         motif_items.append(
@@ -214,6 +358,7 @@ def motif_report(
     phrase_counts: Counter[str] = Counter()
     echo_items: list[Echo] = []
     local_positions: dict[tuple[str, int], list[int]] = {}
+    phrase_positions: dict[int, dict[str, list[int]]] = {}
     min_echo_cluster = max(2, echo_min_count)
 
     for number, tokens in chapter_tokens.items():
@@ -231,6 +376,8 @@ def motif_report(
             phrase_chapters.setdefault(phrase, set()).add(number)
             occurrences.setdefault(phrase, []).append(index)
 
+        if _paragraphs is not None:
+            phrase_positions[number] = occurrences
         for phrase, positions in occurrences.items():
             if len(positions) < echo_min_count:
                 continue
@@ -298,6 +445,35 @@ def motif_report(
     echo_items.sort(key=lambda e: (-e.count, e.chapter, e.term))
     echo_items = echo_items[:top_echoes]
 
+    def add_ngram_locations(locations: _OccurrenceLocations, chapter: int, positions: Sequence[int]) -> None:
+        if not positions or not reader_blocks.get(chapter) or phrase_size < 1:
+            return
+        spans = token_spans[chapter]
+        for position in positions:
+            phrase_spans = spans[position : position + phrase_size]
+            if any(start < 0 or start >= end for start, end in phrase_spans) or any(
+                first[1] > second[0] for first, second in pairwise(phrase_spans)
+            ):
+                continue
+            locations.add(reader_blocks[chapter], phrase_spans[0][0], phrase_spans[-1][1])
+
+    display_locations: dict[str, list[_OccurrenceLocations]] = {}
+    if _paragraphs is not None:
+        repeated_locations, echo_locations = [], []
+        for item in repeated:
+            locations = _OccurrenceLocations()
+            for number in item.chapters:
+                add_ngram_locations(locations, number, phrase_positions[number][item.phrase])
+            repeated_locations.append(locations)
+        for echo in echo_items:
+            locations = _OccurrenceLocations()
+            add_ngram_locations(locations, echo.chapter, local_positions[(echo.term, echo.chapter)])
+            echo_locations.append(locations)
+        display_locations = {
+            "motifs": [motif_locations[item.name] for item in motif_items],
+            "repeated_phrases": repeated_locations,
+            "echoes": echo_locations,
+        }
     return MotifReport(
         language=resolved.key,
         chapters=len(chapters),
@@ -305,4 +481,151 @@ def motif_report(
         top_words=word_counts.most_common(top_words),
         repeated_phrases=repeated,
         echoes=echo_items,
+        _locations=display_locations,
     )
+
+
+def _occurrence_excerpt(text: str, start: int, end: int, radius: int = 36) -> str:
+    left = max(0, start - radius)
+    right = min(len(text), end + radius)
+    prefix = ("…" if left > 0 else "") + text[left:start].replace("\n", " ")
+    quote = text[start:end].replace("\n", " ")
+    suffix = text[end:right].replace("\n", " ") + ("…" if right < len(text) else "")
+    return f"{prefix}{quote}{suffix}".strip()
+
+
+def _is_word_char(char: str) -> bool:
+    return char == "_" or unicodedata.category(char)[0] in ("L", "N")
+
+
+class InvalidSearchPattern(ValueError):
+    """A regular expression supplied for manuscript search could not be compiled."""
+
+
+def compile_search_pattern(
+    query: str,
+    *,
+    is_regex: bool = False,
+    case_sensitive: bool = False,
+) -> re.Pattern[str]:
+    """Compile a literal multi-word phrase or optional regex for manuscript search."""
+    if not isinstance(query, str):
+        raise ValueError("Search query must be a string")
+    trimmed = query.strip()
+    if not trimmed:
+        raise ValueError("Search query must not be empty")
+    flags = 0 if case_sensitive else re.IGNORECASE
+    if is_regex:
+        try:
+            return re.compile(trimmed, flags)
+        except re.error as exc:
+            raise InvalidSearchPattern(f"Invalid regular expression: {exc}") from exc
+    normalized = unicodedata.normalize("NFC", trimmed)
+    parts = normalized.split()
+    body = r"\s+".join(re.escape(part) for part in parts)
+    prefix = r"(?<!\w)" if _is_word_char(normalized[0]) else ""
+    suffix = r"(?!\w)" if _is_word_char(normalized[-1]) else ""
+    return re.compile(prefix + body + suffix, flags)
+
+
+def _make_occurrence(
+    paragraph_idx: int,
+    paragraph: Any,
+    view: CountingText,
+    start: int,
+    end: int,
+    *,
+    dialogue_context: tuple[Sequence[EvidenceSpan], str] | None = None,
+) -> dict[str, Any] | None:
+    mapped = view.source_span(start, end)
+    if mapped is None:
+        return None
+    src_start, src_end = mapped
+    if src_end <= src_start:
+        return None
+    display = str(paragraph.text)
+    occurrence: dict[str, Any] = {
+        "paragraph_id": f"p-{paragraph_idx}",
+        "chapter": int(paragraph.chapter_num),
+        "start_line": int(paragraph.start_line),
+        "end_line": int(paragraph.end_line),
+        "start": int(src_start),
+        "end": int(src_end),
+        "offset_unit": "unicode_codepoint",
+        "quote": display[src_start:src_end],
+        "excerpt": _occurrence_excerpt(display, src_start, src_end),
+    }
+    if dialogue_context is not None:
+        d_spans, d_status = dialogue_context
+        q_ctx = classify_span_quotation_context(
+            src_start, src_end, d_spans, dialogue_status=d_status
+        )
+        if q_ctx is not None:
+            occurrence["quotation_context"] = q_ctx
+    return occurrence
+
+
+def search_manuscript(
+    text: str,
+    query: str,
+    config: CorpusConfig | None = None,
+    *,
+    paragraphs: Sequence[Any] | None = None,
+    is_regex: bool = False,
+    case_sensitive: bool = False,
+    limit: int | None = 500,
+) -> dict[str, Any]:
+    """Search manuscript paragraphs for a phrase or regex with exact offsets and quotation context."""
+    if limit is not None and limit < 1:
+        raise ValueError("Search limit must be at least 1")
+    compiled = compile_search_pattern(
+        query, is_regex=is_regex, case_sensitive=case_sensitive
+    )
+    cfg = config or CorpusConfig()
+    resolved = resolve_language(cfg, sample_text=text)
+    word_re = compile_word_pattern(resolved.word_regex)
+    dialogue_re = compile_pattern(resolved.dialogue_regex)
+
+    if paragraphs is None:
+        from .style_profile import ParagraphProfiler
+
+        paragraphs = ParagraphProfiler(cfg, sample_text=text).text_blocks(
+            parse_markdown_blocks(text, cfg)
+        )
+
+    occurrences: list[dict[str, Any]] = []
+    total_matches = 0
+    for idx, paragraph in enumerate(paragraphs):
+        display = str(paragraph.text)
+        view = counting_view(display)
+        clean = view.text
+        matches = [match.span() for match in compiled.finditer(clean) if match.end() > match.start()]
+        if not matches:
+            continue
+        d_ctx: tuple[list[EvidenceSpan], str] | None = None
+        for s, e in matches:
+            if limit is not None and len(occurrences) >= limit:
+                mapped = view.source_span(s, e)
+                if mapped is not None and mapped[1] > mapped[0]:
+                    total_matches += 1
+                continue
+            if d_ctx is None:
+                d_ctx = extract_paragraph_dialogue_spans(
+                    display, clean, view, dialogue_re, word_re
+                )
+            occ = _make_occurrence(idx, paragraph, view, s, e, dialogue_context=d_ctx)
+            if occ is not None:
+                total_matches += 1
+                occurrences.append(occ)
+
+    return {
+        "schema_version": "lixity-motif-search/1",
+        "query": query.strip(),
+        "regex": bool(is_regex),
+        "case_sensitive": bool(case_sensitive),
+        "language": resolved.key,
+        "offset_unit": "unicode_codepoint",
+        "total_matches": total_matches,
+        "truncated": limit is not None and total_matches > len(occurrences),
+        "occurrences": occurrences,
+    }

@@ -299,6 +299,7 @@ class ParagraphProfiler:
 
     def profile_blocks(
         self, blocks: list[dict[str, Any]], *, evidence: dict[int, ParagraphEvidence] | None = None,
+        include_reader_details: bool = False,
     ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
         """Builds paragraph and chapter profiles from semantic blocks (with line anchors)."""
         paragraphs: list[ParagraphProfile] = []
@@ -413,7 +414,10 @@ class ParagraphProfiler:
                 tense_analysis=observation,
             )
             if evidence is not None:
-                evidence[len(paragraphs)] = self._matcher.evidence(clean, paragraph.text, counts, tense_spans=tense_spans)
+                evidence[len(paragraphs)] = self._matcher.evidence(
+                    clean, paragraph.text, counts, tense_spans=tense_spans,
+                    include_reader_details=include_reader_details,
+                )
                 evidence[len(paragraphs)]["tense"]["trigger"] = profile.tense_trigger
                 if profile.tense_analysis is not None:
                     evidence[len(paragraphs)]["tense"]["grammar"] = profile.tense_analysis

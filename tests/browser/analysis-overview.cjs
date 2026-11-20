@@ -150,7 +150,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
       }
       if (locale === 'en' || locale === 'de') await navigation.screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
-      for (const target of ['flags','pacing','scenes','dialogue','dist','showing','characters','motifs','style','matrix']) {
+      for (const target of ['flags','pacing','scenes','dialogue','showing','characters','motifs','style','matrix']) {
         await selectSection(target);
       }
       await selectSection('showing');
@@ -301,7 +301,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
     await report.locator('#kpi-lexis-drawer summary').click();
     assert.ok(await report.locator('#kpi-lexis-drawer .kpi').first().isVisible(),
       'Vocabulary measurements are accessible without JavaScript');
-    assert.equal(await report.locator('#analysis-sections a').count(),10);
+    assert.equal(await report.locator('#analysis-sections a').count(),9);
+    assert.equal(await report.locator('#pacing #dist').count(),1, 'Sentence lengths share the rhythm view and preserve their anchor');
     assert.ok(await report.locator('#analysis-sections').isVisible(), 'Static reports retain the same real section links without JavaScript');
     for (const selector of [
       '#matrix tbody tr a[href^="#ch-"]', '#characters tbody tr a[href^="#ch-"]',

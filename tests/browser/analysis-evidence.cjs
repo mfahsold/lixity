@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, browserLocales} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, browserLocales, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 const root = path.resolve(__dirname, '../..');
@@ -20,6 +20,9 @@ from lixity.ui import render_dashboard
 from lixity.api import dashboard
 text = '# Synthetic evidence\\n\\n😀 I feel the gate. The gate was opened slowly. "I can wait," she said. The organization might return. Wait. ' + 'The patient keeper watches the garden and the quiet river. ' * 8
 analysis = analyze_document(text, CorpusConfig(language='en'), resolve_thresholds(project_config={}), include_evidence=True)
+sticky_text = '# Synthetic sticky evidence\\n\\n🧭 The bell was on the wall and I was by the door. The bell rang.'
+sticky = analyze_document(sticky_text, CorpusConfig(language='en', sticky_min_words=9, sticky_glue_pct=55.125),
+    resolve_thresholds(project_config={}), include_evidence=True)
 result = {}
 result['static'] = dashboard(text, language='en', title='Synthetic static comparison')
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -27,6 +30,9 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         fingerprint=analysis.fingerprint, paragraph_evidence=analysis.evidence, title='Synthetic evidence', controls=True,
         labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}, language_key=locale)
     result['native-' + locale] = page
+    result['sticky-' + locale] = render_dashboard(sticky.chapters, sticky.paragraphs, metrics=sticky.metrics,
+        fingerprint=sticky.fingerprint, paragraph_evidence=sticky.evidence, title='Synthetic sticky evidence', controls=True,
+        labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}, language_key=locale)
     if locale == 'en': result['native'] = page
     # Independent transport fixture: hand-selected spans include an astral prefix.
     # This exercises the UI contract without reimplementing the shared detector.
@@ -38,7 +44,11 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         layers = {}
         for key, kind, match_text, count in (('asl','sentence','😀 I feel the gate.',1), ('dialogue','dialogue','I can wait',3), ('function','word','the',1), ('filter','pattern','feel',1), ('modal','word','can',1), ('nominal','word','organization',1), ('passive','pattern','was opened',1)):
             start = paragraph.index(match_text)
-            layers[key] = {'status':'available', 'kind':kind, 'count':count, 'mapped_count':count, 'spans':[{'start':start,'end':start+len(match_text),'count':count}]}
+            span = {'start':start,'end':start+len(match_text),'count':count}
+            quotation_context = {'filter': 'outside_quotation', 'modal': 'in_quotation'}.get(key)
+            if quotation_context is not None:
+                span['quotation_context'] = quotation_context
+            layers[key] = {'status':'available', 'kind':kind, 'count':count, 'mapped_count':count, 'spans':[span]}
         evidence = {'schema_version':'paragraph-evidence/1', 'paragraph_sha256':hashlib.sha256(paragraph.encode()).hexdigest(),
             'offset_unit':'unicode_codepoint', 'layers': layers}
         entry[3:4] = [evidence]
@@ -162,10 +172,14 @@ async function explainFromMenu(page, keyboard = false) {
 }
 async function menuInspect(page, keyboard = false) {
   const panel = page.locator('.ptext').filter({hasText:'😀 I feel'}).first();
+  const trigger = panel.locator('.reader-paragraph-actions');
+  await trigger.scrollIntoViewIfNeeded();
+  // Opening the menu and moving the viewport are separate user actions.
+  await settle(page);
   if (keyboard) {
-    await panel.locator('.reader-paragraph-actions').focus();
+    await trigger.focus();
     await page.keyboard.press('Enter');
-  } else await panel.locator('.reader-paragraph-actions').click();
+  } else await trigger.click();
   await explainFromMenu(page, keyboard);
   await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
 }
@@ -202,6 +216,9 @@ async function localizedSentenceCards(browser) {
       assert.equal(await card.locator('.analysis-evidence-sentence-words').textContent(), count + ' ' + words[count === 1 ? 0 : 1], locale + ' native tokenizer count and localized unit');
       assert.equal(await card.locator('.analysis-evidence-number').textContent(), String(count), 'sentence count has a distinct numeric presentation');
       assert.equal(await card.locator('.analysis-evidence-paragraph').count(), 1, 'paragraph value is explicitly separated from the selected sentence');
+      const question = await page.evaluate(() => uiLabel('evidence_review_asl'));
+      assert.ok((await card.locator('.analysis-evidence-explanation').textContent()).includes(question),
+        'reading question is visible without opening the guide');
       assert.equal(await card.locator('.analysis-evidence-guide').evaluate(node => node.open), false, 'method and coverage stay secondary by default');
       const selection = await card.evaluate(node => {
         const quote = node.querySelector('blockquote').getBoundingClientRect();
@@ -214,6 +231,18 @@ async function localizedSentenceCards(browser) {
         assert.ok(await card.evaluate(node => node.getBoundingClientRect().height < 408),
           'a short sentence explanation leaves viewport room for reading');
       }
+      if (locale === 'en' && width === 320 && count === 1) {
+        const axePath = path.join(playwrightModule, '..', 'axe-core', 'axe.min.js');
+        if (fs.existsSync(axePath)) {
+          await page.addScriptTag({path:axePath});
+          const passed = await card.evaluate(async node => {
+            const badge = node.querySelector('.analysis-evidence-quote-context');
+            const results = await axe.run(node, {runOnly:['color-contrast']});
+            return results.passes.some(rule => rule.nodes.some(item => node.querySelector(item.target[0]) === badge));
+          });
+          assert.equal(passed, true, 'The quotation context badge meets text contrast in dark mode');
+        } else console.log('axe-core unavailable; quotation context contrast audit skipped');
+      }
       assert.equal(await card.locator('.analysis-evidence-close').evaluate(node => {const box=node.getBoundingClientRect(); return box.width >= 44 && box.height >= 44;}), true, 'compact close remains an accessible touch target');
       assert.equal(await card.evaluate(node => {const box=node.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;}), true, 'native localized card remains inside viewport');
       if (count === 4) await page.screenshot({path:path.join(artifacts, `sentence-${locale}-${width}.png`)});
@@ -221,6 +250,69 @@ async function localizedSentenceCards(browser) {
     }
     assert.deepEqual(errors, []); await page.close();
     console.log(`${locale}/${width}: native sentence counts and presentation passed`);
+  }
+}
+
+async function localizedContributions(browser) {
+  const quote = '🧭 The bell was on the wall and I was by the door.';
+  const counted = ['The', 'was', 'on', 'the', 'and', 'I', 'was', 'by', 'the'];
+  for (const locale of ['de', 'en', 'fr', 'es', 'it', 'pt', 'nl']) {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, hasTouch:width === 320,
+        reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
+      try {
+        await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures['sticky-' + locale]}));
+        await page.goto('http://localhost/');
+        await page.locator('#manuscript-analysis-toggle').click();
+        await selectMetric(page, 'sticky');
+        assert.equal(await page.locator('.reader-comparison-controls').isVisible(), false);
+        async function openRange(text) {
+          await page.locator('.ptext-inner > p').first().scrollIntoViewIfNeeded();
+          await page.waitForFunction(text => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => range.toString() === text), text);
+          const at = await page.evaluate(text => {
+            const range = [...CSS.highlights.get('lixity-analysis-evidence')].find(range => range.toString() === text);
+            const panel = range.startContainer.parentElement.closest('.ptext');
+            setPassageScrollMargin(panel);
+            const clearance = parseFloat(getComputedStyle(panel).scrollMarginTop) || 12;
+            window.scrollBy({top:range.getClientRects()[0].top - clearance,behavior:'instant'});
+            const rect = range.getClientRects()[0];
+            return {x:rect.x + Math.min(20, rect.width / 2), y:rect.y + rect.height / 2};
+          }, text);
+          await settle(page);
+          if (width === 320) await page.touchscreen.tap(at.x, at.y);
+          else await page.mouse.click(at.x, at.y);
+          const card = page.locator('#analysis-evidence-card');
+          await card.waitFor({state:'visible'});
+          return card;
+        }
+        const card = await openRange(quote);
+        assert.equal(await card.locator('blockquote').textContent(), quote, 'marking preserves the original sentence');
+        assert.deepEqual(await card.locator('blockquote mark').allTextContents(), counted);
+        const expected = await page.evaluate(() => {
+          const format = new Intl.NumberFormat(document.documentElement.lang, {style:'percent',maximumFractionDigits:3});
+          return {
+            count: uiFormat('evidence_sticky_count', {count:9, words:12, percent:format.format(0.75)}),
+            rule: uiFormat('evidence_sticky_rule', {words:9, percent:format.format(0.55125)}),
+            review: uiLabel('evidence_review_sticky'),
+          };
+        });
+        const explanation = await card.locator('.analysis-evidence-explanation').textContent();
+        assert.ok(Object.values(expected).every(text => explanation.includes(text)) && !explanation.includes('evidence_'));
+        assert.deepEqual(await page.evaluate(() => [...CSS.highlights.get('lixity-analysis-contribution')].map(range => range.toString())), counted);
+        assert.ok(await card.evaluate(node => {const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight;}));
+        assert.ok(await card.evaluate(node => {
+          const question = node.querySelector('.analysis-evidence-explanation > p:last-child');
+          return question.getBoundingClientRect().bottom <= node.getBoundingClientRect().bottom;
+        }), `${locale}/${width}: the reading question fits before scrolling the card`);
+        if (locale === 'de' || locale === 'en') await page.screenshot({path:path.join(artifacts, `sticky-${locale}-${width}.png`)});
+        await page.keyboard.press('Escape');
+        assert.equal(await page.evaluate(() => CSS.highlights.has('lixity-analysis-contribution')), false);
+        await selectMetric(page, 'echo');
+        await openRange('bell');
+        assert.deepEqual(await page.evaluate(() => [...CSS.highlights.get('lixity-analysis-related')].map(range => range.toString())), ['bell']);
+        assert.equal(await card.locator('.analysis-evidence-explanation .analysis-evidence-value').count(), 1);
+      } finally {await page.close();}
+    }
   }
 }
 
@@ -626,6 +718,7 @@ async function metricPreferences(browser) {
     if (process.env.LIXITY_LEGENDS_ONLY) return;
     await pendingInspectorCards(browser);
     await localizedSentenceCards(browser);
+    await localizedContributions(browser);
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
       await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.comparable}));
@@ -768,6 +861,8 @@ async function metricPreferences(browser) {
           'opening on touch does not activate the card with the same tap');
       }
       assert.equal(await page.locator('#analysis-evidence-card blockquote').textContent(), 'feel');
+      assert.equal(await page.locator('#analysis-evidence-card .analysis-evidence-quote-context').textContent(),
+        await page.evaluate(() => uiLabel('evidence_quote_outside_quotation')));
       assert.equal(await page.evaluate(() => {
         const rect = document.getElementById('analysis-evidence-card').getBoundingClientRect();
         return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight;
@@ -779,6 +874,17 @@ async function metricPreferences(browser) {
       assert.equal(await page.locator('#analysis-evidence-card').evaluate(node => {const box=node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight;}), true, 'expanded heuristic guide remains bounded');
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false);
+      await selected(page, 'modal');
+      await page.evaluate(() => window.LixityAnalysisEvidence.inspectSpan(document.querySelector('.ptext'), 'modal', 0));
+      await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
+      assert.equal(await page.locator('#analysis-evidence-card .analysis-evidence-quote-context').textContent(),
+        await page.evaluate(() => uiLabel('evidence_quote_in_quotation')));
+      await page.keyboard.press('Escape');
+      await selected(page, 'nominal');
+      assert.equal(await page.evaluate(() => LixityAnalysisEvidence.inspectSpan(document.querySelector('.ptext'), 'nominal', 0)), true);
+      assert.equal(await page.locator('#analysis-evidence-card .analysis-evidence-quote-context').getAttribute('data-quote-context'), 'unknown');
+      await page.keyboard.press('Escape');
+      await selected(page, 'filter');
       if (width === 1440) {
         await paragraph.scrollIntoViewIfNeeded();
         const contextAt = await point(page);

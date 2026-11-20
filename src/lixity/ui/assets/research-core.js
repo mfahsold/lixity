@@ -47,23 +47,7 @@ function researchReferenceLabel(kind, ref, envelope) {
 
 function researchStatus(message, ok) {
   var text = ok === "loading" ? (message || uiLabel("research_loading")) : message;
-  if (typeof window !== "undefined" && window.LixityComponents && typeof window.LixityComponents.setStatus === "function") {
-    window.LixityComponents.setStatus("research-status-bar", text, ok, {prefix: true});
-    return;
-  }
-  var el = document.getElementById("research-status-bar");
-  if (!el) return;
-  if (ok === "loading") {
-    el.className = "ctl-status loading";
-    el.textContent = text;
-  } else if (!message) {
-    el.className = "ctl-status";
-    el.textContent = "";
-  } else {
-    var isOk = Boolean(ok);
-    el.className = "ctl-status " + (isOk ? "ok" : "err");
-    el.textContent = (isOk ? "✓ " : "✗ ") + message;
-  }
+  window.LixityComponents.setStatus("research-status-bar", text, ok, {prefix: true});
 }
 
 var researchStatusReads = new Map(), researchStatusReadContext = null;
@@ -78,8 +62,7 @@ async function researchApiPost(action, payload) {
   invalidateResearchStatusReads();
   var data;
   try {
-    data = await jsonApi(API + "/" + action, {method: "POST",
-      headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload || {})});
+    data = await window.LixityComponents.postJson(API + "/" + action, payload || {});
   } finally {
     invalidateResearchStatusReads();
   }
@@ -118,14 +101,13 @@ function researchFormStatus(button, message, state) {
   var identifier = button.id + "-status";
   var status = document.getElementById(identifier);
   if (!status) {
-    status = document.createElement("p");
-    status.id = identifier;
-    status.setAttribute("role", "status");
-    status.setAttribute("aria-live", "polite");
+    status = window.LixityComponents.el("p", {
+      id: identifier,
+      attrs: { role: "status", "aria-live": "polite" }
+    });
     (button.closest(".row") || button).after(status);
   }
-  status.className = "ctl-status research-form-status" + (state ? " " + state : "");
-  status.textContent = message || "";
+  window.LixityComponents.setStatus(status, message, state, { baseClass: "ctl-status research-form-status" });
 }
 
 function fieldSnapshot(identifiers) {

@@ -94,6 +94,32 @@ def help_badge(help_text: str, aria_label: str) -> str:
     )
 
 
+def close_button(
+    close_label: str,
+    *,
+    control_id: str = "",
+    css_class: str = "ctl",
+    help_text: str = "",
+    extra_attrs: str = "",
+) -> str:
+    """Render a standardized accessible close button with Escape key shortcut."""
+    esc_label = esc(close_label)
+    id_attr = f' id="{esc(control_id, quote=True)}"' if control_id else ""
+    help_attr = f' data-help="{esc(help_text, quote=True)}"' if help_text else ""
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    return (
+        f'<button type="button" class="{esc(css_class, quote=True)}"{id_attr}{attrs} '
+        f'aria-label="{esc_label}" title="{esc_label}"{help_attr} '
+        'aria-keyshortcuts="Escape">✕</button>'
+    )
+
+
+def modal_footer(buttons_html: str, *, footer_id: str = "") -> str:
+    """Render a standardized modal footer action strip."""
+    id_attr = f' id="{esc(footer_id, quote=True)}"' if footer_id else ""
+    return f'<div class="modal-footer"{id_attr}>{buttons_html}</div>'
+
+
 def modal_shell(
     modal_id: str,
     title_id: str,
@@ -109,16 +135,14 @@ def modal_shell(
 ) -> str:
     """Render the shared <dialog class="lixity-modal"> shell."""
     attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
-    close_attr_str = f" {close_attrs.strip()}" if close_attrs.strip() else ""
     title_focus = ' tabindex="-1"' if focusable_title else ""
+    close_btn = close_button(close_label, css_class="modal-close", extra_attrs=close_attrs)
     return (
         f'<dialog class="lixity-modal" id="{esc(modal_id, quote=True)}"{attrs} '
         f'closedby="any" aria-labelledby="{esc(title_id, quote=True)}">'
         '<div class="modal-card"><div class="modal-header">'
         f'<{title_tag} id="{esc(title_id, quote=True)}"{title_focus}>{title_html}</{title_tag}>'
-        f'<button type="button" class="modal-close"{close_attr_str} '
-        f'aria-label="{esc(close_label, quote=True)}" title="{esc(close_label, quote=True)}" '
-        'aria-keyshortcuts="Escape">✕</button>'
+        f'{close_btn}'
         f'</div>{body_html}{footer_html}</div></dialog>'
     )
 
@@ -211,11 +235,15 @@ def pane_ribbon(
     ) if items else ""
 
 
-def chapter_link(chapter: int, text: object, *, flags: bool = False, css_class: str = "") -> str:
-    """Link to a chapter with the same optional flag context as JS navigation."""
+def chapter_link(
+    chapter: int, text: object, *, flags: bool = False, css_class: str = "", layer: str = "",
+) -> str:
+    """Link to a chapter with optional reader flag or measurement context."""
     target = f"#ch-{int(chapter)}"
     classes = f' class="chapter-link{(" " + esc(css_class)) if css_class else ""}"'
     context = ' data-flags="1"' if flags else ""
+    if layer:
+        context += f' data-layer="{esc(layer)}"'
     return f'<a{classes} href="{target}" data-jump="{target}"{context}>{esc(text)}</a>'
 
 
@@ -312,11 +340,223 @@ def license_terms(labels: Mapping[str, str] | None) -> str:
     )
 
 
-def panel_start(panel_id: str, labels: Mapping[str, str] | None, title_key: str) -> str:
+def panel_start(
+    panel_id: str,
+    labels: Mapping[str, str] | None,
+    title_key: str,
+    *,
+    extra_class: str = "",
+    help_key: str | None = None,
+    help_fields: Mapping[str, str] | None = None,
+    badge_html: str = "",
+    heading_id: str = "",
+    extra_attrs: str = "",
+) -> str:
+    """Open a canonical ``<section class="panel">`` with localized heading."""
+    classes = f"panel {extra_class.strip()}" if extra_class.strip() else "panel"
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    title = esc(label(labels, title_key))
+    heading_inner = help_term(labels, help_key, title, fields=help_fields) if help_key else title
+    if badge_html:
+        heading_inner = f"{heading_inner} {badge_html}"
+    h_id = f' id="{esc(heading_id, quote=True)}"' if heading_id else ""
     return (
-        f'<section class="panel" id="{esc(panel_id)}">'
-        f'<h2>{esc(label(labels, title_key))}</h2>'
+        f'<section class="{esc(classes, quote=True)}" id="{esc(panel_id, quote=True)}"{attrs}>'
+        f'<h2{h_id}>{heading_inner}</h2>'
     )
+
+
+def badge(
+    text: object,
+    *,
+    variant: str = "neutral",
+    css_class: str = "",
+    extra_attrs: str = "",
+) -> str:
+    """Render a standardized inline badge/chip."""
+    classes = ["badge"]
+    if variant:
+        classes.append(f"badge-{variant}")
+    if css_class:
+        classes.append(css_class)
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    return f'<span class="{esc(" ".join(classes), quote=True)}"{attrs}>{esc(text)}</span>'
+
+
+def table_wrap_start(
+    aria_label: str = "",
+    *,
+    extra_class: str = "",
+    wrap_id: str = "",
+    aria_labelledby: str = "",
+    table_id: str = "",
+    caption_html: str = "",
+) -> str:
+    """Open a scrollable, keyboard-focusable table region."""
+    classes = f"table-wrap {extra_class.strip()}" if extra_class.strip() else "table-wrap"
+    id_attr = f' id="{esc(wrap_id, quote=True)}"' if wrap_id else ""
+    if aria_labelledby:
+        label_attr = f' aria-labelledby="{esc(aria_labelledby, quote=True)}"'
+    elif aria_label:
+        label_attr = f' aria-label="{esc(aria_label, quote=True)}"'
+    else:
+        label_attr = ""
+    region_attrs = ' tabindex="0" role="region"' if (aria_label or aria_labelledby) else ""
+    tbl_id = f' id="{esc(table_id, quote=True)}"' if table_id else ""
+    return f'<div class="{esc(classes, quote=True)}"{id_attr}{region_attrs}{label_attr}><table{tbl_id}>{caption_html}'
+
+
+def status_banner(
+    element_id: str = "",
+    text_html: str = "",
+    *,
+    css_class: str = "ctl-status",
+    tag: str = "p",
+    role: str = "status",
+    aria_live: str = "polite",
+    hidden: bool = False,
+    extra_attrs: str = "",
+) -> str:
+    """Render an accessible live status or error banner."""
+    cls_attr = f' class="{esc(css_class, quote=True)}"' if css_class else ""
+    id_attr = f' id="{esc(element_id, quote=True)}"' if element_id else ""
+    role_attr = f' role="{esc(role, quote=True)}"' if role else ""
+    live_attr = f' aria-live="{esc(aria_live, quote=True)}"' if aria_live else ""
+    hidden_attr = ' hidden="hidden"' if hidden else ""
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    return (
+        f'<{tag}{cls_attr}{id_attr}{role_attr}{live_attr}{hidden_attr}{attrs}>'
+        f"{text_html}</{tag}>"
+    )
+
+
+def empty_state(
+    text_html: str,
+    *,
+    css_class: str = "hint",
+    badge_text: str = "",
+    role: str = "",
+) -> str:
+    """Render a consistent empty or unavailable state notice."""
+    role_attr = f' role="{esc(role, quote=True)}"' if role else ""
+    if badge_text:
+        return (
+            f'<div class="{esc(css_class, quote=True)}"{role_attr}>'
+            f'{badge(badge_text, variant="neutral")} <span>{text_html}</span></div>'
+        )
+    return f'<p class="{esc(css_class, quote=True)}"{role_attr}>{text_html}</p>'
+
+
+def compact_control(
+    label_text: str,
+    icon_name: str,
+    *,
+    control_id: str = "",
+    tag: str = "button",
+    icon_size: int = 16,
+    css_class: str = "ctl reader-compact-control",
+    help_text: str = "",
+    pressed: bool | None = None,
+    expanded: bool | None = None,
+    controls_id: str = "",
+    keyshortcuts: str = "",
+    label_sr_only: bool = False,
+    disabled: bool = False,
+    extra_attrs: str = "",
+) -> str:
+    """Render an icon + label compact control (button or details summary)."""
+    esc_label = esc(label_text)
+    id_attr = f' id="{esc(control_id, quote=True)}"' if control_id else ""
+    type_attr = ' type="button"' if tag == "button" else ""
+    pressed_attr = f' aria-pressed="{str(pressed).lower()}"' if pressed is not None else ""
+    expanded_attr = f' aria-expanded="{str(expanded).lower()}"' if expanded is not None else ""
+    controls_attr = f' aria-controls="{esc(controls_id, quote=True)}"' if controls_id else ""
+    shortcuts_attr = f' aria-keyshortcuts="{esc(keyshortcuts, quote=True)}"' if keyshortcuts else ""
+    help_attr = f' data-help="{esc(help_text, quote=True)}"' if help_text else ""
+    disabled_attr = " disabled" if disabled else ""
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    label_cls = "reader-control-label sr-only" if label_sr_only else "reader-control-label"
+    icon_html = ui_icon(icon_name, size=icon_size)
+    return (
+        f'<{tag} class="{esc(css_class, quote=True)}"{type_attr}{id_attr}'
+        f'{pressed_attr}{expanded_attr}{controls_attr}{shortcuts_attr}'
+        f' aria-label="{esc_label}" title="{esc_label}"{help_attr}{disabled_attr}{attrs}>'
+        f'<span class="reader-control-icon" aria-hidden="true">{icon_html}</span>'
+        f'<span class="{label_cls}">{esc_label}</span></{tag}>'
+    )
+
+
+def form_field(
+    control_id: str,
+    label_html: str,
+    control_html: str,
+    *,
+    extra_class: str = "",
+    label_class: str = "form-label",
+    note_html: str = "",
+) -> str:
+    """Render a labeled field wrapper using the shared ``setting-field`` layout."""
+    classes = f"setting-field {extra_class.strip()}" if extra_class.strip() else "setting-field"
+    lbl_cls = f' class="{esc(label_class, quote=True)}"' if label_class else ""
+    return (
+        f'<div class="{esc(classes, quote=True)}">'
+        f'<label{lbl_cls} for="{esc(control_id, quote=True)}">{label_html}</label>'
+        f'{control_html}{note_html}</div>'
+    )
+
+
+def dist_row(
+    chapter_num: int,
+    label_text: str,
+    bar_pct: float,
+    value_text: str,
+    *,
+    layer: str = "",
+    bar_class: str = "bar",
+    bar_inner_class: str = "",
+    title_text: str = "",
+    unavailable: bool = False,
+) -> str:
+    """Render one chapter distribution bar row shared by narration panels."""
+    if unavailable:
+        return (
+            f'<div class="row unavailable" title="{esc(title_text, quote=True)}">'
+            f'<span class="label">{esc(label_text)}</span>'
+            f'<span class="{esc(bar_class, quote=True)}"></span>'
+            f'<span class="val">{esc(value_text)}</span>'
+            "</div>"
+        )
+    layer_attr = f' data-layer="{esc(layer, quote=True)}"' if layer else ""
+    inner_cls = f' class="{esc(bar_inner_class, quote=True)}"' if bar_inner_class else ""
+    aria = ' aria-hidden="true"' if "signal-bar" in bar_class else ""
+    return (
+        f'<div class="row" data-jump="#ch-{int(chapter_num)}"{layer_attr} '
+        f'title="{esc(title_text, quote=True)}">'
+        f'{chapter_link(chapter_num, label_text, css_class="label", layer=layer)}'
+        f'<span class="{esc(bar_class, quote=True)}"{aria}>'
+        f'<i{inner_cls} style="width:{max(0.0, min(100.0, bar_pct)):.1f}%"></i></span>'
+        f'<span class="val">{value_text}</span>'
+        "</div>"
+    )
+
+
+def action_strip(
+    items_html: str,
+    *,
+    css_class: str = "row",
+    strip_id: str = "",
+    aria_label: str = "",
+    role: str = "",
+    hidden: bool = False,
+    extra_attrs: str = "",
+) -> str:
+    """Render a standardized action/filter strip container."""
+    id_attr = f' id="{esc(strip_id, quote=True)}"' if strip_id else ""
+    role_attr = f' role="{esc(role, quote=True)}"' if role else ""
+    label_attr = f' aria-label="{esc(aria_label, quote=True)}"' if aria_label else ""
+    hidden_attr = ' hidden="hidden"' if hidden else ""
+    attrs = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
+    return f'<div class="{esc(css_class, quote=True)}"{id_attr}{role_attr}{label_attr}{hidden_attr}{attrs}>{items_html}</div>'
 
 
 def panel_guide(text_html: str, *, element_id: str = "") -> str:
@@ -343,6 +583,16 @@ def manuscript_pdf_controls(
     disabled = "" if available else " disabled"
     choices = "".join(f'<option value="{layout}">{L("manuscript_pdf_" + layout)}</option>'
                       for layout in PDF_LAYOUTS)
+    layout_field = form_field(
+        "manuscript-pdf-layout",
+        L("manuscript_pdf_layout"),
+        f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>{choices}</select>',
+        label_class="",
+    )
+    status_html = status_banner(
+        "manuscript-pdf-status",
+        "" if available else L("manuscript_pdf_unavailable"),
+    )
     return (
         '<details class="manuscript-pdf" id="manuscript-pdf">'
         f'<summary class="ctl" id="manuscript-pdf-title">{L("manuscript_pdf_title")}</summary>'
@@ -350,15 +600,11 @@ def manuscript_pdf_controls(
         f'action="{esc(api_base.rstrip("/") + "/manuscript-pdf")}" '
         f'data-project-token="{esc(project_token)}" data-available="{str(available).lower()}" '
         'aria-describedby="manuscript-pdf-hint">'
-        '<div class="manuscript-pdf-actions"><div class="setting-field">'
-        f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
-        f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
-        f'{choices}</select></div>'
+        f'<div class="manuscript-pdf-actions">{layout_field}'
         '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
         f'{L("manuscript_pdf_download")}</button></div>'
         '<p class="ctl-note" id="manuscript-pdf-layout-desc" aria-live="polite"></p>'
-        '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'
-        f'{"" if available else L("manuscript_pdf_unavailable")}</p></form>'
+        f'{status_html}</form>'
         f'<p class="ctl-note" id="manuscript-pdf-hint">{L("manuscript_pdf_hint")}</p>'
         f'<noscript><p class="ctl-note">{L("manuscript_pdf_javascript")}</p></noscript></details>'
     )
@@ -516,6 +762,7 @@ def kpi(
     layer: str | None = None,
     only: bool = False,
     flags: bool = False,
+    extra_attrs: str = "",
 ) -> str:
     """KPI tile; ``bar`` adds a proportion bar, ``jump``/``layer`` make it a link.
 
@@ -526,14 +773,18 @@ def kpi(
         if bar is not None
         else ""
     )
+    extra = f" {extra_attrs.strip()}" if extra_attrs.strip() else ""
     if jump or layer:
         attrs = (
             f' class="kpi kpi-link" data-jump="{html.escape(jump or "#chapters", quote=True)}"'
             + (f' data-layer="{html.escape(layer, quote=True)}"' if layer else "")
             + (' data-only="1"' if only else "")
             + (' data-flags="1"' if flags else "")
+            + extra
             + ' role="button" tabindex="0"'
         )
+    elif extra:
+        attrs = f' class="kpi kpi-link"{extra} role="button" tabindex="0"'
     else:
         attrs = ' class="kpi"'
     return f"<div{attrs}><b>{value}</b><span>{label_text}</span>{bar_html}</div>"

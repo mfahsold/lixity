@@ -249,6 +249,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/style-space.js", ("analysis",)),
     ("src/lixity/ui/assets/analysis-scope.*", ("analysis",)),
     ("src/lixity/ui/assets/analysis-evidence.*", ("analysis",)),
+    ("src/lixity/ui/assets/analysis-passage-navigation.js", ("analysis", "sharing")),
     ("src/lixity/ui/assets/section-navigation.*", ("analysis", "research")),
     ("src/lixity/ui/assets/decision-review.css", ("research",)),
     ("src/lixity/ui/assets/tooltips.js", ("full",)),

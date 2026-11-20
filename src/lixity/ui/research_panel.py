@@ -13,8 +13,12 @@ from .components import (
     label,
     loading_state,
     panel_label,
+    status_banner,
     tag_input_with_suggestions,
     template_preset_bar,
+)
+from .components import (
+    form_field as shared_form_field,
 )
 
 
@@ -29,10 +33,7 @@ def render_research_panel(
     L = panel_label(labels)
 
     def form_field(identifier: str, key: str, control: str) -> str:
-        return (
-            '<div class="setting-field research-form-field">'
-            f'<label class="form-label" for="{identifier}">{L(key)}</label>' + control + "</div>"
-        )
+        return shared_form_field(identifier, L(key), control, extra_class="research-form-field")
 
     def pane(key: str) -> str:
         visibility = "" if key == "dossiers" else ' style="display:none;"'
@@ -373,7 +374,7 @@ def render_research_panel(
     )
     parts.append('</div>')
     parts.append(f'<p class="ctl-note">{L("research_dossier_collection_help")}</p>')
-    parts.append('<p class="ctl-status err" id="r-dos-col-context" role="status" hidden></p>')
+    parts.append(status_banner("r-dos-col-context", css_class="ctl-status err", aria_live="", hidden=True))
     parts.append(
         form_field(
             "r-dos-col-name",
@@ -873,9 +874,7 @@ def render_research_panel(
     )
     parts.append("</div></details>")
 
-    parts.append(
-        '<div class="ctl-status" id="research-status-bar" role="status" aria-live="polite"></div>'
-    )
+    parts.append(status_banner("research-status-bar", tag="div"))
     parts.append("</section>")
 
     return "".join(parts)

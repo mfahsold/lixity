@@ -24,6 +24,33 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
     for (const width of [1920, 1440, 768, 390, 320]) {
       await page.setViewportSize({width, height: 900});
       await page.goto('http://lixity.test/');
+      if (width === 320 || width === 1440) {
+        const navigation = await page.evaluate(() => {
+          const components = window.LixityComponents;
+          const bar = components.ensureJumpBar('layout-jump-bar', 'layout-jump-proof', document.getElementById('chapters'));
+          components.renderJumpBar(bar, {visible:true, label:'One verified passage'});
+          const next = bar.querySelectorAll('button')[1];
+          next.focus();
+          components.renderJumpBar(bar, {visible:true, label:'Another verified passage'});
+          const result = {
+            mountedInToolbar: Boolean(bar.closest('.toolbar')),
+            retainedFocus: document.activeElement === next,
+            status: bar.querySelector('[role=status]').textContent,
+            insets: [getComputedStyle(bar).paddingInlineStart, getComputedStyle(bar).paddingInlineEnd],
+            touchHeight: next.getBoundingClientRect().height,
+            fits: bar.scrollWidth <= bar.clientWidth + 1,
+          };
+          bar.remove();
+          return result;
+        });
+        assert.equal(navigation.mountedInToolbar, true);
+        assert.equal(navigation.retainedFocus, true);
+        assert.equal(navigation.status, 'Another verified passage');
+        assert.equal(navigation.insets[0], navigation.insets[1]);
+        assert.ok(parseFloat(navigation.insets[0]) >= 8);
+        assert.ok(navigation.touchHeight >= 44, 'Passage navigation remains touchable');
+        assert.equal(navigation.fits, true);
+      }
       if (width >= 1440) {
         const toolbar = await page.locator('#manuscript-reader-controls').boundingBox();
         await page.locator('#reader-focus').click();
@@ -73,11 +100,15 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         return boxes.slice(1).map((box, index) => ({panel: panel.id, gap: box.top - boxes[index].bottom}));
       }));
       assert.ok(panelGaps.every(item => Math.abs(item.gap - 16) < 1), JSON.stringify({width, panelGaps}));
-      const gap = await page.locator('#dialogue').evaluate(panel => {
-        const tiles = panel.querySelector('.kpi-row').getBoundingClientRect();
-        return panel.querySelector('.dist').getBoundingClientRect().top - tiles.bottom;
+      const chartSpacing = await page.locator('#dialogue .dist').evaluate(chart => {
+        const guide = chart.previousElementSibling;
+        return {
+          guided: guide.classList.contains('panel-guide'),
+          gap: chart.getBoundingClientRect().top - guide.getBoundingClientRect().bottom,
+        };
       });
-      assert.ok(gap >= 12 && gap <= 24, `KPI/chart gap ${gap} at ${width}`);
+      assert.ok(chartSpacing.guided && chartSpacing.gap >= 12 && chartSpacing.gap <= 24,
+        `Guidance sits by the dialogue chart at ${width}: ${JSON.stringify(chartSpacing)}`);
       await page.mouse.move(0, 0);
       await openAnalysisSection(page, 'matrix');
       const headings = page.locator('#matrix th');
@@ -136,7 +167,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('#lixity-tooltip .tooltip-copy').textContent(), await paragraphHelp.getAttribute('data-help'));
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
-      for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
+      for (const selector of ['#flags', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
         await page.locator(selector === '#controls' ? '#tab-view-project' : '#tab-view-analysis').click();
         if (selector !== '#controls' && selector !== '#ch-1' && await page.locator('#workbench-overview-open').isVisible()) {
           await page.locator('#workbench-overview-open').click();

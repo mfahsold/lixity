@@ -24,8 +24,10 @@ from __future__ import annotations
 
 import math
 import re
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from hashlib import sha256
 from itertools import pairwise
 from typing import Any
 
@@ -339,6 +341,7 @@ class PacingReport:
     sticky_available: bool = True
     sticky_items: list[dict[str, Any]] = field(default_factory=list)
     rhythm_profile: dict[str, Any] = field(default_factory=lambda: compute_rhythm_profile([]))
+    _sticky_sentence_keys: tuple[str | None, ...] = field(default=(), repr=False, compare=False)
 
     @property
     def scenes_are_chapters(self) -> bool:
@@ -384,6 +387,7 @@ def _scene_stats(
     hook_short_sentence: int = HOOK_SHORT_SENTENCE,
     sticky_glue_pct: float = DEFAULT_STICKY_GLUE_PCT,
     sticky_min_words: int = DEFAULT_STICKY_MIN_WORDS,
+    include_sticky_identity: bool = False,
 ) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
     scene_text = prose_text(scene_text, _front_matter=False)
     words = len(word_re.findall(scene_text))
@@ -408,14 +412,17 @@ def _scene_stats(
             glue_pcts.append(glue_pct)
             if n_words >= sticky_min_words and glue_pct >= sticky_glue_pct:
                 sticky_count += 1
-                sticky_items.append({
+                item = {
                     "chapter_num": chapter_num,
                     "scene_index": index,
                     "words": n_words,
                     "glue_words": glue_words,
                     "glue_pct": round(glue_pct, 2),
                     "preview": sentence.strip()[:80],
-                })
+                }
+                if include_sticky_identity:
+                    item["_sentence_key"] = sha256(sentence.strip().encode("utf-8")).hexdigest()
+                sticky_items.append(item)
 
     entry_sentence = sentences[0] if sentences else ""
     exit_sentence = sentences[-1] if sentences else ""
@@ -532,7 +539,9 @@ def _chapter_flow_stats(
     return repeated_runs, adjacent_pairs, linked_pairs
 
 
-def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport:
+def pacing_report(
+    text: str, config: CorpusConfig | None = None, *, _include_sticky_identity: bool = False,
+) -> PacingReport:
     """Scene structure, pacing signals and chapter hooks (deterministic)."""
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
@@ -579,6 +588,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
                 hook_short_sentence=config.hook_short_sentence,
                 sticky_glue_pct=config.sticky_glue_pct,
                 sticky_min_words=config.sticky_min_words,
+                include_sticky_identity=_include_sticky_identity,
             )
             if scene_result is not None:
                 stats, scene_glue_pcts, scene_sticky_items = scene_result
@@ -692,6 +702,13 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     all_sticky_items.sort(
         key=lambda item: (-item["glue_pct"], -item["words"], item["chapter_num"], item["scene_index"])
     )
+    sticky_items = all_sticky_items[:MAX_STICKY_ITEMS]
+    sticky_keys: list[str | None] = []
+    if _include_sticky_identity:
+        counts = Counter((item["chapter_num"], item["_sentence_key"]) for item in all_sticky_items)
+        for item in sticky_items:
+            key = item.pop("_sentence_key")
+            sticky_keys.append(key if counts[item["chapter_num"], key] == 1 else None)
     return PacingReport(
         language=resolved.key,
         chapters=len(chapter_list),
@@ -718,8 +735,22 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         ),
         mean_glue_pct=(sum(all_glue_pcts) / len(all_glue_pcts)) if all_glue_pcts else 0.0,
         sticky_available=sticky_available,
-        sticky_items=all_sticky_items[:MAX_STICKY_ITEMS],
+        sticky_items=sticky_items,
         rhythm_profile=compute_rhythm_profile(
             all_corpus_sentence_lengths, short_sentence_max=config.short_sentence_max
         ),
+        _sticky_sentence_keys=tuple(sticky_keys),
     )
+
+
+def sentence_group_intervals(bounds: Sequence[int] | None) -> list[tuple[int, int | None] | None]:
+    """Convert ascending word-count cutoffs into inclusive (min, max) sentence intervals."""
+    if bounds is None:
+        return []
+    intervals: list[tuple[int, int | None] | None] = [(1, int(bounds[0]))]
+    intervals.extend(
+        (int(left) + 1, int(right)) if left < right else None
+        for left, right in pairwise(bounds)
+    )
+    intervals.append((int(max(bounds)) + 1, None))
+    return intervals

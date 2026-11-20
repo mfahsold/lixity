@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 
 from ..markers import Marker
 from ..style_profile import ChapterProfile
-from .components import esc, help_term, label, panel_label
+from .components import badge, empty_state, esc, label, panel_label, panel_start, table_wrap_start
 
 
 def render_markers_panel(
@@ -21,11 +21,10 @@ def render_markers_panel(
 
     L = panel_label(labels)
 
-    parts: list[str] = ['<section class="panel" id="markers">']
-    parts.append(f"<h2>{help_term(labels, 'markers', L('markers'))}</h2>")
+    parts: list[str] = [panel_start("markers", labels, "markers", help_key="markers")]
     if markers:
-        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("markers")}">')
-        parts.append("<table><thead><tr>")
+        parts.append(table_wrap_start(label(labels, "markers")))
+        parts.append("<thead><tr>")
         parts.append(
             f"<th scope=\"col\">{L('status')}</th><th scope=\"col\">{L('chapter')}</th>"
             f'<th scope="col" class="num">{L("line")}</th><th scope="col">{L("notes")}</th>'
@@ -46,7 +45,7 @@ def render_markers_panel(
             )
             parts.append(
                 f'<tr class="row-link" data-line="{m.line}" role="button" tabindex="0">'
-                f'<td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
+                f'<td>{badge(kind_label, variant="", css_class=f"marker-{m.kind}")}</td>'
                 f"<td>{chapter_cell}</td>"
                 f'<td class="num">{L("line")} {m.line}</td><td>{note}</td>'
             )
@@ -58,6 +57,6 @@ def render_markers_panel(
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
     else:
-        parts.append(f'<p class="hint">{L("markers_empty")}</p>')
+        parts.append(empty_state(L("markers_empty")))
     parts.append("</section>")
     return "".join(parts)

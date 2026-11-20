@@ -54,7 +54,8 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .status-item.unknown .status-dot { background: var(--neutral); }
 .status-detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22rem; }
 /* --- Focus & anchors (keyboard accessibility) -------------------------- */
-:where(a, button, select, input, textarea, summary, .chip, .help, .table-wrap, [role="button"]):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-xs); }
+:where(a, button, select, input, textarea, summary, .chip, .help, .table-wrap, [role="button"]):not(.ctl):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-xs); }
+.ctl:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .chapter, .ptext, .panel, section[id] { scroll-margin-top: var(--sticky-clearance, 4.5rem); }
 /* --- Skip link & screen-reader utility (accessibility) ---------------- */
 .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; border: 0 !important; }
@@ -163,10 +164,15 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 classes (.badge-success/-warning/-neutral/-warn) carry the state colours;
 .research-badge is an alias kept for existing markup. */
 .badge, .research-badge {
-display: inline-block;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+gap: .25rem;
 font-size: var(--text-micro);
 font-weight: var(--weight-semibold);
-padding: .12rem .5rem;
+line-height: 1.35;
+vertical-align: middle;
+padding: .15rem .55rem;
 border-radius: var(--radius-pill);
 border: 1px solid transparent;
 text-transform: none;
@@ -240,7 +246,7 @@ button.ctl.primary:enabled:hover, a.ctl.primary:hover { background: var(--action
 button.ctl.primary:enabled:active, a.ctl.primary:active { box-shadow: none; }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact { min-height: 2rem; padding: .25rem .6rem; font-size: var(--text-small); }
-details.nda { border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .7rem; margin-top: .6rem; }
+details.nda { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .6rem 1rem; margin-top: .6rem; }
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
 .ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; margin-top: .5rem; }
@@ -299,7 +305,7 @@ details.settings-section[open] > :not(summary) { margin-block-start: var(--space
 /* Tabs identify a view; primary buttons identify an action. Keep all local
 tablists on one recipe, with an inset focus ring inside the scrollport. */
 .style-tabs, .research-tabs.row, .modal-tabs { display: flex; flex-wrap: nowrap; gap: var(--space-1); min-width: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--line); padding: var(--space-1); margin: 0; scroll-padding-inline: var(--space-1); }
-.modal-tabs { flex: none; padding-inline: var(--space-4); }
+.modal-tabs { flex: none; gap: var(--space-2); padding: var(--space-2) var(--space-4); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-height: 2.5rem; padding: .45rem .8rem; border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover { background: var(--surface-raised); color: var(--fg); border-color: var(--line); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] { border-color: var(--line); border-bottom-color: var(--accent); background: var(--accent-light); color: var(--accent); }
@@ -320,7 +326,7 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
 .modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
-.modal-close { background: transparent; border: 1px solid transparent; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); width: 2.5rem; height: 2.5rem; flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
+.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); width: 2.5rem; height: 2.5rem; flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
 .modal-close:hover { color: var(--fg); background: var(--neutral); }
 .modal-close:focus { outline: none; }
 .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -329,11 +335,10 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-tab-pane { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .modal-tab-pane > .modal-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .modal-tab-pane > .modal-form > .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.modal-tab-pane > .modal-form > .modal-footer { flex: none; margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
-.modal-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; min-width: 0; overscroll-behavior: contain; scroll-padding-block: var(--space-3); overflow-y: auto; background: var(--surface); }
-.modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .75rem; margin-top: .4rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
-/* A footer directly under a card needs its own inset and stays outside the scroll region. */
+.modal-tab-pane > .modal-form > .modal-footer,
 .modal-card > .modal-footer { flex: none; margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
+.modal-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; min-width: 0; overscroll-behavior: contain; scroll-padding-block: var(--space-3); overflow-y: auto; background: var(--surface); }
+.modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-3); margin-block-start: var(--space-2); padding-block-start: var(--space-4); border-block-start: 1px solid var(--line); }
 #runtime-status { margin: 0; font-size: var(--text-small); color: var(--muted); }
 #runtime-status[data-state="error"] { color: var(--flag); font-weight: var(--weight-semibold); }
 #runtime-content { display: grid; gap: var(--space-4); }
@@ -358,28 +363,76 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-scroll { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-block: var(--space-3); }
 .modal-scroll > .modal-body { overflow: visible; }
 .modal-body > * { flex-shrink: 0; min-width: 0; }
-.modal-body > .form-label { margin-bottom: calc(-1 * var(--space-3)); }
+.modal-body > .form-label { margin-block: 0 calc(-1 * var(--space-2)); }
 /* Form layout is shared by project, research and revision dialogs. */
 .form-checkbox { display: inline-flex; align-items: flex-start; min-width: 0; max-width: 100%; line-height: var(--line-control); overflow-wrap: anywhere; gap: .55rem; cursor: pointer; font-size: var(--text-control); color: var(--fg); user-select: none; margin-top: .15rem; }
 .form-checkbox > input { flex: none; margin-block-start: .15em; }
 .form-checkbox > span { min-width: 0; }
 @media (max-width: 540px) {
 .form-row { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+.modal-tabs { flex-wrap: wrap; }
+.modal-tabs > button[role="tab"] { flex: 1 1 auto; white-space: normal; text-align: center; }
 }
-/* Documentation wrappers must not restyle embedded workspaces or reports. */
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 2.75rem; padding: .5rem .25rem; cursor: pointer; color: var(--accent); font-weight: var(--weight-semibold); list-style: none; }
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) > summary::-webkit-details-marker { display: none; }
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) > summary::before { content: ""; width: .45rem; height: .45rem; flex: 0 0 .45rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 140ms ease; }
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details)[open] > summary::before { transform: rotate(45deg); }
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) > summary:hover { color: var(--fg); }
-@media (prefers-reduced-motion: reduce) {
-:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) > summary::before { transition: none; }
+/* Panel disclosures and document details share the same inset and marker.
+   Documentation wrappers must not restyle embedded workspaces or reports. */
+:where(.panel-disclosure, .research-composer, .settings-advanced, .research-details, .workspace-actions, .project-overview-technical, .project-overview-browser, .project-overview-output-group, .triage-reason, .dim-cutoff, #dim-expert, .motif-occurrence-group, .layer-comparison-note, .research-dossier-actions, .paragraph-values, .reader-tense-group, .reader-tense-counts, .reader-tense-help, .dossier-image-reference, .dossier-media-overview, .analysis-evidence-guide, .analysis-evidence-all-values, .scene-detail, .research-decision-review, .research-decision-review-earlier, .welcome-more, .geography-method, .kpi-drawer, .signal-method, details.nda, #analysis-measurements, .scene-measurements, .site-page:not(:is(.lixity-workspace, .lixity-report)) details) {
+  & > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-block-size: 2.75rem;
+    padding: var(--space-2);
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    list-style: none;
+  }
+  & > summary::-webkit-details-marker { display: none; }
+  & > summary::before {
+    content: "";
+    box-sizing: border-box;
+    flex: 0 0 .45rem;
+    block-size: .45rem;
+    border-inline-end: 2px solid currentColor;
+    border-block-end: 2px solid currentColor;
+    transform: rotate(-45deg);
+  }
+  &[open] > summary::before { transform: rotate(45deg); }
+  & > summary:hover { color: var(--fg); }
+  @media (prefers-reduced-motion: no-preference) {
+    & > summary::before { transition: transform var(--dur-fast) var(--ease-out); }
+  }
 }
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
 /* --- Icons & Motion ---------------------------------------------------- */
 .lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
-.btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; }
+.btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.lixity-icon-slot { display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle; line-height: 1; }
+
+/* Related passages share one navigation layout in the sticky manuscript toolbar. */
+.passage-jump-bar {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-small);
+}
+:is(.workbench-overview, .reader-focus) .passage-jump-bar { display: none; }
+.passage-jump-label { flex: 1 1 12rem; font-weight: var(--weight-semibold); min-width: 0; overflow-wrap: anywhere; }
+.passage-jump-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.passage-jump-actions > .ctl { min-width: 2.5rem; }
+@media (pointer: coarse) {
+  .passage-jump-actions > .ctl { min-width: 2.75rem; min-height: 2.75rem; }
+}
 @media (prefers-reduced-motion: no-preference) {
   :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
   :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
@@ -452,11 +505,16 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   color: var(--fg);
 }
 .command-palette-esc-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1.2;
   font-size: var(--text-caption);
-  padding: 0.15rem 0.45rem;
+  padding: 0.2rem 0.45rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-xs);
   color: var(--muted);
 }
 .command-palette-results {
@@ -522,11 +580,16 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
   text-overflow: ellipsis;
 }
 .command-palette-item-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1.2;
   font-size: var(--text-caption);
-  padding: 0.1rem 0.4rem;
+  padding: 0.15rem 0.45rem;
   background: var(--surface-raised, rgba(0, 0, 0, 0.04));
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-xs);
   color: var(--muted);
 }
 .command-palette-empty {

@@ -193,14 +193,18 @@ function scrollAndFlash(target, options) {
     target.focus({preventScroll: true});
   }
   setPassageScrollMargin(target);
-  reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
   var behavior = options.behavior || "smooth";
   var block = options.block || "start";
   // A tall passage cannot fit below sticky controls. "nearest" may align its
   // bottom and hide its beginning underneath them; preserve the reading start.
   if (block === "nearest" && target.closest("#chapters") &&
       target.getBoundingClientRect().height > innerHeight - parseFloat(target.style.scrollMarginTop)) block = "start";
-  target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: block });
+  if (window.LixityComponents && typeof window.LixityComponents.scrollIntoViewSafe === "function") {
+    window.LixityComponents.scrollIntoViewSafe(target, { behavior: behavior, block: block });
+  } else {
+    reduceMotion = Boolean(passageMotionPreference && passageMotionPreference.matches);
+    target.scrollIntoView({ behavior: reduceMotion && behavior === "smooth" ? "auto" : behavior, block: block });
+  }
   if (typeof scheduleOutlierNavigation === "function") scheduleOutlierNavigation();
   flashOnArrival(target);
 }
@@ -247,11 +251,13 @@ document.body.classList.add("has-js-paragraphs");
 // Interval boundaries are UTF-16 DOM offsets; persisted anchors use codepoints.
 // Search/research DOM marks coexist with separate native metric Highlight ranges.
 var manuscriptParagraphMarks = Object.create(null);
+var manuscriptMotifMarks = Object.create(null);
 function renderParagraphText(paragraph, query) {
   var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];
   if (!content) return;
   var marks = manuscriptParagraphMarks[panel.id];
-  if (!query && (!marks || !marks.length)) {
+  var motifMarks = manuscriptMotifMarks[panel.id];
+  if (!query && (!marks || !marks.length) && (!motifMarks || !motifMarks.length)) {
     paragraph.dataset.searchQuery = "";
     if (!paragraph.querySelector("mark") && paragraph.textContent === content[0]) return;
   }
@@ -274,12 +280,13 @@ function renderParagraphText(paragraph, query) {
   if (query) {
     // Case folding can expand characters such as İ. Match the original text
     // so every interval keeps its DOM offset; the query remains literal data.
-    var pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), match;
-    while ((match = pattern.exec(text)) !== null) {
+    var pattern = window.LixityComponents.literalWhitespaceRegex(query, "gi"), match;
+    while (pattern && (match = pattern.exec(text)) !== null) {
       spans.push({start: match.index, end: match.index + match[0].length, search: true});
     }
   }
   (marks || []).forEach(function(mark) { spans.push(mark); });
+  (motifMarks || []).forEach(function(mark) { spans.push(mark); });
   var boundaries = Array.from(new Set([0, text.length].concat(spans.flatMap(function(span) {
     return [span.start, span.end];
   })))).sort(function(a, b) { return a - b; });
@@ -289,8 +296,14 @@ function renderParagraphText(paragraph, query) {
     var active = spans.filter(function(span) { return span.start <= start && span.end >= end; });
     if (!active.length) { fragment.appendChild(document.createTextNode(text.slice(start, end))); continue; }
     var mark = document.createElement("mark");
-    mark.className = (active.some(function(span) {return span.search;}) ? "text-hit " : "") +
-      (active.some(function(span) {return !span.search;}) ? "manuscript-claim-hit" : "");
+    var classes = [];
+    if (active.some(function(span) {return span.search;})) classes.push("text-hit");
+    if (active.some(function(span) {return !span.search && !span.motif;})) classes.push("manuscript-claim-hit");
+    if (active.some(function(span) {return span.motif;})) {
+      classes.push("motif-hit");
+      if (active.some(function(span) {return span.motif && span.current;})) classes.push("motif-hit-current");
+    }
+    mark.className = classes.join(" ");
     mark.textContent = text.slice(start, end);
     fragment.appendChild(mark);
   }
@@ -326,7 +339,7 @@ function renderParagraph(panel, textOnly) {
     text.textContent = content[0];
     text.dataset.searchQuery = "";
     inner.appendChild(text);
-    if ((manuscriptParagraphMarks[panel.id] || []).length) {
+    if ((manuscriptParagraphMarks[panel.id] || []).length || (manuscriptMotifMarks[panel.id] || []).length) {
       renderParagraphText(text, "");
     }
   }

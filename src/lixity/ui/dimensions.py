@@ -10,11 +10,14 @@ from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint, dime
 from ..style_profile import ChapterProfile
 from .components import (
     attr_json,
+    badge,
+    empty_state,
     esc,
-    help_term,
     label,
     loading_bars,
     panel_formatters,
+    panel_start,
+    table_wrap_start,
     toggle_button,
 )
 
@@ -33,8 +36,7 @@ def style_dimensions(
     def number(value: float, decimals: int = 2, signed: bool = False) -> str:
         return _N(value, decimals, signed)
 
-    parts = ['<section class="panel" id="dimensions">',
-             f"<h2>{help_term(labels, 'dimensions', translated('style_dimensions'))}</h2>"]
+    parts = [panel_start("dimensions", labels, "style_dimensions", help_key="dimensions")]
     diagnostics = fingerprint.dimension_diagnostics
     field_labels = {f: label_key for f, label_key, _u in FEATURES}
 
@@ -44,7 +46,7 @@ def style_dimensions(
     dim_list = fingerprint.dimensions
     if not dim_list:
         status = diagnostics.get("status", "unavailable")
-        parts.append(f'<p class="dim-unavailable" role="status">{translated("dim_" + status, chapters=diagnostics.get("min_chapters", 3), features=diagnostics.get("min_features", 3))}</p>')
+        parts.append(empty_state(translated("dim_" + status, chapters=diagnostics.get("min_chapters", 3), features=diagnostics.get("min_features", 3)), css_class="dim-unavailable", role="status"))
     points_data: list[dict[str, Any]] = []
     for ch in chapters:
         if not dim_list or any(ch.num not in dim["scores"] for dim in dim_list):
@@ -60,13 +62,13 @@ def style_dimensions(
     if diagnostics or points_data:
         strip = [
             '<div class="chip-row dim-summary-strip">',
-            f'<span class="badge dim-coverage">{translated("dim_coverage", scored=len(points_data), total=len(chapters), features=len(features))}</span>',
+            badge(label(labels, "dim_coverage").format(scored=len(points_data), total=len(chapters), features=len(features)), variant="", css_class="dim-coverage"),
         ]
         if dim_list:
             retained = diagnostics.get("retained_variance", sum(dim["variance"] for dim in dim_list))
-            strip.append(f'<span class="badge" id="dim-retained">{translated("dim_retained", variance=number(retained * 100, 1))}</span>')
+            strip.append(badge(label(labels, "dim_retained").format(variance=number(retained * 100, 1)), variant="", extra_attrs='id="dim-retained"'))
         if points_data:
-            strip.append(f'<span class="badge dim-3d-count">{len(points_data)} / {len(chapters)} {translated("chapters")}</span>')
+            strip.append(badge(f'{len(points_data)} / {len(chapters)} {label(labels, "chapters")}', variant="", css_class="dim-3d-count"))
         strip.append('</div>')
         parts.extend(strip)
         if dim_list and "shrinkage_lambda" in diagnostics:
@@ -162,7 +164,11 @@ def style_dimensions(
             entries = [(feature_name(name), float(value)) for name, value in positive + negative]
             chip_layers = {feature_name(name): feature_layers[name]
                            for name, _ in positive + negative if name in feature_layers}
-            parts.append(f'<div class="dim-card"><div class="dim-header"><span class="dim-title">{translated("style_dimensions")} {dim["index"]}</span><span class="badge">{format_pct(dim["variance"] * 100, language_key, 0)} {translated("dim_variance")}</span></div>')
+            variance_badge = badge(
+                f'{format_pct(dim["variance"] * 100, language_key, 0)} {label(labels, "dim_variance")}',
+                variant="",
+            )
+            parts.append(f'<div class="dim-card"><div class="dim-header"><span class="dim-title">{translated("style_dimensions")} {dim["index"]}</span>{variance_badge}</div>')
             axis_index = int(dim["index"]) - 1
             if 0 <= axis_index < len(fingerprint.dimension_axis_scales):
                 scale = fingerprint.dimension_axis_scales[axis_index]
@@ -190,8 +196,15 @@ def style_dimensions(
                 parts.append(f'<div class="dim-meta">{translated("dim_flagged")}: {esc(flagged)}</div>')
             parts.append('</div>')
         parts.append(f'</div><p class="hint">{translated("dim_poles")}</p>')
-        parts.append('<div class="table-wrap dim-score-wrap" tabindex="0" role="region" aria-labelledby="dim-scores-caption"><table id="dim-scores">'
-                     f'<caption id="dim-scores-caption">{translated("dim_scores")}</caption><thead><tr><th scope="col">{translated("chapter")}</th>')
+        parts.append(
+            table_wrap_start(
+                extra_class="dim-score-wrap",
+                aria_labelledby="dim-scores-caption",
+                table_id="dim-scores",
+                caption_html=f'<caption id="dim-scores-caption">{translated("dim_scores")}</caption>',
+            )
+            + f'<thead><tr><th scope="col">{translated("chapter")}</th>'
+        )
         parts.extend(f'<th scope="col">D{axis["idx"]}</th>' for axis in axes_data)
         parts.append(f'<th scope="col">{translated("dim_flagged")}</th></tr></thead><tbody>')
         for point in points_data:
@@ -216,7 +229,11 @@ def style_dimensions(
             parts.append(f'<li>{translated("chapter")} {item["chapter"]}: {translated("dim_missing_features")} — {esc(missing)}</li>')
         parts.append('</ul>')
     for dim in dim_list:
-        parts.append(f'<h3>D{dim["index"]}</h3><div class="table-wrap" tabindex="0" role="region" aria-label="D{dim["index"]}"><table><thead><tr><th scope="col">{translated("register_target")}</th><th scope="col">{translated("dim_loading")}</th></tr></thead><tbody>')
+        parts.append(
+            f'<h3>D{dim["index"]}</h3>'
+            + table_wrap_start(f'D{dim["index"]}')
+            + f'<thead><tr><th scope="col">{translated("register_target")}</th><th scope="col">{translated("dim_loading")}</th></tr></thead><tbody>'
+        )
         for name, value in sorted(dim["loadings"].items(), key=lambda item: abs(item[1]), reverse=True):
             parts.append(f'<tr><th scope="row">{esc(feature_name(name))}</th><td class="num">{number(value, 3, bool(value))}</td></tr>')
         parts.append('</tbody></table></div>')

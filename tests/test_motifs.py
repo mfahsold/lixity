@@ -151,6 +151,55 @@ class TestRepetition(unittest.TestCase):
         self.assertEqual(len(report.echoes), 1)
         self.assertEqual(report.echoes[0].term, "the bright silver")
 
+    def test_search_manuscript_handles_punctuated_phrases_unicode_boundaries_and_quotations(self):
+        from lixity.motifs import search_manuscript
+
+        text = (
+            "## Eins\n\n"
+            '🧭 Am Fenster: Es ist so, dass die Straße leer bleibt. '
+            '„Es ist so,\ndass die Straßenlaterne brennt“, sagte Mara.\n\n'
+            "## Zwei\n\n"
+            "Dies ist so, dasselbe gilt für andere.\n"
+        )
+        cfg = CorpusConfig(language="de")
+        res = search_manuscript(text, "es ist so, dass", cfg)
+        self.assertEqual(res["schema_version"], "lixity-motif-search/1")
+        self.assertEqual(res["offset_unit"], "unicode_codepoint")
+        self.assertEqual(res["total_matches"], 2)
+        self.assertFalse(res["truncated"])
+        occs = res["occurrences"]
+        self.assertEqual([o["paragraph_id"] for o in occs], ["p-0", "p-0"])
+        self.assertEqual([o["chapter"] for o in occs], [1, 1])
+        self.assertEqual([o["start_line"] for o in occs], [3, 3])
+        self.assertEqual(occs[0]["quotation_context"], "outside_quotation")
+        self.assertEqual(occs[1]["quotation_context"], "in_quotation")
+        self.assertEqual(occs[0]["quote"], "Es ist so, dass")
+        # Codepoint offset check after astral emoji 🧭 (index 0).
+        self.assertEqual(occs[0]["start"], 14)
+
+        street = search_manuscript(text, "Straße", cfg)
+        self.assertEqual(street["total_matches"], 1)
+        self.assertEqual(street["occurrences"][0]["quote"], "Straße")
+
+    def test_search_manuscript_supports_regex_truncation_and_validation(self):
+        from lixity.motifs import search_manuscript
+
+        text = "## One\n\nI feel calm. \"I feel bold.\" I feel ready.\n"
+        cfg = CorpusConfig(language="en")
+        res = search_manuscript(text, r"\bfeel\s+\w+", cfg, is_regex=True, limit=2)
+        self.assertEqual(res["total_matches"], 3)
+        self.assertTrue(res["truncated"])
+        self.assertEqual(len(res["occurrences"]), 2)
+        self.assertEqual(res["occurrences"][0]["quotation_context"], "outside_quotation")
+        self.assertEqual(res["occurrences"][1]["quotation_context"], "in_quotation")
+
+        with self.assertRaises(ValueError):
+            search_manuscript(text, "   ", cfg)
+        with self.assertRaises(ValueError):
+            search_manuscript(text, "[unclosed", cfg, is_regex=True)
+        with self.assertRaises(ValueError):
+            search_manuscript(text, "feel", cfg, limit=0)
+
 
 if __name__ == "__main__":
     unittest.main()

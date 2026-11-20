@@ -15,12 +15,21 @@
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
   function element(tag, text, className) {
+    if (window.LixityComponents && typeof window.LixityComponents.el === "function") {
+      return window.LixityComponents.el(tag, { className: className || "", text: text || null });
+    }
     var node = document.createElement(tag);
     if (text) node.textContent = text;
     if (className) node.className = className;
     return node;
   }
   function label(key) { return bridge.label(key); }
+  function countLabel(key, count) {
+    if (typeof window.uiCountFormat === "function") return window.uiCountFormat(key, count);
+    var singular = key + "_one";
+    var chosen = count === 1 && label(singular) !== singular ? singular : key;
+    return label(chosen).replace("{count}", String(count));
+  }
   function researchIcon() {
     var icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     icon.setAttribute("viewBox", "0 0 24 24"); icon.setAttribute("aria-hidden", "true");
@@ -329,7 +338,7 @@
           matchesPanel(row, document.getElementById(reviewFilter.paragraphId))));
     });
     var fragment = document.createDocumentFragment();
-    fragment.appendChild(element("p", label(rows.length === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", String(rows.length)), "ctl-note"));
+    fragment.appendChild(element("p", countLabel("manuscript_link_review_count", rows.length), "ctl-note"));
     if (filtered && reviewFilter) {
       var all = element("button", label("manuscript_link_review"), "ctl");
       all.type = "button"; all.dataset.manuscriptLinksAll = ""; fragment.appendChild(all);
@@ -808,7 +817,7 @@
       var model = passageModel(report, panel);
       var fragment = document.createDocumentFragment();
       fragment.appendChild(element("p", model.shown === model.total ?
-        label(model.total === 1 ? "manuscript_link_review_count_one" : "manuscript_link_review_count").replace("{count}", model.total) :
+        countLabel("manuscript_link_review_count", model.total) :
         label("passage_research_count").replace("{shown}", model.shown).replace("{total}", model.total), "ctl-note"));
       if (!model.total) fragment.appendChild(element("p", label("passage_research_empty"), "ctl-note"));
       model.groups.forEach(function(group) {
@@ -823,8 +832,7 @@
               if (["source_changed", "claim_withdrawn"].includes(flag)) warnings.add(label("manuscript_link_" + flag));
             }); });
             if (warnings.size) claimItem.appendChild(element("p", Array.from(warnings).join(" · "), "ctl-note"));
-            var associationTitle = version.associations.length === 1 ? label("passage_research_link_details") :
-              label("passage_research_link_details_count").replace("{count}", version.associations.length);
+            var associationTitle = countLabel("passage_research_link_details_count", version.associations.length);
             if (claim.versions.length > 1) associationTitle += " · " + label("research_revision_number").replace("{revision}", version.pinned.revision);
             var associations = passageDetails(associationTitle, "data-passage-research-associations");
             associations.appendChild(element("p", label("research_revision_kind_claim") + " · " +
@@ -842,10 +850,8 @@
         });
         if (group.decisions.length) {
           var count = group.decisions.length;
-          var decisions = passageDetails(label(count === 1 ? "passage_research_decision_count_one" : "passage_research_decision_count")
-            .replace("{count}", count), "data-passage-research-decisions");
-          var more = count > 5 ? passageDetails(label(count === 6 ? "passage_research_more_decisions_one" : "passage_research_more_decisions")
-            .replace("{count}", count - 5), "data-passage-research-more-decisions") : null;
+          var decisions = passageDetails(countLabel("passage_research_decision_count", count), "data-passage-research-decisions");
+          var more = count > 5 ? passageDetails(countLabel("passage_research_more_decisions", count - 5), "data-passage-research-more-decisions") : null;
           group.decisions.slice(0, 5).forEach(function(decision) { decisions.appendChild(recordButton("decision", decision)); });
           if (more) more.addEventListener("toggle", function() {
             if (!more.open || more.dataset.loaded || !passageCurrent(owner)) return;
@@ -961,7 +967,7 @@
       fragment.appendChild(element("p", label("manuscript_terms_empty"), "ctl-note"));
       return fragment;
     }
-    fragment.appendChild(element("p", label(occurrences.length === 1 ? "manuscript_terms_count_one" : "manuscript_terms_count").replace("{count}", String(occurrences.length)), "ctl-note"));
+    fragment.appendChild(element("p", countLabel("manuscript_terms_count", occurrences.length), "ctl-note"));
     if (!occurrences.length) {
       fragment.appendChild(element("p", label("manuscript_terms_no_matches"), "ctl-note"));
       return fragment;

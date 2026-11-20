@@ -66,3 +66,38 @@ def test_editor_recovery_query_rejects_unknown_and_duplicate_fields(tmp_path):
         assert server.request("/api/manuscript-edit?unknown=1").status == 400
         assert server.request("/api/manuscript-edit?recovery=a&recovery=b").status == 400
         assert server.request("/api/manuscript-edit?recovery=").status == 400
+
+
+def test_manuscript_compare_endpoint_applies_project_settings_and_origin_guard(tmp_path):
+    (tmp_path / "lixity.toml").write_text('short_sentence_max = 2\n', encoding="utf-8")
+    source = tmp_path / "book.md"
+    text = "## One\n\nDr. Vale waits. She turns.\n"
+    source.write_text(text, encoding="utf-8")
+    with LoopbackServer(make_handler(tmp_path, source_input=source)) as server:
+        opened = server.request("/api/manuscript-edit").json
+        payload = {
+            "document": opened["document"],
+            "revision": opened["revision"],
+            "base_text": text,
+            "draft_text": text + "More words appear now.\n",
+        }
+        assert server.request("/api/manuscript-compare", payload=payload, headers={"Origin": "https://evil.invalid"}).status == 403
+        res = server.request("/api/manuscript-compare", payload=payload)
+        assert res.status == 200
+        data = res.json
+        assert data["ok"] is True
+        assert data["settings_sha256"]
+        measurements = data["measurements"]
+        assert measurements["base"]["asl"] == 2.5
+        assert measurements["current"]["asl"] == 2.5
+        assert measurements["draft"]["asl"] > 2.5
+        assert source.read_text() == text
+        assert not (tmp_path / ".lixity" / "editing").exists()
+        assert server.request("/api/manuscript-compare", payload={**payload, "current_text": "Different text"}).status == 400
+        assert server.request("/api/manuscript-compare", payload={**payload, "document": "0" * 64}).status == 409
+        bound_payload = {**payload, "settings_sha256": data["settings_sha256"]}
+        assert server.request("/api/manuscript-compare", payload=bound_payload).status == 200
+        (tmp_path / "lixity.toml").write_text('short_sentence_max = 3\n', encoding="utf-8")
+        assert server.request("/api/manuscript-compare", payload=bound_payload).status == 409
+        source.write_text("An external edit.", encoding="utf-8")
+        assert server.request("/api/manuscript-compare", payload=payload).status == 409

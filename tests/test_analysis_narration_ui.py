@@ -6,8 +6,9 @@ import pytest
 
 from lixity.analyzer import CorpusAnalyzer
 from lixity.dialogue import dialogue_report
+from lixity.format import pct
 from lixity.language import get_language_profile
-from lixity.models import CorpusConfig
+from lixity.models import CorpusConfig, CorpusMetrics
 from lixity.pacing import pacing_report
 from lixity.scenes import scene_report
 from lixity.showing import showing_report
@@ -70,7 +71,13 @@ def test_dialogue_keeps_every_chapter_in_manuscript_order_including_zero_turns(c
     panel = ElementTree.fromstring(render_dialogue_panel(report))  # noqa: S314
     chart = panel.find("./div[@class='dist scrollable']")
     assert chart is not None, "Complete chapter coverage uses the existing bounded chart"
+    assert "Counted text" not in "".join(panel.itertext())
     assert [row.attrib["data-jump"] for row in chart] == [f"#ch-{number}" for number in range(1, count + 1)]
+    for row in chart:
+        assert row.attrib["data-layer"] == "dialogue"
+        link = row.find("a")
+        assert link.attrib["href"] == row.attrib["data-jump"]
+        assert link.attrib["data-layer"] == "dialogue"
     assert chart[0].findtext("./span[@class='val']").endswith(" · 1 Quoted span")
     assert chart[-1].findtext("./span[@class='val']") == "0.0% · 0 Quoted spans"
     details = panel.find("./details[@class='panel-disclosure dialogue-measurements']")
@@ -96,9 +103,34 @@ def test_pacing_names_the_bar_measurement_and_explains_the_existing_hook_heurist
     assert labels["pacing_scale"] in "".join(guide.itertext())
     value = panel.find("./div[@class='dist scrollable']/div/span[@class='val']")
     assert FEATURE_UNITS[locale]["asl"] in "".join(value.itertext())
-    assert "3" in "".join(value.itertext())
-    sparkline = panel.find(".//span[@class='sparkline']")
+    assert panel.find("./div[@class='kpi-row']") is None
+    assert details.find("./div[@class='kpi-row']") is not None
+    assert details.find(".//tbody/tr").findall("td")[2].text == "3"
+    sparkline = details.find(".//span[@class='sparkline']")
     assert sparkline is not None and sparkline.text
+
+
+def test_pacing_sticky_examples_explain_measured_counts_without_guessing_a_rule():
+    sentence = "In the garden she said that it was in the way and that it would be there."
+    config = CorpusConfig(language="en", sticky_min_words=9, sticky_glue_pct=55.125)
+    report = pacing_report("## Synthetic chapter\n\n" + (sentence + " ") * 24, config).to_dict()
+    assert "sticky_rule" not in report
+    report["sticky_rule"] = {"min_words": config.sticky_min_words, "min_pct": config.sticky_glue_pct}
+    panel = ElementTree.fromstring(render_pacing_panel(report, language_key="en"))  # noqa: S314
+    detail = panel.find("./details[@class='panel-disclosure pacing-sticky-items']")
+    assert detail is not None and "open" not in detail.attrib
+    assert "at least 9 words and at least 55.125% function words" in "".join(detail.itertext())
+    assert "Showing 20 of 24 matching sentences." in "".join(detail.itertext())
+    assert len(detail.findall("./ul/li")) == 20
+    first = detail.find("./ul/li")
+    assert first.findtext("p") == sentence
+    assert "13 of 17 words are function words (76.47%)" in "".join(first.itertext())
+    assert first.find("./p/a").attrib["href"] == "#ch-1"
+
+    del report["sticky_rule"]
+    legacy = render_pacing_panel(report, language_key="en")
+    assert "The thresholds are unavailable in this report." in legacy
+    assert "13 of 17 words are function words (76.47%)" in legacy
 
 
 def test_sentence_distribution_names_the_effective_word_ranges():
@@ -106,10 +138,17 @@ def test_sentence_distribution_names_the_effective_word_ranges():
     metrics = CorpusAnalyzer(config).analyze_text("This is short. These sentences now differ. How many words are there now? This sentence has more words than the others.")
     panel = ElementTree.fromstring(render_sentence_dist_panel(metrics))  # noqa: S314
     assert [node.text for node in panel.findall(".//div[@class='row']/span[@class='label']")] == [
-        "≤ 3 words", "4–5 words", "6–7 words", "> 7 words",
+        "Short (≤ 3 words)", "Medium (4–5 words)", "Long (6–7 words)", "Very long (> 7 words)",
     ]
     assert [node.text for node in panel.findall(".//div[@class='row']/span[@class='val']")] == ["1 · 25.0%"] * 4
     assert "_word_bounds" not in metrics.sentence_dist.model_dump()
+    restored = CorpusMetrics.model_validate(metrics.model_dump())
+    legacy = ElementTree.fromstring(render_sentence_dist_panel(restored))  # noqa: S314
+    assert "The word limits for these groups are unavailable in this report." in "".join(legacy.itertext())
+    assert [node.text for node in legacy.findall(".//div[@class='row']/span[@class='label']")] == [
+        "Short", "Medium", "Long", "Very long",
+    ]
+    assert [node.text for node in legacy.findall(".//div[@class='row']/span[@class='val']")] == ["1 · 25.0%"] * 4
 
 
 @pytest.mark.parametrize("locale", LOCALES)
@@ -160,7 +199,14 @@ def test_dialogue_panel_surfaces_voice_separation_and_adverbial_tags(locale):
     }
     html = render_dialogue_panel(report, labels, locale)
     panel = ElementTree.fromstring(html)  # noqa: S314
-    text = "".join(panel.itertext())
+    headline = panel.find("./div[@class='kpi-row']")
+    assert headline is not None
+    assert [node.findtext("b") for node in headline] == ["4", pct(35, locale)]
+    assert labels["analysis_dialogue_share"] in "".join(headline.itertext())
+    extra = panel.find("./details[@id='dialogue-corpus-details']")
+    assert extra is not None and "open" not in extra.attrib
+    assert extra.findtext("summary") == labels["analysis_dialogue_corpus_details"]
+    text = "".join(extra.itertext())
     assert labels["dlg_adverbial_tags"] in text
     assert labels["dlg_voice_separation"] in text
     assert labels["dlg_voice_sep_distinct"] in text
@@ -287,6 +333,26 @@ def test_pacing_panel_surfaces_rhythm_profile(locale):
     assert labels["pac_length_entropy"] in text
     assert labels["pac_rhythm_profile"] in text
     assert labels["pac_rhythm_hint"] in text
+    assert labels["sentence_group_bounds_unavailable"] in text
+    assert [
+        node.text for node in panel.findall(".//div[@id='pacing-rhythm-buckets']/div/span")
+    ] == [labels["sentence_group_" + key] for key in ("short", "medium", "long")]
+
+
+def test_pacing_uses_effective_ranges_when_the_middle_group_is_empty():
+    report = pacing_report(
+        "## Synthetic\n\nA quiet morning. The river crossed the field beside the trees, "
+        "passed the old gate and ran towards the village along a narrow muddy path.",
+        CorpusConfig(short_sentence_max=21, medium_sentence_max=24, long_sentence_max=30),
+    ).to_dict()
+    assert "rhythm_word_bounds" not in report
+    report["rhythm_word_bounds"] = (21, 20)
+    panel = ElementTree.fromstring(render_pacing_panel(report))  # noqa: S314
+    groups = panel.findall(".//div[@id='pacing-rhythm-buckets']/div")
+    assert [group.findtext("span") for group in groups] == [
+        "Short (≤ 21 words)", "Medium (empty range)", "Long (> 21 words)",
+    ]
+    assert [group.findtext("b") for group in groups] == ["50.0%", "0.0%", "50.0%"]
 
 
 @pytest.mark.parametrize("locale", LOCALES)
@@ -456,6 +522,68 @@ def test_manuscript_editor_js_has_phase2_enriched_diff_and_write_nudge():
     assert "write-nudge" in editor_js
     assert "write-nudge" in reader_css
     assert "prefers-reduced-motion: reduce" in reader_css
+
+
+def test_pacing_merges_sentence_distribution_with_jump_intervals():
+    import json
+
+    text = "## Chapter 1\n\nShort one. Another short sentence here. The quiet river ran slowly across the wide stony meadow.\n"
+    cfg = CorpusConfig(language="en", short_sentence_max=3, medium_sentence_max=6, long_sentence_max=10)
+    metrics = CorpusAnalyzer(cfg).analyze_text(text)
+    report = pacing_report(text, cfg).to_dict()
+    report["sentence_group_matches"] = {
+        "rhythm": {"short": [{"paragraph_id": "p-0", "span_index": 0}], "medium": [], "long": []},
+        "distribution": {"short": [{"paragraph_id": "p-0", "span_index": 0}], "medium": [], "long": [], "very_long": []},
+    }
+    panel = ElementTree.fromstring(render_pacing_panel(report, metrics=metrics))  # noqa: S314
+    assert json.loads(panel.attrib["data-sentence-group-matches"]) == report["sentence_group_matches"]
+    dist = panel.find(".//div[@class='rhythm-sentence-dist']")
+    assert dist is not None
+    rows = dist.findall(".//div[@class='dist']/div[@class='row']")
+    assert len(rows) == 4
+    assert rows[0].attrib.get("data-rhythm-min-words") == "1"
+    assert rows[0].attrib.get("data-rhythm-max-words") == "3"
+    assert rows[0].attrib.get("data-rhythm-group") == "short"
+    jump_buttons = dist.findall(".//button[@data-rhythm-min-words]")
+    assert len(jump_buttons) == 3
+    assert rows[3].find(".//button") is None
+
+
+def test_motifs_panel_forwards_codepoint_unit_and_quotation_context():
+    import json
+
+    from lixity.ui.narration import render_motifs_panel
+
+    motifs = {
+        "chapters": 1,
+        "repeated_phrases": [
+            {
+                "phrase": "es ist so, dass",
+                "count": 1,
+                "chapters": [1],
+                "mapped_occurrence_count": 1,
+                "occurrences": [
+                    {
+                        "paragraph_id": "p-0",
+                        "chapter": 1,
+                        "start_line": 3,
+                        "start": 1,
+                        "end": 16,
+                        "offset_unit": "unicode_codepoint",
+                        "quote": "es ist so, dass",
+                        "excerpt": "„es ist so, dass…“",
+                        "quotation_context": "in_quotation",
+                    }
+                ],
+            }
+        ],
+    }
+    panel = ElementTree.fromstring(render_motifs_panel(motifs))  # noqa: S314
+    group = panel.find(".//div[@data-motif-group]")
+    assert group is not None and group.find(".//button[@data-motif-select]") is not None
+    payload = json.loads(group.attrib["data-motif-occurrences"])
+    assert payload[0]["offset_unit"] == "unicode_codepoint"
+    assert payload[0]["quotation_context"] == "in_quotation"
 
 
 

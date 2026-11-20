@@ -6,7 +6,7 @@ An unavailable mapping preserves the measured count without inventing a span.
 
 import re
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
@@ -31,12 +31,15 @@ from .markdown_parser import counting_inline_text, parse_markdown_blocks, strip_
 from .models import CorpusConfig
 from .sentences import split_sentence_spans
 from .tense import TenseMatcher
-from .text_normalization import counting_view
+from .text_normalization import CountingText, counting_view
 
 _WORD_RE = re.compile(r"\w+")
 
 if TYPE_CHECKING:
     from .style_profile import ParagraphProfile
+
+
+QuotationContext = Literal["in_quotation", "outside_quotation", "overlaps_quotation"]
 
 
 class _EvidenceSpan(TypedDict):
@@ -47,6 +50,9 @@ class _EvidenceSpan(TypedDict):
 
 class EvidenceSpan(_EvidenceSpan, total=False):
     words: int
+    function_words: int
+    function_spans: list[tuple[int, int]]
+    quotation_context: QuotationContext
 
 
 class _LayerEvidence(TypedDict):
@@ -59,6 +65,7 @@ class _LayerEvidence(TypedDict):
 
 class LayerEvidence(_LayerEvidence, total=False):
     reason: str
+    sticky_rule: tuple[int, float]
 
 
 class _TenseEvidence(TypedDict):
@@ -147,6 +154,76 @@ def _layer(kind: str, count: int, spans: list[EvidenceSpan], *,
     return result
 
 
+def classify_span_quotation_context(
+    start: int,
+    end: int,
+    dialogue_spans: Sequence[Mapping[str, Any]],
+    *,
+    dialogue_status: str = "available",
+) -> QuotationContext | None:
+    """Classify a display-offset span relative to recognized quotation spans."""
+    if dialogue_status == "unavailable":
+        return None
+    if any(int(d["start"]) <= start and end <= int(d["end"]) for d in dialogue_spans):
+        return "in_quotation"
+    if dialogue_status == "partial":
+        return None
+    if any(start < int(d["end"]) and end > int(d["start"]) for d in dialogue_spans):
+        return "overlaps_quotation"
+    return "outside_quotation"
+
+
+def extract_paragraph_dialogue_spans(
+    display: str,
+    clean: str,
+    view: CountingText,
+    dialogue_re: re.Pattern[str],
+    word_re: re.Pattern[str],
+) -> tuple[list[EvidenceSpan], Literal["available", "partial", "unavailable"]]:
+    """Extract display-offset dialogue spans and mapping status for one paragraph."""
+    d_group = quotation_capture_group(dialogue_re)
+    raw_count = 0
+    mapped_spans: list[EvidenceSpan] = []
+    unmapped = False
+    for match in dialogue_re.finditer(clean):
+        count = len(word_re.findall(match.group(d_group) or ""))
+        if not count:
+            continue
+        raw_count += count
+        start, end = match.span(d_group)
+        if end <= start:
+            continue
+        source = view.source_span(start, end) if view.text != display else (start, end)
+        if source is None:
+            unmapped = True
+            continue
+        mapped_spans.append({"start": source[0], "end": source[1], "count": count})
+    layer = _layer(
+        "dialogue",
+        raw_count,
+        mapped_spans,
+        reason="unicode_mapping_unavailable" if unmapped else "zero_width_matches",
+    )
+    return layer["spans"], layer["status"]
+
+
+def _annotate_layer_quotation_context(result_layers: Mapping[str, LayerEvidence]) -> None:
+    dialogue_layer = result_layers.get("dialogue")
+    if dialogue_layer is None or dialogue_layer["status"] == "unavailable":
+        return
+    d_spans = dialogue_layer["spans"]
+    d_status = dialogue_layer["status"]
+    for key, layer in result_layers.items():
+        if key not in _KINDS or key == "dialogue" or layer["kind"] == "sentence":
+            continue
+        for span in layer["spans"]:
+            q_ctx = classify_span_quotation_context(
+                span["start"], span["end"], d_spans, dialogue_status=d_status
+            )
+            if q_ctx is not None:
+                span["quotation_context"] = q_ctx
+
+
 def _envelope(text: str, layers: dict[str, LayerEvidence]) -> ParagraphEvidence:
     result: ParagraphEvidence = {"schema_version": "paragraph-evidence/1",
                                 "paragraph_sha256": sha256(text.encode("utf-8")).hexdigest(),
@@ -201,6 +278,35 @@ class ParagraphMatcher:
             return False
         glue_words = sum(1 for tok in tokens if tok in self.language.function_words)
         return (glue_words / n_words * 100.0) >= self.sticky_glue_pct
+
+    def _sticky_details(self, sentence: str, start: int, end: int) -> tuple[int, list[tuple[int, int]]]:
+        group = 1 if self.word.groups == 1 else 0
+        hits = [match.span(group) for match in self.word.finditer(sentence)
+                if (match.group(group) or "").lower() in self.language.function_words]
+        # Word patterns may capture text outside their consuming range.
+        return len(hits), [(start + left, start + right) for left, right in hits
+                           if 0 <= left < right <= end - start]
+
+    def _sentence_quotation_context(
+        self, clean: str, sentence: EvidenceSpan, dialogue_spans: Sequence[EvidenceSpan],
+    ) -> QuotationContext | None:
+        start, end = sentence["start"], sentence["end"]
+        context = classify_span_quotation_context(start, end, dialogue_spans)
+        if context != "overlaps_quotation":
+            return context
+        # Sentence spans can include quote marks and punctuation outside the
+        # recognized capture. Classify the actual counted words at its edges.
+        group = 1 if self.word.groups == 1 else 0
+        token_spans = [match.span(group) for match in self.word.finditer(clean[start:end])]
+        if not token_spans or any(not 0 <= left < right <= end - start for left, right in token_spans):
+            return None
+        locations = {
+            classify_span_quotation_context(start + left, start + right, dialogue_spans)
+            for left, right in token_spans
+        }
+        if len(locations) == 1:
+            return locations.pop()
+        return "overlaps_quotation"
 
     def count(self, clean: str) -> ParagraphCounts:
         """Count canonical NFC prose with the configured token/capture rules."""
@@ -276,7 +382,8 @@ class ParagraphMatcher:
         )
 
     def evidence(self, clean: str, display: str, counts: ParagraphCounts, *,
-                 tense_spans: tuple[list[tuple[int, int]], list[tuple[int, int]]] | None = None) -> ParagraphEvidence:
+                 tense_spans: tuple[list[tuple[int, int]], list[tuple[int, int]]] | None = None,
+                 include_reader_details: bool = False) -> ParagraphEvidence:
         values = counts.layers()
         kinds = dict(_KINDS)
         if tense_spans is not None:
@@ -367,6 +474,19 @@ class ParagraphMatcher:
                 clean, sorted(quoted_spans_for_tags), self.language.key
             )
             spans["indirect_speech"] = [{"start": s, "end": e, "count": 1} for s, e in ind_spans]
+        if include_reader_details:
+            for span in spans["dialogue"]:
+                span["quotation_context"] = "in_quotation"
+            for key in ("asl", "sticky"):
+                for span in spans[key]:
+                    location = self._sentence_quotation_context(clean, span, spans["dialogue"])
+                    if location is not None:
+                        span["quotation_context"] = location
+            for span in spans["sticky"]:
+                start, end = span["start"], span["end"]
+                count, hits = self._sticky_details(clean[start:end], start, end)
+                span["function_words"] = count
+                span["function_spans"] = hits
         unmapped: set[str] = set()
         if view.text != display:
             for key, matches in spans.items():
@@ -376,7 +496,13 @@ class ParagraphMatcher:
                     if source is None:
                         unmapped.add(key)
                         continue
-                    mapped.append({**span, "start": source[0], "end": source[1]})
+                    mapped_span: EvidenceSpan = {**span, "start": source[0], "end": source[1]}
+                    if "function_spans" in span:
+                        mapped_span["function_spans"] = [
+                            hit for start, end in span["function_spans"]
+                            if (hit := view.source_span(start, end)) is not None
+                        ]
+                    mapped.append(mapped_span)
                 spans[key] = mapped
         unavailable_by_lang = {
             key for key, avail in (
@@ -398,6 +524,9 @@ class ParagraphMatcher:
                     kinds[key], count, spans[key],
                     reason="unicode_mapping_unavailable" if key in unmapped else "zero_width_matches",
                 )
+        if include_reader_details and result_layers["sticky"]["spans"]:
+            result_layers["sticky"]["sticky_rule"] = (self.sticky_min_words, self.sticky_glue_pct)
+        _annotate_layer_quotation_context(result_layers)
         return _envelope(display, result_layers)
 
 

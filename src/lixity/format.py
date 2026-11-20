@@ -51,7 +51,8 @@ def precise_num(value: float, language_key: str = "en", minimum_decimals: int = 
     return num(value, language_key, max(minimum_decimals, len(text.partition(".")[2])))
 
 
-def pct(value: float, language_key: str = "en", decimals: int = 1) -> str:
+def pct(value: float, language_key: str = "en", decimals: int = 1, *, precise: bool = False) -> str:
     """Percentage with typographic spacing (space before % outside English)."""
     suffix = "%" if language_key in ("en", "generic") else " %"
-    return num(value, language_key, decimals) + suffix
+    formatted = precise_num(value, language_key, decimals) if precise else num(value, language_key, decimals)
+    return formatted + suffix

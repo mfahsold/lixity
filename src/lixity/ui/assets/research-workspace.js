@@ -784,7 +784,7 @@ function renderManuscriptDraftsView(host) {
   var drafts = manuscriptDraftsState.drafts || [];
   var skipped = Number(manuscriptDraftsState.skipped || 0);
   var skippedNote = skipped > 0
-    ? '<p class="ctl-note">' + escapeHtml(uiFormat(skipped === 1 ? "research_dossier_draft_skipped_one" : "research_dossier_draft_skipped", { count: skipped })) + "</p>"
+    ? '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_dossier_draft_skipped", skipped)) + "</p>"
     : "";
   if (!drafts.length) {
     host.innerHTML = skippedNote + '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_draft_empty")) + "</p>";

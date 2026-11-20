@@ -25,10 +25,8 @@
   overflow: visible;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  background: var(--surface);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
-  backdrop-filter: blur(var(--glass-blur-sm, 8px));
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
 }
 .pane-ribbon > .ctl,
 .research-pane-navigation > .ctl {
@@ -83,11 +81,13 @@
 #research-revision-history-list .ctl { padding: .35rem .6rem; }
 .research-revision-provenance { margin-top: 0; overflow-wrap: anywhere; }
 @media (max-width: 600px) {
-  .research-navigation { flex-wrap: wrap; justify-content: space-between; }
+  .research-navigation { flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1) var(--space-2); }
   .research-navigation > .research-tabs { flex-basis: 100%; order: -1; align-items: stretch; }
   .research-navigation .research-tabs > button[role="tab"] { white-space: normal; }
   /* Keep destinations inside the pane as the viewport changes, before density is measured. */
+  .pane-ribbon,
   .research-pane-navigation { flex-wrap: wrap; }
+  .pane-ribbon > .ctl,
   .research-pane-navigation > .ctl { white-space: normal; }
 }
 @media (pointer: coarse) {

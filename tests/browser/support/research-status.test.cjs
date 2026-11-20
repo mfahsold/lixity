@@ -18,6 +18,9 @@ function runtime() {
       calls.push({url, options, responseType, resolve, reject});
       return promise;
     }, refreshResearchProjectInfo: async () => {}};
+  context.window = {LixityComponents: {postJson(url, payload) {
+    return context.jsonApi(url, {method: 'POST', body: JSON.stringify(payload)});
+  }}};
   vm.runInNewContext(source, context);
   return {context, calls, manager, body};
 }

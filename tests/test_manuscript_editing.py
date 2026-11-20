@@ -1,5 +1,6 @@
 """Synthetic source fidelity, conflict and recovery contracts."""
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 
 import pytest
 
@@ -541,3 +542,163 @@ def test_recovery_db_enforces_wal_trusted_schema_and_skips_read_ddl(tmp_path, mo
         assert "PRAGMA trusted_schema=OFF" in spy.statements
         assert spy.commits == 0
         assert not any(stmt.lstrip().startswith(("CREATE ", "ALTER ", "DROP ")) for stmt in spy.statements)
+
+
+def test_compare_measures_base_current_and_draft_with_project_config(tmp_path):
+    source = tmp_path / "book.md"
+    base_text = "## Chapter 1\n\nDr. Vale waits. She turns.\n"
+    source.write_text(base_text, encoding="utf-8")
+    cfg = {"short_sentence_max": 2, "sticky_max_words": 6, "language": "en"}
+    editor = ManuscriptStore(tmp_path, source, language="en", project_config=cfg)
+    result = editor.compare(
+        revision=editor.open()["revision"],
+        base_text=base_text,
+        draft_text="## Chapter 1\n\nDr. Vale waits. She turns. A long sentence runs past two words carefully.\n",
+    )
+    measurements = result["measurements"]
+    assert measurements["base"]["asl"] == 2.5
+    assert measurements["current"]["asl"] == 2.5
+    assert result["settings_sha256"]
+    assert measurements["draft"]["asl"] > 2.5
+    assert result["base_to_current"]["deltas"]["asl"] == 0.0
+    assert result["current_to_draft"]["chapter_matching"]["clear"] is True
+    assert result["primary_diff"] == "current_to_draft"
+    assert result["current_to_draft"]["chapter_matching"]["changed"] == 1
+    assert result["current_to_draft"]["chapter_deltas"][0]["changed"] is True
+    assert result["base_to_current"]["chapter_matching"]["changed"] == 0
+    assert result["base_to_current"]["chapter_deltas"][0]["changed"] is False
+
+
+def test_compare_uses_one_detected_language_and_does_not_create_history(tmp_path):
+    from lixity.language import detect_language
+    from lixity.manuscript_editing import analyze_manuscript_snapshot, compare_texts
+
+    source = tmp_path / "book.md"
+    current = "Der Mann und die Frau sind in dem Haus, weil sie auf den Regen warten."
+    draft = "It was only a matter of time before the door that he had opened would close."
+    assert detect_language(current) == "de"
+    assert detect_language(draft) == "en"
+    original = b"\xef\xbb\xbf" + (current + "\r\n").encode()
+    source.write_bytes(original)
+    config = {"sticky_glue_pct": 45.0, "sticky_min_words": 2}
+    editor = ManuscriptStore(tmp_path, source, language="auto", project_config=config)
+    opened = editor.open()
+    compared = editor.compare(revision=opened["revision"], base_text=draft, draft_text=draft)
+    expected = analyze_manuscript_snapshot(draft, language="de", project_config=config)
+    independently_detected = analyze_manuscript_snapshot(draft, language="auto", project_config=config)
+    assert expected["sticky_pct"] != independently_detected["sticky_pct"]
+    assert compared["measurements"]["draft"]["sticky_pct"] == expected["sticky_pct"]
+    assert compared["measurements"]["base"] == compared["measurements"]["draft"]
+    assert compared["measurements"]["current"]["revision"] == opened["revision"]
+    assert compare_texts(draft, current, language="auto", project_config=config)["base"]["sticky_pct"] == expected["sticky_pct"]
+    assert source.read_bytes() == original
+    assert not editor.directory.exists()
+
+
+def test_unrelated_inserted_chapter_does_not_inherit_a_previous_title_match(tmp_path):
+    source = tmp_path / "book.md"
+    base = "## Arrival\n\nClara crossed the square, carrying letters wrapped in linen.\n\n## Departure\n\nShe waited under dusky trees by the old stone gate."
+    draft = (
+        "## Arrival\n\nHana crossed the square, carrying letters wrapped in linen.\n\n"
+        "## Prologue\n\nGolden orchards neighbored pastures scattered across distant hills.\n\n"
+        "## Departure\n\nShe waited under dusky trees by the old stone gate."
+    )
+    source.write_text(base)
+    editor = ManuscriptStore(tmp_path, source)
+    result = editor.compare(revision=editor.open()["revision"], base_text=base, draft_text=draft)
+    chapters = result["current_to_draft"]["chapter_deltas"]
+    assert [c["match_status"] for c in chapters] == ["ambiguous", "ambiguous", "matched"]
+    assert chapters[0]["words_delta"] is None
+    assert chapters[0]["asl_delta"] is None
+
+
+def test_resaving_with_changed_settings_keeps_archived_measurements_immutable(tmp_path):
+    initial = "## Chapter\n\nShe waited.\n\nCUT HERE\n\nSeveral optional words follow.\n"
+    editor, source = store(tmp_path, initial.encode())
+    opened = editor.open()
+    saved = save(editor, opened, initial + "Extra words here.\n")
+    archived = editor.timeline()
+    revised = ManuscriptStore(tmp_path, source, project_config={"appendix_marker": "CUT HERE"})
+    assert revised.analyze_snapshot(source.read_text())["words"] < archived[-1]["words"]
+    save(revised, revised.open(), source.read_text(), "b" * 32)
+    assert revised.timeline() == archived
+    delta = revised.delta()
+    assert delta["has_baseline"] is True
+    assert delta["deltas"]["words"] == 0
+    assert delta["current"]["revision"] == saved["revision"]
+
+
+def test_delta_recomputes_auto_language_from_target_or_withholds_unverifiable_history(tmp_path):
+    source = tmp_path / "book.md"
+    initial = "It was only a matter of time before the door that he had opened would close."
+    current = "Der Mann und die Frau sind in dem Haus, weil sie auf den Regen warten."
+    source.write_text(initial)
+    config = {"sticky_glue_pct": 45.0, "sticky_min_words": 2}
+    auto = ManuscriptStore(tmp_path, source, language="auto", project_config=config)
+    opened = auto.open()
+    saved = save(auto, opened, current)
+    history = auto.timeline()
+    assert history[0]["sticky_pct"] == 100.0
+    delta = auto.delta(base_revision=opened["revision"], target_revision=saved["revision"])
+    assert delta["has_baseline"] is True
+    assert delta["base"]["sticky_pct"] == 0.0
+    assert auto.timeline() == history
+    auto.discard(opened["revision"])
+    unavailable = auto.delta()
+    assert unavailable["has_baseline"] is False
+    assert unavailable["deltas"] is None
+    assert unavailable["current"]["revision"] == saved["revision"]
+
+
+def test_legacy_row_without_provenance_or_text_does_not_imply_a_comparable_baseline(tmp_path):
+    editor, _source = store(tmp_path)
+    opened = editor.open()
+    save(editor, opened, "Someone walked across the square.")
+    with closing(editor._database()) as connection, connection:
+        connection.execute(
+            "UPDATE manuscript_revisions SET settings_sha256=NULL WHERE document=? AND revision=?",
+            (editor.document, opened["revision"]),
+        )
+    assert editor.delta()["has_baseline"] is True  # The original text is retained and can be remeasured.
+    editor.discard(opened["revision"])
+    assert editor.delta()["deltas"] is None
+
+
+def test_delta_withholds_ambiguous_chapters_and_matches_renumbered_content(tmp_path):
+    source = tmp_path / "book.md"
+    old_ch1 = "Lanterns flickered above the harbour wall as waves struck the stone stairs again."
+    old_ch2 = "Clara locked the cedar drawer and listened to footsteps along the gravel drive."
+    source.write_text(f"## One\n\n{old_ch1}\n\n## Two\n\n{old_ch2}\n", encoding="utf-8")
+    editor = ManuscriptStore(tmp_path, source)
+    opened = editor.open()
+    # Renumbered after inserting a new prologue: unique content matches Ch1 -> Ch2 and Ch2 -> Ch3.
+    renumbered = (
+        "## Prologue\n\nThunder rolled across the empty square before dawn.\n\n"
+        f"## Two\n\n{old_ch1}\n\n## Three\n\n{old_ch2}\n"
+    )
+    save(editor, opened, renumbered, "c" * 32)
+    delta = editor.delta()
+    assert [c["match_status"] for c in delta["chapter_deltas"]] == ["unmatched", "matched", "matched"]
+    assert delta["chapter_deltas"][0]["words_delta"] is None
+    assert delta["chapter_deltas"][1]["base_title"] == "One"
+    assert delta["chapter_deltas"][1]["words_delta"] == 0
+    assert delta["chapter_matching"]["unmatched"] == 1
+    assert delta["chapter_matching"]["clear"] is True
+
+    # Identical generic chapters make correspondence ambiguous -> deltas withheld.
+    source_amb = tmp_path / "amb.md"
+    source_amb.write_text("## Chapter\n\nSame words here.\n\n## Chapter\n\nSame words here.\n", encoding="utf-8")
+    amb_editor = ManuscriptStore(tmp_path, source_amb)
+    amb_open = amb_editor.open()
+    save(
+        amb_editor,
+        amb_open,
+        "## Chapter\n\nSame words here.\n\n## Chapter\n\nDifferent words entirely.\n",
+        "d" * 32,
+    )
+    amb_delta = amb_editor.delta()
+    assert any(
+        c["match_status"] in {"ambiguous", "unmatched"} and c["words_delta"] is None
+        for c in amb_delta["chapter_deltas"]
+    )
+    assert amb_delta["chapter_matching"]["clear"] is False

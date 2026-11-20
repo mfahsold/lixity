@@ -854,7 +854,7 @@ if (researchRevisionDialog) {
   function revisionUpdateQueueControls() {
     if (revisionBatchReview) {
       revisionBatchReview.hidden = Boolean(revisionState.section) || !revisionBatch.entries.length;
-      revisionBatchReview.textContent = uiFormat("research_revision_batch_review", {count: revisionBatch.entries.length});
+      revisionBatchReview.textContent = uiCountFormat("research_revision_batch_review", revisionBatch.entries.length);
     }
     var queued = revisionBatch.entries.some(function(entry) {
       return entry.operation.kind === revisionState.kind && entry.operation.id === revisionState.id;
@@ -931,7 +931,7 @@ if (researchRevisionDialog) {
       }), true);
     } else {
       revisionBatch.preview = preview;
-      revisionBatchStatus(uiFormat("research_revision_batch_ready", {count: preview.operations.length}), false);
+      revisionBatchStatus(uiCountFormat("research_revision_batch_ready", preview.operations.length), false);
     }
     revisionBatchPending(false);
   }
@@ -1060,7 +1060,7 @@ if (researchRevisionDialog) {
         revisionBatchPending(false);
         revisionBatchDialog.close();
         revisionUpdateQueueControls();
-        researchStatus(uiFormat("research_revision_batch_saved", {count: result.records.length}), true);
+        researchStatus(uiCountFormat("research_revision_batch_saved", result.records.length), true);
         revisionRefreshLists();
       }
     } catch (error) {

@@ -316,7 +316,7 @@ async function companionOverviewReturn(browser, motion) {
    const analysis=page.locator('#analysis-sections');
    await expect(analysis).not.toBeVisible();
    await expect(page.locator('[data-analysis-workflow]')).toHaveCount(3);
-   await expect(analysis.locator('[data-section-link]')).toHaveCount(10);
+   await expect(analysis.locator('[data-section-link]')).toHaveCount(9);
    await expect(analysis.locator('[data-section-indicator]')).toHaveCount(0);
    assert.equal(await analysis.locator('[data-section-link]').evaluateAll(links=>links.every(link=>
     !!link.dataset.help && link.dataset.help.trim() && !link.hasAttribute('tabindex'))),true);
@@ -325,7 +325,7 @@ async function companionOverviewReturn(browser, motion) {
     await page.evaluate(()=>uiLabel('speech_reader_help_plan')),
     'Export-only workspaces must not promise audio rendering');
    const outline = page.locator('#analysis-outline-nav');
-   for(const target of ['flags','dist','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {
+   for(const target of ['flags','dialogue','characters','pacing','scenes','motifs','showing','style','matrix']) {
     assert.equal(await outline.locator(`[data-section-link=${target}]`).getAttribute('data-help'),
      await analysis.locator(`[data-section-link=${target}]`).getAttribute('data-help'));
    }

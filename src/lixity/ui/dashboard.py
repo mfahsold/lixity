@@ -47,9 +47,14 @@ from .components import (
     analysis_outline_nav,
     artifacts_panel,
     attr_json,
+    badge,
     chapter_link,
     checkbox_field,
+    close_button,
+    compact_control,
     details_start,
+    empty_state,
+    form_field,
     help_term,
     kpi,
     kpi_group,
@@ -66,7 +71,9 @@ from .components import (
     project_header,
     script_json,
     section_nav,
+    status_banner,
     status_strip,
+    table_wrap_start,
     tense_class,
     tense_label,
     ui_icon,
@@ -99,6 +106,7 @@ from .settings import settings_form
 from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
+_PASSAGE_NAVIGATION_SCRIPT = "analysis-passage-navigation.js"
 _CSS_FILES = (
     "design-tokens.css",
     "components.css",
@@ -141,6 +149,7 @@ _JS_FILES = (
     "register-settings.js",
     "site-publication-settings.js",
     "dashboard.js",
+    _PASSAGE_NAVIGATION_SCRIPT,
     "analysis-scope.js",
     "zotero-results.js",
     "research-cards.js",
@@ -178,6 +187,7 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
     "audio-take.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
+    _PASSAGE_NAVIGATION_SCRIPT,
 ))
 _REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css"})
 
@@ -189,6 +199,7 @@ _PUBLICATION_JS_FILES = tuple(
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
         "teleprompter.js", "speech-presentation.js", "audio-take.js",
         "research-collections.js", "research-tools.js",
+        _PASSAGE_NAVIGATION_SCRIPT,
     }
 )
 
@@ -334,6 +345,8 @@ def render_dashboard(
     research root; standalone renderers supply no guessed context.
     ``project_overview_enabled`` enables explicit local project inspection;
     embedding and read-only exports omit that surface by default.
+    ``motif-search`` enables native custom expression search. A static report
+    can present the motif occurrences already included in its data.
     ``project_author`` and ``identity_check`` describe saved project identity and
     a read-only manuscript comparison. Author editing requires the explicit
     ``author_setting_enabled`` capability; its default supplies no personal name.
@@ -505,6 +518,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     "open",
                     "ctx_yes",
                     "ctx_no",
+                    "chapter",
+                    "line",
+                    "sentence_dist",
+                    "pac_sticky_items",
                 )
                 if speech_enabled or not key.startswith("speech_")
             },
@@ -678,7 +695,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
-        parts.append('<div class="table-wrap"><table><tbody>')
+        parts.append(table_wrap_start() + "<tbody>")
         ctx_fields = (
             ("genre", "ctx_genre"),
             ("created_period", "ctx_created_period"),
@@ -796,8 +813,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append(
             '<div class="view-pane" id="view-pane-project" data-view-pane="project" data-requires-write role="tabpanel" aria-labelledby="tab-view-project">'
         )
-        parts.append('<section class="panel controls" id="controls">')
-        parts.append(f"<h2>{L('workspace_project')}</h2>")
+        parts.append(panel_start("controls", labels, "workspace_project", extra_class="controls"))
         results_available = action_enabled("export") or any(
             action_enabled(action) for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild"))
         ribbon_gates = {
@@ -926,17 +942,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
             parts.append("</div></div>")
 
-        parts.append(
-            f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>'
-        )
+        parts.append(status_banner("ctl-status", L("server_hint"), tag="div"))
         # Generated files belong to the Results step, directly under the actions.
         if artifacts and not show_project_overview:
             parts.append(artifacts_panel(artifacts, labels, language_key, title_key="generated_files"))
         parts.append("</section>")
 
         if allowed_actions is not None and "nda-draft" in allowed_actions:
-            parts.append('<section class="panel controls" id="nda-draft">')
-            parts.append(f"<h2>{L('nda_draft_title')}</h2>")
+            parts.append(panel_start("nda-draft", labels, "nda_draft_title", extra_class="controls"))
             parts.append(f'<p class="ctl-note">{L("nda_draft_hint")}</p>')
             parts.append(
                 f'<form id="nda-draft-form" class="ctl-group" autocomplete="off" '
@@ -951,22 +964,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 ("place", "nda_draft_place", "text"),
             ):
                 field_id = "nda-" + field.replace("_", "-")
-                parts.append(
-                    f'<div class="setting-field"><label for="{field_id}">{L(label_key)}</label>'
-                )
                 if input_type == "textarea":
-                    parts.append(
+                    control_html = (
                         f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2" data-help="{L("nda_draft_hint")}"></textarea>'
                     )
                 else:
                     value_attr = (
                         f' value="{esc(nda_project_name)}"' if field == "project_name" else ""
                     )
-                    parts.append(
+                    control_html = (
                         f'<input class="ctl" type="{input_type}" id="{field_id}" '
                         f'name="{field}"{value_attr} data-help="{L("nda_draft_hint")}" required/>'
                     )
-                parts.append("</div>")
+                parts.append(form_field(field_id, L(label_key), control_html, label_class=""))
             parts.append('</div><div class="row">')
             parts.append(
                 f'<button type="submit" class="ctl primary" id="nda-preview-btn" '
@@ -980,9 +990,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'<button type="button" class="ctl" id="nda-text-btn" '
                 f'title="{L("nda_draft_text")}" data-help="{L("nda_draft_text_help")}" disabled>{L("nda_draft_text")}</button>'
             )
-            parts.append(
-                '</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>'
-            )
+            parts.append('</div>' + status_banner("nda-draft-status", tag="div") + '</form>')
             parts.append(
                 f'<noscript><p class="ctl-note">{L("nda_draft_javascript")}</p></noscript>'
             )
@@ -1002,15 +1010,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     reader_controls = ""
     if controls and has_reading:
-        dossier_icon = ui_icon("panel-right", size=15)
         reader_controls = (
             '<div class="reader-controls">'
-            '<button type="button" class="ctl reader-compact-control" id="workspace-reader-toggle" '
-            f'aria-label="{L("reader_toggle")}" title="{L("reader_toggle")}" '
-            f'data-help="{L("reader_hint")}" '
-            'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
-            f'<span class="reader-control-icon" aria-hidden="true">{dossier_icon}</span>'
-            f'<span class="reader-control-label">{L("reader_toggle")}</span></button><p class="ctl-note">'
+            + compact_control(
+                label(labels, "reader_toggle"),
+                "panel-right",
+                icon_size=15,
+                control_id="workspace-reader-toggle",
+                help_text=label(labels, "reader_hint"),
+                expanded=False,
+                controls_id="workspace-reader-panel",
+                disabled=True,
+            )
+            + '<p class="ctl-note">'
             f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
         ) if reader_enabled else ""
         parts.append(
@@ -1025,19 +1037,32 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             'aria-labelledby="workspace-reader-title" hidden>'
             '<div class="workspace-reader-head">'
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
-            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}" title="{esc(L("modal_close"), quote=True)}" data-help="{esc(L("modal_close"), quote=True)}" aria-keyshortcuts="Escape">✕</button>'
-            "</div>"
+            + close_button(
+                label(labels, "modal_close"),
+                control_id="workspace-reader-close",
+                help_text=label(labels, "modal_close"),
+            )
+            + "</div>"
             '<div class="row workspace-reader-controls" id="workspace-reader-collection-field" hidden>'
-            '<div class="setting-field grow">'
-            f'<label for="workspace-reader-collection">{L("research_dossier_collection")}</label>'
-            f'<select class="ctl" id="workspace-reader-collection" data-help="{L("research_filter_collection_help")}"><option value="all">{L("research_dossier_collection_all")}</option></select></div></div>'
+            + form_field(
+                "workspace-reader-collection",
+                L("research_dossier_collection"),
+                f'<select class="ctl" id="workspace-reader-collection" data-help="{L("research_filter_collection_help")}"><option value="all">{L("research_dossier_collection_all")}</option></select>',
+                extra_class="grow",
+                label_class="",
+            )
+            + '</div>'
             '<div class="row workspace-reader-controls">'
-            '<div class="setting-field grow">'
-            f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'
-            f'<select class="ctl" id="workspace-reader-dossier" data-help="{L("reader_hint")}"><option value="">{L("reader_choose")}</option></select></div>'
-            f'<button type="button" class="ctl" id="workspace-reader-refresh" title="{L("reader_refresh")}" data-help="{L("reader_hint")}">{L("reader_refresh")}</button></div>'
-            '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
-            '<div id="workspace-reader-body"></div></aside></div>'
+            + form_field(
+                "workspace-reader-dossier",
+                L("reader_choose"),
+                f'<select class="ctl" id="workspace-reader-dossier" data-help="{L("reader_hint")}"><option value="">{L("reader_choose")}</option></select>',
+                extra_class="grow",
+                label_class="",
+            )
+            + f'<button type="button" class="ctl" id="workspace-reader-refresh" title="{L("reader_refresh")}" data-help="{L("reader_hint")}">{L("reader_refresh")}</button></div>'
+            + status_banner("workspace-reader-status")
+            + '<div id="workspace-reader-body"></div></aside></div>'
             '<div id="workspace-reader-divider" class="workspace-reader-divider" role="separator" '
             'tabindex="0" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" '
             f'aria-valuenow="62" aria-label="{L("reading_split")}" aria-keyshortcuts="ArrowLeft ArrowRight Home End" '
@@ -1115,26 +1140,31 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         metric_control = (
             '<label class="metric-layer-control">'
             f'<span>{L("analysis_measure") if controls else help_term(labels, "layer", L("style_layer"))}</span> '
-            f'<select class="ctl" id="style-layer" aria-label="{L("analysis_measure")}" '
+            f'<select class="ctl ctl-sm" id="style-layer" aria-label="{L("analysis_measure")}" '
             f'data-help="{L("reading_help_measure")}">'
             f'<option value="">{L("layer_off")}</option>'
             + "".join(grouped_layer_options)
             + "</select></label>"
         )
+    scenes_panel = render_scenes_panel(scenes, labels, language_key)
+    motifs_panel = render_motifs_panel(
+        motifs, labels, custom_search=controls and allowed_actions is not None and action_enabled("motif-search"),
+    )
     # Use one navigation in the measured reader header when available, with
     # the same registry-backed anchors in static reports without reader controls.
     available = {"flags"} if has_chapters else set()
-    if metrics is not None:
+    has_pacing = bool(pacing and pacing.get("chapter_list"))
+    if has_pacing:
+        available.add("pacing")
+    elif metrics is not None:
         available.add("dist")
     if dialogue:
         available.add("dialogue")
     if characters and (characters.get("figures") or characters.get("error")):
         available.add("characters")
-    if pacing and pacing.get("chapter_list"):
-        available.add("pacing")
-    if scenes:
+    if scenes_panel:
         available.add("scenes")
-    if motifs:
+    if motifs_panel:
         available.add("motifs")
     if showing and showing.get("chapter_list"):
         available.add("showing")
@@ -1165,7 +1195,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             f'{layer_navigation}'
             '</div>'
             f'{flag_checkbox}'
-            f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
+            f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
             '</div></div>'
         ) if paragraphs else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
@@ -1241,9 +1271,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         review_routes: list[tuple[str, str, str, str]] = [
             ("review_compare", compare_hint, "review_compare_action", compare_target),
         ]
-        if metrics is not None:
+        if metrics is not None or has_pacing:
             review_routes.append(
-                ("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist")
+                ("review_rhythm", "review_rhythm_hint", "review_rhythm_action",
+                 "pacing" if has_pacing else "dist")
             )
         if (
             fingerprint is not None and metrics is not None and metrics.chapters
@@ -1315,20 +1346,22 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     )
     parts.append("</span>")
     if controls and research_context_token:
-        terms_icon = ui_icon("tag")
         parts.append(
-            f'<button type="button" class="ctl reader-compact-control reader-terms-btn" id="research-reader-terms" '
-            f'aria-label="{L("manuscript_terms_heading")}" title="{L("manuscript_terms_heading")}" '
-            f'data-help="{L("manuscript_terms_help")}">'
-            f'<span class="reader-control-icon" aria-hidden="true">{terms_icon}</span>'
-            f'<span class="reader-control-label sr-only">{L("manuscript_terms_heading")}</span></button>'
+            compact_control(
+                label(labels, "manuscript_terms_heading"),
+                "tag",
+                control_id="research-reader-terms",
+                css_class="ctl reader-compact-control reader-terms-btn",
+                help_text=label(labels, "manuscript_terms_help"),
+                label_sr_only=True,
+            )
         )
     if not (has_reading and controls):
         parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
                                     extra_class="js-analysis-control"))
         if paragraphs:
             parts.append(
-                f'<button type="button" class="ctl js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
+                f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
             )
             parts.append(metric_control)
     parts.append('<span class="legend">')
@@ -1361,6 +1394,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     )
     parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
                  f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
+                 '<p class="ctl-note" id="analysis-evidence-instruction"></p>'
                  '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p></div>')
     parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
                  f'<strong>{L("legend_paragraph_comparison")}</strong>')
@@ -1573,11 +1607,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
         scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
+        rhythm_jump = "#pacing" if has_pacing else "#dist"
         rhythm_tiles.append(
             kpi(
                 N(metrics.asl, 2) if has_tokens else "–",
                 help_term(labels, "asl", L("measurement_words_per_sentence")),
-                jump="#dist",
+                jump=rhythm_jump,
             )
         )
         rhythm_tiles.append(
@@ -1585,7 +1620,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 P(metrics.staccato_pct) if has_tokens else "–",
                 L("measurement_short_sentences"),
                 bar=metrics.staccato_pct if has_tokens else None,
-                jump="#dist",
+                jump=rhythm_jump,
             )
         )
         language_tiles.append(
@@ -1726,9 +1761,16 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
     review_capable = bool(controls and not read_only and allowed_actions is not None and action_enabled("analysis-review"))
-    parts.append(f'<section class="panel" id="flags" data-review-capable="{str(review_capable).lower()}">')
-    parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))} "
-                 f'<span class="badge">{N(len(flagged), 0)}</span></h2>')
+    parts.append(
+        panel_start(
+            "flags",
+            labels,
+            "panel_flags",
+            help_key="flagged",
+            badge_html=badge(N(len(flagged), 0), variant=""),
+            extra_attrs=f'data-review-capable="{str(review_capable).lower()}"',
+        )
+    )
     parts.append(panel_guide(L("triage_intro")))
     if flagged:
         parts.append('<div class="row triage-controls">')
@@ -1750,43 +1792,16 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                          for status in ("unreviewed", "stale", "later", "kept", "changed"))
             parts.append('</select></label>')
         parts.append(f'<button type="button" class="ctl" id="triage-next">{L("triage_next")}</button></div>')
-        parts.append('<div class="triage-pill-filters">')
-        parts.append(
-            f'<div class="chip-row" role="group" aria-label="{L("flags_stage")}" data-triage-pill-group="severity">'
-            f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
-            f'{L("triage_all")} <span class="badge" data-pill-count>{N(len(flagged), 0)}</span></button>'
-        )
-        for severity in sorted({p.severity for p in flagged}):
-            sev_count = sum(1 for p in flagged if p.severity == severity)
-            parts.append(
-                f'<button type="button" class="ctl ctl-sm" data-value="{severity}" aria-pressed="false">'
-                f'{L(f"severity_{severity}")} <span class="badge" data-pill-count>{N(sev_count, 0)}</span></button>'
-            )
-        parts.append('</div>')
-        if review_capable:
-            parts.append(
-                f'<div class="chip-row" role="group" aria-label="{L("triage_status")}" data-triage-pill-group="status">'
-                f'<button type="button" class="ctl ctl-sm" data-value="" aria-pressed="true">'
-                f'{L("triage_all")} <span class="badge" data-pill-count>{N(len(flagged), 0)}</span></button>'
-            )
-            parts.extend(
-                f'<button type="button" class="ctl ctl-sm" data-value="{triage_status}" aria-pressed="false">'
-                f'{L("triage_" + triage_status)} <span class="badge" data-pill-count>0</span></button>'
-                for triage_status in ("unreviewed", "stale", "later", "kept", "changed")
-            )
-            parts.append('</div>')
-        parts.append('</div>')
     if flagged or review_capable:
-        parts.append('<p class="ctl-note" id="triage-progress" role="status" aria-live="polite"></p>')
+        parts.append(status_banner("triage-progress", css_class="ctl-note"))
         if review_capable:
             parts.append(f'<p class="ctl-note">{L("triage_storage")}</p>')
-            parts.append('<p class="ctl-status" id="triage-save-status" role="status" aria-live="polite"></p>')
+            parts.append(status_banner("triage-save-status"))
             parts.append(f'<button type="button" class="ctl" id="triage-reload" hidden>{L("triage_reload")}</button>')
     if flagged:
         para_index = {id(p): i for i, p in enumerate(paragraphs)}
-        parts.append('<div class="table-wrap flags-wrap" tabindex="0" role="region" '
-                     f'aria-label="{L("panel_flags")}">')
-        parts.append("<table><thead><tr>")
+        parts.append(table_wrap_start(label(labels, "panel_flags"), extra_class="flags-wrap"))
+        parts.append("<thead><tr>")
         parts.append(
             f'<th scope="col">{label(labels, "flags_stage")}</th>'
             f'<th scope="col">{L("chapter")}</th>'
@@ -1812,8 +1827,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'data-target="p-{idx}" data-flags="1" '
                 f'data-triage-chapter="{p.chapter_num}" data-triage-severity="{p.severity}" '
                 f'data-review-sha="{paragraph_identity(p)["paragraph_sha256"]}">'
-                f'<td><span class="badge sev-{p.severity}">'
-                f"{esc(label(labels, f'severity_{p.severity}'))}</span></td>"
+                f'<td>{badge(label(labels, f"severity_{p.severity}"), variant="", css_class=f"sev-{p.severity}")}</td>'
                 f"<td>{chapter_cell}</td>"
                 f'<td class="num">{esc(line_label(labels, p))}</td>'
                 f'<td class="flag-excerpt">{esc(excerpt)}'
@@ -1835,7 +1849,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
     else:
-        parts.append(f'<p class="hint">{label(labels, "flags_empty")}</p>')
+        parts.append(empty_state(label(labels, "flags_empty")))
     parts.append("</section>")
 
     # --- Work markers (editor-visible, right after flagged passages) -------
@@ -1844,13 +1858,18 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     # --- Narrative panels (ordered by editorial workflow relevance:
     #     pacing & scenes -> dialogue, sentence craft & signal groups ->
     #     character presence & local echoes) -------------------------------
-    parts.append(render_pacing_panel(pacing, labels, language_key))
-    parts.append(render_scenes_panel(scenes, labels, language_key))
-    parts.append(render_dialogue_panel(dialogue, labels, language_key))
-    parts.append(render_sentence_dist_panel(metrics, labels, language_key))
-    parts.append(render_showing_panel(showing, labels, language_key))
+    parts.append(render_pacing_panel(pacing, labels, language_key, metrics=metrics))
+    parts.append(scenes_panel)
+    parts.append(render_dialogue_panel(dialogue, labels, language_key,
+                                       counted_text_available=bool(controls and has_reading and paragraph_evidence)))
+    if not has_pacing:
+        parts.append(render_sentence_dist_panel(metrics, labels, language_key))
+    sentence_bounds = metrics.sentence_dist._word_bounds if metrics is not None else None
+    parts.append(render_showing_panel(
+        showing, labels, language_key, short_sentence_max=sentence_bounds[0] if sentence_bounds else None,
+    ))
     parts.append(render_characters_panel(characters, chapters, labels, language_key))
-    parts.append(render_motifs_panel(motifs, labels))
+    parts.append(motifs_panel)
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
@@ -1876,10 +1895,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 style_structural(chapters, fingerprint, labels, language_key),
             ),
         ]
-        parts.append(
-            f'<section class="panel style-panel" id="style">'
-            f'<h2>{L("group_style")}</h2>'
-        )
+        parts.append(panel_start("style", labels, "group_style", extra_class="style-panel"))
         parts.append(
             f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>'
         )
@@ -1905,7 +1921,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         # Chapters exist, but none reaches the comparability floor: explain the
         # minimum instead of presenting an empty or misleading style reference.
         min_chapters = fingerprint.thresholds.min_chapters
-        parts.append(f'<section class="panel" id="style"><h2>{L("group_style")}</h2>')
+        parts.append(panel_start("style", labels, "group_style"))
         parts.append(
             '<p class="ctl-note">'
             + L("style_unavailable_note")
@@ -1931,9 +1947,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         parts.append(details_start(L("analysis_coverage"), extra_class="analysis-coverage")
                      + panel_guide(L("analysis_chapter_coverage")) + '</details>')
-        parts.append('<div class="table-wrap" tabindex="0" role="region" '
-                     f'aria-label="{L("chapter_table")}">')
-        parts.append("<table><thead><tr>")
+        parts.append(table_wrap_start(label(labels, "chapter_table")))
+        parts.append("<thead><tr>")
         parts.append(
             f'<th scope="col">{help_term(labels, "chapter_row", "#")}</th>'
             f'<th scope="col">{help_term(labels, "chapter_row", L("chapter"))}</th>'
@@ -2008,6 +2023,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     if controls:
         parts.append(license_terms(labels))
+    scripts = _JS_FILES if controls else _REPORT_JS_FILES
+    if not controls and (motifs_panel or (paragraph_evidence and (has_pacing or showing))):
+        scripts += (_PASSAGE_NAVIGATION_SCRIPT,)
     parts.extend(
         [
             "</div>",
@@ -2015,7 +2033,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             ('<script type="application/json" id="research-diagram-library">'
              + _script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + "</script>" if controls else ""),
-            f"<script>{_bundle((_JS_FILES if controls else _REPORT_JS_FILES) + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
+            f"<script>{_bundle(scripts + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",
         ]

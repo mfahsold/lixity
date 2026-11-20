@@ -29,6 +29,7 @@ from ..ui import render_analysis
 from ..ui.manuscript_document import reader_blocks
 from ..ui.render_contracts import DashboardContent, DashboardOptions
 from .constants import NATIVE_UI_ACTIONS
+from .middleware import ANALYSIS_OVERRIDE_KEYS, load_selected_project_config
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
 
@@ -113,8 +114,12 @@ def build_server_dashboard(
     token_root = project_root or (Path(source_input).parent if source_input else None)
     settings_token = project_settings_token(token_root, source_input, config_bytes=project_config_bytes)
     source_is_file = bool(source_input and os.path.isfile(source_input))
-    settings = (read_explicit_project_config(project_root) if project_root is not None else
-                load_project_config(source_input) if source_is_file else {})
+    settings = load_selected_project_config(
+        source_input,
+        project_root=project_root,
+        explicit_loader=read_explicit_project_config,
+        implicit_loader=load_project_config,
+    )
     identity_settings = settings
     if project_root is None and source_input and not source_is_file:
         identity_settings = load_project_config(Path(source_input).parent)
@@ -128,8 +133,9 @@ def build_server_dashboard(
             settings["characters"] = identity_settings["characters"]
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
+        override_keys = {"register_profiles", "chapter_registers", "characters"} | ANALYSIS_OVERRIDE_KEYS
         settings = {**settings, **{key: value for key, value in identity_settings_override.items()
-                                  if key in {"register_profiles", "chapter_registers", "characters", "tense_model", "tense_scope"}}}
+                                  if key in override_keys}}
     config, resolved = resolve_document_config(text, language, project_config=settings)
     status_labels = resolved.labels
 

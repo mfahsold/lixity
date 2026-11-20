@@ -12,11 +12,13 @@ from .components import (
     attr_json,
     checkbox_field,
     esc,
+    form_field,
     help_badge,
     help_term,
     label,
     panel_guide,
     panel_label,
+    status_banner,
 )
 
 
@@ -46,14 +48,17 @@ def _segmented_select(
         f'aria-pressed="{"true" if selected else "false"}">{esc(pill_label)}</button>'
         for val, _opt_label, pill_label, selected in options
     )
-    return (
-        '<div class="setting-field">'
-        f'<label for="{esc(select_id)}">{esc_label} {badge}</label>'
-        f'<select class="ctl" id="{esc(select_id)}" data-default="{esc(default_value)}"'
-        f'{extra}{help_attr} aria-describedby="{esc(described_by)}">{option_html}</select>'
-        f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
-        f'data-sync-select="{esc(select_id)}">{pill_html}</div>'
-        f'{note_html}</div>'
+    return form_field(
+        select_id,
+        f"{esc_label} {badge}",
+        (
+            f'<select class="ctl" id="{esc(select_id)}" data-default="{esc(default_value)}"'
+            f'{extra}{help_attr} aria-describedby="{esc(described_by)}">{option_html}</select>'
+            f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
+            f'data-sync-select="{esc(select_id)}">{pill_html}</div>'
+        ),
+        label_class="",
+        note_html=note_html,
     )
 
 
@@ -98,17 +103,26 @@ def settings_form(
         f'<legend>{translated("settings_project_details")}</legend>',
         project_save_hint,
         '<div class="settings-grid">',
-        f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
-        f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
-        f'data-help="{translated("settings_title_hint")}" aria-describedby="set-title-help"/>',
-        f'<p id="set-title-help">{translated("settings_title_hint")}</p></div>',
-        f'<div class="setting-field"><label for="set-author-name">{translated("project_author_name")}</label>',
-        f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
-        f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
-        f'data-help="{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}" '
-        f'data-author-setting-enabled="{str(author_setting_enabled).lower()}"'
-        f'{" disabled" if not author_setting_enabled else ""}/>',
-        f'<p id="set-author-name-help">{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}</p></div></div>',
+        form_field(
+            "set-title",
+            translated("title"),
+            f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
+            f'data-help="{translated("settings_title_hint")}" aria-describedby="set-title-help"/>',
+            label_class="",
+            note_html=f'<p id="set-title-help">{translated("settings_title_hint")}</p>',
+        ),
+        form_field(
+            "set-author-name",
+            translated("project_author_name"),
+            f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
+            f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
+            f'data-help="{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}" '
+            f'data-author-setting-enabled="{str(author_setting_enabled).lower()}"'
+            f'{" disabled" if not author_setting_enabled else ""}/>',
+            label_class="",
+            note_html=f'<p id="set-author-name-help">{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}</p>',
+        ),
+        '</div>',
     ]
     if identity_check is not None:
         parts.extend([
@@ -185,21 +199,35 @@ def settings_form(
         ),
     ]
     if publication_error:
-        publication_parts.append('<p class="ctl-status err" id="publication-settings-error" role="alert">'
-                     f'{translated("publication_invalid")}: {esc(publication_error)}</p>')
+        publication_parts.append(
+            status_banner(
+                "publication-settings-error",
+                f'{translated("publication_invalid")}: {esc(publication_error)}',
+                css_class="ctl-status err",
+                role="alert",
+                aria_live="",
+            )
+        )
     publication_parts.append('<div class="settings-grid">')
     for field in PUBLICATION_FIELDS:
         identifier = "set-publication-" + field.key
         value = esc(publication_values[field.key])
         attrs = (f'class="ctl" id="{identifier}" data-publication-key="{field.key}" '
                  f'maxlength="{field.max_chars}"{disabled}')
-        publication_parts.append(f'<div class="setting-field publication-field-{field.kind} publication-field-{field.key}">'
-                     f'<label for="{identifier}">{translated("publication_" + field.key)}</label>')
-        if field.kind == "multiline":
-            publication_parts.append(f'<textarea {attrs} rows="3">{value}</textarea>')
-        else:
-            publication_parts.append(f'<input type="text" {attrs} value="{value}"/>')
-        publication_parts.append('</div>')
+        control_html = (
+            f'<textarea {attrs} rows="3">{value}</textarea>'
+            if field.kind == "multiline"
+            else f'<input type="text" {attrs} value="{value}"/>'
+        )
+        publication_parts.append(
+            form_field(
+                identifier,
+                translated("publication_" + field.key),
+                control_html,
+                extra_class=f"publication-field-{field.kind} publication-field-{field.key}",
+                label_class="",
+            )
+        )
     publication_parts.append('</div></details>')
     preset_choices = tuple(
         (preset, f"settings_preset_{preset}")
@@ -254,12 +282,15 @@ def settings_form(
             )
         default_note = esc(label(labels, "settings_default")).replace("{value}", str(default))
         parts.append(
-            f'<div class="setting-field"><label for="{control_id}">{translated(key)} '
-            f'{help_badge(help_text, label(labels, key))}</label>'
-            f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
-            f'{" ".join(constraints)} required '
-            f'data-default="{default!r}" data-help="{esc(help_text, quote=True)}" aria-describedby="{control_id}-help settings-scope-help"/>'
-            f'<p class="ctl-note" id="{control_id}-help">{default_note}</p></div>'
+            form_field(
+                control_id,
+                f'{translated(key)} {help_badge(help_text, label(labels, key))}',
+                f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
+                f'{" ".join(constraints)} required '
+                f'data-default="{default!r}" data-help="{esc(help_text, quote=True)}" aria-describedby="{control_id}-help settings-scope-help"/>',
+                label_class="",
+                note_html=f'<p class="ctl-note" id="{control_id}-help">{default_note}</p>',
+            )
         )
         if key == "fdr_q":
             method = thresholds.fdr_method.lower()
@@ -352,8 +383,8 @@ def site_publication_editor(
         f'data-labels="{attr_json(terms)}" data-context-token="{esc(context_token)}"'
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(terms["publication_editor_title"])}</legend>'
-        '<p class="ctl-status" data-site-publication-status role="status" aria-live="polite"></p>'
-        f'<button type="button" class="ctl" data-site-publication-retry hidden>{esc(terms["publication_editor_retry"])}</button>'
+        + status_banner(extra_attrs="data-site-publication-status")
+        + f'<button type="button" class="ctl" data-site-publication-retry hidden>{esc(terms["publication_editor_retry"])}</button>'
         '<div data-site-publication-profiles></div>'
         f'<button type="button" class="ctl" data-site-publication-add-profile data-help="{esc(terms["publication_editor_hint"])}">{esc(terms["publication_editor_add_profile"])}</button>'
         '</fieldset></details>'
@@ -389,10 +420,13 @@ def register_editor(
         f'<legend>{esc(label(labels, "register_title"))}</legend>'
         '<div data-register-profiles></div>'
         '<div class="settings-grid register-template-controls">'
-        '<div class="setting-field">'
-        f'<label for="register-template-select">{esc(label(labels, "register_template_label"))}</label>'
-        f'<select class="ctl" id="register-template-select" data-register-template-select data-help="{esc(label(labels, "register_scope_hint"))}">{template_options}</select>'
-        '</div></div>'
+        + form_field(
+            "register-template-select",
+            esc(label(labels, "register_template_label")),
+            f'<select class="ctl" id="register-template-select" data-register-template-select data-help="{esc(label(labels, "register_scope_hint"))}">{template_options}</select>',
+            label_class="",
+        )
+        + '</div>'
         '<div class="settings-actions">'
         f'<button type="button" class="ctl" data-register-add-profile data-help="{register_help}">{esc(label(labels, "register_add_profile"))}</button>'
         f'<button type="button" class="ctl" data-register-add-template data-help="{register_help}">{esc(label(labels, "register_template_apply"))}</button>'

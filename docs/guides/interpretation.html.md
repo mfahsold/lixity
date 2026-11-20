@@ -20,13 +20,15 @@ Turn **Analysis** on and choose a metric in **Measure**. The separate **Counted 
 
 ### Counted text
 
-Violet underlines identify the exact words or sentences counted by the chosen metric. Hover or tap a mark to see the quotation and its count.
+Violet underlines identify the exact words or sentences counted by the chosen metric. Open a mark to see the quotation, why it was marked and a question to consider as you read.
 
 ### ↓ ↑ Paragraph comparison
 
 Blue/down and orange/up markers identify notable lower and higher paragraph values relative to the chapter. Their number is the paragraph's raw value. Color and direction describe a difference, not a quality grade.
 
 A selected sentence's word count and its paragraph's comparison have different scopes. The explanation card shows them separately; **Read these marks** opens the counting and method details. **Focus reading** temporarily hides both displays and restores your choices on exit. [Try the marks in the short tour](first-look.html#passage).
+
+In **Sticky sentences**, the underline marks a sentence that reaches the configured minimum length and share of function words. Open it to see both thresholds and the counted words, such as articles, pronouns and conjunctions. Read it aloud and see where you pause. In the repeated-word view, dashed marks link other occurrences of the same word in that paragraph. Read those occurrences together to see what the repetition does.
 
 ![Counted-text underlines, paragraph comparison markers and the separate explanation card in the Lixity reader](../screenshots/dashboard-measurement-focus.png)
 
@@ -134,6 +136,10 @@ No. Benjamini–Hochberg and Benjamini–Yekutieli require valid input probabili
 The style summary labels the share of feature comparisons within the threshold and shows its numerator and denominator. For example, 407 of 416 comparisons is about 98%; this is not a measurement of stylistic cohesion. Missing comparisons are excluded. When no comparison is available, the summary remains unknown.
 
 ## What can tense and pacing labels tell me?
+
+Read the word ranges next to the sentence groups. The sentence-length distribution uses four groups. The detailed pacing profile uses three groups to describe how widely sentence lengths vary.
+
+Open the rhythm view and choose a chapter or length group to read examples in the manuscript. Word-pattern examples show their relation to recognized quotation marks when it can be established. In the motifs view, open a repeated phrase to see which occurrences can be highlighted together.
 
 The passage card distinguishes mixed tense cues from a dominant-tense change since the previous paragraph. Open an original counted form to locate it in the manuscript; repeated forms have separate locations. Counts, other paragraph values and general heuristic help start collapsed. If a cue cannot be mapped reliably, Lixity says so. Mixed cues alone do not establish a tense switch.
 

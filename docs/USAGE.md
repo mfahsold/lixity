@@ -26,8 +26,8 @@ owns retained sources, citations, dossiers, Zotero, backups and OCR.
 
 Examples use `manuscript.md` and `./novel` as placeholders for your own UTF-8
 Markdown file and project folder. Analysis and ordinary file exports do not
-require a running browser service. This reference describes 0.8.2; inspect
-`lixity --version` and installed `--help` before using the commands.
+require a running browser service. Check `lixity --version` and the installed
+`--help` to confirm the commands available in your version.
 
 ## Installation
 
@@ -768,7 +768,10 @@ direction between the two groups relative to this manuscript. For concrete wordi
 and choose a component such as **Perception filters**, **Modals**, **Noun endings** or
 **Passive patterns**. **Counted text** marks the exact
 lexical cues independently of **Paragraph comparison**. Inspect a marked span
-to read its count and counting rule.
+to read its count, counting rule and an editorial question. In **Sticky
+sentences**, the card shows which function words contributed to the sentence's
+share and which configured thresholds it reached. In the repeated-word
+view, dashed underlines connect the other occurrences in the same paragraph.
 
 The composite is chapter-level; it is not a word-by-word showing/telling
 classification. It does not distinguish abstract adjectives from sensory verbs.

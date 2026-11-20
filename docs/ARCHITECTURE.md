@@ -1266,6 +1266,15 @@ Labels preserve localized casing. Research catalogues use separated rows within
 their enclosing panel; nested evidence and detail surfaces retain their own
 boundaries. Keep these view-specific layouts in `dashboard.css`.
 
+Passage navigation shares one toolbar component and the reader's existing
+scroll clearance. Updating the position and text preserves the focused
+control. The analysis pipeline supplies counts and verified source positions.
+The browser checks the rendered passage before highlighting it.
+
+Server middleware owns shared project configuration loading and request
+validation. Editor comparison measures exact texts in the analysis backend.
+The view handles debouncing, focus and presentation of the returned state.
+
 Inline styles are reserved for measured/dynamic values. Layout and responsive
 stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden
 spacing/typography patterns. New panels must remain usable at 320 px.

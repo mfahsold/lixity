@@ -727,7 +727,7 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   (`reason: "language_unavailable"`) for `generic` or languages without
   curated `function_words` / dialogue-tag verb lists. `echo` highlights
   same-paragraph repetitions (`>= 2` occurrences, length `>= 4` excluding
-  function/stop words) regardless of whether repetition is intentional
+  function words) regardless of whether repetition is intentional
   rhetorical cadence (anaphora/epizeuxis) or accidental echo.
 - **Voice separation & adverbial dialogue tags:** `voice_separation` compares
   surface lexical cosine similarity, ASL, and `?!` density between quoted
@@ -763,7 +763,7 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
 - **Rhythm profile (`rhythm_profile`):** `asl_cv`, `asl_iqr`, `burstiness`,
   `length_entropy`, and `normalized_entropy` require `sentences >= 2`
   (`available: false` otherwise; `burstiness` also requires `mean > 0`).
-  Three-bucket Shannon entropy (`short <= 7`, `medium 8..20`,
+  Three-bucket Shannon entropy (by default `short <= 6`, `medium 7..20`,
   `long > 20`) depends on sentence splitting and bucket thresholds; high or low
   entropy or burstiness is a descriptive dispersion signal, not an aesthetic or "AI-ness"
   verdict.

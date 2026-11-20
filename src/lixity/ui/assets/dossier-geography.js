@@ -150,7 +150,7 @@
           var feature = value.features[index];
           return !row || row.index !== index || row.label !== feature.properties.label || row.geometry_type !== (feature.geometry ? feature.geometry.type : "unknown");
         })) summary = null;
-    var overview = summary ? '<p class="geography-overview">' + safe(uiFormat("geography_overview", {
+    var overview = summary ? '<p class="geography-overview">' + safe(uiCountFormat("geography_overview", summary.feature_count, {
       located: number(summary.located_feature_count), unlocated: number(summary.unlocated_feature_count), count: number(summary.feature_count)
     })) + (Number.isFinite(summary.route_length_km) ? '<br><span class="ctl-note">' + safe(uiFormat("geography_route_total", {distance: distance(summary.route_length_km)})) + '</span>' : '') + '</p>' : '';
     var legend = '<div class="geography-legend" aria-label="' + safe(label("legend")) + '">' + types.map(function(type) {

@@ -7,6 +7,7 @@
   var status = document.getElementById("analysis-evidence-status");
   var supported = Boolean(window.CSS && CSS.highlights && window.Highlight);
   var visible = new Set(), records = new Map(), epoch = 0, frame = 0, request = 0;
+  var spanRequest = 0;
   var card = null, opening = null, dismissTimer = 0, down = null, hoverFrame = 0, pointer = null, hoverTimer = 0, candidate = null;
   var touchTap = null, touchFallback = 0, lateTouchClick = null;
   var host = document.createElement("div");
@@ -14,6 +15,8 @@
   document.body.appendChild(host);
   var html = LixityComponents.html;
   var textEncoder = null, zFormatters = Object.create(null);
+  var lang = document.documentElement.lang || "en";
+  var percentFormat = new Intl.NumberFormat(lang, {style:"percent", maximumFractionDigits:3});
   var tensePanel = null;
   function clearTense() {
     tensePanel = null;
@@ -33,11 +36,16 @@
   }
   function message(key) { return uiLabel(key); }
   function setStatus(value) { if (status && status.textContent !== value) status.textContent = value; }
+  function clearSelectionHighlights() {
+    if (!supported) return;
+    CSS.highlights.delete("lixity-analysis-current");
+    CSS.highlights.delete("lixity-analysis-related");
+    CSS.highlights.delete("lixity-analysis-contribution");
+  }
   function clearHighlight() {
     if (!supported) return;
     CSS.highlights.delete("lixity-analysis-evidence");
-    CSS.highlights.delete("lixity-analysis-current");
-    CSS.highlights.delete("lixity-analysis-related");
+    clearSelectionHighlights();
   }
   function cancelTouchTap() {
     clearTimeout(touchFallback); touchFallback = 0; touchTap = null;
@@ -47,10 +55,7 @@
     request++; clearTimeout(dismissTimer); clearTimeout(hoverTimer); candidate = null;
     var previous = card || opening; card = null; host.hidden = true;
     if (!scrolling) opening = null;
-    if (supported) {
-      CSS.highlights.delete("lixity-analysis-current");
-      CSS.highlights.delete("lixity-analysis-related");
-    }
+    clearSelectionHighlights();
     if (restore && previous && previous.pinned && previous.trigger && previous.trigger.isConnected) previous.trigger.focus({preventScroll:true});
   }
   function paragraph(panel) { return panel.querySelector(".ptext-inner > p"); }
@@ -72,6 +77,20 @@
     return count === value.mapped_count && (value.status !== "available" || count === value.count) &&
       (value.status !== "unavailable" || value.spans.length === 0);
   }
+  function stickyDetails(span, rule, offsets) {
+    if (!Array.isArray(rule) || !Number.isSafeInteger(rule[0]) || rule[0] < 1 ||
+        !Number.isFinite(rule[1]) || rule[1] <= 0 || rule[1] > 100 ||
+        !Number.isSafeInteger(span.words) || span.words < rule[0] ||
+        !Number.isSafeInteger(span.function_words) || span.function_words < 0 || span.function_words > span.words ||
+        !Array.isArray(span.function_spans) || span.function_spans.length > span.function_words) return null;
+    var pct = span.function_words / span.words * 100;
+    if (pct < rule[1]) return null;
+    var ranges = span.function_spans.filter(function(hit) {
+      return Array.isArray(hit) && Number.isSafeInteger(hit[0]) && Number.isSafeInteger(hit[1]) &&
+        span.start <= hit[0] && hit[0] < hit[1] && hit[1] <= span.end;
+    }).map(function(hit) { return [offsets[hit[0]], offsets[hit[1]]]; });
+    return {count:span.function_words, pct:pct, minWords:rule[0], minPct:rule[1], ranges:ranges};
+  }
   async function prepare(panel) {
     var prose = paragraph(panel), content = paragraphContent[panel.id], evidence = content && content[3];
     var old = records.get(panel);
@@ -91,8 +110,7 @@
       var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
       if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return record;
       // Build one codepoint→UTF-16 table and text-node map per actual prose generation.
-      var offsets = [0], offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
-      for (var character of record.text) { offset += character.length; offsets.push(offset); }
+      var offsets = LixityComponents.cpOffsets(record.text), offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
       offset = 0;
       while (walker.nextNode()) {
         nodes.push({node:walker.currentNode, start:offset, end:offset + walker.currentNode.length});
@@ -106,15 +124,25 @@
         }
         return {node:nodes[low].node, offset:at - nodes[low].start};
       }
+      record.rangeAt = function(left, right) {
+        var range = document.createRange(), start = point(left), end = point(right);
+        range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+        return range;
+      };
       function prepareLayers(values, target) {
         if (!values || typeof values !== "object") return;
         Object.keys(values).forEach(function(key) {
           var value = values[key];
           if (!validLayer(value, offsets.length - 1)) return;
           var spans = value.spans.map(function(span) {
-            var range = document.createRange(), start = point(offsets[span.start]), end = point(offsets[span.end]);
-            range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
-            return {range:range, count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+            var qctx = typeof span.quotation_context === "string" &&
+              ["in_quotation", "outside_quotation", "overlaps_quotation"].includes(span.quotation_context)
+              ? span.quotation_context
+              : null;
+            return {range:record.rangeAt(offsets[span.start], offsets[span.end]),
+              count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+              sticky:key === "sticky" ? stickyDetails(span, value.sticky_rule, offsets) : null,
+              quotation_context:qctx,
               start:offsets[span.start], end:offsets[span.end],
               quote:record.text.slice(offsets[span.start], offsets[span.end])};
           });
@@ -202,6 +230,25 @@
       return {node:container, x:container.scrollLeft, y:container.scrollTop};
     })};
   }
+  function markedQuote(span) {
+    if (!span.sticky || !span.sticky.ranges.length) return span.quote;
+    var parts = [], cursor = span.start;
+    var ranges = span.sticky.ranges.slice().sort(function(left, right) {return left[0] - right[0];});
+    // Merge overlaps within the quote without losing the original token counts.
+    var merged = [];
+    ranges.forEach(function(hit) {
+      var last = merged[merged.length - 1];
+      if (last && hit[0] < last[1]) last[1] = Math.max(last[1], hit[1]);
+      else merged.push(hit.slice());
+    });
+    merged.forEach(function(hit) {
+      parts.push(span.quote.slice(cursor - span.start, hit[0] - span.start));
+      parts.push(html`<mark class="analysis-evidence-contribution">${span.quote.slice(hit[0] - span.start, hit[1] - span.start)}</mark>`);
+      cursor = hit[1];
+    });
+    parts.push(span.quote.slice(cursor - span.start));
+    return parts;
+  }
   function paint() {
     if (!card) return;
     var record = card.record, layer = record.layers[select.value];
@@ -209,17 +256,15 @@
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
     var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
     var content = paragraphContent[record.panel.id], summaries = content[4];
-    var normalizedQuote = span && span.quote ? span.quote.trim().toLocaleLowerCase() : "";
-    var sameWordSpans = normalizedQuote && select.value === "word_echoes"
-      ? spans.filter(function(item) { return item.quote && item.quote.trim().toLocaleLowerCase() === normalizedQuote; })
+    var key = select.value;
+    var sticky = span && span.sticky;
+    var quoteCtx = span && (span.quotation_context || "unknown");
+    var normalizedQuote = span && span.quote ? span.quote.normalize().toLowerCase() : "";
+    var sameWordSpans = normalizedQuote && key === "echo"
+      ? spans.filter(function(item) { return item.quote.normalize().toLowerCase() === normalizedQuote; })
       : [];
     var hasMetricSummary = Boolean(summaries && typeof summaries[select.value] === "string");
-    var summary = hasMetricSummary ? summaries[select.value] :
-      select.value === "word_echoes" && span
-        ? uiFormat(sameWordSpans.length > 1 ? "evidence_echo_summary" : "evidence_echo_single", {
-            word: span.quote, count: sameWordSpans.length, total: spans.length
-          })
-        : "";
+    var summary = hasMetricSummary ? summaries[key] : "";
     var allParagraphValues = content[2] && content[2] !== summary ? content[2] : "";
     var canEditPassage = Boolean(window.LixityManuscriptEditor && typeof window.LixityManuscriptEditor.openAtLine === "function" &&
       record.panel.dataset.start && Number(record.panel.dataset.start) > 0);
@@ -234,7 +279,6 @@
       layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
     var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
     var comparison = info && Number.isFinite(info[2]) ? info : null;
-    var lang = document.documentElement.lang || "en";
     var zFmt = zFormatters[lang] || (zFormatters[lang] = new Intl.NumberFormat(lang, {
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
@@ -244,17 +288,41 @@
     var marker = comparison && (Number.isFinite(comparison[5])
       ? comparison[5]
       : Math.max(0, Math.min(100, 50 + comparison[2] / 2.5 * 50)));
+    var reason = sticky
+      ? uiCountFormat("evidence_sticky_rule", sticky.minWords, {
+          words:sticky.minWords, percent:percentFormat.format(sticky.minPct / 100)
+        })
+      : message("evidence_reason_" + key);
+    var matchSummary = sticky
+      ? uiCountFormat("evidence_sticky_count", sticky.count, {words:span.words, percent:percentFormat.format(sticky.pct / 100)})
+      : sameWordSpans.length ? uiCountFormat("evidence_echo_summary", sameWordSpans.length, {
+          word:span.quote, total:spans.length
+        }) : "";
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
-      <strong id="analysis-evidence-title">${option.textContent}</strong>
+      <div class="analysis-evidence-heading-text">
+        <strong id="analysis-evidence-title">${option.textContent}</strong>
+        ${quoteCtx ? html`<span class="badge badge-neutral analysis-evidence-quote-context" data-quote-context=${quoteCtx}>${message("evidence_quote_" + quoteCtx)}</span>` : null}
+      </div>
       <button type="button" class="ctl analysis-evidence-close" aria-label=${message("evidence_close")} onClick=${function() {close(true);}}>✕</button>
       </div>
-      ${span || counted !== null ? html`<div class=${"analysis-evidence-selection" + (span ? " analysis-evidence-has-quote" : "")}>
-        ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${span.quote}</blockquote>` : null}
-        ${counted !== null ? html`<div class="analysis-evidence-measure">
+      ${span || counted !== null ? html`<div class=${"analysis-evidence-selection" + (span && !matchSummary ? " analysis-evidence-has-quote" : "")}>
+        ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${markedQuote(span)}</blockquote>` : null}
+        ${counted !== null && !matchSummary ? html`<div class="analysis-evidence-measure">
           <span class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</span>
           <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
         </div>` : null}
       </div>` : null}
+      ${span ? html`<section class="analysis-evidence-explanation">
+        <strong class="analysis-evidence-scope">${message("evidence_reason_heading")}</strong>
+        ${matchSummary ? html`<p class="analysis-evidence-value">${matchSummary}</p>` : null}
+        <p>${reason}</p>
+        ${sticky && sticky.ranges.length ? html`<p class="analysis-evidence-key-note">
+          <mark class="analysis-evidence-contribution">${message("evidence_sticky_key")}</mark>
+        </p>` : null}
+        ${key === "sticky" && (!sticky || sticky.ranges.length < sticky.count) ? html`<p class="analysis-evidence-warning">${message("evidence_sticky_unmapped")}</p>` : null}
+        <strong class="analysis-evidence-scope">${message("evidence_review_heading")}</strong>
+        <p>${message("evidence_review_" + key)}</p>
+      </section>` : null}
       ${summary || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
         ${summary ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
         <p class="analysis-evidence-value">${summary}</p>` : null}
@@ -281,18 +349,26 @@
         }}>${message("evidence_edit_passage")}</button>
       </div>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("layer_guide")}</summary>
-        ${!comparison ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
+        ${!comparison && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
         ${layer && layer.value.status !== "unavailable" ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
+        ${key === "sticky" ? html`<p>${message("evidence_reason_function")}</p>` : null}
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;
+    clearSelectionHighlights();
     if (supported && span && enabled()) {
       CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
       var relatedRanges = sameWordSpans.filter(function(item) { return item !== span && item.range; }).map(function(item) { return item.range; });
-      if (relatedRanges.length) CSS.highlights.set("lixity-analysis-related", new (Function.prototype.bind.apply(Highlight, [null].concat(relatedRanges)))());
-      else CSS.highlights.delete("lixity-analysis-related");
-    } else if (supported) {
-      CSS.highlights.delete("lixity-analysis-current");
-      CSS.highlights.delete("lixity-analysis-related");
+      if (relatedRanges.length) {
+        var related = new Highlight();
+        relatedRanges.forEach(function(range) {related.add(range);});
+        CSS.highlights.set("lixity-analysis-related", related);
+      }
+      if (sticky && sticky.ranges.length) {
+        var contributions = new Highlight();
+        sticky.ranges.forEach(function(hit) {contributions.add(record.rangeAt(hit[0], hit[1]));});
+        contributions.priority = 1;
+        CSS.highlights.set("lixity-analysis-contribution", contributions);
+      }
     }
     position(card.rect);
     host.scrollTop = 0;
@@ -460,6 +536,10 @@
     pointer = event;
     if (!hoverFrame) hoverFrame = requestAnimationFrame(function() {hoverFrame = 0; hover(pointer, false);});
   }, {passive:true});
+  chapters.addEventListener("click", function(event) {
+    if (!event.defaultPrevented && event.pointerType === "mouse" && event.detail === 1 &&
+        event.target.closest(".ptext-inner > p") && !event.target.closest("a, button, .manuscript-claim-hit")) hover(event, true);
+  });
   chapters.addEventListener("pointerleave", function(event) {
     clearTimeout(hoverTimer); candidate = null;
     if (card && !card.pinned && !host.contains(event.relatedTarget)) dismissTimer = setTimeout(function() {close(false);}, 180);
@@ -553,10 +633,53 @@
     schedule();
   }, {rootMargin:"128px"});
   chapters.querySelectorAll(".ptext").forEach(function(panel) {observer.observe(panel);});
+  async function inspectSpan(panel, layerKey, spanIndex, options) {
+    if (!panel || !panel.isConnected || !Number.isSafeInteger(spanIndex) || spanIndex < 0) return false;
+    var content = paragraphContent[panel.id], evidence = content && content[3];
+    var candidateLayer = evidence && evidence.layers && evidence.layers[layerKey];
+    if (!candidateLayer || !Array.isArray(candidateLayer.spans) || spanIndex >= candidateLayer.spans.length) return false;
+    var serial = ++spanRequest;
+    if (window.LixityWorkbench) {
+      var wbState = LixityWorkbench.state();
+      if (wbState.surface !== "document") {
+        LixityWorkbench.dispatch({type:"surface", value:"document", analysisVisible:true});
+      } else if (!wbState.analysisVisible) {
+        LixityWorkbench.dispatch({type:"analysis", value:true});
+      }
+    }
+    if (typeof revealChapter === "function") revealChapter(panel);
+    var chip = paragraphChips[panel.id];
+    if (chip && typeof toggleParagraph === "function") toggleParagraph(chip, true, true);
+    if (layerKey && select.value !== layerKey) {
+      select.value = layerKey;
+      select.dispatchEvent(new Event("change", {bubbles:true}));
+    }
+    if (toggle && !toggle.checked) {
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event("change", {bubbles:true}));
+    }
+    await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
+    var record = await prepare(panel), layer = record.layers[layerKey];
+    if (serial !== spanRequest || !currentRecord(record) || select.value !== layerKey || !layer || spanIndex >= layer.spans.length) return false;
+    request++;
+    var idx = spanIndex;
+    var span = layer.spans[idx];
+    var containers = revealRange(panel, span.range);
+    var sourceRect = span.range.getClientRects()[0];
+    var preserveFocus = options && options.preserveFocus;
+    var trigger = preserveFocus && document.activeElement || panel.querySelector(".reader-paragraph-actions") || panel;
+    card = {record:record, index:idx, pinned:true, trigger:trigger,
+      rect:sourceRect || trigger.getBoundingClientRect(),
+      arrival:scrollPosition(containers, trigger)};
+    paint();
+    var closeBtn = host.querySelector("button");
+    if (closeBtn && !preserveFocus) closeBtn.focus({preventScroll:true});
+    return true;
+  }
   function available() {
     var state = LixityWorkbench.state();
     return !document.hidden && state.view === "analysis" && state.surface === "document";
   }
-  window.LixityAnalysisEvidence = {inspect:inspect, available:available, tense:tenseEvidence, revealTense:revealTense};
+  window.LixityAnalysisEvidence = {inspect:inspect, inspectSpan:inspectSpan, available:available, tense:tenseEvidence, revealTense:revealTense};
   schedule();
 })();

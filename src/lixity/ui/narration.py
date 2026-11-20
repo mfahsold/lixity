@@ -2,20 +2,28 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from itertools import pairwise
 from typing import Any
 
 from ..dialogue import LONG_TURN_MIN_WORDS, SHORT_TURN_MAX_WORDS
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
+from ..format import pct as format_pct
 from ..models import CorpusMetrics
-from ..pacing import HOOK_SHORT_SENTENCE
+from ..motifs import MAX_DISPLAY_OCCURRENCES
+from ..pacing import HOOK_SHORT_SENTENCE, sentence_group_intervals
 from ..showing import MIN_COMPARISON_CHAPTERS
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
 from .components import (
+    action_strip,
+    attr_json,
+    badge,
     chapter_link,
+    checkbox_field,
     details_start,
+    dist_row,
     esc,
     help_term,
     kpi,
@@ -25,6 +33,8 @@ from .components import (
     panel_guide,
     panel_label,
     panel_start,
+    status_banner,
+    table_wrap_start,
 )
 
 
@@ -40,8 +50,12 @@ def render_scenes_panel(
                 f'<p role="status">{esc(label(labels, "scene_error_summary"))}</p>'
                 f'<details><summary>{esc(label(labels, "scene_error_details"))}</summary>'
                 f'<p>{esc(scenes["error"])}</p></details></section>')
-    if not scenes.get("items") and not scenes.get("planned_items"):
+    items = scenes.get("items")
+    if items is None:
         return ""
+    if not items and not scenes.get("planned_items"):
+        return (panel_start("scenes", labels, "panel_scenes")
+                + panel_guide(esc(label(labels, "scene_no_measurements"))) + "</section>")
 
     _L, _N, _ = panel_formatters(labels, language_key)
 
@@ -60,9 +74,12 @@ def render_scenes_panel(
     dialog_key = next(label_key for field, label_key, _unit in FEATURES if field == "dialog_pct")
     has_hooks = any("entry_hook_type" in item or "exit_hook_type" in item for item in scenes["items"])
 
-    def _hook_label(hook_type: Any) -> str:
+    def _hook_text(hook_type: Any) -> str:
         key = f"hook_type_{hook_type}" if hook_type in {"dialogue", "action", "reflection", "question", "unknown"} else "hook_type_unknown"
-        return L(key)
+        return label(labels, key)
+
+    def _hook_label(hook_type: Any) -> str:
+        return esc(_hook_text(hook_type))
 
     hook_dist = scenes.get("hook_distribution")
     if isinstance(hook_dist, Mapping) and (hook_dist.get("entry") or hook_dist.get("exit")):
@@ -111,18 +128,20 @@ def render_scenes_panel(
             if has_showing_rates
             else ""
         )
-        parts.append('<div class="table-wrap scene-overview" tabindex="0" role="region" '
-                     f'aria-label="{L("panel_scenes")}"><table><thead><tr>'
-                     f'<th scope="col">{L("panel_scenes")}</th><th scope="col" class="num">{L("words")}</th>'
-                     f'<th scope="col" class="num">{L("sentences")}</th>'
-                     f'<th scope="col" class="num">{asl_unit}</th><th scope="col" class="num">{L(dialog_key)}</th>'
-                     f'{hook_headers}{dynamic_header}{showing_headers}</tr></thead><tbody>')
+        parts.append(
+            table_wrap_start(label(labels, "panel_scenes"), extra_class="scene-overview")
+            + '<thead><tr>'
+            f'<th scope="col">{L("panel_scenes")}</th><th scope="col" class="num">{L("words")}</th>'
+            f'<th scope="col" class="num">{L("sentences")}</th>'
+            f'<th scope="col" class="num">{asl_unit}</th><th scope="col" class="num">{L(dialog_key)}</th>'
+            f'{hook_headers}{dynamic_header}{showing_headers}</tr></thead><tbody>'
+        )
     for item in scenes["items"]:
-        group = esc(item["group"]) if item["group"] else L("scene_unassigned")
-        group_badge = f'<span class="badge badge-register">{group}</span>' if item["group"] else f'<span class="badge badge-neutral">{group}</span>'
+        group_raw = item["group"] or label(labels, "scene_unassigned")
+        group_badge = badge(group_raw, variant="register" if item["group"] else "neutral")
         pov_chars = item.get("pov_characters") or []
         pov_badge = (
-            f' <span class="badge badge-neutral">{L("scene_pov")}: {esc(", ".join(str(c) for c in pov_chars))}</span>'
+            " " + badge(f'{label(labels, "scene_pov")}: {", ".join(str(c) for c in pov_chars)}')
             if pov_chars
             else ""
         )
@@ -134,10 +153,10 @@ def render_scenes_panel(
             entry_t = item.get("entry_hook_type")
             exit_t = item.get("exit_hook_type")
             exit_score = item.get("exit_hook_score")
-            entry_cell = f'<span class="badge badge-neutral">{_hook_label(entry_t)}</span>' if entry_t else "—"
+            entry_cell = badge(_hook_text(entry_t)) if entry_t else "—"
             if exit_t:
                 score_txt = f" · {int(exit_score)}/3" if exit_score is not None else ""
-                exit_cell = f'<span class="badge badge-neutral">{_hook_label(exit_t)}{score_txt}</span>'
+                exit_cell = badge(f"{_hook_text(exit_t)}{score_txt}")
             else:
                 exit_cell = "—"
             hook_cells = f"<td>{entry_cell}</td><td>{exit_cell}</td>"
@@ -145,7 +164,7 @@ def render_scenes_panel(
         if has_dynamics:
             dyn_raw = item.get("scene_dynamic")
             if dyn_raw in {"accelerating", "decelerating", "dialogue_surge", "steady", "insufficient_length"}:
-                dynamic_cell = f'<td><span class="badge badge-neutral">{L("scene_dynamic_" + dyn_raw)}</span></td>'
+                dynamic_cell = f'<td>{badge(label(labels, "scene_dynamic_" + dyn_raw))}</td>'
             else:
                 dynamic_cell = "<td>—</td>"
         showing_cells = ""
@@ -188,9 +207,13 @@ def render_scenes_panel(
         if has_baseline:
             header += f'<th>{L("scene_baseline")}</th>'
         target = f'scene-metrics-{item["chapter"]}-{item["scene"]}'
-        parts.append(f'<div class="table-wrap" id="{esc(target)}" tabindex="0" role="region" '
-                     f'aria-label="{L("scene_measurements")} · {esc(item["id"])}">'
-                     f'<table><thead><tr>{header}</tr></thead><tbody>')
+        parts.append(
+            table_wrap_start(
+                f'{label(labels, "scene_measurements")} · {item["id"]}',
+                wrap_id=target,
+            )
+            + f'<thead><tr>{header}</tr></thead><tbody>'
+        )
         baseline = scenes["baselines"].get(item["group"], {})
         for field, label_key, unit in FEATURES:
             units = FEATURE_UNITS.get(language_key, {}).get(field, unit)
@@ -257,32 +280,87 @@ def render_scenes_panel(
     return "".join(parts)
 
 
+def _sentence_group_attrs(
+    interval: tuple[int, int | None] | None,
+    *,
+    label_text: str,
+    count_positive: bool,
+    group_key: str = "",
+) -> str:
+    if interval is None or not count_positive:
+        return ""
+    min_w, max_w = interval
+    max_attr = f' data-rhythm-max-words="{max_w}"' if max_w is not None else ""
+    group_attr = f' data-rhythm-group="{esc(group_key, quote=True)}"' if group_key else ""
+    return (
+        f' data-rhythm-min-words="{min_w}"{max_attr}{group_attr}'
+        f' data-rhythm-label="{esc(label_text, quote=True)}"'
+    )
+
+
+def _sentence_group_labels(
+    keys: Sequence[str], bounds: Sequence[int] | None,
+    L: Callable[[str], str], N: Callable[..., str],
+) -> list[str]:
+    names = [L("sentence_group_" + key) for key in keys]
+    if bounds is None:
+        return names
+    words = L("words")
+    first_unit = L("words_one") if bounds[0] == 1 else words
+    ranges = [f"≤ {N(bounds[0], 0)} {first_unit}"]
+    ranges.extend(
+        f"{N(left + 1, 0)}–{N(right, 0)} {words}" if left < right else L("sentence_group_empty")
+        for left, right in pairwise(bounds)
+    )
+    ranges.append(f"> {N(max(bounds), 0)} {words}")
+    return [f"{name} ({length})" for name, length in zip(names, ranges, strict=True)]
+
+
 def render_sentence_dist_panel(
     metrics: CorpusMetrics | None,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *,
+    embedded: bool = False,
 ) -> str:
-    """Renders the sentence-length distribution panel."""
+    """Renders the sentence-length distribution panel (standalone or embedded in rhythm)."""
     if metrics is None:
         return ""
 
     L, N, P = panel_formatters(labels, language_key)
 
     d = metrics.sentence_dist
-    short, medium, long = d._word_bounds
-    rows = [
-        (f"≤ {N(short, 0)}", d.short_count, d.short_pct),
-        (f"{N(short + 1, 0)}–{N(medium, 0)}", d.medium_count, d.medium_pct),
-        (f"{N(medium + 1, 0)}–{N(long, 0)}", d.long_count, d.long_pct),
-        (f"> {N(long, 0)}", d.complex_count, d.complex_pct),
-    ]
-    parts = [panel_start("dist", labels, "sentence_dist"),
-             panel_guide(L("analysis_sentence_dist_guide")), '<div class="dist">']
-    for criterion, count, pct in rows:
+    dist_keys = ("short", "medium", "long", "very_long")
+    groups = _sentence_group_labels(dist_keys, d._word_bounds, L, N)
+    intervals = sentence_group_intervals(d._word_bounds) or [None] * len(groups)
+    values = [(d.short_count, d.short_pct), (d.medium_count, d.medium_pct),
+              (d.long_count, d.long_pct), (d.complex_count, d.complex_pct)]
+    parts = (
+        [f'<div class="rhythm-sentence-dist" id="dist"><h3>{L("sentence_dist")}</h3>']
+        if embedded
+        else [panel_start("dist", labels, "sentence_dist")]
+    )
+    parts.append(panel_guide(L("analysis_sentence_dist_guide")))
+    if d._word_bounds is None:
+        parts.append(f'<p class="ctl-note">{L("sentence_group_bounds_unavailable")}</p>')
+    parts.append('<div class="dist">')
+    jump_label = L("rhythm_open_sentences")
+    for group_key, group, interval, (count, pct) in zip(dist_keys, groups, intervals, values, strict=True):
+        attrs = _sentence_group_attrs(
+            interval,
+            label_text=group,
+            count_positive=count > 0,
+            group_key=group_key,
+        )
+        jump_btn = (
+            f'<button type="button" class="ctl ctl-sm rhythm-jump-btn"{attrs} hidden="hidden">{jump_label}</button>'
+            if attrs
+            else ""
+        )
         parts.append(
-            f'<div class="row"><span class="label">{criterion} {L("words")}</span>'
+            f'<div class="row"{attrs}><span class="label">{group}</span>'
             f'<span class="bar" aria-hidden="true"><i style="width:{max(0.0, min(100.0, pct)):.1f}%"></i></span>'
-            f'<span class="val">{N(count, 0)} · {P(pct)}</span></div>'
+            f'<span class="val">{N(count, 0)} · {P(pct)}</span>{jump_btn}</div>'
         )
     parts.append("</div>")
     verb_mattr = getattr(metrics, "verb_mattr", None)
@@ -294,7 +372,7 @@ def render_sentence_dist_panel(
         if desc_mattr is not None:
             tiles.append(kpi(N(desc_mattr, 3), help_term(labels, "lex_desc", L("lex_desc_mattr"))))
         parts.extend((details_start(L("analysis_sentence_dist_vocabulary")), kpi_row(tiles), "</details>"))
-    parts.append("</section>")
+    parts.append("</div>" if embedded else "</section>")
     return "".join(parts)
 
 
@@ -302,6 +380,8 @@ def render_dialogue_panel(
     dialogue: Mapping[str, Any] | None,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *,
+    counted_text_available: bool = False,
 ) -> str:
     """Render recognized quoted spans and their manuscript word shares."""
     if not dialogue:
@@ -309,13 +389,19 @@ def render_dialogue_panel(
 
     L, N, P = panel_formatters(labels, language_key)
 
-    parts = [panel_start("dialogue", labels, "panel_dialogue"),
-             panel_guide(L("analysis_dialogue_guide"))]
-    tiles: list[str] = []
-    tiles.append(kpi(N(dialogue.get("turns", 0), 0), help_term(labels, "dialogue", L("dlg_turns"))))
-    tiles.append(kpi(P(dialogue.get("dialogue_pct", 0.0)), L("dialogue")))
-    tiles.append(kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters"))
-    tiles.append(kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"))
+    parts = [
+        panel_start("dialogue", labels, "panel_dialogue"),
+        panel_guide(L("analysis_dialogue_guide")),
+        kpi_row([
+            kpi(N(dialogue.get("turns", 0), 0), L("dlg_turns")),
+            kpi(P(dialogue.get("dialogue_pct", 0.0)),
+                help_term(labels, "dialogue", L("analysis_dialogue_share"))),
+        ]),
+    ]
+    tiles = [
+        kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters"),
+        kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"),
+    ]
     if "short_turn_pct" in dialogue:
         short_label = esc(
             label(labels, "dlg_short_turns").replace("{max_words}", str(SHORT_TURN_MAX_WORDS))
@@ -400,25 +486,30 @@ def render_dialogue_panel(
                 L("dlg_voice_separation"),
             )
         )
-    parts.append(kpi_row(tiles))
-
     dialogue_chapters = dialogue.get("chapters", [])
     if dialogue_chapters:
+        reading_guide = label(labels, "analysis_dialogue_reading_guide")
+        if counted_text_available:
+            reading_guide += " " + label(labels, "analysis_dialogue_counted_guide").format(
+                counted_text=label(labels, "legend_counted_text"),
+            )
+        parts.append(panel_guide(esc(reading_guide)))
         parts.append('<div class="dist scrollable">')
         for chapter in dialogue_chapters:
             num = int(chapter.get("chapter_num", 0))
             turns = int(chapter.get("turns", 0))
             turns_label = L("dlg_turns_one" if turns == 1 else "dlg_turns")
             share = float(chapter.get("dialogue_pct", 0.0))
-            title_attr = esc(chapter.get("title", ""))
             chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
             parts.append(
-                f'<div class="row" data-jump="#ch-{num}" '
-                f'title="{title_attr}">'
-                f'{chapter_link(num, chapter_label, css_class="label")}'
-                f'<span class="bar"><i style="width:{min(100.0, share):.1f}%"></i></span>'
-                f'<span class="val">{P(share)} · {turns} {turns_label}</span>'
-                f"</div>"
+                dist_row(
+                    num,
+                    chapter_label,
+                    min(100.0, share),
+                    f"{P(share)} · {turns} {turns_label}",
+                    layer="dialogue",
+                    title_text=chapter.get("title", ""),
+                )
             )
         parts.append("</div>")
         if any("short_turn_pct" in ch or "dialogue_asl" in ch for ch in dialogue_chapters):
@@ -435,8 +526,8 @@ def render_dialogue_panel(
             parts.append(details_start(f'{L("dlg_chapter_details")} ({len(dialogue_chapters)})',
                                        extra_class="dialogue-measurements"))
             parts.append(
-                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("dlg_chapter_details")}">'
-                "<table><thead><tr>"
+                table_wrap_start(label(labels, "dlg_chapter_details"))
+                + "<thead><tr>"
                 f'<th scope="col">{L("chapter")}</th>'
                 f'<th scope="col" class="num">{L("dlg_turns")}</th>'
                 f'<th scope="col" class="num">{short_col}</th>'
@@ -475,7 +566,7 @@ def render_dialogue_panel(
                 )
                 parts.append(
                     f"<tr>"
-                    f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
+                    f'<th scope="row">{chapter_link(num, chapter_label, layer="dialogue")}</th>'
                     f'<td class="num">{N(turns, 0)}</td>'
                     f'<td class="num">{N(short_turns, 0)} ({P(short_pct)})</td>'
                     f'<td class="num">{N(long_turns, 0)}</td>'
@@ -486,6 +577,10 @@ def render_dialogue_panel(
                     f"</tr>"
                 )
             parts.append("</tbody></table></div></details>")
+    parts.extend((
+        details_start(L("analysis_dialogue_corpus_details"), element_id="dialogue-corpus-details"),
+        kpi_row(tiles),
+    ))
     if isinstance(voice_sep, Mapping) and voice_sep.get("available"):
         sep_raw = str(voice_sep.get("separation_label", "unavailable"))
         sep_key = f"dlg_voice_sep_{sep_raw}" if sep_raw in {"distinct", "moderate", "blended", "unavailable"} else "dlg_voice_sep_unavailable"
@@ -503,7 +598,7 @@ def render_dialogue_panel(
             f'{L("dlg_dialogue_asl")} {dlg_asl_s} vs. {L("dlg_narration_asl")} {nar_asl_s} ({delta_s}) · '
             f'{L("dlg_cosine_similarity")} {cos_s}</p>'
         )
-    parts.append("</section>")
+    parts.append("</details></section>")
     return "".join(parts)
 
 
@@ -538,7 +633,7 @@ def render_characters_panel(
         parts.append(f'<p class="hint">{L("chr_pov_coverage")}: {cov} / {total}{missing_txt}</p>')
     has_pov = any("declared_pov_chapters" in figure for figure in characters["figures"])
     has_pov_gaps = has_pov and any("pov_longest_gap" in figure for figure in characters["figures"])
-    parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_characters")}"><table><thead><tr>')
+    parts.append(table_wrap_start(label(labels, "panel_characters")) + "<thead><tr>")
     for key in (
         "chr_name",
         "chr_mentions",
@@ -612,8 +707,8 @@ def render_characters_panel(
         char_rows = voices.get("characters") or []
         if char_rows:
             parts.append(
-                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_voices_title")}">'
-                "<table><thead><tr>"
+                table_wrap_start(label(labels, "chr_voices_title"))
+                + "<thead><tr>"
                 f'<th scope="col">{L("chr_name")}</th>'
                 f'<th scope="col" class="num">{L("chr_voice_turns")}</th>'
                 f'<th scope="col" class="num">{L("words")}</th>'
@@ -631,7 +726,7 @@ def render_characters_panel(
                     parts.append(
                         f'<tr><th scope="row">{v_name}</th>'
                         f'<td class="num">{v_turns}</td><td class="num">{v_words}</td>'
-                        f'<td colspan="4" class="num"><span class="badge badge-neutral">{L("chr_voice_insufficient")}</span></td></tr>'
+                        f'<td colspan="4" class="num">{badge(label(labels, "chr_voice_insufficient"))}</td></tr>'
                     )
                     continue
                 v_asl = N(float(ch_voice["dialogue_asl"]), 1) if ch_voice.get("dialogue_asl") is not None else "–"
@@ -660,8 +755,8 @@ def render_characters_panel(
         pairs = interactions.get("pairs") or []
         if pairs:
             parts.append(
-                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_interactions_title")}">'
-                "<table><thead><tr>"
+                table_wrap_start(label(labels, "chr_interactions_title"))
+                + "<thead><tr>"
                 f'<th scope="col">{L("chr_interaction_pair")}</th>'
                 f'<th scope="col" class="num">{L("chr_turn_exchanges")}</th>'
                 f'<th scope="col" class="num">{L("chr_co_chapters")}</th>'
@@ -681,8 +776,8 @@ def render_characters_panel(
         dominance = interactions.get("turn_dominance") or []
         if dominance:
             parts.append(
-                f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("chr_turn_dominance")}">'
-                "<table><thead><tr>"
+                table_wrap_start(label(labels, "chr_turn_dominance"))
+                + "<thead><tr>"
                 f'<th scope="col">{L("chr_name")}</th>'
                 f'<th scope="col" class="num">{L("chr_voice_turns")}</th>'
                 f'<th scope="col" class="num">{L("words")}</th>'
@@ -709,20 +804,75 @@ def render_characters_panel(
     return "".join(parts)
 
 
+def _evidence_chapter_select(
+    chapters: Sequence[Mapping[str, Any]], L: Callable[[str], str],
+) -> str:
+    options = [f'<option value="">{L("analysis_scope_all")}</option>']
+    for chapter in chapters:
+        number = int(chapter.get("chapter_num") or 0)
+        if number <= 0:
+            continue
+        name = f'{L("chapter")} {number} · {esc(chapter.get("title", ""))}'
+        options.append(f'<option value="{number}">{name}</option>')
+    return (
+        f'<label class="evidence-chapter-label">{L("evidence_examples_chapter")}'
+        f'<select class="ctl" data-evidence-chapter="1">{"".join(options)}</select></label>'
+    )
+
+
 def render_pacing_panel(
     pacing: Mapping[str, Any] | None,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *,
+    metrics: CorpusMetrics | None = None,
 ) -> str:
-    """Renders the pacing curve and scene structure panel."""
+    """Renders the unified pacing, rhythm and sentence-length panel."""
     if not (pacing and pacing.get("chapter_list")):
         return ""
 
     L, N, P = panel_formatters(labels, language_key)
 
-    parts = [panel_start("pacing", labels, "panel_pacing"), panel_guide(L("pacing_scale"))]
+    sg_matches = pacing.get("sentence_group_matches")
+    pacing_attrs = (
+        f'data-sentence-group-matches="{attr_json(sg_matches)}"'
+        if isinstance(sg_matches, Mapping)
+        else ""
+    )
+    parts = [panel_start("pacing", labels, "panel_pacing", extra_attrs=pacing_attrs), panel_guide(L("pacing_scale"))]
     if pacing.get("scenes_are_chapters", False):
         parts.append(f'<p class="ctl-note">{L("pacing_units_note")}</p>')
+    units = esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])["asl"])
+    chapters_pacing = pacing["chapter_list"]
+    max_asl = max((float(c.get("asl", 0.0)) for c in chapters_pacing), default=0.0) or 1.0
+    parts.append('<div class="dist scrollable">')
+    for chapter in chapters_pacing:
+        num = int(chapter.get("chapter_num", 0))
+        asl = float(chapter.get("asl", 0.0))
+        chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
+        parts.append(
+            dist_row(
+                num,
+                chapter_label,
+                min(100.0, asl / max_asl * 100.0),
+                f"{N(asl, 1)} {units}",
+                layer="asl",
+                title_text=chapter.get("title", ""),
+            )
+        )
+    parts.append("</div>")
+    parts.append(action_strip(
+        f'<p class="ctl-note">{L("evidence_examples_note")}</p>'
+        f'<div class="row">{_evidence_chapter_select(chapters_pacing, L)}'
+        f'<button type="button" class="ctl ctl-sm" data-pattern-jump="1" data-layer="asl">'
+        f'{L("rhythm_open_sentences")}</button></div>',
+        css_class="chapter-evidence-actions",
+        hidden=True,
+    ))
+    if metrics is not None:
+        parts.append(render_sentence_dist_panel(metrics, labels, language_key, embedded=True))
+
+    parts.append(details_start(L("pac_chapter_details"), extra_class="pacing-measurements"))
     tiles: list[str] = []
     tiles.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
     tiles.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
@@ -734,7 +884,9 @@ def render_pacing_panel(
     if "repeated_start_runs" in pacing:
         tiles.append(kpi(N(int(pacing.get("repeated_start_runs", 0)), 0), L("pac_monotony")))
     if pacing.get("sticky_available"):
-        tiles.append(kpi(P(float(pacing.get("sticky_sentence_pct", 0.0))), L("pac_sticky_pct")))
+        sticky_pct_val = float(pacing.get("sticky_sentence_pct", 0.0))
+        sticky_jump = "#pacing-sticky-items" if pacing.get("sticky_items") else None
+        tiles.append(kpi(P(sticky_pct_val), L("pac_sticky_pct"), jump=sticky_jump))
         tiles.append(kpi(P(float(pacing.get("mean_glue_pct", 0.0))), L("pac_glue_mean")))
     rhythm = pacing.get("rhythm_profile")
     if isinstance(rhythm, Mapping) and rhythm.get("available"):
@@ -746,53 +898,44 @@ def render_pacing_panel(
             tiles.append(kpi(N(float(rhythm["length_entropy"]), 2), L("pac_length_entropy")))
     parts.append(kpi_row(tiles))
     if isinstance(rhythm, Mapping) and rhythm.get("available"):
+        parts.append(
+            f'<p class="hint pacing-rhythm-profile"><strong>{L("pac_rhythm_profile")}</strong> '
+            f'{L("pac_rhythm_hint")}</p>'
+        )
         buckets = rhythm.get("bucket_shares")
-        bucket_txt = ""
         if isinstance(buckets, Mapping):
-            s_val = float(buckets.get("short", 0.0))
-            m_val = float(buckets.get("medium", 0.0))
-            l_val = float(buckets.get("long", 0.0))
-            scale = 100.0 if (s_val + m_val + l_val) <= 1.5 else 1.0
-            bucket_txt = f' · {L("pac_rhythm_buckets")}: {P(s_val * scale)} / {P(m_val * scale)} / {P(l_val * scale)}'
-        parts.append(
-            f'<p class="hint pacing-rhythm-profile"><strong>{L("pac_rhythm_profile")}:</strong> '
-            f'{L("pac_rhythm_hint")}{bucket_txt}</p>'
-        )
-    units = esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])["asl"])
-
-    chapters_pacing = pacing["chapter_list"]
-    max_asl = max((float(c.get("asl", 0.0)) for c in chapters_pacing), default=0.0) or 1.0
-    parts.append('<div class="dist scrollable">')
-    for chapter in chapters_pacing:
-        num = int(chapter.get("chapter_num", 0))
-        asl = float(chapter.get("asl", 0.0))
-        hook = int(chapter.get("hook_score", 0))
-        sparkline = chapter.get("pacing_sparkline") or ""
-        spark_html = (
-            f'<span class="sparkline" style="font-family:monospace;font-size:var(--text-micro);letter-spacing:.05em;color:var(--accent)" '
-            f'title="{L("pac_sparkline")}">{esc(sparkline)}</span> · '
-            if sparkline
-            else ""
-        )
-        title_attr = esc(chapter.get("title", ""))
-        chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
-        parts.append(
-            f'<div class="row" data-jump="#ch-{num}" '
-            f'title="{title_attr}">'
-            f'{chapter_link(num, chapter_label, css_class="label")}'
-            f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
-            f'<span class="val">{spark_html}{N(asl, 1)} {units} · {L("pac_hook")} {hook}</span>'
-            f"</div>"
-        )
-    parts.append("</div>")
-    if any("sentence_overlap_pct" in ch or "repeated_start_runs" in ch or "pacing_sparkline" in ch for ch in chapters_pacing):
-        has_sticky_ch = any("sticky_sentence_pct" in ch for ch in chapters_pacing)
+            keys = ("short", "medium", "long")
+            bounds = pacing.get("rhythm_word_bounds")
+            if (not isinstance(bounds, (tuple, list)) or len(bounds) != 2
+                    or any(type(bound) is not int or bound < 1 for bound in bounds)):
+                bounds = None
+                parts.append(f'<p class="ctl-note">{L("sentence_group_bounds_unavailable")}</p>')
+            groups = _sentence_group_labels(keys, bounds, L, N)
+            intervals = sentence_group_intervals(bounds) or [None] * len(groups)
+            values_by_group = [buckets.get(key) for key in keys]
+            scale = 100.0 if sum(float(value) for value in values_by_group if value is not None) <= 1.5 else 1.0
+            parts.append(f'<p class="ctl-note">{L("pacing_sentence_groups")}</p>')
+            parts.append(kpi_row([
+                kpi(
+                    P(float(value) * scale) if value is not None else "–",
+                    group,
+                    extra_attrs=_sentence_group_attrs(
+                        interval,
+                        label_text=group,
+                        count_positive=value is not None and float(value) > 0.0,
+                        group_key=group_key,
+                    ),
+                )
+                for group_key, group, interval, value in zip(keys, groups, intervals, values_by_group, strict=True)
+            ], row_id="pacing-rhythm-buckets"))
+    if any(field in ch for ch in chapters_pacing for field in (
+        "hook_score", "sentence_overlap_pct", "repeated_start_runs", "pacing_sparkline", "sticky_sentence_pct",
+    )):
+        has_sticky_ch = pacing.get("sticky_available", True) and any("sticky_sentence_pct" in ch for ch in chapters_pacing)
         sticky_th = f'<th scope="col" class="num">{L("pac_sticky_pct")}</th>' if has_sticky_ch else ""
-        parts.append(details_start(f'{L("pac_chapter_details")} ({len(chapters_pacing)})',
-                                   extra_class="pacing-measurements"))
         parts.append(
-            f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("pac_chapter_details")}">'
-            "<table><thead><tr>"
+            table_wrap_start(label(labels, "pac_chapter_details"))
+            + "<thead><tr>"
             f'<th scope="col">{L("chapter")}</th>'
             f'<th scope="col" class="num">{help_term(labels, "asl", units)}</th>'
             f'<th scope="col" class="spark">{help_term(labels, "pacing_sparkline", L("pac_sparkline"))}</th>'
@@ -805,10 +948,10 @@ def render_pacing_panel(
         for chapter in chapters_pacing:
             num = int(chapter.get("chapter_num", 0))
             asl = float(chapter.get("asl", 0.0))
-            hook = int(chapter.get("hook_score", 0))
+            hook = chapter.get("hook_score")
             sparkline = chapter.get("pacing_sparkline") or ""
-            overlap = float(chapter.get("sentence_overlap_pct", 0.0))
-            monotony = int(chapter.get("repeated_start_runs", 0))
+            overlap = chapter.get("sentence_overlap_pct")
+            monotony = chapter.get("repeated_start_runs")
             chapter_label = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
             sticky_cell = (
                 f'<td class="num">{P(float(chapter["sticky_sentence_pct"])) if chapter.get("sticky_sentence_pct") is not None else "–"}</td>'
@@ -820,30 +963,70 @@ def render_pacing_panel(
                 f'<th scope="row">{chapter_link(num, chapter_label)}</th>'
                 f'<td class="num">{N(asl, 1)}</td>'
                 f'<td class="spark" style="text-align:center"><span class="sparkline" style="font-family:monospace;font-size:var(--text-micro);letter-spacing:.05em;color:var(--accent)">{esc(sparkline)}</span></td>'
-                f'<td class="num">{N(hook, 0)}</td>'
-                f'<td class="num">{P(overlap)}</td>'
-                f'<td class="num">{N(monotony, 0)}</td>'
+                f'<td class="num">{N(int(hook), 0) if hook is not None else "–"}</td>'
+                f'<td class="num">{P(float(overlap)) if overlap is not None else "–"}</td>'
+                f'<td class="num">{N(int(monotony), 0) if monotony is not None else "–"}</td>'
                 f"{sticky_cell}"
                 f"</tr>"
             )
-        parts.append("</tbody></table></div></details>")
+        parts.append("</tbody></table></div>")
+    parts.append("</details>")
     sticky_items = pacing.get("sticky_items") or []
-    if sticky_items:
+    if pacing.get("sticky_available") or sticky_items:
+        total = int(pacing.get("sticky_sentences", len(sticky_items)))
+        shown = sticky_items[:20]
         parts.append(
-            f'<details class="pacing-sticky-items"><summary>{L("pac_sticky_items")} ({len(sticky_items)})</summary><ul>'
+            details_start(
+                f'{L("pac_sticky_items")} ({N(total, 0)})',
+                element_id="pacing-sticky-items",
+                extra_class="pacing-sticky-items",
+            )
         )
-        for item in sticky_items[:20]:
+        parts.append(f'<p class="ctl-note">{L("pac_sticky_read")}</p>')
+        rule = pacing.get("sticky_rule")
+        if isinstance(rule, Mapping) and rule.get("min_words") is not None and rule.get("min_pct") is not None:
+            thresholds = label(labels, "pac_sticky_rule").format(
+                min_words=N(int(rule["min_words"]), 0),
+                min_pct=format_pct(float(rule["min_pct"]), language_key, decimals=2, precise=True),
+            )
+            parts.append(f'<p class="ctl-note">{esc(thresholds)}</p>')
+        else:
+            parts.append(f'<p class="ctl-note">{L("pac_sticky_rule_missing")}</p>')
+        if len(shown) < total:
+            count = label(labels, "pac_sticky_shown").format(shown=N(len(shown), 0), total=N(total, 0))
+            parts.append(f'<p class="ctl-note">{esc(count)}</p>')
+        if shown:
+            parts.append("<ul>")
+        for item in shown:
             ch_num = int(item.get("chapter_num", 0))
-            glue_pct = float(item.get("glue_pct", 0.0))
-            words_n = int(item.get("words", 0))
+            glue_pct = P(float(item["glue_pct"]), 2) if item.get("glue_pct") is not None else "–"
+            words = N(int(item["words"]), 0) if item.get("words") is not None else "–"
+            glue_words = item.get("glue_words")
+            if glue_words is None:
+                evidence = f'{glue_pct} {L("function_words")} · {words} {L("words")}'
+            else:
+                evidence = esc(label(labels, "pac_sticky_evidence").format(
+                    function_words=N(int(glue_words), 0), words=words, percent=glue_pct,
+                ))
             preview = esc(str(item.get("preview", "")))
             ch_label = f'{label(labels, "chapter")} {ch_num}'
+            p_id = item.get("paragraph_id")
+            jump_html = ""
+            if p_id:
+                jump_html = (
+                    f' <button type="button" class="ctl ctl-sm sticky-jump-btn" '
+                    f'data-sticky-jump="1" data-target="{esc(str(p_id), quote=True)}" '
+                    f'data-line="{int(item.get("start_line", 0))}" '
+                    f'data-span-index="{int(item.get("span_index", 0))}">'
+                    f'{L("rhythm_open_sentence")}</button>'
+                )
             parts.append(
-                f'<li>{chapter_link(ch_num, ch_label)} '
-                f'<span class="badge badge-neutral">{P(glue_pct)} · {words_n} {L("words")}</span> '
-                f'<span class="text-muted">{preview}</span></li>'
+                f'<li><p>{preview}</p><p class="ctl-note">{evidence} · '
+                f'{chapter_link(ch_num, ch_label, layer="sticky")}{jump_html}</p></li>'
             )
-        parts.append("</ul></details>")
+        if shown:
+            parts.append("</ul>")
+        parts.append("</details>")
     corridor = pacing.get("genre_corridor")
     if isinstance(corridor, Mapping) and corridor.get("metrics"):
         genre_label = esc(str(corridor.get("label") or corridor.get("genre") or ""))
@@ -856,8 +1039,8 @@ def render_pacing_panel(
         parts.append(
             f'<details class="genre-corridor" open><summary>{L("genre_corridor_title")}: {genre_label}</summary>'
             f'<p class="hint">{L("genre_corridor_note")}</p>'
-            f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("genre_corridor_title")}">'
-            "<table><thead><tr>"
+            + table_wrap_start(label(labels, "genre_corridor_title"))
+            + "<thead><tr>"
             f'<th scope="col">{L("genre_corridor_title")}</th>'
             f'<th scope="col" class="num">{L("genre_corridor_observed")}</th>'
             f'<th scope="col" class="num">{L("genre_corridor_range")}</th>'
@@ -873,13 +1056,13 @@ def render_pacing_panel(
             high = m_val.get("high")
             pos = str(m_val.get("position") or "")
             pos_key = f"scene_{pos}" if pos in {"below", "within", "above", "unavailable"} else ""
-            pos_label = L(pos_key) if pos_key else esc(pos or "–")
+            pos_raw = label(labels, pos_key) if pos_key else (pos or "–")
             parts.append(
                 f"<tr>"
                 f'<th scope="row">{m_name}</th>'
                 f'<td class="num">{N(obs, 1) if obs is not None else "–"}</td>'
                 f'<td class="num">{N(low, 1) if low is not None else "…"} – {N(high, 1) if high is not None else "…"}</td>'
-                f'<td><span class="badge badge-neutral">{pos_label}</span></td>'
+                f'<td>{badge(pos_raw)}</td>'
                 f"</tr>"
             )
         parts.append("</tbody></table></div></details>")
@@ -887,19 +1070,127 @@ def render_pacing_panel(
     return "".join(parts)
 
 
+_MOTIF_PREVIEW_LIMIT = 30
+
+
+def _render_motif_occurrences(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    group_type: str,
+    label_field: str,
+    count_field: str,
+    L: Callable[[str], str],
+    labels: Mapping[str, str] | None,
+) -> str:
+    """Render exact match locations and shared-highlight selectors for motifs/phrases."""
+    groups: list[str] = []
+    for index, item in enumerate(items):
+        occs = item.get("occurrences")
+        counted = int(item.get(count_field, 0))
+        mapped = item.get("mapped_occurrence_count")
+        if not isinstance(occs, list) or not isinstance(mapped, int) or not counted:
+            continue
+        title = str(item.get(label_field, ""))
+        occ_payload = attr_json([
+            {
+                "paragraph_id": str(occ["paragraph_id"]),
+                "start_line": int(occ["start_line"]),
+                "start": int(occ["start"]),
+                "end": int(occ["end"]),
+                "offset_unit": str(occ["offset_unit"]),
+                "quote": str(occ["quote"]),
+                **({"quotation_context": str(occ["quotation_context"])} if occ.get("quotation_context") else {}),
+            }
+            for occ in occs
+        ])
+        notes = []
+        if mapped < counted:
+            coverage = "mot_locations_partial_one" if counted == 1 else "mot_locations_partial"
+            notes.append(L(coverage).format(mapped=mapped, count=counted))
+        if len(occs) < mapped:
+            notes.append(L("mot_locations_limit").format(shown=len(occs), mapped=mapped))
+        if len(occs) > _MOTIF_PREVIEW_LIMIT:
+            notes.append(L("mot_locations_preview").format(preview=_MOTIF_PREVIEW_LIMIT))
+        rows = []
+        for idx, occ in enumerate(occs[:_MOTIF_PREVIEW_LIMIT]):
+            loc = f'{label(labels, "chapter")} {int(occ["chapter"])} · {label(labels, "line")} {int(occ["start_line"])}'
+            excerpt = esc(str(occ.get("excerpt", "")))
+            context = occ.get("quotation_context")
+            quote_badge = (f'<span class="badge badge-neutral">{L(f"evidence_quote_{context}")}</span> '
+                           if context else "")
+            rows.append(
+                f'<li><span class="ctl-note">{esc(loc)}</span> {quote_badge}'
+                f'<span class="motif-occ-excerpt">{excerpt}</span> '
+                f'<a class="ctl ctl-sm motif-jump-btn" href="#{esc(occ["paragraph_id"])}" '
+                f'data-motif-jump="1" data-occurrence-index="{idx}">{L("mot_open_occurrence")}</a></li>'
+            )
+        actions = (
+            '<div class="motif-occurrence-actions">'
+            f'<button type="button" class="ctl ctl-sm motif-select-btn" aria-pressed="false" '
+            f'data-motif-select="1">{L("mot_highlight_all")}</button></div>'
+            f'<ul class="motif-occurrence-list">{"".join(rows)}</ul>'
+        ) if rows else ""
+        groups.append(
+            details_start(f'{esc(title)} ({counted})', extra_class="motif-occurrence-group")
+            + f'<div data-motif-group="{group_type}-{index}" data-motif-label="{esc(title)}" '
+            + f'data-motif-occurrences=\'{occ_payload}\'>'
+            + "".join(f'<p class="ctl-note">{note}</p>' for note in notes)
+            + '<p class="ctl-status" data-motif-status="" role="status"></p>'
+            + actions + '</div></details>'
+        )
+    if not groups:
+        return ""
+    return f'<div class="motif-occurrence-groups">{"".join(groups)}</div>'
+
+
+def _render_motif_custom_search(L: Callable[[str], str]) -> str:
+    """Render the custom phrase/pattern search form inside #motifs (no table)."""
+    regex_field = checkbox_field('<input type="checkbox" id="motif-pattern-regex"/>', L("mot_custom_regex"),
+                                 extra_class="motif-custom-regex")
+    return (
+        '<div class="motif-custom-block">'
+        f'<h3>{L("mot_custom_heading")}</h3>'
+        f'<p class="ctl-note">{L("mot_custom_hint")}</p>'
+        '<form class="motif-custom-search" id="motif-custom-search" '
+        f'data-location-limit="{MAX_DISPLAY_OCCURRENCES}" data-preview-limit="{_MOTIF_PREVIEW_LIMIT}">'
+        f'<label class="motif-custom-field"><span>{L("mot_custom_label")}</span>'
+        f'<input type="search" class="ctl" id="motif-pattern-input" '
+        f'placeholder="{L("mot_custom_placeholder")}" autocomplete="off"/></label>'
+        f'{regex_field}'
+        f'<button type="submit" class="ctl primary" id="motif-pattern-submit">{L("mot_custom_submit")}</button>'
+        f'<button type="button" class="ctl" id="motif-pattern-clear" hidden="hidden">{L("mot_custom_clear")}</button>'
+        '</form>'
+        + status_banner("motif-pattern-status")
+        + '<div id="motif-custom-results"></div>'
+        '</div>'
+    )
+
+
 def render_motifs_panel(
     motifs: Mapping[str, Any] | None,
     labels: Mapping[str, str] | None = None,
+    *,
+    custom_search: bool = False,
 ) -> str:
-    """Render motifs, manuscript phrase totals and local chapter-prose echoes."""
-    if not (motifs and (motifs.get("motifs") or motifs.get("repeated_phrases") or motifs.get("echoes"))):
+    """Render motifs, manuscript phrase totals, local echoes and custom search patterns."""
+    if not motifs:
         return ""
 
     L = panel_label(labels)
+    findings = (motifs.get("motifs"), motifs.get("repeated_phrases"), motifs.get("echoes"))
+    if not any(findings):
+        if None in findings or not motifs.get("chapters"):
+            return ""
+        return (
+            panel_start("motifs", labels, "panel_motifs")
+            + panel_guide(L("motifs_no_findings"))
+            + (_render_motif_custom_search(L) if custom_search else "")
+            + "</section>"
+        )
 
     parts: list[str] = [panel_start("motifs", labels, "panel_motifs")]
     if motifs.get("motifs"):
-        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_motifs")}"><table><thead><tr>')
+        parts.append(table_wrap_start(label(labels, "panel_motifs")) + "<thead><tr>")
         parts.extend(
             (f'<th scope="col">{L(key)}</th>' if key == "mot_name" else f'<th scope="col" class="num">{L(key)}</th>')
             for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
@@ -921,10 +1212,11 @@ def render_motifs_panel(
                 f"</tr>"
             )
         parts.append("</tbody></table></div>")
+        parts.append(_render_motif_occurrences(motifs["motifs"], group_type="motif", label_field="name",
+                                               count_field="mentions", L=L, labels=labels))
 
     if motifs.get("repeated_phrases"):
-        parts.append('<div class="table-wrap motif-phrases" tabindex="0" role="region" '
-                     f'aria-label="{L("mot_phrase")}"><table><thead><tr>')
+        parts.append(table_wrap_start(label(labels, "mot_phrase"), extra_class="motif-phrases") + "<thead><tr>")
         parts.extend(
             (f'<th scope="col">{L(key)}</th>' if key == "mot_phrase" else f'<th scope="col" class="num">{L(key)}</th>')
             for key in ("mot_phrase", "mot_global_count", "mot_chapters")
@@ -945,11 +1237,12 @@ def render_motifs_panel(
                 f"</tr>"
             )
         parts.append("</tbody></table></div>")
+        parts.append(_render_motif_occurrences(motifs["repeated_phrases"], group_type="phrase", label_field="phrase",
+                                               count_field="count", L=L, labels=labels))
 
     if motifs.get("echoes"):
         parts.extend((f'<h3>{L("mot_echoes")}</h3>', panel_guide(L("mot_echo_note"))))
-        parts.append('<div class="table-wrap motif-echoes" tabindex="0" role="region" '
-                     f'aria-label="{L("mot_echoes")}"><table><thead><tr>')
+        parts.append(table_wrap_start(label(labels, "mot_echoes"), extra_class="motif-echoes") + "<thead><tr>")
         parts.extend(
             (f'<th scope="col">{L(key)}</th>' if key == "mot_phrase" else f'<th scope="col" class="num">{L(key)}</th>')
             for key in ("mot_phrase", "mot_echo_chapter", "mot_echo_count", "mot_echo_words")
@@ -964,8 +1257,13 @@ def render_motifs_panel(
                 f'<td class="num">{int(echo["first_word"])}–{int(echo["last_word"])}</td></tr>'
             )
         parts.append('</tbody></table></div>')
-        parts.append(f'<details><summary>{L("mot_echo_method")}</summary><p>{L("mot_echo_limits")}</p></details>')
+        parts.append(_render_motif_occurrences(motifs["echoes"], group_type="echo", label_field="term",
+                                               count_field="count", L=L, labels=labels))
+        parts.append(details_start(L("mot_echo_method"), extra_class="motif-echo-method")
+                     + f'<p>{L("mot_echo_limits")}</p></details>')
 
+    if custom_search:
+        parts.append(_render_motif_custom_search(L))
     parts.append("</section>")
     return "".join(parts)
 
@@ -974,6 +1272,8 @@ def render_showing_panel(
     showing: Mapping[str, Any] | None,
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
+    *,
+    short_sentence_max: int | None = None,
 ) -> str:
     """Render the manuscript-relative signal groups without a narrative verdict."""
     if not (showing and showing.get("chapter_list")):
@@ -998,6 +1298,34 @@ def render_showing_panel(
     parts.append(f'<p class="ctl-note">{brief_note}</p>')
     parts.append(details_start(L("showing_method"), extra_class="signal-method"))
     parts.append(f'<p class="ctl-note">{context_note}</p></details>')
+    pattern_layers = (
+        ("filter", "layer_filter"),
+        ("modal", "layer_modal"),
+        ("passive", "layer_passive"),
+        ("nominal", "layer_nominal"),
+        ("sensory", "layer_sensory"),
+        ("dialogue", "layer_dialogue"),
+    )
+    pattern_buttons = "".join(
+        f'<button type="button" class="ctl ctl-sm showing-pattern-jump" '
+        f'data-pattern-jump="1" data-layer="{layer_key}">{L(label_key)}</button>'
+        for layer_key, label_key in pattern_layers
+    )
+    if short_sentence_max is not None:
+        pattern_buttons += (
+            '<button type="button" class="ctl ctl-sm rhythm-jump-btn" '
+            f'data-rhythm-min-words="1" data-rhythm-max-words="{short_sentence_max}" '
+            f'data-rhythm-label="{L("rhythm_open_short_sentences")}" hidden="hidden">'
+            f'{L("rhythm_open_short_sentences")}</button>'
+        )
+    parts.append(
+        action_strip(
+            f'<p class="ctl-note">{L("showing_open_patterns")} {L("evidence_examples_note")}</p>'
+            f'<div class="row">{_evidence_chapter_select(showing_chapters, L)}{pattern_buttons}</div>',
+            css_class="chapter-evidence-actions showing-pattern-actions",
+            hidden=True,
+        )
+    )
     if not comparable:
         note = L("showing_unavailable_note").replace("{min_chapters}", str(MIN_COMPARISON_CHAPTERS))
         parts.append(f'<p class="ctl-note">{note}</p></section>')
@@ -1029,29 +1357,34 @@ def render_showing_panel(
     parts.append('<div class="dist scrollable">')
     for chapter in showing_chapters:
         num = int(chapter.get("chapter_num", 0))
-        title_attr = esc(chapter.get("title", ""))
-        label_text = f'{label(labels, "chapter")} {num} · {chapter.get("title", "")}'
+        title_raw = chapter.get("title", "")
+        label_text = f'{label(labels, "chapter")} {num} · {title_raw}'
         if not chapter.get("comparable", True):
             parts.append(
-                f'<div class="row unavailable" title="{title_attr}">'
-                f'<span class="label">{esc(label_text)}</span>'
-                f'<span class="bar"></span>'
-                f'<span class="val">–</span>'
-                f"</div>"
+                dist_row(
+                    num,
+                    label_text,
+                    0.0,
+                    "–",
+                    bar_class="bar",
+                    title_text=title_raw,
+                    unavailable=True,
+                )
             )
             continue
         balance = float(chapter.get("balance") or 0.0)
         width = min(50.0, abs(balance) / max_abs * 50.0)
         sign = "signal-negative" if balance < 0 else "signal-positive"
-        bar = f'<i class="{sign}" style="width:{width:.1f}%"></i>'
-        value = N(balance, 2, signed=True)
         parts.append(
-            f'<div class="row" data-jump="#ch-{num}" '
-            f'title="{title_attr}">'
-            f'{chapter_link(num, label_text, css_class="label")}'
-            f'<span class="bar signal-bar" aria-hidden="true">{bar}</span>'
-            f'<span class="val">{value}</span>'
-            f"</div>"
+            dist_row(
+                num,
+                label_text,
+                width,
+                N(balance, 2, signed=True),
+                bar_class="bar signal-bar",
+                bar_inner_class=sign,
+                title_text=title_raw,
+            )
         )
     parts.append("</div></section>")
     return "".join(parts)

@@ -280,9 +280,7 @@ class SentenceDistribution(BaseModel):
     """
 
     # Report labels use the analyzer's effective ranges without adding JSON fields.
-    _word_bounds: tuple[int, int, int] = PrivateAttr(
-        default=(DEFAULT_SHORT_SENTENCE_MAX, DEFAULT_MEDIUM_SENTENCE_MAX, DEFAULT_LONG_SENTENCE_MAX)
-    )
+    _word_bounds: tuple[int, int, int] | None = PrivateAttr(default=None)
 
     short_count: int = Field(description="Count of short sentences (<= 6 words, staccato/commands).")
     short_pct: float = Field(description="Percentage of short sentences.")

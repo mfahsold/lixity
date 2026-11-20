@@ -795,7 +795,7 @@ async function checkDemoCapabilities(page, width) {
     await expect(page.locator('#style-panels > .panel:visible')).toHaveCount(1);
   }
   await expect(page.locator('[data-analysis-workflow]')).toHaveCount(3);
-  for (const target of ['dist', 'scenes', 'characters', 'style']) {
+  for (const target of ['pacing', 'scenes', 'characters', 'style']) {
     const choice = page.locator(`[data-analysis-section-target="${target}"]`);
     const workflow = await choice.getAttribute('data-analysis-section-workflow');
     await page.locator(`[data-analysis-workflow="${workflow}"]`).click();

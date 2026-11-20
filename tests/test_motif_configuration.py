@@ -61,7 +61,12 @@ def test_project_patterns_agree_in_metrics_api_cli_native_and_build(tmp_path, ca
     built = next((tmp_path / "exports").glob("*_dashboard.html"))
     built_panel = re.search(r'<section[^>]*id="motifs".*?</section>', built.read_text(), re.DOTALL)
     assert built_panel is not None
-    assert built_panel[0] == panel[0]
+    static_root = ElementTree.fromstring(built_panel[0])  # noqa: S314
+    custom_search = root.find("./div[@class='motif-custom-block']")
+    assert custom_search is not None and custom_search.find("form[@id='motif-custom-search']") is not None
+    assert static_root.find(".//form[@id='motif-custom-search']") is None
+    root.remove(custom_search)
+    assert ElementTree.tostring(static_root) == ElementTree.tostring(root)
     assert all((tmp_path / name).read_bytes() == content for name, content in before.items())
 
 

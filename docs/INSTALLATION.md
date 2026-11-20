@@ -9,7 +9,7 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this documentation describes **v0.8.2**. Verify packages at
+> **Version scope:** this documentation describes **v0.9.0**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -62,7 +62,7 @@ installer. No AppImage, DEB, RPM or bundled desktop installer is published here.
 
 The next packaging work targets **Linux first**, with an isolated, supported
 runtime and explicit install, upgrade, rollback and removal checks. Python 3.12
-is the agreed minimum for the next development baseline; the 0.8.2
+is the agreed minimum for the next development baseline; the 0.9.0
 package still declares Python 3.10+. A future installer must preserve project
 files and retained research, and restart only the service it owns. Optional
 speech and OCR environments remain separate from the basic application.
@@ -107,7 +107,7 @@ lixity doctor
 lixity service start --open
 ```
 
-See the [release notes](releases/v0.8.2.md)
+See the [release notes](releases/v0.9.0.md)
 for changes and compatibility. `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -337,7 +337,7 @@ or precise speed; see the same [read-aloud guide](AUDIO.md#lixity-read-aloud).
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
 hardware-appropriate PyTorch installation. Install the current Lixity release into that
-environment (`python -m pip install 'lixity==0.8.2'`) and obtain the
+environment (`python -m pip install 'lixity==0.9.0'`) and obtain the
 complete local CustomVoice checkpoint, including its speech tokenizer, using the
 [upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
 build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker

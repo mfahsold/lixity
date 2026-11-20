@@ -29,9 +29,10 @@ from .constants import (
 from .discovery import api_index
 from .pdf_context import project_settings_token
 from .routes_analysis_review import AnalysisReviewRoutesMixin
-from .routes_editing import EditingRoutesMixin
+from .routes_editing import MAX_EDITOR_COMPARISON_PAYLOAD_BYTES, EditingRoutesMixin
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
+from .routes_motifs import MotifRoutesMixin
 from .routes_nda import NdaRoutesMixin
 from .routes_pdf import ManuscriptPdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
@@ -44,6 +45,7 @@ class LixityServerHandler(
     AnalysisReviewRoutesMixin,
     ProjectRoutesMixin,
     MarkerRoutesMixin,
+    MotifRoutesMixin,
     ManuscriptResearchRoutesMixin,
     NdaRoutesMixin,
     ManuscriptPdfRoutesMixin,
@@ -100,6 +102,7 @@ class LixityServerHandler(
     POST_ROUTES: ClassVar[dict[str, str]] = {
         "manuscript-edit": "_handle_editor_save",
         "manuscript-edit-discard": "_handle_editor_discard",
+        "manuscript-compare": "_handle_editor_compare",
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
         "speech-audio-import": "_handle_speech_audio_import",
@@ -119,6 +122,7 @@ class LixityServerHandler(
         "rebuild": "_handle_refresh",
         "marker-add": "_handle_marker_add",
         "marker-resolve": "_handle_marker_resolve",
+        "motif-search": "_handle_motif_search",
         "research-zotero": "_handle_zotero_browse",
         "research-zotero-ingest": "_handle_zotero_capture",
         "settings": "_handle_settings",
@@ -366,6 +370,7 @@ class LixityServerHandler(
         maximum = (138 * 1024**2 if action == "audio-audit"
                    else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media", "speech-audio-import"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}
+                   else MAX_EDITOR_COMPARISON_PAYLOAD_BYTES if action == "manuscript-compare"
                    else MAX_PAYLOAD_BYTES)
         payload = self._read_json_body(maximum=maximum)
         if payload is None:

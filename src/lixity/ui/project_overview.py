@@ -7,7 +7,7 @@ from ..workspace_labels import (
     PROJECT_STRUCTURE_ROLE_LABELS,
     PROJECT_STRUCTURE_STATE_LABELS,
 )
-from .components import esc, label, script_json
+from .components import esc, label, script_json, status_banner
 
 
 def project_overview(labels: Mapping[str, str] | None = None, *, research_navigation: bool = False) -> str:
@@ -24,8 +24,7 @@ def project_overview(labels: Mapping[str, str] | None = None, *, research_naviga
         f'data-help="{esc(label(labels, "project_structure_refresh_help"))}" title="{esc(label(labels, "project_structure_refresh"))}">'
         f'{esc(label(labels, "project_structure_refresh"))}</button></div>'
         f'<p class="ctl-note">{esc(label(labels, "project_structure_scope"))}</p>'
-        '<p class="ctl-status" id="project-overview-status" role="status" aria-live="polite">'
-        f'{esc(label(labels, "project_structure_not_checked"))}</p>'
-        '<div id="project-overview-body" hidden></div></section>'
+        + status_banner("project-overview-status", esc(label(labels, "project_structure_not_checked")))
+        + '<div id="project-overview-body" hidden></div></section>'
         f'<script type="application/json" id="project-overview-label-keys">{payload}</script>'
     )

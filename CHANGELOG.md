@@ -7,14 +7,45 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - Pending release
+
 ### Fixed
 
+- Keep the next and previous examples reachable by keyboard, and restore focus
+  to the control that opened the passage navigation. Localize invalid search
+  pattern errors.
+- Improve dark-mode quotation context contrast and wrap word-pattern actions
+  at small widths and larger font sizes.
+- Label changes in dialogue share and sticky-sentence share in percentage points.
+- Match the browser CI host to the Noble container and check Python TLS before
+  installing dependencies.
+- Measure all three texts in the local version comparison under one effective
+  project configuration. Pair chapter deltas only when chapter identity can
+  be established.
+- Use the same availability decision for navigation and the rendered Motifs
+  and Scenes panels. Explain an empty result when those analyses completed.
+- Group occurrences of the selected repeated word in the reader.
 - Keep the Research source navigation within the viewport immediately after
   resizing to a narrow screen.
 - Defer manuscript autosave until text composition finishes.
 
 ### Changed
 
+- Combine sentence lengths and pacing in one view. Open verified rhythm and
+  word-pattern examples in the manuscript and identify their quotation context.
+- Open and highlight verified occurrences of recurring phrases and motifs.
+  Find author-supplied expressions in the local app.
+- Use one shared passage navigation bar, with stable keyboard focus and
+  consistent insets, disclosure markers and dialog controls across the workspace.
+- Label the actual sentence-length ranges in the distribution and pacing
+  views. Older reports show when their boundaries are unavailable.
+- Use a single set of filters for tense review and one explicit save action
+  for each review decision.
+- Show why a passage was marked and a concrete reading question in each
+  manuscript measurement card. For sticky sentences, show the configured
+  thresholds and highlight the exact function words in the selected sentence.
+  Lead the dialogue and pacing panels with the measurements writers need to
+  start reading.
 - Explain manuscript analysis in terms of questions writers can answer. The
   overview and pattern panels suggest where to look in the text, chapter tables
   spell out units, and a chapter measurement opens with the observed value and
@@ -4199,7 +4230,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/mfahsold/lixity/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/mfahsold/lixity/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/mfahsold/lixity/compare/v0.7.9...v0.8.0

@@ -143,7 +143,7 @@ function processImportedFiles(files) {
         if (Array.isArray(data.loss_report) && data.loss_report.length > 0 && lossEl) {
           var titleSpan = document.createElement("div");
           titleSpan.className = "fpc-loss-title";
-          titleSpan.textContent = uiFormat("import_loss_warning", {count: data.loss_report.length});
+          titleSpan.textContent = uiCountFormat("import_loss_warning", data.loss_report.length);
           var list = document.createElement("ul");
           data.loss_report.forEach(function (item) {
             var li = document.createElement("li");

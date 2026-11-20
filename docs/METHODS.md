@@ -1287,8 +1287,10 @@ they do not estimate literary quality or a reader's experienced immersion.
 - **Rhythm profile & sentence-length entropy (`pacing.py`):** `PacingReport` and
   `ChapterPacing` expose `rhythm_profile`: `{available, sentences, asl_cv,
   asl_iqr, length_entropy, normalized_entropy, bucket_shares}` with
-  `bucket_shares: {short, medium, long}` (`short`: `<= short_sentence_max`,
-  default `7`; `medium`: `8..20`; `long`: `> 20`). `asl_cv = std / mean`,
+  `bucket_shares: {short, medium, long}`. Short sentences have at most
+  `short_sentence_max` words (default `6`). Medium sentences exceed that
+  limit and have at most 20 words. Long sentences exceed both limits.
+  `asl_cv = std / mean`,
   `asl_iqr = Q75 - Q25`, `length_entropy = -sum(p_b * log2(p_b))` in bits over
   non-empty buckets (max `log2(3) ≈ 1.585` bits), and
   `normalized_entropy = length_entropy / log2(3)`. When `sentences < 2`,

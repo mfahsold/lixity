@@ -15,7 +15,7 @@ from ..site_export import SiteExportLimitError
 from ..workspace import slugify
 from ._base import ResponseMixin
 from .constants import MAX_ARTIFACT_BYTES
-from .pdf_context import manuscript_pdf_token
+from .middleware import format_validation_error
 
 
 class SiteExportRoutesMixin(ResponseMixin):
@@ -32,87 +32,75 @@ class SiteExportRoutesMixin(ResponseMixin):
             request = SiteExportRequest.model_validate(payload)
         except ValidationError as exc:
             self._log.warning("Website export id=%s stage=validation_failed", export_id)
-            message = "; ".join(str(error["msg"]).removeprefix("Value error, ")
-                                for error in exc.errors(include_url=False, include_input=False))
-            self._json({"ok": False, "message": message}, 400)
+            self._error(format_validation_error(exc), 400)
             return
         self._log.debug("Website export id=%s stage=validated mode=%s research=%s source_files=%s cap=%s",
                         export_id, request.mode, request.include_research,
                         request.include_source_files, request.max_chapter)
-        expected = request.project_token
+        ctx = self._capture_manuscript_context(
+            request.project_token,
+            require_readable=True,
+            stale_message="The selected project changed; reload before downloading",
+        )
+        if ctx is None:
+            self._log.warning("Website export id=%s stage=context_changed", export_id)
+            return
         try:
             with self._workspace_lock:
-                source = self.source_input
-                if not source or not Path(source).is_file():
-                    raise ValueError("No readable manuscript is selected")
-                root = self.workspace_root
-                language, title, thresholds = self.language, self.title, self.thresholds
-                info = self.dashboard_info
-                analysis_overrides = {key: value for key, value in self.project_open_overrides.items()
-                                      if key in ("tense_model", "tense_scope")}
-                token = manuscript_pdf_token(source, project_root=root, language=language,
-                                             title=title, thresholds=thresholds)
-                if token != expected:
-                    self._log.warning("Website export id=%s stage=context_changed", export_id)
-                    self._json({"ok": False, "message": "The selected project changed; reload before downloading"}, 409)
-                    return
                 research_root = self.get_research_root()
                 if (request.include_research and research_root is not None
-                        and research_root.resolve() != Path(root).resolve()):
+                        and research_root.resolve() != Path(ctx.root).resolve()):
                     raise ValueError("The selected research belongs to another project; open that project before exporting it")
 
             from ..site_export import prepare_site
 
             bundle = prepare_site(
-                root, manuscript=source, language=language, title=title, thresholds=thresholds,
-                **analysis_overrides,
+                ctx.root, manuscript=ctx.source, language=ctx.language, title=ctx.title, thresholds=ctx.thresholds,
+                **ctx.analysis_overrides,
                 **request.export_options().model_dump(exclude_defaults=True),
             )
             report = bundle.preflight() if preflight else None
             content = b"" if preflight else bundle.to_zip()
             if (report["sizes"]["zip_bytes"] if report is not None else len(content)) > MAX_ARTIFACT_BYTES:
                 self._log.warning("Website export id=%s stage=download_limit", export_id)
-                self._json({"ok": False, "message": "Website ZIP exceeds the download limit; use export-site to a local directory"}, 413)
+                self._error("Website ZIP exceeds the download limit; use export-site to a local directory", 413)
                 return
         except SiteExportLimitError as exc:
             self._log.warning("Website export id=%s stage=preparation_limit category=%s", export_id,
                               exc.diagnostic["limit"])
-            self._json({"ok": False, "message": str(exc), "preflight": exc.diagnostic}, 413)
+            self._error(str(exc), 413, extra={"preflight": exc.diagnostic})
             return
         except (OSError, ValueError, RuntimeError) as exc:
             self._log.warning("Website export id=%s stage=preparation_failed error=%s errno=%s",
                               export_id, type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._error(str(exc), 400)
             return
-        with self._workspace_lock:
-            current = manuscript_pdf_token(self.source_input, project_root=self.workspace_root,
-                                           language=self.language, title=self.title,
-                                           thresholds=self.thresholds)
-            if current != token or info is not self.dashboard_info:
-                self._log.warning("Website export id=%s stage=context_changed", export_id)
-                self._json({"ok": False, "message": "The selected project changed; reload before downloading"}, 409)
-                return
-            if preflight:
-                self._log.debug("Website export id=%s stage=preflight_prepared duration_ms=%d",
-                                export_id, round((perf_counter() - started) * 1000))
-                self._json({"ok": True, "preflight": report})
-                return
-            filename = slugify(bundle.manifest["project"]["title"]) + "-reading-website.zip"
-            sent = self._send(200, content, "application/zip",
-                              headers={"Content-Disposition": f'attachment; filename="{filename}"',
-                                       "X-Lixity-Export-ID": export_id})
-            self._log.log(INFO if sent else WARNING, "Website export id=%s stage=%s bytes=%d duration_ms=%d",
-                          export_id, "body_written" if sent else "client_disconnected",
-                          len(content), round((perf_counter() - started) * 1000))
+        if not self._manuscript_context_still_current(
+            ctx, stale_message="The selected project changed; reload before downloading"
+        ):
+            self._log.warning("Website export id=%s stage=context_changed", export_id)
+            return
+        if preflight:
+            self._log.debug("Website export id=%s stage=preflight_prepared duration_ms=%d",
+                            export_id, round((perf_counter() - started) * 1000))
+            self._ok({"preflight": report})
+            return
+        filename = slugify(bundle.manifest["project"]["title"]) + "-reading-website.zip"
+        sent = self._send(200, content, "application/zip",
+                          headers={"Content-Disposition": f'attachment; filename="{filename}"',
+                                   "X-Lixity-Export-ID": export_id})
+        self._log.log(INFO if sent else WARNING, "Website export id=%s stage=%s bytes=%d duration_ms=%d",
+                      export_id, "body_written" if sent else "client_disconnected",
+                      len(content), round((perf_counter() - started) * 1000))
 
     def _handle_site_export_report(self, payload: dict[str, Any]) -> None:
-        try:
-            report = SiteExportReport.model_validate(payload)
-        except ValidationError:
-            self._json({"ok": False, "message": "Invalid export receipt"}, 400)
+        report = self._validate_model(
+            SiteExportReport, payload, error_message="Invalid export receipt"
+        )
+        if report is None:
             return
         self._log.log(WARNING if report.error_name or report.stage == "profiles_invalid" else INFO,
                       "Website export browser receipt id=%s stage=%s error=%s profiles=%s http_status=%s",
                       report.export_id or "none", report.stage, report.error_name or "none",
                       report.profile_count, report.http_status)
-        self._json({"ok": True})
+        self._ok()

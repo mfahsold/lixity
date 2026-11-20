@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from html import escape
 
 from ..style_profile import ChapterProfile
-from .components import panel_label, ui_icon
+from .components import close_button, compact_control, label, panel_label, ui_icon
 from .manuscript_document import ReaderBlock
 
 INLINE_EVIDENCE_LAYERS = ("sticky", "dialogue_tag", "echo", "indirect_speech")
@@ -56,12 +56,29 @@ def reading_controls(
             options = "".join(choices)
         if not reader_document[0].is_chapter and source_chapters:
             options = f'<option value="reader-preface">{text("reading_view")}</option>' + options
-    focus_icon = ui_icon("maximize-2")
-    teleprompter_icon = ui_icon("teleprompter")
-    overview_icon = ui_icon("layout-grid")
-    direct_speech_icon = ui_icon("message-square")
     help_icon = ui_icon("help-circle")
-    appearance_icon = ui_icon("type")
+    appearance_summary = compact_control(
+        label(labels, "reading_appearance"), "type", tag="summary",
+    )
+    focus_btn = compact_control(
+        label(labels, "reading_focus"), "maximize-2", control_id="reader-focus",
+        help_text=label(labels, "reading_help_focus"), pressed=False,
+    )
+    teleprompter_btn = compact_control(
+        label(labels, "reading_teleprompter"), "teleprompter", control_id="reader-teleprompter",
+        help_text=label(labels, "reading_help_teleprompter"), pressed=False, keyshortcuts="P",
+    )
+    direct_speech_btn = compact_control(
+        label(labels, "reading_direct_speech"), "message-square", control_id="reader-direct-speech",
+        help_text=label(labels, "reading_help_direct_speech"), pressed=False, keyshortcuts="D",
+    )
+    overview_btn = compact_control(
+        label(labels, "reading_overview"), "layout-grid", control_id="workbench-overview-open",
+        help_text=label(labels, "reading_help_overview"),
+    )
+    inspector_close_btn = close_button(
+        label(labels, "modal_close"), control_id="reader-inspector-close",
+    )
     return (
         '<div class="manuscript-reader-controls" id="manuscript-reader-controls" hidden>'
         f'<select id="manuscript-mode" hidden aria-hidden="true" tabindex="-1"><option value="read">{text("reading_read")}</option>'
@@ -69,9 +86,7 @@ def reading_controls(
         f'<select class="ctl reader-chapter" id="reader-chapter" aria-label="{text("reading_chapter")}">'
         f'<option value="">{text("reading_chapter")}…</option>{options}</select>'
         '<details class="reader-settings" id="reader-settings" name="reader-settings">'
-        f'<summary class="ctl reader-compact-control" aria-label="{text("reading_appearance")}" title="{text("reading_appearance")}">'
-        f'<span class="reader-control-icon" aria-hidden="true">{appearance_icon}</span>'
-        f'<span class="reader-control-label">{text("reading_appearance")}</span></summary><div class="reader-settings-body">'
+        f'{appearance_summary}<div class="reader-settings-body">'
         f'<div class="reader-size-controls" role="group" aria-label="{text("reading_size")}">'
         f'<button class="ctl" type="button" id="reader-text-smaller" aria-label="{text("reading_smaller")}">A−</button>'
         '<output id="reader-size-value" aria-live="polite">18</output>'
@@ -101,18 +116,7 @@ def reading_controls(
         f'<dt><kbd>Enter</kbd></dt><dd>{text("reading_shortcut_search")}</dd>'
         f'<dt><kbd>Esc</kbd></dt><dd>{text("reading_shortcut_close")}</dd>'
         '</dl></div></div></details>'
-        f'<button class="ctl reader-compact-control" type="button" id="reader-focus" aria-pressed="false" '
-        f'aria-label="{text("reading_focus")}" title="{text("reading_focus")}" '
-        f'data-help="{text("reading_help_focus")}"><span class="reader-control-icon" aria-hidden="true">{focus_icon}</span>'
-        f'<span class="reader-control-label">{text("reading_focus")}</span></button>'
-        f'<button class="ctl reader-compact-control" type="button" id="reader-teleprompter" aria-pressed="false" '
-        f'aria-label="{text("reading_teleprompter")}" title="{text("reading_teleprompter")}" aria-keyshortcuts="P" '
-        f'data-help="{text("reading_help_teleprompter")}"><span class="reader-control-icon" aria-hidden="true">{teleprompter_icon}</span>'
-        f'<span class="reader-control-label">{text("reading_teleprompter")}</span></button>'
-        f'<button class="ctl reader-compact-control" type="button" id="reader-direct-speech" aria-pressed="false" '
-        f'aria-label="{text("reading_direct_speech")}" title="{text("reading_direct_speech")}" aria-keyshortcuts="D" '
-        f'data-help="{text("reading_help_direct_speech")}"><span class="reader-control-icon" aria-hidden="true">{direct_speech_icon}</span>'
-        f'<span class="reader-control-label">{text("reading_direct_speech")}</span></button>'
+        f'{focus_btn}{teleprompter_btn}{direct_speech_btn}'
         '<div class="reader-analysis-toggle-controls">'
         f'<button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" '
         f'aria-label="{text("reading_analysis")}" title="{text("reading_analysis")}" aria-pressed="false" data-help="{text("reading_help_analysis")}">'
@@ -132,10 +136,7 @@ def reading_controls(
         f'<li><button type="button" class="ctl" data-analysis-guide-action="explore">{text("reading_explore_passage")}</button></li></ol>'
         f'<p class="ctl-note">{text("analysis_guide_compare")}</p>'
         '</div></details></div>'
-        f'<button class="ctl reader-compact-control" type="button" id="workbench-overview-open" '
-        f'aria-label="{text("reading_overview")}" title="{text("reading_overview")}" '
-        f'data-help="{text("reading_help_overview")}"><span class="reader-control-icon" aria-hidden="true">{overview_icon}</span>'
-        f'<span class="reader-control-label">{text("reading_overview")}</span></button>'
+        f'{overview_btn}'
         f'{companion_controls}'
         f'<strong class="workbench-surface-label" id="workbench-overview-label" hidden>{text("reading_overview")}</strong>'
         f'<button class="ctl" type="button" id="workbench-overview-back" hidden '
@@ -149,7 +150,7 @@ def reading_controls(
         '<aside class="reader-inspector panel" id="reader-inspector" hidden '
         'aria-labelledby="reader-inspector-title"><div class="workspace-reader-head">'
         f'<h2 id="reader-inspector-title">{text("reading_explore_passage")}</h2>'
-        f'<button class="ctl" type="button" id="reader-inspector-close" aria-label="{text("modal_close")}" title="{text("modal_close")}" aria-keyshortcuts="Escape">✕</button>'
+        f'{inspector_close_btn}'
         '</div><div id="reader-inspector-body"></div></aside>'
         f'<div class="manuscript-context-menu" id="manuscript-context-menu" role="menu" aria-label="{text("reading_actions")}" hidden></div>'
         f'<div class="manuscript-selection-tools" id="manuscript-selection-tools" role="toolbar" aria-label="{text("reading_actions")}" hidden></div>'

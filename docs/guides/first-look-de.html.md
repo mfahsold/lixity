@@ -40,7 +40,7 @@ In der Demo öffnet **Compare chapters 1 and 2** die Kapitelmatrix. Dort siehst 
 
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 
-2. Beim Absatz **… → Explore passage → Explain measurement** öffnen. Die Erklärung zeigt die gezählten Sätze und Wörter. **Counted text** blendet die Markierungen ein.
+2. Beim Absatz **… → Explore passage → Explain measurement** öffnen. Die Karte zeigt die Fundstelle, den Grund für ihre Markierung und eine Lesefrage. **Counted text** blendet die Markierungen ein.
 
 3. Über **opening chapter** in der Aufgabenkarte die Hafenbeschreibung im ersten Kapitel vergleichen. Was ändert sich beim Lesen, nicht nur in der Zahl?
 
@@ -51,6 +51,8 @@ Der Prüfschritt ist gelungen, wenn sich der Unterschied am Text erklären läss
 **Noch unveröffentlichte Navigation der lokalen App.** Die Analyseübersicht zeigt den Status, die nächste Textstelle und die Einstiege **Textstellen prüfen**, **Kapitel vergleichen** und **Muster erkunden**. Wähle einen Einstieg und bei Bedarf eine weitere Ansicht. Jeweils ein Analysebereich ist sichtbar. Eingaben bleiben beim Wechsel erhalten. Direkte Links öffnen den zugehörigen Bereich.
 
 Unter **Muster erkunden → Manuskript in Zahlen** siehst du Wörter und Sätze, den Satzrhythmus und weitere Sprachmerkmale. Bei Bedarf kannst du zusätzliche Kennzahlen zur Wortvielfalt und zum Stilvergleich aufklappen. Mit **Zurück zur Textstelle** liest du an derselben Stelle weiter. Eigenständige Berichte behalten direkte Abschnittslinks. Text und Tabellen bleiben auch ohne JavaScript lesbar.
+
+Die Rhythmusansicht verbindet den Kapiteldurchschnitt mit der Satzlängenverteilung. Öffne eine Längengruppe und blättere in der Leseleiste durch die Satzbeispiele. Unter **Motive und Wiederholungen** kannst du zu den Fundstellen einer Wortfolge springen und sie gemeinsam markieren. Mit Tab erreichst du die nächste Fundstelle. Beim Schließen der Leiste kehrst du zur Schaltfläche zurück, mit der du sie geöffnet hast.
 
 ## Hinweise zum Lesen, keine Schreibziele
 

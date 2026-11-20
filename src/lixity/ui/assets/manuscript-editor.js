@@ -20,7 +20,7 @@
     opts = opts || {};
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = opts.className || 'ctl';
+    b.className = opts.className || 'ctl ctl-sm';
     b.id = id;
     b.setAttribute('aria-label', label);
     b.setAttribute('title', help || label);
@@ -55,7 +55,7 @@
   let loaded = false, generation = 0, openingLine = 1, lastState = '';
   const closeWords = [L('editor_close_writing'), L('editor_close_writing_help')];
   const openButton = button(text(0), 'manuscript-write', open, null, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
-  const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1], {icon: 'book-open', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
+  const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1], {icon: 'book-open', className: 'ctl ctl-sm reader-compact-control', labelClass: 'reader-control-label'});
   closeButton.hidden = true;
   const companionControls = controls.querySelector('.reader-controls');
   const openAnchor = companionControls || controls.querySelector('#reader-teleprompter') || controls.querySelector('#workbench-overview-label') || controls.querySelector('#reader-analysis-settings');
@@ -71,10 +71,10 @@
   const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
   tools.append(historyGroup, formatGroup, versionsGroup, contextGroup, statusGroup);
   const fmtWords = ['editor_fmt_h2', 'editor_fmt_bold', 'editor_fmt_italic', 'editor_fmt_break'].map(L);
-  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl editor-fmt-btn'});
-  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B'});
-  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I'});
-  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl editor-fmt-btn'});
+  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl ctl-sm editor-fmt-btn'});
+  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B'});
+  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I'});
+  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl ctl-sm editor-fmt-btn'});
   formatGroup.append(fmtH2, fmtBold, fmtItalic, fmtBreak);
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
@@ -96,8 +96,8 @@
     pulseBtn.setAttribute('aria-expanded', String(openState));
   });
   pulseWrap.append(pulseBtn, pulsePopover);
-  const recovery = document.createElement('select'); recovery.className = 'ctl'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
-  const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl primary'});
+  const recovery = document.createElement('select'); recovery.className = 'ctl ctl-sm'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
+  const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl ctl-sm primary'});
   const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
   const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
   historyGroup.append(undoBtn, redoBtn);
@@ -264,7 +264,8 @@
   const comparisonTitle = document.createElement('h2'); comparisonTitle.textContent = comparisonWords[1];
   const comparisonClose = document.createElement('button'); comparisonClose.type = 'button'; comparisonClose.className = 'modal-close'; comparisonClose.textContent = '✕'; comparisonClose.setAttribute('aria-label', comparisonWords[6]); comparisonClose.title = comparisonWords[6];
   const comparisonBody = document.createElement('div'); comparisonBody.className = 'modal-body';
-  const comparisonNote = document.createElement('p'); comparisonNote.className = 'ctl-note'; comparisonNote.textContent = comparisonWords[7];
+  const comparisonNote = document.createElement('p'); comparisonNote.className = 'ctl-note';
+  comparisonNote.textContent = comparisonWords[7] + ' ' + L('editor_compare_metrics_reference');
   const comparisonGrid = document.createElement('div'); comparisonGrid.className = 'manuscript-comparison-grid';
   const comparisonFields = ['base','current','draft'].map((name, index) => {
     const label = document.createElement('label'); label.textContent = comparisonWords[index+2];
@@ -273,23 +274,29 @@
     const field = document.createElement('textarea'); field.id = 'manuscript-comparison-' + name; field.readOnly = index !== 2;
     label.append(identity,summary,field); comparisonGrid.append(label); return {field,identity,summary};
   });
+  const comparisonChapters = document.createElement('div');
+  comparisonChapters.id = 'manuscript-comparison-chapters';
+  comparisonChapters.className = 'manuscript-comparison-chapters';
+  comparisonChapters.hidden = true;
   let comparisonSnapshot = null, comparisonLoading = false, comparisonOriginal = '';
+  let comparisonTimer = 0, comparisonRequest = null, comparisonSettings = null;
   const comparisonDirty = () => comparison.open && comparisonFields[2].field.value !== comparisonOriginal;
   function closeComparison() {
     if (!comparisonDirty() || confirm(L('editor_compare_discard_confirm'))) comparison.close();
   }
   comparisonClose.addEventListener('click', closeComparison);
   comparison.addEventListener('cancel', event => {event.preventDefault(); closeComparison();});
+  comparison.addEventListener('close', cancelComparisonMeasurements);
   const comparisonUse = button(comparisonWords[5], 'manuscript-comparison-use', () => {
     if (!comparisonSnapshot || inflight) return;
     paused = true; pending = null; snapshot = comparisonSnapshot; comparisonSnapshot = null;
     editor.replace(comparisonFields[2].field.value); dirty = true;
     comparison.close(); show('unsaved', text(15)); editor.focus();
   }, null, {icon: 'check', className: 'ctl primary'});
-  const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape'});
+  const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape', className: 'ctl'});
   const comparisonActions = document.createElement('div'); comparisonActions.className = 'modal-footer'; comparisonActions.append(comparisonCancel,comparisonUse);
   comparisonHeader.append(comparisonTitle, comparisonClose);
-  comparisonBody.append(comparisonNote, comparisonGrid);
+  comparisonBody.append(comparisonNote, comparisonGrid, comparisonChapters);
   comparisonCard.append(comparisonHeader, comparisonBody, comparisonActions);
   comparison.append(comparisonCard); document.body.append(comparison);
   const compareBtn = button(comparisonWords[1], 'manuscript-compare', async () => {
@@ -306,8 +313,11 @@
       comparisonFields[1].field.value = current.text; comparisonFields[1].identity.textContent = current.revision.slice(0,12);
       comparisonFields[2].field.value = recovered ? recovered.text : editor.text(); comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : text(6);
       comparisonOriginal = comparisonFields[2].field.value;
-      updateComparisonSummaries(baseRevision, current.revision);
+      comparisonSettings = null;
+      comparisonFields.forEach(({summary}) => {summary.textContent = L('editor_compare_metrics_loading');});
+      comparisonChapters.hidden = true;
       comparison.showModal();
+      refreshComparisonMeasurements();
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(comparisonGrid);
       comparisonCancel.focus();
     } catch (error) {show('error',error.message);}
@@ -340,26 +350,26 @@
     #manuscript-reading-frame[hidden] {display:none;}
     #manuscript-editor {min-width:0;padding:4px 0 24px;width:100%;}
     .manuscript-edit-tools {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0;}
-    .manuscript-editor-toolbar {container:editor-tools / inline-size;position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius,12px);box-shadow:var(--shadow);}
-    .editor-tool-group {display:inline-flex;align-items:center;gap:4px;min-width:0;flex-shrink:0;}
+    .manuscript-editor-toolbar {container:editor-tools / inline-size;position:sticky;top:0;z-index:14;flex-wrap:nowrap;gap:6px;padding:5px 8px;margin-bottom:14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:var(--radius-sm,8px);box-shadow:var(--shadow);box-sizing:border-box;max-width:100%;}
+    .editor-tool-group {display:inline-flex;align-items:center;gap:4px;min-width:0;flex:0 1 auto;}
+    .editor-group-history,.editor-group-format {flex-shrink:0;}
     .editor-group-versions,.editor-group-context {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
     .editor-group-status {margin-inline-start:auto;padding-inline-start:6px;gap:6px;}
     .manuscript-editor-toolbar .reader-controls {display:inline-flex;align-items:center;flex-basis:auto;gap:4px;}
-    .manuscript-editor-toolbar button.ctl {padding:.3rem .5rem;min-height:2.25rem;white-space:nowrap;}
+    .manuscript-editor-toolbar button.ctl {padding:.25rem .5rem;min-height:2rem;white-space:nowrap;}
     .manuscript-editor-toolbar button.editor-icon-only .editor-tool-label {display:none;}
-    .manuscript-editor-toolbar button.editor-icon-only {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
+    .manuscript-editor-toolbar button.editor-icon-only {padding-inline:.45rem;min-width:2rem;justify-content:center;}
     .manuscript-editor-toolbar button.ctl:not(.primary),
     .manuscript-reading-bar button.ctl:not(.primary) {border-color:transparent;background:transparent;}
     .manuscript-editor-toolbar button.ctl:not(.primary):hover,
     .manuscript-reading-bar button.ctl:not(.primary):hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
-    #manuscript-save-status {font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14rem;}
+    #manuscript-save-status {min-width:0;flex:0 1 auto;font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12rem;}
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
     #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
-    #manuscript-recovery {max-width:11rem;min-width:6.5rem;flex:0 1 11rem;min-height:2.25rem;padding-block:.25rem;}
-    .manuscript-editor-toolbar button.editor-fmt-btn {min-width:2.1rem;padding-inline:.45rem;font-size:.82rem;font-weight:650;}
+    #manuscript-recovery {max-width:10.5rem;min-width:5.5rem;flex:0 1 10.5rem;min-height:2rem;padding-block:.2rem;font-size:var(--text-note,.8125rem);}
+    .manuscript-editor-toolbar button.editor-fmt-btn {min-width:2rem;padding-inline:.45rem;font-size:.82rem;font-weight:650;}
     .manuscript-editor-toolbar button.editor-fmt-italic {font-style:italic;font-family:var(--font-title,serif);}
     .manuscript-editor-toolbar .editor-group-format {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
-    #manuscript-recovery {max-width:9.25rem;font-size:var(--text-note,.8125rem);}
     #manuscript-save-status[data-state="saved"] {background:transparent!important;border-color:transparent!important;color:var(--muted)!important;font-weight:400!important;box-shadow:none!important;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
     #manuscript-session-pulse-wrap {max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:8px auto 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
@@ -368,23 +378,32 @@
     #manuscript-pulse-popover {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);padding:10px 14px;box-shadow:var(--shadow);font-size:var(--text-micro,.8125rem);color:var(--muted);max-width:100%;box-sizing:border-box;}
     #manuscript-pulse-popover svg {display:block;margin-top:6px;color:var(--accent,currentColor);}
     .manuscript-compare-metrics {font-weight:400;color:var(--muted);margin-top:2px;}
+    .manuscript-comparison-chapters {margin-top:var(--space-3,12px);padding-top:var(--space-3,12px);border-top:1px solid var(--line);font-size:var(--text-small,.875rem);}
+    .manuscript-comparison-chapters h3 {margin:0 0 6px;font-size:var(--text-small,.875rem);font-weight:var(--weight-semibold,600);}
+    .manuscript-comparison-chapters ul {margin:4px 0 0;padding-inline-start:18px;display:grid;gap:4px;}
+    .manuscript-comparison-chapters li {color:var(--fg);}
+    .manuscript-comparison-chapters li small {color:var(--muted);margin-inline-start:6px;}
     #manuscript-editor-host .cm-line.lixity-session-edited {box-shadow:inset 2px 0 0 var(--accent,#2f5aa8);}
     @container editor-tools (max-width: 76rem) {
       #manuscript-search .editor-tool-label,
       .manuscript-editor-toolbar #workspace-reader-toggle .reader-control-label {display:none;}
       #manuscript-search,
-      .manuscript-editor-toolbar #workspace-reader-toggle {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
+      .manuscript-editor-toolbar #workspace-reader-toggle {padding-inline:.45rem;min-width:2rem;justify-content:center;}
       #manuscript-recovery {max-width:9rem;flex-basis:9rem;}
     }
     @container editor-tools (max-width: 60rem) {
       #manuscript-read .editor-tool-label,
       #manuscript-recover .editor-tool-label,
+      #manuscript-compare .editor-tool-label,
+      #manuscript-save .editor-tool-label,
       .manuscript-editor-toolbar #manuscript-close .reader-control-label {display:none;}
       #manuscript-read,
       #manuscript-recover,
-      .manuscript-editor-toolbar #manuscript-close {padding-inline:.45rem;min-width:2.25rem;justify-content:center;}
-      #manuscript-recovery {max-width:7.5rem;flex-basis:7.5rem;}
-      #manuscript-save-status {max-width:9rem;padding-inline:7px;}
+      #manuscript-compare,
+      #manuscript-save,
+      .manuscript-editor-toolbar #manuscript-close {padding-inline:.45rem;min-width:2rem;justify-content:center;}
+      #manuscript-recovery {max-width:8.5rem;flex-basis:8.5rem;}
+      #manuscript-save-status {max-width:8rem;padding-inline:7px;}
     }
     @media(max-width:760px) {
       .manuscript-editor-toolbar {flex-wrap:wrap;}
@@ -442,46 +461,19 @@
     const sign = v > 0 ? '+' : '';
     return sign + fmtNum(v, digits);
   }
-  function quickTextStats(raw) {
-    const clean = (raw || '').replace(/<!--[\s\S]*?-->/g, '').replace(/^#+.*$/gm, '');
-    const tokens = clean.match(/[\p{L}\p{N}_]+/gu) || [];
-    const sents = clean.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
-    const dlg = (clean.match(/[„"«»‹›‚‘'][^"”»›’']+[“"»«›‹’']/g) || []).join(' ').match(/[\p{L}\p{N}_]+/gu) || [];
-    let lengthEntropy = null;
-    if (sents.length > 0) {
-      const counts = [0, 0, 0];
-      sents.forEach(s => {
-        const len = (s.match(/[\p{L}\p{N}_]+/gu) || []).length;
-        if (len <= 8) counts[0] += 1;
-        else if (len <= 20) counts[1] += 1;
-        else counts[2] += 1;
-      });
-      let ent = 0;
-      counts.forEach(c => {
-        if (c > 0) {
-          const p = c / sents.length;
-          ent -= p * Math.log2(p);
-        }
-      });
-      lengthEntropy = ent / Math.log2(3);
-    }
-    return {
-      words: tokens.length,
-      asl: sents.length ? tokens.length / sents.length : null,
-      dialogue_ratio: tokens.length ? (dlg.length / tokens.length) * 100 : null,
-      length_entropy: lengthEntropy,
-      sticky_pct: null,
-      indirect_speech_per_1000: null,
-    };
+  function formatPercentagePointChange(value) {
+    return L('measurement_percentage_point_change').replace('{value}', fmtSigned(value, 1));
   }
-  function formatMetricsLine(snap, deltas) {
+  function formatMetricsLine(snap, deltas, {comparison = false} = {}) {
     if (!snap) return '';
     const parts = [fmtNum(snap.words, 0) + ' ' + pulseWords[0]];
     if (deltas && deltas.words !== null && deltas.words !== undefined && deltas.words !== 0) {
-      parts[0] += ' (' + fmtSigned(deltas.words, 0) + ' ' + pulseWords[1] + ')';
+      const change = fmtSigned(deltas.words, 0);
+      parts[0] += comparison ? ' (Δ ' + change + ')' : ' (' + change + ' ' + pulseWords[1] + ')';
     }
     if (snap.asl !== null && snap.asl !== undefined) {
-      let aslPart = pulseWords[2] + ' ' + fmtNum(snap.asl, 1);
+      const averageLabel = comparison ? L('measurement_words_per_sentence') : pulseWords[2];
+      let aslPart = averageLabel + ' ' + fmtNum(snap.asl, 1);
       if (deltas && deltas.asl !== null && deltas.asl !== undefined && Math.abs(deltas.asl) >= 0.05) {
         aslPart += ' (Δ ' + fmtSigned(deltas.asl, 1) + ')';
       }
@@ -500,7 +492,7 @@
     if (snap.sticky_pct !== null && snap.sticky_pct !== undefined) {
       let stickyPart = pulseWords[8] + ' ' + fmtNum(snap.sticky_pct, 1) + ' %';
       if (deltas && deltas.sticky_pct !== null && deltas.sticky_pct !== undefined && Math.abs(deltas.sticky_pct) >= 0.05) {
-        stickyPart += ' (Δ ' + fmtSigned(deltas.sticky_pct, 1) + ' %)';
+        stickyPart += ' (Δ ' + formatPercentagePointChange(deltas.sticky_pct) + ')';
       }
       parts.push(stickyPart);
     }
@@ -513,35 +505,130 @@
     }
     return parts.join(' · ');
   }
-  function snapDeltas(nextSnap, prevSnap) {
-    if (!nextSnap || !prevSnap) return null;
-    const diffNum = (k) => (
-      nextSnap[k] !== null && nextSnap[k] !== undefined &&
-      prevSnap[k] !== null && prevSnap[k] !== undefined
-        ? nextSnap[k] - prevSnap[k]
-        : null
-    );
-    return {
-      words: nextSnap.words - prevSnap.words,
-      asl: diffNum('asl'),
-      length_entropy: diffNum('length_entropy'),
-      sticky_pct: diffNum('sticky_pct'),
-      indirect_speech_per_1000: diffNum('indirect_speech_per_1000'),
-    };
+  function formatChapterDelta(ch) {
+    const bits = [];
+    if (typeof ch.words_delta === 'number' && ch.words_delta !== 0) {
+      bits.push(fmtSigned(ch.words_delta, 0) + ' ' + pulseWords[0]);
+    }
+    if (typeof ch.asl_delta === 'number' && Math.abs(ch.asl_delta) >= 0.05) {
+      bits.push(L('measurement_words_per_sentence') + ' Δ ' + fmtSigned(ch.asl_delta, 1));
+    }
+    if (typeof ch.dialog_pct_delta === 'number' && Math.abs(ch.dialog_pct_delta) >= 0.05) {
+      bits.push(pulseWords[3] + ' Δ ' + formatPercentagePointChange(ch.dialog_pct_delta));
+    }
+    return bits.join(' · ');
   }
-  function updateComparisonSummaries(baseRev, currentRev) {
-    const byRev = new Map(latestTimeline.map(r => [r.revision, r]));
-    const baseSnap = byRev.get(baseRev) || quickTextStats(comparisonFields[0].field.value);
-    const curSnap = byRev.get(currentRev) || quickTextStats(comparisonFields[1].field.value);
-    const draftSnap = quickTextStats(comparisonFields[2].field.value);
-    comparisonFields[0].summary.textContent = formatMetricsLine(baseSnap, null);
-    comparisonFields[1].summary.textContent = formatMetricsLine(curSnap, snapDeltas(curSnap, baseSnap));
-    comparisonFields[2].summary.textContent = formatMetricsLine(draftSnap, snapDeltas(draftSnap, curSnap));
+  function renderComparisonResults(data) {
+    const m = (data && data.measurements) || {};
+    const b2c = data && data.base_to_current ? data.base_to_current.deltas : null;
+    const c2d = data && data.current_to_draft ? data.current_to_draft.deltas : null;
+    const pairs = [
+      [m.base, null],
+      [m.current, b2c],
+      [m.draft, c2d],
+    ];
+    comparisonFields.forEach(({summary}, index) => {
+      const [metrics, deltas] = pairs[index];
+      summary.textContent = metrics
+        ? L('editor_compare_metrics_measured') + ' · ' + formatMetricsLine(metrics, deltas, {comparison: true})
+        : L('editor_compare_metrics_unavailable');
+    });
+    const diffKey = data && data.primary_diff;
+    const diff = diffKey && data[diffKey] ? data[diffKey] : null;
+    comparisonChapters.replaceChildren();
+    if (!diff || !Array.isArray(diff.chapter_deltas) || !diff.chapter_deltas.length) {
+      comparisonChapters.hidden = true;
+      return;
+    }
+    const matched = diff.chapter_deltas.filter(ch => (
+      ch.match_status === 'matched' &&
+      (typeof ch.changed === 'boolean' ? ch.changed : (
+        ch.base_num !== ch.num ||
+        (typeof ch.words_delta === 'number' && ch.words_delta !== 0) ||
+        (typeof ch.asl_delta === 'number' && Math.abs(ch.asl_delta) >= 0.05) ||
+        (typeof ch.dialog_pct_delta === 'number' && Math.abs(ch.dialog_pct_delta) >= 0.05)
+      ))
+    ));
+    const {ambiguous, unmatched} = diff.chapter_matching || {};
+    if (!matched.length && !ambiguous && !unmatched) {
+      comparisonChapters.hidden = true;
+      return;
+    }
+    const heading = document.createElement('h3');
+    const [from, to] = diffKey === 'base_to_current' ? [2, 3] : [3, 4];
+    heading.textContent = `${L('editor_compare_chapters_heading')} · ${comparisonWords[from]} → ${comparisonWords[to]}`;
+    comparisonChapters.append(heading);
+    if (matched.length) {
+      const list = document.createElement('ul');
+      matched.forEach(ch => {
+        const li = document.createElement('li');
+        const numText = ch.base_num && ch.base_num !== ch.num
+          ? `${ch.base_num} → ${ch.num}`
+          : String(ch.num);
+        const titlePart = ch.title ? ` · ${ch.title}` : '';
+        const strong = document.createElement('strong');
+        strong.textContent = `${L('chapter')} ${numText}${titlePart}`;
+        li.append(strong);
+        const deltaText = formatChapterDelta(ch);
+        if (deltaText) {
+          const detail = document.createElement('small');
+          detail.textContent = deltaText;
+          li.append(detail);
+        }
+        list.append(li);
+      });
+      comparisonChapters.append(list);
+    }
+    if (ambiguous) {
+      const noteEl = document.createElement('p');
+      noteEl.className = 'ctl-note';
+      noteEl.textContent = L('editor_compare_chapters_unclear');
+      comparisonChapters.append(noteEl);
+    }
+    if (unmatched) {
+      const noteEl = document.createElement('p');
+      noteEl.className = 'ctl-note';
+      noteEl.textContent = L('editor_compare_chapters_unmatched');
+      comparisonChapters.append(noteEl);
+    }
+    comparisonChapters.hidden = false;
+  }
+  function cancelComparisonMeasurements() {
+    clearTimeout(comparisonTimer);
+    if (comparisonRequest) comparisonRequest.abort();
+    comparisonRequest = null;
+  }
+  async function refreshComparisonMeasurements() {
+    if (!comparison.open || !comparisonSnapshot) return;
+    const controller = new AbortController();
+    comparisonRequest = controller;
+    try {
+      const data = await request('/manuscript-compare', {
+        document: comparisonSnapshot.document,
+        revision: comparisonSnapshot.revision,
+        settings_sha256: comparisonSettings,
+        base_text: comparisonFields[0].field.value,
+        draft_text: comparisonFields[2].field.value,
+      }, {signal: controller.signal});
+      if (comparisonRequest !== controller || !comparison.open) return;
+      comparisonSettings = data.settings_sha256;
+      renderComparisonResults(data);
+    } catch (error) {
+      if (comparisonRequest !== controller || !comparison.open) return;
+      comparisonFields.forEach(({summary}) => {
+        summary.textContent = L(error.conflict ? 'editor_compare_metrics_stale' : 'editor_compare_metrics_unavailable');
+      });
+      comparisonChapters.hidden = true;
+    } finally {
+      if (comparisonRequest === controller) comparisonRequest = null;
+    }
   }
   comparisonFields[2].field.addEventListener('input', () => {
-    if (comparison.open && snapshot && comparisonSnapshot) {
-      updateComparisonSummaries(snapshot.revision, comparisonSnapshot.revision);
-    }
+    if (!comparison.open || !comparisonSnapshot) return;
+    cancelComparisonMeasurements();
+    comparisonFields[2].summary.textContent = L('editor_compare_metrics_loading');
+    comparisonChapters.hidden = true;
+    comparisonTimer = setTimeout(refreshComparisonMeasurements, 300);
   });
   function renderSparklineSvg(revisions) {
     if (!revisions || revisions.length < 2) return '';
@@ -584,8 +671,9 @@
       pulseWrap.hidden = true;
     }
   }
-  async function request(path, payload) {
-    const response = await fetch(api + path, payload ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)} : {});
+  async function request(path, payload, {signal} = {}) {
+    const options = payload ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)} : {};
+    const response = await fetch(api + path, {...options, signal});
     const data = await response.json(); if (!response.ok || !data.ok) {const error = new Error(data.message || text(6)); error.conflict = response.status === 409; throw error;} return data;
   }
   function changes() {

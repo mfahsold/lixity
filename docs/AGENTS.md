@@ -25,6 +25,26 @@ source. Its response includes document identity, original-byte revision, kind an
 normalized text. Unknown, repeated or empty query parameters are rejected.
 `POST /api/manuscript-edit-discard` with `document` and `id` explicitly
 deletes that recovery copy. The same Host/Origin checks protect these operations.
+
+Unreleased `POST /api/manuscript-compare` accepts `document`, the current
+file's `revision`, `base_text` and `draft_text` as strings. An optional
+`settings_sha256` pins the effective settings from an earlier response.
+The operation measures both supplied texts and the revision read from disk
+under one resolved configuration. Each editor text has the normal 4 MiB
+UTF-8 limit. A stale revision or settings fingerprint returns 409.
+`lixity-compare/1` reports `measurements`, `base_to_current`,
+`current_to_draft` and `primary_diff`. Chapter differences are available
+for paired chapters. The request has no manuscript or history writes.
+
+Unreleased `POST /api/motif-search` searches the selected manuscript with
+a required `query` and optional `regex`, `case_sensitive`, `limit`
+and `project_token`. `lixity-motif-search/1` identifies the source by
+`source_sha256` and returns mappable `occurrences`, `total_matches`
+and `truncated`. Occurrence offsets are Unicode code points within the
+identified displayed paragraph. Verify source and passage identity before
+using an occurrence to navigate or highlight. Invalid regular expression syntax
+returns HTTP 400 with the error code `invalid-regex`.
+
 Editor receipts do not refresh analysis. `GET /api/manuscript-view?document=<id>&revision=<sha256>`
 returns the ordinary native dashboard only when its analyzed and current source
 match the requested revision (otherwise 409 or an explicit error). The HTML body

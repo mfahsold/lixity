@@ -58,7 +58,10 @@ server.serve_forever()
     await rows.first().locator('.triage-reason summary').click();
     await expect(rows.first().locator('.triage-reason')).toContainText('Present markers: 3; past markers: 3');
     await expect(page.locator('#manuscript-analysis-panels')).toBeVisible();
+    assert.equal(await page.locator('#flags [data-triage-pill-group], #flags .triage-quick-actions').count(), 0);
+    const initialDecision = await rows.first().locator('.triage-saved-state').textContent();
     await rows.first().locator('.triage-choice').selectOption('kept');
+    await expect(rows.first().locator('.triage-saved-state')).toHaveText(initialDecision);
     await rows.first().locator('[data-triage-save]').click();
     await expect(rows.first().locator('.triage-saved-state')).toHaveText('Deliberately kept');
     await expect(page.locator('#triage-progress')).toContainText('1 /');

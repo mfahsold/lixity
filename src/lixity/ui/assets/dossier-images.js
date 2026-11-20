@@ -204,7 +204,7 @@
     if (!figures.length) return;
     var overview = document.createElement("details"), summary = document.createElement("summary"), list = document.createElement("ul");
     overview.className = "dossier-media-overview";
-    summary.textContent = uiFormat("image_media", {count: figures.length});
+    summary.textContent = uiCountFormat("image_media", figures.length);
     overview.append(summary, list);
     var heading = "";
     body.querySelectorAll("h1, h2, h3, h4, h5, h6, .dossier-image").forEach(function(node) {

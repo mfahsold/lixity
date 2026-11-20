@@ -60,12 +60,17 @@ class TestDocumentPipeline(unittest.TestCase):
                 text = '## One\n\nMara sees rain. "Stay here," she says.' + divider + ' Rain falls.\n'
                 settings = {"assignments": {"1:1": "quiet"},
                             "groups": {"quiet": {"targets": {"asl": [2, 8]}}}}
-                config, _ = resolve_document_config(text, project_config={"motifs": {"Weather": "rain"}})
+                config, _ = resolve_document_config(
+                    text, project_config={"motifs": {"Weather": "rain"}}, sticky_min_words=9, sticky_glue_pct=55.5,
+                    short_sentence_max=7,
+                )
                 analysis = analyze_document(text, config, resolve_thresholds(project_config={}))
                 before = analysis.metrics.model_dump()
                 expected = {
                     "dialogue": dialogue_report(text, config).to_dict(),
-                    "pacing": pacing_report(text, config).to_dict(),
+                    "pacing": {**pacing_report(text, config).to_dict(),
+                               "sticky_rule": {"min_words": 9, "min_pct": 55.5},
+                               "rhythm_word_bounds": (7, 20)},
                     "motifs": motif_report(text, config=config).to_dict(),
                     "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),
                     "scenes": scene_report(text, config, settings),
@@ -90,3 +95,54 @@ class TestDocumentPipeline(unittest.TestCase):
                                                  scene_settings={"assignments": {"1:1": "missing"}})
         self.assertIn("Unknown register", reports["scenes"]["error"])
         self.assertTrue(reports["dialogue"])
+
+    def test_sticky_jumps_use_complete_unique_sentences_after_ranking(self):
+        from lixity import pipeline
+        from lixity.pacing import pacing_report
+
+        prefix = "The gate and the door " * 5
+        first, second = prefix + "open.", prefix + "close."
+        stronger = "It is on the wall and it is by the door."
+        ambiguous = "She was in the hall and it was by the door."
+        text = f"## One\n\n{first}\n\n{second}\n\n{stronger}\n\n{ambiguous}\n\n> {ambiguous}\n"
+        config, _ = resolve_document_config(text, "en")
+        analysis = analyze_document(text, config, resolve_thresholds(project_config={}), include_evidence=True)
+        reports = pipeline.supplementary_reports(text, config, analysis)
+        rows = reports["pacing"]["sticky_items"]
+        self.assertLess(
+            next(i for i, row in enumerate(rows) if row.get("paragraph_id") == "p-2"),
+            next(i for i, row in enumerate(rows) if row.get("paragraph_id") == "p-0"),
+        )
+        self.assertEqual(
+            [row.get("paragraph_id") for row in rows if row["preview"] == prefix[:80]], ["p-0", "p-1"],
+        )
+        self.assertEqual(
+            [row.get("paragraph_id") for row in rows if row["preview"] == ambiguous], [None, None],
+        )
+        self.assertEqual(
+            pacing_report(text, config, _include_sticky_identity=True).to_dict(),
+            pacing_report(text, config).to_dict(),
+        )
+
+    def test_supplementary_reports_precomputes_sentence_group_matches_with_evidence(self):
+        from lixity import pipeline
+
+        text = (
+            "## One\n\n"
+            "Short sentence. A medium length sentence with several words here. "
+            "This much longer sentence keeps extending across many different words until it crosses the long boundary easily and continues beyond twenty words.\n"
+        )
+        config, _ = resolve_document_config(
+            text, project_config={}, short_sentence_max=3, medium_sentence_max=10, long_sentence_max=15
+        )
+        analysis = analyze_document(
+            text, config, resolve_thresholds(project_config={}), include_evidence=True
+        )
+        reports = pipeline.supplementary_reports(text, config, analysis)
+        matches = reports["pacing"]["sentence_group_matches"]
+        self.assertEqual(matches["rhythm"]["short"], [{"paragraph_id": "p-0", "span_index": 0}])
+        self.assertEqual(matches["rhythm"]["medium"], [{"paragraph_id": "p-0", "span_index": 1}])
+        self.assertEqual(matches["rhythm"]["long"], [{"paragraph_id": "p-0", "span_index": 2}])
+        self.assertEqual(matches["distribution"]["short"], [{"paragraph_id": "p-0", "span_index": 0}])
+        self.assertEqual(matches["distribution"]["medium"], [{"paragraph_id": "p-0", "span_index": 1}])
+        self.assertEqual(matches["distribution"]["very_long"], [{"paragraph_id": "p-0", "span_index": 2}])

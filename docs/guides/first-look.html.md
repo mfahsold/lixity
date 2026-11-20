@@ -26,7 +26,7 @@ A board moved. Mara turned. The crate tipped towards the drain.
 
 1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
 
-2. Choose its **… → Explore passage → Explain measurement**. Inspect the actual sentences and their word counts. Turn on **Counted text** if you want marks in the prose.
+2. Choose its **… → Explore passage → Explain measurement**. The card shows the selected sentence, what was counted and a question to consider as you read. Turn on **Counted text** to see the marks in the prose.
 
 3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
 
@@ -47,6 +47,8 @@ Neutral dotted marks and a book-icon **Research** count identify saved research 
 **Unreleased native navigation.** The analysis overview starts with status, the next passage and three choices, **Review passages**, **Compare chapters** and **Explore patterns**. Select a task, then a secondary view. One analysis section is visible at a time. Inputs remain in place when you switch, and direct links reveal their target section.
 
 Under **Explore patterns**, choose **Manuscript measurements** to see counts, sentence rhythm and language measures. Expand the vocabulary and style disclosures for more detail. A linked scene title reveals its detailed **Scene measurements**. **Back to passage** restores your reading context. Standalone reports retain direct section links and remain readable without JavaScript.
+
+The rhythm view combines chapter averages with the sentence-length distribution. Choose a length group to open a sentence, then move between examples with the reading toolbar. In **Motifs and repetition**, open a recurring phrase to see which occurrences can be read together. Press Tab to reach the next occurrence. Closing the toolbar returns you to the control that opened it.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. These short chapters demonstrate a workflow; their numbers are not a quality verdict. [The mark key](interpretation.html#analysis-marks) explains the colors and scopes. [Reader controls and coverage](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers text size, focus, keyboard access and supported formatting.
 
