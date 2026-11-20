@@ -13397,7 +13397,17 @@ function ocrReading(ocr) {
   return {label: labelText, guidance: guidanceText, badge: badgeClass};
 }
 
-async function refreshResearchProjectInfo(freshRead) {
+var researchProjectInfoPending = null;
+
+function refreshResearchProjectInfo(freshRead) {
+  var pending = readResearchProjectInfo(freshRead);
+  researchProjectInfoPending = pending;
+  return pending.finally(function() {
+    if (researchProjectInfoPending === pending) researchProjectInfoPending = null;
+  });
+}
+
+async function readResearchProjectInfo(freshRead) {
   var statusRead = ++researchProjectStatusRead;
   var activeRootEl = document.getElementById("r-active-root");
   if (activeRootEl && (!activeRootEl.textContent || activeRootEl.textContent.trim() === "")) {

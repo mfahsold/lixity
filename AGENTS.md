@@ -68,10 +68,15 @@ and investigate reported bugs before changing behavior.
   changes to `main` for an authorized documentation rollout. A source edit
   alone does not authorize deployment; tagged releases publish their verified
   Pages build.
-- Dashboard & rollout: `make run` (foreground) vs `make start`/`stop`/`restart`
-  (managed service, default port 8765). Installing a package never updates a
-  running service; an authorized source rollout needs an explicit `make restart`.
-  Matching version strings do not establish that a running process loaded a fix.
+- Dashboard & rollout: use one managed port for project views. Identify the
+  listener and intended executable with `service status --port PORT --json`
+  and `doctor --port PORT --json`. For checkout development use `make run`
+  (foreground) or `make start`/`stop`/`restart` (managed); non-default
+  ports use `LIXITY_PORT`. For a packaged rollout, build and smoke-test the
+  wheel, install it into the selected environment, then restart its managed
+  port. Verify the new process, intended project and changed behavior through
+  that listener. Matching version strings alone establish neither artifact
+  parity nor loaded behavior. See [installation and rollout](docs/INSTALLATION.md#running-the-server).
 - CI runs `tests` automatically for pull requests targeting `main`; `tests`,
   `browser`, `research-platforms` and `release-candidate` (`rc.yml`,
   `make rc-gate`) support manual dispatch. Tagged releases reuse the source,

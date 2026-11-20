@@ -55,7 +55,7 @@
   "tour_return": "Prova un brano in locale e consulta i risultati.",
   "tour_error": "Impossibile caricare il video. Apri la demo interattiva.",
   "discover": "Scopri Lixity",
-  "editor_status": "Disponibile in v{version}: analisi locale, Solo Dialoghi, lettura e modifica del manoscritto, dossier di ricerca e copie di lettura autonome. La demo pubblica resta di sola lettura.",
+  "editor_status": "L’app locale comprende analisi, modalità Solo dialoghi, modifica del manoscritto, dossier di ricerca e copie di lettura autonome. Puoi esplorare la demo di sola lettura nel browser.",
   "editor_link": "Ambito e disponibilità dell’editor (inglese)",
   "workflow": "Lettura attenta, note di ricerca e confronti tra capitoli restano ancorati alle tue parole. L’analisi integrata gira localmente; i servizi opzionali di mappe e voce possono usare la rete. I client IA collegati hanno regole proprie per il trattamento dei dati.",
   "sandbox_cta": "Prova un brano nel browser",

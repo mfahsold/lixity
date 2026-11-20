@@ -55,7 +55,7 @@
   "tour_return": "Einen Absatz lokal prüfen und die Ergebnisse ansehen.",
   "tour_error": "Das Video konnte nicht geladen werden. Öffne stattdessen die interaktive Demo.",
   "discover": "Lixity kennenlernen",
-  "editor_status": "In v{version} verfügbar: lokale Analyse, Nur-Dialog-Modus, Lesen und Schreiben am Manuskript, Recherche-Dossiers und eigenständige Lesefassungen. Die öffentliche Demo bleibt schreibgeschützt.",
+  "editor_status": "Die lokale App bietet Analyse, Nur-Dialog-Modus, Schreiben am Manuskript, Recherche-Dossiers und eigenständige Lesefassungen. Die schreibgeschützte Demo kannst du im Browser erkunden.",
   "editor_link": "Editor: Umfang und Verfügbarkeit (Englisch)",
   "workflow": "Gehe von einer Textstelle zum Kapitelvergleich oder zur verknüpften Recherche und wieder zurück. Die eingebaute Analyse läuft lokal. Optionale Karten- und Sprachdienste können Netzwerkverbindungen nutzen; für verbundene KI-Clients gelten deren eigene Datenregeln.",
   "sandbox_cta": "Absatz im Browser testen",

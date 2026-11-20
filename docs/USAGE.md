@@ -1004,14 +1004,16 @@ the [workspace manual](WORKSPACE.md) for browser tasks.
 
 ### `lixity service`
 
-One regular app instance supports independent
-project views in multiple tabs. Project selection returns a scoped view URL
-under the same origin instead of replacing every tab's selection. In 0.8.0, use **Project → Settings → Audio and services → Services & audio queue**
-to revisit open views, close an idle view or refresh worker/queue status.
+One regular app instance supports independent project views in multiple tabs.
+Open the same app address in another tab and choose **Project actions → Open
+Project**. Each project view has a scoped URL under that origin. Use
+**Project → Audio and services → Services & audio queue** to revisit open views,
+close an idle view or refresh worker and queue status.
 The startup view stays available. At most 16 views are retained; their URLs
 expire on server restart and return HTTP 410 instead of selecting another project.
-Reopen the project from the home address after restarting. Additional ports are
-for explicitly separate development instances, not ordinary project selection.
+Reopen the project from the home address after restarting. Use additional ports
+when you need separate app processes, such as comparing an installed build with
+a development checkout.
 Launch overrides belong to the startup view; newly opened projects use their
 own configuration instead of inheriting another book's analysis language or thresholds.
 

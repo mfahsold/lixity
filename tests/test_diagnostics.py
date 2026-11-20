@@ -57,7 +57,9 @@ def test_unavailable_metadata_remains_unknown(installed, monkeypatch, error):
     assert report['issues'][0]['code'] == 'distribution-metadata-unavailable'
 
 
-def test_running_older_service_reports_restart_need(installed, monkeypatch):
+def test_running_older_service_reports_restart_need(installed, monkeypatch, capsys):
+    from lixity.cli import main
+
     previous = installed.service_status
     monkeypatch.setattr(installed, 'service_status', lambda port: {
         **previous(port), 'state': 'running', 'running': True, 'running_version': '0.7.3',
@@ -65,6 +67,10 @@ def test_running_older_service_reports_restart_need(installed, monkeypatch):
     report = installed.doctor()
     assert report['ok'] is False
     assert [issue['code'] for issue in report['issues']] == ['service-version-mismatch']
+    for language, label in [('en', 'Running version'), ('de', 'Laufende Version')]:
+        monkeypatch.setenv('LIXITY_LANG', language)
+        assert main(['doctor', '--port', '59991']) == 1
+        assert f'{label}: 0.7.3' in capsys.readouterr().out
 
 
 def test_unknown_service_does_not_look_stopped(installed, monkeypatch):

@@ -14,6 +14,12 @@ Passing tests establish only their assertions; confirm that those assertions
 cover the requested behavior. Check an issue's premise against the base before
 implementing it. Fix an incorrect verification before changing correct code.
 
+For an interaction regression, assert the author-visible outcome after the
+actual trigger. An open disclosure or a Playwright field fill can succeed while
+the field starts outside the viewport. Hold a pending response explicitly when
+testing ordering. After a rollout, repeat the critical action on the target
+listener and distinguish package version, running version and source identity.
+
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not
 render those responses wholesale, even during read-only checks.

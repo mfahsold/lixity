@@ -11,6 +11,45 @@ const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-workflows-'));
 
+async function checkEarlyDossierSuggestions(browser, url) {
+  const page = await browser.newPage();
+  let releaseStatus, releaseSuggestions, statusRequested = false;
+  const pendingStatus = new Promise(resolve => { releaseStatus = resolve; });
+  const pendingSuggestions = new Promise(resolve => { releaseSuggestions = resolve; });
+  try {
+    await page.route(request => request.pathname === '/api/research/status', async route => {
+      statusRequested = true;
+      await pendingStatus;
+      await route.continue();
+    });
+    await page.route(request => request.pathname === '/api/research/manuscript-dossier-drafts', async route => {
+      await pendingSuggestions;
+      await route.continue();
+    });
+    await page.goto(url);
+    await expect.poll(() => statusRequested).toBe(true);
+    await page.locator('#tab-view-research').click();
+    await page.locator('#r-dos-drafts-box > summary').press('Enter');
+    const load = page.locator('#r-manuscript-dossier-btn');
+    await load.press('Enter');
+    await expect(load).toBeDisabled();
+
+    // The first project response must arrive before any proposals can render.
+    releaseStatus();
+    await expect(page.locator('#r-active-root')).toContainText('synthetic-project');
+    releaseSuggestions();
+    const drafts = page.locator('#r-manuscript-drafts');
+    await expect(drafts.locator('[data-draft-select="character:mara"]')).toBeVisible();
+    await expect(drafts.locator('[data-draft-select="character:ivo"]')).toBeVisible();
+    await expect(load).toBeEnabled();
+    await expect(page.locator('#research-dossiers-list')).toContainText('Current synthetic dossier');
+  } finally {
+    releaseStatus();
+    releaseSuggestions();
+    await page.close();
+  }
+}
+
 async function checkDossierComposerNavigation(browser, url) {
   const page = await browser.newPage({viewport: {width: 390, height: 700}});
   try {
@@ -108,6 +147,7 @@ server.serve_forever()
     const dossierListURL = url => url.origin === fixture.url &&
       url.pathname === '/api/research/dossiers' && !url.searchParams.has('id');
     browser = await launchChromium();
+    await checkEarlyDossierSuggestions(browser, fixture.url);
     await checkDossierComposerNavigation(browser, fixture.url);
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     const errors = [], preparations = [], saves = [];

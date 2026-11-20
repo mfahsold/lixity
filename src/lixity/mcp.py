@@ -1,8 +1,8 @@
 """Minimal MCP server for Lixity (read-only, stdlib only).
 
-Exposes the existing analysis API over JSON-RPC 2.0 on stdio following the
+Exposes analysis and service status over JSON-RPC 2.0 on stdio following the
 Model Context Protocol (``tools/list`` / ``tools/call``, ``prompts/list`` / ``prompts/get``).
-No writes: manuscript text travels only into the analysis functions and back as JSON.
+Tools do not write files or change the running service.
 
 Run: ``python -m lixity.mcp`` or ``lixity mcp`` (one JSON-RPC message per line on stdin).
 """
@@ -72,6 +72,20 @@ _TOOLS = (
         "name": "lixity_about",
         "description": _ABOUT_DESCRIPTION,
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+    },
+    {
+        "name": "lixity_service_status",
+        "description": (
+            "Inspect the locally managed service on one explicit port. "
+            "Returns the installed version of this MCP process and the running service version. "
+            "Does not open projects or change the service."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {"port": {"type": "integer", "minimum": 1, "maximum": 65535}},
+            "required": ["port"],
+            "additionalProperties": False,
+        },
     },
     {
         "name": "lixity_analyze",
@@ -485,6 +499,16 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
     try:
         if name == "lixity_about":
             payload = _api.about()
+        elif name == "lixity_service_status":
+            from .service import service_status
+
+            port = arguments.get("port") if isinstance(arguments, dict) else None
+            if type(port) is not int or not 1 <= port <= 65535 or set(arguments) != {"port"}:
+                return {
+                    "content": [{"type": "text", "text": "lixity_service_status requires one integer port from 1 to 65535."}],
+                    "isError": True,
+                }
+            payload = service_status(port)
         elif name == "lixity_analyze":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {

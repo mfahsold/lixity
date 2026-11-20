@@ -55,7 +55,7 @@
   "tour_return": "Test een passage lokaal en bekijk de resultaten.",
   "tour_error": "De video kon niet worden geladen. Open de interactieve demo.",
   "discover": "Ontdek Lixity",
-  "editor_status": "Beschikbaar in v{version}: lokale analyse, Directe Rede-modus, lezen en bewerken van het manuscript, onderzoeksdossiers en losse leesversies. De openbare demo blijft alleen-lezen.",
+  "editor_status": "De lokale app biedt analyse, de modus Directe rede, manuscriptbewerking, onderzoeksdossiers en zelfstandige leesversies. Verken de demo in je browser in alleen-lezenmodus.",
   "editor_link": "Bereik en beschikbaarheid van de editor (Engels)",
   "workflow": "Aandachtig lezen, onderzoeksnotities en hoofdstukvergelijkingen blijven verankerd in jouw woorden. De ingebouwde analyse draait lokaal; optionele kaart- en spraakdiensten kunnen het netwerk gebruiken. Verbonden AI-clients hebben hun eigen regels voor gegevensverwerking.",
   "sandbox_cta": "Test een passage in de browser",

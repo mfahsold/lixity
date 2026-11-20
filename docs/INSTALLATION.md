@@ -617,36 +617,41 @@ A non-editable tool installed from a local folder is a copy: changing the
 folder does not update the installed tool. Reinstall the chosen release or
 development source explicitly, verify its version, and restart its service.
 
-#### Refresh an existing local checkout installation
+#### Refresh a checkout or a packaged service
 
-For a machine deliberately testing unreleased checkout changes, update both
-installations explicitly. After all app jobs and separate CLI renders finish,
-stop the dashboard using its current installation. From the checkout:
+Choose the executable and port used by the browser tab you want to update.
+`lixity doctor --port 8765 --json` pairs the invoked installation with its
+observation of that listener. In a checkout, use `.venv/bin/lixity doctor`
+with the same port. Module and interpreter paths identify the environment.
+Version strings identify the version declared by each build. For exact source
+parity, compare the installed modules and UI assets with the verified wheel.
+
+For a checkout service, run `make install-dev` if its development environment
+needs refreshing. Finish active renders and save open drafts. Then run
+`make restart LIXITY_PORT=8765` with the port you verified.
+
+For a packaged checkout build, build and test the wheel before stopping the
+service:
 
 ```sh
-.venv/bin/lixity service stop
-make install-dev
-make build
+.venv/bin/python scripts/check_release.py --build --smoke
+lixity service status --port 8765 --json
+lixity service stop --port 8765
+# Install the verified wheel from dist/ using the existing tool installer.
+lixity service restart --port 8765
+lixity doctor --port 8765 --json
 ```
 
-`make build` replaces the managed `dist/` archives only after comparing their
-modules and UI assets against the current source. Install that newly built wheel
-with `uv tool install --reinstall-package lixity` and its actual path, as in the
-[pinned-wheel instructions](#pinned-release-and-installation-scope). A development
-build is not a published release even when its filename matches one. Preserve
-the tool's recorded additional requirements and constraints when replacing it;
-do not silently remove language adapters or model packages.
+Use the verified wheel's actual path in the
+[pinned-wheel instructions](#pinned-release-and-installation-scope). Preserve any
+recorded tool requirements and constraints for language adapters or model
+packages. The commands above use the normal port. Use the same actual port for
+each action if the service runs elsewhere. A local checkout build can use the
+same version string as a published package.
 
-Compare `lixity doctor --json` with `.venv/bin/lixity doctor --json`: their
-`installation.module_path` and `installation.interpreter` identify the two
-environments. Matching version strings alone do not prove matching code, and
-`doctor` does not compare the installed files with a checkout. For an isolated
-wheel installation, compare packaged module and UI-asset bytes against source
-when exact parity is required. Do not mask an outdated installation with
-`PYTHONPATH` and then report the installed CLI as updated.
-
-Restart with the installation intended to own the dashboard, for example
-`lixity service restart`, then reload browser tabs and reopen project views.
+Open the app home address after restarting, reopen additional project views and
+exercise the changed feature in the running browser app. An existing scoped
+view URL belongs to the earlier process.
 Optional audio workers retain their own environments; verify the selected
 engine using `lixity audio-status --project ./my-novel --json` and perform a short
 explicit synthesis check. A healthy app service does not establish worker readiness.

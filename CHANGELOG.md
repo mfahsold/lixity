@@ -9,6 +9,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Explain same-port project views in the service help and setup guides. Show
+  the running app version in service status and doctor output, and expose
+  explicit-port service status through read-only MCP discovery.
 - Give the writing surface its own editing controls and a Versions disclosure
   for comparison, recovery and download. Add a display preference for text
   associations in the companion dossier.
@@ -37,8 +40,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Keep loaded dossier suggestions when switching categories or selecting a
-  suggestion. Offer the existing character template when there is no new
-  character suggestion.
+  suggestion, including when loading before the research view finishes
+  identifying its project. Offer the existing character template when there
+  is no new character suggestion.
 - Move focus to the title when opening the dossier form from the toolbar.
   Bring the form into view when expanding its heading in a short window.
 - Hide reader analysis chrome during writing and keep reader shortcuts from

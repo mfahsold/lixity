@@ -23,7 +23,8 @@ source version; the link alone is not publication evidence.
 ```sh
 lixity --version
 lixity about --json
-lixity doctor --json
+lixity service status --port 8765 --json
+lixity doctor --port 8765 --json
 lixity COMMAND --help
 lixity research COMMAND --help
 ```
@@ -31,6 +32,10 @@ lixity research COMMAND --help
 `about` (also `schema`) reports commands, formats, languages, features and default
 thresholds, not an analysis-result JSON Schema. `research schema` describes
 research entities. A native server lists its registered operations at `GET /api`.
+Read the selected view's `data-api` prefix to inspect that project's context.
+MCP clients discover the installed stdio server through `tools/list`. The
+unreleased `lixity_service_status` tool observes an explicit app port and reports
+installed and running versions without opening a project.
 Python consumers use `from lixity import api` and
 `from lixity.research import api as research_api`.
 
@@ -80,8 +85,9 @@ mentions, motifs, pacing, paragraph tense heuristics and manuscript-relative
 style comparisons. Heuristic cutoff hits, FDR-selected cells and tense flags are
 different result sets. Source analysis never changes the manuscript baseline.
 
-Native project views share one app origin; use each view's `data-api`
-prefix. **Services & audio queue**, under Project settings on current main,
+Use **Project actions → Open Project** from another tab at the same app address.
+Native project views share one app port, with their own `data-api` prefixes.
+**Services & audio queue**, under Project settings on current main,
 reports open views, actual worker health and the bounded
 shared audio queue. View URLs expire on app restart; reopen from home.
 

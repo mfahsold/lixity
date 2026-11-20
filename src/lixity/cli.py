@@ -2009,6 +2009,9 @@ def _main(argv: list[str] | None = None) -> int:
                 print(f"{_m('doctor_' + key)}: {installation[key] if installation[key] is not None else _m('doctor_unknown')}")
             service = result["service"]
             print(f"{_m('doctor_service')}: {service['state']} ({service['port']})")
+            if service["state"] in ("running", "starting"):
+                version = service.get("running_version") or _m("doctor_unknown")
+                print(f"{_m('doctor_running_version')}: {version}")
             for issue in result["issues"]:
                 print("- " + _m("doctor_" + issue["code"].replace("-", "_")))
             if result["ok"]:

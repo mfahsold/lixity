@@ -50,6 +50,45 @@ Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Nederlands](https://mfahsold.github.io/lixity/index-nl.html)
 ([language coverage](https://mfahsold.github.io/lixity/LOCALIZATION.md)).
 
+<a id="start-here"></a>
+
+## Install and start
+
+Install [uv](https://docs.astral.sh/uv/) and run these commands on Windows,
+macOS or Linux.
+
+```bash
+uv tool install --python 3.12 --managed-python lixity
+uv tool update-shell
+```
+
+Open a new terminal, check the installed package and start the local workspace.
+
+```bash
+lixity --version
+lixity service start --open
+```
+
+The default address is `http://127.0.0.1:8765/`. Choose **Open Project** to
+continue in an existing folder. Choose **Analyze a manuscript** to preview
+importing a file into a new project. The preview accepts Markdown, plain text and
+one Word (.docx) file. Confirm the analysis language before reading the results.
+English is the default. Choose automatic detection to analyze in the detected language.
+
+To work on another project, open the same address in a second tab and choose
+**Project actions → Open Project**. Each tab keeps its own project view.
+
+To return to a running workspace, use the address shown by `lixity service status`.
+After updating the installation, run `lixity service restart --open` on the
+same port and reload the browser. `lixity doctor` reports the CLI and service
+versions. The package installed from PyPI follows the
+[latest published release](https://github.com/mfahsold/lixity/releases/latest).
+The demo and source documentation follow development.
+
+[Open your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) ·
+[Start with a project path or use a custom port](https://mfahsold.github.io/lixity/guides/installation.html#existing-project) ·
+[Update or remove Lixity](https://mfahsold.github.io/lixity/guides/installation.html#updates)
+
 ## What can you do with Lixity?
 
 Keep manuscript prose, research, and project settings together as you move
@@ -82,13 +121,10 @@ between reading, comparison, research, and sharing:
 - **Follow scene research:** open a dossier beside the manuscript and connect
   paragraphs to claims, source passages, weighted tag clouds, character notes,
   or scene geography.
-- **Connect an AI client (MCP):** run `lixity mcp` to give Claude Desktop,
-  Cursor, Antigravity, or local coding agents 16 read-only analysis and
-  research tools (including `lixity_scenes`, `lixity_corridors`,
-  `lixity_manuscript_dossier_drafts`, `lixity_outlier_matrix`, `revision_diff`,
-  and `lixity_research_gaps`) and 3 structured editorial prompts. Lixity
-  returns results over local stdio; the connected client controls where it
-  processes them.
+- **Connect an AI client (MCP):** run `lixity mcp` for read-only analysis,
+  research inspection and guided editorial prompts. Use `tools/list` to see
+  what's available in your installation. Lixity returns results over local
+  stdio. The connected client controls where it processes them.
 - **Share selected material:** export a printable PDF or a self-contained,
   offline reading website for beta readers and editors. Choose which manuscript,
   companion notes, and analysis to include before exporting.
@@ -121,44 +157,12 @@ to keep the crate closed until dawn. Lixity preserves the connection; it does no
 resolve the contradiction or establish the truth of a saved claim.
 [Follow the decision](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
 
-<a id="start-here"></a>
-
 ## Share one revision experience
 
 What did you want to check? Did the explanation help? What got in the way?
 [Send a short description](mailto:mfahsold@googlemail.com?subject=Lixity%20feedback)
 or [report a reproducible issue](https://github.com/mfahsold/lixity/issues).
 You do not need to share manuscript text to give useful feedback.
-
-## Install and start
-
-Install [uv](https://docs.astral.sh/uv/), then run on Windows, macOS or Linux:
-
-```bash
-uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
-```
-
-In a new terminal:
-
-```bash
-lixity --version
-lixity service start --open
-```
-
-Choose **Open Project** or **Analyze a manuscript**, then confirm the language.
-The engine reads `.md`, `.markdown` and `.txt`; the app can also preview and
-convert a `.docx` file when importing a copy. Retaining a PDF as research is a
-separate action. English is the default analysis language;
-automatic detection is an explicit choice.
-
-[Your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) covers
-opening, importing and settings. The
-[installation guide](https://mfahsold.github.io/lixity/INSTALLATION.md) covers
-updates, local launchers and removal. After upgrading, run
-`lixity service restart --open` and reload the browser: installation alone does
-not update a running service. `lixity doctor` identifies the installed package
-and owned service.
 
 ## One project, from draft to reading copy
 

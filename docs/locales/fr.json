@@ -55,7 +55,7 @@
   "tour_return": "Testez un passage localement et consultez ses résultats.",
   "tour_error": "La vidéo ne peut pas être chargée. Découvrez la démonstration interactive.",
   "discover": "Découvrir Lixity",
-  "editor_status": "Disponible dans v{version} : analyse locale, Mode Discours Direct, lecture et édition du manuscrit, dossiers de recherche et copies de lecture autonomes. La démo publique reste en lecture seule.",
+  "editor_status": "L’application locale propose l’analyse, le mode Discours direct, l’édition du manuscrit, les dossiers de recherche et les copies de lecture autonomes. Explorez la démo en lecture seule dans votre navigateur.",
   "editor_link": "Portée et disponibilité de l’éditeur (anglais)",
   "workflow": "Lecture attentive, notes de recherche et comparaisons de chapitres restent ancrées dans vos mots. L’analyse intégrée tourne localement ; les services cartographiques et vocaux optionnels peuvent utiliser le réseau. Les clients IA connectés ont leurs propres règles de traitement des données.",
   "sandbox_cta": "Tester un passage en ligne",

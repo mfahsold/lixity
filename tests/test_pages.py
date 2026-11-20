@@ -151,7 +151,8 @@ class TestPagesStaging(unittest.TestCase):
             self.assertIn('hreflang="de" href="' + SITE + 'guides/first-look-de.html"', english)
             self.assertIn('hreflang="en" href="' + SITE + 'guides/first-look.html"', german)
             self.assertIn("erfundenes englisches Hafenmanuskript", german)
-            self.assertIn("nicht als klassischer Desktop-Installer", german)
+            self.assertIn("<code>lixity service start --open</code>", german)
+            self.assertIn('href="installation.html#restart"', german)
             self.assertTrue((output / "guides/first-look-de.html.md").is_file())
 
     def test_demo_uses_the_native_rail_for_guidance(self):

@@ -80,20 +80,9 @@ Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text 
 
 Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 
-Die lokale Anwendung läuft nach der Installation im Browser. Voraussetzung sind derzeit [uv](https://docs.astral.sh/uv/getting-started/installation/) und ein Terminal; Lixity wird als Python-Werkzeug installiert, nicht als klassischer Desktop-Installer. Die [Installationsanleitung für Windows, macOS und Linux](installation.html) ist auf Englisch.
+Die [englische Installationsanleitung](installation.html) zeigt die Einrichtung mit `uv` unter Windows, macOS und Linux. Danach öffnet `lixity service start --open` die lokale Anwendung im Browser.
 
-```
-uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
-```
-
-Danach in einem neuen Terminal die lokale Anwendung starten:
-
-```
-lixity service start --open
-```
-
-Ein Projekt oder die Importvorschau für das Markdown-Manuskript öffnen und die Sprache **Deutsch** bestätigen. Englisch ist die Voreinstellung; automatische Erkennung ist eine ausdrückliche Wahl. Die eingebaute Analyse läuft lokal. Optionale Integrationen haben eigene [Datengrenzen](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md).
+Wähle **Projekt öffnen**, um in einem vorhandenen Ordner weiterzuarbeiten. Mit **Manuskript untersuchen** prüfst du die Importvorschau für ein neues Projekt. Bestätige **Deutsch** als Analysesprache. Englisch ist die Voreinstellung. Falls der Browser einen anderen Arbeitsbereich öffnet, prüfe Adresse und Port in der [Anleitung zum lokalen Dienst](installation.html#restart).
 
 Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sein Funktionsumfang sind über `lixity --version` und die [Versionshinweise](https://github.com/mfahsold/lixity/releases/latest) prüfbar. Die Demo kann weder importieren noch Änderungen speichern.
 

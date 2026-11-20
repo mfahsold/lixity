@@ -55,7 +55,7 @@
   "tour_return": "Try a passage locally and inspect its results.",
   "tour_error": "The video could not load. Explore the interactive demo instead.",
   "discover": "Meet Lixity",
-  "editor_status": "Available in v{version}: prose analysis, Direct Speech Mode, manuscript reading and editing, research dossiers, and reading exports. The public demo is read-only.",
+  "editor_status": "The local app includes prose analysis, Direct Speech Mode, manuscript editing, research dossiers, and reading exports. Explore the read-only demo in your browser.",
   "editor_link": "Editor scope and availability (English)",
   "workflow": "Move between a manuscript passage, its chapter comparisons, and linked research notes. Built-in analysis runs on your computer; optional speech, map services, and connected AI clients have separate network and data-handling requirements.",
   "sandbox_cta": "Try a passage in browser",

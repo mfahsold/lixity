@@ -2,6 +2,7 @@
 var manuscriptDraftsState = null;
 
 function resetManuscriptDossierDrafts() {
+  if (!manuscriptDraftsState) return;
   manuscriptDraftsState = null;
   var host = document.getElementById("r-manuscript-drafts");
   if (host) host.replaceChildren();
@@ -126,13 +127,16 @@ document.getElementById("r-dos-drafts-box")?.addEventListener("click", async fun
   if (loadDraftsBtn) {
     var draftsHost = document.getElementById("r-manuscript-drafts");
     if (!draftsHost || loadDraftsBtn.disabled) return;
-    var state = {context: researchReadContext(), drafts: [], skipped: 0,
-      selectedByKind: Object.create(null), activeKind: "character", saving: false, error: ""};
-    manuscriptDraftsState = state;
+    var state = null;
     var loadFocused = document.activeElement === loadDraftsBtn;
     loadDraftsBtn.disabled = true;
     draftsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_loading")) + "</p>";
     try {
+      // The initial status read establishes the project identity for this view.
+      if (!researchSelectionProjectId && researchProjectInfoPending) await researchProjectInfoPending;
+      state = {context: researchReadContext(), drafts: [], skipped: 0,
+        selectedByKind: Object.create(null), activeKind: "character", saving: false, error: ""};
+      manuscriptDraftsState = state;
       var data = await researchApiGet("research/manuscript-dossier-drafts");
       if (manuscriptDraftsState !== state || !acceptResearchContext(state.context, data || {})) return;
       if (!data || data.ok !== true || !Array.isArray(data.drafts)) {
@@ -143,7 +147,7 @@ document.getElementById("r-dos-drafts-box")?.addEventListener("click", async fun
       state.skipped = Number(data.skipped_existing || 0);
       renderManuscriptDraftsView(draftsHost, state);
     } catch (error) {
-      if (manuscriptDraftsState === state && acceptResearchContext(state.context, {})) {
+      if (!state || (manuscriptDraftsState === state && acceptResearchContext(state.context, {}))) {
         draftsHost.innerHTML = '<p class="ctl-note err">' + escapeHtml((error && error.message) || uiLabel("research_status_unavailable")) + "</p>";
       }
     } finally {

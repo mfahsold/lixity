@@ -134,8 +134,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
         "  lixity service restart --open\n"
         "  lixity service status --json\n"
         "  lixity service stop\n\n"
-        "Custom port (repeat --port for every action):\n"
-        "  lixity service start ./my-novel --port 8766 --open\n"
+        "Projects share one app address. Use Open Project in the browser to open\n"
+        "another project in its own tab. Those view URLs expire on restart.\n\n"
+        "For a deliberately separate app instance, repeat --port for every action:\n"
+        "  lixity service start --port 8766 --open\n"
         "  lixity service status --port 8766\n"
         "  lixity service restart --port 8766\n"
         "  lixity service stop --port 8766\n\n"
@@ -1496,6 +1498,9 @@ def run(args: argparse.Namespace) -> int:
         print(
             f"{prefix} {result['message']}" + (f" → {result['url']}" if result.get("url") else "")
         )
+        if args.action == "status" and result["state"] in ("running", "starting"):
+            version = _status_data(result, port)["running_version"]
+            print(f"Running version: {version or 'Unavailable'}")
         if result.get("log") and args.action in ("start", "restart"):
             print(f"Log: {result['log']}")
     return 0 if result["ok"] else 1

@@ -4,6 +4,8 @@ import io
 import json
 from pathlib import Path
 
+import pytest
+
 from lixity import mcp
 
 SAMPLE = "# Chapter One\n\nShe walked home. He had already left the grey house.\n"
@@ -29,6 +31,7 @@ def test_tools_list_names_readonly_tools():
     names = [tool["name"] for tool in response["result"]["tools"]]
     expected = [
         "lixity_about",
+        "lixity_service_status",
         "lixity_analyze",
         "lixity_profile",
         "lixity_pacing",
@@ -55,6 +58,49 @@ def test_call_about_returns_metadata():
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["meta"]["tool"] == "lixity"
     assert "languages" in payload
+
+
+@pytest.mark.parametrize(("state", "ready"), [
+    ("running", True), ("starting", False), ("stopped", False), ("busy", False), ("unknown", None),
+])
+def test_service_status_tool_reuses_the_read_only_projection(monkeypatch, state, ready):
+    from lixity import __version__, service
+
+    observations = []
+
+    def observe(manager, action, overrides):
+        observations.append((manager.port, action, overrides))
+        return {"state": state, "running_version": "0.1.0", "log": "PRIVATE_SERVICE_PATH"}
+
+    monkeypatch.setenv("LIXITY_PORT", "8765")
+    monkeypatch.setattr(service.ServiceManager, "control", observe)
+    response = _request("tools/call", {"name": "lixity_service_status", "arguments": {"port": 8767}})
+    assert not response["result"].get("isError")
+    raw = response["result"]["content"][0]["text"]
+    result = json.loads(raw)
+    assert observations == [(8767, "status", {})]
+    assert result["schema_version"] == "lixity-service-status/1"
+    assert result["ok"] is (state != "unknown")
+    assert result["running"] is ready and result["state"] == state and result["port"] == 8767
+    assert result["installed_version"] == __version__
+    assert result["running_version"] == ("0.1.0" if state in ("running", "starting") else None)
+    assert "PRIVATE_SERVICE_PATH" not in raw
+
+
+@pytest.mark.parametrize("arguments", [
+    [], {}, {"port": True}, {"port": "8767"}, {"port": 8767.0}, {"port": 0}, {"port": 65536},
+    {"port": 8767, "host": "PRIVATE_SERVICE_PATH"},
+])
+def test_service_status_tool_rejects_non_explicit_or_invalid_ports(monkeypatch, arguments):
+    from lixity import service
+
+    def forbidden(_port):
+        pytest.fail("Invalid MCP arguments must not inspect a port")
+
+    monkeypatch.setattr(service, "service_status", forbidden)
+    response = _request("tools/call", {"name": "lixity_service_status", "arguments": arguments})
+    assert response["result"]["isError"]
+    assert "PRIVATE_SERVICE_PATH" not in response["result"]["content"][0]["text"]
 
 
 def test_call_analyze_returns_metrics():
@@ -170,7 +216,7 @@ def test_serve_roundtrip_over_stdio():
     lines = [json.loads(line) for line in out.getvalue().strip().splitlines()]
     by_id = {entry.get("id"): entry for entry in lines}
     assert by_id[1]["result"]["serverInfo"]["name"] == "lixity"
-    assert len(by_id[2]["result"]["tools"]) == 16
+    assert len(by_id[2]["result"]["tools"]) == 17
     assert "lixity" in by_id[3]["result"]["content"][0]["text"]
     assert lines[-1]["error"]["code"] == -32700
 

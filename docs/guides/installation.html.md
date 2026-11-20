@@ -2,11 +2,11 @@
 
 This short guide covers the ordinary application setup. The [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) owns advanced environments, optional workers, service lifecycle and troubleshooting. Use the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md) to find other tasks.
 
-Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
+Open your manuscript in a browser workspace running on your computer to explore sentence rhythm, vocabulary and style. The local app works without an account or a manuscript upload.
 
-Updated 5 November 2026
+Updated 20 November 2026
 
-**Version line:** This guide covers **v0.8.2** in the pre-1.0 **0.x** line; check [published releases](https://github.com/mfahsold/lixity/releases/latest) for package availability. Historical **1.x** and **3.x** tags predate the numbering reset. A larger historical number does not mean a newer release; product and schema versions are independent.
+This source guide describes **v0.9.0**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.0.md). The regular install uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
 ## What do I need?
 
@@ -43,39 +43,26 @@ uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal, then verify and start the app:
+Open a new terminal, then check the installed package and start the app:
 
 ```
 lixity --version
-lixity doctor
 lixity service start --open
 ```
 
-If `lixity` is not found, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory. The health check reports installation and service issues, not linguistic validity.
-
-This installs the published package from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration applies to new terminals. Check `lixity --version` and the [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.0.md) for changes and compatibility.
+If your terminal cannot find `lixity`, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory.
 
 ## Start the workspace
 
-The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspace; it does not search your terminal's current folder. Choose **Open Project** for an existing folder or **Analyze a manuscript** for an import preview. Confirm the language and read a passage before interpreting its measurements.
+The default browser address is `http://127.0.0.1:8765/`. A fresh start opens an empty workspace unless you supply a project path or set `LIXITY_DIR`. If Lixity is already running on that port, `start --open` opens the existing workspace.
 
-1. Open your existing project or confirm an import preview, including the manuscript language.
+1. Choose **Open Project** to continue in an existing folder. To copy a manuscript into a new project, choose **Analyze a manuscript** and review the import preview. Confirm the analysis language.
 
 2. Read in **Manuscript**. Choose a paragraph's **… → Explore passage** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
 
-3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return. **PDF export** offers editorial, reading, submission and report copies.
+3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return.
 
 English is the default analysis language; automatic detection is an explicit choice. The [first-session guide](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) explains project selection. For a short example before importing, try the [Warehouse 4 walkthrough](first-look.html). Its public demo cannot import, edit or save.
-
-Check the app, stop it and return later:
-
-```
-lixity service status
-lixity service stop
-lixity service start --open
-```
-
-Open the project again, or provide its path when starting. `restart --open` restores recorded launch settings, including the startup project; a later project choice in the browser is separate. [Service lifecycle](#restart) explains the difference.
 
 **Pinned release wheel**
 
@@ -117,37 +104,51 @@ For source capture, install Zotero 10 or later on the same computer and enable i
 
 ## Open an existing project and research archive
 
-With the service stopped, an explicit project can be supplied when starting:
+With the service stopped, launch directly into a project. Replace `./My Novel` with your folder. Keep the quotes around paths containing spaces.
 
 ```
-lixity service start --open /absolute/path/to/project
+lixity service start "./My Novel" --open
 ```
 
-Replace the example path with your project folder. Open `http://127.0.0.1:8765/` and check the project name in the workspace bar. **Open Project** switches this server to an existing folder and its research. CLI analysis, research and build commands do not switch an already running server. **New Project → Import Manuscript** creates a separate project from uploaded text.
+To change the startup project of an already running service, restart with the new path:
 
-For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.
+```
+lixity service restart "./My Novel" --open
+```
 
-Switch between Research, Manuscript, and Project. New Project, Open Project and optional guidance are available in every view. Selecting or dropping a manuscript opens its preview directly; confirm to create a separate project. Source and dossier filters narrow their lists; Research → Search looks through retained text.
+Check the project name after it opens. A separate CLI command, `lixity project --project "./My Novel"`, inspects a folder independently of the browser.
 
-The [first-session guide](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) explains these controls.
+An initialized research archive can also open as a research-only workspace. Load a manuscript when you want to compare it with sources.
 
 ## Running the server day to day
 
-The workspace uses `http://127.0.0.1:8765/` by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Separate project views can coexist under the same server address. Tabs using the same view share that view's project; view URLs expire on restart.
+Use `status` to find the address and state of the managed service. Use `stop` to close it or `restart --open` to reopen it with its saved startup settings.
 
 ```
 lixity service status
-lixity service restart
+lixity service restart --open
 lixity service stop
 ```
 
-After a computer restart, start the service again; no reimport is needed. Restart uses the saved launch settings, not a later project choice in the browser. A browser reload alone does not update running code.
+A project you open in the browser belongs to that view for the current session. After a restart, open the new address reported by the service. Use **Open Project** to reconnect a folder you chose in the previous session. For a foreground `lixity serve` session, press `Ctrl+C` in its terminal. See the [service command reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service) for startup settings and [the setup reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login) for opening at login.
 
-Foreground `serve` and managed start/restart accept `--min-chapters N`, an integer of at least 2 (default 2). Restart retains the saved threshold unless overridden. See the [service command reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-service).
+### Use a different port
 
-The controller manages its own instances. A foreground `lixity serve` process still stops with `Ctrl+C`; external systemd, launchd or Task Scheduler entries use their own manager. Login startup is an explicit advanced choice in the [setup reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-startup-at-login). Start Zotero for new captures; retained research stays readable while it is closed.
+If port 8765 is occupied, inspect it with `lixity service status --port 8765`. To start a separate workspace, choose a free port. Use the same port for its browser address and every service or diagnostic command.
 
-PyPI installations use `uv tool upgrade lixity`; wheel-pinned installations require the new release URL. Restart the workspace after updating. Product versions describe development maturity and are independent of research storage versions; consult the [archive compatibility guidance](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#storage-lifecycle-and-recovery) before sharing an archive with older readers.
+```
+lixity service start "./My Novel" --port 9000 --open
+```
+
+This example opens `http://127.0.0.1:9000/`. Any service on port 8765 keeps running.
+
+- Check the address and state with `lixity service status --port 9000`.
+
+- Check installed and running versions with `lixity doctor --port 9000`.
+
+- Reload the service with `lixity service restart --port 9000 --open`.
+
+- Close that instance with `lixity service stop --port 9000`.
 
 ## Update or remove Lixity
 
@@ -160,7 +161,7 @@ lixity --version
 lixity service restart --open
 ```
 
-Restart restores recorded launch settings even after stopping; a project selected later in the browser is not a startup setting. For a custom port, use `--port 9000` with both stop and restart. Pass an explicit project to override the recorded startup choice. `uv tool upgrade lixity` selects the newest PyPI release; a pinned wheel keeps its fixed URL and is replaced explicitly.
+Use the same port to stop and restart each instance. After restart, reload the browser at the address the service reports. `lixity doctor --port 9000` compares the installed package with the service on port 9000. For an installation pinned to a wheel, install the new release wheel explicitly. See [archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#storage-lifecycle-and-recovery) when sharing research data with older readers.
 
 For removal, stop all managed instances and disable any login-startup entry you configured, then run `uv tool uninstall lixity`. Manuscript folders and research archives remain. See the [complete update/removal reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
 
@@ -168,7 +169,7 @@ For removal, stop all managed instances and disable any login-startup entry you 
 
 The chooser shows folders available to the computer and account running Lixity. A container or service account may have different access from your terminal. Check the project path and permissions, then restart the intended server. Use Open Project to reconnect the original folder rather than importing another copy.
 
-If port 8765 is already occupied, identify the existing server or use `--port 9000`. Changing ports leaves the previous instance running. See [installation troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#troubleshooting).
+If the browser shows an unexpected project or version, check its address against `lixity service status` and inspect the same port with `lixity doctor`. See [installation troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#troubleshooting).
 
 ## Using the Python API?
 

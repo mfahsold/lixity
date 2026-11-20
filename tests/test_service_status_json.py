@@ -100,6 +100,10 @@ def test_pending_status_is_known_but_not_ready_and_preserves_the_record(
         assert result["ok"] and result["state"] == "starting" and result["running"] is False
         assert result["running_version"] == expected_version
         assert "private-source" not in text and "synthetic-secret" not in text
+        assert service.run(arguments("status", "--port", str(port))) == 1
+        human = capsys.readouterr().out
+        assert f"Running version: {expected_version or 'Unavailable'}" in human
+        assert "private-source" not in human and "synthetic-secret" not in human
         assert snapshot(tmp_path) == before
 
 
@@ -239,7 +243,9 @@ def test_native_running_status_uses_the_same_projection_without_reading_project_
         assert result["installed_version"] == result["running_version"] == __version__
         assert "log" not in result and str(project) not in text
         assert service.run(arguments("status", "--port", str(app.port))) == 0
-        assert "[OK] Lixity is running" in capsys.readouterr().out
+        human = capsys.readouterr().out
+        assert "[OK] Lixity is running" in human
+        assert f"Running version: {__version__}" in human
         assert snapshot(tmp_path) == before
         # Other lifecycle JSON deliberately retains its established contract and semantics.
         assert service.run(arguments("stop", "--port", str(app.port), "--json")) == 0
