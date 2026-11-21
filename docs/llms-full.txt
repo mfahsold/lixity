@@ -2936,19 +2936,19 @@ explicit review/save steps; they are not automatic corrections. **Terms &
 variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
-manuscript** and choose **Load suggestions**. Browse the available characters,
-places and scenes, then select a suggestion to read **Text to be saved**.
+manuscript** and choose **New dossiers**. Browse the available characters,
+places and scenes, then select a suggestion to read its preview.
 **Create dossier** confirms that preview. If the manuscript or settings change,
 reload the suggestions and review the new draft. After saving, **Open saved
-dossier** opens that exact record. Suggestions already covered by a dossier are
-counted separately. **New dossier** in the Dossiers toolbar opens the form
+dossier** opens that record. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
 
-To refresh a generated figure dossier, choose **Update existing character
-dossiers**, select the proposal and choose **Prepare update**. This opens
-the current dossier in its revision editor and adds the manuscript proposal
-after the saved notes. Edit the draft before saving it as a new version.
+Open a generated character dossier and choose **Add from manuscript**.
+Review the addition, which goes after your existing notes. Choose **Edit dossier
+text** if you want to change it, then **Save dossier version** or **Discard
+draft**. The **Add to a character dossier**
+option under **From manuscript** opens the same review for the dossier you select.
 
 Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the
@@ -5792,21 +5792,21 @@ character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
 to confirm the manuscript, settings and saved text you reviewed.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**Load suggestions**. The preview shows the full text that will become the
+**New dossiers**. The preview shows the full text that will become the
 dossier. If the manuscript or settings change before saving, reload and review
 the revised proposal. **Open saved dossier** opens the created record.
 **New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
 
-To update an existing generated character dossier, choose **Update existing
-character dossiers** and select its current manuscript proposal. **Prepare
-update** checks the proposal and the dossier revision again. The revision
-editor adds the proposal as an editable section after the existing notes.
-Choose a change type and enter a reason, then select **Save new version**.
-The same dossier ID and its earlier versions remain available. An existing
-proposal is offered for update only when it can be linked to one generated
-character dossier.
+In a generated character dossier, choose **Add from manuscript**. You can also
+choose **Add to a character dossier** under **From manuscript** and select one.
+Lixity checks the proposal and the current dossier revision. The review shows
+what will be added after your existing notes. Use **Edit dossier text** to
+change it. Choose **Save dossier version** to record a new version of the same
+dossier, or choose **Discard draft**. Lixity records that the addition came from
+the manuscript.
+An update requires an unambiguous match to one generated character dossier.
 
 The scene register and individual scenes can be saved independently. Scenes
 follow the manuscript order and show opening and closing text. A chapter
@@ -11712,6 +11712,9 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations, expected_snapshot}`. They return the same versioned envelope.
 
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision`, `claim_relation` and `manuscript_claim_link`.
+  An unpinned generated character dossier can expose `character_analysis_available: true`
+  in a local view with a loaded manuscript. The update still requires an exact
+  matching proposal from `manuscript-dossier-drafts`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
 

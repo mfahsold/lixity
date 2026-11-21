@@ -140,7 +140,9 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
     try {
       await page.goto(publicOrigin + '/lixity/demo/report.html?private=SECRET', {waitUntil: 'domcontentloaded'});
       await expect(page).toHaveTitle('Lixity project demo — The Crate at Warehouse 4');
-      await expect(page.locator('.demo-context')).toContainText('Read-only demo');
+      const notice = page.locator('.workspace-shell .site-read-only-notice');
+      await expect(notice).toBeVisible();
+      await expect(notice).toContainText('Read-only snapshot');
       try { await expect.poll(() => pixels.length).toBe(1); }
       catch (error) {
         console.error('Actual generated demo CSP violations:', await page.evaluate(() => window.__cspViolations));

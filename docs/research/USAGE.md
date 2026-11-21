@@ -646,21 +646,21 @@ character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
 to confirm the manuscript, settings and saved text you reviewed.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**Load suggestions**. The preview shows the full text that will become the
+**New dossiers**. The preview shows the full text that will become the
 dossier. If the manuscript or settings change before saving, reload and review
 the revised proposal. **Open saved dossier** opens the created record.
 **New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
 
-To update an existing generated character dossier, choose **Update existing
-character dossiers** and select its current manuscript proposal. **Prepare
-update** checks the proposal and the dossier revision again. The revision
-editor adds the proposal as an editable section after the existing notes.
-Choose a change type and enter a reason, then select **Save new version**.
-The same dossier ID and its earlier versions remain available. An existing
-proposal is offered for update only when it can be linked to one generated
-character dossier.
+In a generated character dossier, choose **Add from manuscript**. You can also
+choose **Add to a character dossier** under **From manuscript** and select one.
+Lixity checks the proposal and the current dossier revision. The review shows
+what will be added after your existing notes. Use **Edit dossier text** to
+change it. Choose **Save dossier version** to record a new version of the same
+dossier, or choose **Discard draft**. Lixity records that the addition came from
+the manuscript.
+An update requires an unambiguous match to one generated character dossier.
 
 The scene register and individual scenes can be saved independently. Scenes
 follow the manuscript order and show opening and closing text. A chapter

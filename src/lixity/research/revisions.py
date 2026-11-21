@@ -252,12 +252,21 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
     }
 
 
-def get_record(project: str | Path, kind: str, record_id: str, *, revision: int | None = None) -> dict[str, Any]:
+def get_record(
+    project: str | Path, kind: str, record_id: str, *,
+    revision: int | None = None, include_character_binding: bool = False,
+) -> dict[str, Any]:
     """Read the current record or an explicitly pinned historical revision."""
     repository = Repository(project)
     snapshot = repository.snapshot()
-    return _view(repository, snapshot, _record(snapshot, kind, record_id, revision,
-                                              include_withdrawn=revision is not None))
+    record = _record(snapshot, kind, record_id, revision, include_withdrawn=revision is not None)
+    result = _view(repository, snapshot, record)
+    if include_character_binding and revision is None and isinstance(record, Dossier):
+        from .dossiers import _generated_character_name
+
+        if _generated_character_name(snapshot, record.id):
+            result["character_analysis_available"] = True
+    return result
 
 
 def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, Any]:

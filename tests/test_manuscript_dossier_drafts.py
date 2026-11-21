@@ -217,6 +217,10 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: 
         dossier_base = "/api/research/dossiers?id=" + record["dossier_id"]
         assert server.request_json(dossier_base)[1]["character_analysis_available"] is True
         assert "character_analysis_available" not in server.request_json(dossier_base + "&revision=1")[1]
+        record_base = "/api/research/record?kind=dossier&id="
+        assert server.request_json(record_base + record["dossier_id"])[1]["character_analysis_available"] is True
+        assert "character_analysis_available" not in server.request_json(record_base + record["dossier_id"] + "&revision=1")[1]
+        assert "character_analysis_available" not in server.request_json(record_base + manual["dossier_id"])[1]
         assert server.request(path(id=manual["dossier_id"])).status == 404
         assert server.request(path(id=record["dossier_id"], research_token="0" * 64)).status == 409
         assert server.request(path(id=record["dossier_id"], offset=20)).status == 400

@@ -688,7 +688,9 @@ class TestLixityServer(unittest.TestCase):
                 )
                 self.assertEqual(status, 200, body)
                 self.assertTrue(json.loads(body)["ok"])
-                get_record.assert_called_once_with(root, "dossier", "urn:uuid:dossier", revision=1)
+                get_record.assert_called_once_with(
+                    root, "dossier", "urn:uuid:dossier", revision=1, include_character_binding=False,
+                )
                 status, body, _ = self.make_request(
                     "/api/research/history?kind=dossier&id=urn%3Auuid%3Adossier"
                 )

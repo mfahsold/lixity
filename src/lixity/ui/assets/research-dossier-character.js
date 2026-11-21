@@ -2,6 +2,15 @@
 (function() {
   "use strict";
 
+  function researchDossierCharacterUpdateHtml(detail) {
+    if (detail.character_analysis_available !== true || detail.availability || !researchContextToken() ||
+        !detail.id || !Number.isInteger(detail.revision) || detail.revision < 1) return "";
+    return '<div class="research-record-actions"><button type="button" class="ctl ctl-sm" data-update-character-dossier' +
+      ' data-record-id="' + escapeHtml(detail.id) + '">' +
+      escapeHtml(uiLabel("research_dossier_draft_stage_existing")) + '</button>' +
+      '<p class="ctl-note" data-character-update-status role="status" hidden></p></div>';
+  }
+
   function researchDossierCharacterHtml() {
     function label(key) { return escapeHtml(uiLabel("research_dossier_character_" + key)); }
     return '<details class="research-dossier-character" data-dossier-character><summary><h4>' + label("heading") + '</h4></summary>' +
@@ -191,5 +200,7 @@
     if (panel.open) load(0, false);
   }
 
-  window.LixityDossierCharacter = {html: researchDossierCharacterHtml, mount: mountResearchDossierCharacter};
+  window.LixityDossierCharacter = {
+    html: researchDossierCharacterHtml, mount: mountResearchDossierCharacter, updateHtml: researchDossierCharacterUpdateHtml
+  };
 })();

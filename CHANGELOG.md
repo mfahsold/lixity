@@ -20,8 +20,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its source, settings and content. Keep the scene register and each scene
   separately selectable. Use actual prose matches for place suggestions
   and identify configured places and inferred candidates.
-- Prepare updates for existing generated character dossiers from the current
-  manuscript. Review the appended proposal in the existing revision editor.
+- Add a manuscript proposal directly from a generated character dossier.
+  A focused review shows the added text and offers explicit save and discard
+  actions. The manuscript proposals panel shows creation and addition as
+  separate choices up front.
 - Share chapter-delta response fields between editor comparisons, revision
   history and standalone text comparisons. Read the paragraph comparison
   marker position from the prepared dashboard data.

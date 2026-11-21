@@ -636,7 +636,8 @@ class ResearchRoutesMixin(ResponseMixin):
             result = (
                 research_api.record_history(root, kind, record_id)
                 if history
-                else research_api.get_record(root, kind, record_id, revision=revision)
+                else research_api.get_record(root, kind, record_id, revision=revision,
+                                             include_character_binding=revision is None and bool(self.source_input))
             )
             self._json({"ok": True, **result})
         except (ResearchError, OSError, ValueError) as exc:

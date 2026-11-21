@@ -127,7 +127,7 @@ async function textRole(locator) {
           const primary = await textRole(page.locator('#tab-view-analysis'));
           const settings = await textRole(page.locator('#reader-settings > summary'));
           const metric = await textRole(page.locator('#style-layer'));
-          const metricLabel = await textRole(page.locator('.metric-layer-control > span'));
+          const metricLabel = await textRole(page.locator('.metric-layer-control > .metric-layer-label'));
           const counted = await textRole(page.locator('.analysis-evidence-key'));
           const comparison = await textRole(page.locator('.analysis-comparison-key'));
           const adjacent = await textRole(page.locator('#manuscript-analysis-toggle'));

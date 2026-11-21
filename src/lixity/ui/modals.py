@@ -348,6 +348,7 @@ def render_project_modals(
 
     # One editor and history view for all authored research record kinds.
     revision_body = [
+        f'    <p class="ctl-note research-revision-meta" id="research-revision-stage-help" hidden>{L("research_dossier_draft_revision_help")}</p>',
         '    <div class="modal-scroll">',
         '    <div class="modal-tabs" role="tablist" aria-labelledby="research-revision-title">',
         f'      <button type="button" class="modal-tab-btn active" role="tab" id="research-revision-history-tab" aria-controls="research-revision-history" aria-selected="true" tabindex="0">{L("research_revision_entry")}</button>',
@@ -362,8 +363,12 @@ def render_project_modals(
         '        <div id="research-revision-merge-fields"></div>',
         f'        <button type="button" class="ctl" id="research-revision-merge-apply">{L("research_revision_merge_apply")}</button>',
         '      </section>',
+        '      <div id="research-revision-stage-preview" class="research-revision-fields" hidden>',
+        f'        <div class="row"><button type="button" class="ctl" id="research-revision-stage-edit">{L("research_dossier_draft_revision_edit")}</button></div>',
+        '        <div id="research-revision-stage-proposal" class="research-prose markdown-body"></div>',
+        '      </div>',
         '      <div id="research-revision-fields" class="research-revision-fields"></div>',
-        f'      <p class="ctl-note">{L("research_revision_link_help")}</p>',
+        f'      <p class="ctl-note" id="research-revision-link-help">{L("research_revision_link_help")}</p>',
         '      <fieldset class="research-revision-choice">',
         f'        <legend class="form-label">{L("research_revision_type")}</legend>',
         f'        <label><input type="radio" name="research_revision_change_kind" value="correction" required/> <span><strong>{L("research_revision_correction")}</strong><small>{L("research_revision_correction_desc")}</small></span></label>',
@@ -376,7 +381,6 @@ def render_project_modals(
         '        <div class="research-details-body" id="research-revision-citations"></div>',
         '      </details>',
         '    </form>',
-        status_banner("research-revision-status", role="alert", aria_live="assertive", hidden=True),
         '    <div id="research-revision-history" class="modal-body research-revision-history" role="tabpanel" aria-labelledby="research-revision-history-tab">',
         '      <div id="research-revision-history-detail"></div>',
         '      <details class="research-details" id="research-revision-versions">',
@@ -385,6 +389,7 @@ def render_project_modals(
         '      </details>',
         '    </div>',
         '    </div>',
+        status_banner("research-revision-status", role="alert", aria_live="assertive", hidden=True),
     ]
     parts.append(
         modal_shell(
@@ -395,7 +400,7 @@ def render_project_modals(
             close_label=close_lbl,
             footer_html=modal_footer(
                 f'<button type="button" class="ctl" id="research-revision-reload" hidden>{L("research_revision_reload")}</button>'
-                f'<button type="button" class="ctl" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
+                f'<button type="button" class="ctl" id="research-revision-discard" data-close-modal aria-keyshortcuts="Escape">{L("modal_cancel")}</button>'
                 f'<button type="button" class="ctl" id="research-revision-batch-add">{L("research_revision_batch_add")}</button>'
                 f'<button type="submit" form="research-revision-form" class="ctl primary" id="research-revision-save">{L("research_revision_save")}</button>',
                 footer_id="research-revision-actions",

@@ -1731,6 +1731,9 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations, expected_snapshot}`. They return the same versioned envelope.
 
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision`, `claim_relation` and `manuscript_claim_link`.
+  An unpinned generated character dossier can expose `character_analysis_available: true`
+  in a local view with a loaded manuscript. The update still requires an exact
+  matching proposal from `manuscript-dossier-drafts`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
 

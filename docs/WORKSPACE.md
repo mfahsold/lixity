@@ -580,19 +580,19 @@ explicit review/save steps; they are not automatic corrections. **Terms &
 variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
-manuscript** and choose **Load suggestions**. Browse the available characters,
-places and scenes, then select a suggestion to read **Text to be saved**.
+manuscript** and choose **New dossiers**. Browse the available characters,
+places and scenes, then select a suggestion to read its preview.
 **Create dossier** confirms that preview. If the manuscript or settings change,
 reload the suggestions and review the new draft. After saving, **Open saved
-dossier** opens that exact record. Suggestions already covered by a dossier are
-counted separately. **New dossier** in the Dossiers toolbar opens the form
+dossier** opens that record. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
 
-To refresh a generated figure dossier, choose **Update existing character
-dossiers**, select the proposal and choose **Prepare update**. This opens
-the current dossier in its revision editor and adds the manuscript proposal
-after the saved notes. Edit the draft before saving it as a new version.
+Open a generated character dossier and choose **Add from manuscript**.
+Review the addition, which goes after your existing notes. Choose **Edit dossier
+text** if you want to change it, then **Save dossier version** or **Discard
+draft**. The **Add to a character dossier**
+option under **From manuscript** opens the same review for the dossier you select.
 
 Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the

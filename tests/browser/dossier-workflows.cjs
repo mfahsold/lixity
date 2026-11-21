@@ -33,7 +33,7 @@ async function checkEarlyDossierSuggestions(browser, url) {
     await page.locator('#r-dos-drafts-box > summary').press('Enter');
     const load = page.locator('#r-manuscript-dossier-btn');
     await load.press('Enter');
-    await expect(load).toBeDisabled();
+    await expect(page.locator('#r-manuscript-drafts-status')).toBeVisible();
 
     // The first project response must arrive before any proposals can render.
     releaseStatus();
@@ -42,7 +42,7 @@ async function checkEarlyDossierSuggestions(browser, url) {
     const drafts = page.locator('#r-manuscript-drafts');
     await expect(drafts.locator('[data-draft-select="character:mara"]')).toBeVisible();
     await expect(drafts.locator('[data-draft-select="character:ivo"]')).toBeVisible();
-    await expect(load).toBeEnabled();
+    await expect(page.locator('#r-manuscript-drafts-status')).toBeHidden();
     await expect(page.locator('#research-dossiers-list')).toContainText('Current synthetic dossier');
   } finally {
     releaseStatus();
@@ -402,23 +402,29 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
 
 async function checkExistingCharacterDraft(browser, fixture) {
   const page = await browser.newPage({viewport: {width: 1440, height: 900}});
-  const catalogue = page.locator('#r-manuscript-drafts');
+  const labels = require(path.join(root, 'src/lixity/locales/en.json'));
+  const draftsBox = page.locator('#r-dos-drafts-box');
+  const catalogue = draftsBox.locator('#r-manuscript-drafts');
   const preview = catalogue.locator('#r-manuscript-draft-preview');
-  const existing = catalogue.locator('[data-draft-load-existing]');
+  const existing = draftsBox.locator('[data-draft-load-existing]');
   const stage = preview.locator('[data-draft-stage-existing]');
-  const openSaved = preview.locator('[data-draft-open-existing]');
   const dialog = page.locator('#modal-research-revision');
-  const body = page.locator('#research-revision-field-body');
+  const body = dialog.locator('#research-revision-field-body');
+  const stagePreview = dialog.locator('#research-revision-stage-proposal');
+  const stageEdit = dialog.locator('#research-revision-stage-edit');
+  const save = dialog.locator('#research-revision-save');
+  const discard = dialog.locator('#research-revision-discard');
+  const directSelector = `[data-update-character-dossier][data-record-id="${fixture.legacy}"]`;
   const recordUrl = `${fixture.url}/api/research/record?kind=dossier&id=${fixture.legacy}`;
   const record = async () => (await page.request.get(recordUrl)).json();
   const listUrl = fixture.url + '/api/research/dossiers';
   const countDossiers = async () => (await (await page.request.get(listUrl)).json()).dossiers.length;
-  const acceptedWrites = [], errors = [];
+  const writeAttempts = [], errors = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
     const path = new URL(request.url()).pathname;
     if (request.method() === 'POST' && /^\/api\/(research-dossier(?:-from-manuscript)?|research-record-revise)$/.test(path)) {
-      acceptedWrites.push({path, body: request.postDataJSON()});
+      writeAttempts.push({path, body: request.postDataJSON()});
     }
   });
 
@@ -441,7 +447,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
   }
 
   const rowan = 'character:rowan';
-  const loadButton = page.locator('#r-manuscript-dossier-btn');
+  const loadButton = draftsBox.locator('#r-manuscript-dossier-btn');
   const stale = catalogue.locator('[data-draft-stale]');
   const reloadExisting = stale.locator('[data-draft-reload]');
   try {
@@ -457,15 +463,62 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await manualTitle.fill('A separate unsaved dossier');
     await manualBody.fill('Keep this independent draft without a write.');
 
-    await page.locator('#r-dos-drafts-box > summary').press('Enter');
+    const legacySummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${fixture.legacy}"]`);
+    await legacySummary.click();
+    const details = legacySummary.locator('..');
+    const direct = details.locator(directSelector);
+    await expect(direct).toHaveText(labels.research_dossier_draft_stage_existing);
+    const proposals = url => url.pathname === '/api/research/manuscript-dossier-drafts' && url.searchParams.get('include_existing') === '1';
+    await page.route(proposals, route => route.fulfill({json: {ok: true, drafts: []}}));
+    await direct.press('Enter');
+    await expect(details.locator('[data-character-update-status]')).toHaveText(labels.research_dossier_draft_unavailable);
+    await expect(direct).toBeEnabled();
+    await expect(dialog).toBeHidden();
+    await page.unroute(proposals);
+    await direct.press('Enter');
+    await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
+    await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(stageEdit).toBeFocused();
+    await expect(body).toBeHidden();
+    await expect(discard).toHaveText(labels.research_dossier_draft_revision_discard);
+    await discard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await expect(direct).toBeFocused();
+
+    await page.locator(`[data-research-history=dossier][data-record-id="${fixture.legacy}"]`).click();
+    await expect(dialog.locator(directSelector)).toBeVisible();
+    await dialog.locator(directSelector).press('Enter');
+    await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
+    await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(stageEdit).toHaveText(labels.research_dossier_draft_revision_edit);
+    await stageEdit.press('Enter');
+    await expect(stagePreview).toBeHidden();
+    await expect(body).toBeFocused();
+    const editableText = await body.inputValue();
+    assert.ok(editableText.startsWith(original.record.body));
+    assert.ok(editableText.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.equal(await body.evaluate(field => field.selectionStart), original.record.body.length);
+    await discard.press('Enter');
+    await expect(dialog).toBeHidden();
+    assert.deepEqual(await record(), original, 'Direct entry points let the author discard a draft before saving');
+    assert.deepEqual(writeAttempts, []);
+
+    await draftsBox.locator(':scope > summary').press('Enter');
+    await expect(loadButton).toHaveText(labels.research_dossier_draft_load);
+    await expect(existing).toHaveText(labels.research_dossier_draft_load_existing);
+    await expect(loadButton).toHaveAttribute('aria-pressed', 'false');
+    await expect(existing).toHaveAttribute('aria-pressed', 'false');
+    await expect(catalogue).toBeEmpty();
     const defaults = await readSuggestions(loadButton, false);
     assert.ok(!defaults.some(draft => draft.id === rowan), 'New suggestions exclude the known character dossier');
     await expect(catalogue.locator(`[data-draft-select="${rowan}"]`)).toHaveCount(0);
+    await expect(loadButton).toHaveAttribute('aria-pressed', 'true');
     await catalogue.locator('[data-draft-kind="scene"]').press('Enter');
     await catalogue.locator('[data-draft-select="scene:1:1"]').press('Enter');
     await expect(preview.locator('[data-create-manuscript-draft="scene:1:1"]')).toBeEnabled();
     await expect(existing).toBeVisible();
     const inclusive = await readSuggestions(existing, true);
+    await expect(existing).toHaveAttribute('aria-pressed', 'true');
     const first = inclusive.find(draft => draft.id === rowan);
     assert.equal(first.already_covered, true);
     assert.deepEqual([first.existing_dossier.id, first.existing_dossier.revision], [fixture.legacy, 1]);
@@ -478,13 +531,18 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await selectCharacter(rowan);
     await expect(preview.locator('[data-create-manuscript-draft]')).toHaveCount(0);
     await expect(catalogue.locator('[data-draft-select^="scene:"]')).toHaveCount(0);
-    await preview.scrollIntoViewIfNeeded();
+    await page.setViewportSize({width: 320, height: 640});
+    await preview.locator('h5').evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+    await expect.poll(() => stage.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const prose = node.closest('section').querySelector('[data-draft-preview-body]').getBoundingClientRect();
+      return rect.bottom <= prose.top && rect.top >= 0 && rect.bottom <= innerHeight &&
+        node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
+    }), {message: 'The primary action is reachable immediately above the preview at 320px'}).toBe(true);
+    await page.screenshot({path: path.join(artifacts, 'existing-figure-preview-mobile.png')});
+    await page.setViewportSize({width: 1440, height: 900});
+    await preview.locator('h5').scrollIntoViewIfNeeded();
     await page.screenshot({path: path.join(artifacts, 'existing-figure-preview-desktop.png')});
-    await openSaved.press('Enter');
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText('Figur: Rowan');
-    await page.keyboard.press('Escape');
-    assert.deepEqual(await record(), original);
 
     const authoredTitle = 'Rowan with an authored note';
     const authoredBody = original.record.body + '\n\n## Writer’s private working note\n\nKeep the hand-drawn compass.';
@@ -501,10 +559,11 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await stage.press('Enter');
     await expect(stale).toBeVisible();
     await expect(reloadExisting).toBeFocused();
+    await expect(reloadExisting).toHaveText(labels.research_dossier_draft_reload);
     await expect(stage).toBeDisabled();
     await expect(dialog).toBeHidden();
     assert.deepEqual(await record(), second, 'A stale archived revision cannot stage a generated replacement');
-    assert.deepEqual(acceptedWrites, []);
+    assert.deepEqual(writeAttempts, []);
 
     const refreshed = await readSuggestions(reloadExisting, true);
     const reviewed = refreshed.find(draft => draft.id === rowan);
@@ -526,46 +585,72 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await selectCharacter(rowan);
     await stage.press('Enter');
     await expect(dialog).toBeVisible();
-    await expect(page.locator('#research-revision-field-title')).toHaveValue(authoredTitle);
-    await expect(body).toBeFocused();
-    const proposed = await body.inputValue();
-    assert.ok(proposed.startsWith(authoredBody));
-    assert.ok(proposed.includes('Rowan kept watch. Rowan counted the lamps.'));
+    await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
+    await expect(dialog.locator('#research-revision-kind')).toContainText(authoredTitle);
+    await expect(dialog.locator('#research-revision-stage-help')).toHaveText(labels.research_dossier_draft_revision_help);
+    await expect(dialog.locator('#research-revision-field-title')).toBeHidden();
+    await expect(dialog.locator('#research-revision-batch-add')).toBeHidden();
+    await expect(dialog.locator('#research-revision-reason')).toBeHidden();
+    await expect(save).toHaveText(labels.research_dossier_draft_revision_save);
+    await expect(save).toBeEnabled();
+    await expect(stageEdit).toBeFocused();
+    await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(stagePreview).not.toContainText('Keep the hand-drawn compass.');
+    await expect(body).toBeHidden();
     await expect(manualTitle).toHaveValue('A separate unsaved dossier');
     await expect(manualBody).toHaveValue('Keep this independent draft without a write.');
-    await page.setViewportSize({width: 320, height: 900});
+    await page.setViewportSize({width: 320, height: 640});
     assert.ok(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth), 'The staged revision fits at 320px');
+    await expect(dialog.locator('#research-revision-stage-help')).toBeInViewport();
+    await expect(stagePreview).toBeInViewport();
+    await expect(save).toBeInViewport();
     await page.screenshot({path: path.join(artifacts, 'existing-figure-staged-mobile.png')});
     assert.deepEqual(await record(), second, 'Staging a proposal leaves the current accepted revision untouched');
     assert.equal(await countDossiers(), countBefore);
-    assert.deepEqual(acceptedWrites, []);
-    await page.locator('input[name=research_revision_change_kind][value=correction]').check();
-    await page.locator('#research-revision-reason').fill('Reviewed the generated proposal and kept the working note.');
-    await page.locator('#research-revision-save').press('Enter');
+    assert.deepEqual(writeAttempts, []);
+
+    const refusedMessage = 'Synthetic retryable save failure';
+    await page.route('**/api/research-record-revise', route =>
+      route.fulfill({status: 400, json: {ok: false, message: refusedMessage}}), {times: 1});
+    await save.press('Enter');
+    const saveStatus = dialog.locator('#research-revision-status');
+    await expect(saveStatus).toContainText(refusedMessage);
+    await expect(saveStatus).toBeInViewport();
+    await expect(save).toBeInViewport();
+    await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(body).toBeHidden();
+    assert.deepEqual(await record(), second);
+    await save.press('Enter');
     await expect(dialog).toBeHidden();
     const saved = await record();
     assert.equal(saved.record.revision, 3);
     assert.equal(saved.record.id, fixture.legacy);
     assert.equal(saved.record.title, authoredTitle);
-    assert.equal(saved.record.body, proposed);
+    assert.ok(saved.record.body.startsWith(authoredBody));
+    assert.ok(saved.record.body.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.equal(saved.record.body, writeAttempts.at(-1).body.changes.body);
     assert.deepEqual(saved.record.tags, second.record.tags);
     assert.deepEqual(saved.record.citations, second.record.citations);
+    assert.equal(saved.record.change.change_kind, 'supersession');
+    assert.equal(saved.record.change.reason, labels.research_dossier_draft_revision_reason);
     assert.equal(await countDossiers(), countBefore);
-    assert.equal(acceptedWrites.length, 1);
-    assert.equal(acceptedWrites[0].path, '/api/research-record-revise');
-    assert.equal(acceptedWrites[0].body.expected_revision, 2);
-    assert.equal(acceptedWrites[0].body.expected_snapshot, second.snapshot);
+    assert.equal(writeAttempts.length, 2);
+    assert.deepEqual(writeAttempts[1], writeAttempts[0], 'Retrying sends the same reviewed proposal');
+    assert.equal(writeAttempts[1].path, '/api/research-record-revise');
+    assert.equal(writeAttempts[1].body.expected_revision, 2);
+    assert.equal(writeAttempts[1].body.expected_snapshot, second.snapshot);
+    assert.equal(writeAttempts[1].body.change_kind, 'supersession');
+    assert.equal(writeAttempts[1].body.reason, labels.research_dossier_draft_revision_reason);
     const historical = await (await page.request.get(recordUrl + '&revision=1')).json();
     assert.deepEqual(historical.record, original.record);
     await readSuggestions(loadButton, false);
     await readSuggestions(existing, true);
     await selectCharacter(rowan);
     await stage.press('Enter');
-    await expect(dialog).toBeVisible();
-    await expect(body).toHaveValue(saved.record.body);
-    await page.keyboard.press('Escape');
+    await expect(draftsBox.locator('#r-manuscript-drafts-status')).toHaveText(labels.research_dossier_draft_staged_same);
+    await expect(dialog).toBeHidden();
     assert.deepEqual(await record(), saved, 'Staging identical manuscript material cannot duplicate the appendix');
-    assert.equal(acceptedWrites.length, 1);
+    assert.equal(writeAttempts.length, 2);
     await readSuggestions(loadButton, false);
     await expect(catalogue.locator(`[data-draft-select="${rowan}"]`)).toHaveCount(0);
     await catalogue.locator('[data-draft-kind="scene"]').press('Enter');
@@ -843,7 +928,7 @@ server.serve_forever()
     const maraDraft = draftList.locator('[data-draft-select="character:mara"]');
     const characterKind = draftList.locator('[data-draft-kind=character]');
     const sceneKind = draftList.locator('[data-draft-kind=scene]');
-    const manualDossier = draftList.getByRole('button', {name:'Create a character dossier manually'});
+    const manualDossier = draftList.locator('[data-draft-manual-character]');
     await draftsBox.locator(':scope > summary').press('Enter');
     await loadDrafts.press('Enter');
     await expect(ivoDraft).toBeVisible();
@@ -866,7 +951,7 @@ server.serve_forever()
     assert.equal(draftWrites[0].draft_id, 'character:ivo');
     await preview.locator('[data-create-manuscript-draft="character:mara"]').press('Enter');
     await expect(manualDossier).toBeVisible();
-    await expect(draftList).toContainText('There are currently no new character suggestions.');
+    await expect(draftList).toContainText('No suggestions for new character dossiers found.');
     await sceneKind.press('Enter');
     await expect(preview).toContainText(/scenes?/i);
     const savedDossiers = await (await page.request.get(fixture.url + '/api/research/dossiers')).json();
@@ -907,7 +992,10 @@ server.serve_forever()
     await page.unroute('**/api/research/manuscript-dossier-drafts?*');
     await checkSceneAndLocationDrafts(page, fixture, draftWrites);
 
+    const manuscript = path.join(artifacts, 'synthetic-project', 'manuscript.md');
+    const originalText = fs.readFileSync(manuscript, 'utf8');
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+      const labels = require(path.join(root, 'src/lixity/locales', `${language}.json`));
       await page.request.post(fixture.url + '/api/settings', {data: {language}});
       await page.reload();
       await page.locator('#tab-view-research').click();
@@ -921,6 +1009,12 @@ server.serve_forever()
       }
       await page.keyboard.press('Escape');
       if (!await draftsBox.evaluate(node => node.open)) await draftsBox.locator(':scope > summary').press('Enter');
+      const localizedExisting = draftsBox.locator('[data-draft-load-existing]');
+      await expect(localizedExisting).toHaveText(labels.research_dossier_draft_load_existing);
+      await expect(loadDrafts).toHaveText(labels.research_dossier_draft_load);
+      for (const button of [localizedExisting, loadDrafts]) {
+        assert.ok(await button.evaluate(node => node.scrollWidth <= node.clientWidth), `${language} dossier option fits at 320px`);
+      }
       await loadDrafts.press('Enter');
       const localizedManual = draftList.locator('[data-draft-manual-character]');
       await expect(localizedManual).toBeVisible();
@@ -933,8 +1027,6 @@ server.serve_forever()
       await expect(dossierTitle).toBeFocused();
       await expect(dossierBody).not.toHaveValue('');
 
-      const labels = require(path.join(root, 'src/lixity/locales', `${language}.json`));
-      await expect(draftList.locator('[data-draft-load-existing]')).toHaveText(labels.research_dossier_draft_load_existing);
       const placeKind = draftList.locator('[data-draft-kind=location]');
       await placeKind.press('Enter');
       await expect(placeKind).toBeFocused();
@@ -951,7 +1043,33 @@ server.serve_forever()
 
       const legacySummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${fixture.legacy}"]`);
       await legacySummary.click();
-      const character = legacySummary.locator('..').locator('details[data-dossier-character]');
+      const dossierDetails = legacySummary.locator('..');
+      const localizedDirect = dossierDetails.locator('[data-update-character-dossier]');
+      await expect(localizedDirect).toHaveText(labels.research_dossier_draft_stage_existing);
+      assert.ok(await localizedDirect.evaluate(button => button.scrollWidth <= button.clientWidth),
+        `${language} direct update action fits at 320px`);
+      try {
+        fs.writeFileSync(manuscript, originalText + '\n\nRowan checked the spare lantern.\n');
+        await localizedDirect.press('Enter');
+        await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
+        await expect(dialog.locator('#research-revision-stage-help')).toHaveText(labels.research_dossier_draft_revision_help);
+        const saveSupplement = dialog.locator('#research-revision-save');
+        const discardSupplement = dialog.locator('#research-revision-discard');
+        const editSupplement = dialog.locator('#research-revision-stage-edit');
+        await expect(saveSupplement).toHaveText(labels.research_dossier_draft_revision_save);
+        await expect(discardSupplement).toHaveText(labels.research_dossier_draft_revision_discard);
+        await expect(editSupplement).toHaveText(labels.research_dossier_draft_revision_edit);
+        await expect(dialog.locator('#research-revision-stage-proposal')).toBeVisible();
+        for (const element of [dialog, saveSupplement, discardSupplement, editSupplement]) {
+          assert.ok(await element.evaluate(node => node.scrollWidth <= node.clientWidth),
+            `${language} staged dossier controls fit at 320px`);
+        }
+        await discardSupplement.press('Enter');
+        await expect(dialog).toBeHidden();
+      } finally {
+        fs.writeFileSync(manuscript, originalText);
+      }
+      const character = dossierDetails.locator('details[data-dossier-character]');
       const characterSummary = character.locator(':scope > summary');
       await expect(characterSummary).toHaveText(labels.research_dossier_character_heading);
       await characterSummary.press('Enter');

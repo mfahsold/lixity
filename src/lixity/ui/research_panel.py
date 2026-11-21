@@ -336,17 +336,17 @@ def render_research_panel(
                  'data-research-nav-section data-research-nav-label="research_nav_draft_dossier" '
                  'data-research-nav-icon="sparkles" data-research-nav-help="research_dossier_draft_help">')
     parts.append(
-        f'<summary data-help="{L("research_dossier_draft_help")}">{L("research_dossier_draft_heading")}</summary><div class="ctl-group research-composer-body">'
+        f'<summary>{L("research_dossier_draft_heading")}</summary><div class="ctl-group research-composer-body">'
     )
-    parts.append('<div class="row mb-2">')
+    parts.append(f'<p class="ctl-note">{L("research_dossier_draft_help")}</p>')
+    parts.append(f'<div class="chip-row" role="group" aria-label="{L("research_dossier_draft_heading")}">')
     parts.append(
-        f'<button type="button" class="ctl primary" id="r-manuscript-dossier-btn" data-help="{L("research_dossier_draft_help")}">{L("research_dossier_draft_load")}</button>'
-    )
-    parts.append(
-        f'<button type="button" class="ctl" data-close-disclosure="r-dos-drafts-box">{L("disclosure_collapse")}</button>'
+        f'<button type="button" class="ctl" aria-pressed="false" id="r-manuscript-dossier-btn">{L("research_dossier_draft_load")}</button>'
+        f'<button type="button" class="ctl" aria-pressed="false" data-draft-load-existing>{L("research_dossier_draft_load_existing")}</button>'
     )
     parts.append("</div>")
-    parts.append('<div id="r-manuscript-drafts" aria-live="polite"></div>')
+    parts.append('<p class="ctl-note" id="r-manuscript-drafts-status" role="status" hidden></p>')
+    parts.append('<div id="r-manuscript-drafts"></div>')
     parts.append("</div>")
     parts.append("</details>")
     parts.append('<div class="row mb-2" id="r-dos-collection-bar" hidden>')

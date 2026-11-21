@@ -677,6 +677,7 @@ function researchDossierDetailHtml(detail, readOnly, options) {
     window.LixityDossierImages.actionsHtml(imageContext) : "";
   var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
+    (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "") +
     (!options.recordView && !window.LixitySite.readOnly && !detail.availability &&
       detail.character_analysis_available === true && researchContextToken() && window.LixityDossierCharacter ?
       window.LixityDossierCharacter.html() : "") +
