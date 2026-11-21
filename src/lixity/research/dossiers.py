@@ -475,6 +475,7 @@ def get_dossier(
     summary: bool = False,
     include_citations: bool = True,
     manuscript: str | Path | None = None,
+    include_character_binding: bool = False,
 ) -> dict[str, Any]:
     """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
@@ -489,6 +490,7 @@ def get_dossier(
         summary=summary,
         include_citations=include_citations,
         manuscript=manuscript,
+        include_character_binding=include_character_binding,
     )
 
 
@@ -503,6 +505,7 @@ def _get_dossier(
     include_citations: bool = True,
     preamble: bool = False,
     manuscript: str | Path | None = None,
+    include_character_binding: bool = False,
 ) -> dict[str, Any]:
     """Build native dossier detail against one accepted snapshot."""
     if revision is not None and (type(revision) is not int or revision < 1):
@@ -661,7 +664,30 @@ def _get_dossier(
         res["manuscript_evidence"] = dossier_manuscript_evidence(
             repository.root, dossier.id, manuscript=manuscript
         )
+    if include_character_binding and revision is None and _generated_character_name(snapshot, dossier.id):
+        res["character_analysis_available"] = True
     return res
+
+
+def _generated_character_name(snapshot: Snapshot, dossier_id: str) -> str | None:
+    """Resolve the generated binding from the immutable original dossier."""
+    if any(identifier == dossier_id and operation in ("withdraw", "purge")
+           for operation, _kind, identifier in snapshot.lifecycle):
+        return None
+    original = snapshot.revisions.get((dossier_id, 1))
+    if not isinstance(original, Dossier) or not {"character", "manuscript-draft"}.issubset(original.tags):
+        return None
+    for prefix in ("Figur: ", "Character: "):
+        if original.title.startswith(prefix):
+            return original.title.removeprefix(prefix).strip() or None
+    return None
+
+
+def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[str, str] | None:
+    """Read the archive ID and captured label from the same snapshot."""
+    snapshot = Repository(project).snapshot(kinds=frozenset({"dossier", "tombstone"}))
+    name = _generated_character_name(snapshot, dossier_id)
+    return (snapshot.project.id, name) if name is not None else None
 
 
 def _draft_matches_existing_dossier(draft: Mapping[str, Any], existing_titles: Sequence[str]) -> bool:

@@ -109,6 +109,8 @@ from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _PASSAGE_NAVIGATION_SCRIPT = "analysis-passage-navigation.js"
+_DOSSIER_CHARACTER_SCRIPT = "research-dossier-character.js"
+_DOSSIER_CHARACTER_STYLE = "research-dossier-character.css"
 _CSS_FILES = (
     "design-tokens.css",
     "components.css",
@@ -118,6 +120,7 @@ _CSS_FILES = (
     "research-navigation.css",
     "research-tools.css",
     "research-collections.css",
+    _DOSSIER_CHARACTER_STYLE,
     "dossier-images.css",
     "vendor/leaflet-1.9.4.css",
     "dossier-geography.css",
@@ -156,6 +159,7 @@ _JS_FILES = (
     "zotero-results.js",
     "research-cards.js",
     "research-core.js",
+    _DOSSIER_CHARACTER_SCRIPT,
     "research-content.js",
     "research-evidence.js",
     "research-lists.js",
@@ -191,9 +195,14 @@ _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
     "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
     "research-dossier-drafts.js",
-    _PASSAGE_NAVIGATION_SCRIPT,
+    _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
 ))
-_REPORT_CSS_FILES = tuple(name for name in _CSS_FILES if name not in {"teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css"})
+_REPORT_CSS_FILES = tuple(
+    name for name in _CSS_FILES if name not in {
+        "teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css",
+        _DOSSIER_CHARACTER_STYLE,
+    }
+)
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
 _PUBLICATION_JS_FILES = tuple(
@@ -203,7 +212,7 @@ _PUBLICATION_JS_FILES = tuple(
         "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
         "teleprompter.js", "speech-presentation.js", "audio-take.js",
         "research-collections.js", "research-dossier-drafts.js", "research-tools.js",
-        _PASSAGE_NAVIGATION_SCRIPT,
+        _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
     }
 )
 

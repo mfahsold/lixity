@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Open a manuscript overview, chapter distribution and complete matching prose
+  paragraphs from generated character dossiers, including existing dossiers.
+  The reading view includes up to two neighboring sentences on either side
+  where available and highlights the names in the matching passage.
+
 ### Changed
 
 - Share chapter-delta response fields between editor comparisons, revision

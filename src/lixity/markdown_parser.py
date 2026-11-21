@@ -11,6 +11,7 @@ from __future__ import annotations
 import html as html_mod
 import re
 from collections.abc import Iterator
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
@@ -622,6 +623,8 @@ def parse_markdown_blocks(
             start_line = i + 1
             paras = []
             quote_breaks = []
+            quote_lines = []
+            quote_start = start_line
             cur_p: list[str] = []
             while i < len(lines):
                 q_line = lines[i].rstrip("\r\n").strip()
@@ -632,8 +635,11 @@ def parse_markdown_blocks(
                             paras.append(" ".join(cur_p))
                             if _quote_lines:
                                 quote_breaks.append(_soft_break_offsets(cur_p))
+                                quote_lines.append((quote_start, i))
                             cur_p = []
                     else:
+                        if not cur_p:
+                            quote_start = i + 1
                         cur_p.append(content_q)
                     i += 1
                 else:
@@ -642,11 +648,13 @@ def parse_markdown_blocks(
                 paras.append(" ".join(cur_p))
                 if _quote_lines:
                     quote_breaks.append(_soft_break_offsets(cur_p))
+                    quote_lines.append((quote_start, i))
             blocks.append(
                 {"type": "quote_block", "paras": paras, "start_line": start_line, "end_line": i}
             )
             if _quote_lines:
                 blocks[-1]["quote_breaks"] = quote_breaks
+                blocks[-1]["quote_lines"] = quote_lines
             continue
 
         # Footnote definitions [^id]: text
@@ -750,14 +758,47 @@ def parse_markdown_blocks(
     return blocks
 
 
+def _prose_values(block: dict[str, Any]) -> Iterator[str]:
+    if block["type"] == "quote_block":
+        yield from block["paras"]
+    elif block["type"] in ("p", "list_item"):
+        yield block["text"]
+
+
+@dataclass(frozen=True)
+class CountedChapterPassage:
+    """Counted prose with a chapter-body line range and context boundaries."""
+
+    start_line: int
+    end_line: int
+    text: str
+    region: int
+
+
+def counted_chapter_passages(body: str) -> Iterator[CountedChapterPassage]:
+    """Yield full counted prose with 1-based lines and structural regions."""
+    region = 0
+    for block in parse_markdown_blocks(body, _front_matter=False, _quote_lines=True):
+        kind = block["type"]
+        if kind not in ("p", "list_item"):
+            region += 1
+        if kind not in ("p", "list_item", "quote_block"):
+            continue
+        lines = block.get("quote_lines", [(block["start_line"], block["end_line"])])
+        for (start, end), value in zip(lines, _prose_values(block), strict=True):
+            clean = counting_inline_text(value)
+            if clean:
+                yield CountedChapterPassage(start, end, clean, region)
+        if kind == "quote_block":
+            region += 1
+
+
 def _extract_prose_paragraphs(
     content: str, config: CorpusConfig | None, front_matter: bool, counting: bool
 ) -> list[str]:
     paragraphs: list[str] = []
     for block in parse_markdown_blocks(content, config, _front_matter=front_matter):
-        values = (block["paras"] if block["type"] == "quote_block" else
-                  [block["text"]] if block["type"] in ("p", "list_item") else [])
-        for value in values:
+        for value in _prose_values(block):
             clean = counting_inline_text(value) if counting else strip_inline_markup(value)
             if clean:
                 paragraphs.append(clean)

@@ -139,6 +139,18 @@ def _name_pattern(name: str, *, case_sensitive: bool = False) -> re.Pattern[str]
     return re.compile(rf"(?<!\w)(?:{name})(?!\w)", flags)
 
 
+def _mention_spans(prose: str, aliases: Sequence[re.Pattern[str]]) -> list[tuple[int, int]]:
+    """Resolve overlap consistently for counts and readable evidence."""
+    spans = sorted({match.span() for pattern in aliases for match in pattern.finditer(prose)})
+    matches: list[tuple[int, int]] = []
+    right = -1
+    for start, end in spans:
+        if start >= right:
+            matches.append((start, end))
+        right = max(right, end)
+    return matches
+
+
 def character_presence(
     text: str,
     names: Mapping[str, str] | Sequence[str],
@@ -171,13 +183,7 @@ def character_presence(
     for label, aliases in patterns.items():
         per_chapter: dict[int, int] = {}
         for number, clean in chapter_prose:
-            spans = sorted({match.span() for pattern in aliases for match in pattern.finditer(clean)})
-            hits = 0
-            right = -1
-            for start, end in spans:
-                if start >= right:
-                    hits += 1
-                right = max(right, end)
+            hits = len(_mention_spans(clean, aliases))
             if hits:
                 per_chapter[number] = hits
         present = sorted(per_chapter)

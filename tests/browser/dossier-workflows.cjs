@@ -10,6 +10,7 @@ const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-workflows-'));
+const legacyMiddlePassages = 120;
 
 async function checkEarlyDossierSuggestions(browser, url) {
   const page = await browser.newPage();
@@ -111,6 +112,132 @@ async function checkDossierComposerNavigation(browser, url) {
   }
 }
 
+async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
+  const page = await browser.newPage({viewport: {width: legacy ? 320 : 1440, height: 900}});
+  const recordUrl = `${fixture.url}/api/research/record?kind=dossier&id=${dossierId}`;
+  const requestMethods = [], analysisReads = [], errors = [];
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith('/api/')) requestMethods.push(request.method());
+    if (url.pathname === '/api/research/dossier-character') analysisReads.push(url.searchParams);
+  });
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    const before = await (await page.request.get(recordUrl)).json();
+    assert.equal(before.record.revision, 1);
+    await page.goto(fixture.url);
+    await page.locator('#tab-view-research').click();
+    const summary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossierId}"]`);
+    await summary.click();
+    const dossier = summary.locator('..');
+    const analysis = dossier.locator('details[data-dossier-character]');
+    await expect(analysis).toBeVisible();
+    await expect(analysis).not.toHaveAttribute('open', '');
+    assert.deepEqual(analysisReads, [], 'Collapsed analysis leaves the manuscript read on demand');
+    await analysis.locator(':scope > summary').press('Enter');
+    const overview = analysis.locator('[data-character-overview]');
+    const table = analysis.locator('[data-character-distribution]');
+    await expect(overview).toBeVisible();
+    await expect(table.locator('tbody tr')).toHaveCount(3);
+    const count = legacy ? legacyMiddlePassages + 4 : 3;
+    await expect(overview).toContainText(new RegExp(`\\b${count}\\b`));
+    const chapterCounts = await table.locator('tbody tr').evaluateAll(rows =>
+      rows.map(row => Array.from(row.cells, cell => cell.textContent.trim())));
+    const expected = [2, 0, legacy ? legacyMiddlePassages + 2 : 1];
+    for (const [index, mentions] of expected.entries()) {
+      assert.ok(chapterCounts[index].includes(String(mentions)), `Chapter ${index + 1} shows ${mentions} mentions`);
+    }
+
+    const passages = analysis.locator('[data-character-passages] [data-character-passage]');
+    const more = analysis.locator('[data-character-more]');
+    await expect(passages.first()).toBeVisible();
+    await expect(passages.first().locator('mark')).toHaveCount(2);
+    let pages = 1;
+    while (await more.isVisible()) {
+      const previousCount = await passages.count();
+      await more.press('Enter');
+      await expect.poll(() => passages.count()).toBeGreaterThan(previousCount);
+      const firstNew = passages.nth(previousCount);
+      await expect(firstNew).toBeFocused();
+      await expect.poll(() => firstNew.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        return rect.top >= 0 && node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + 4));
+      })).toBe(true);
+      assert.ok(++pages <= legacyMiddlePassages + 2, 'Each page advances the passage list');
+    }
+    const excerpts = await passages.locator('blockquote').allTextContents();
+    assert.equal(excerpts.length, legacy ? legacyMiddlePassages + 2 : 2);
+    assert.equal(new Set(excerpts).size, excerpts.length, 'A paragraph with two mentions appears once');
+    if (legacy) {
+      assert.ok(pages > 1, 'The legacy dossier exposes further reading pages');
+      assert.match(excerpts[0], /Rowan kept watch\. Rowan counted the lamps\./);
+      const contextBefore = passages.first().locator('[data-character-context="before"]');
+      const contextAfter = passages.first().locator('[data-character-context="after"]');
+      await expect(contextBefore.locator('p').last()).toHaveText('The mast creaked. A cart stopped nearby.');
+      await expect(contextAfter.locator('p').last()).toHaveText('The bell fell quiet. The tide moved back.');
+      assert.equal(await contextBefore.evaluate(node => node.nextElementSibling.tagName), 'BLOCKQUOTE');
+      assert.equal(await contextAfter.evaluate(node => node.previousElementSibling.tagName), 'BLOCKQUOTE');
+      assert.equal(excerpts[0], 'Rowan kept watch. Rowan counted the lamps.');
+      for (let number = 1; number <= legacyMiddlePassages; number++) {
+        assert.match(excerpts[number], new RegExp(`Rowan recorded the tally ${number} in the notebook\\.`));
+      }
+      await expect(passages.nth(2)).not.toContainText('Rowan recorded the tally 1 in the notebook.');
+      await expect(passages.nth(2)).not.toContainText('Rowan recorded the tally 3 in the notebook.');
+      await expect(analysis.locator('[data-character-passages]')).not.toContainText('The storehouse stood empty.');
+      await expect(analysis.locator('[data-character-passages]')).not.toContainText('The far scene opened beneath a hill.');
+      assert.match(excerpts.at(-1), /called to Rook.*The red paper lantern finally disappeared\./s);
+      assert.deepEqual(await passages.last().locator('mark').allTextContents(), ['Rook', 'Rowan']);
+      await expect(dossier.locator('.research-dossier-body-rendered')).toContainText('Erste Textstelle');
+    } else {
+      assert.match(excerpts[0], /Mara waited for Ivo\. Mara took the lantern\./);
+      assert.match(excerpts.at(-1), /called to Mare from the quay/);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Reading fits the viewport');
+    const viewport = legacy ? 'mobile' : 'desktop';
+    await overview.scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(artifacts, `character-analysis-${viewport}.png`)});
+    await table.scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(artifacts, `character-distribution-${viewport}.png`)});
+    await passages.last().scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(artifacts, `character-reading-${viewport}.png`)});
+    const filter = analysis.locator('[data-character-chapter]');
+    await filter.focus();
+    await filter.selectOption('2');
+    await expect(passages).toHaveCount(0);
+    await expect(more).toBeHidden();
+    await filter.selectOption('1');
+    await expect(passages).toHaveCount(1);
+    await expect(passages.first()).toContainText(legacy ? 'Rowan counted the lamps.' : 'Mara took the lantern.');
+    await expect(filter).toBeFocused();
+    if (legacy) {
+      await expect(passages.first().locator('[data-character-context="before"]')).toContainText('The mast creaked.');
+      await expect(passages.first().locator('[data-character-context="after"]')).toContainText('The tide moved back.');
+      await passages.first().scrollIntoViewIfNeeded();
+      await page.screenshot({path: path.join(artifacts, 'character-context-mobile.png')});
+      await page.setViewportSize({width: 1440, height: 900});
+      await passages.first().scrollIntoViewIfNeeded();
+      await page.screenshot({path: path.join(artifacts, 'character-context-desktop.png')});
+    }
+    assert.match(analysisReads[1].get('analysis_sha256'), /^[a-f0-9]{64}$/);
+    assert.ok(analysisReads.slice(1).every(query => query.get('analysis_sha256') === analysisReads[1].get('analysis_sha256')),
+      'Reading pages and chapter filters stay bound to the accepted analysis');
+    if (!legacy) {
+      await page.locator(`[data-workspace-dossier="${dossierId}"]`).click();
+      await expect(page.locator('#workspace-reader-dossier')).toHaveValue(dossierId);
+      const alongside = page.locator('#workspace-reader-body details[data-dossier-character]');
+      await alongside.locator(':scope > summary').press('Enter');
+      await expect(alongside.locator('[data-character-passage]').first()).toContainText('Mara took the lantern.');
+      await expect(alongside.locator('[data-character-distribution] tbody tr')).toHaveCount(3);
+    }
+    assert.deepEqual(await (await page.request.get(recordUrl)).json(), before,
+      'Reading character analysis preserves the authored text and exact archive revision');
+    assert.ok(requestMethods.every(method => method === 'GET'), 'Opening existing character dossiers performs reads');
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+}
+
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
 import json, sys
@@ -122,15 +249,29 @@ base = Path(sys.argv[1]); project = base / 'synthetic-project'
 api.init(project, title='Synthetic contextual research')
 dossier = api.create_dossier(project, title='Current synthetic dossier', body='# Notes\\n\\nOriginal note.\\n\\n# Detail\\n\\nOriginal detail.')
 api.create_dossier(project, title='Another synthetic dossier', body='Unrelated body.')
+legacy = api.create_dossier(project, title='Figur: Rowan', language='de',
+    tags=['manuscript-draft', 'character'],
+    body='## Überblick\\n\\n- **Figur:** Rowan\\n\\n## Erste Textstelle\\n\\n„Rowan hielt Wache.“')
 manuscript = project / 'manuscript.md'
-manuscript.write_text('# Sample\\n\\n## First chapter\\n\\nMara waited for Ivo. Mara took the lantern.\\n', encoding='utf-8')
-(project / 'lixity.toml').write_text('names = ["Mara", "Ivo"]\\n', encoding='utf-8')
+middle = '\\n\\n'.join(f'Rowan recorded the tally {index} in the notebook.' for index in range(1, ${legacyMiddlePassages} + 1))
+manuscript.write_text(
+    '# Sample\\n\\n## First chapter\\n\\nMara waited for Ivo. Mara took the lantern.\\n\\n'
+    'The mast creaked. A cart stopped nearby.\\n\\nRowan kept watch. Rowan counted the lamps.\\n\\n'
+    'The bell fell quiet. The tide moved back.\\n\\n'
+    '## Second chapter\\n\\nThe storehouse stood empty.\\n\\n'
+    '## Third chapter\\n\\nThe ferryman called to Mare from the quay.\\n\\n' + middle + '\\n\\n'
+    '🧭 The runner called to Rook from the quay. Rowan held the soaked map flat as the crew drew nearer, '
+    'and the wind whipped along the edge of the pier, scattering scraps of rope and cloth into the water. '
+    'The red paper lantern finally disappeared.\\n\\n***\\n\\nThe far scene opened beneath a hill.\\n', encoding='utf-8')
+(project / 'lixity.toml').write_text(
+    '[characters.Mara]\\naliases = ["Mare"]\\n[characters.Ivo]\\n[characters.Rowan]\\naliases = ["Rook"]\\n', encoding='utf-8')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.source_input = str(manuscript)
 LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'; LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['dossier_id']}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['dossier_id'],
+    'legacy': legacy['dossier_id']}), flush=True)
 server.serve_forever()
 `, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
   let stderr = '';
@@ -187,6 +328,7 @@ server.serve_forever()
     await page.goto(fixture.url);
     await page.locator('#tab-view-research').click();
     await openDetails();
+    await expect(details.locator('..').locator('details[data-dossier-character]')).toHaveCount(0);
     const initialActions = details.locator('..').locator('.research-dossier-actions');
     assert.equal(await initialActions.evaluate(node => node.open), false, 'Dossier reading starts with secondary actions closed');
     await expect(page.locator(`[data-dossier-claim="${fixture.dossier}"]`)).not.toBeVisible();
@@ -374,7 +516,10 @@ server.serve_forever()
     await expect(preview).toContainText(/scenes?/i);
     const savedDossiers = await (await page.request.get(fixture.url + '/api/research/dossiers')).json();
     assert.ok(savedDossiers.dossiers.some(item => item.title === 'Character: Ivo'));
-    assert.ok(savedDossiers.dossiers.some(item => item.title === 'Character: Mara'));
+    const maraDossier = savedDossiers.dossiers.find(item => item.title === 'Character: Mara');
+    assert.ok(maraDossier);
+    await checkCharacterDossier(browser, fixture, maraDossier.id, false);
+    await checkCharacterDossier(browser, fixture, fixture.legacy, true);
 
     const dossierTitle = page.locator('#r-dos-title');
     const dossierBody = page.locator('#r-dos-body');
@@ -430,9 +575,36 @@ server.serve_forever()
       await localizedManual.press('Enter');
       await expect(dossierTitle).toBeFocused();
       await expect(dossierBody).not.toHaveValue('');
+
+      const labels = require(path.join(root, 'src/lixity/locales', `${language}.json`));
+      const legacySummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${fixture.legacy}"]`);
+      await legacySummary.click();
+      const character = legacySummary.locator('..').locator('details[data-dossier-character]');
+      const characterSummary = character.locator(':scope > summary');
+      await expect(characterSummary).toHaveText(labels.research_dossier_character_heading);
+      await characterSummary.press('Enter');
+      await expect(character.getByText(labels.research_dossier_character_distribution, {exact: true}).first()).toBeVisible();
+      await expect(character.getByText(labels.research_dossier_character_passages, {exact: true}).first()).toBeVisible();
+      await expect(character.getByText(labels.research_dossier_character_context_hint, {exact: true})).toBeVisible();
+      const firstMatch = character.locator('[data-character-passage]').first();
+      await expect(firstMatch.locator('[data-character-context="before"] p').first()).toHaveText(labels.research_dossier_character_context_before);
+      await expect(firstMatch.locator('[data-character-context="after"] p').first()).toHaveText(labels.research_dossier_character_context_after);
+      if (language === 'de') {
+        await characterSummary.scrollIntoViewIfNeeded();
+        await page.screenshot({path: path.join(artifacts, 'character-analysis-de-320.png')});
+      }
+      const dimensions = await character.evaluate(node => {
+        const bounds = node.getBoundingClientRect();
+        const overflow = Array.from(node.querySelectorAll('*'))
+          .filter(child => child.getBoundingClientRect().right > bounds.right + 1)
+          .slice(0, 12).map(child => `${child.tagName}.${child.className}`);
+        return {scroll: node.scrollWidth, client: node.clientWidth, overflow};
+      });
+      assert.ok(dimensions.scroll <= dimensions.client,
+        `${language} character analysis fits at 320px: ${JSON.stringify(dimensions)}`);
     }
     assert.deepEqual(errors, []);
-    console.log(`Dossier workflows: contextual claim/decision pins, concurrent section edits, manuscript suggestions and manual character dossiers passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
+    console.log(`Dossier workflows: contextual claim/decision pins, concurrent section edits, manuscript suggestions, manual dossiers and exact paged character readings with nearby context passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
   } finally {
     if (stderr.includes('Traceback')) console.error(stderr);
     if (browser) await browser.close();

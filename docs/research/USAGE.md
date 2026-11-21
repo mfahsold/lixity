@@ -649,6 +649,29 @@ the toolbar opens the manual form, where you can choose the **Character** templa
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
 
+In a generated character dossier, **Character in the manuscript** reads the
+currently selected manuscript. It shows the name-mention count, every chapter's
+count including zeros, and any available viewpoint declarations and dialogue
+attribution. Viewpoint chapters come from project settings. Dialogue measures
+require enough attributed turns to be calculated.
+
+**Read the matching passages** shows each matching prose paragraph in full,
+with the counted name forms highlighted. Where the paragraph has fewer than
+two sentences before or after the matching sentences, Lixity fills in nearby
+sentences up to that limit where available. Read each matching paragraph in
+its own entry. A paragraph can contain several mentions. Read in manuscript
+order or choose a chapter. Load more paragraphs to
+continue through the selection. Line labels refer to the chapter body.
+Configured name variants are included. Pronouns and indirect references are
+outside the search, so a chapter with zero matches may still feature the
+character. These counts describe the text and its matching rules.
+
+Existing manuscript-generated character dossiers offer this view while a
+manuscript is selected. Opening it reads the current source without saving a
+dossier revision or creating a citation. The saved notes and exact historical
+versions retain their authored text. The computed passages stay in the local
+workspace, outside reading exports.
+
 <a id="configured-terms-and-boundary-policies"></a>
 
 ### Configured terms, props and boundary policies

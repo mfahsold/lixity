@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
+from urllib.parse import urlencode
 
+from support import LoopbackServer, make_handler
+
+from lixity.characters import _name_pattern, character_presence
 from lixity.cli import main as lixity_cli_main
 from lixity.mcp import _TOOLS, handle_message
 from lixity.research import api as research_api
+from lixity.research.character_evidence import _chapter_passages
 from lixity.research.manuscript_drafts import DRAFT_SCHEMA, extract_manuscript_dossier_drafts
+from lixity.server.pdf_context import research_context_token
 from lixity.ui.research_panel import render_research_panel
 from lixity.workspace_labels import WORKSPACE_LABELS
 
@@ -142,6 +149,110 @@ def test_research_panel_has_direct_timeline_tab_and_draft_controls() -> None:
     assert 'id="r-manuscript-drafts"' in html
 
 
+def test_legacy_regex_matches_keep_grouped_and_zero_width_locations() -> None:
+    body = "Anna\n\nMaria hielt Wache.\n\n> Anna rief.\n>\n> Maria wartete."
+    expression = r"Anna\s+Maria|(?=\n\nMaria wartete)"
+    mentions, passages = _chapter_passages(body, [_name_pattern(expression)])
+    assert mentions == character_presence("## Kapitel\n\n" + body, {expression: "Anna"})[0].mentions == 2
+    assert passages == [
+        {"start_line": 1, "end_line": 3, "text": "Anna\n\nMaria hielt Wache.",
+         "matches": [{"start": 0, "end": 11}]},
+        {"start_line": 5, "end_line": 5, "text": "Anna rief.",
+         "matches": [{"start": 10, "end": 10}]},
+    ]
+
+
+def test_figure_reading_context_fills_only_missing_adjacent_sentences() -> None:
+    body = "\n\n".join((
+        "Far away. Dr. Vale checked the hall. The clock had stopped.",
+        "Anna entered. The lamp hummed.",
+        "A guard crossed the yard. Rain followed. The gate shut.",
+        "The trail curved. Anna heard the gate. Silence returned. The path vanished.",
+        "Anna paused.",
+        "***",
+        "Unrelated scene. It starts beyond the divider.",
+    ))
+    mentions, passages = _chapter_passages(body, [_name_pattern("Anna")], context_language="en")
+    assert mentions == len(passages) == 3
+    first, middle, last = passages
+    assert first["text"] == "Anna entered. The lamp hummed."
+    assert first["context_before"] == "Dr. Vale checked the hall. The clock had stopped."
+    assert first["context_after"] == "A guard crossed the yard."
+    assert middle["context_before"] == "The gate shut."
+    assert middle["context_after"] == ""
+    assert last["context_before"] == last["context_after"] == ""
+    assert [item["text"][span["start"]:span["end"]] for item in passages for span in item["matches"]] == ["Anna"] * 3
+
+
+def test_figure_reading_context_stays_in_one_quotation_block() -> None:
+    body = "The narrator begins.\n\n> The wind rises.\n>\n> Anna waits.\n>\n> The door opens.\n\nThe narrator stops."
+    _, (passage,) = _chapter_passages(body, [_name_pattern("Anna")], context_language="en")
+    assert passage["context_before"] == "The wind rises."
+    assert passage["text"] == "Anna waits."
+    assert passage["context_after"] == "The door opens."
+
+
+def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: Path) -> None:
+    project = tmp_path
+    manuscript = project / "novel.md"
+    long_passage = "😀 **Anna** rief Nanni. " + "Die übrige Beschreibung bleibt lesbar. " * 20 + "Letzter Satz."
+    middle = [f"Anna nannte die Nummer {num}." for num in range(23)]
+    prose = "\n\n".join(["## Ankunft", "Die Wache schlief. Die Glocke läutete.", long_passage, *middle,
+                          "## Pause", "Nur die anderen gingen weiter.",
+                          "## Rückkehr", "> Nanni blieb noch.", "`Anna` [Weiter](https://example.test/Anna)."])
+    manuscript.write_text(prose, encoding="utf-8")
+    config = project / "lixity.toml"
+    config.write_text('[characters.Anna]\naliases = ["Nanni"]\npov_in_chapters = [2]\n', encoding="utf-8")
+    init = research_api.init(project, title="Figurendossier", language="de")
+    record = research_api.create_dossier(project, "Figur: Anna", "## Überblick\n\nEigene Notizen.",
+                                        tags=["manuscript-draft", "character"])
+    manual = research_api.create_dossier(project, "Figur: Andere", "Eigene Notizen.", tags=["character"])
+    token = research_context_token(project)
+
+    def path(**params: str | int) -> str:
+        return "/api/research/dossier-character?" + urlencode({"research_token": token, **params})
+
+    with LoopbackServer(make_handler(project, source_input=manuscript, language="de")) as server:
+        dossier_base = "/api/research/dossiers?id=" + record["dossier_id"]
+        assert server.request_json(dossier_base)[1]["character_analysis_available"] is True
+        assert "character_analysis_available" not in server.request_json(dossier_base + "&revision=1")[1]
+        assert server.request(path(id=manual["dossier_id"])).status == 404
+        assert server.request(path(id=record["dossier_id"], research_token="0" * 64)).status == 409
+        assert server.request(path(id=record["dossier_id"], offset=20)).status == 400
+
+        status, first = server.request_json(path(id=record["dossier_id"]))
+        assert status == 200, first
+        assert first["project_id"] == init["project_id"]
+        assert first["source_sha256"] == sha256(prose.encode()).hexdigest()
+        assert first["aliases"] == ["Nanni"]
+        assert first["declared_pov_chapters"] == [2]
+        assert first["mentions"] == 26
+        assert first["chapters_with_mentions"] == 2
+        assert first["longest_gap"] == 1
+        assert [row["mentions"] for row in first["chapters"]] == [25, 0, 1]
+        assert first["dialogue"]["status"] == "insufficient_turns"
+        assert first["passage_count"] == 25
+        passage = first["passages"][0]
+        assert passage["text"].endswith("Letzter Satz.")
+        assert passage["context_before"] == "Die Wache schlief. Die Glocke läutete."
+        assert passage["context_after"] == ""
+        assert [passage["text"][span["start"]:span["end"]] for span in passage["matches"]] == ["Anna", "Nanni"]
+        accepted = first["analysis_sha256"]
+        next_page = path(id=record["dossier_id"], analysis_sha256=accepted, offset=first["next_offset"])
+        status, rest = server.request_json(next_page)
+        assert status == 200, rest
+        assert len(rest["passages"]) + len(first["passages"]) == 25
+        assert rest["passages"][-1]["text"] == "Nanni blieb noch."
+        assert rest["next_offset"] is None
+        status, empty = server.request_json(path(id=record["dossier_id"], chapter=2, analysis_sha256=accepted))
+        assert status == 200, empty
+        assert empty["passages"] == [] and empty["passage_count"] == 0
+        config.write_text('[characters.Anna]\naliases = []\n', encoding="utf-8")
+        assert server.request(next_page).status == 409
+    assert manuscript.read_text(encoding="utf-8") == prose
+    assert research_api.get_dossier(project, record["dossier_id"])["body"] == "## Überblick\n\nEigene Notizen."
+
+
 def test_extract_drafts_accepts_full_project_config() -> None:
     result = extract_manuscript_dossier_drafts(
         SAMPLE_MANUSCRIPT,
@@ -155,6 +266,24 @@ def test_extract_drafts_accepts_full_project_config() -> None:
     )
     assert any(d["kind"] == "character" for d in result["drafts"])
     assert any(d["kind"] == "scene" for d in result["drafts"])
+
+
+def test_character_draft_first_passage_uses_counted_alias_and_readable_excerpt() -> None:
+    prose = ("Quiet footsteps return to the courtyard. " * 8) + (
+        "nox waits near the wall. After the watch has passed, she follows the frozen lane. " * 4
+    )
+    payload = extract_manuscript_dossier_drafts(
+        "## The courtyard\n\n```text\nRowan remains in a note.\n```\n\n" + prose,
+        settings={"characters": {"Rowan": {"aliases": ["Nox"], "pov_in_chapters": [1]}}},
+        kind="character",
+    )
+    draft, = payload["drafts"]
+    first = draft["evidence_hints"]["first_hit"]
+    assert first["chapter"] == 1 and first["line"] > 1
+    assert first["quote"].startswith("…") and first["quote"].endswith("…")
+    assert "nox waits near the wall." in first["quote"]
+    assert "remains in a note" not in draft["body"]
+    assert "Declared viewpoint chapters" in draft["body"]
 
 
 def test_manuscript_dossier_drafts_excludes_existing_by_default(tmp_path: Path) -> None:

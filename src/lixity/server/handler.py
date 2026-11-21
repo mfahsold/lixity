@@ -83,6 +83,7 @@ class LixityServerHandler(
         "/api/research/media": "_handle_research_media",
         "/api/research/dossiers": "_handle_research_dossiers",
         "/api/research/manuscript-dossier-drafts": "_handle_research_manuscript_dossier_drafts",
+        "/api/research/dossier-character": "_handle_research_dossier_character",
         "/api/research/claims": "_handle_research_claims",
         "/api/research/timeline": "_handle_research_timeline",
         "/api/research/claim-relations": "_handle_research_claim_relations",

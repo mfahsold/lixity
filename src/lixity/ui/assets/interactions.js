@@ -217,7 +217,7 @@ function readingViewportTop() {
 }
 
 function setPassageScrollMargin(target) {
-  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-dossier-location, .publication-header, .publication-reader-header");
+  var bars = document.querySelectorAll("#workbench-thread, #manuscript-reader-controls, .toolbar, .research-pane-navigation, .research-dossier-location, .publication-header, .publication-reader-header");
   var height = 0, rect = target.getBoundingClientRect();
   var container = passageScrollContainers(target)[0];
   bars.forEach(function(bar) {

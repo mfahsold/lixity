@@ -5,19 +5,19 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from textwrap import shorten
 from typing import Any
 
-from ..characters import presence_report, resolve_character_settings
-from ..dialogue import character_voice_profiles
-from ..language import resolve_language
-from ..markdown_parser import prose_paragraphs, split_chapters
-from ..models import CorpusConfig
-from ..scenes import _chapter_recurring_names, scene_report
+from ..characters import Names, _name_pattern, presence_report, resolve_character_settings
+from ..markdown_parser import split_chapters
+from ..pipeline import resolve_document_config
+from ..scenes import scene_report
+from .character_evidence import _auto_character_names, _chapter_passages
 
 DRAFT_SCHEMA = "manuscript-dossier-drafts/1"
-_MAX_AUTO_CHARACTERS = 12
 _MAX_INDIVIDUAL_SCENES = 12
 _MAX_LOCATIONS = 12
+_CHARACTER_QUOTE_WIDTH = 180
 
 _LOCATION_PREPOSITIONS = (
     "in", "im", "am", "an", "nach", "aus", "bei", "vor", "hinter",
@@ -168,16 +168,6 @@ def _slug(value: str) -> str:
     return cleaned or "entry"
 
 
-def _auto_character_names(chapters: Sequence[tuple[int, str, str]]) -> list[str]:
-    counts: Counter[str] = Counter()
-    for _chapter_num, _chapter_title, chapter_body in chapters:
-        paragraphs = prose_paragraphs(chapter_body)
-        recurring = _chapter_recurring_names(paragraphs)
-        for name in recurring:
-            counts[name] += sum(1 for para in paragraphs if name in para)
-    return [name for name, _count in counts.most_common(_MAX_AUTO_CHARACTERS)]
-
-
 def _first_quote_for_name(
     chapters: Sequence[tuple[int, str, str]], pattern_text: str
 ) -> dict[str, Any] | None:
@@ -198,11 +188,34 @@ def _first_quote_for_name(
     return None
 
 
+def _first_character_quote(
+    chapter: tuple[int, str, str], name: str, names: Names,
+) -> dict[str, Any] | None:
+    """Keep a brief saved excerpt around the first match in counted prose."""
+    number, title, body = chapter
+    patterns = (pattern for pattern, label in names.items() if label == name) if isinstance(names, Mapping) else (name,)
+    _, passages = _chapter_passages(body, [_name_pattern(pattern) for pattern in patterns])
+    if not passages:
+        return None
+    passage = passages[0]
+    text: str = passage["text"]
+    start: int = passage["matches"][0]["start"]
+    if len(text) > _CHARACTER_QUOTE_WIDTH:
+        leading_context = _CHARACTER_QUOTE_WIDTH // 4
+        if start > leading_context:
+            boundary = re.search(r"\s+", text[start - leading_context:start])
+            left = start - leading_context + boundary.end() if boundary else start
+            text = "…" + text[left:]
+        text = shorten(text, width=_CHARACTER_QUOTE_WIDTH, placeholder="…")
+    return {"chapter": number, "chapter_title": title, "line": passage["start_line"], "quote": text}
+
+
 def _character_draft(
     *,
     figure: Mapping[str, Any],
     voice: Mapping[str, Any] | None,
     first_hit: Mapping[str, Any] | None,
+    aliases: Sequence[str],
     total_chapters: int,
     is_de: bool,
 ) -> dict[str, Any]:
@@ -211,36 +224,29 @@ def _character_draft(
     chapters_present = [
         int(ch) for ch in (figure.get("chapters_present") or figure.get("chapters") or [])
     ]
-    pov_chapters = [int(ch) for ch in (figure.get("pov_chapters") or [])]
-    pov_gaps = figure.get("longest_gap") if figure.get("longest_gap") is not None else figure.get("pov_max_gap")
-    aliases = [str(a) for a in (figure.get("aliases") or []) if str(a).strip()]
+    pov_chapters = [int(ch) for ch in (figure.get("declared_pov_chapters") or [])]
 
     sections: list[str] = []
     if is_de:
-        sections.append(f"## Überblick\n- **Figur:** {name}")
+        sections.append(f"## Überblick\n\n- **Figur:** {name}")
         if aliases:
-            sections.append(f"- **Aliase / Schreibweisen:** {', '.join(aliases)}")
-        sections.append(
-            f"- **Erwähnungen:** {total} in {len(chapters_present)} von {total_chapters} Kapiteln"
-            + (f" (Kapitel {', '.join(str(c) for c in chapters_present[:12])})" if chapters_present else "")
-        )
+            sections.append(f"- **Alternative Namen:** {', '.join(aliases)}")
+        sections.append(f"- **Namensnennungen:** {total} in {len(chapters_present)} von {total_chapters} Kapiteln")
         if pov_chapters:
-            sections.append(f"- **POV-Kapitel:** {', '.join(str(c) for c in pov_chapters)}")
-            if isinstance(pov_gaps, int) and pov_gaps > 0:
-                sections.append(f"- **Größte POV-Lücke:** {pov_gaps} Kapitel")
+            sections.append(f"- **Festgelegte Perspektivkapitel:** {', '.join(str(c) for c in pov_chapters)}")
         if voice and voice.get("turns"):
             turns = int(voice["turns"])
-            mean_len = voice.get("mean_sentence_words")
-            q_share = voice.get("question_ratio")
+            mean_len = voice.get("dialogue_asl")
+            q_share = voice.get("question_excl_rate")
             sections.append(
-                "\n## Dialogprofil\n"
-                f"- **Erkannte Redezüge:** {turns}"
+                "\n## Figurenrede\n\n"
+                f"- **Der Figur zugeordnete Redezüge (geschätzt):** {turns}"
                 + (f"\n- **Mittlere Satzlänge im Dialog:** {float(mean_len):.1f} Wörter" if mean_len is not None else "")
-                + (f"\n- **Frageanteil:** {float(q_share) * 100:.0f} %" if q_share is not None else "")
+                + (f"\n- **Anteil der Frage- und Ausrufesätze:** {float(q_share):.0f} %" if q_share is not None else "")
             )
         if first_hit:
             sections.append(
-                "\n## Erste Textstelle\n"
+                "\n## Erste erfasste Textstelle\n\n"
                 f"- Kapitel {first_hit['chapter']} ({first_hit['chapter_title']}), Zeile {first_hit['line']}: „{first_hit['quote']}“"
             )
         summary = f"{total} Erwähnungen · {len(chapters_present)}/{total_chapters} Kapitel" + (
@@ -248,30 +254,25 @@ def _character_draft(
         )
         title = f"Figur: {name}"
     else:
-        sections.append(f"## Overview\n- **Character:** {name}")
+        sections.append(f"## Overview\n\n- **Character:** {name}")
         if aliases:
             sections.append(f"- **Aliases:** {', '.join(aliases)}")
-        sections.append(
-            f"- **Mentions:** {total} across {len(chapters_present)} of {total_chapters} chapters"
-            + (f" (chapters {', '.join(str(c) for c in chapters_present[:12])})" if chapters_present else "")
-        )
+        sections.append(f"- **Name mentions:** {total} across {len(chapters_present)} of {total_chapters} chapters")
         if pov_chapters:
-            sections.append(f"- **POV chapters:** {', '.join(str(c) for c in pov_chapters)}")
-            if isinstance(pov_gaps, int) and pov_gaps > 0:
-                sections.append(f"- **Largest POV gap:** {pov_gaps} chapters")
+            sections.append(f"- **Declared viewpoint chapters:** {', '.join(str(c) for c in pov_chapters)}")
         if voice and voice.get("turns"):
             turns = int(voice["turns"])
-            mean_len = voice.get("mean_sentence_words")
-            q_share = voice.get("question_ratio")
+            mean_len = voice.get("dialogue_asl")
+            q_share = voice.get("question_excl_rate")
             sections.append(
-                "\n## Dialogue voice\n"
-                f"- **Attributed turns:** {turns}"
+                "\n## Dialogue voice\n\n"
+                f"- **Turns attributed to this character (estimate):** {turns}"
                 + (f"\n- **Mean dialogue sentence length:** {float(mean_len):.1f} words" if mean_len is not None else "")
-                + (f"\n- **Question ratio:** {float(q_share) * 100:.0f} %" if q_share is not None else "")
+                + (f"\n- **Share of questions and exclamations:** {float(q_share):.0f} %" if q_share is not None else "")
             )
         if first_hit:
             sections.append(
-                "\n## First manuscript passage\n"
+                "\n## First matching passage\n\n"
                 f"- Chapter {first_hit['chapter']} ({first_hit['chapter_title']}), line {first_hit['line']}: “{first_hit['quote']}”"
             )
         summary = f"{total} mentions · {len(chapters_present)}/{total_chapters} chapters" + (
@@ -357,8 +358,9 @@ def extract_manuscript_dossier_drafts(
     kind: str = "all",
 ) -> dict[str, Any]:
     """Build deterministic, read-only dossier drafts from manuscript characters, dialogue, and scenes."""
-    config = CorpusConfig(language=language)
-    lang_key = resolve_language(config).key
+    settings = settings or {}
+    config, resolved_language = resolve_document_config(text, language, project_config=settings)
+    lang_key = resolved_language.key
     is_de = lang_key == "de"
     chapters = split_chapters(text, config)
     total_chapters = len(chapters)
@@ -370,7 +372,7 @@ def extract_manuscript_dossier_drafts(
     excluded_character_names: set[str] = set()
 
     if want_characters or want_locations:
-        resolved = resolve_character_settings(None, settings or {})
+        resolved = resolve_character_settings(None, settings)
         names_input: Mapping[str, str] | Sequence[str] = (
             resolved.names or _auto_character_names(chapters)
         )
@@ -386,23 +388,26 @@ def extract_manuscript_dossier_drafts(
                 config,
                 declared_pov=resolved.declared_pov or None,
             )
-            voices_raw = pres.get("character_voices") or character_voice_profiles(text, names_input, config)
+            voices_raw = pres["character_voices"]
+            configured = settings.get("characters", {})
             voice_by_name = {
                 str(entry.get("name")): entry
                 for entry in (voices_raw.get("characters") or voices_raw.get("profiles") or [])
                 if entry.get("name")
             }
+            chapter_by_number = {chapter[0]: chapter for chapter in chapters}
             char_drafts: list[dict[str, Any]] = []
             for fig in pres.get("figures") or []:
                 fig_name = str(fig.get("name") or "").strip()
                 if not fig_name or int(fig.get("mentions") or fig.get("total") or 0) <= 0:
                     continue
-                first_hit = _first_quote_for_name(chapters, fig_name)
+                first_hit = _first_character_quote(chapter_by_number[fig["first_chapter"]], fig_name, names_input)
                 char_drafts.append(
                     _character_draft(
                         figure=fig,
                         voice=voice_by_name.get(fig_name),
                         first_hit=first_hit,
+                        aliases=(configured.get(fig_name) or {}).get("aliases", ()),
                         total_chapters=total_chapters,
                         is_de=is_de,
                     )

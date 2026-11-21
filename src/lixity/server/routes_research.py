@@ -18,8 +18,12 @@ from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.parse import parse_qs, urlparse
 
+from ..config import read_explicit_project_config
 from ..io import FileUtils
+from ..project_structure import MAX_CONFIG_BYTES
 from ..research import api as research_api
+from ..research.character_evidence import CharacterEvidenceChanged, character_evidence
+from ..research.dossiers import generated_character_binding
 from ..research.limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES, MAX_SOURCE_BYTES
 from ..research.media import MEDIA_TYPES
 from ..research.models import Reference, Source, SourceVersion
@@ -86,6 +90,46 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": True, **data})
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_dossier_character(self) -> None:
+        query = self._parse_query(
+            required=("id", "research_token"), optional=("chapter", "offset", "analysis_sha256"),
+            non_empty=("id", "research_token", "chapter", "offset", "analysis_sha256"),
+            error_message="Choose one dossier and optionally a chapter and page",
+        )
+        if query is None:
+            return
+        root = self._require_research_root()
+        source = self.source_input
+        manuscript_root = self.get_author_project_root()
+        if root is None:
+            return
+        if source is None or manuscript_root is None:
+            self._error("No manuscript is selected for the dossier", 404)
+            return
+        try:
+            for key in ("chapter", "offset"):
+                if key in query and (not re.fullmatch(r"[0-9]{1,9}", query[key])):
+                    raise ValueError("Choose a valid chapter and page")
+            chapter = int(query["chapter"]) if "chapter" in query else None
+            offset = int(query.get("offset", "0"))
+            expected = query.get("analysis_sha256")
+            if (expected is None and offset) or (expected is not None and not re.fullmatch(r"[0-9a-f]{64}", expected)):
+                raise ValueError("Choose an accepted character analysis before paging")
+            binding = generated_character_binding(root, query["id"])
+            if binding is None:
+                self._error("No generated character binding is available for this dossier", 404)
+                return
+            project_id, name = binding
+            text, source_sha = FileUtils.read_source_snapshot(source)
+            settings = read_explicit_project_config(manuscript_root, maximum_bytes=MAX_CONFIG_BYTES)
+            data = character_evidence(text, source_sha, character=name, language=self.language, settings=settings,
+                                      chapter=chapter, offset=offset, expected_analysis_sha256=expected)
+            self._json({"ok": True, "project_id": project_id, **data})
+        except CharacterEvidenceChanged as exc:
+            self._error(str(exc), 409)
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._error(str(exc), 400)
 
     def _handle_research_dossier_from_manuscript(self, payload: dict[str, Any]) -> None:
         root = self._require_research_root()
@@ -458,7 +502,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 manuscript = query.get("manuscript", [None])[0]
                 data = research_api.get_dossier(root, dossier_id,
                     section=query.get("section", [None])[0], revision=revision,
-                    manuscript=manuscript)
+                    manuscript=manuscript, include_character_binding=bool(self.source_input))
             else:
                 collection = query.get("collection", [None])[0]
                 data = research_api.list_dossiers(root, collection=collection)

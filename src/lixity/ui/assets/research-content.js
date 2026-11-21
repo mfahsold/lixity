@@ -677,6 +677,9 @@ function researchDossierDetailHtml(detail, readOnly, options) {
     window.LixityDossierImages.actionsHtml(imageContext) : "";
   var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
+    (!options.recordView && !window.LixitySite.readOnly && !detail.availability &&
+      detail.character_analysis_available === true && researchContextToken() && window.LixityDossierCharacter ?
+      window.LixityDossierCharacter.html() : "") +
     '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_folder_notes")) + '</h4>' +
     bodyHtml +
     (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography, detail.geography_summary) : "") + '</section>' +
@@ -714,13 +717,13 @@ function researchDossierContentsHtml(markup) {
   nav.dataset.sectionNav = "dossier"; nav.setAttribute("aria-label", uiLabel("research_sections"));
   var list = document.createElement("ul"); nav.appendChild(list); contents.append(summary, nav);
   var levels = [], parents = [list], previous = null, ordinal = 0;
-  var targets = folder.querySelectorAll(".research-folder-notes, " +
+  var targets = folder.querySelectorAll("[data-dossier-character], .research-folder-notes, " +
     ".research-dossier-body-rendered h1, .research-dossier-body-rendered h2, .research-dossier-body-rendered h3, " +
     ".research-dossier-body-rendered h4, .research-dossier-body-rendered h5, .research-dossier-body-rendered h6, " +
     ".dossier-geography, .research-dossier-claims, .research-folder-citations");
   targets.forEach(function(target) {
     var depth = 0, text;
-    if (target.matches("section")) { levels = []; text = target.querySelector("h4").textContent; }
+    if (target.matches("section, [data-dossier-character]")) { levels = []; text = target.querySelector("h4").textContent; }
     else {
       var level = Number(target.tagName.slice(1));
       while (levels.length && levels[levels.length - 1] >= level) levels.pop();
@@ -762,6 +765,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAs
       var link = event.target.closest("[data-section-link]");
       var target = link && document.getElementById(link.dataset.sectionLink);
       var rendered = target && host.contains(target) && target.closest(".research-dossier-body-rendered");
+      if (target && host.contains(target) && target.matches("[data-dossier-character]")) target.open = true;
       // Reuse the existing preview toggle before the delegated jump reveals
       // disclosures and scrolls. The decoration owns neither activation nor source state.
       if (rendered && rendered.hidden) {
@@ -789,6 +793,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAs
       context.projectId === researchSelectionProjectId && context.token === researchContextToken() &&
       detail.project_id === researchSelectionProjectId && (!stillCurrent || stillCurrent());
   };
+  if (window.LixityDossierCharacter) window.LixityDossierCharacter.mount(host, detail, reading);
   var slot = host.querySelector(".research-dossier-claims");
   if (!slot || !researchContextToken() || !detail.id || !detail.project_id) return;
   var serial = slot._claimsRead = (slot._claimsRead || 0) + 1;

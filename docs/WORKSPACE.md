@@ -587,6 +587,12 @@ counted separately. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
 
+Open **Character in the manuscript** in a generated character dossier to see
+recognized name mentions, their distribution across all chapters and the
+matching paragraphs. Read the passages in manuscript order or select a chapter
+to focus the reading. Where available, neighboring sentences give each passage
+context. See the [counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts).
+
 ## Editing research text
 
 Research text fields share one Markdown editor with localized formatting controls

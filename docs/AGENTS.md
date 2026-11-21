@@ -1500,6 +1500,22 @@ an archive write; omission alone receives a default.
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.
   Drafts covered by existing dossiers are excluded by default and counted in
   `skipped_existing`. Use `include_existing=1` to preview all suggestions.
+- `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
+  for a current dossier whose first revision was generated from a character
+  suggestion. Native current dossier details advertise
+  `character_analysis_available` when this reading is available. The read
+  returns `dossier-character-local/1` with count, chapter distribution,
+  available dialogue and declared viewpoint information, and a page of full
+  matching prose paragraphs. A chapter with no matches has a count of zero.
+  Each passage carries its chapter-body line range and name match offsets in
+  Unicode code points in `text`. The plain-text `context_before` and
+  `context_after` fields contain nearby sentences outside the matching
+  passage, when available. Presence counts refer to `matches` in `text`.
+  The optional `chapter` limits passages to that
+  chapter. To continue a page, repeat that selection and send `next_offset`
+  as `offset` together with `analysis_sha256`. Changed manuscript content or
+  analysis settings invalidate continuation. This read writes no archive
+  records and is outside the read-only site export.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft (`{"draft_id": "...", "kind": "character",
   "language": "...", "actor": "local-author", "manuscript": "..."}`; omitted
