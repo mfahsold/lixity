@@ -7,6 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 from urllib.parse import urlencode
 
+import pytest
 from support import LoopbackServer, make_handler
 
 from lixity.characters import _name_pattern, character_presence
@@ -266,6 +267,65 @@ def test_extract_drafts_accepts_full_project_config() -> None:
     )
     assert any(d["kind"] == "character" for d in result["drafts"])
     assert any(d["kind"] == "scene" for d in result["drafts"])
+
+
+def test_configured_place_drafts_use_counted_prose_and_exact_unicode_names(tmp_path: Path) -> None:
+    manuscript = tmp_path / "novel.md"
+    prefix = "Sie prüfte die Spuren am Ufer. " * 12
+    manuscript.write_text(
+        f"## Abfahrt\n\n{prefix}Sie kam in Mühle an. In MÖHLE wartete schon der Fischer.\n\n"
+        "~~~text\nMühle und Möhle stehen im Codeblock.\n~~~\n\nIn Bern endete die Reise.",
+        encoding="utf-8",
+    )
+    (tmp_path / "lixity.toml").write_text('language = "de"\nlocations = ["Mühle", "Möhle", "Bern"]\n', encoding="utf-8")
+    result = research_api.manuscript_dossier_drafts(tmp_path, manuscript, kind="location")
+    proposals = {item["evidence_hints"]["location"]: item for item in result["drafts"]}
+    assert set(proposals) == {"Mühle", "Möhle", "Bern"}
+    assert len({item["id"] for item in proposals.values()}) == 3
+    for name, item in proposals.items():
+        hints = item["evidence_hints"]
+        assert hints["basis"] == "configured" and hints["mentions"] == 1
+        assert name.casefold() in hints["first_hit"]["quote"].casefold()
+        assert name.casefold() in item["body"].casefold()
+    assert proposals["Mühle"]["evidence_hints"]["first_hit"]["quote"].startswith("…")
+
+
+@pytest.mark.parametrize(("language", "direction", "reference"), [
+    ("de", "Sie zog nach Nordhafen.", "In Nordhafen begann die Reise."),
+    ("en", "She sailed toward Nordhafen.", "The ferry waited in Nordhafen."),
+    ("es", "El barco siguió hacia Nordhafen.", "El ferry esperaba en Nordhafen."),
+    ("fr", "Elle partit vers Nordhafen.", "Le ferry attendait à Nordhafen."),
+    ("it", "Partì verso Nordhafen.", "Il traghetto aspettava a Nordhafen."),
+    ("nl", "Ze ging naar Nordhafen.", "De boot wachtte in Nordhafen."),
+    ("pt", "O barco seguiu para Nordhafen.", "O ferry esperava em Nordhafen."),
+])
+def test_place_suggestions_require_a_directional_cue_in_counted_prose(
+    language: str, direction: str, reference: str,
+) -> None:
+    text = (f"## Leaving\n\n{direction}\n\n{reference}\n\n"
+            "Sie packte in Eile. Sie ging in Eile.\n\n~~~text\nTo Atlantis. In Atlantis.\n~~~\n")
+    result = extract_manuscript_dossier_drafts(text, language=language, kind="location")
+    draft, = result["drafts"]
+    assert draft["evidence_hints"]["location"] == "Nordhafen"
+    assert draft["evidence_hints"]["basis"] == "inferred"
+    assert draft["evidence_hints"]["mentions"] == 2
+    assert direction in draft["body"]
+
+
+def test_scene_drafts_include_all_units_in_order_with_scope_and_passages() -> None:
+    scenes = "\n\n***\n\n".join(f"Ist der Weg {number} frei? Dann gehen wir los." for number in range(1, 46))
+    text = f"## Aufbruch\n\n{scenes}\n\n## Ankunft\n\nAm Tor wartete niemand. Sie klopfte.\n"
+    overview, *units = extract_manuscript_dossier_drafts(text, language="de", kind="scene")["drafts"]
+    assert [draft["id"] for draft in units] == [*(f"scene:1:{n}" for n in range(1, 46)), "scene:2:1"]
+    assert overview["id"] == "scenes:manuscript"
+    assert overview["evidence_hints"]["chapter_fallback"] is True
+    assert "Kapitel 1 · Szene 45" in overview["body"]
+    assert units[0]["evidence_hints"]["scene_scope"] == "scene"
+    assert "Ist der Weg 1 frei?" in units[0]["body"]
+    assert "Dann gehen wir los." in units[0]["body"]
+    assert "Frage" in units[0]["body"]
+    assert units[-1]["evidence_hints"]["scene_scope"] == "chapter"
+    assert "das ganze Kapitel" in units[-1]["body"]
 
 
 def test_character_draft_first_passage_uses_counted_alias_and_readable_excerpt() -> None:

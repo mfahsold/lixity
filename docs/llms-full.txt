@@ -2937,11 +2937,18 @@ variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
 manuscript** and choose **Load suggestions**. Browse the available characters,
-places and scenes, then select a suggestion to preview it. **Create dossier**
-saves the selected proposal. Suggestions already covered by a dossier are
+places and scenes, then select a suggestion to read **Text to be saved**.
+**Create dossier** confirms that preview. If the manuscript or settings change,
+reload the suggestions and review the new draft. After saving, **Open saved
+dossier** opens that exact record. Suggestions already covered by a dossier are
 counted separately. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
+
+To refresh a generated figure dossier, choose **Update existing character
+dossiers**, select the proposal and choose **Prepare update**. This opens
+the current dossier in its revision editor and adds the manuscript proposal
+after the saved notes. Edit the draft before saving it as a new version.
 
 Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the
@@ -5765,8 +5772,8 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 
 ### Manuscript-driven dossier drafts
 
-`dossier-drafts` inspects a manuscript with deterministic presence/POV-gap,
-character-voice, and scene metrics and returns read-only candidate drafts
+`dossier-drafts` inspects a manuscript and returns read-only character, scene
+and place proposals
 (`manuscript-dossier-drafts/1`) without writing to the archive.
 `dossier-from-manuscript` explicitly creates one saved dossier from a chosen
 `--draft-id` (or the first draft matching `--kind` when `--draft-id` is
@@ -5775,18 +5782,43 @@ omitted).
 ```sh
 lixity research dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all
 lixity research dossier-from-manuscript --project ./novel --manuscript ./manuscript.md \
-  --draft-id DRAFT_ID --actor local-author
+  --draft-id DRAFT_ID --preview-sha256 PREVIEW_SHA256 --actor local-author
 ```
 
 Both commands accept `--language` to override the project's configured analysis
-language, and `--kind` accepts `all`, `character`, or `scene` (`dossier-drafts`
-defaults to `all`; `dossier-from-manuscript` defaults to `character` when
-`--draft-id` is omitted). In the browser workspace, open **Research → Dossiers
-→ From manuscript** and select **Load suggestions**. Review the character,
-place or scene proposal before saving it as a dossier. **New dossier** in
-the toolbar opens the manual form, where you can choose the **Character** template.
+language. `--kind` accepts `all`, `character`, `scene` or `location`. Previewing
+defaults to `all`. A creation without `--draft-id` selects the first new
+character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
+to confirm the manuscript, settings and saved text you reviewed.
+
+In the browser, open **Research → Dossiers → From manuscript** and select
+**Load suggestions**. The preview shows the full text that will become the
+dossier. If the manuscript or settings change before saving, reload and review
+the revised proposal. **Open saved dossier** opens the created record.
+**New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
+
+To update an existing generated character dossier, choose **Update existing
+character dossiers** and select its current manuscript proposal. **Prepare
+update** checks the proposal and the dossier revision again. The revision
+editor adds the proposal as an editable section after the existing notes.
+Choose a change type and enter a reason, then select **Save new version**.
+The same dossier ID and its earlier versions remain available. An existing
+proposal is offered for update only when it can be linked to one generated
+character dossier.
+
+The scene register and individual scenes can be saved independently. Scenes
+follow the manuscript order and show opening and closing text. A chapter
+without a recognized scene separator is measured as a whole chapter and labeled
+accordingly.
+
+Set `locations = ["Bern", "Hafen Nord"]` in the project-root `lixity.toml` to
+track named places. A configured empty list disables place suggestions. With
+no list, repeated capitalized names near spatial cues, including a directional
+cue, can yield up to twelve candidates. Read the cited prose to decide whether
+the name refers to a place. The count follows whole-name matches in prose.
+Headings and code blocks are outside this count.
 
 In a generated character dossier, **Character in the manuscript** reads the
 currently selected manuscript. It shows the name-mention count, every chapter's
@@ -10119,7 +10151,7 @@ The archive audit reads the project explicitly named in its request.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
-- `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
+- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene and place dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene|location"`).
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells with
   `abs(z_star) >= z_threshold` before rounding, with per-chapter counts
   (`lixity-outlier-matrix/1`). Supply a finite, nonnegative JSON number
@@ -11449,6 +11481,15 @@ an archive write; omission alone receives a default.
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.
   Drafts covered by existing dossiers are excluded by default and counted in
   `skipped_existing`. Use `include_existing=1` to preview all suggestions.
+  In an initialized archive the response includes `project_id`. Each file-based
+  draft includes `preview_sha256` for its exact text, source and project settings.
+  Scene evidence uses `scene_scope: register|scene|chapter`. Place evidence
+  includes `basis: configured|inferred` and a counted prose match.
+  With `include_existing=1`, covered proposals carry `already_covered: true`.
+  A covered character proposal carries `existing_dossier` when it can be linked
+  to exactly one current generated dossier. Its `id`, `title`, `revision`,
+  `project_id` and `snapshot` identify that accepted dossier read. The editor
+  can prepare a separate revision after rechecking the proposal and dossier.
 - `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
   for a current dossier whose first revision was generated from a character
   suggestion. Native current dossier details advertise
@@ -11466,10 +11507,13 @@ an archive write; omission alone receives a default.
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
-  dossier from a manuscript draft (`{"draft_id": "...", "kind": "character",
-  "language": "...", "actor": "local-author", "manuscript": "..."}`; omitted
-  `manuscript` uses the loaded server input, and omitted `draft_id` selects the
-  first draft matching `kind`).
+  dossier from a manuscript draft. For native confirmation send `draft_id`,
+  `preview_sha256` and the normal research context fields. Changed inputs or
+  an already covered proposal return HTTP 409 with `code: "stale-draft"`.
+  `language` and `actor` are optional. Omitted `manuscript` uses the loaded
+  file. The direct creation form without a draft ID selects the first
+  uncovered proposal matching `kind`. Explicit IDs from older previews
+  resolve only when they identify one candidate.
 - `GET /api/research/claim-relations?claim_id=...&include_retracted=true`:
   recorded causal relations; both filters are optional, with retracted entries
   omitted by default. `include_retracted` accepts `true|false`.

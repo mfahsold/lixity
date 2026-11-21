@@ -7,6 +7,12 @@ function researchRecordLabel(record, kind) {
   return window.LixityComponents.recordLabel(record, uiLabel("research_name_unavailable_" + kind));
 }
 
+function researchDossierDisplayTags(tags) {
+  return (Array.isArray(tags) ? tags : []).filter(function(tag) {
+    return !/^manuscript-draft:[a-f0-9]{32}$/.test(tag);
+  });
+}
+
 function researchPassageLabel(passage) {
   var title = researchRecordLabel({title: passage && passage.source_title}, "source");
   var quote = passage && passage.verbatim;

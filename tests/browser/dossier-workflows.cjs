@@ -238,6 +238,345 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
   }
 }
 
+async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
+  const labels = require(path.join(root, 'src/lixity/locales/en.json'));
+  const loadButton = page.locator('#r-manuscript-dossier-btn');
+  const catalogue = page.locator('#r-manuscript-drafts');
+  const preview = catalogue.locator('#r-manuscript-draft-preview');
+  const body = preview.locator('[data-draft-preview-body] .research-dossier-body-rendered');
+  const choose = id => catalogue.locator(`[data-draft-select="${id}"]`);
+  const create = id => preview.locator(`[data-create-manuscript-draft="${id}"]`);
+  const kind = name => catalogue.locator(`[data-draft-kind="${name}"]`);
+  const listRecords = async () => (await page.request.get(fixture.url + '/api/research/dossiers')).json();
+  let drafts = [];
+
+  async function reload(button = loadButton) {
+    const received = page.waitForResponse(response => new URL(response.url()).pathname === '/api/research/manuscript-dossier-drafts');
+    await button.press('Enter');
+    drafts = (await (await received).json()).drafts;
+    await expect(loadButton).toBeEnabled();
+    await expect(preview).toBeVisible();
+  }
+
+  async function select(category, id) {
+    await kind(category).press('Enter');
+    await expect(kind(category)).toBeFocused();
+    await choose(id).press('Space');
+    await expect(choose(id)).toBeFocused();
+    await expect(choose(id)).toHaveAttribute('aria-pressed', 'true');
+    await expect(body).toBeVisible();
+  }
+
+  async function save(id, expectedStatus = 200) {
+    const submitted = page.waitForResponse(response => new URL(response.url()).pathname === '/api/research-dossier-from-manuscript');
+    const reviewed = drafts.find(draft => draft.id === id);
+    assert.match(reviewed.preview_sha256, /^[a-f0-9]{64}$/);
+    await create(id).press('Enter');
+    const response = await submitted;
+    assert.equal(response.status(), expectedStatus);
+    assert.deepEqual([draftWrites.at(-1).draft_id, draftWrites.at(-1).preview_sha256], [id, reviewed.preview_sha256]);
+    const result = await response.json();
+    if (response.ok()) {
+      const recordUrl = `${fixture.url}/api/research/record?kind=dossier&id=${result.dossier_id}`;
+      const {record} = await (await page.request.get(recordUrl)).json();
+      assert.equal(record.body, reviewed.body.trim(), 'Saving persists the reviewed dossier text');
+      assert.ok(record.tags.some(tag => /^manuscript-draft:[a-f0-9]{32}$/.test(tag)),
+        'The archive retains the generated origin even though it is hidden from author tag controls');
+    }
+    return result;
+  }
+
+  const firstScene = 'scene:1:1', otherScene = 'scene:2:1', register = 'scenes:manuscript';
+  const initialRecords = await listRecords();
+  await reload();
+  await select('scene', register);
+  const registerGroup = catalogue.locator('[data-draft-group="scene-register"]');
+  const individualGroup = catalogue.locator('[data-draft-group="scene-individual"]');
+  await expect(registerGroup.locator(`[data-draft-select="${register}"]`)).toBeVisible();
+  await expect(registerGroup.getByRole('heading', {name: labels.research_dossier_draft_scene_register, exact: true})).toBeVisible();
+  await expect(individualGroup.getByRole('heading', {name: labels.research_dossier_draft_scene_individual, exact: true})).toBeVisible();
+  await expect(individualGroup.locator(`[data-draft-select="${firstScene}"]`)).toBeVisible();
+  await expect(individualGroup.locator(`[data-draft-select="${otherScene}"]`)).toBeVisible();
+  await expect(choose('scene:3:2')).toContainText(`${labels.research_dossier_draft_scene_unit} 2`);
+  const registerEntries = body.locator('li');
+  await expect(registerEntries).toHaveCount(4);
+  await expect(registerEntries).toContainText([
+    'The quiet morning under the lantern and past the old tide gate', 'The ledger under the lantern',
+    'The runner on the quay', 'The hill beyond the river'
+  ]);
+  await preview.scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, 'scene-register-desktop.png')});
+  await select('scene', firstScene);
+  await expect(body).toContainText('The quiet morning under the lantern and past the old tide gate');
+  await expect(body).toContainText('Mara waited for Ivo.');
+  await expect(body).toContainText('The tide moved back.');
+  await expect(body).not.toContainText('The hill beyond the river');
+  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_scene_chapter_fallback);
+  assert.deepEqual(await listRecords(), initialRecords, 'Opening complete previews leaves the archive unchanged');
+  const savedScene = await save(firstScene);
+  await expect(choose(firstScene)).toHaveCount(0);
+  await expect(catalogue.locator('[data-draft-select][aria-pressed="true"]')).toBeFocused();
+  const savedAction = catalogue.locator('[data-draft-open-saved]');
+  await expect(savedAction).toBeVisible();
+  await savedAction.press('Enter');
+  const recordDialog = page.locator('#modal-research-revision');
+  await expect(recordDialog).toBeVisible();
+  await expect(recordDialog).toContainText(savedScene.title);
+  await page.keyboard.press('Escape');
+
+  await reload();
+  await select('scene', register);
+  await expect(choose(otherScene)).toBeVisible();
+  const savedRegister = await save(register);
+  await expect(choose(register)).toHaveCount(0);
+  assert.notEqual(savedScene.dossier_id, savedRegister.dossier_id);
+  await reload();
+  await select('scene', otherScene);
+  await expect(choose(register)).toHaveCount(0);
+  await expect(body).toContainText('The ledger under the lantern');
+
+  const greyhaven = 'location:greyhaven';
+  await select('location', greyhaven);
+  const location = drafts.find(draft => draft.id === greyhaven);
+  assert.equal(location.evidence_hints.basis, 'inferred');
+  assert.equal(location.evidence_hints.mentions, 3);
+  assert.deepEqual(location.evidence_hints.chapters, [2, 3]);
+  assert.equal(location.evidence_hints.first_hit.chapter, 2);
+  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_inferred);
+  await expect(body).toContainText('A courier slept in Greyhaven until the bell rang.');
+  await expect(body).not.toContainText('A forged note from Greyhaven');
+  await preview.scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, 'location-draft-desktop.png')});
+  assert.ok(!drafts.some(draft => draft.id === 'location:eile'));
+  const savedLocation = await save(greyhaven);
+  assert.ok((await listRecords()).dossiers.some(dossier => dossier.id === savedLocation.dossier_id));
+
+  const project = path.join(artifacts, 'synthetic-project');
+  const manuscript = path.join(project, 'manuscript.md');
+  const original = fs.readFileSync(manuscript, 'utf8');
+  await reload();
+  await select('scene', otherScene);
+  const acceptedDigest = drafts.find(draft => draft.id === otherScene).preview_sha256;
+  const beforeDrift = await listRecords();
+  try {
+    fs.writeFileSync(manuscript, original.replace('The storehouse stood empty.', 'The storehouse stood empty. A newly lit lantern glimmered.'));
+    await save(otherScene, 409);
+    const stale = catalogue.locator('[data-draft-stale]');
+    const reloadStale = stale.locator('[data-draft-reload]');
+    await expect(stale).toBeVisible();
+    await expect(stale.getByRole('alert')).toHaveText(labels.research_dossier_draft_stale);
+    await expect(create(otherScene)).toBeDisabled();
+    await expect(reloadStale).toBeFocused();
+    await page.setViewportSize({width: 320, height: 900});
+    await stale.scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(artifacts, 'draft-stale-mobile.png')});
+    assert.deepEqual(await listRecords(), beforeDrift, 'A stale preview cannot create a record');
+    const rejectedAttempts = draftWrites.length;
+    await reload(reloadStale);
+    await expect(choose(otherScene)).toHaveAttribute('aria-pressed', 'true');
+    await expect(choose(otherScene)).toBeFocused();
+    await expect(stale).toBeHidden();
+    await expect(create(otherScene)).toBeEnabled();
+    assert.notEqual(drafts.find(draft => draft.id === otherScene).preview_sha256, acceptedDigest);
+    assert.equal(draftWrites.length, rejectedAttempts, 'Reloading a stale preview does not confirm the save');
+    await save(otherScene);
+    assert.ok((await listRecords()).dossiers.length > beforeDrift.dossiers.length);
+  } finally {
+    fs.writeFileSync(manuscript, original);
+  }
+
+  const settings = path.join(project, 'lixity.toml');
+  fs.writeFileSync(settings, 'locations = ["Greyhaven", "Silverbank"]\n' + fs.readFileSync(settings, 'utf8'));
+  await reload();
+  const silverbank = 'location:silverbank';
+  await select('location', silverbank);
+  const explicit = drafts.find(draft => draft.id === silverbank);
+  assert.equal(explicit.evidence_hints.basis, 'configured');
+  assert.equal(explicit.evidence_hints.mentions, 2);
+  await expect(body).toContainText('Lanterns glowed in Silverbank after dusk.');
+  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_configured);
+  await expect(page.locator('#r-filter-dossiers-tags')).not.toContainText(/manuscript-draft:[a-f0-9]{32}/);
+  await preview.scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, 'location-draft-mobile.png')});
+}
+
+async function checkExistingCharacterDraft(browser, fixture) {
+  const page = await browser.newPage({viewport: {width: 1440, height: 900}});
+  const catalogue = page.locator('#r-manuscript-drafts');
+  const preview = catalogue.locator('#r-manuscript-draft-preview');
+  const existing = catalogue.locator('[data-draft-load-existing]');
+  const stage = preview.locator('[data-draft-stage-existing]');
+  const openSaved = preview.locator('[data-draft-open-existing]');
+  const dialog = page.locator('#modal-research-revision');
+  const body = page.locator('#research-revision-field-body');
+  const recordUrl = `${fixture.url}/api/research/record?kind=dossier&id=${fixture.legacy}`;
+  const record = async () => (await page.request.get(recordUrl)).json();
+  const listUrl = fixture.url + '/api/research/dossiers';
+  const countDossiers = async () => (await (await page.request.get(listUrl)).json()).dossiers.length;
+  const acceptedWrites = [], errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'POST' && /^\/api\/(research-dossier(?:-from-manuscript)?|research-record-revise)$/.test(path)) {
+      acceptedWrites.push({path, body: request.postDataJSON()});
+    }
+  });
+
+  async function readSuggestions(trigger, includeExisting) {
+    const request = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/research/manuscript-dossier-drafts' &&
+        (url.searchParams.get('include_existing') === '1') === includeExisting;
+    });
+    await trigger.press('Enter');
+    const {drafts} = await (await request).json();
+    return drafts;
+  }
+
+  async function selectCharacter(id) {
+    const option = catalogue.locator(`[data-draft-select="${id}"]`);
+    await option.press('Space');
+    await expect(option).toBeFocused();
+    await expect(option).toHaveAttribute('aria-pressed', 'true');
+  }
+
+  const rowan = 'character:rowan';
+  const loadButton = page.locator('#r-manuscript-dossier-btn');
+  const stale = catalogue.locator('[data-draft-stale]');
+  const reloadExisting = stale.locator('[data-draft-reload]');
+  try {
+    const original = await record();
+    const countBefore = await countDossiers();
+    assert.equal(original.record.revision, 1);
+    await page.goto(fixture.url);
+    await page.locator('#tab-view-research').click();
+    const composer = page.locator('#r-dos-composer');
+    await composer.locator(':scope > summary').press('Enter');
+    const manualTitle = page.locator('#r-dos-title');
+    const manualBody = page.locator('#r-dos-body');
+    await manualTitle.fill('A separate unsaved dossier');
+    await manualBody.fill('Keep this independent draft without a write.');
+
+    await page.locator('#r-dos-drafts-box > summary').press('Enter');
+    const defaults = await readSuggestions(loadButton, false);
+    assert.ok(!defaults.some(draft => draft.id === rowan), 'New suggestions exclude the known character dossier');
+    await expect(catalogue.locator(`[data-draft-select="${rowan}"]`)).toHaveCount(0);
+    await catalogue.locator('[data-draft-kind="scene"]').press('Enter');
+    await catalogue.locator('[data-draft-select="scene:1:1"]').press('Enter');
+    await expect(preview.locator('[data-create-manuscript-draft="scene:1:1"]')).toBeEnabled();
+    await expect(existing).toBeVisible();
+    const inclusive = await readSuggestions(existing, true);
+    const first = inclusive.find(draft => draft.id === rowan);
+    assert.equal(first.already_covered, true);
+    assert.deepEqual([first.existing_dossier.id, first.existing_dossier.revision], [fixture.legacy, 1]);
+    for (const id of ['character:nightjar', 'character:linden']) {
+      const other = inclusive.find(draft => draft.id === id);
+      assert.equal(other.already_covered, true);
+      assert.equal(other.existing_dossier, undefined);
+      await expect(catalogue.locator(`[data-draft-select="${id}"]`)).toHaveCount(0);
+    }
+    await selectCharacter(rowan);
+    await expect(preview.locator('[data-create-manuscript-draft]')).toHaveCount(0);
+    await expect(catalogue.locator('[data-draft-select^="scene:"]')).toHaveCount(0);
+    await preview.scrollIntoViewIfNeeded();
+    await page.screenshot({path: path.join(artifacts, 'existing-figure-preview-desktop.png')});
+    await openSaved.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Figur: Rowan');
+    await page.keyboard.press('Escape');
+    assert.deepEqual(await record(), original);
+
+    const authoredTitle = 'Rowan with an authored note';
+    const authoredBody = original.record.body + '\n\n## Writer’s private working note\n\nKeep the hand-drawn compass.';
+    const authoredTags = [...original.record.tags, 'compass-note'];
+    const corrected = await page.request.post(fixture.url + '/api/research-record-revise', {data: {
+      kind: 'dossier', id: fixture.legacy, expected_snapshot: original.snapshot,
+      expected_revision: original.record.revision, changes: {title: authoredTitle, body: authoredBody, tags: authoredTags},
+      change_kind: 'correction', reason: 'Synthetic author correction before regeneration'
+    }});
+    assert.ok(corrected.ok());
+    const second = await record();
+    assert.equal(second.record.revision, 2);
+
+    await stage.press('Enter');
+    await expect(stale).toBeVisible();
+    await expect(reloadExisting).toBeFocused();
+    await expect(stage).toBeDisabled();
+    await expect(dialog).toBeHidden();
+    assert.deepEqual(await record(), second, 'A stale archived revision cannot stage a generated replacement');
+    assert.deepEqual(acceptedWrites, []);
+
+    const refreshed = await readSuggestions(reloadExisting, true);
+    const reviewed = refreshed.find(draft => draft.id === rowan);
+    assert.deepEqual([reviewed.existing_dossier.id, reviewed.existing_dossier.revision], [fixture.legacy, 2]);
+    await expect(preview).toContainText(authoredTitle);
+    await selectCharacter(rowan);
+    const manuscript = path.join(artifacts, 'synthetic-project', 'manuscript.md');
+    const source = fs.readFileSync(manuscript, 'utf8');
+    try {
+      fs.writeFileSync(manuscript, source + '\n\nRowan returned quietly to the landing.\n');
+      await stage.press('Enter');
+      await expect(stale).toBeVisible();
+      await expect(dialog).toBeHidden();
+      assert.deepEqual(await record(), second, 'A stale manuscript proposal cannot stage an edit');
+    } finally {
+      fs.writeFileSync(manuscript, source);
+    }
+    await readSuggestions(reloadExisting, true);
+    await selectCharacter(rowan);
+    await stage.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(page.locator('#research-revision-field-title')).toHaveValue(authoredTitle);
+    await expect(body).toBeFocused();
+    const proposed = await body.inputValue();
+    assert.ok(proposed.startsWith(authoredBody));
+    assert.ok(proposed.includes('Rowan kept watch. Rowan counted the lamps.'));
+    await expect(manualTitle).toHaveValue('A separate unsaved dossier');
+    await expect(manualBody).toHaveValue('Keep this independent draft without a write.');
+    await page.setViewportSize({width: 320, height: 900});
+    assert.ok(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth), 'The staged revision fits at 320px');
+    await page.screenshot({path: path.join(artifacts, 'existing-figure-staged-mobile.png')});
+    assert.deepEqual(await record(), second, 'Staging a proposal leaves the current accepted revision untouched');
+    assert.equal(await countDossiers(), countBefore);
+    assert.deepEqual(acceptedWrites, []);
+    await page.locator('input[name=research_revision_change_kind][value=correction]').check();
+    await page.locator('#research-revision-reason').fill('Reviewed the generated proposal and kept the working note.');
+    await page.locator('#research-revision-save').press('Enter');
+    await expect(dialog).toBeHidden();
+    const saved = await record();
+    assert.equal(saved.record.revision, 3);
+    assert.equal(saved.record.id, fixture.legacy);
+    assert.equal(saved.record.title, authoredTitle);
+    assert.equal(saved.record.body, proposed);
+    assert.deepEqual(saved.record.tags, second.record.tags);
+    assert.deepEqual(saved.record.citations, second.record.citations);
+    assert.equal(await countDossiers(), countBefore);
+    assert.equal(acceptedWrites.length, 1);
+    assert.equal(acceptedWrites[0].path, '/api/research-record-revise');
+    assert.equal(acceptedWrites[0].body.expected_revision, 2);
+    assert.equal(acceptedWrites[0].body.expected_snapshot, second.snapshot);
+    const historical = await (await page.request.get(recordUrl + '&revision=1')).json();
+    assert.deepEqual(historical.record, original.record);
+    await readSuggestions(loadButton, false);
+    await readSuggestions(existing, true);
+    await selectCharacter(rowan);
+    await stage.press('Enter');
+    await expect(dialog).toBeVisible();
+    await expect(body).toHaveValue(saved.record.body);
+    await page.keyboard.press('Escape');
+    assert.deepEqual(await record(), saved, 'Staging identical manuscript material cannot duplicate the appendix');
+    assert.equal(acceptedWrites.length, 1);
+    await readSuggestions(loadButton, false);
+    await expect(catalogue.locator(`[data-draft-select="${rowan}"]`)).toHaveCount(0);
+    await catalogue.locator('[data-draft-kind="scene"]').press('Enter');
+    await catalogue.locator('[data-draft-select="scene:1:1"]').press('Enter');
+    await expect(preview.locator('[data-create-manuscript-draft="scene:1:1"]')).toBeEnabled();
+    assert.deepEqual(errors, []);
+  } finally {
+    await page.close();
+  }
+}
+
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
 import json, sys
@@ -252,6 +591,10 @@ api.create_dossier(project, title='Another synthetic dossier', body='Unrelated b
 legacy = api.create_dossier(project, title='Figur: Rowan', language='de',
     tags=['manuscript-draft', 'character'],
     body='## Überblick\\n\\n- **Figur:** Rowan\\n\\n## Erste Textstelle\\n\\n„Rowan hielt Wache.“')
+api.create_dossier(project, title='Character: Nightjar', body='A manually authored record about Nightjar.')
+for title in ('Figur: Linden', 'Character: Linden'):
+    api.create_dossier(project, title=title, tags=['manuscript-draft', 'character'],
+        body='One of two existing generated dossiers for Linden.')
 manuscript = project / 'manuscript.md'
 middle = '\\n\\n'.join(f'Rowan recorded the tally {index} in the notebook.' for index in range(1, ${legacyMiddlePassages} + 1))
 manuscript.write_text(
@@ -259,12 +602,23 @@ manuscript.write_text(
     'The mast creaked. A cart stopped nearby.\\n\\nRowan kept watch. Rowan counted the lamps.\\n\\n'
     'The bell fell quiet. The tide moved back.\\n\\n'
     '## Second chapter\\n\\nThe storehouse stood empty.\\n\\n'
+    'Nightjar passed the door while Linden waited by the wall.\\n\\n'
+    'A courier slept in Greyhaven until the bell rang. Lanterns glowed in Silverbank after dusk.\\n\\n'
+    'Er war in Eile und blieb am Kai. Sie blieb in Eile.\\n\\n'
+    'A tide chart labelled the next shoal Greyhavenish.\\n\\n'
+    '~~~text\\nA forged note from Greyhaven named the ghost route.\\n~~~\\n\\n'
     '## Third chapter\\n\\nThe ferryman called to Mare from the quay.\\n\\n' + middle + '\\n\\n'
     '🧭 The runner called to Rook from the quay. Rowan held the soaked map flat as the crew drew nearer, '
     'and the wind whipped along the edge of the pier, scattering scraps of rope and cloth into the water. '
-    'The red paper lantern finally disappeared.\\n\\n***\\n\\nThe far scene opened beneath a hill.\\n', encoding='utf-8')
+    'The red paper lantern finally disappeared.\\n\\n***\\n\\nThe far scene opened beneath a hill. '
+    'A boat went to Greyhaven before the wharf shift. The boats moored near greyhaven after dawn. '
+    'The night ferry returned to Silverbank before the thaw.\\n', encoding='utf-8')
 (project / 'lixity.toml').write_text(
-    '[characters.Mara]\\naliases = ["Mare"]\\n[characters.Ivo]\\n[characters.Rowan]\\naliases = ["Rook"]\\n', encoding='utf-8')
+    '[characters.Mara]\\naliases = ["Mare"]\\n[characters.Ivo]\\n[characters.Rowan]\\naliases = ["Rook"]\\n'
+    '[characters.Nightjar]\\n[characters.Linden]\\n'
+    '[scene_analysis.titles]\\n"1:1" = "The quiet morning under the lantern and past the old tide gate"\\n'
+    '"2:1" = "The ledger under the lantern"\\n"3:1" = "The runner on the quay"\\n'
+    '"3:2" = "The hill beyond the river"\\n', encoding='utf-8')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.source_input = str(manuscript)
 LixityServerHandler.exports_dir = str(base / 'exports')
@@ -513,6 +867,7 @@ server.serve_forever()
     await preview.locator('[data-create-manuscript-draft="character:mara"]').press('Enter');
     await expect(manualDossier).toBeVisible();
     await expect(draftList).toContainText('There are currently no new character suggestions.');
+    await sceneKind.press('Enter');
     await expect(preview).toContainText(/scenes?/i);
     const savedDossiers = await (await page.request.get(fixture.url + '/api/research/dossiers')).json();
     assert.ok(savedDossiers.dossiers.some(item => item.title === 'Character: Ivo'));
@@ -520,6 +875,7 @@ server.serve_forever()
     assert.ok(maraDossier);
     await checkCharacterDossier(browser, fixture, maraDossier.id, false);
     await checkCharacterDossier(browser, fixture, fixture.legacy, true);
+    await checkExistingCharacterDraft(browser, fixture);
 
     const dossierTitle = page.locator('#r-dos-title');
     const dossierBody = page.locator('#r-dos-body');
@@ -549,6 +905,7 @@ server.serve_forever()
     assert.deepEqual(draftWrites.map(write => write.draft_id), ['character:ivo', 'character:mara'],
       'Only explicit manuscript draft saves create records');
     await page.unroute('**/api/research/manuscript-dossier-drafts?*');
+    await checkSceneAndLocationDrafts(page, fixture, draftWrites);
 
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
       await page.request.post(fixture.url + '/api/settings', {data: {language}});
@@ -577,6 +934,21 @@ server.serve_forever()
       await expect(dossierBody).not.toHaveValue('');
 
       const labels = require(path.join(root, 'src/lixity/locales', `${language}.json`));
+      await expect(draftList.locator('[data-draft-load-existing]')).toHaveText(labels.research_dossier_draft_load_existing);
+      const placeKind = draftList.locator('[data-draft-kind=location]');
+      await placeKind.press('Enter');
+      await expect(placeKind).toBeFocused();
+      await draftList.locator('[data-draft-select="location:silverbank"]').press('Enter');
+      await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_configured);
+      await expect(preview.locator('[data-draft-preview-body] .research-dossier-body-rendered')).toContainText('Lanterns glowed in Silverbank after dusk.');
+      await sceneKind.press('Enter');
+      await expect(sceneKind).toBeFocused();
+      await expect(draftList.getByRole('heading', {name: labels.research_dossier_draft_scene_individual, exact: true})).toBeVisible();
+      await expect(draftList.locator('[data-draft-select="scene:3:2"]')).toContainText(`${labels.research_dossier_draft_scene_unit} 2`);
+      assert.ok(await draftList.evaluate(node => node.scrollWidth <= node.clientWidth),
+        `${language} draft list and preview fit at 320px`);
+      if (language === 'de') await draftList.screenshot({path: path.join(artifacts, 'scene-draft-de-320.png')});
+
       const legacySummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${fixture.legacy}"]`);
       await legacySummary.click();
       const character = legacySummary.locator('..').locator('details[data-dossier-character]');
@@ -604,7 +976,7 @@ server.serve_forever()
         `${language} character analysis fits at 320px: ${JSON.stringify(dimensions)}`);
     }
     assert.deepEqual(errors, []);
-    console.log(`Dossier workflows: contextual claim/decision pins, concurrent section edits, manuscript suggestions, manual dossiers and exact paged character readings with nearby context passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
+    console.log(`Dossier workflows: full draft previews, independent scene saves, auditable locations, exact character regeneration and paged character readings passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
   } finally {
     if (stderr.includes('Traceback')) console.error(stderr);
     if (browser) await browser.close();

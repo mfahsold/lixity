@@ -1578,7 +1578,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--manuscript", required=True, help="Path to manuscript file")
             command.add_argument(
                 "--kind",
-                choices=("all", "character", "scene"),
+                choices=("all", "character", "scene", "location"),
                 default="all",
                 help="Draft kind filter (default: all)",
             )
@@ -1586,9 +1586,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
         elif name == "dossier-from-manuscript":
             command.add_argument("--manuscript", required=True, help="Path to manuscript file")
             command.add_argument("--draft-id", help="Specific draft ID from dossier-drafts")
+            command.add_argument("--preview-sha256", help="Confirm the preview digest returned for the selected draft")
             command.add_argument(
                 "--kind",
-                choices=("all", "character", "scene"),
+                choices=("all", "character", "scene", "location"),
                 default="character",
                 help="Fallback draft kind if --draft-id is omitted (default: character)",
             )
@@ -3049,6 +3050,7 @@ def run(args: argparse.Namespace) -> int:
                 kind=args.kind,
                 language=args.language,
                 actor=args.actor,
+                preview_sha256=args.preview_sha256,
             )
         elif command in ("dossier-image", "dossier-media"):
             if not args.allow_retention:

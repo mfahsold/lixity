@@ -7,185 +7,163 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from textwrap import shorten
 from typing import Any
+from unicodedata import normalize
+from urllib.parse import quote
 
-from ..characters import Names, _name_pattern, presence_report, resolve_character_settings
-from ..markdown_parser import split_chapters
+from ..characters import (
+    MAX_CHARACTER_NAME_CHARS,
+    Names,
+    _name_pattern,
+    presence_report,
+    resolve_character_settings,
+)
+from ..language import get_language_profile
+from ..markdown_parser import CountedChapterPassage, counted_chapter_passages, split_chapters
 from ..pipeline import resolve_document_config
+from ..publication import validate_metadata_text
 from ..scenes import scene_report
+from ..workspace_labels import workspace_labels_for
 from .character_evidence import _auto_character_names, _chapter_passages
 
 DRAFT_SCHEMA = "manuscript-dossier-drafts/1"
-_MAX_INDIVIDUAL_SCENES = 12
-_MAX_LOCATIONS = 12
-_CHARACTER_QUOTE_WIDTH = 180
+_INFERRED_LOCATION_LIMIT = 12
+_QUOTE_WIDTH = 180
 
-_LOCATION_PREPOSITIONS = (
-    "in", "im", "am", "an", "nach", "aus", "bei", "vor", "hinter",
-    "zwischen", "unter", "neben", "auf", "durch", "at", "to", "from", "near",
-)
-_LOCATION_STOPWORDS = frozenset({
-    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "einer",
-    "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag",
-    "januar", "februar", "märz", "april", "mai", "juni", "juli", "august", "september",
-    "oktober", "november", "dezember", "kapitel", "chapter", "szene", "scene", "teil", "part",
-    "the", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
-    "january", "february", "march", "may", "june", "july", "october", "december",
-})
-_LOCATION_CUE_RE = re.compile(
-    r"\b(?:" + "|".join(_LOCATION_PREPOSITIONS) + r")\s+([A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ\-]{2,}(?:\s+[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ\-]{2,})?)"
-)
+# Repeated wording with a directional cue can suggest a place. Ordinary
+# locative prepositions alone are too broad, especially for German nouns.
+_LOCATION_CUES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "de": (("nach", "richtung"), ("in", "im", "am", "an", "bei", "vor", "aus")),
+    "en": (("to", "toward", "towards"), ("in", "at", "from", "near")),
+    "es": (("hacia",), ("a", "en", "desde", "cerca de")),
+    "fr": (("vers",), ("à", "dans", "depuis", "près de")),
+    "it": (("verso",), ("a", "in", "da", "vicino a")),
+    "nl": (("naar",), ("in", "bij", "van", "nabij")),
+    "pt": (("para", "rumo a"), ("em", "de", "perto de")),
+}
+_LOCATION_WORD = r"[^\W\d_]+(?:-[^\W\d_]+)*"
+
+
+def _name_key(name: str) -> str:
+    return normalize("NFC", name.casefold())
+
+
+def _named_draft_id(kind: str, name: str) -> dict[str, str]:
+    key = _name_key(name)
+    identifier = f"{kind}:{quote(key, safe='')}"
+    old_slug = re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-") or "entry"
+    legacy = f"{kind}:{old_slug}"
+    return {"id": identifier, **({"legacy_id": legacy} if legacy != identifier else {})}
+
+
+def _configured_location_names(settings: Mapping[str, Any]) -> list[str] | None:
+    # The direct-text API previously accepted places as a synonym. The project
+    # configuration exposes locations as its canonical key.
+    if "locations" not in settings and "places" not in settings:
+        return None
+    value = settings.get("locations", settings.get("places"))
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError("locations must be a list of names")
+    names: dict[str, str] = {}
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError("Each configured location must be a nonempty name")
+        name = validate_metadata_text(item, "Location name", MAX_CHARACTER_NAME_CHARS)
+        if not name:
+            raise ValueError("Each configured location must be a nonempty name")
+        names.setdefault(_name_key(name), name)
+    return list(names.values())
+
+
+def _suggested_locations(
+    paragraphs: Sequence[CountedChapterPassage], language: str, excluded_names: set[str],
+) -> list[str]:
+    directional, local = _LOCATION_CUES.get(language, _LOCATION_CUES["en"])
+    cue = "|".join(re.escape(value) for value in (*directional, *local))
+    pattern = re.compile(
+        rf"(?<!\w)(?P<cue>(?i:{cue}))\s+(?P<name>{_LOCATION_WORD})"
+        rf"(?=(?:[ \t]+(?P<following>{_LOCATION_WORD}))?)"
+    )
+    stopwords = get_language_profile(language).stopwords | excluded_names
+    found: dict[str, str] = {}
+    counts: Counter[str] = Counter()
+    directional_hits: set[str] = set()
+    for paragraph in paragraphs:
+        for match in pattern.finditer(paragraph.text):
+            first, second = match["name"], match["following"]
+            if len(first) < 3 or not first[0].isupper() or _name_key(first) in stopwords:
+                continue
+            candidate = (
+                f"{first} {second}"
+                if second and second[0].isupper() and _name_key(second) not in stopwords else first
+            )
+            key = _name_key(candidate)
+            if key in stopwords:
+                continue
+            found.setdefault(key, candidate)
+            counts[key] += 1
+            if match["cue"].casefold() in directional:
+                directional_hits.add(key)
+    eligible = (key for key, count in counts.items() if count > 1 and key in directional_hits)
+    return [found[key] for key in sorted(eligible, key=lambda key: (-counts[key], key))[:_INFERRED_LOCATION_LIMIT]]
+
+
+def _short_excerpt(text: str, match_start: int = 0) -> str:
+    if len(text) <= _QUOTE_WIDTH:
+        return text
+    leading_context = _QUOTE_WIDTH // 4
+    if match_start > leading_context:
+        boundary = re.search(r"\s+", text[match_start - leading_context:match_start])
+        left = match_start - leading_context + boundary.end() if boundary else match_start
+        text = "…" + text[left:]
+    return shorten(text, width=_QUOTE_WIDTH, placeholder="…")
 
 
 def _extract_location_drafts(
-    chapters: Sequence[tuple[int, str, str]],
-    *,
-    excluded_names: set[str],
-    configured_locations: Sequence[str],
-    is_de: bool,
+    chapters: Sequence[tuple[int, str, str]], *,
+    excluded_names: set[str], configured_locations: Sequence[str] | None,
+    language: str, labels: Mapping[str, str],
 ) -> list[dict[str, Any]]:
-    counts: Counter[str] = Counter()
-    chapters_by_loc: dict[str, set[int]] = {}
-    if configured_locations:
-        targets = [loc.strip() for loc in configured_locations if str(loc).strip()]
-        for ch_num, _ch_title, ch_body in chapters:
-            for loc in targets:
-                hits = len(re.findall(rf"\b{re.escape(loc)}\b", ch_body))
-                if hits:
-                    counts[loc] += hits
-                    chapters_by_loc.setdefault(loc, set()).add(int(ch_num))
-    else:
-        for ch_num, ch_title, ch_body in chapters:
-            for match in _LOCATION_CUE_RE.finditer(f"{ch_title}\n{ch_body}"):
-                candidate = match.group(1).strip()
-                parts = candidate.split()
-                if any(p.casefold() in _LOCATION_STOPWORDS for p in parts):
-                    continue
-                if candidate.casefold() in excluded_names or any(p.casefold() in excluded_names for p in parts):
-                    continue
-                counts[candidate] += 1
-                chapters_by_loc.setdefault(candidate, set()).add(int(ch_num))
-        counts = Counter({k: v for k, v in counts.items() if v >= 2})
-
+    prepared = [(number, title, list(counted_chapter_passages(body))) for number, title, body in chapters]
+    basis = "configured" if configured_locations is not None else "inferred"
+    names = configured_locations if configured_locations is not None else _suggested_locations(
+        [part for _, _, parts in prepared for part in parts], language, excluded_names,
+    )
     drafts: list[dict[str, Any]] = []
-    for loc, total in counts.most_common(_MAX_LOCATIONS):
-        chs = sorted(chapters_by_loc.get(loc, ()))
-        first_hit = _first_quote_for_name(chapters, loc)
-        if is_de:
-            body_lines = [
-                f"## Überblick\n- **Ort / Schauplatz:** {loc}",
-                f"- **Erwähnungen:** {total} in {len(chs)} von {len(chapters)} Kapiteln"
-                + (f" (Kapitel {', '.join(str(c) for c in chs[:12])})" if chs else ""),
-                "\n## Atmosphäre & Fakten\n- (Offene Details aus dem Manuskript ergänzen)",
-            ]
-            if first_hit:
-                body_lines.append(
-                    f"\n## Erste Textstelle\n- Kapitel {first_hit['chapter']} ({first_hit['chapter_title']}), "
-                    f"Zeile {first_hit['line']}: „{first_hit['quote']}“"
-                )
-            title = f"Ort: {loc}"
-            summary = f"{total} Erwähnungen · {len(chs)}/{len(chapters)} Kapitel"
-        else:
-            body_lines = [
-                f"## Overview\n- **Location:** {loc}",
-                f"- **Mentions:** {total} in {len(chs)} of {len(chapters)} chapters"
-                + (f" (chapters {', '.join(str(c) for c in chs[:12])})" if chs else ""),
-                "\n## Setting & facts\n- (Add verified details from manuscript or research)",
-            ]
-            if first_hit:
-                body_lines.append(
-                    f"\n## First occurrence\n- Chapter {first_hit['chapter']} ({first_hit['chapter_title']}), "
-                    f"line {first_hit['line']}: “{first_hit['quote']}”"
-                )
-            title = f"Location: {loc}"
-            summary = f"{total} mentions · {len(chs)}/{len(chapters)} chapters"
-        drafts.append(
-            {
-                "id": f"location:{_slug(loc)}",
-                "kind": "location",
-                "title": title,
-                "summary": summary,
-                "tags": ["manuscript-draft", "location"],
-                "body": "\n".join(body_lines),
-                "evidence_hints": {
-                    "location": loc,
-                    "mentions": int(total),
-                    "chapters": chs,
-                    **({"first_hit": dict(first_hit)} if first_hit else {}),
-                },
-            }
-        )
+    for name in names:
+        pattern = _name_pattern(re.escape(name))
+        by_chapter: Counter[int] = Counter()
+        first_hit = None
+        for number, title, parts in prepared:
+            for part in parts:
+                matches = list(pattern.finditer(part.text))
+                if not matches:
+                    continue
+                by_chapter[number] += len(matches)
+                if first_hit is None:
+                    first_hit = {"chapter": number, "chapter_title": title, "line": part.start_line,
+                                 "quote": _short_excerpt(part.text, matches[0].start())}
+        if first_hit is None:
+            continue
+        total = sum(by_chapter.values())
+        place_label = labels["research_dossier_draft_location_title"]
+        mentions_label = labels["research_dossier_character_mentions"]
+        chapter_label = labels["chapter"]
+        summary = f"{mentions_label} · {total} · {chapter_label} {len(by_chapter)}/{len(chapters)}"
+        body = "\n".join((
+            f"## {place_label}", "", labels[f"research_dossier_draft_location_{basis}"], "", summary, "",
+            f"## {labels['research_dossier_draft_first_match']}", "",
+            f"{chapter_label} {first_hit['chapter']} · {first_hit['chapter_title']}"
+            f" · {labels['line']} {first_hit['line']}", "", f"> {first_hit['quote']}",
+        ))
+        drafts.append({
+            **_named_draft_id("location", name),
+            "kind": "location", "title": f"{place_label}: {name}", "summary": summary,
+            "tags": ["manuscript-draft", "location"], "body": body,
+            "evidence_hints": {"location": name, "basis": basis, "mentions": total,
+                               "chapters": sorted(by_chapter), "first_hit": first_hit},
+        })
+    drafts.sort(key=lambda draft: (-draft["evidence_hints"]["mentions"], _name_key(draft["title"])))
     return drafts
-
-
-def _individual_scene_drafts(*, report: Mapping[str, Any], is_de: bool) -> list[dict[str, Any]]:
-    scenes = list(report.get("items") or report.get("scenes") or [])
-    ranked = sorted(scenes, key=lambda sc: -int(sc.get("words") or 0))[:_MAX_INDIVIDUAL_SCENES]
-    out: list[dict[str, Any]] = []
-    for idx, sc in enumerate(ranked, start=1):
-        ch = int(sc.get("chapter") or 0)
-        sc_num = int(sc.get("scene") or idx)
-        words = int(sc.get("words") or 0)
-        feats = sc.get("features") or {}
-        dlg = feats.get("dialog_pct")
-        label = str(sc.get("scene_title") or (f"Kap. {ch} · Szene {sc_num}" if is_de else f"Ch. {ch} · Scene {sc_num}"))
-        if is_de:
-            title = f"Szene: {label}"
-            summary = f"{words} Wörter" + (f" · {float(dlg):.0f}% Dialog" if isinstance(dlg, (int, float)) else "")
-            body = (
-                f"## Szenenprofil\n- **Szene:** {label}\n- **Umfang:** {words} Wörter\n"
-                + (f"- **Dialoganteil:** {float(dlg):.0f}%\n" if isinstance(dlg, (int, float)) else "")
-                + f"- **Einstieg / Ausstieg:** {sc.get('entry_hook_type') or '–'} / {sc.get('exit_hook_type') or '–'}\n"
-            )
-        else:
-            title = f"Scene: {label}"
-            summary = f"{words} words" + (f" · {float(dlg):.0f}% dialogue" if isinstance(dlg, (int, float)) else "")
-            body = (
-                f"## Scene profile\n- **Scene:** {label}\n- **Length:** {words} words\n"
-                + (f"- **Dialogue share:** {float(dlg):.0f}%\n" if isinstance(dlg, (int, float)) else "")
-                + f"- **Entry / Exit:** {sc.get('entry_hook_type') or '–'} / {sc.get('exit_hook_type') or '–'}\n"
-            )
-        out.append(
-            {
-                "id": f"scene:{ch}:{sc_num}",
-                "kind": "scene",
-                "title": title,
-                "summary": summary,
-                "tags": ["manuscript-draft", "scene"],
-                "body": body,
-                "evidence_hints": {
-                    "scene": label,
-                    "chapter": ch,
-                    "scene_index": sc_num,
-                    "words": words,
-                },
-            }
-        )
-    return out
-
-
-def _slug(value: str) -> str:
-    cleaned = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
-    return cleaned or "entry"
-
-
-def _first_quote_for_name(
-    chapters: Sequence[tuple[int, str, str]], pattern_text: str
-) -> dict[str, Any] | None:
-    pattern = re.compile(rf"\b{re.escape(pattern_text)}\b")
-    for chapter_num, chapter_title, chapter_body in chapters:
-        lines = chapter_body.splitlines()
-        for offset, raw_line in enumerate(lines):
-            stripped = raw_line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if pattern.search(stripped):
-                return {
-                    "chapter": int(chapter_num),
-                    "chapter_title": str(chapter_title),
-                    "line": int(offset + 1),
-                    "quote": stripped[:180],
-                }
-    return None
 
 
 def _first_character_quote(
@@ -198,16 +176,8 @@ def _first_character_quote(
     if not passages:
         return None
     passage = passages[0]
-    text: str = passage["text"]
-    start: int = passage["matches"][0]["start"]
-    if len(text) > _CHARACTER_QUOTE_WIDTH:
-        leading_context = _CHARACTER_QUOTE_WIDTH // 4
-        if start > leading_context:
-            boundary = re.search(r"\s+", text[start - leading_context:start])
-            left = start - leading_context + boundary.end() if boundary else start
-            text = "…" + text[left:]
-        text = shorten(text, width=_CHARACTER_QUOTE_WIDTH, placeholder="…")
-    return {"chapter": number, "chapter_title": title, "line": passage["start_line"], "quote": text}
+    return {"chapter": number, "chapter_title": title, "line": passage["start_line"],
+            "quote": _short_excerpt(passage["text"], passage["matches"][0]["start"])}
 
 
 def _character_draft(
@@ -281,7 +251,7 @@ def _character_draft(
         title = f"Character: {name}"
 
     return {
-        "id": f"character:{_slug(name)}",
+        **_named_draft_id("character", name),
         "kind": "character",
         "title": title,
         "summary": summary,
@@ -296,57 +266,72 @@ def _character_draft(
     }
 
 
-def _scenes_draft(*, report: Mapping[str, Any], total_chapters: int, is_de: bool) -> dict[str, Any] | None:
-    scenes = list(report.get("items") or report.get("scenes") or [])
-    if not scenes:
-        return None
-    lines: list[str] = []
-    if is_de:
-        lines.append("## Szenenübersicht")
-        lines.append(f"- **Erkannte Szenen:** {len(scenes)} über {total_chapters} Kapitel")
-        plateaus = list(report.get("pacing_plateaus") or [])
-        if plateaus:
-            lines.append(f"- **Gleichförmige Pacing-Strecken:** {len(plateaus)}")
-        lines.append("\n## Szenenliste")
-        for idx, sc in enumerate(scenes[:40], start=1):
-            label = sc.get("scene_title") or f"Kap. {sc.get('chapter')} · Szene {sc.get('scene', idx)}"
-            words = sc.get("words")
-            feats = sc.get("features") or {}
-            dlg = feats.get("dialog_pct")
-            dlg_str = f" · Dialog: {dlg:.0f}%" if isinstance(dlg, (int, float)) else ""
-            hooks = f" · Einstieg/Ausstieg: {sc.get('entry_hook_type') or '–'}/{sc.get('exit_hook_type') or '–'}"
-            lines.append(f"- **{label}** ({words} Wörter{dlg_str}{hooks})")
-        if len(scenes) > 40:
-            lines.append(f"- … und {len(scenes) - 40} weitere Szenen")
-        title = f"Szenenregister ({total_chapters} Kapitel, {len(scenes)} Szenen)"
-        summary = f"{len(scenes)} Szenen in {total_chapters} Kapiteln"
-    else:
-        lines.append("## Scene overview")
-        lines.append(f"- **Detected scenes:** {len(scenes)} across {total_chapters} chapters")
-        plateaus = list(report.get("pacing_plateaus") or [])
-        if plateaus:
-            lines.append(f"- **Pacing plateaus:** {len(plateaus)}")
-        lines.append("\n## Scene list")
-        for idx, sc in enumerate(scenes[:40], start=1):
-            label = sc.get("scene_title") or f"Ch. {sc.get('chapter')} · Scene {sc.get('scene', idx)}"
-            words = sc.get("words")
-            feats = sc.get("features") or {}
-            dlg = feats.get("dialog_pct")
-            dlg_str = f" · Dialogue: {dlg:.0f}%" if isinstance(dlg, (int, float)) else ""
-            hooks = f" · Entry/Exit: {sc.get('entry_hook_type') or '–'}/{sc.get('exit_hook_type') or '–'}"
-            lines.append(f"- **{label}** ({words} words{dlg_str}{hooks})")
-        if len(scenes) > 40:
-            lines.append(f"- … and {len(scenes) - 40} more scenes")
-        title = f"Scene register ({total_chapters} chapters, {len(scenes)} scenes)"
-        summary = f"{len(scenes)} scenes across {total_chapters} chapters"
+def _scene_position(scene: Mapping[str, Any], labels: Mapping[str, str]) -> str:
+    chapter = f"{labels['chapter']} {scene['chapter']}"
+    return chapter if scene["chapter_as_unit"] else f"{chapter} · {labels['scene_unit']} {scene['scene']}"
+
+
+def _scene_counts(scene: Mapping[str, Any], labels: Mapping[str, str]) -> str:
+    return f"{scene['words']} {labels['words']} · {scene['sentences']} {labels['sentences']}"
+
+
+def _individual_scene_drafts(
+    scenes: Sequence[Mapping[str, Any]], labels: Mapping[str, str],
+) -> list[dict[str, Any]]:
+    drafts = []
+    for scene in scenes:
+        scope = "chapter" if scene["chapter_as_unit"] else "scene"
+        heading = labels["chapter"] if scope == "chapter" else labels["scene_unit"]
+        position = _scene_position(scene, labels)
+        stats = _scene_counts(scene, labels)
+        lines = [f"## {scene['scene_title']}", "", position, "", stats]
+        if scope == "chapter":
+            lines.extend(("", labels["research_dossier_draft_scene_chapter_fallback"]))
+        features = scene["features"]
+        if features["dialog_pct"] is not None:
+            lines.extend(("", f"{labels['feat_dialog']} · {features['dialog_pct']:.0f} %"))
+        for edge, passage in (("entry", "opening"), ("exit", "closing")):
+            hook = labels.get(f"hook_type_{scene[f'{edge}_hook_type']}", labels["hook_type_unknown"])
+            if edge == "exit" and scene["closing"] == scene["opening"]:
+                lines.extend(("", f"{labels['scene_exit_hook']} · {hook}"))
+                continue
+            passage_key = "first_passage" if edge == "entry" else "last_passage"
+            lines.extend(("", f"## {labels['research_dossier_draft_' + passage_key]}", "", hook))
+            if scene[passage]:
+                lines.extend(("", f"> {_short_excerpt(scene[passage])}"))
+        drafts.append({
+            "id": f"scene:{scene['id']}", "kind": "scene",
+            "title": f"{heading}: {scene['scene_title']}", "summary": f"{position} · {stats}",
+            "tags": ["manuscript-draft", "scene"], "body": "\n".join(lines),
+            "evidence_hints": {
+                "scene": scene["scene_title"], "scene_scope": scope, "chapter": scene["chapter"],
+                "chapter_title": scene["chapter_title"], "scene_index": scene["scene"],
+                "scene_source_sha256": scene["source_sha256"], "words": scene["words"],
+                "sentences": scene["sentences"],
+            },
+        })
+    return drafts
+
+
+def _scenes_draft(
+    scenes: Sequence[Mapping[str, Any]], total_chapters: int, labels: Mapping[str, str],
+) -> dict[str, Any]:
+    title = labels["research_dossier_draft_scene_register"]
+    unit_label = "research_dossier_draft_scene_units_one" if len(scenes) == 1 else "research_dossier_draft_scene_units"
+    summary = labels[unit_label].format(count=len(scenes))
+    uses_chapters = any(scene["chapter_as_unit"] for scene in scenes)
+    lines = [f"## {title}", "", summary, ""]
+    if uses_chapters:
+        lines.extend((labels["research_dossier_draft_scene_chapter_fallback"], ""))
+    for scene in scenes:
+        position = _scene_position(scene, labels)
+        stats = _scene_counts(scene, labels)
+        lines.append(f"- **{position}** · {scene['scene_title']} · {stats}")
     return {
-        "id": "scenes:manuscript",
-        "kind": "scene",
-        "title": title,
-        "summary": summary,
-        "tags": ["manuscript-draft", "scenes"],
-        "body": "\n".join(lines),
-        "evidence_hints": {"chapters": total_chapters, "scenes": len(scenes)},
+        "id": "scenes:manuscript", "kind": "scene", "title": title, "summary": summary,
+        "tags": ["manuscript-draft", "scenes"], "body": "\n".join(lines),
+        "evidence_hints": {"scene_scope": "register", "chapters": total_chapters, "scenes": len(scenes),
+                           "chapter_fallback": uses_chapters},
     }
 
 
@@ -369,18 +354,19 @@ def extract_manuscript_dossier_drafts(
     want_characters = kind in ("all", "character", "characters")
     want_scenes = kind in ("all", "scene", "scenes")
     want_locations = kind in ("all", "location", "locations")
+    labels = {**get_language_profile(lang_key).labels, **workspace_labels_for(lang_key)}
+    configured_locations = _configured_location_names(settings) if want_locations else None
     excluded_character_names: set[str] = set()
 
-    if want_characters or want_locations:
+    if want_characters or (want_locations and configured_locations is None):
         resolved = resolve_character_settings(None, settings)
         names_input: Mapping[str, str] | Sequence[str] = (
             resolved.names or _auto_character_names(chapters)
         )
-        if isinstance(names_input, Mapping):
-            excluded_character_names.update(str(v).casefold() for v in names_input.values())
-            excluded_character_names.update(str(k).casefold() for k in names_input)
-        else:
-            excluded_character_names.update(str(n).casefold() for n in names_input)
+        # Recurring capitals alone do not prove that a name belongs to a
+        # character. Only an explicit character declaration excludes a place.
+        declared_names = resolved.names.values() if isinstance(resolved.names, Mapping) else resolved.names
+        excluded_character_names.update(_name_key(name) for name in declared_names)
         if want_characters and names_input:
             pres = presence_report(
                 text,
@@ -428,23 +414,17 @@ def extract_manuscript_dossier_drafts(
                     k: v for k, v in settings.items() if k in {"assignments", "groups", "planned", "titles"}
                 }
                 scene_settings = filtered or None
-        sc_report = scene_report(text, config, scene_settings)
-        sc_draft = _scenes_draft(report=sc_report, total_chapters=total_chapters, is_de=is_de)
-        if sc_draft is not None:
-            drafts.append(sc_draft)
-        drafts.extend(_individual_scene_drafts(report=sc_report, is_de=is_de))
+        sc_report = scene_report(text, config, scene_settings, _include_draft_evidence=True)
+        scenes = sc_report["items"]
+        if scenes:
+            drafts.append(_scenes_draft(scenes, total_chapters, labels))
+            drafts.extend(_individual_scene_drafts(scenes, labels))
 
     if want_locations:
-        raw_locs = (settings or {}).get("locations") or (settings or {}).get("places") or []
-        configured_locs = [str(item) for item in raw_locs] if isinstance(raw_locs, Sequence) and not isinstance(raw_locs, str) else []
-        drafts.extend(
-            _extract_location_drafts(
-                chapters,
-                excluded_names=excluded_character_names,
-                configured_locations=configured_locs,
-                is_de=is_de,
-            )
-        )
+        drafts.extend(_extract_location_drafts(
+            chapters, excluded_names=excluded_character_names, configured_locations=configured_locations,
+            language=lang_key, labels=labels,
+        ))
 
     return {
         "schema_version": DRAFT_SCHEMA,

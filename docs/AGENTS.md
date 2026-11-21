@@ -170,7 +170,7 @@ The archive audit reads the project explicitly named in its request.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
-- `lixity_manuscript_dossier_drafts`: Read-only extraction of deterministic character and scene dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene"`).
+- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene and place dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene|location"`).
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells with
   `abs(z_star) >= z_threshold` before rounding, with per-chapter counts
   (`lixity-outlier-matrix/1`). Supply a finite, nonnegative JSON number
@@ -1500,6 +1500,15 @@ an archive write; omission alone receives a default.
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.
   Drafts covered by existing dossiers are excluded by default and counted in
   `skipped_existing`. Use `include_existing=1` to preview all suggestions.
+  In an initialized archive the response includes `project_id`. Each file-based
+  draft includes `preview_sha256` for its exact text, source and project settings.
+  Scene evidence uses `scene_scope: register|scene|chapter`. Place evidence
+  includes `basis: configured|inferred` and a counted prose match.
+  With `include_existing=1`, covered proposals carry `already_covered: true`.
+  A covered character proposal carries `existing_dossier` when it can be linked
+  to exactly one current generated dossier. Its `id`, `title`, `revision`,
+  `project_id` and `snapshot` identify that accepted dossier read. The editor
+  can prepare a separate revision after rechecking the proposal and dossier.
 - `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
   for a current dossier whose first revision was generated from a character
   suggestion. Native current dossier details advertise
@@ -1517,10 +1526,13 @@ an archive write; omission alone receives a default.
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
-  dossier from a manuscript draft (`{"draft_id": "...", "kind": "character",
-  "language": "...", "actor": "local-author", "manuscript": "..."}`; omitted
-  `manuscript` uses the loaded server input, and omitted `draft_id` selects the
-  first draft matching `kind`).
+  dossier from a manuscript draft. For native confirmation send `draft_id`,
+  `preview_sha256` and the normal research context fields. Changed inputs or
+  an already covered proposal return HTTP 409 with `code: "stale-draft"`.
+  `language` and `actor` are optional. Omitted `manuscript` uses the loaded
+  file. The direct creation form without a draft ID selects the first
+  uncovered proposal matching `kind`. Explicit IDs from older previews
+  resolve only when they identify one candidate.
 - `GET /api/research/claim-relations?claim_id=...&include_retracted=true`:
   recorded causal relations; both filters are optional, with retracted entries
   omitted by default. `include_retracted` accepts `true|false`.

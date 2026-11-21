@@ -2,6 +2,7 @@
 
 import re
 from collections.abc import Mapping, Sequence
+from hashlib import sha256
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
@@ -348,6 +349,7 @@ def scene_report(
     text: str, config: CorpusConfig, settings: Any = None, *,
     _premeasured_chapters: Sequence[ChapterMetrics] | None = None,
     pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
+    _include_draft_evidence: bool = False,
 ) -> dict[str, Any]:
     """Use existing analysis features per pacing unit; never analyze sources.
 
@@ -455,6 +457,13 @@ def scene_report(
             }
             if pov_by_chapter is not None:
                 item_dict["pov_characters"] = list(pov_by_chapter.get(chapter_num, ()))
+            if _include_draft_evidence:
+                item_dict.update(
+                    chapter_as_unit=not scene_breaks,
+                    source_sha256=sha256(scene.text.encode("utf-8")).hexdigest(),
+                    opening=scene.text[first[0]:first[1]],
+                    closing=exit_sentence,
+                )
             items.append(item_dict)
     missing = assignments.keys() - {item["id"] for item in items}
     unplanned = missing - planned

@@ -626,8 +626,8 @@ matching headings are ambiguous and require reading the full dossier. Direct ID,
 
 ### Manuscript-driven dossier drafts
 
-`dossier-drafts` inspects a manuscript with deterministic presence/POV-gap,
-character-voice, and scene metrics and returns read-only candidate drafts
+`dossier-drafts` inspects a manuscript and returns read-only character, scene
+and place proposals
 (`manuscript-dossier-drafts/1`) without writing to the archive.
 `dossier-from-manuscript` explicitly creates one saved dossier from a chosen
 `--draft-id` (or the first draft matching `--kind` when `--draft-id` is
@@ -636,18 +636,43 @@ omitted).
 ```sh
 lixity research dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all
 lixity research dossier-from-manuscript --project ./novel --manuscript ./manuscript.md \
-  --draft-id DRAFT_ID --actor local-author
+  --draft-id DRAFT_ID --preview-sha256 PREVIEW_SHA256 --actor local-author
 ```
 
 Both commands accept `--language` to override the project's configured analysis
-language, and `--kind` accepts `all`, `character`, or `scene` (`dossier-drafts`
-defaults to `all`; `dossier-from-manuscript` defaults to `character` when
-`--draft-id` is omitted). In the browser workspace, open **Research → Dossiers
-→ From manuscript** and select **Load suggestions**. Review the character,
-place or scene proposal before saving it as a dossier. **New dossier** in
-the toolbar opens the manual form, where you can choose the **Character** template.
+language. `--kind` accepts `all`, `character`, `scene` or `location`. Previewing
+defaults to `all`. A creation without `--draft-id` selects the first new
+character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
+to confirm the manuscript, settings and saved text you reviewed.
+
+In the browser, open **Research → Dossiers → From manuscript** and select
+**Load suggestions**. The preview shows the full text that will become the
+dossier. If the manuscript or settings change before saving, reload and review
+the revised proposal. **Open saved dossier** opens the created record.
+**New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
+
+To update an existing generated character dossier, choose **Update existing
+character dossiers** and select its current manuscript proposal. **Prepare
+update** checks the proposal and the dossier revision again. The revision
+editor adds the proposal as an editable section after the existing notes.
+Choose a change type and enter a reason, then select **Save new version**.
+The same dossier ID and its earlier versions remain available. An existing
+proposal is offered for update only when it can be linked to one generated
+character dossier.
+
+The scene register and individual scenes can be saved independently. Scenes
+follow the manuscript order and show opening and closing text. A chapter
+without a recognized scene separator is measured as a whole chapter and labeled
+accordingly.
+
+Set `locations = ["Bern", "Hafen Nord"]` in the project-root `lixity.toml` to
+track named places. A configured empty list disables place suggestions. With
+no list, repeated capitalized names near spatial cues, including a directional
+cue, can yield up to twelve candidates. Read the cited prose to decide whether
+the name refers to a place. The count follows whole-name matches in prose.
+Headings and code blocks are outside this count.
 
 In a generated character dossier, **Character in the manuscript** reads the
 currently selected manuscript. It shows the name-mention count, every chapter's

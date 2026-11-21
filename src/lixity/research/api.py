@@ -33,9 +33,6 @@ from .dossier_edit import (
     prepare_dossier_edits as prepare_dossier_edits,
 )
 from .dossiers import (
-    _draft_matches_existing_dossier as _draft_matches_existing_dossier,
-)
-from .dossiers import (
     _get_dossier as _get_dossier,
 )
 from .dossiers import (

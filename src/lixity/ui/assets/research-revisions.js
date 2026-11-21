@@ -40,6 +40,20 @@ if (researchRevisionDialog) {
   // The native reader is disposable; hiding its retained forms is not a save.
   // Read the existing revision state and form values, never a second draft copy.
   window.LixityResearchDrafts = {
+    stageDossierBody: async function(id, prepare) {
+      if (window.LixitySite.readOnly || researchRevisionDialog.open || revisionState.pending) return;
+      var session = revisionState.session + 1;
+      await revisionOpen("dossier", id, "edit");
+      if (revisionState.session !== session || !researchRevisionDialog.open || revisionState.mode !== "edit") return;
+      var draft = prepare(revisionState.current);
+      var field = revisionFieldsHost.querySelector('textarea[name="body"]');
+      if (!draft || !field) { researchRevisionDialog.close(); return false; }
+      field.value = draft.body;
+      field.dispatchEvent(new Event("input", {bubbles: true}));
+      revisionStatus(draft.message, false);
+      field.focus();
+      return true;
+    },
     busy: function() {
       return revisionState.pending || revisionBatch.pending || Boolean(document.querySelector('#research-manager [data-pending="true"]'));
     },
@@ -300,6 +314,7 @@ if (researchRevisionDialog) {
       var raw = revisionState.section && spec.name === "body" ? revisionState.sectionContent : revisionFieldValue(record, spec.name, false);
       var value = Array.isArray(raw) ? raw.slice() : raw;
       revisionState.initial[spec.name] = value;
+      if (revisionState.kind === "dossier" && spec.name === "tags") value = researchDossierDisplayTags(value);
       var id = "research-revision-field-" + spec.name;
       var group = document.createElement("div");
       group.className = "form-group";
@@ -381,6 +396,7 @@ if (researchRevisionDialog) {
       if (["dossier_revision", "claim_revision", "from_claim_revision", "to_claim_revision"].includes(spec.name)) return "";
       var value = revisionFieldValue(record, spec.name, true, envelope);
       if (dossier && ["title", "body", "geography"].includes(spec.name)) return "";
+      if (dossier && spec.name === "tags") value = researchDossierDisplayTags(value);
       if (!spec.required && (value === null || value === undefined ||
           typeof value === "string" && !value.trim() || Array.isArray(value) && !value.length)) return "";
       if (Array.isArray(value)) value = value.join(", ");
@@ -620,6 +636,11 @@ if (researchRevisionDialog) {
         spec.type === "textarea" ? input.value : input.value.trim();
       var before = revisionState.initial[spec.name];
       if (spec.type === "number" && value === "") return;
+      if (revisionState.kind === "dossier" && spec.name === "tags" && Array.isArray(before)) {
+        var visibleBefore = researchDossierDisplayTags(before);
+        if (JSON.stringify(value) === JSON.stringify(visibleBefore)) return;
+        value = value.concat(before.filter(function(tag) { return !visibleBefore.includes(tag) && !value.includes(tag); }));
+      }
       if (JSON.stringify(value) !== JSON.stringify(before)) {
         changes[spec.name] = value === "" && !spec.required && !revisionState.section ? null : value;
       }
@@ -673,6 +694,7 @@ if (researchRevisionDialog) {
       var field = document.getElementById("research-revision-field-" + name);
       if (!field) return;
       var value = changes[name];
+      if (revisionState.kind === "dossier" && name === "tags") value = researchDossierDisplayTags(value);
       if (field._geographyEditor) field._geographyEditor.set(value);
       else if (field.dataset.referenceKind) revisionSetReferenceSelection(field, value);
       else if (field.type === "checkbox") field.checked = Boolean(value);
@@ -715,6 +737,7 @@ if (researchRevisionDialog) {
 
   function revisionMergeValue(value, name, kind, envelope) {
     envelope = envelope || revisionState.current;
+    if ((kind || revisionState.kind) === "dossier" && name === "tags") value = researchDossierDisplayTags(value);
     if (name === "dossier_revisions" && value && typeof value === "object") {
       return Object.entries(value).map(function(pair) {
         return researchReferenceLabel("dossier", {id:pair[0], revision:pair[1]}, envelope);

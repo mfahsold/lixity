@@ -145,6 +145,16 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": "kind must be all, character, scene, or location"}, 400)
             return
         kind = cast(Literal["all", "character", "scene", "location"], kind_raw)
+        preview_sha256 = payload.get("preview_sha256")
+        if "preview_sha256" in payload and (
+            not isinstance(preview_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", preview_sha256) or not draft_id
+        ):
+            self._error("A draft ID and valid preview digest are required to confirm a manuscript draft", 400)
+            return
+        project_id = payload.get("project_id")
+        if project_id is not None and not isinstance(project_id, str):
+            self._error("A selected research project ID is required", 400)
+            return
         language = str(payload.get("language") or "").strip() or self.language
         actor = str(payload.get("actor") or "local-author").strip() or "local-author"
         try:
@@ -155,8 +165,12 @@ class ResearchRoutesMixin(ResponseMixin):
                 kind=kind,
                 language=language,
                 actor=actor,
+                preview_sha256=preview_sha256,
+                expected_project_id=project_id,
             )
             self._json({"ok": True, **res})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "code": "stale-draft", "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError, TypeError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 

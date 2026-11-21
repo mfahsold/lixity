@@ -54,6 +54,13 @@
 }
 .pane-ribbon > .ctl[hidden],
 .research-pane-navigation > .ctl[hidden] { display: none; }
+#r-manuscript-drafts { min-inline-size: 0; }
+#r-manuscript-drafts .ctl { max-inline-size: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
+#r-manuscript-drafts :is(h5, h6, p[role]) { margin-block: 0; overflow-wrap: anywhere; }
+#r-manuscript-drafts [data-draft-group="scene-individual"] > .chip-row {
+  max-block-size: min(40dvh, 16rem); overflow: auto; padding: var(--space-1);
+}
+#r-manuscript-drafts [data-draft-preview-body] > .research-dossier-body-wrap { margin: 0; }
 .pane-ribbon .ctl-icon,
 .research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; padding-inline: 0; }
 .pane-ribbon > .ctl[aria-current="location"],

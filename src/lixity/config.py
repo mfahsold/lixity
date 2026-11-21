@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "manuscript", "audio")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "locations", "manuscript", "audio")
 PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "audio")
 
 # Keys that may appear in [tool.lixity] (documented schema).
@@ -64,6 +64,7 @@ TOOL_KEYS = frozenset(
         "min_chapters",
         "names",
         "characters",
+        "locations",
         "motifs",
         "nda",
         "scene_analysis",

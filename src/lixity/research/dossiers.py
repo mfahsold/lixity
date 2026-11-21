@@ -1,19 +1,25 @@
 """Dossier lifecycle, collection, term-profile, and manuscript-draft orchestration."""
 
+import json
 import re
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Literal
+from unicodedata import normalize
 
 from pydantic import ValidationError
 
+from ..config import read_explicit_project_config
+from ..io import FileUtils
+from ..project_structure import MAX_CONFIG_BYTES
 from . import editorial
 from .geography import summarize_geography
 from .images import image_descriptions, resolve_dossier_images, resolve_dossier_media
 from .manuscript import dossier_manuscript_evidence
 from .manuscript_drafts import extract_manuscript_dossier_drafts
 from .models import LANGUAGES, Dossier, Language, Passage, Reference, Tombstone
-from .repository import Repository, ResearchError, Snapshot
+from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, digest
 from .revisions import EvidenceCitationReader, dossier_withdrawal, source_updates
 from .sections import (
     _editable_section_titles,
@@ -46,10 +52,18 @@ def create_dossier(
     actor: str = "local-author",
 ) -> dict[str, Any]:
     """Create and commit a new Dossier record."""
-    from .api import envelope
-
     repository = Repository(project)
     snapshot = repository.snapshot()
+    return _commit_dossier(repository, snapshot, title, body, language=language, tags=tags,
+                           evidence_ids=evidence_ids, geography=geography, actor=actor)
+
+
+def _commit_dossier(
+    repository: Repository, snapshot: Snapshot, title: str, body: str, *,
+    language: str | None, tags: list[str] | None, actor: str,
+    evidence_ids: list[str] | None = None, geography: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    from .api import envelope
 
     title = title.strip()
     if not (1 <= len(title) <= 500):
@@ -690,26 +704,105 @@ def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[s
     return (snapshot.project.id, name) if name is not None else None
 
 
-def _draft_matches_existing_dossier(draft: Mapping[str, Any], existing_titles: Sequence[str]) -> bool:
-    title_cf = str(draft.get("title") or "").strip().casefold()
-    if title_cf and any(t == title_cf for t in existing_titles):
-        return True
-    kind = str(draft.get("kind") or "")
+DraftKind = Literal["all", "character", "scene", "location"]
+_DRAFT_ORIGIN_TAG = "manuscript-draft:"
+_DRAFT_TITLE_PREFIXES = {
+    "character": ("figur:", "character:"),
+    "location": ("ort:", "location:"),
+    "scene": ("szene:", "scene:"),
+}
+
+
+def _draft_label(value: str) -> str:
+    return normalize("NFC", value.strip().casefold())
+
+
+def _draft_legacy_key(draft: Mapping[str, Any]) -> tuple[str, str]:
+    if draft["id"] == "scenes:manuscript":
+        return "register", ""
+    kind = str(draft["kind"])
+    return kind, _draft_label(str(draft["evidence_hints"][kind]))
+
+
+def _draft_digest(value: Any) -> str:
+    return digest(json.dumps(value, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8"))
+
+
+def _draft_origin(draft: Mapping[str, Any], root: Path, manuscript: Path) -> str:
+    kind, label = _draft_legacy_key(draft)
+    identity = [kind, label]
+    if kind in ("scene", "register"):
+        label = manuscript.relative_to(root).as_posix() if manuscript.is_relative_to(root) else manuscript.as_posix()
+        identity = [kind, label, draft["id"]]
     if kind == "scene":
-        return any(
-            t.startswith(("szenenregister", "scene register", "szene:", "scene:"))
-            for t in existing_titles
-        )
-    hints = draft.get("evidence_hints")
-    entity_name = str(
-        (hints.get("character") or hints.get("location") or hints.get("scene"))
-        if isinstance(hints, Mapping)
-        else ""
-    ).strip()
-    if not entity_name:
-        return False
-    pattern = re.compile(rf"\b{re.escape(entity_name.casefold())}\b")
-    return any(bool(pattern.search(t)) for t in existing_titles)
+        hints = draft["evidence_hints"]
+        identity.extend([hints.get("scene_scope"), hints.get("scene_source_sha256")])
+    return _DRAFT_ORIGIN_TAG + _draft_digest(identity)[:32]
+
+
+def _saved_draft_keys(snapshot: Snapshot) -> tuple[dict[str, list[Dossier]], dict[tuple[str, str], list[Dossier]]]:
+    """Use accepted origin tags, with exact legacy names only within one kind."""
+    retired = {identifier for operation, kind, identifier in snapshot.lifecycle
+               if kind == "dossier" and operation in ("withdraw", "purge")}
+    origins: dict[str, list[Dossier]] = {}
+    legacy: dict[tuple[str, str], list[Dossier]] = {}
+    for record in snapshot.records.values():
+        if not isinstance(record, Dossier) or record.id in retired:
+            continue
+        original = snapshot.get(Reference(id=record.id, revision=1), Dossier)
+        tags = {_draft_label(tag) for tag in original.tags}
+        generated = "manuscript-draft" in tags
+        identity = {tag for tag in tags if tag.startswith(_DRAFT_ORIGIN_TAG)
+                    and re.fullmatch(r"[0-9a-f]{32}", tag.removeprefix(_DRAFT_ORIGIN_TAG))}
+        if generated and identity:
+            for tag in identity:
+                origins.setdefault(tag, []).append(record)
+            continue
+        title = _draft_label(original.title if generated else record.title)
+        if generated and "scenes" in tags and title.startswith(("szenenregister (", "scene register (")):
+            legacy.setdefault(("register", ""), []).append(record)
+            continue
+        for kind, prefixes in _DRAFT_TITLE_PREFIXES.items():
+            if kind == "scene" and not (generated and "scene" in tags):
+                continue
+            prefix = next((value for value in prefixes if title.startswith(value)), None)
+            if prefix is not None:
+                legacy.setdefault((kind, title.removeprefix(prefix).strip()), []).append(record)
+                break
+    return origins, legacy
+
+
+def _covered_drafts(
+    drafts: Sequence[Mapping[str, Any]], snapshot: Snapshot, root: Path, manuscript: Path,
+) -> dict[str, list[Dossier]]:
+    origins, legacy = _saved_draft_keys(snapshot)
+    labels = Counter(_draft_legacy_key(item) for item in drafts)
+    covered: dict[str, list[Dossier]] = {}
+    for item in drafts:
+        key = _draft_legacy_key(item)
+        matches = origins.get(_draft_origin(item, root, manuscript), [])
+        if labels[key] == 1:
+            matches = [*matches, *legacy.get(key, [])]
+        if matches:
+            covered[str(item["id"])] = matches
+    return covered
+
+
+def _draft_report(
+    root: Path, manuscript: Path, *, language: str | None, kind: DraftKind, snapshot: Snapshot | None,
+) -> dict[str, Any]:
+    settings = read_explicit_project_config(root, maximum_bytes=MAX_CONFIG_BYTES) if root.is_dir() else {}
+    requested = language or (str(settings.get("language")) if settings.get("language") else "en")
+    language = "auto" if requested.strip().lower() == "auto" else supported_language(requested)
+    text, source_sha256 = FileUtils.read_source_snapshot(str(manuscript))
+    payload = extract_manuscript_dossier_drafts(text, language=language, settings=settings, kind=kind)
+    project_id = snapshot.project.id if snapshot is not None else None
+    analysis = _draft_digest([str(root), project_id, str(manuscript), source_sha256, settings, language])
+    for item in payload["drafts"]:
+        item["preview_sha256"] = _draft_digest([analysis, item])
+    if project_id is not None:
+        payload["project_id"] = project_id
+    return payload
 
 
 def manuscript_dossier_drafts(
@@ -717,44 +810,33 @@ def manuscript_dossier_drafts(
     manuscript: str | Path,
     *,
     language: str | None = None,
-    kind: Literal["all", "character", "scene", "location"] = "all",
+    kind: DraftKind = "all",
     exclude_existing: bool = True,
 ) -> dict[str, Any]:
     """Extract read-only dossier drafts from a manuscript using deterministic metrics."""
-    from ..config import read_explicit_project_config
-
-    root = Path(project)
-    manuscript_path = Path(manuscript)
-    if not manuscript_path.is_file():
-        raise ResearchError(f"Manuscript file does not exist: {manuscript_path}")
-    settings = read_explicit_project_config(root, maximum_bytes=65536) if root.is_dir() else {}
-    resolved_lang = supported_language(
-        language or (str(settings.get("language")) if settings.get("language") else "en")
-    )
-    text = manuscript_path.read_text(encoding="utf-8", errors="replace")
-    payload = extract_manuscript_dossier_drafts(
-        text,
-        language=resolved_lang,
-        settings=settings,
-        kind=kind,
-    )
-    skipped_existing = 0
-    if exclude_existing and (root / "research").is_dir():
-        existing_titles = [
-            str(d.get("title") or "").strip().casefold()
-            for d in list_dossiers(root).get("dossiers", [])
-            if str(d.get("title") or "").strip()
-        ]
-        if existing_titles:
-            kept: list[dict[str, Any]] = []
-            for item in payload.get("drafts", []):
-                if _draft_matches_existing_dossier(item, existing_titles):
-                    skipped_existing += 1
-                else:
-                    kept.append(item)
-            payload["drafts"] = kept
-    payload["skipped_existing"] = skipped_existing
-    payload["manuscript"] = str(manuscript_path)
+    repository = Repository(project)
+    source = Path(manuscript).expanduser().resolve()
+    snapshot = repository.snapshot(kinds=frozenset({"dossier"})) if repository.data.is_dir() else None
+    payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot)
+    drafts = payload["drafts"]
+    if snapshot is not None:
+        covered = _covered_drafts(drafts, snapshot, repository.root, source)
+        if exclude_existing:
+            payload["drafts"] = [item for item in drafts if item["id"] not in covered]
+        else:
+            for item in drafts:
+                records = covered.get(item["id"])
+                if not records:
+                    continue
+                item["already_covered"] = True
+                if item["kind"] == "character" and len(records) == 1:
+                    record = records[0]
+                    original_name = _generated_character_name(snapshot, record.id)
+                    if original_name is not None and _draft_label(original_name) == _draft_legacy_key(item)[1]:
+                        item["existing_dossier"] = {"id": record.id, "title": record.title, "revision": record.revision,
+                                                   "project_id": snapshot.project.id, "snapshot": snapshot.digest}
+    payload["skipped_existing"] = len(drafts) - len(payload["drafts"])
+    payload["manuscript"] = str(manuscript)
     return payload
 
 
@@ -763,37 +845,65 @@ def create_dossier_from_manuscript(
     manuscript: str | Path,
     *,
     draft_id: str | None = None,
-    kind: Literal["all", "character", "scene", "location"] = "character",
+    kind: DraftKind = "character",
     language: str | None = None,
     actor: str = "local-author",
+    preview_sha256: str | None = None,
+    expected_project_id: str | None = None,
 ) -> dict[str, Any]:
     """Create a Dossier explicitly from a deterministic manuscript draft."""
-    payload = manuscript_dossier_drafts(
-        project,
-        manuscript,
-        language=language,
-        kind=kind if draft_id is None else "all",
-    )
-    drafts = payload.get("drafts", [])
-    if not drafts:
-        raise ResearchError("No manuscript dossier drafts could be extracted")
-    selected: dict[str, Any]
+    if preview_sha256 is not None and (not draft_id or not re.fullmatch(r"[0-9a-f]{64}", preview_sha256)):
+        raise ResearchError("A draft ID and valid preview digest are required to confirm a manuscript draft")
     if draft_id is not None:
-        match = next((item for item in drafts if item.get("id") == draft_id), None)
-        if match is None:
+        prefix = draft_id.partition(":")[0]
+        if prefix in ("scene", "scenes"):
+            kind = "scene"
+        elif prefix == "character":
+            kind = "character"
+        elif prefix == "location":
+            kind = "location"
+        else:
             raise ResearchError(f"Unknown manuscript dossier draft ID: {draft_id}")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id is not None and expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Selected research project changed; reload manuscript suggestions")
+    source = Path(manuscript).expanduser().resolve()
+    try:
+        payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot)
+    except (OSError, ValueError) as exc:
+        if preview_sha256 is None:
+            raise
+        raise ResearchConflictError(f"Could not verify the manuscript draft; reload suggestions: {exc}") from exc
+    drafts = payload["drafts"]
+    covered = _covered_drafts(drafts, snapshot, repository.root, source)
+    if draft_id is None:
+        candidates = [item for item in drafts if item["id"] not in covered]
+        if not candidates:
+            raise ResearchError("No new manuscript dossier drafts could be extracted")
+        selected = candidates[0]
+    elif preview_sha256 is not None:
+        match = next((item for item in drafts if item["id"] == draft_id and item["preview_sha256"] == preview_sha256), None)
+        if match is None:
+            raise ResearchConflictError("Manuscript draft changed; reload the suggestions before saving")
         selected = match
     else:
-        selected = drafts[0]
-    created = create_dossier(
-        project,
+        candidates = [item for item in drafts if item["id"] == draft_id or item.get("legacy_id") == draft_id]
+        if len(candidates) != 1:
+            raise ResearchError(f"Unknown or ambiguous manuscript dossier draft ID: {draft_id}")
+        selected = candidates[0]
+    if selected["id"] in covered:
+        raise ResearchConflictError("A dossier for this manuscript suggestion already exists")
+    created = _commit_dossier(
+        repository, snapshot,
         str(selected["title"]),
         str(selected["body"]),
         language=payload["language"],
-        tags=list(selected.get("tags", [])),
+        tags=[*selected["tags"], _draft_origin(selected, repository.root, source)],
         actor=actor,
     )
     return {
         **created,
+        "project_id": snapshot.project.id,
         "draft": selected,
     }

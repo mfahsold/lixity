@@ -438,9 +438,11 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     renderWindowedResearchList("dossiers", listHost, [], data.message || uiLabel("research_load_dossiers_failed"));
     return;
   }
-  var dossiers = data.dossiers;
+  var dossiers = data.dossiers.map(function(dossier) {
+    return Object.assign({}, dossier, {tags: researchDossierDisplayTags(dossier.tags)});
+  });
   reading.state.count = dossiers.length;
-  researchDossiersPayload = data;
+  researchDossiersPayload = Object.assign({}, data, {dossiers: dossiers});
   researchDossiersContext = context;
   ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
     var dossierSelect = document.getElementById(selectId);
@@ -458,8 +460,8 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     window.LixityComponents.syncEmptySelect("r-dos-eids");
   }
   syncAllSearchableSelects();
-  if (typeof refreshResearchCollectionEditor === "function") refreshResearchCollectionEditor(data);
-  renderResearchDossiersView(data);
+  if (typeof refreshResearchCollectionEditor === "function") refreshResearchCollectionEditor(researchDossiersPayload);
+  renderResearchDossiersView(researchDossiersPayload);
   return data;
 }
 

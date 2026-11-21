@@ -310,8 +310,7 @@ _TOOLS = (
     {
         "name": "lixity_manuscript_dossier_drafts",
         "description": (
-            "Read-only extraction of deterministic character and scene dossier drafts from "
-            "manuscript text (presence/POV gaps, character voice profiles, scene counts)."
+            "Read-only extraction of character, scene and place dossier drafts from manuscript text."
         ),
         "inputSchema": {
             "type": "object",
@@ -324,8 +323,8 @@ _TOOLS = (
                 },
                 "kind": {
                     "type": "string",
-                    "enum": ["all", "character", "scene"],
-                    "description": "Draft kind filter (all, character, or scene).",
+                    "enum": ["all", "character", "scene", "location"],
+                    "description": "Draft kind filter (all, character, scene, or location).",
                     "default": "all",
                 },
             },
@@ -644,12 +643,12 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             from .research.manuscript_drafts import extract_manuscript_dossier_drafts
 
             kind_arg = str(arguments.get("kind") or "all")
-            if kind_arg not in {"all", "character", "scene"}:
+            if kind_arg not in {"all", "character", "scene", "location"}:
                 return {
                     "content": [
                         {
                             "type": "text",
-                            "text": "lixity_manuscript_dossier_drafts kind must be all, character, or scene.",
+                            "text": "lixity_manuscript_dossier_drafts kind must be all, character, scene, or location.",
                         }
                     ],
                     "isError": True,
