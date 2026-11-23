@@ -5,7 +5,7 @@
 >
 > This file defines repository constraints and required checks.
 > [CONTRIBUTING.md](CONTRIBUTING.md) owns maintainer procedures.
-> [AGENT_PROFILE.md](AGENT_PROFILE.md) owns agent verification practices.
+> [AGENT_PROFILE.md](AGENT_PROFILE.md) owns agent collaboration and verification practices.
 > [docs/AGENTS.md](docs/AGENTS.md) documents the shipped automation contract.
 
 Lixity is a shared manuscript-analysis engine, CLI and local browser app for
@@ -99,8 +99,8 @@ and investigate reported bugs before changing behavior.
 
 ## What to read (existing instruction trees, do not duplicate them)
 
-- `AGENT_PROFILE.md` — delegated agent operating rules: verify before
-  asserting, surgical diffs, explicit unknowns, escalation.
+- [AGENT_PROFILE.md](AGENT_PROFILE.md) covers verification, collaboration,
+  escalation and [durable project lessons](AGENT_PROFILE.md#record-durable-project-lessons).
 - Local communication operations: the ignored `outreach/START-HERE.md` indexes
   Postiz, publication references and metrics. Keep credentials, account data and
   operational history outside shipped product files; connecting an account does

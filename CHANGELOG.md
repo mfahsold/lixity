@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-23
+
 ### Added
 
 - Configure ten limits for sentence rhythm, dialogue and function-word cues in
@@ -20,223 +22,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   paragraphs from generated character dossiers, including existing dossiers.
   The reading view includes up to two neighboring sentences on either side
   where available and highlights the names in the matching passage.
-
-### Changed
-
-- Preserve unchanged manuscript paragraphs while searching, and keep dossier
-  suggestion controls in place when switching between drafts. The local app
-  loads the diagram renderer on first use. Character dossiers reuse speaker
-  attribution without calculating relationship pairs for the unused dialogue panel.
-- Edit chapter-specific term variants in separate rows with their own chapter
-  numbers and notes. Dossier review loads occurrences for the selected dossier
-  using the open project's settings, including for manuscripts in subfolders.
-- Share native test selection and browser fixtures between local and CI checks.
-  Regenerate screenshots before examples so each public artifact has one writer.
-- Group dossier actions with the version note and align the section headings.
-  Keep the outline below the research toolbar, and space PDF excerpt labels
-  closer to their passages while retaining the body type size.
-- Share heading, prose and metadata roles across the workspace, reading
-  exports and Pages. Apply semantic notice colors and modal shadows through
-  the selected theme, including system mode.
-- Reuse native select controls in project, dossier and export flows. Scale
-  guide text with browser font preferences and let tour captions wrap below
-  narrow players.
-- Give analysis settings a single control per choice, explain the editorial
-  presets in plain language, and show localized save feedback beside Apply.
-  Language choices and threshold values come from the shared engine settings.
-- Explain project path failures in the interface language and keep the folder
-  chooser on the last loaded folder. Show where the Word import preview omits
-  a table, image or footnote.
-- Use the selected project's configuration for language and thresholds when
-  opening a project, including when it sits inside another project folder.
-- Localize generated dossier titles and distinguish suggestions, previews and
-  saves. Show singular and plural project research counts in all seven locales.
-- Open matching character evidence in the manuscript when the paragraph and
-  source revision match the displayed reader. Keep excerpts readable when no
-  jump is available.
-- Show the chapter matrix's dated revision deltas next to their measurements.
-  The matrix and the editor's comparison use the same chapter counts and
-  display conventions. Tense review loads independently.
-- Localize homepage image descriptions and send authors to the matching
-  German or English sandbox. Label English demo links on localized Pages.
-- Preview the complete manuscript dossier draft before saving and confirm
-  its source, settings and content. Keep the scene register and each scene
-  separately selectable. Use actual prose matches for place suggestions
-  and identify configured places and inferred candidates.
-- Preview and refresh the saved analysis directly from a generated character
-  dossier. Group name counts, chapters with matches and full passages with
-  highlighted names and surrounding context. Open live counts and passages
-  separately. Show the first and last place match, and bring explicitly linked
-  object or term matches into their dossiers.
-- Explain why each manuscript dossier is proposed and show the qualifying
-  passage for inferred places. Edit the place list from the workspace. Tune
-  inferred candidate limits, character passage context and saved report
-  length in the project workspace. Compact drafts retain a checkable first
-  passage in the preview.
-- Link a configured term to a dossier in the manuscript's term editor.
-  Prepare contextual excerpts only for the requested page of figure evidence.
-  Skip Unicode fallback scans when an NFC paragraph cannot contain a match.
-- Use the same installed discovery sections in the CLI and MCP. Accept a
-  positional manuscript or explicit project default in research comparison
-  and report manuscript selectors in machine-readable command help.
-- Use the selected manuscript’s project settings throughout dossier review
-  and creation. Keep other proposals available when scene or place settings
-  need attention. Share Markdown excerpts and chapter tables between generators.
-- Share chapter-delta response fields between editor comparisons, revision
-  history and standalone text comparisons. Read the paragraph comparison
-  marker position from the prepared dashboard data.
-- Reuse the bounded file reader for serving project exports and reuse validated
-  export options when preparing a native reading website.
-- Align the first-session, writing, recovery and publication guides with the
-  current workspace. Document export choices in the workspace guide, CLI
-  commands in the usage reference and preflight payloads in the API contracts.
-- Document the checkout and packaged service paths separately. Add `make doctor`
-  for the checkout's configured port, and include the Lixity skill in the
-  source archive with the test that checks it.
-- Explain same-port project views in the service help and setup guides. Show
-  the running app version in service status and doctor output, and expose
-  explicit-port service status through read-only MCP discovery.
-- Give the writing surface its own editing controls and a Versions disclosure
-  for comparison, recovery and download. Add a display preference for text
-  associations in the companion dossier.
-- Put the chapter picker and projection controls above the style plot. Fit
-  point help within the canvas area and allow page scrolling over the plot.
-- Open the public demo in the native manuscript layout, with guided draft
-  examples and the read-only notice in the workspace navigation.
-- Give the fictional Warehouse 4 draft verifiable examples of a tense slip,
-  repeated phrasing, reported speech and wordiness. Add guided passage links
-  and parallel English and German practice drafts in the browser sandbox.
-- Add localized measurement references from the analysis overview, chapter
-  inspector, passage evidence and version comparison. Explain counting filters
-  and let writers decide how a passage reads in context.
-- Use one manuscript metric selector for the app and reports. Explain each
-  selection in seven languages and link to its exact method.
-- Share the chapter and metric select control and define reader appearance
-  choices in one place. Reuse the same function-word rule and quotation context
-  across evidence, pacing, phrase search and version comparisons.
-- Link each public homepage to its metric reference. Check generated guides
-  with the same documentation gate in local builds, release preparation and
-  GitHub Pages.
-- Reuse the legacy word-count preparation in analysis and version history.
-  Use one reader control path for metric selection and clearing, and share the
-  export's page preparation between the reading and analysis pages.
-
-### Fixed
-
-- Keep percentage labels and inclusive dialogue-share and function-word
-  comparisons stable when converting between percentages and ratios.
-- Standardize finite chapter series before squaring their deviations so very
-  large and very small values remain comparable in changepoint analysis.
-- Reject unsupported language selectors and coerced paragraph flag levels in
-  text-analysis MCP tools.
-- Reject dossier PDF downloads when a retained extraction has inconsistent
-  source-version provenance.
-- Keep linked term and quote jumps on the verified line range when identical
-  paragraphs appear in different chapters. Reuse prepared term variants and
-  compute cross-profile overlap flags for returned matches.
-- Clear old dossier revision, section and record-wide options when retargeting
-  a reader export. Explain tempo in the audio editor according to the engine
-  and show the current engine default.
-- Keep pending releases undated and link to the working comparison until a
-  maintainer records the release date.
-- Keep PyPI catch-up dispatches independent of Pages deployments. Verify live
-  Pages and Zenodo independently, and allow release verification to omit
-  intentionally skipped PyPI publication or a superseded Pages deployment.
-  The Linux application launcher opens the URL selected by the managed service.
-- Show repeated copies of the same generated character analysis once in the
-  dossier reader and PDF. Refresh unedited generated text in place and keep
-  authored changes and saved versions.
-- Verify manuscript jumps from configured term matches against the current
-  source digest. Save term edits with the active project settings token and
-  preserve their dossier and claim links.
-- Accept decimal commas in dossier coordinate entry when a space separates
-  longitude and latitude.
-- Complete the manuscript timeline when an interrupted save is retried. Recover
-  the starting measurement from the journal's verified revision and retained
-  bytes, and commit the available measurements with the save receipt.
-- Preserve section links and manuscript quotations in published Markdown guides.
-- Refresh the open editorial review after saving a dossier image and request the
-  report once when opening the whole-project review.
-- Accept only the stdio launch syntax for `lixity mcp` and describe tool
-  arguments through discovery. Build the MCP outlier matrix from measured
-  chapter-feature scores and accept finite cutoffs above the default range.
-  Use built-in text-analysis defaults independently of the subprocess directory
-  and local user settings.
-- Keep loaded dossier suggestions when switching categories or selecting a
-  suggestion, including when loading before the research view finishes
-  identifying its project. Offer the existing character template when there
-  is no new character suggestion.
-- Move focus to the title when opening the dossier form from the toolbar.
-  Bring the form into view when expanding its heading in a short window.
-- Hide reader analysis chrome during writing and keep reader shortcuts from
-  activating hidden controls.
-- Distinguish unavailable style-change calculations from tested comparisons
-  with an empty shortlist. Show the exact missing chapters and word floor.
-- Show manuscript measurements on first opening the analysis overview and
-  keep overview links from interrupting the reader during startup.
-- Show paragraph comparison measurements once in the tooltip, with the
-  action in the heading.
-- Share aligned text, arrow spacing and native selection across the chapter and
-  analysis pickers, project settings and dynamically generated settings fields.
-- Show the effective dialogue and chapter-closing thresholds. Label empty
-  tense review results, show the reason for the suggested passage and offer
-  sentence examples when they are available.
-- Keep flagged manuscript passages visible when navigating to them on a
-  narrow screen.
-- Omit speech tags inside unresolved quotes consistently from dialogue
-  reports and passage evidence. Keep authored heading-like text in capped
-  exports and restrict the teleprompter shortcut to the manuscript reader.
-- Recognize paired typographic quotation marks in the browser sandbox and keep
-  function-word highlights visible across quotations and speech cues.
-- Distinguish missing language rules, zero matches and unavailable text ranges
-  in manuscript analysis. Apply revision deltas to the matching source and
-  report missing chapter measurements as unavailable in version history.
-- Preserve evidence display preferences across metric changes and reloads.
-- Compare word-pattern groups only when the language profile supplies the
-  component rules. Describe a passage's comparison against its chapter median.
-- Keep sticky-sentence links when counted text and displayed text use
-  canonically equivalent Unicode forms.
-- Use the measured sentence lengths for paragraph averages, including with
-  boundary-sensitive custom word patterns. Bind revision deltas and review
-  results to the same project settings. Keep late responses from replacing
-  the editor's current revision measurements.
-- Keep cue hits consistent between corpus measurements and paragraph evidence
-  when a project changes the word tokenizer or an unrelated cue pattern.
-- Share quotation boundaries across the analysis, reader and retained-version
-  measurements. Recognize supported typography across paragraphs and count
-  each quoted word from its own analysis scope once. Use the actual baseline
-  date in the editor's version summary and show share changes in percentage
-  points for the manuscript as well as for chapters.
-- Preserve an opening prose passage before the first chapter heading and
-  ignore appendix markers shown inside comments and fenced code examples.
-
-## [0.9.0] - Pending release
-
-### Fixed
-
-- Keep the next and previous examples reachable by keyboard, and restore focus
-  to the control that opened the passage navigation. Localize invalid search
-  pattern errors.
-- Improve dark-mode quotation context contrast and wrap word-pattern actions
-  at small widths and larger font sizes.
-- Keep project navigation inside the viewport during resizing and make its
-  destinations reachable with larger text. Use the shared control text size
-  for the measurement selector and touch targets for passage navigation.
-- Label changes in dialogue share and sticky-sentence share in percentage points.
-- Update the teleprompter's dossier context when the last paragraph is reached.
-- Verify file stability on Windows without comparing incompatible change times
-  reported for paths and open file descriptors.
-- Match the browser CI host to the Noble container and check Python TLS before
-  installing dependencies.
-- Measure all three texts in the local version comparison under one effective
-  project configuration. Pair chapter deltas only when chapter identity can
-  be established.
-- Use the same availability decision for navigation and the rendered Motifs
-  and Scenes panels. Explain an empty result when those analyses completed.
-- Group occurrences of the selected repeated word in the reader.
-- Keep the Research source navigation within the viewport immediately after
-  resizing to a narrow screen.
-- Defer manuscript autosave until text composition finishes.
 
 ### Changed
 
@@ -442,6 +227,215 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Per-document write lock & compact dossier sections (`manuscript_editing.py`, `routes_editing.py`, `routes_markers.py`, `research-cards.js`)**: Replaced coarse global `SOURCE_WRITE_LOCK` contention with `document_lock(source)` keyed by resolved manuscript path (preserving `SOURCE_WRITE_LOCK` export for compatibility), and reduced inline `DossierSections` preview limit in dossier cards from 4 to 2.
 - **Normalized editorial review & UI disclosure (`research/editorial.py`, `research/presentation.py`, `research-review.js`, `manuscript-links.js`)**: `editorial_review_data()` now deduplicates affected dossier outlines into top-level `dossier_outlines` with `sections_count` per candidate; `research-review.js` collapses section outlines behind a disclosure toggle and `manuscript-links.js` groups large manuscript link lists (>12 links) by chapter `<details>` while keeping chapters needing attention open.
 - **Inverted 3-gram & hash quote lookup (`research/manuscript.py`)**: `derive_manuscript_review()` now indexes paragraph SHA-256 hashes in O(1) (`by_hash`) and uses a character 3-gram inverted index (`_ParagraphQuoteIndex`) for exact quote fallback resolution.
+- Preserve unchanged manuscript paragraphs while searching, and keep dossier
+  suggestion controls in place when switching between drafts. The local app
+  loads the diagram renderer on first use. Character dossiers reuse speaker
+  attribution without calculating relationship pairs for the unused dialogue panel.
+- Edit chapter-specific term variants in separate rows with their own chapter
+  numbers and notes. Dossier review loads occurrences for the selected dossier
+  using the open project's settings, including for manuscripts in subfolders.
+- Share native test selection and browser fixtures between local and CI checks.
+  Regenerate screenshots before examples so each public artifact has one writer.
+- Group dossier actions with the version note and align the section headings.
+  Keep the outline below the research toolbar, and space PDF excerpt labels
+  closer to their passages while retaining the body type size.
+- Share heading, prose and metadata roles across the workspace, reading
+  exports and Pages. Apply semantic notice colors and modal shadows through
+  the selected theme, including system mode.
+- Reuse native select controls in project, dossier and export flows. Scale
+  guide text with browser font preferences and let tour captions wrap below
+  narrow players.
+- Give analysis settings a single control per choice, explain the editorial
+  presets in plain language, and show localized save feedback beside Apply.
+  Language choices and threshold values come from the shared engine settings.
+- Explain project path failures in the interface language and keep the folder
+  chooser on the last loaded folder. Show where the Word import preview omits
+  a table, image or footnote.
+- Use the selected project's configuration for language and thresholds when
+  opening a project, including when it sits inside another project folder.
+- Localize generated dossier titles and distinguish suggestions, previews and
+  saves. Show singular and plural project research counts in all seven locales.
+- Open matching character evidence in the manuscript when the paragraph and
+  source revision match the displayed reader. Keep excerpts readable when no
+  jump is available.
+- Show the chapter matrix's dated revision deltas next to their measurements.
+  The matrix and the editor's comparison use the same chapter counts and
+  display conventions. Tense review loads independently.
+- Localize homepage image descriptions and send authors to the matching
+  German or English sandbox. Label English demo links on localized Pages.
+- Preview the complete manuscript dossier draft before saving and confirm
+  its source, settings and content. Keep the scene register and each scene
+  separately selectable. Use actual prose matches for place suggestions
+  and identify configured places and inferred candidates.
+- Preview and refresh the saved analysis directly from a generated character
+  dossier. Group name counts, chapters with matches and full passages with
+  highlighted names and surrounding context. Open live counts and passages
+  separately. Show the first and last place match, and bring explicitly linked
+  object or term matches into their dossiers.
+- Explain why each manuscript dossier is proposed and show the qualifying
+  passage for inferred places. Edit the place list from the workspace. Tune
+  inferred candidate limits, character passage context and saved report
+  length in the project workspace. Compact drafts retain a checkable first
+  passage in the preview.
+- Link a configured term to a dossier in the manuscript's term editor.
+  Prepare contextual excerpts only for the requested page of figure evidence.
+  Skip Unicode fallback scans when an NFC paragraph cannot contain a match.
+- Use the same installed discovery sections in the CLI and MCP. Accept a
+  positional manuscript or explicit project default in research comparison
+  and report manuscript selectors in machine-readable command help.
+- Use the selected manuscript’s project settings throughout dossier review
+  and creation. Keep other proposals available when scene or place settings
+  need attention. Share Markdown excerpts and chapter tables between generators.
+- Share chapter-delta response fields between editor comparisons, revision
+  history and standalone text comparisons. Read the paragraph comparison
+  marker position from the prepared dashboard data.
+- Reuse the bounded file reader for serving project exports and reuse validated
+  export options when preparing a native reading website.
+- Align the first-session, writing, recovery and publication guides with the
+  current workspace. Document export choices in the workspace guide, CLI
+  commands in the usage reference and preflight payloads in the API contracts.
+- Document the checkout and packaged service paths separately. Add `make doctor`
+  for the checkout's configured port, and include the Lixity skill in the
+  source archive with the test that checks it.
+- Explain same-port project views in the service help and setup guides. Show
+  the running app version in service status and doctor output, and expose
+  explicit-port service status through read-only MCP discovery.
+- Give the writing surface its own editing controls and a Versions disclosure
+  for comparison, recovery and download. Add a display preference for text
+  associations in the companion dossier.
+- Put the chapter picker and projection controls above the style plot. Fit
+  point help within the canvas area and allow page scrolling over the plot.
+- Open the public demo in the native manuscript layout, with guided draft
+  examples and the read-only notice in the workspace navigation.
+- Give the fictional Warehouse 4 draft verifiable examples of a tense slip,
+  repeated phrasing, reported speech and wordiness. Add guided passage links
+  and parallel English and German practice drafts in the browser sandbox.
+- Add localized measurement references from the analysis overview, chapter
+  inspector, passage evidence and version comparison. Explain counting filters
+  and let writers decide how a passage reads in context.
+- Use one manuscript metric selector for the app and reports. Explain each
+  selection in seven languages and link to its exact method.
+- Share the chapter and metric select control and define reader appearance
+  choices in one place. Reuse the same function-word rule and quotation context
+  across evidence, pacing, phrase search and version comparisons.
+- Link each public homepage to its metric reference. Check generated guides
+  with the same documentation gate in local builds, release preparation and
+  GitHub Pages.
+- Reuse the legacy word-count preparation in analysis and version history.
+  Use one reader control path for metric selection and clearing, and share the
+  export's page preparation between the reading and analysis pages.
+
+### Fixed
+
+- Keep the next and previous examples reachable by keyboard, and restore focus
+  to the control that opened the passage navigation. Localize invalid search
+  pattern errors.
+- Improve dark-mode quotation context contrast and wrap word-pattern actions
+  at small widths and larger font sizes.
+- Keep project navigation inside the viewport during resizing and make its
+  destinations reachable with larger text. Use the shared control text size
+  for the measurement selector and touch targets for passage navigation.
+- Label changes in dialogue share and sticky-sentence share in percentage points.
+- Update the teleprompter's dossier context when the last paragraph is reached.
+- Verify file stability on Windows without comparing incompatible change times
+  reported for paths and open file descriptors.
+- Match the browser CI host to the Noble container and check Python TLS before
+  installing dependencies.
+- Measure all three texts in the local version comparison under one effective
+  project configuration. Pair chapter deltas only when chapter identity can
+  be established.
+- Use the same availability decision for navigation and the rendered Motifs
+  and Scenes panels. Explain an empty result when those analyses completed.
+- Group occurrences of the selected repeated word in the reader.
+- Keep the Research source navigation within the viewport immediately after
+  resizing to a narrow screen.
+- Defer manuscript autosave until text composition finishes.
+- Keep percentage labels and inclusive dialogue-share and function-word
+  comparisons stable when converting between percentages and ratios.
+- Standardize finite chapter series before squaring their deviations so very
+  large and very small values remain comparable in changepoint analysis.
+- Reject unsupported language selectors and coerced paragraph flag levels in
+  text-analysis MCP tools.
+- Reject dossier PDF downloads when a retained extraction has inconsistent
+  source-version provenance.
+- Keep linked term and quote jumps on the verified line range when identical
+  paragraphs appear in different chapters. Reuse prepared term variants and
+  compute cross-profile overlap flags for returned matches.
+- Clear old dossier revision, section and record-wide options when retargeting
+  a reader export. Explain tempo in the audio editor according to the engine
+  and show the current engine default.
+- Keep pending releases undated and link to the working comparison until a
+  maintainer records the release date.
+- Keep PyPI catch-up dispatches independent of Pages deployments. Verify live
+  Pages and Zenodo independently, and allow release verification to omit
+  intentionally skipped PyPI publication or a superseded Pages deployment.
+  The Linux application launcher opens the URL selected by the managed service.
+- Show repeated copies of the same generated character analysis once in the
+  dossier reader and PDF. Refresh unedited generated text in place and keep
+  authored changes and saved versions.
+- Verify manuscript jumps from configured term matches against the current
+  source digest. Save term edits with the active project settings token and
+  preserve their dossier and claim links.
+- Accept decimal commas in dossier coordinate entry when a space separates
+  longitude and latitude.
+- Complete the manuscript timeline when an interrupted save is retried. Recover
+  the starting measurement from the journal's verified revision and retained
+  bytes, and commit the available measurements with the save receipt.
+- Preserve section links and manuscript quotations in published Markdown guides.
+- Refresh the open editorial review after saving a dossier image and request the
+  report once when opening the whole-project review.
+- Accept only the stdio launch syntax for `lixity mcp` and describe tool
+  arguments through discovery. Build the MCP outlier matrix from measured
+  chapter-feature scores and accept finite cutoffs above the default range.
+  Use built-in text-analysis defaults independently of the subprocess directory
+  and local user settings.
+- Keep loaded dossier suggestions when switching categories or selecting a
+  suggestion, including when loading before the research view finishes
+  identifying its project. Offer the existing character template when there
+  is no new character suggestion.
+- Move focus to the title when opening the dossier form from the toolbar.
+  Bring the form into view when expanding its heading in a short window.
+- Hide reader analysis chrome during writing and keep reader shortcuts from
+  activating hidden controls.
+- Distinguish unavailable style-change calculations from tested comparisons
+  with an empty shortlist. Show the exact missing chapters and word floor.
+- Show manuscript measurements on first opening the analysis overview and
+  keep overview links from interrupting the reader during startup.
+- Show paragraph comparison measurements once in the tooltip, with the
+  action in the heading.
+- Share aligned text, arrow spacing and native selection across the chapter and
+  analysis pickers, project settings and dynamically generated settings fields.
+- Show the effective dialogue and chapter-closing thresholds. Label empty
+  tense review results, show the reason for the suggested passage and offer
+  sentence examples when they are available.
+- Keep flagged manuscript passages visible when navigating to them on a
+  narrow screen.
+- Omit speech tags inside unresolved quotes consistently from dialogue
+  reports and passage evidence. Keep authored heading-like text in capped
+  exports and restrict the teleprompter shortcut to the manuscript reader.
+- Recognize paired typographic quotation marks in the browser sandbox and keep
+  function-word highlights visible across quotations and speech cues.
+- Distinguish missing language rules, zero matches and unavailable text ranges
+  in manuscript analysis. Apply revision deltas to the matching source and
+  report missing chapter measurements as unavailable in version history.
+- Preserve evidence display preferences across metric changes and reloads.
+- Compare word-pattern groups only when the language profile supplies the
+  component rules. Describe a passage's comparison against its chapter median.
+- Keep sticky-sentence links when counted text and displayed text use
+  canonically equivalent Unicode forms.
+- Use the measured sentence lengths for paragraph averages, including with
+  boundary-sensitive custom word patterns. Bind revision deltas and review
+  results to the same project settings. Keep late responses from replacing
+  the editor's current revision measurements.
+- Keep cue hits consistent between corpus measurements and paragraph evidence
+  when a project changes the word tokenizer or an unrelated cue pattern.
+- Share quotation boundaries across the analysis, reader and retained-version
+  measurements. Recognize supported typography across paragraphs and count
+  each quoted word from its own analysis scope once. Use the actual baseline
+  date in the editor's version summary and show share changes in percentage
+  points for the manuscript as well as for chapters.
+- Preserve an opening prose passage before the first chapter heading and
+  ignore appendix markers shown inside comments and fenced code examples.
 
 ## [0.8.2] - 2026-11-16
 
@@ -4439,8 +4433,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.8.2...HEAD
-[0.9.0]: https://github.com/mfahsold/lixity/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/mfahsold/lixity/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/mfahsold/lixity/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/mfahsold/lixity/compare/v0.7.9...v0.8.0

@@ -1,10 +1,16 @@
 # Agent operating rules
 
-Read with [AGENTS.md](AGENTS.md), which defines repository scope and data
-boundaries. [CONTRIBUTING.md](CONTRIBUTING.md) owns contributor checks;
-[docs/AGENTS.md](docs/AGENTS.md) documents the shipped automation interface.
-These rules address observed repository failures, not a scientific agent persona.
-Add a rule only for a demonstrated failure that existing checks cannot prevent.
+Follow the repository's scope, data boundaries, maintainer procedures and
+shipped automation contract. [Repository guidance](AGENTS.md) ·
+[Maintainer procedures](CONTRIBUTING.md) · [Automation contract](docs/AGENTS.md)
+
+## Work with authors and maintainers
+
+Be direct, curious and precise. Lead with the result or blocker. Describe the
+change in the vocabulary of the person using it. Use the visible label when
+explaining where to click. If evidence changes the explanation, say what you
+observed and revise it. Acknowledge a confirmed mistake and continue from the
+corrected facts.
 
 ## Verify before asserting
 
@@ -17,17 +23,28 @@ implementing it. Fix an incorrect verification before changing correct code.
 For an interaction regression, assert the author-visible outcome after the
 actual trigger. An open disclosure or a Playwright field fill can succeed while
 the field starts outside the viewport. Hold a pending response explicitly when
-testing ordering. After a rollout, repeat the critical action on the target
-listener. Use the [rollout verification](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
-to distinguish package version, running version and source identity.
+testing ordering.
 
 For an analytical adapter, exercise a measured positive case and an unavailable
-case. An empty list with a valid schema can hide an incorrect projection. Compare
-selected rows and units against the shared analysis result.
+case. Compare exact counts, denominators, units and boundary decisions against
+the shared analysis result. Check the effective method and settings on both
+sides of a delta. When changing comparisons or archive references, exercise an
+existing archived record and a missing source. Check that saved revisions and
+evidence still point to their original records and that an unavailable
+comparison stays visible.
 
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not
 render those responses wholesale, even during read-only checks.
+
+### Verify the running workspace
+
+For an authorized restart, record the project selections to restore in the
+local working context. Reopen them on the same managed port after the restart.
+Runtime workspace URLs belong to their server process. Check package version,
+running version and source identity, then repeat the affected action in the
+appropriate project views. Report which views were restored and which could not
+be verified. [Rollout procedure](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
 
 ## Keep changes reviewable
 
@@ -84,6 +101,21 @@ to maintained tests; keep one-off issue scripts and reports in ignored
 Use the [affected checks](CONTRIBUTING.md#select-the-checks-for-your-change),
 inspect the final diff, and report what passed or remains unverified. Document
 intentional public behavior changes in the existing maintained entry points.
+
+## Record durable project lessons
+
+Treat `/remember` as an explicit request to capture a confirmed decision or
+lesson. Keep a note when it is likely to affect future work and has a clear
+scope, a concrete example or verification, and a maintained home. Record
+operating rules here, maintainer procedures in their guide, and product
+contracts where users already look for them. Update the existing guidance in
+place. Add a rule for a demonstrated failure only when existing checks leave
+that failure uncovered. [Documentation ownership](CONTRIBUTING.md#where-work-belongs)
+
+Keep unresolved hypotheses and one-off session details in ignored local
+planning. Keep private manuscript text, research data, credentials and project
+paths out of shared lessons. If a lesson is already recorded, refer to the
+existing entry.
 
 ## Escalation
 

@@ -267,7 +267,9 @@ operation.
    `env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS`.
    Push the reviewed commit to `main` before an optional `make rc-gate`
    (`rc.yml`). It qualifies the commit at remote `main` without publishing.
-   Confirm the run's SHA before creating the annotated `vX.Y.Z` tag. Compare
+   If local qualification has covered the candidate, the tagged workflow can
+   run the hosted gates once. When using an RC run, confirm its SHA before
+   creating the annotated `vX.Y.Z` tag. Compare
    the reviewed SHA with `git rev-parse 'vX.Y.Z^{commit}'` before pushing the
    tag, then verify the dereferenced remote tag and the release run's SHA.
 3. **Follow tag publication.**
