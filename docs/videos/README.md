@@ -30,22 +30,22 @@ and free of real projects, names or unpublished text.
 ## Homepage product tour
 
 `product-tour.webm` (AV1) and `product-tour.mp4` (H.264 fallback) show the same
-48-second tour. Six eight-second scenes each present one author task in the
-light theme:
+48-second tour in the fictional Warehouse 4 workspace. Six eight-second scenes
+follow the tasks in one project.
 
 | Time | Task shown |
 | --- | --- |
-| 0–8 s | Find a sticky-sentence highlight in public-domain Effi Briest |
-| 8–16 s | Dim narration with Direct Speech Mode in Pride and Prejudice |
-| 16–24 s | Compare an unsaved draft with its original in the synthetic Warehouse 4 project |
-| 24–32 s | Inspect one chapter in the heatmap for a closer read |
-| 32–40 s | View research claims on the timeline with their evidence labels |
-| 40–48 s | Inspect a local passage and its results in the Browser Sandbox |
+| 0–8 s | Open an analysis suggestion and jump to the manuscript passage |
+| 8–16 s | Open the explanation and see the exact words counted |
+| 16–24 s | Compare an unsaved draft and the manuscript under the same settings |
+| 24–32 s | Open a chapter's sentence-length measurement in the matrix |
+| 32–40 s | Open Mara’s saved dossier and see the chapter table and passages |
+| 40–48 s | Download the displayed dossier version as a PDF |
 
-The comparison does not claim to save a draft or create an immutable revision.
-Timeline placement does not verify a claim: assumptions and claims with evidence
-retain their distinct labels. The app uses the languages of the recorded
-fixtures; the captions explain each task in the homepage's language.
+The recorder starts a disposable local Lixity workspace. The comparison leaves
+the manuscript unchanged. The last scene checks that the download contains a
+complete PDF from the saved dossier version. The app uses the English fixture.
+Captions explain each task in the homepage’s language.
 
 Each scene allows time to orient, follow a deliberate action and read the result.
 The camera stays fixed, with no animated zoom or burned-in English scene labels.
@@ -67,7 +67,7 @@ readable without playback or JavaScript. Technical documentation remains English
 To regenerate just this recording:
 
 ```sh
-python3 scripts/make_screenshots.py --video --only product-tour
+.venv/bin/python scripts/make_screenshots.py --video --only product-tour
 .venv/bin/python scripts/make_videos.py --only product-tour
 make docs-sync
 ```
@@ -81,10 +81,9 @@ framing, cursor motion and caption alignment before accepting new encodings.
 ## Social excerpts
 
 `social-hook-16x9.mp4` and `social-hook-9x16.mp4` are separate 30-second excerpts
-for social sharing. They take six seconds each from the reading, dialogue,
-comparison, heatmap and sandbox scenes of the validated homepage MP4. They omit
-the research timeline and do not replace the full tour or the step-by-step guide
-walkthroughs.
+for social sharing. They take six seconds each from the passage jump, evidence,
+comparison, character dossier and PDF scenes of the validated homepage MP4.
+The full tour also covers the chapter matrix.
 
 The landscape file uses a 1600×900 frame with the complete app recording centered
 between side margins. The portrait file uses 1080×1920 and fits the complete app

@@ -630,6 +630,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
         f'data-image-limits="{image_limits_attribute()}" '
+        f'data-dossier-pdf-capable="{str(can_edit and allowed_actions is not None and action_enabled("research-dossier-pdf")).lower()}" '
         f'data-dossier-media-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-media")).lower()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',

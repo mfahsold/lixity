@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 from collections.abc import Collection, Mapping
 from html import escape
@@ -35,7 +36,7 @@ from .middleware import (
     format_validation_error,
     parse_single_query_params,
 )
-from .pdf_context import manuscript_pdf_token
+from .pdf_context import manuscript_pdf_token, research_context_token
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
@@ -356,6 +357,19 @@ class ResponseMixin(WorkspaceState):
         elif isinstance(error, (ResearchPublicationError, ResearchCleanupError)):
             code = 500
         self._error(str(error) if message is None else message, code)
+
+    def _research_context_matches(self, token: Any) -> bool:
+        """Keep token-bound requests in the selected root, including restored copies."""
+        if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{64}", token):
+            self._error("A selected research context token is required", 400)
+            return False
+        root = self.get_research_root()
+        if root is None and self.source_input:
+            root = Path(self.workspace_root)
+        if token != research_context_token(root):
+            self._error("Selected research project changed; refresh before continuing", 409, error_code="stale-context")
+            return False
+        return True
 
     def _require_research_root(self, *, missing_status: int = 404) -> Path | None:
         """Return the initialized research root or respond with the expected 4xx status."""

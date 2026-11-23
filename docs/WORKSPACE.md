@@ -23,10 +23,11 @@ workers and integrations.
 | Find text or review tense observations | [Search](#searching-the-manuscript), [Start a review](#start-a-review), [Save review decisions](#save-review-decisions) |
 | Compare language patterns across chapters | [Style area](#style-area), [Settings and interpretation](#settings-and-interpretation), [Style-space navigation](#style-space-navigation) |
 | Read evidence beside the text | [Dossier alongside](#read-a-dossier-beside-the-manuscript), [Claim associations](#link-a-manuscript-quote-to-a-claim) |
+| Review and save character, scene or place notes | [Manuscript dossiers](#research-in-context), [Dossier proposal rules](research/USAGE.md#manuscript-driven-dossier-drafts) |
 | Leave an explicit note in the manuscript | [Work markers](#work-markers-editor-visible) |
 | Inspect files and project settings | [Project structure](#inspect-project-structure), [Saved project settings](#saved-project-settings) |
 | Record or listen | [Audio manual](AUDIO.md#author-voice-recording-and-listening) |
-| Prepare a recipient's copy | [PDF](#download-a-manuscript-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
+| Prepare a recipient's copy | [Manuscript PDF](#download-a-manuscript-pdf), [Dossier PDF](#download-a-dossier-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
 | Recover an unavailable source or missing control | [Source freshness](#source-availability-and-saved-analysis), [Troubleshooting](#troubleshooting) |
 
 ## Before you begin
@@ -389,8 +390,8 @@ associations, not distinct sources or evidence strength. The control opens
 research context by keyboard or pointer; an exact inline mark also opens it on
 click when no text selection is active. Closing the context returns to the
 passage. Research references remain visible with Analysis Off and coexist with
-solid counted-text underlines and search backgrounds. There is currently no
-separate global Research-mark visibility switch. The
+solid counted-text underlines and search backgrounds. The companion's **Text
+associations** control applies to the open dossier. The
 [annotation design contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity)
 explains the ownership and color roles.
 
@@ -602,7 +603,9 @@ Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the
 matching paragraphs. Read the passages in manuscript order or select a chapter
 to focus the reading. Where available, neighboring sentences give each passage
-context. See the [counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts).
+context. To keep those passages with an exported dossier revision, review and
+save the addition first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
+[Dossier PDF](#download-a-dossier-pdf)
 
 ## Editing research text
 
@@ -1036,6 +1039,19 @@ The browser returns a download. Use [`lixity pdf`](USAGE.md#lixity-pdf) to write
 a chosen file from the terminal. Both paths use the shared composer and
 project metadata. If the browser reports a stale export context, reload the
 project view and select the layout again.
+
+## Download a dossier PDF
+
+In **Research → Dossiers**, open a dossier and choose **Download PDF**. The
+same action is available beside the manuscript and when viewing a saved
+version. Check the version beside the button. The A4 document includes saved
+notes and tables, place and route descriptions, and pinned source quotations.
+Use your PDF reader's bookmarks to move between sections of a long dossier.
+
+To include a new manuscript excerpt, review and save the addition first, then
+download the new version. Use the attachment's own controls to open original
+media. See the [research manual](research/USAGE.md#download-a-dossier-as-pdf)
+for what each copy contains.
 
 ## Export a reading website
 

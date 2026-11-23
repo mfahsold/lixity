@@ -52,8 +52,8 @@ from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
 from lixity.ui.render_contracts import DashboardContent, DashboardOptions  # noqa: E402
+from scripts.build_examples import build_demo  # noqa: E402
 from scripts.example_project import DEMO_MANUSCRIPT, manuscript_title  # noqa: E402
-from scripts.example_publications import build_publication_examples, build_research_demo  # noqa: E402
 from scripts.stage_pages import screenshot_manifest  # noqa: E402
 
 CAPTURES: list[dict[str, str | int]] = []
@@ -85,44 +85,6 @@ WINDOW_CHROME = """<!DOCTYPE html>
   </div>
 </body></html>
 """
-
-
-def _build_tour_manuscript_html(manuscript_path: Path, out_name: str, *, max_chars: int = 60_000) -> Path:
-    """Render a classic-novel dashboard excerpt for fast product-tour sub-cuts."""
-    from lixity.scenes import scene_report_for_display
-
-    raw = manuscript_path.read_text(encoding="utf-8")
-    if len(raw) > max_chars:
-        cut = raw.rfind("\n## ", 0, max_chars)
-        if cut < 5000:
-            cut = raw.rfind("\n# ", 0, max_chars)
-        if cut > 5000:
-            raw = raw[:cut]
-    cfg, res = resolve_document_config(raw, "auto", project_config={})
-    thresh = resolve_thresholds(project_config={})
-    anal = analyze_document(raw, cfg, thresh, include_evidence=True)
-    html_text = render_dashboard(
-        anal.chapters,
-        anal.paragraphs,
-        metrics=anal.metrics,
-        reader_document=reader_blocks(raw, cfg, anal.paragraphs),
-        fingerprint=anal.fingerprint,
-        paragraph_evidence=anal.evidence,
-        dialogue=dialogue_report(raw, cfg).to_dict(),
-        pacing=pacing_report(raw, cfg).to_dict(),
-        scenes=scene_report_for_display(raw, cfg, None, premeasured_chapters=anal.metrics.chapters),
-        motifs=motif_report(raw, None, cfg).to_dict(),
-        showing=showing_report(raw, cfg, metrics=anal.metrics).to_dict(),
-        title=manuscript_title(raw, manuscript_path.stem),
-        labels=res.labels,
-        language_name=res.name,
-        language_key=res.key,
-        current_language=res.key,
-        manuscript_name=manuscript_path.name,
-        controls=True,
-        enabled_actions=NATIVE_UI_ACTIONS,
-    )
-    return _write_html(out_name, html_text)
 
 
 def _queue_capture(source: Path, target: Path, width: int, height: int,
@@ -687,7 +649,6 @@ def main() -> int:
     research_fixture = build_research_fixture(WORK_DIR, language=resolved.key, nda_project_name=title)
     for review_fixture in (dashboard_review, editorial_review):
         research_fixture["/api/analysis-review?project_token=" + review_fixture["token"]] = review_fixture["response"]
-    research_proj = WORK_DIR / "research-demo"
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
@@ -709,23 +670,9 @@ def main() -> int:
     if args.video:
         video_dir = WORK_DIR / "videos"
         video_dir.mkdir(parents=True, exist_ok=True)
-        tour_extra_sources: list[str] = []
-        if not args.only or "product-tour" in args.only:
-            effi_path = BASE_DIR / "samples" / "effi-briest.md"
-            pride_path = BASE_DIR / "samples" / "pride-and-prejudice.md"
-            sandbox_src = BASE_DIR / "docs" / "sandbox" / "index.html"
-            if effi_path.is_file():
-                tour_extra_sources.append(str(_build_tour_manuscript_html(effi_path, "tour-effi-briest.html")))
-            if pride_path.is_file():
-                tour_extra_sources.append(str(_build_tour_manuscript_html(pride_path, "tour-pride-prejudice.html")))
-            if sandbox_src.is_file():
-                sandbox_copy = WORK_DIR / "sandbox-index.html"
-                shutil.copyfile(sandbox_src, sandbox_copy)
-                tour_extra_sources.append(str(sandbox_copy))
         CAPTURES[:] = [
             {
                 "source": str(research_workspace),
-                "extraSources": tour_extra_sources,
                 "target": str(OUT_DIR / "dashboard-light.png"),
                 "width": 1440, "height": 900, "video": True,
                 "videoTarget": str(video_dir / "product-tour.webm"),
@@ -805,8 +752,7 @@ def main() -> int:
 
     # Social previews use the final capture dimensions. Build the publication
     # and its checksums together, rather than mutating a checksummed HTML member.
-    build_research_demo(BASE_DIR, research_proj)
-    build_publication_examples(BASE_DIR, research_proj)
+    build_demo(BASE_DIR)
     sync_screenshot_catalog()
     corrected = sync_embedded_image_sizes()
     print(

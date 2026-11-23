@@ -41,12 +41,12 @@ _UMLAUTS = str.maketrans(
 )
 
 
-def slugify(name: str) -> str:
+def slugify(name: str, *, fallback: str = "manuskript") -> str:
     """Filesystem-safe artifact slug (umlauts transliterated, spaces -> ``_``)."""
     text = name.strip().translate(_UMLAUTS)
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^A-Za-z0-9._-]+", "_", text).strip("_")
-    return text or "manuskript"
+    return text or fallback
 
 
 @dataclass(frozen=True)

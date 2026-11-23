@@ -90,6 +90,7 @@ maintained procedure for each task; UI and CLI use the same project archive.
 | Track configured terms and props | [Terms and boundary policies](#configured-terms-props-and-boundary-policies) |
 | Edit a record and handle a concurrent change | [Native editing](#native-editing-and-history), [guarded CLI update](#update-one-reviewed-record), [draft conflicts](#resolve-conflicting-drafts) |
 | Edit a dossier body, section or opening text | [Markdown round trip](#edit-an-exported-markdown-dossier), [section editing](#work-on-one-dossier-section), [preamble](#edit-the-dossier-preamble-explicitly) |
+| Download a saved dossier version | [Dossier PDF](#download-a-dossier-as-pdf) |
 | Compare an ordinary Markdown copy with a dossier | [Read-only body comparison](#compare-a-markdown-reading-copy) |
 | Attach visual references, documents or video | [Images](#keep-a-visual-reference-in-a-dossier), [PDF/video](#retain-a-pdf-or-video-in-a-dossier), [provenance corrections](#correct-retained-media-provenance-without-reattaching) |
 | Describe places and journeys | [Dossier geography](#keep-places-and-journeys-in-a-dossier) |
@@ -1295,6 +1296,20 @@ For the exact body without display headings or an added newline, use
 `dossier ID --project ./novel --format text --body-only`. To accept a reviewed
 change, use the existing guarded update or the exported-draft workflow below.
 There is no directory mirror, background watcher or deletion synchronization.
+
+### Download a dossier as PDF
+
+Open a saved dossier in **Research → Dossiers** and choose **Download PDF**.
+The same action is available when reading a dossier beside the manuscript or
+opening a version from its history. The button identifies which saved version
+it will download. If the project changes, reopen it and choose the version again.
+
+The A4 document includes section bookmarks, saved notes, tables and pinned
+source quotations, with a text summary of any saved places and routes.
+For character dossiers this includes the chapter distribution and passages
+already saved in that version. To include current manuscript matches, review
+and save a manuscript addition first. Use the dossier's attachment controls
+for original media, and the research view for current claim links.
 
 ### Edit an exported Markdown dossier
 

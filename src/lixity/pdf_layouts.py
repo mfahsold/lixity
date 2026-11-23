@@ -7,6 +7,8 @@ Each layout exists because a different reader needs different geometry:
 * the editorial copy leaves correction space and numbers manuscript lines;
 * the neutral A4 document retains authored text without adding a title page,
   running heads, line numbers or analysis;
+* the dossier uses that A4 text flow with an explicit saved revision, an
+  outline and the revision's attached text sections;
 * the book layout is for reading a manuscript continuously, so it uses a serif
   measure, indented paragraphs, chapter openings and running heads;
 * the 30 by 60 sheet is a submission format: fixed character grid, fixed line
@@ -21,8 +23,8 @@ cannot draw the manuscript's script.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .manuscript_document import (
@@ -30,6 +32,8 @@ from .manuscript_document import (
     ManuscriptSections,
     inline_runs,
     manuscript_sections,
+    markdown_document_blocks,
+    markdown_inline_runs,
 )
 from .pdf_document import (
     A4,
@@ -272,25 +276,26 @@ def _report_fontset(choice: FontChoice | None) -> FontSet:
 
 @dataclass(frozen=True)
 class _TableData:
-    """One pipe table from the report Markdown, markers already stripped."""
+    """One table, with formatting markers already stripped."""
 
     header: list[str]
     rows: list[list[str]]
+    alignments: tuple[str, ...] = ()
 
 
-def _table_data(raw_rows: list[str]) -> _TableData | None:
-    """Parse Markdown pipe rows; the alignment rule row is dropped."""
+def _table_data(raw_rows: list[list[str]], cell_text: Callable[[str], str],
+                *, alignments: tuple[str, ...] = ()) -> _TableData | None:
+    """Materialize rows for the shared PDF table layout."""
     rows: list[list[str]] = []
     for raw in raw_rows:
-        if set(raw) <= set("|-: "):
-            continue
-        cells = [_plain(cell.strip()) for cell in raw.strip("|").split("|")]
+        cells = [cell_text(cell.strip()) for cell in raw]
         if any(cells):
             rows.append(cells)
     if len(rows) < 2:
         return None
     width = max(len(row) for row in rows)
-    return _TableData(rows[0], [row + [""] * (width - len(row)) for row in rows[1:]])
+    padded = [row + [""] * (width - len(row)) for row in rows]
+    return _TableData(padded[0], padded[1:], alignments)
 
 
 def _report_sections(markdown: str) -> list[tuple[str, list[str | _TableData]]]:
@@ -327,7 +332,8 @@ def _report_sections(markdown: str) -> list[tuple[str, list[str | _TableData]]]:
             while index < len(lines) and lines[index].lstrip().startswith("|"):
                 raw_rows.append(lines[index].strip())
                 index += 1
-            table = _table_data(raw_rows)
+            table = _table_data([row.strip("|").split("|") for row in raw_rows
+                                 if set(row) - set("|-: ")], _plain)
             if table is not None:
                 items.append(table)
             continue
@@ -421,8 +427,36 @@ def _column_widths(header: list[str], rows: list[list[str]], text_face: Embedded
 
 
 #: Table type is a step below the body so tables read as reference material.
-_REPORT_TABLE_SCALE = 0.92
-_REPORT_TABLE_GAP = 12.0
+_TABLE_SCALE = 0.92
+_TABLE_GAP = 12.0
+
+
+def _collect_table(fonts: FontSet, item: _TableData) -> None:
+    for cell in item.header:
+        fonts.collect("heading", cell)
+    for row in item.rows:
+        for cell in row:
+            fonts.collect("text", cell)
+
+
+def _add_table(document: Document, item: _TableData, size: float, leading: float,
+               *, new_page: bool) -> None:
+    rows = [item.header, *item.rows]
+    alignments = _column_alignments(rows)
+    for index, alignment in enumerate(item.alignments[:len(alignments)]):
+        if alignment:
+            alignments[index] = alignment
+    widths, drawn_size = _column_widths(
+        item.header, item.rows, document.fonts.face("text"), document.fonts.face("heading"),
+        round(size * _TABLE_SCALE, 1), document.measure, _TABLE_GAP,
+    )
+    document.add_table(Table(
+        rows=rows, widths=widths, gap=_TABLE_GAP, alignments=alignments,
+        size=drawn_size, leading=1.32, header=True, repeat_header=True,
+        row_rules=len(item.rows) >= 8, row_gap=drawn_size * 0.34,
+        space_before=leading * 0.25, space_after=leading,
+        new_page=new_page, decorated=True,
+    ))
 
 
 def report_pdf(
@@ -472,16 +506,11 @@ def report_pdf(
             document.fonts.collect("heading", heading)
         for item in items:
             if isinstance(item, _TableData):
-                for cell in item.header:
-                    document.fonts.collect("heading", cell)
-                for row in item.rows:
-                    for cell in row:
-                        document.fonts.collect("text", cell)
+                _collect_table(document.fonts, item)
             else:
                 document.fonts.collect("text", item)
-    body_face = document.fonts.face("text")
-    heading_face = document.fonts.face("heading")
-    table_size = round(size * _REPORT_TABLE_SCALE, 1)
+    # Build subsets once as the report's table widths are measured.
+    document.fonts.build()
     first = True
     for heading, items in sections:
         if heading:
@@ -492,18 +521,7 @@ def report_pdf(
             first = False
         for item in items:
             if isinstance(item, _TableData):
-                table_rows = [item.header, *item.rows]
-                widths, drawn_size = _column_widths(item.header, item.rows, body_face,
-                                                    heading_face, table_size,
-                                                    document.measure, _REPORT_TABLE_GAP)
-                document.add_table(Table(
-                    rows=table_rows, widths=widths, gap=_REPORT_TABLE_GAP,
-                    alignments=_column_alignments(table_rows),
-                    size=drawn_size, leading=1.32, header=True, repeat_header=True,
-                    row_rules=len(item.rows) >= 8, row_gap=drawn_size * 0.34,
-                    space_before=leading * 0.25, space_after=leading * 1.0,
-                    new_page=first, decorated=True,
-                ))
+                _add_table(document, item, size, leading, new_page=first)
             else:
                 document.add(Block(item, role="text", size=size, leading=leading / size,
                                    align=JUSTIFIED, space_after=leading * 0.5,
@@ -522,6 +540,12 @@ class _ManuscriptStyle:
     size: float
     leading: float
     paragraph_gap: float = 0.0
+    bookmark_headings: bool = False
+
+
+_DOCUMENT_STYLE = _ManuscriptStyle("document", 12.0, 16.2, 8.1)
+_DOSSIER_STYLE = replace(_DOCUMENT_STYLE, bookmark_headings=True)
+_DocumentSections = Sequence[tuple[str, Sequence[ManuscriptBlock | _TableData]]]
 
 
 def _manuscript_runs(block: ManuscriptBlock, *, sheet: bool = False) -> list[tuple[str, str]]:
@@ -531,10 +555,11 @@ def _manuscript_runs(block: ManuscriptBlock, *, sheet: bool = False) -> list[tup
     base = "heading" if block.kind == "heading" else "text"
     roles = {"plain": base, "emphasis": "bold_italic" if base == "heading" else "italic",
              "strong": "heading", "strong_emphasis": "bold_italic", "code": "mono"}
-    return [(run.text, "mono" if sheet else roles[run.style]) for run in inline_runs(block.text)]
+    runs = block.runs if block.runs is not None else inline_runs(block.text)
+    return [(run.text, "mono" if sheet else roles[run.style]) for run in runs]
 
 
-def _manuscript_fonts(choice: FontChoice | None, sections: ManuscriptSections,
+def _manuscript_fonts(choice: FontChoice | None, sections: _DocumentSections,
                       *, sheet: bool = False) -> FontSet:
     required = {"mono"} if sheet else {"text", "heading"}
     for heading, blocks in sections:
@@ -542,11 +567,12 @@ def _manuscript_fonts(choice: FontChoice | None, sections: ManuscriptSections,
             required.update(role for text, role in _manuscript_runs(
                 ManuscriptBlock("heading", heading), sheet=sheet) if text)
         for block in blocks:
-            required.update(role for text, role in _manuscript_runs(block, sheet=sheet) if text)
+            if isinstance(block, ManuscriptBlock):
+                required.update(role for text, role in _manuscript_runs(block, sheet=sheet) if text)
     return _fontset(choice, tuple(sorted(required)))
 
 
-def _render_manuscript(document: Document, sections: ManuscriptSections,
+def _render_manuscript(document: Document, sections: _DocumentSections,
                        style: _ManuscriptStyle, *, start_on_page: bool = False) -> None:
     """Place semantic manuscript blocks through one flow for all reading formats."""
     sheet = style.mode == "sheet"
@@ -572,6 +598,11 @@ def _render_manuscript(document: Document, sections: ManuscriptSections,
             ))
             new_page = False
         for semantic in blocks:
+            if isinstance(semantic, _TableData):
+                _add_table(document, semantic, style.size, style.leading, new_page=new_page)
+                new_page = False
+                first_paragraph = True
+                continue
             if semantic.kind == "page_break":
                 new_page = True
                 first_paragraph = True
@@ -584,7 +615,7 @@ def _render_manuscript(document: Document, sections: ManuscriptSections,
             before = 0.0
             after = style.leading if sheet else style.paragraph_gap
             role = body_role
-            keep = False
+            keep = semantic.keep_with_next
             if semantic.kind == "heading":
                 role = "mono" if sheet else "heading"
                 size = style.size if sheet else (13.0 if style.mode == "editor" else max(11.0, style.size * 1.12))
@@ -619,6 +650,7 @@ def _render_manuscript(document: Document, sections: ManuscriptSections,
                 space_after=after, new_page=new_page, columns=NORM_COLUMNS if sheet else None,
                 runs=runs, keep_with_next=keep, min_split_lines=1 if sheet else 2,
                 numbered=style.mode == "editor", preserve_whitespace=semantic.kind == "code",
+                bookmark=text if style.bookmark_headings and semantic.kind == "heading" else "",
             ))
             new_page = False
             if semantic.kind == "paragraph":
@@ -721,13 +753,106 @@ def document_pdf(
 ) -> bytes:
     """Render neutral A4 text; title and author are metadata, not added prose."""
     sections = _book_sections(chapters, body, include_title=True)
+    document = _neutral_document(sections, choice, {"title": title, "author": author, **(metadata or {})})
+    _render_manuscript(document, sections, _DOCUMENT_STYLE)
+    return document.render()
+
+
+def _neutral_document(sections: _DocumentSections, choice: FontChoice | None,
+                      metadata: Mapping[str, str]) -> Document:
     document = Document(
         _manuscript_fonts(choice, sections), page_size=A4,
-        margins=(72.0, 72.0, 72.0, 72.0),
-        metadata={"title": title, "author": author, **(metadata or {})},
+        margins=(72.0, 72.0, 72.0, 72.0), metadata=metadata,
     )
-    document.baseline = 16.2
-    _render_manuscript(document, sections, _ManuscriptStyle("document", 12.0, 16.2, 8.1))
+    document.baseline = _DOCUMENT_STYLE.leading
+    return document
+
+
+def _dossier_table(rows: list[str]) -> _TableData | None:
+    """Read a clear TSV block or a pipe table shown by the dossier reader."""
+    if len(rows) < 2:
+        return None
+
+    def inline_text(cell: str) -> str:
+        return "".join(run.text for run in markdown_inline_runs(cell))
+
+    if all("\t" in row for row in rows):
+        return _table_data([row.split("\t") for row in rows], inline_text)
+    if not all("|" in row for row in rows):
+        return None
+    cells = [row.strip().removeprefix("|").removesuffix("|").split("|") for row in rows]
+    rule = [cell.strip() for cell in cells[1]]
+    if (len(rule) == len(cells[0]) and len(rule) >= 2
+            and all(re.fullmatch(r":?-+:?", cell) for cell in rule)):
+        alignments = tuple(
+            CENTRE if cell.startswith(":") and cell.endswith(":")
+            else "right" if cell.endswith(":") else LEFT if cell.startswith(":") else ""
+            for cell in rule
+        )
+        return _table_data([cells[0], *cells[2:]], inline_text, alignments=alignments)
+    if len(cells[0]) >= 2 and all(row.count("|") >= 2 for row in rows):
+        return _table_data(cells, inline_text)
+    return None
+
+
+def _dossier_blocks(body: str) -> list[ManuscriptBlock | _TableData]:
+    blocks: list[ManuscriptBlock | _TableData] = []
+    lines = body.splitlines()
+    source = markdown_document_blocks(body)
+    index = 0
+    while index < len(source):
+        block = source[index]
+        next_index = index + 1
+        table = None
+        if block.kind in {"paragraph", "list_item"}:
+            rows = lines[block.start_line - 1:block.end_line]
+            # The shared manuscript parser separates list items. A numbered
+            # first cell can instead be part of a contiguous TSV block.
+            if all("\t" in row for row in rows):
+                while (next_index < len(source)
+                       and source[next_index].kind in {"paragraph", "list_item"}
+                       and source[next_index].start_line == source[next_index - 1].end_line + 1):
+                    following = source[next_index]
+                    following_rows = lines[following.start_line - 1:following.end_line]
+                    if any("\t" not in row for row in following_rows):
+                        break
+                    rows.extend(following_rows)
+                    next_index += 1
+            table = _dossier_table(rows)
+        if table is not None:
+            blocks.append(table)
+        else:
+            for position in range(index, next_index):
+                block = source[position]
+                value = re.sub(r"[ \t]+#+$", "", block.text) if block.kind == "heading" else block.text
+                runs = tuple(markdown_inline_runs(value))
+                # Saved manuscript readings label each quotation with a line
+                # number and a bold context label. Keep those labels with text.
+                keep = (block.kind in {"paragraph", "quote"} and bool(runs)
+                        and all(run.style == "strong" for run in runs)
+                        and position + 1 < len(source) and source[position + 1].kind == "quote")
+                blocks.append(ManuscriptBlock(block.kind, value, block.level, runs, keep_with_next=keep))
+        index = next_index
+    return blocks
+
+
+def dossier_pdf(
+    *, title: str, revision_label: str, language: str, body: str,
+    appendix: Sequence[ManuscriptBlock] = (), choice: FontChoice | None = None,
+) -> bytes:
+    """Render a saved research dossier and its pinned quotations in reading order."""
+    blocks = _dossier_blocks(body)
+    sections = [("", [*blocks, *appendix])]
+    document = _neutral_document(sections, choice, {"title": title, "language": language})
+    document.add(Block(title, role="heading", size=22.0, leading=1.2,
+                       bookmark=title, keep_with_next=True))
+    document.add(Block(revision_label, role="text", size=10.0, leading=1.4,
+                       space_after=_DOCUMENT_STYLE.paragraph_gap, keep_with_next=True))
+    for block in blocks:
+        if isinstance(block, _TableData):
+            _collect_table(document.fonts, block)
+    _render_manuscript(document, sections, _DOSSIER_STYLE)
+    document.page_furniture("{folio}/{pages}", role="text", size=8.5, position="footer-centre")
     return document.render()
 
 

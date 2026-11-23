@@ -1,9 +1,8 @@
 # Product direction and capability boundaries
 
-Reviewed against the development checkout on 2026-11-10; availability updated
-for 0.8.2 on 2026-11-16. This is a maintained product reference, not a release
-announcement. Implementation status distinguishes shipped capabilities from
-remaining proposals; no delivery dates are implied. Consult
+Reviewed against the development checkout on 2026-11-23, following the 0.8.2
+release. This page records demonstrated capabilities and proposed improvements.
+Installation guides and release notes identify available builds. Consult
 [Workspace](WORKSPACE.md), [Editing scope](MANUSCRIPT_EDITING_RFC.md) and
 [Installation](INSTALLATION.md) for current behavior and availability.
 
@@ -11,10 +10,10 @@ remaining proposals; no delivery dates are implied. Consult
 
 **Read closely. Trace the evidence. Understand your text.**
 
-Lixity brings close reading, traceable research and linguistic analysis into one
-local manuscript workspace. Its distinctive value is the connection between a
-measurement, the passage behind it, its research and a selected reading export.
-Integrated writing extends that connection and is included in 0.8.1. Lead with practical outcomes, then show the mechanism.
+Lixity brings writing, close reading and traceable research into one local
+manuscript workspace. Open the passage behind a measurement, decide whether to
+revise it and keep the research that shaped the scene. Prepare a reading copy
+with the material you choose.
 
 Primary audience: novelists revising a manuscript, initially German-speaking,
 with multilingual product introductions. Editors and people exploring language
@@ -25,17 +24,19 @@ segments. Technical documentation remains English-only.
 
 | Benefit | Existing evidence and demonstration | Boundary to keep explicit |
 | --- | --- | --- |
-| Find a passage worth revisiting | Chapter comparisons, skew-aware robust baselines (median/MAD, `Sn`/`Qn` fallback, medcouple, regularized Mahalanobis), length-invariant lexical diversity (`MATTR`, `MTLD`, `HD-D`), live-count filter pills, inline triage toggles, auto-refreshing review, and navigation back to prose; [analysis workflow](WORKSPACE.md#explore-language-in-the-browser) | Differences are not errors, quality scores or authorship proof. |
+| Find a passage worth revisiting | Inspect the words behind a sentence warning. Open examples from a rhythm or word-pattern comparison and return to the scene. [Analysis workflow](WORKSPACE.md#explore-language-in-the-browser) | Read a measured difference in context before deciding whether to revise. [Methods](METHODS.md) |
 | Read with fewer distractions | Continuous prose, focus reading, search, optional analysis marks and passage tools; [workspace](WORKSPACE.md) | Source editing is a distinct workflow, included in 0.8.1. |
-| Keep the reasoning behind a scene | Retained sources, claims, dossiers, weighted tag clouds, author decisions, manuscript quotations, and 16 read-only MCP tools; [research manual](research/USAGE.md) | Storing a claim does not verify it. Links preserve their accepted evidence rather than silently adopting new versions. |
+| Keep the reasoning behind a scene | Follow a manuscript quote through retained sources, claims, dossiers and author decisions. [Research manual](research/USAGE.md) | Links preserve the evidence version you accepted. Evaluate a claim and decide what the manuscript should do with it. |
+| Review where a character appears | Development checkout shows chapter counts, complete matching passages and surrounding sentences, with a preview for additions to a saved dossier. [Dossier workflow](research/USAGE.md#manuscript-driven-dossier-drafts) | The search measures counted names and configured variants. Read the scene for implicit appearances and pronouns. |
 | Revisit language questions consistently | CLI and Python API reuse the offline analysis engine with explicit settings; [methods](METHODS.md) | Reproducibility depends on text, software, language resources and settings. Translated interfaces do not imply equal analysis coverage. |
 | Hear and rehearse prose | Teleprompter, pronunciation and direction planning, recording and selected synthesis services; [audio](AUDIO.md) | Microphone permission, optional workers and service data boundaries must stay visible. |
-| Share the right amount of context | Reading websites, curated companion material, analysis and printable PDF; [export workflow](WORKSPACE.md#export-a-reading-website) | Reading copies are snapshots, not project backups or collaborative editors. |
+| Share the right amount of context | Reading websites, curated companion material and manuscript PDFs. The development checkout provides a PDF of the selected saved dossier version. [Website export](WORKSPACE.md#export-a-reading-website) · [Dossier PDF](WORKSPACE.md#download-a-dossier-pdf) | Check the files and evidence before sharing. Use the verified backup workflow for restoration. |
 | Write without restarting the workflow | CodeMirror, conditional autosave, recovery and revision-bound reading; [editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | Browser reload loses undo; recovery cannot guarantee keystrokes that never reached storage. |
 
-The public synthetic demo demonstrates reading, comparisons and evidence without
-requesting a private manuscript. It does not demonstrate saving. Do not describe
-the demo video as an editor demonstration until it actually includes that flow.
+Use the public Warehouse 4 project to show what an author can decide after
+reading a measured passage. The demo supports inspection of the fixed project.
+Record any writing, archive saving or download scenes in a synthetic local
+project. Label local actions when the public demo uses a fixed copy.
 
 ## What should come next
 
@@ -82,6 +83,9 @@ not telemetry already collected. Never record manuscript text or search terms.
   without an external editor? Record lost context and unsuccessful recovery.
 - Can a reviewer distinguish unchanged, moved and ambiguous research links after
   edits? Inspect retained evidence, not just the displayed badge.
+- Can an author find a character's appearances, review a manuscript addition
+  and download the intended dossier version? Compare the PDF with that saved
+  revision, including its last passage and pinned source quotations.
 - Can a project be restored in a fresh directory with the same manuscript and
   valid evidence references? Verify the inventory and content hashes.
 - For public discovery, compare tour-to-demo and installation-guide visits over

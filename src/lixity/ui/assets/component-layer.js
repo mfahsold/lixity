@@ -129,6 +129,23 @@
       setTimeout(function () { URL.revokeObjectURL(url); }, typeof revokeMs === "number" ? revokeMs : 1500);
       return url;
     },
+    readPdfBlob: async function (response) {
+      if (!response.ok) {
+        var error = new Error("PDF unavailable");
+        error.status = response.status;
+        try {
+          var data = await response.json();
+          if (typeof data?.code === "string") error.serverCode = data.code;
+          if (typeof data?.message === "string") error.serverMessage = data.message;
+        } catch (_) { /* The caller supplies its localized default message. */ }
+        throw error;
+      }
+      var mime = (response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+      if (mime !== "application/pdf") throw new Error("PDF unavailable");
+      var blob = await response.blob();
+      if ((await blob.slice(0, 5).text()) !== "%PDF-") throw new Error("PDF unavailable");
+      return blob;
+    },
     jsonApi: async function (url, options, responseType) {
       var t0 = performance.now();
       try {

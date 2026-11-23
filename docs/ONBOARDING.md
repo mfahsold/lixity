@@ -165,11 +165,27 @@ viewer leads to linked dossiers and cited source passages. Close it, then use
 **Back to passage** to return to the requesting text. See the
 [association workflow](WORKSPACE.md#link-a-manuscript-quote-to-a-claim) for the
 pinned/current distinction.
-To create an
-association locally, select text in one paragraph, choose **Link selection to
-claim**, review the claim and quote, and explicitly permit quote retention before
-**Save association**. This saves the quote, not a full manuscript capture or source
-evidence. The public demo lets you explore saved records without writing them.
+To create an association locally, select text in one paragraph, choose **Link
+selection to claim**, review the claim and quote, and explicitly permit quote
+retention before **Save association**. The association stores the selected
+quotation and its manuscript location with the selected claim version. The
+public demo lets you explore saved records without writing them.
+
+### Review a manuscript dossier
+
+In the current development checkout, open **Research → Dossiers → From
+manuscript → New dossiers**. Choose a character, scene or place proposal and
+read the preview before saving. For a generated character dossier, **Character
+in the manuscript** shows the chapter distribution and matching passages in the
+currently selected manuscript. A chapter can feature a character without
+naming them.
+
+Use **Add from manuscript** to review a supplement while keeping your earlier
+notes. **Save dossier version** adds a new archived revision. To take that
+revision to a reading session, reopen it and choose **Download PDF**. The PDF
+keeps the saved text and its pinned source quotations. [Dossier proposals and
+character reading](research/USAGE.md#manuscript-driven-dossier-drafts) ·
+[Dossier PDF contents](research/USAGE.md#download-a-dossier-as-pdf)
 
 <a id="use-zotero-for-sources-and-media-since-v1190"></a>
 ## Use Zotero for sources and media
@@ -194,8 +210,11 @@ preview before generating a chapter; choosing a model does not start its worker.
 Choose **Project actions → Reading website** to share a review workspace, curated
 novel or companion. The [workspace export instructions](WORKSPACE.md#export-a-reading-website)
 explain chapter limits, included research, optional analysis and saved chapter
-audio. A PDF is a separate printable output; see [PDF layouts](USAGE.md#lixity-pdf).
-Inspect the copy before sharing it. An export is not a complete project backup.
+audio. Use [manuscript PDF layouts](USAGE.md#lixity-pdf) for a printable reading
+copy, or [download a dossier PDF](WORKSPACE.md#download-a-dossier-pdf) for a
+saved research record. Review the chosen contents before sharing. Use a
+[project backup](PROJECT_BACKUP.md) to retain the selected project files and
+archive for later restoration.
 
 ## Check your first session and return later
 

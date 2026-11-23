@@ -4,7 +4,7 @@ Collect sources, read and annotate in Zotero. Use Lixity's research workspace to
 
 This walkthrough introduces the author workflow. The [research manual](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#find-a-task) owns the detailed procedures and compatibility rules; [design history](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md#design-history) is separate from implemented commands.
 
-Updated 5 November 2026
+Updated 23 November 2026
 
 **Before importing:**
 
@@ -34,7 +34,7 @@ lixity research search --project ./sample-project --query "reading room"
 
 `--allow-retention` confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.
 
-For an authorized file outside Zotero, open **Research → Sources → Add local source** in the 0.8.1 workspace. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. In 0.8.1, the local importer remains available alongside Zotero; earlier releases may use different labels or hide local import for wholly Zotero-linked archives. Direct CLI/API import remains available.
+For an authorized file outside Zotero, open **Research → Sources → Add local source**. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. The same workspace offers local import and Zotero capture.
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
@@ -52,7 +52,7 @@ Matching URLs do not merge sources. Refreshing a named source with a new URL cre
 
 Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
 
-Run Zotero on the same computer and download the attachments you need. Open **Research → Sources → Capture from Zotero** in the 0.8.1 workspace, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Run Zotero on the same computer and download the attachments you need. Open **Research → Sources → Capture from Zotero**, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API. Eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
@@ -76,7 +76,7 @@ Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboar
 
 ## Search sources and current notes
 
-In the 0.8.1 workspace, **Search research** opens a shared tool above the selected research content. It includes retained source passages and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. Search refreshes an outdated index automatically; `--strict` reports an error instead. Only source passages can be cited as evidence.
+**Search research** opens a shared tool above the selected research content. It includes retained source passages and current dossiers, claims and decisions. Choose a narrower scope when needed, then use **View entry** to read a current authored record or open a source passage to inspect its citation. For strict CLI reads, `--strict` reports an outdated index.
 
 For a known source or dossier, its list filter narrows the loaded title and tag metadata immediately. Use **Search research → All records** to find words inside retained text and current authored notes; earlier versions are outside that search.
 
@@ -134,9 +134,23 @@ back up the archive. Retention-confirmed manuscript links require record/manifes
 
 ## Edit dossiers and review decisions
 
+Under **Research → Dossiers → From manuscript**, choose a character, scene or place suggestion and review the proposed text before saving. A character suggestion starts with mention counts and a first passage. Open the generated dossier’s **Character in the manuscript** section for the chapter table and full matching passages with neighboring sentences where available. **Add from manuscript** lets you review that material and save it alongside your notes. Go back to the text to check who a name refers to before using the suggestion.
+
 Open a dossier to read its notes, linked claims and source quotations. Use **Edit section** beside a unique heading for a bounded change, or **Edit** for the full record. Select correction or supersession, give a reason and save explicitly. An unchanged save keeps the existing revision; a changed save appends history. For an external editor, use the [export → edit → preview → apply procedure](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#edit-an-exported-markdown-dossier). Ordinary source import does not create an authored dossier.
 
 In **Review**, open **Read decision with dossier** to compare the named versions. **Mark as applied** records your assessment for those exact versions; it does not update old pins or inspect prose. A later revision may need another review. The manual covers [concurrent drafts](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#resolve-conflicting-drafts) and [saving related changes together](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#review-decisions-and-save-related-revisions-together).
+
+<a id="dossier-export"></a>
+
+## Download a dossier PDF
+
+In the current development workspace, open a saved dossier and select **Download PDF**. Check the version shown beside the button. You can download that version from the dossier, beside the manuscript, or after opening it from the dossier’s history.
+
+The A4 copy includes saved notes, chapter tables, place and route descriptions, and source quotations pinned to that version. Use the PDF reader’s bookmarks to jump between sections. Save a new manuscript excerpt as a dossier addition to include it in your next download. Use the attachment controls for original files and the research view to inspect current claim links.
+
+Open [Mara’s saved dossier in PDF](../demo/warehouse-4-dossier.pdf) to see the chapter distribution, manuscript passages and a pinned source quote from the fictional Warehouse 4 project.
+
+For the whole draft, use the [manuscript PDF layouts](#manuscript-export). For a browser-based reading copy with selected background, use the [reading website export](#reading-website).
 
 <a id="claim-chronology"></a>
 

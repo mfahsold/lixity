@@ -9,8 +9,9 @@ Five reading examples are published on the documentation site:
 * ``examples/effi-briest.html`` - the opening chapters of a public-domain novel;
 * ``examples/pride-and-prejudice.html`` - the opening chapters of a public-domain novel.
 
-The project also includes five manuscript/analysis PDF layouts and a bounded
-static research fixture. Its former research URL is a compatibility redirect.
+The project also includes five manuscript/analysis PDF layouts, a saved
+character dossier PDF and a bounded static research fixture. Its former
+research URL is a compatibility redirect.
 The two classic works also ship as complete analysis reports
 (``examples/<slug>-report.pdf``). The Effi Briest excerpt additionally demonstrates
 the shared editorial, reading and submission PDF layouts. Every HTML page carries canonical and social
@@ -36,6 +37,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.check_release import source_version  # noqa: E402
 from scripts.example_publications import (  # noqa: E402
+    DEMO_DOSSIER_PDF,
     LICENSE_URL,
     SITE,
     _finalize,
@@ -124,11 +126,17 @@ def build_demo(root: Path) -> Path:
     from tempfile import TemporaryDirectory
 
     with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
-        from scripts.example_project import create_example_project
+        from lixity.research.dossier_pdf import compose_dossier_pdf
+        from lixity.research.models import Reference
+        from scripts.example_project import create_example_project, save_example_character_dossier
 
         project = Path(directory).resolve() / "research-demo"
-        create_example_project(project)
-        demo = build_research_demo(root, project)
+        example = create_example_project(project)
+        identifier, revision = save_example_character_dossier(project, example["character_evidence_id"])
+        result = compose_dossier_pdf(project, Reference(id=identifier, revision=revision))
+        if result is None:
+            raise ValueError("The public character dossier revision must be available")
+        demo = build_research_demo(root, project, dossier_pdf=result[1])
         build_publication_examples(root, project)
         return demo
 
@@ -215,6 +223,8 @@ def _task_build_demo(root: Path) -> list[tuple[Path, str]]:
         (demo, f"{demo.stat().st_size:,} bytes"),
         (root / "LICENSE", ""),
     ]
+    dossier = demo.with_name(DEMO_DOSSIER_PDF)
+    items.append((dossier, f"{dossier.stat().st_size:,} bytes"))
     for mode in ("reader", "companion"):
         page = root / f"docs/demo/{mode}/index.html"
         items.append((page, f"{page.stat().st_size:,} bytes"))

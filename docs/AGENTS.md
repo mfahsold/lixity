@@ -646,6 +646,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
+| `[data-dossier-pdf-export]` | native download of the exact displayed saved dossier version |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view; closing it preserves the existing manuscript DOM/state |
 | `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body |
 | `.research-dossier-body-rendered [data-dossier-heading]` | source-order authored headings; repeated titles retain distinct local navigation targets |
@@ -1495,6 +1496,14 @@ an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.
+- `GET /api/research/dossier-pdf?id=...&revision=...&research_token=...`
+  downloads an A4 PDF for one exact saved dossier version from the selected
+  local research workspace. The response is an `application/pdf` attachment
+  with `Cache-Control: no-store`. It contains saved body text, tables and
+  geography descriptions, section bookmarks and pinned quotations. The download
+  is composed in memory and creates no archive revisions or output files. An
+  unavailable revision returns HTTP 404. A changed project returns HTTP 409
+  with `code: stale-context`. A closed workspace can return HTTP 410.
 - `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene|location&language=...`:
   read-only deterministic character, scene and location dossier drafts
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.

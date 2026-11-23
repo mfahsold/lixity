@@ -20,6 +20,7 @@ BASE_DIR = ROOT
 SITE = "https://mfahsold.github.io/lixity"
 OG_IMAGE_ALT = "Lixity continuous manuscript reader with chapter navigation and contextual tools"
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
+DEMO_DOSSIER_PDF = "warehouse-4-dossier.pdf"
 
 
 def _finalize(report: str) -> str:
@@ -245,7 +246,7 @@ def _demo_quick_start(text: str, project: Path) -> str:
     )
 
 
-def build_research_demo(root: Path, project: Path) -> Path:
+def build_research_demo(root: Path, project: Path, *, dossier_pdf: bytes | None = None) -> Path:
     """Wrap the production website export of the reviewed synthetic project."""
     from lixity.pdf_export import PDF_LAYOUTS, compose_pdf
     from lixity.site_contracts import SiteManifest
@@ -288,6 +289,9 @@ def build_research_demo(root: Path, project: Path) -> Path:
         ("editor", "Editorial manuscript PDF"), ("book", "Reading manuscript PDF"),
         ("sheet", "Submission manuscript PDF"), ("report", "Analysis report PDF"),
         ("document", "Document PDF (A4)"))]
+    if dossier_pdf is not None:
+        files[DEMO_DOSSIER_PDF] = dossier_pdf
+        pdf_links.append((DEMO_DOSSIER_PDF, "Mara’s saved dossier (PDF)"))
     about_paragraphs = [
         "Start in Research with Dossiers: Warehouse 4 case notes connects the customs log, an office discrepancy and exact manuscript quotations. "
         "The preliminary log and its correction disagree about where the crate was opened; claim versions preserve the earlier interpretation. "

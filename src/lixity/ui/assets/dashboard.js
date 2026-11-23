@@ -860,29 +860,17 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
     if (!Array.from(layout.options).some(function(option) { return option.value === selected && !option.disabled; })) return;
     pending(true);
     message("manuscript_pdf_busy", false);
-    var reason = "";
     try {
       var response = await fetch(API + "/manuscript-pdf", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({layout: selected, project_token: form.dataset.projectToken})
       });
-      if (!response.ok) {
-        try {
-          var errorBody = await response.json();
-          if (typeof errorBody.message === "string") reason = errorBody.message;
-        } catch (_) { /* Keep the localized failure message. */ }
-        throw new Error("Manuscript PDF unavailable");
-      }
-      if ((response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase() !== "application/pdf") {
-        throw new Error("Manuscript PDF unavailable");
-      }
-      var blob = await response.blob();
-      if ((await blob.slice(0, 5).text()) !== "%PDF-") throw new Error("Manuscript PDF unavailable");
+      var blob = await window.LixityComponents.readPdfBlob(response);
       window.LixityComponents.downloadBlob(blob, "manuscript-" + selected + ".pdf", 1000);
       message("manuscript_pdf_success", false);
-    } catch (_) {
+    } catch (error) {
       message("manuscript_pdf_error", true);
-      if (reason) status.textContent += " " + reason;
+      if (error?.serverMessage) status.textContent += " " + error.serverMessage;
     } finally { pending(false); }
   });
   pending(false);

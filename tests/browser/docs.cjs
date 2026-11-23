@@ -400,7 +400,13 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
     return;
   }
   await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
+  const dossierCards = page.locator('#research-dossiers-list .research-card');
+  await expect(dossierCards).toHaveCount(3);
+  const character = dossierCards.filter({hasText: 'Character: Mara'});
+  await character.locator('[data-research-detail=dossier]').click();
+  await expect(character.locator('.research-details-body table')).toContainText('Name mentions');
+  await expect(character.locator('.research-details-body')).toContainText('Port Authority Customs Log (synthetic)');
+  await expect(character.locator('[data-dossier-pdf-export]')).toHaveCount(0);
   await page.locator('[data-rtab=sources]').click();
   await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
   await expect(page.locator('#zotero-box')).not.toHaveAttribute('open', '');
@@ -414,8 +420,8 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(source.locator('.research-details-body')).toContainText('circa-1900');
   await page.locator('#r-filter-sources').fill('');
   await page.locator('[data-rtab=dossiers]').click();
-  await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
-  const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+  await expect(dossierCards).toHaveCount(3);
+  const dossier = dossierCards.filter({hasText: 'Warehouse 4 case notes'});
   await dossier.locator('[data-research-detail=dossier]').click();
   const detail = dossier.locator('.research-details-body');
   await expect(detail.locator('[data-dossier-claim], [data-dossier-decision]')).toHaveCount(0);
@@ -1420,7 +1426,7 @@ async function checkSandboxQuotationPairs(page) {
             await expect(picker.locator('nav')).toBeVisible();
             await picker.locator('a[hreflang=de]').click();
             await expect(page).toHaveURL(origin + '/lixity/index-de.html');
-            await expect(page.locator('h1')).toHaveText('Manuskript. Analyse. Recherche.Ein Arbeitsraum.');
+            await expect(page.locator('h1')).toHaveText(/Überarbeite dein Manuskript\.\s*Behalte die Recherche im Blick\./);
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
             await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');

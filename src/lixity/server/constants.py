@@ -19,7 +19,7 @@ NATIVE_UI_ACTIONS = (
     "site-export",
     "site-preflight",
     "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
-    "research-media-ingest", "research-dossier-media",
+    "research-media-ingest", "research-dossier-media", "research-dossier-pdf",
     "analysis-review",
     "motif-search",
     "research-compare",

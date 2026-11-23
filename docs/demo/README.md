@@ -49,11 +49,16 @@ The case notes connect six claims, three decisions and five exact manuscript
 quotations. Explore conflicting inspection accounts, a qualified witness report,
 an authored cause/effect link and a corrected claim whose earlier manuscript
 links remain pinned. The timeline, diagrams, map and images provide different
-ways into the same two dossiers.
+ways into the same case notes.
 Historical map/photo sources have
 [reviewed credits and file hashes](../assets/research/sources.json). People,
 customs records, incidents and journeys are invented; the visuals do not verify
 them, and coordinates are not georeferenced to the map image.
+
+Open **Character: Mara** in Dossiers to see the saved chapter table and read
+her appearances in context. Download [the same dossier version](warehouse-4-dossier.pdf)
+from **Download this project**. The PDF includes the saved excerpts and a
+pinned witness quotation from the fictional archive.
 
 ## Public artifacts
 
@@ -69,6 +74,8 @@ them, and coordinates are not georeferenced to the map image.
 - The same six chapters as an [editorial copy](warehouse-4-editor.pdf),
   [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf),
   [analysis report](warehouse-4-report.pdf) and [plain A4 document](warehouse-4-document.pdf).
+- [Mara’s dossier PDF](warehouse-4-dossier.pdf) with the saved character review
+  and pinned source quotation shown in the product tour.
 
 The author-workspace demo supports exploring manuscript analysis, retained
 research, a dossier alongside the manuscript, prepared PDF downloads and a
@@ -119,11 +126,10 @@ For an unwrapped local analysis/research website, use the regular export command
 
 Project creation lives in `scripts/example_project.py`; screenshot HTTP fixtures
 are a separate adapter in `scripts/make_screenshots.py`.
-`scripts/example_publications.py` owns the reviewed Pages wrappers, metadata and
-publication profiles. Both build entrypoints call this shared publication module;
-it does not import the screenshot adapter or the build entrypoint. The public
-build creates the same ordinary project and passes it through the production
-exporter, then adds the reviewed website wrapper.
+`scripts/example_publications.py` owns the Pages wrappers, metadata and
+publication profiles. Screenshot and example generation call the shared demo
+builder. It creates the same ordinary project, adds Mara’s reviewed dossier
+version, and passes the project through the production exporter.
 No screenshot fixture is needed to create or export the editable project.
 
 A future real-book sample should be a separately prepared, explicitly selected

@@ -264,7 +264,7 @@ class TestPagesStaging(unittest.TestCase):
                       "demo/report.html", "demo/research.html",
                       "demo/warehouse-4-editor.pdf", "demo/warehouse-4-book.pdf",
                       "demo/warehouse-4-sheet.pdf", "demo/warehouse-4-report.pdf",
-                      "demo/warehouse-4-document.pdf",
+                      "demo/warehouse-4-document.pdf", "demo/warehouse-4-dossier.pdf",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
@@ -593,6 +593,8 @@ class TestPublicLanguages(unittest.TestCase):
     def test_home_tour_has_localized_transcript_and_explicit_playback(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 
+        timing = json.loads((ROOT / "docs/videos/product-tour-timing.json").read_text())
+
         pages = render_pages()
         for language in LANGUAGES:
             with self.subTest(language=language):
@@ -603,9 +605,9 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertIn('muted playsinline controls', text)
                 self.assertNotIn(' autoplay', text)
                 self.assertIn('id="tour-transcript"', text)
-                for scene in ('read', 'passage', 'compare', 'research', 'context', 'return'):
-                    self.assertIn(html.escape(content['tour_' + scene], quote=True), text)
-
+                for scene in timing["scenes"]:
+                    self.assertIn(html.escape(content['tour_' + scene['id']], quote=True), text)
+                self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)
 
     def test_generated_languages_are_complete_and_reciprocal(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, page_url, render_pages

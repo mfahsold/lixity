@@ -17,7 +17,8 @@ async function main() {
     const researchFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
     // Intercept a synthetic origin so embedded exact-version images use the same
     // resource URLs as the native app without contacting a running server.
-    async function prepareWorkspacePage(target, {cursor = false} = {}) {
+    async function prepareWorkspacePage(target, {cursor = false, fixtures = true} = {}) {
+    if (fixtures) {
     // Published map captures show real OSM tiles, with their native attribution.
     // Load only the normal visible viewport; regression suites stub tile bytes.
     await target.route('https://tile.openstreetmap.org/**', async route => {
@@ -53,8 +54,7 @@ async function main() {
           body: JSON.stringify({ok: true, snapshots: [], items: []})});
         return;
       }
-      const allSources = captures.flatMap(item => [item.source, ...(item.extraSources || [])]);
-      const matchedSource = allSources.find(src => '/' + path.basename(src) === url.pathname);
+      const matchedSource = captures.map(item => item.source).find(src => '/' + path.basename(src) === url.pathname);
       assert.ok(matchedSource, 'Unknown screenshot resource: ' + url.pathname);
       await route.fulfill({status: 200, contentType: 'text/html; charset=utf-8',
         body: fs.readFileSync(matchedSource)});
@@ -93,6 +93,7 @@ async function main() {
         }));
       };
     }, {fixture: researchFixture});
+    }
     if (cursor) {
       await target.addInitScript(() => {
         const attach = () => {
@@ -489,7 +490,7 @@ async function main() {
     await Promise.all(captures.filter(item => item.video).map(async capture => {
       const flow = path.basename(capture.videoTarget, '.webm');
       if (flow === 'product-tour') {
-        results.push(...await recordProductTour({browser, capture, prepareWorkspacePage, origin: CAPTURE_ORIGIN}));
+        results.push(...await recordProductTour({browser, capture, prepareWorkspacePage}));
         return;
       }
       const context = await browser.newContext({

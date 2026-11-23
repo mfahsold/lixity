@@ -70,6 +70,7 @@ DOCS_ROOT_FILES = {
     "demo/warehouse-4-sheet.pdf",
     "demo/warehouse-4-report.pdf",
     "demo/warehouse-4-document.pdf",
+    "demo/warehouse-4-dossier.pdf",
     "assets/research/sources.json",
     "assets/analytics.json",
     "assets/research/hamburg-free-port-1900.jpg",

@@ -404,7 +404,7 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         },
     }).commit()
     return {"project": research_proj, "image_resources": image_resources,
-            "primary_claim_id": claim_res["claim_id"]}
+            "primary_claim_id": claim_res["claim_id"], "character_evidence_id": witness_limits}
 
 
 def create_example_project(destination: Path) -> dict:
@@ -417,6 +417,30 @@ def create_example_project(destination: Path) -> dict:
         result = _populate(Path(directory).resolve())
         shutil.copytree(result["project"], destination)
     return {**result, "project": destination}
+
+
+def save_example_character_dossier(project: Path, evidence_id: str) -> tuple[str, int]:
+    """Prepare the same reviewed Warehouse 4 dossier for the video and PDF."""
+    from lixity.research import api
+    from lixity.research.character_evidence import character_dossier_text
+    from lixity.research.dossiers import read_dossier_manuscript
+
+    manuscript = project / "harbour-manuscript.md"
+    drafts = api.manuscript_dossier_drafts(project, manuscript, kind="character")
+    mara = next(draft for draft in drafts["drafts"] if draft["evidence_hints"]["character"] == "Mara")
+    dossier = api.create_dossier_from_manuscript(
+        project, manuscript, draft_id=mara["id"], preview_sha256=mara["preview_sha256"],
+        expected_project_id=drafts["project_id"],
+    )
+    text, source_sha256, settings = read_dossier_manuscript(manuscript, project)
+    supplement = character_dossier_text(text, source_sha256, character="Mara", language="en", settings=settings)
+    identifier = dossier["dossier_id"]
+    revision = api.revise_record(
+        project, "dossier", identifier, expected_revision=1, change_kind="correction",
+        reason="Review the character passages and retain the related witness statement.",
+        changes={"body": supplement["body"], "evidence_ids": [evidence_id]},
+    )
+    return identifier, int(revision["record"]["revision"])
 
 
 def main() -> int:

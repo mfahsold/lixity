@@ -9,6 +9,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Download the displayed saved dossier version as an A4 PDF from its detail
+  view, history, or manuscript side panel. The PDF includes section bookmarks,
+  saved notes and tables, descriptions of places and routes, and pinned source
+  quotations. The action identifies the saved version before downloading.
 - Open a manuscript overview, chapter distribution and complete matching prose
   paragraphs from generated character dossiers, including existing dossiers.
   The reading view includes up to two neighboring sentences on either side

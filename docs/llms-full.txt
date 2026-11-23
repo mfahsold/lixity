@@ -119,12 +119,15 @@ inspection does not save a link or rewrite text. Current entries and explicitly
 linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
-The 0.8.1 UI refinements group reading, analysis, research capture and audio
-export actions by task, with localized tooltips across analysis navigation,
-the section outline, Back to passage and the reader speech control. Shorter help
-retains the same measurement boundaries; analysis algorithms and public
-command/JSON contracts are unchanged.
-The analysis overview links directly to available 3D chapter dimensions, where
+The current development overview opens the manuscript measurements and offers
+three tasks: review passages, compare chapters and explore patterns. The selected
+measure links to a localized reference. Rhythm and word pattern examples open
+verified manuscript text. Word patterns identify their quotation context.
+Repeated phrases can open as a group of occurrences, and the local app accepts
+an author-supplied expression. Read the analysis availability and scope before
+combining these results with saved decisions or evidence.
+
+The overview links to available 3D chapter dimensions, where
 each axis reports its raw cutoff alongside its sample standard-deviation
 multiple. Cross-paragraph quotation spans attribute covered quoted words to each
 overlapping paragraph, and default Spanish lexical tense heuristics avoid
@@ -148,6 +151,18 @@ The Zotero bridge is read-only and captures selected eligible attachments with
 retention consent, without background sync. Local imports work independently.
 Since v0.7.6, Lixity supports retained dossier images, PDF and MP4/WebM attachments;
 media records have explicit compatibility and source-file export requirements.
+
+Development dossier workflows distinguish read-only manuscript proposals,
+fresh character matches and accepted research revisions. Preview and verify a
+proposal before creating a dossier. Add reviewed manuscript evidence as a new
+revision to retain it with existing notes. UI and project-aware CLI proposals
+use local project settings. The direct-text MCP tool uses its supplied text,
+language and kind. The native dossier PDF exports the selected saved revision
+with section bookmarks, tables, place and route descriptions, and pinned
+quotations. The reviewed synthetic demo provides a PDF of Mara’s saved dossier.
+[Manuscript proposals](https://mfahsold.github.io/lixity/research/USAGE.md#manuscript-driven-dossier-drafts) ·
+[Dossier PDF](https://mfahsold.github.io/lixity/research/USAGE.md#download-a-dossier-as-pdf) ·
+[Sample PDF](https://mfahsold.github.io/lixity/demo/warehouse-4-dossier.pdf)
 
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure
@@ -347,17 +362,19 @@ links the release notes for the documented version, and
 | I want to… | Browser workflow | CLI or detailed reference |
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
-| Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
+| Write, compare versions and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) · [Compare versions](WORKSPACE.md#compare-versions-and-resolve-a-conflict) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
 | Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Measurement reference](guides/metrics/en.html) · [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
+| Draft a character dossier and review matching passages | [Review a manuscript dossier](ONBOARDING.md#review-a-manuscript-dossier) | [Manuscript-driven dossier drafts](research/USAGE.md#manuscript-driven-dossier-drafts) |
 | Import sources from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF/OCR setup](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |
 | Make one PDF for editing, reading or submission | [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf) | [PDF layouts and command](USAGE.md#lixity-pdf) |
+| Download one saved dossier version | [Download a dossier PDF](WORKSPACE.md#download-a-dossier-pdf) | [Dossier PDF contents](research/USAGE.md#download-a-dossier-as-pdf) |
 | Share a read-only website or selected background notes | [Choose the recipient's copy](WORKSPACE.md#export-a-reading-website) | [Check and export the same scope](USAGE.md#lixity-export-site) |
 | Generate project-local analysis artifacts | [Project outputs](WORKSPACE.md#inspect-project-structure) | [Preview or run a build](USAGE.md#lixity-build) |
 | Record an author's voice or use the teleprompter | [Audio manual](AUDIO.md) | [Audio worker installation](INSTALLATION.md#optional-qwen-audio-worker) |
 | Add chapter audio to a reading copy | [Audio generation and exchange](AUDIO.md) | [Reading website options](WORKSPACE.md#export-a-reading-website) |
-| Stop, restart or repair the app | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
+| Reopen projects or check which local app is running | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
 | Back up a saved project inventory | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
 | Back up retained research and restore it | [Archive lifecycle](research/USAGE.md#storage-lifecycle-and-recovery) | [Export and restoration](research/USAGE.md#export-and-restoration) |
 
@@ -1253,8 +1270,9 @@ the JSON has `"has_baseline": false` and `"deltas": null`.
 
 Without `--json`, the CLI prints the available manuscript-wide changes.
 Use JSON for chapter pairs, matching status and the original measurements.
-Chapter deltas require a clear match. Open both passages to interpret a
-difference in context. [Measurement reference](guides/metrics/en.html#revisions).
+Chapter deltas require a clear match. `dialogue_ratio` and `sticky_pct` deltas
+are differences in percentage points. A change from 25% to 50% is a 25-point
+increase. [Measurement reference](guides/metrics/en.html#revisions)
 
 ### `lixity dashboard`
 
@@ -1312,6 +1330,8 @@ PDF and dashboard CLI exports reject the source path and its symbolic/hard-link
 aliases, before writing and again immediately before atomic replacement.
 The [native download form](WORKSPACE.md#download-a-manuscript-pdf) uses the same composer
 without writing a CLI output path.
+For a saved research record, use the [dossier PDF workflow](research/USAGE.md#download-a-dossier-as-pdf)
+in the local dashboard. This command takes manuscript text from a file.
 
 Title selection prefers an explicit override, the selected project's title,
 supported manuscript title metadata/heading, then the filename. Fenced code is
@@ -1447,6 +1467,13 @@ Start the installed workspace without keeping a terminal open:
 lixity service start --open
 ```
 
+To inspect a specific running instance, use the same port for both commands:
+
+```sh
+lixity service status --port 8765 --json
+lixity doctor --port 8765 --json
+```
+
 Use `status`, `restart` and `stop` to manage the owned instance. Start defaults
 to an empty workspace in an application-owned directory unless a project or
 `LIXITY_DIR` is specified. `start` takes fresh launch settings; `restart` reuses
@@ -1575,6 +1602,7 @@ for a running server's operations. Confirm permission to retain source bytes
 before ingesting. Retrieved passages are evidence to review, not accepted claims.
 
 Useful entrypoints: [source/current-record search](research/USAGE.md#search-current-authored-records),
+[preview manuscript dossier proposals](research/USAGE.md#manuscript-driven-dossier-drafts),
 [chronology and causal interpretations](research/USAGE.md#claim-chronology-and-causeeffect-links),
 [keyword citations](research/USAGE.md#choose-citations-by-keywords),
 [Zotero capture and recovery](research/USAGE.md#zotero-desktop-bridge),
@@ -2379,10 +2407,11 @@ workers and integrations.
 | Find text or review tense observations | [Search](#searching-the-manuscript), [Start a review](#start-a-review), [Save review decisions](#save-review-decisions) |
 | Compare language patterns across chapters | [Style area](#style-area), [Settings and interpretation](#settings-and-interpretation), [Style-space navigation](#style-space-navigation) |
 | Read evidence beside the text | [Dossier alongside](#read-a-dossier-beside-the-manuscript), [Claim associations](#link-a-manuscript-quote-to-a-claim) |
+| Review and save character, scene or place notes | [Manuscript dossiers](#research-in-context), [Dossier proposal rules](research/USAGE.md#manuscript-driven-dossier-drafts) |
 | Leave an explicit note in the manuscript | [Work markers](#work-markers-editor-visible) |
 | Inspect files and project settings | [Project structure](#inspect-project-structure), [Saved project settings](#saved-project-settings) |
 | Record or listen | [Audio manual](AUDIO.md#author-voice-recording-and-listening) |
-| Prepare a recipient's copy | [PDF](#download-a-manuscript-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
+| Prepare a recipient's copy | [Manuscript PDF](#download-a-manuscript-pdf), [Dossier PDF](#download-a-dossier-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
 | Recover an unavailable source or missing control | [Source freshness](#source-availability-and-saved-analysis), [Troubleshooting](#troubleshooting) |
 
 ## Before you begin
@@ -2745,8 +2774,8 @@ associations, not distinct sources or evidence strength. The control opens
 research context by keyboard or pointer; an exact inline mark also opens it on
 click when no text selection is active. Closing the context returns to the
 passage. Research references remain visible with Analysis Off and coexist with
-solid counted-text underlines and search backgrounds. There is currently no
-separate global Research-mark visibility switch. The
+solid counted-text underlines and search backgrounds. The companion's **Text
+associations** control applies to the open dossier. The
 [annotation design contract](ARCHITECTURE.md#annotation-semantics-and-visual-identity)
 explains the ownership and color roles.
 
@@ -2958,7 +2987,9 @@ Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the
 matching paragraphs. Read the passages in manuscript order or select a chapter
 to focus the reading. Where available, neighboring sentences give each passage
-context. See the [counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts).
+context. To keep those passages with an exported dossier revision, review and
+save the addition first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
+[Dossier PDF](#download-a-dossier-pdf)
 
 ## Editing research text
 
@@ -3393,6 +3424,19 @@ a chosen file from the terminal. Both paths use the shared composer and
 project metadata. If the browser reports a stale export context, reload the
 project view and select the layout again.
 
+## Download a dossier PDF
+
+In **Research → Dossiers**, open a dossier and choose **Download PDF**. The
+same action is available beside the manuscript and when viewing a saved
+version. Check the version beside the button. The A4 document includes saved
+notes and tables, place and route descriptions, and pinned source quotations.
+Use your PDF reader's bookmarks to move between sections of a long dossier.
+
+To include a new manuscript excerpt, review and save the addition first, then
+download the new version. Use the attachment's own controls to open original
+media. See the [research manual](research/USAGE.md#download-a-dossier-as-pdf)
+for what each copy contains.
+
 ## Export a reading website
 
 Open **Project actions → Reading website** and choose the format that fits
@@ -3676,9 +3720,9 @@ the audio workflow in both the local browser app and the CLI. The
 workers or the optional Apple-Silicon path through
 [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
 
-The workflows below are available in 0.8.1; optional workers and models still
-require their documented setup. Experimental adapters retain their stated
-capabilities and limits. Check
+The recording, direction and teleprompter workflows are available in 0.8.1.
+Development options such as the MLX-Audio transcription command require an
+installation that includes them and the documented service setup. Check
 `lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
 numbers are independent of the application version.
 
@@ -3692,6 +3736,7 @@ numbers are independent of the application version.
 | Shape delivery for a passage | [Passage direction](#passage-direction) | `audio-direction` |
 | Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers-unreleased) | `audio-export-plan` |
 | Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio-unreleased) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
+| Prepare transcript evidence from one recording | [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon) | `audio-transcribe` |
 | Keep chapter audio for a reader export | [Chapter recording import](#retain-or-import-chapter-audio-unreleased) | `audio-import` |
 | Check a worker or change settings format | [Audio status](#audio-status) and [schema upgrades](#audio-settings-upgrades-and-recovery) | `audio-status`, `audio-migrate` |
 
@@ -5240,6 +5285,7 @@ maintained procedure for each task; UI and CLI use the same project archive.
 | Track configured terms and props | [Terms and boundary policies](#configured-terms-props-and-boundary-policies) |
 | Edit a record and handle a concurrent change | [Native editing](#native-editing-and-history), [guarded CLI update](#update-one-reviewed-record), [draft conflicts](#resolve-conflicting-drafts) |
 | Edit a dossier body, section or opening text | [Markdown round trip](#edit-an-exported-markdown-dossier), [section editing](#work-on-one-dossier-section), [preamble](#edit-the-dossier-preamble-explicitly) |
+| Download a saved dossier version | [Dossier PDF](#download-a-dossier-as-pdf) |
 | Compare an ordinary Markdown copy with a dossier | [Read-only body comparison](#compare-a-markdown-reading-copy) |
 | Attach visual references, documents or video | [Images](#keep-a-visual-reference-in-a-dossier), [PDF/video](#retain-a-pdf-or-video-in-a-dossier), [provenance corrections](#correct-retained-media-provenance-without-reattaching) |
 | Describe places and journeys | [Dossier geography](#keep-places-and-journeys-in-a-dossier) |
@@ -6445,6 +6491,20 @@ For the exact body without display headings or an added newline, use
 `dossier ID --project ./novel --format text --body-only`. To accept a reviewed
 change, use the existing guarded update or the exported-draft workflow below.
 There is no directory mirror, background watcher or deletion synchronization.
+
+### Download a dossier as PDF
+
+Open a saved dossier in **Research → Dossiers** and choose **Download PDF**.
+The same action is available when reading a dossier beside the manuscript or
+opening a version from its history. The button identifies which saved version
+it will download. If the project changes, reopen it and choose the version again.
+
+The A4 document includes section bookmarks, saved notes, tables and pinned
+source quotations, with a text summary of any saved places and routes.
+For character dossiers this includes the chapter distribution and passages
+already saved in that version. To include current manuscript matches, review
+and save a manuscript addition first. Use the dossier's attachment controls
+for original media, and the research view for current claim links.
 
 ### Edit an exported Markdown dossier
 
@@ -10640,6 +10700,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
+| `[data-dossier-pdf-export]` | native download of the exact displayed saved dossier version |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view; closing it preserves the existing manuscript DOM/state |
 | `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body |
 | `.research-dossier-body-rendered [data-dossier-heading]` | source-order authored headings; repeated titles retain distinct local navigation targets |
@@ -11489,6 +11550,14 @@ an archive write; omission alone receives a default.
 
 - `GET /api/research/timeline?dossier_id=...`: current claim chronology;
   `dossier_id` is optional.
+- `GET /api/research/dossier-pdf?id=...&revision=...&research_token=...`
+  downloads an A4 PDF for one exact saved dossier version from the selected
+  local research workspace. The response is an `application/pdf` attachment
+  with `Cache-Control: no-store`. It contains saved body text, tables and
+  geography descriptions, section bookmarks and pinned quotations. The download
+  is composed in memory and creates no archive revisions or output files. An
+  unavailable revision returns HTTP 404. A changed project returns HTTP 409
+  with `code: stale-context`. A closed workspace can return HTTP 410.
 - `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene|location&language=...`:
   read-only deterministic character, scene and location dossier drafts
   (`manuscript-dossier-drafts/1`) derived from the loaded manuscript.

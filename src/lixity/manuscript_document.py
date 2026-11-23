@@ -49,6 +49,8 @@ class ManuscriptBlock:
     kind: BlockKind
     text: str = ""
     level: int = 3
+    runs: tuple[TextRun, ...] | None = None
+    keep_with_next: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,7 +140,9 @@ class _RunReader(HTMLParser):
         self._append(data)
 
 
-def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -> list[TextRun]:
+def _inline_runs(
+    text: str, *, start_line: int = 1, page_breaks: bool = False, interpret_tex: bool = True,
+) -> list[TextRun]:
     delimiters = _InlineDelimiters(text)
     protected: list[str] = []
     prefix = "\x01PRESENTATION\x02"
@@ -167,7 +171,8 @@ def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -
                         f"[Image: {label or 'unlabelled'}; reference: {reference}]",
                     )))
                 else:
-                    label_runs = _inline_runs(label, start_line=start_line + text.count("\n", 0, index))
+                    label_runs = _inline_runs(label, start_line=start_line + text.count("\n", 0, index),
+                                              interpret_tex=interpret_tex)
                     for run in label_runs:
                         tag = {"emphasis": "em", "strong": "strong", "code": "code",
                                "strong_emphasis": "strong"}.get(run.style)
@@ -197,6 +202,10 @@ def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -
                     output.append(protect("<code>" + html.escape(literal) + "</code>"))
                     index = end
                     continue
+            if not interpret_tex:
+                output.append(char)
+                index += 1
+                continue
             if char == "$":
                 closing = re.search(r"(?<!\\)\$", text[index + 1:])
                 if closing:
@@ -284,6 +293,11 @@ def inline_runs(text: str) -> list[TextRun]:
     return _inline_runs(text)
 
 
+def markdown_inline_runs(text: str) -> list[TextRun]:
+    """Present Markdown inline formatting while leaving embedded TeX literal."""
+    return _inline_runs(text, interpret_tex=False)
+
+
 def _protected_source(text: str) -> tuple[str, str, list[bool]]:
     """Shield comments in literal code from the analysis parser's comment filter."""
     sentinel = "\ue000"
@@ -329,6 +343,7 @@ def _joined_lines(lines: list[str]) -> str:
 
 def _source_blocks(
     text: str, *, start_line: int, front_matter: bool, validate_inline: bool,
+    tex_page_breaks: bool = True,
 ) -> list[SourceManuscriptBlock]:
     protected, sentinel, literal_lines = _protected_source(text)
     clean = _without_comments(protected)
@@ -343,7 +358,7 @@ def _source_blocks(
             _LIST.match(line) or _HEADING.match(line) or line.lstrip().startswith("[^")
             or (line.lstrip().startswith(">")
                 and not (index and lines[index - 1].lstrip().startswith(">")))
-            or SCENE_BREAK_RE.fullmatch(line) or _PAGE_BREAK.fullmatch(line.strip())
+            or SCENE_BREAK_RE.fullmatch(line) or (tex_page_breaks and _PAGE_BREAK.fullmatch(line.strip()))
         )
         code_start = (literal_lines[index] and not (index and literal_lines[index - 1])
                       and (_fence_closer(line) is not None or not index
@@ -353,7 +368,8 @@ def _source_blocks(
             line_map.append(index)
         shadow.append(line)
         line_map.append(index)
-        if index >= metadata_end and not literal_lines[index] and _PAGE_BREAK.fullmatch(line.strip()):
+        if (tex_page_breaks and index >= metadata_end and not literal_lines[index]
+                and _PAGE_BREAK.fullmatch(line.strip())):
             shadow.append("")
             line_map.append(index)
     result: list[SourceManuscriptBlock] = []
@@ -415,7 +431,7 @@ def _source_blocks(
             note_lines = [line.replace(sentinel, "<") for line in lines[first:last + 1]]
             note_lines[0] = re.sub(r"^\s*\[\^[^\]]+\]:[ \t]*", "", note_lines[0])
             result.append(presentation("note", f"[{block['id']}] {_joined_lines(note_lines)}"))
-        elif _PAGE_BREAK.fullmatch(value.strip()):
+        elif tex_page_breaks and _PAGE_BREAK.fullmatch(value.strip()):
             result.append(presentation("page_break"))
         elif kind == "list_item":
             result.append(presentation("list_item", _joined_lines(
@@ -424,6 +440,12 @@ def _source_blocks(
         else:
             result.append(presentation("list_item" if _LIST.match(value) else "paragraph", value))
     return result
+
+
+def markdown_document_blocks(text: str) -> list[SourceManuscriptBlock]:
+    """Read standalone Markdown with source spans and no manuscript conventions."""
+    return _source_blocks(text, start_line=1, front_matter=False, validate_inline=False,
+                          tex_page_breaks=False)
 
 
 def _blocks(text: str, *, start_line: int, front_matter: bool) -> list[ManuscriptBlock]:

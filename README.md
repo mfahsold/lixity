@@ -9,16 +9,16 @@
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 > **A local workspace for authors, editors, and researchers.**
-> Compare chapter rhythms, trace scene research to its sources, and choose what to share in a reading copy. Built-in analysis runs offline.
+> Find a passage worth revisiting, keep the research for a scene at hand, and share the revision you choose. Built-in analysis runs offline.
 >
 > 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · ✍️ **[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
 
 **Read closely. Follow the evidence. Decide what to revise.**
 
-Lixity keeps manuscript prose, stylometric signals, and scene research in one
-offline workspace. Compare chapter rhythms, inspect dialogue and repeated words
-in context, trace scene details to versioned sources and author decisions, and
-export clean PDFs or self-contained reading websites.
+Lixity keeps your manuscript, its measurements and your research in one local
+workspace. Read a measured passage in context, revise it, and compare what
+changed. Keep the sources and decisions behind the scene together. When a copy
+is ready to share, choose a PDF or a self-contained reading website.
 
 - **Return from signal to prose:** open the relevant chapter and inspect
   counted words and sentences where evidence is available. Signals support
@@ -32,9 +32,9 @@ export clean PDFs or self-contained reading websites.
 **Try without installing.** Shorten a sentence or trace a repeated word in the
 [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html).
 In the read-only [Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html),
-compare average sentence lengths in two fictional harbour chapters, then open
-the corresponding passages. The demo shows a fixed project snapshot and
-identifies the development version that generated it.
+look for repeated wording or a possible tense shift in the fictional Warehouse 4
+draft. Open the highlighted passage and decide whether it needs attention. The
+demo identifies the development version that generated the snapshot.
 Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
 [Methods & limits](https://mfahsold.github.io/lixity/METHODS.md) ·
@@ -100,34 +100,23 @@ between reading, comparison, research, and sharing:
   a local listening preview with Qwen, Coqui, IMS-Toucan, ZONOS3 or an explicit
   provider. ZONOS3 on Apple Silicon can reuse a private project voice reference;
   its tempo is conditioned inside the model, not reprocessed with FFmpeg.
-- **Compare prose patterns:** explore sentence lengths, length-invariant
-  lexical diversity (`MATTR`, `MTLD`, exact `HD-D`), dialogue balance,
-  repeated words, and skew-aware robust style baselines (median/MAD with
-  `Sn`/`Qn` fallback, split-MAD, medcouple, and regularized Mahalanobis
-  distances), plus heuristic signals for scene pacing, sensory language,
-  tense, and character voices. Compare chapters or drafts (`lixity diff`),
-  triage passages with live-count filter pills, inline decision toggles, and
-  auto-refreshing review, and return to the relevant prose. Optional genre
-  reference ranges are descriptive, not targets. In the reader, **Direct Speech
-  Mode** (`D`) dims narration to focus on dialogue; evidence filters highlight
-  **sticky sentences**, **dialogue tags**, **same-paragraph word echoes**, and
-  **indirect speech**. Try a classic in the
-  [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?preset=pride-prejudice).
-  **Unreleased:** the reference view explains its separate thresholds and warns
-  when two comparable chapters cannot reach the configured deviation cutoff.
-  Rank projections expose regularization; nominal FDR is exploratory selection,
-  with no established error-rate calibration. See the
-  [methods](https://mfahsold.github.io/lixity/METHODS.md#decision-legend-and-small-chapter-sets-unreleased).
-- **Follow scene research:** open a dossier beside the manuscript and connect
-  paragraphs to claims, source passages, weighted tag clouds, character notes,
-  or scene geography.
+- **Compare prose patterns.** Explore sentence rhythm, dialogue, repeated
+  wording and changes across versions. The measurement card shows what was
+  counted, why a passage was marked and what to check as you read. Open the
+  source text from a chapter comparison or pattern example. A tense flag or
+  a shorter sentence can suit the scene as written. [Methods and limits](https://mfahsold.github.io/lixity/METHODS.md)
+- **Follow scene research.** Read a dossier beside the manuscript and follow a
+  quotation to its saved claim, source passage and author decision. In the
+  development checkout, preview dossier proposals for characters, scenes and
+  places before saving. A generated character dossier can show where the
+  counted names occur, chapter by chapter. [Research workflows](https://mfahsold.github.io/lixity/research/USAGE.md#manuscript-driven-dossier-drafts)
 - **Connect an AI client (MCP):** run `lixity mcp` for read-only analysis,
   research inspection and guided editorial prompts. Use `tools/list` to see
   what's available in your installation. Lixity returns results over local
   stdio. The connected client controls where it processes them.
-- **Share selected material:** export a printable PDF or a self-contained,
-  offline reading website for beta readers and editors. Choose which manuscript,
-  companion notes, and analysis to include before exporting.
+- **Share selected material.** Prepare a manuscript PDF or an offline reading
+  website with the chapters, companion notes and analysis you select. The
+  development checkout also downloads an exact saved dossier version as a PDF.
 
 | Your task | Work in Lixity | What stays under your control |
 | :--- | :--- | :--- |
@@ -138,6 +127,7 @@ between reading, comparison, research, and sharing:
 | Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
 | Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
 | Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |
+| Review a character's role | Preview a character dossier and inspect chapter distribution and matching paragraphs in the development checkout | You choose what to save. The analysis counts names and configured variants. Read the passage for implied appearances. |
 | Hear a passage | Prepare direction, pronunciation rules and pauses; review a short recording or synthesis preview | Speech planning needs no worker. Recording needs permission; synthesis uses the explicitly selected service. |
 | Share a reading copy | Choose manuscript, curated companion notes, analysis or a printable PDF | Preview the contents before export; a fixed copy does not expose your live project. |
 
@@ -188,8 +178,10 @@ language-specific verb-group rules; parser errors remain possible.
 A dossier gathers authored notes, retained source passages, claims, decisions,
 images and maps. Passage associations return to their manuscript context. A linked
 earlier version remains distinct from the current entry. Configured terms and
-props locate declared wording and connect it to dossiers; they do not infer
-characters or automatically verify continuity.
+props locate declared wording and connect it to dossiers. Use the current
+manuscript's chapter counts and surrounding sentences to review a generated
+character dossier. Save a reviewed manuscript addition as a new version to keep
+those passages with your notes.
 
 Research is scoped to an explicit project. Retaining a source and redistributing
 it are separate choices. Original PDFs, images and videos have their own import
@@ -230,13 +222,12 @@ it does not interpret free acting prompts. Existing F5 profiles remain readable,
 but the bundled F5 runtime is unavailable.
 [Choose and set up a speech engine](https://mfahsold.github.io/lixity/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
 
-An explicitly configured external speech provider receives selected text only
-when rendering is requested. Audio plans may include provider URLs, model names
-and credential-variable names, so review them before sharing. Audio inspection
-can measure a local recording; comparison with planned words requires a supplied,
-timestamped transcript. Lixity does not perform speech recognition. Listen to a
-short preview before committing to a long render.
-[Audio workflow and limits](https://mfahsold.github.io/lixity/AUDIO.md#audio-export-and-external-providers-unreleased).
+An explicitly configured external speech provider receives selected text when
+you request synthesis. Review audio plans before sharing them. Comparing a
+recording with the planned words requires reviewed, timestamped transcript
+evidence. In the development checkout, `audio-transcribe` sends a chosen
+recording to an explicit MLX-Audio service for optional recognition.
+[Audio workflow and limits](https://mfahsold.github.io/lixity/AUDIO.md#audio-export-and-external-providers-unreleased)
 
 ### Choose what leaves the project
 
@@ -245,7 +236,8 @@ short preview before committing to a long render.
 | [Review workspace](https://mfahsold.github.io/lixity/demo/report.html) | Manuscript and analysis, optionally internal research and history; for author/editor review. |
 | [Novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html) | Manuscript with explicitly selected dossier notes, plus optional analysis of the exported chapters. |
 | [Standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html) | Selected background material for someone reading the novel elsewhere. |
-| PDF | Neutral/editorial manuscript, analysis report, A5 book or submission sheet. |
+| [Manuscript PDF](https://mfahsold.github.io/lixity/WORKSPACE.md#download-a-manuscript-pdf) | Neutral or editorial manuscript, analysis report, A5 book or submission sheet. |
+| [Dossier PDF](https://mfahsold.github.io/lixity/WORKSPACE.md#download-a-dossier-pdf) | A saved dossier version with its notes, tables and pinned quotations in the development checkout. |
 
 Reading websites are fixed exports, not live co-editing or project backups.
 A publication profile selects dossier bodies or sections and chapter reveal

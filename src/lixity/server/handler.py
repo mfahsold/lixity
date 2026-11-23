@@ -35,7 +35,7 @@ from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
 from .routes_motifs import MotifRoutesMixin
 from .routes_nda import NdaRoutesMixin
-from .routes_pdf import ManuscriptPdfRoutesMixin
+from .routes_pdf import DOSSIER_PDF_PATH, PdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
 from .routes_site import SiteExportRoutesMixin
 from .routes_speech import SpeechRoutesMixin
@@ -49,7 +49,7 @@ class LixityServerHandler(
     MotifRoutesMixin,
     ManuscriptResearchRoutesMixin,
     NdaRoutesMixin,
-    ManuscriptPdfRoutesMixin,
+    PdfRoutesMixin,
     SiteExportRoutesMixin,
     SpeechRoutesMixin,
     BaseHTTPRequestHandler,
@@ -82,6 +82,7 @@ class LixityServerHandler(
         "/api/research/images": "_handle_research_images",
         "/api/research/media": "_handle_research_media",
         "/api/research/dossiers": "_handle_research_dossiers",
+        DOSSIER_PDF_PATH: "_handle_research_dossier_pdf",
         "/api/research/manuscript-dossier-drafts": "_handle_research_manuscript_dossier_drafts",
         "/api/research/dossier-character": "_handle_research_dossier_character",
         "/api/research/claims": "_handle_research_claims",
@@ -212,16 +213,18 @@ class LixityServerHandler(
             return
         handler_name = self.GET_ROUTES.get(path)
         if handler_name is not None:
-            query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-            if path.startswith("/api/research/") and "research_token" in query:
-                tokens = query["research_token"]
-                with self._workspace_lock:
-                    if len(tokens) != 1:
-                        self._json({"ok": False, "message": "Choose one selected research context token"}, 400)
-                    elif self._research_context_matches(tokens[0]):
-                        getattr(self, handler_name)()
-            else:
-                getattr(self, handler_name)()
+            handler = getattr(self, handler_name)
+            # The PDF handler captures and checks its context around the render.
+            if path.startswith("/api/research/") and path != DOSSIER_PDF_PATH:
+                tokens = parse_qs(urlparse(self.path).query, keep_blank_values=True).get("research_token")
+                if tokens:
+                    with self._workspace_lock:
+                        if len(tokens) != 1:
+                            self._error("Choose one selected research context token", 400)
+                        elif self._research_context_matches(tokens[0]):
+                            handler()
+                    return
+            handler()
             return
 
         self._json({"ok": False, "message": "Not found"}, 404)

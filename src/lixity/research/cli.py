@@ -490,15 +490,16 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
         ("dossier-images --project ./novel --missing-provenance",),
     ),
     "dossier-drafts": (
-        "Extract read-only character and scene dossier drafts from a manuscript using\n"
-        "deterministic linguistic and structural metrics.",
+        "Preview character, scene and place proposals using the selected manuscript\n"
+        "and project settings. This command reads without creating dossier revisions.",
         ("dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all",),
     ),
     "dossier-from-manuscript": (
-        "Create a new dossier explicitly from one deterministic manuscript draft.",
+        "Create a saved dossier from a manuscript draft. When using --draft-id,\n"
+        "pass the preview_sha256 from the proposal you reviewed.",
         (
             "dossier-from-manuscript --project ./novel --manuscript ./manuscript.md "
-            "--draft-id character:matteo",
+            "--draft-id DRAFT_ID --preview-sha256 PREVIEW_SHA256",
         ),
     ),
     "claim": (

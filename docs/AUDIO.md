@@ -8,9 +8,9 @@ the audio workflow in both the local browser app and the CLI. The
 workers or the optional Apple-Silicon path through
 [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
 
-The workflows below are available in 0.8.1; optional workers and models still
-require their documented setup. Experimental adapters retain their stated
-capabilities and limits. Check
+The recording, direction and teleprompter workflows are available in 0.8.1.
+Development options such as the MLX-Audio transcription command require an
+installation that includes them and the documented service setup. Check
 `lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
 numbers are independent of the application version.
 
@@ -24,6 +24,7 @@ numbers are independent of the application version.
 | Shape delivery for a passage | [Passage direction](#passage-direction) | `audio-direction` |
 | Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers-unreleased) | `audio-export-plan` |
 | Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio-unreleased) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
+| Prepare transcript evidence from one recording | [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon) | `audio-transcribe` |
 | Keep chapter audio for a reader export | [Chapter recording import](#retain-or-import-chapter-audio-unreleased) | `audio-import` |
 | Check a worker or change settings format | [Audio status](#audio-status) and [schema upgrades](#audio-settings-upgrades-and-recovery) | `audio-status`, `audio-migrate` |
 

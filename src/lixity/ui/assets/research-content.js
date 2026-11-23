@@ -652,6 +652,59 @@ function researchDossierBodyHtml(bodyText, dossierContext, actions) {
   '</div>';
 }
 
+function researchDossierPdfContent(detail) {
+  var token = researchContextToken();
+  if (window.LixitySite.readOnly || document.body.dataset.dossierPdfCapable !== "true" ||
+      !token || detail.availability || !detail.id || !detail.project_id ||
+      !Number.isInteger(detail.revision) || detail.revision < 1) return null;
+  var version = uiFormat("research_revision_number", {revision: detail.revision});
+  return {
+    action: '<div class="research-record-actions row">' +
+      '<button type="button" class="ctl ctl-sm" data-dossier-pdf-export data-record-id="' + escapeHtml(detail.id) +
+      '" data-record-revision="' + detail.revision + '" data-project-id="' + escapeHtml(detail.project_id) +
+      '" data-research-token="' + escapeHtml(token) + '">' + escapeHtml(uiLabel("manuscript_pdf_download")) + '</button>' +
+      '<div data-dossier-pdf-status role="status"><p class="ctl-status"></p></div></div>',
+    scope: '<p class="ctl-note" data-dossier-pdf-scope>' + escapeHtml(uiFormat("research_dossier_pdf_scope", {version: version})) + '</p>'
+  };
+}
+
+document.addEventListener("click", async function(event) {
+  var button = event.target.closest("[data-dossier-pdf-export]");
+  if (!button || button.getAttribute("aria-disabled") === "true") return;
+  var token = button.dataset.researchToken;
+  var projectId = button.dataset.projectId;
+  function isCurrent() {
+    return token && token === researchContextToken() && button.isConnected &&
+      !button.closest("details:not([open])") && button.getClientRects().length > 0 &&
+      (!researchSelectionProjectId || researchSelectionProjectId === projectId);
+  }
+  if (!isCurrent()) return;
+  var status = button.parentElement.querySelector("[data-dossier-pdf-status] .ctl-status");
+  var components = window.LixityComponents;
+  var revision = button.dataset.recordRevision;
+  button.setAttribute("aria-disabled", "true");
+  button.setAttribute("aria-busy", "true");
+  components.setStatus(status, uiLabel("manuscript_pdf_busy"), "loading");
+  try {
+    var params = new URLSearchParams({id: button.dataset.recordId, revision: revision, research_token: token});
+    var response = await fetch(API + "/research/dossier-pdf?" + params);
+    var blob = await components.readPdfBlob(response);
+    if (!isCurrent()) return;
+    var disposition = response.headers.get("Content-Disposition") || "";
+    var filename = disposition.match(/\bfilename="([A-Za-z0-9._-]+\.pdf)"/i)?.[1] || "dossier-v" + revision + ".pdf";
+    components.downloadBlob(blob, filename);
+    components.setStatus(status, uiLabel("manuscript_pdf_success"), "ok");
+  } catch (error) {
+    var key = error?.serverCode === "stale-context" || error?.status === 410 ? "research_dossier_pdf_stale"
+      : error?.status === 404 ? "research_dossier_pdf_unavailable" : "manuscript_pdf_error";
+    if (isCurrent()) components.setStatus(status, uiLabel(key), "err");
+  } finally {
+    button.removeAttribute("aria-disabled");
+    button.removeAttribute("aria-busy");
+    if (!isCurrent()) components.setStatus(status, "", "");
+  }
+});
+
 function researchDossierDetailHtml(detail, readOnly, options) {
   options = options || {};
   readOnly = readOnly || window.LixitySite.readOnly;
@@ -676,8 +729,12 @@ function researchDossierDetailHtml(detail, readOnly, options) {
   var attachmentActions = imageContext.image_editable && window.LixityDossierImages ?
     window.LixityDossierImages.actionsHtml(imageContext) : "";
   var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
+  var pdf = researchDossierPdfContent(detail);
+  var dossierActions = (pdf?.action || "") +
+    (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "");
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
-    (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "") +
+    (dossierActions ? '<div class="row">' + dossierActions + '</div>' : "") +
+    (pdf?.scope || "") +
     (!options.recordView && !window.LixitySite.readOnly && !detail.availability &&
       detail.character_analysis_available === true && researchContextToken() && window.LixityDossierCharacter ?
       window.LixityDossierCharacter.html() : "") +
@@ -709,6 +766,11 @@ var researchDossierContentsSerial = 0;
 function researchDossierContentsHtml(markup) {
   var template = document.createElement("template"); template.innerHTML = markup;
   var folder = template.content.firstElementChild, prefix = "dossier-section-" + (++researchDossierContentsSerial) + "-";
+  var pdfScope = folder.querySelector("[data-dossier-pdf-scope]");
+  if (pdfScope) {
+    pdfScope.id = prefix + "pdf";
+    folder.querySelector("[data-dossier-pdf-export]").setAttribute("aria-describedby", pdfScope.id);
+  }
   if (window.LixityDossierImages) window.LixityDossierImages.addOverview(folder);
   var contents = document.createElement("details"); contents.className = "research-dossier-contents";
   contents.dataset.sectionContents = ""; contents.open = !window.matchMedia("(max-width: 900px)").matches;

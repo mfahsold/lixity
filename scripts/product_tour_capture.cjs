@@ -6,34 +6,33 @@ const path = require('node:path');
 const {createHash} = require('node:crypto');
 const {spawnSync} = require('node:child_process');
 const {performance} = require('node:perf_hooks');
+const {startNativeServer} = require('../tests/browser/support/native-server.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const MINIMUM_HOLD = 3;
 
-function readComparisonFixture(directory, payload = null) {
-  const python = process.env.PYTHON_BIN || path.join(ROOT, '.venv', 'bin', 'python');
-  const result = spawnSync(python, ['-c', `
+async function startTourProject(directory) {
+  return startNativeServer(`
 import json
 import sys
+from http.server import ThreadingHTTPServer
 from pathlib import Path
-from lixity.manuscript_editing import ManuscriptStore
+from lixity.server import LixityServerHandler
+from scripts.example_project import create_example_project, save_example_character_dossier
 
-project = Path(sys.argv[1])
-store = ManuscriptStore(project, project / "harbour-manuscript.md", language="en")
-request = json.load(sys.stdin)
-if request is None:
-    result = store.open()
-else:
-    if request.pop("document") != store.document:
-        raise ValueError("Comparison must address the synthetic fixture")
-    result = store.compare(**request)
-print(json.dumps({"ok": True, **result}))
-`, directory], {
-    cwd: ROOT, input: JSON.stringify(payload), encoding: 'utf8', timeout: 10000,
-    env: {...process.env, PYTHONPATH: path.join(ROOT, 'src')},
-  });
-  assert.equal(result.status, 0, 'Synthetic comparison failed: ' + (result.stderr || result.error));
-  return JSON.parse(result.stdout);
+project = Path(sys.argv[1]) / 'warehouse-4'
+example = create_example_project(project)
+manuscript = project / 'harbour-manuscript.md'
+dossier, revision = save_example_character_dossier(project, example['character_evidence_id'])
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(project / 'exports')
+LixityServerHandler.language = 'en'
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier, 'revision': revision}), flush=True)
+server.serve_forever()
+`, directory);
 }
 
 function anchorFrame(source, requiredFrames) {
@@ -57,12 +56,24 @@ function anchorFrame(source, requiredFrames) {
   return first;
 }
 
-async function recordProductTour({browser, capture, prepareWorkspacePage, origin}) {
+async function recordProductTour(options) {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tour-'));
+  let server;
+  try {
+    server = await startTourProject(project);
+    return await recordTourScenes({...options, ...server.fixture, project});
+  } finally {
+    if (server) await server.close();
+    fs.rmSync(project, {recursive: true, force: true});
+  }
+}
+
+async function recordTourScenes({browser, capture, prepareWorkspacePage, url: origin, dossier, revision, project}) {
   const plan = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/videos/product-tour-timing.json'), 'utf8'));
   assert.equal(plan.schema_version, 'lixity-product-tour-timing/1');
   assert.equal(plan.fps, 25);
   assert.equal(plan.duration, 48);
-  assert.deepEqual(plan.scenes.map(scene => scene.id), ['read', 'passage', 'compare', 'research', 'context', 'return']);
+  assert.deepEqual(plan.scenes.map(scene => scene.id), ['read', 'passage', 'compare', 'chapters', 'dossier', 'pdf']);
   assert.deepEqual(plan.scenes.map(scene => [scene.start, scene.end]),
     [[0, 8], [8, 16], [16, 24], [24, 32], [32, 40], [40, 48]]);
   const directory = path.dirname(capture.videoTarget);
@@ -98,90 +109,72 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    let video, comparisonDirectory;
+    let video;
     try {
-      await prepareWorkspacePage(page, {cursor: true});
-      // Product-tour fixtures are completely local; guide map captures retain
-      // their existing separate network policy.
-      await page.route('**/*', route => new URL(route.request().url()).origin === origin ? route.fallback() : route.abort());
+      await prepareWorkspacePage(page, {cursor: true, fixtures: false});
+      // Record only the disposable app. Comparison reads the unsaved text;
+      // an accidental save or other write fails the recording.
+      await page.route('**/*', route => {
+        const request = route.request(), url = new URL(request.url());
+        if (url.origin !== origin) return route.abort();
+        assert.ok(request.method() !== 'POST' || url.pathname === '/api/manuscript-compare',
+          'Unexpected write in the product tour: ' + url.pathname);
+        return route.continue();
+      });
       page.setDefaultTimeout(15000);
-      const open = async filename => {
-        await page.goto(origin + '/' + filename);
+      const open = async () => {
+        await page.goto(origin);
         await page.evaluate(() => document.fonts.ready);
       };
       const settle = async () => page.evaluate(() => new Promise(resolve =>
         requestAnimationFrame(() => requestAnimationFrame(resolve))));
       let target, verify, act;
+      const dossierSummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossier}"]`);
+      const dossierCard = dossierSummary.locator('..');
 
       if (scene.id === 'read') {
-        await open('tour-effi-briest.html');
+        await open();
+        await page.locator('#workbench-overview-open').click();
+        target = page.locator('[data-review-passage]');
+        const paragraph = page.locator('#' + await target.getAttribute('data-target'));
+        verify = async () => {
+          await paragraph.waitFor({state: 'visible'});
+          await visible(page, paragraph.locator('.ptext-inner > p'), 'Review passage reached from the overview');
+        };
+      } else if (scene.id === 'passage') {
+        await open();
         await page.locator('#manuscript-analysis-toggle').click();
         await page.locator('#style-layer').selectOption('sticky');
         await page.locator('#analysis-evidence-enabled').check();
-        assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), false,
-          'The function-word sentence filter uses counted-text marks without paragraph comparison');
         const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id => {
           const layer = paragraphContent[id][3]?.layers?.sticky;
-          return layer && layer.mapped_count > 0 && paragraphContent[id][0].length < 700 && document.getElementById(id);
+          return layer && layer.mapped_count > 0 && paragraphContent[id][0].length < 500 && document.getElementById(id);
         }));
-        assert.ok(paragraphId, 'The classic must contain mapped sticky-sentence evidence');
-        await proseAtTop(page.locator('[id="' + paragraphId + '"]'));
-        await page.waitForFunction(() => (CSS.highlights.get('lixity-analysis-evidence')?.size || 0) > 0);
-        await page.locator('#manuscript-analysis-toggle').click();
-        target = page.locator('#manuscript-analysis-toggle');
-        verify = async () => {
-          assert.equal(await target.getAttribute('aria-pressed'), 'true');
-          await proseAtTop(page.locator('[id="' + paragraphId + '"]'));
-          await page.waitForFunction(() => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range => {
-            const rect = range.getBoundingClientRect();
-            return rect.top >= 0 && rect.bottom <= innerHeight && rect.width > 0;
-          }));
-          assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true);
+        assert.ok(paragraphId, 'Warehouse 4 must contain a short paragraph with sentence evidence');
+        const paragraph = page.locator('#' + paragraphId);
+        await proseAtTop(paragraph);
+        target = paragraph.locator('.ptext-inner > p');
+        await page.waitForFunction(id => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range =>
+          range.startContainer.parentElement.closest('.ptext')?.id === id), paragraphId);
+        act = async click => {
+          const point = await page.evaluate(id => {
+            const hit = [...CSS.highlights.get('lixity-analysis-evidence')].find(range =>
+              range.startContainer.parentElement.closest('.ptext')?.id === id);
+            const rect = hit.getClientRects()[0];
+            return {x: rect.x + Math.min(20, rect.width / 2), y: rect.y + rect.height / 2};
+          }, paragraphId);
+          await click(target, point);
         };
-      } else if (scene.id === 'passage') {
-        await open('tour-pride-prejudice.html');
-        const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id => {
-          const value = paragraphContent[id];
-          return value[3]?.layers?.dialogue?.mapped_count > 0 && /[“"]/.test(value[0]) && document.getElementById(id);
-        }));
-        assert.ok(paragraphId, 'The dialogue scene needs an actual quoted exchange');
-        await proseAtTop(page.locator('[id="' + paragraphId + '"]'));
-        target = page.locator('#reader-direct-speech');
         verify = async () => {
-          assert.equal(await target.getAttribute('aria-pressed'), 'true');
-          await page.waitForFunction(() => [...(CSS.highlights.get('lixity-direct-speech') || [])].some(range => {
-            const rect = range.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight;
-          }));
-          assert.equal(await page.locator('#reader-inspector').isVisible(), false);
+          const card = page.locator('#analysis-evidence-card');
+          await card.waitFor({state: 'visible'});
+          assert.ok(await card.locator('blockquote mark').count(), 'The explanation marks counted words in the exact sentence');
+          await visible(page, card.locator('.analysis-evidence-explanation'), 'Why the sentence was selected and how to review it');
         };
       } else if (scene.id === 'compare') {
-        const original = '# 1. The Eastern Gate\n\nThe watchman waited beside the quiet harbour. "Did you hear the bell?" she asked.\n\nHe shook his head. Fog covered the pilings.\n';
-        comparisonDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tour-comparison-'));
-        const manuscript = path.join(comparisonDirectory, 'harbour-manuscript.md');
-        fs.writeFileSync(manuscript, original);
-        const snapshot = readComparisonFixture(comparisonDirectory);
-        await page.route('**/api/**', async route => {
-          const url = new URL(route.request().url());
-          if (url.pathname.endsWith('/editor-bootstrap.js') || url.pathname.endsWith('/editor-bundle.js')) {
-            const asset = url.pathname.endsWith('/editor-bootstrap.js') ? 'manuscript-editor.js' : 'vendor/codemirror-editor.js';
-            await route.fulfill({contentType: 'application/javascript', body: fs.readFileSync(path.join(ROOT, 'src/lixity/ui/assets', asset))});
-          } else if (url.pathname === '/api/manuscript-edit') {
-            assert.equal(route.request().method(), 'GET', 'An isolated comparison draft must never save the original');
-            await route.fulfill({json: snapshot});
-          } else if (url.pathname === '/api/manuscript-compare') {
-            assert.equal(route.request().method(), 'POST', 'The comparison submits text for read-only analysis');
-            await route.fulfill({json: readComparisonFixture(comparisonDirectory, route.request().postDataJSON())});
-          } else await route.fallback();
-        });
-        await open(path.basename(capture.source));
-        await page.locator('#tab-view-analysis').click();
-        await page.evaluate(() => {
-          if (document.getElementById('manuscript-write')) return;
-          const script = document.createElement('script');
-          const existing = document.querySelector('script[nonce]');
-          if (existing) script.nonce = existing.nonce || existing.getAttribute('nonce');
-          script.src = '/api/editor-bootstrap.js'; document.body.appendChild(script);
-        });
+        const filename = path.join(project, 'warehouse-4', 'harbour-manuscript.md');
+        const original = fs.readFileSync(filename, 'utf8');
+        await open();
         await page.locator('#manuscript-write').click();
         await page.locator('.cm-content').waitFor({state: 'visible'});
         await page.locator('#manuscript-versions > summary').click();
@@ -190,23 +183,20 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
         await target.waitFor({state: 'visible'});
         act = async click => {
           await click(target);
-          await page.keyboard.press('Control+End');
+          await target.evaluate(node => node.setSelectionRange(node.value.length, node.value.length));
           await page.keyboard.type(' Lanterns lit.', {delay: 80});
         };
         verify = async () => {
           assert.equal(await page.locator('#manuscript-comparison-base').inputValue(), original);
           assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), original);
           assert.equal(await target.inputValue(), original + ' Lanterns lit.');
-          assert.equal(await page.locator('#manuscript-save-status').getAttribute('data-state'), 'saved');
-          assert.equal(await page.locator('#manuscript-comparison-use').isEnabled(), true);
           const chapter = page.locator('#manuscript-comparison-chapters li').filter({hasText: '+2 words'});
           await chapter.waitFor({state: 'visible'});
           await visible(page, chapter, 'Measured chapter change');
-          assert.equal(fs.readFileSync(manuscript, 'utf8'), original);
+          assert.equal(fs.readFileSync(filename, 'utf8'), original);
         };
-      } else if (scene.id === 'research') {
-        await open(path.basename(capture.source));
-        await page.locator('#tab-view-analysis').click();
+      } else if (scene.id === 'chapters') {
+        await open();
         await page.locator('#workbench-overview-open').click();
         await page.locator('[data-analysis-workflow=compare]').click();
         await page.locator('[data-analysis-section-target=style]').click();
@@ -222,37 +212,40 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
           await visible(page, page.locator('#metric-context-chapter'), 'Selected chapter');
           await visible(page, page.locator('#metric-context-value'), 'Selected chapter measurement');
         };
-      } else if (scene.id === 'context') {
-        await open(path.basename(capture.source));
-        await page.locator('#tab-view-research').click();
-        await page.locator('[data-rtab="claims"]').click();
-        await page.locator('#r-open-timeline').click();
-        target = page.locator('#research-claims-timeline .research-timeline-strip-row').first();
-        await target.waitFor({state: 'visible'});
-        // The initial overview and timeline reads can replace the same rows.
-        // Position the current row in one browser turn rather than retaining
-        // an element through Playwright's multi-frame stability wait.
-        await target.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
-        verify = async () => {
-          assert.equal(await page.locator('#rtab-timeline').isVisible(), true);
-          assert.ok(await page.locator('#research-claims-timeline .research-timeline-dated > li').evaluateAll(nodes => {
-            const shown = nodes.filter(node => { const rect = node.getBoundingClientRect(); return rect.top >= 0 && rect.bottom <= innerHeight; });
-            return shown.some(node => node.textContent.includes('With evidence')) &&
-              shown.some(node => node.textContent.includes('Author assumption'));
-          }), 'Timeline outcomes must visibly distinguish evidence labels from author assumptions');
-        };
       } else {
-        await open('sandbox-index.html');
-        if (await page.locator('#lang-toggle').innerText() === 'EN') await page.locator('#lang-toggle').click();
-        await page.locator('#preset-clear').click();
-        target = page.locator('#preset-en');
-        verify = async () => {
-          assert.ok((await page.locator('#input').inputValue()).includes('Netherfield'));
-          assert.ok(Number(await page.locator('#k-words').innerText()) > 0);
-          await visible(page, page.locator('#input'), 'Sandbox passage input');
-          await visible(page, page.locator('.kpis'), 'Sandbox passage results');
-          await visible(page, page.locator('#privacy-pill'), 'Sandbox local-processing context');
-        };
+        await open();
+        await page.locator('#tab-view-research').click();
+        await dossierSummary.waitFor({state: 'visible'});
+        await dossierSummary.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+        const body = dossierCard.locator('.research-dossier-body-rendered');
+        if (scene.id === 'dossier') {
+          target = dossierSummary;
+          verify = async () => {
+            await body.waitFor({state: 'visible'});
+            await body.locator('table').waitFor({state: 'visible'});
+            assert.ok(await body.locator('blockquote').count(), 'The generated dossier keeps the quoted manuscript passages');
+            await body.locator('table').evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+            await visible(page, body.locator('table thead'), 'Chapter distribution in the saved character dossier');
+          };
+        } else {
+          await dossierSummary.click();
+          target = dossierCard.locator('[data-dossier-pdf-export]');
+          await target.scrollIntoViewIfNeeded();
+          act = async click => {
+            const downloading = page.waitForEvent('download');
+            await click(target);
+            const download = await downloading;
+            assert.ok(download.suggestedFilename().endsWith('-v' + revision + '.pdf'));
+            const bytes = fs.readFileSync(await download.path());
+            assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+            assert.ok(bytes.subarray(-32).toString().includes('%%EOF'), 'Download must be a complete PDF');
+          };
+          verify = async () => {
+            const status = dossierCard.locator('[data-dossier-pdf-status]');
+            await status.getByText(/PDF download started/i).waitFor({state: 'visible'});
+            await visible(page, status, 'Download confirmation');
+          };
+        }
       }
 
       await settle();
@@ -282,10 +275,10 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
       await page.evaluate(() => document.getElementById('tour-frame-anchor').remove());
       const started = performance.now();
       const clicks = [];
-      const click = async locator => {
+      const click = async (locator, point) => {
         const box = await locator.boundingBox();
         assert.ok(box && box.width && box.height, 'A tour click needs a visible target');
-        const destination = {x: box.x + box.width / 2, y: box.y + box.height / 2};
+        const destination = point || {x: box.x + box.width / 2, y: box.y + box.height / 2};
         assert.ok(await locator.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)), destination),
           'The directed click must reach its stated control');
         // Leave room for the final browser input acknowledgement, while the
@@ -339,7 +332,6 @@ async function recordProductTour({browser, capture, prepareWorkspacePage, origin
       throw error;
     } finally {
       if (!video) await context.close();
-      if (comparisonDirectory) fs.rmSync(comparisonDirectory, {recursive: true, force: true});
     }
   }
   const pendingSidecar = sidecar + '.tmp-' + process.pid;

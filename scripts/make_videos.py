@@ -116,10 +116,9 @@ def _tour_plan() -> dict:
     plan = json.loads(TOUR_TIMING_PATH.read_text(encoding="utf-8"))
     if plan.get("schema_version") != "lixity-product-tour-timing/1":
         raise SystemExit("Unknown product-tour timing schema")
-    ids = ["read", "passage", "compare", "research", "context", "return"]
     scenes = plan["scenes"]
     fps = plan["fps"]
-    if not isinstance(fps, int) or fps <= 0 or [scene["id"] for scene in scenes] != ids:
+    if not isinstance(fps, int) or fps <= 0 or len(scenes) != 6 or len({scene["id"] for scene in scenes}) != len(scenes):
         raise SystemExit("The product tour needs six ordered scenes and a positive integer fps")
     previous_end = 0
     for scene in scenes:
@@ -238,11 +237,11 @@ def convert_social_cuts() -> None:
     font = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     font_opt = f":fontfile={font}" if Path(font).is_file() else ""
     hooks = {
-        "read": "Notice sticky sentences",
-        "passage": "Focus on dialogue",
+        "read": "Go to a passage worth checking",
+        "passage": "See why words were marked",
         "compare": "Compare your revision",
-        "research": "Compare chapters",
-        "return": "Try your passage offline",
+        "dossier": "Find a character across chapters",
+        "pdf": "Download an exact dossier version",
     }
     selected = [scene for scene in plan["scenes"] if scene["id"] in hooks]
     frames = len(selected) * 6 * plan["fps"]

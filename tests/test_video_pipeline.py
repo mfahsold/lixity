@@ -37,7 +37,7 @@ def short_tour_recording(
         [FFMPEG, "-v", "error", "-f", "lavfi", "-i", "color=size=160x100:rate=25",
          "-t", "0.4", "-c:v", "libvpx", str(source)], check=True,
     )
-    ids = ["read", "passage", "compare", "research", "context", "return"]
+    ids = [scene["id"] for scene in make_videos._tour_plan()["scenes"]]
     timing = {
         "schema_version": "lixity-product-tour-recording/1", "fps": 25, "duration": 48,
         "segments": [{"id": name, "file": source.name, "startFrame": 2, "frames": 200,

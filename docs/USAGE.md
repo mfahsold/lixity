@@ -846,8 +846,9 @@ the JSON has `"has_baseline": false` and `"deltas": null`.
 
 Without `--json`, the CLI prints the available manuscript-wide changes.
 Use JSON for chapter pairs, matching status and the original measurements.
-Chapter deltas require a clear match. Open both passages to interpret a
-difference in context. [Measurement reference](guides/metrics/en.html#revisions).
+Chapter deltas require a clear match. `dialogue_ratio` and `sticky_pct` deltas
+are differences in percentage points. A change from 25% to 50% is a 25-point
+increase. [Measurement reference](guides/metrics/en.html#revisions)
 
 ### `lixity dashboard`
 
@@ -905,6 +906,8 @@ PDF and dashboard CLI exports reject the source path and its symbolic/hard-link
 aliases, before writing and again immediately before atomic replacement.
 The [native download form](WORKSPACE.md#download-a-manuscript-pdf) uses the same composer
 without writing a CLI output path.
+For a saved research record, use the [dossier PDF workflow](research/USAGE.md#download-a-dossier-as-pdf)
+in the local dashboard. This command takes manuscript text from a file.
 
 Title selection prefers an explicit override, the selected project's title,
 supported manuscript title metadata/heading, then the filename. Fenced code is
@@ -1040,6 +1043,13 @@ Start the installed workspace without keeping a terminal open:
 lixity service start --open
 ```
 
+To inspect a specific running instance, use the same port for both commands:
+
+```sh
+lixity service status --port 8765 --json
+lixity doctor --port 8765 --json
+```
+
 Use `status`, `restart` and `stop` to manage the owned instance. Start defaults
 to an empty workspace in an application-owned directory unless a project or
 `LIXITY_DIR` is specified. `start` takes fresh launch settings; `restart` reuses
@@ -1168,6 +1178,7 @@ for a running server's operations. Confirm permission to retain source bytes
 before ingesting. Retrieved passages are evidence to review, not accepted claims.
 
 Useful entrypoints: [source/current-record search](research/USAGE.md#search-current-authored-records),
+[preview manuscript dossier proposals](research/USAGE.md#manuscript-driven-dossier-drafts),
 [chronology and causal interpretations](research/USAGE.md#claim-chronology-and-causeeffect-links),
 [keyword citations](research/USAGE.md#choose-citations-by-keywords),
 [Zotero capture and recovery](research/USAGE.md#zotero-desktop-bridge),

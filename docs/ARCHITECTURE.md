@@ -522,6 +522,12 @@ and submission layouts share block placement and the same PDF document engine;
 the analysis report retains its metric tables. Editorial geometry reuses
 `BookLayoutConfig`, which also remains available to embedding adapters.
 
+The dossier PDF starts from one accepted dossier revision and its pinned
+quotations. It uses the same Markdown projection, table layout, font embedding,
+pagination and PDF outline engine. The native route captures the research context,
+renders from one archive snapshot outside the workspace lock, and validates the
+selected context again before delivering the PDF.
+
 `config.prepare_project_settings` validates one settings candidate while
 preserving unrelated TOML values. The route renders that candidate,
 commits through `PreparedProjectSettings`, then publishes session/cache state.

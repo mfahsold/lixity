@@ -41,27 +41,13 @@ from ..research.media import MEDIA_TYPES
 from ..research.models import Reference, Source, SourceVersion
 from ..research.repository import Repository, ResearchConflictError, ResearchError
 from ._base import ResponseMixin
-from .pdf_context import manuscript_pdf_token, research_context_token
+from .pdf_context import manuscript_pdf_token
 
 RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision", "claim_relation", "manuscript_claim_link"))
 
 
 class ResearchRoutesMixin(ResponseMixin):
     """Handlers for the explicit-project research workspace."""
-
-    def _research_context_matches(self, token: Any) -> bool:
-        """Keep token-bound requests in the selected root, including restored copies."""
-        if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{64}", token):
-            self._json({"ok": False, "message": "A selected research context token is required"}, 400)
-            return False
-        root = self.get_research_root()
-        if root is None and self.source_input:
-            root = Path(self.workspace_root)
-        if token != research_context_token(root):
-            self._json({"ok": False, "code": "stale-context",
-                        "message": "Selected research project changed; refresh before continuing"}, 409)
-            return False
-        return True
 
     def _handle_research_timeline(self) -> None:
         root = self._require_research_root()

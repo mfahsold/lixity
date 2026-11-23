@@ -97,12 +97,15 @@ inspection does not save a link or rewrite text. Current entries and explicitly
 linked earlier versions remain distinct. Project inspection observes bounded
 metadata; it does not establish output provenance or archive integrity.
 
-The 0.8.1 UI refinements group reading, analysis, research capture and audio
-export actions by task, with localized tooltips across analysis navigation,
-the section outline, Back to passage and the reader speech control. Shorter help
-retains the same measurement boundaries; analysis algorithms and public
-command/JSON contracts are unchanged.
-The analysis overview links directly to available 3D chapter dimensions, where
+The current development overview opens the manuscript measurements and offers
+three tasks: review passages, compare chapters and explore patterns. The selected
+measure links to a localized reference. Rhythm and word pattern examples open
+verified manuscript text. Word patterns identify their quotation context.
+Repeated phrases can open as a group of occurrences, and the local app accepts
+an author-supplied expression. Read the analysis availability and scope before
+combining these results with saved decisions or evidence.
+
+The overview links to available 3D chapter dimensions, where
 each axis reports its raw cutoff alongside its sample standard-deviation
 multiple. Cross-paragraph quotation spans attribute covered quoted words to each
 overlapping paragraph, and default Spanish lexical tense heuristics avoid
@@ -126,6 +129,18 @@ The Zotero bridge is read-only and captures selected eligible attachments with
 retention consent, without background sync. Local imports work independently.
 Since v0.7.6, Lixity supports retained dossier images, PDF and MP4/WebM attachments;
 media records have explicit compatibility and source-file export requirements.
+
+Development dossier workflows distinguish read-only manuscript proposals,
+fresh character matches and accepted research revisions. Preview and verify a
+proposal before creating a dossier. Add reviewed manuscript evidence as a new
+revision to retain it with existing notes. UI and project-aware CLI proposals
+use local project settings. The direct-text MCP tool uses its supplied text,
+language and kind. The native dossier PDF exports the selected saved revision
+with section bookmarks, tables, place and route descriptions, and pinned
+quotations. The reviewed synthetic demo provides a PDF of Mara’s saved dossier.
+[Manuscript proposals](https://mfahsold.github.io/lixity/research/USAGE.md#manuscript-driven-dossier-drafts) ·
+[Dossier PDF](https://mfahsold.github.io/lixity/research/USAGE.md#download-a-dossier-as-pdf) ·
+[Sample PDF](https://mfahsold.github.io/lixity/demo/warehouse-4-dossier.pdf)
 
 Reading websites are copies, not backups or access control. Review-workspace
 exports and curated reader/companion publications have different disclosure

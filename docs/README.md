@@ -44,17 +44,19 @@ links the release notes for the documented version, and
 | I want to… | Browser workflow | CLI or detailed reference |
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
-| Write and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
+| Write, compare versions and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) · [Compare versions](WORKSPACE.md#compare-versions-and-resolve-a-conflict) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
 | Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Measurement reference](guides/metrics/en.html) · [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
+| Draft a character dossier and review matching passages | [Review a manuscript dossier](ONBOARDING.md#review-a-manuscript-dossier) | [Manuscript-driven dossier drafts](research/USAGE.md#manuscript-driven-dossier-drafts) |
 | Import sources from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF/OCR setup](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |
 | Make one PDF for editing, reading or submission | [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf) | [PDF layouts and command](USAGE.md#lixity-pdf) |
+| Download one saved dossier version | [Download a dossier PDF](WORKSPACE.md#download-a-dossier-pdf) | [Dossier PDF contents](research/USAGE.md#download-a-dossier-as-pdf) |
 | Share a read-only website or selected background notes | [Choose the recipient's copy](WORKSPACE.md#export-a-reading-website) | [Check and export the same scope](USAGE.md#lixity-export-site) |
 | Generate project-local analysis artifacts | [Project outputs](WORKSPACE.md#inspect-project-structure) | [Preview or run a build](USAGE.md#lixity-build) |
 | Record an author's voice or use the teleprompter | [Audio manual](AUDIO.md) | [Audio worker installation](INSTALLATION.md#optional-qwen-audio-worker) |
 | Add chapter audio to a reading copy | [Audio generation and exchange](AUDIO.md) | [Reading website options](WORKSPACE.md#export-a-reading-website) |
-| Stop, restart or repair the app | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
+| Reopen projects or check which local app is running | [Service management](INSTALLATION.md#running-the-server) | [Troubleshooting](INSTALLATION.md#troubleshooting) · [`doctor`](USAGE.md#lixity-doctor) |
 | Back up a saved project inventory | [Project backup](PROJECT_BACKUP.md) | [CLI backup and restore](USAGE.md#verified-project-backup-unreleased) |
 | Back up retained research and restore it | [Archive lifecycle](research/USAGE.md#storage-lifecycle-and-recovery) | [Export and restoration](research/USAGE.md#export-and-restoration) |
 
