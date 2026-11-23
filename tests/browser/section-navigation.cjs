@@ -437,6 +437,19 @@ async function dossierRibbon(page, compact) {
    await disclosure.locator('summary')[touch?'tap':'click']();
    await expect(disclosure).not.toHaveAttribute('open','');
    await folder.locator('.research-folder-citations').evaluate(node=>node.scrollIntoView());
+   if (locale === 'en' && width === 1440 && motion === 'no-preference') {
+    // Refit the bottomed dock after the click starts the upward animation.
+    // An equivalent CSS height lets the real fitting step run in this event.
+    await location.evaluate(control => {
+     const dock = control.closest('.workspace-context-panel');
+     dock.scrollTop = dock.scrollHeight;
+     window.addEventListener('click', () => {
+      const height = dock.style.getPropertyValue('--context-available-height');
+      dock.style.setProperty('--context-available-height', `calc(${height})`);
+      window.LixityReader.fitContext();
+     }, {once: true});
+    });
+   }
    await location[touch?'tap':'click']();
    await expect(disclosure).toHaveAttribute('open','');
    await expect(disclosure.locator('summary')).toBeInViewport();

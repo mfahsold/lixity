@@ -12,6 +12,7 @@ import re
 import secrets
 from collections.abc import Collection, Mapping
 from html import escape
+from logging import DEBUG, WARNING
 from pathlib import Path
 from threading import RLock
 from typing import Any, BinaryIO, TypeVar
@@ -28,7 +29,7 @@ from ..research.repository import (
 from ..ui.components import status_strip
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome, WorkspaceState
-from .constants import DEFAULT_PORT
+from .constants import AUDIO_CAPTURE_ROUTE, DEFAULT_PORT
 from .middleware import (
     SelectedManuscriptContext,
     analysis_open_overrides,
@@ -113,7 +114,8 @@ class ResponseMixin(WorkspaceState):
             # A cancelled request cannot receive another response. Keep transport
             # errors out of route processing handlers, which might retry as 500.
             self.close_connection = True
-            self._log.warning("Client disconnected while sending HTTP %d response", code)
+            self._log.log(WARNING if code >= 500 else DEBUG,
+                          "Client disconnected while sending HTTP %d response", code)
             return False
 
     def _send_stream(
@@ -150,10 +152,8 @@ class ResponseMixin(WorkspaceState):
     ) -> None:
         """Serve the dashboard with a per-response script nonce and strict CSP.
 
-        The shell is self-contained: scripts come only from the bundled inline
-        block (nonce), styles stay inline, and everything else is default-deny.
-        A request nonce blocks injected scripts from manuscript or project text,
-        so escaping tests and CSP protect the same boundary.
+        Nonced scripts and inline styles retain the default-deny policy. A
+        microphone-enabled page can also load its exact packaged AudioWorklet URL.
         """
         notice_keys = {
             RefreshOutcome.MISSING: "status_source_missing",
@@ -179,10 +179,15 @@ class ResponseMixin(WorkspaceState):
         if self.source_input and not editor_view:
             bootstrap = (f'<script nonce="{nonce}" src="{escape(self.api_base)}/editor-bootstrap.js"></script>')
             body = body.replace("</body>", bootstrap + "</body>")
+        script_policy = f"script-src 'nonce-{nonce}'"
+        if allow_microphone and self._trusted_host():
+            # AudioWorklet loads through script-src and cannot attach a document nonce.
+            worklet = self.api_base.removesuffix("/api") + AUDIO_CAPTURE_ROUTE
+            script_policy += f" http://{self.headers['Host']}{worklet}"
         policy = "; ".join(
             (
                 "default-src 'none'",
-                f"script-src 'nonce-{nonce}'",
+                script_policy,
                 "style-src 'unsafe-inline'",
                 "img-src 'self' data: blob: https://tile.openstreetmap.org",
                 "font-src 'self' data:",

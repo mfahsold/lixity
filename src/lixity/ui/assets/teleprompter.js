@@ -684,7 +684,7 @@
   function resetCapture() {
     ++pcmCaptureSequence; isRecording = false;
     if (recordTimerId) clearInterval(recordTimerId); recordTimerId = null;
-    if (pcmProcessorNode) { pcmProcessorNode.onaudioprocess = null; pcmProcessorNode.disconnect(); pcmProcessorNode = null; }
+    if (pcmProcessorNode) { pcmProcessorNode.close(); pcmProcessorNode = null; }
     if (pcmSourceNode) { pcmSourceNode.disconnect(); pcmSourceNode = null; }
     if (pcmMediaStream) { pcmMediaStream.getTracks().forEach(function(track) { track.stop(); }); pcmMediaStream = null; }
     if (pcmAudioContext) { pcmAudioContext.close().catch(function() {}); pcmAudioContext = null; }
@@ -730,18 +730,21 @@
       if (request !== pcmCaptureSequence || !isRecording || modal.hidden) return;
       sameContext();
       if (context.state !== "running") throw new Error("Audio capture is suspended");
-      pcmSourceNode = context.createMediaStreamSource(stream); pcmProcessorNode = context.createScriptProcessor(4096, 1, 1);
-      pcmProcessorNode.onaudioprocess = function(event) {
+      pcmSourceNode = context.createMediaStreamSource(stream);
+      var capture = await window.LixityAudioTake.openPcmCapture(context, function(input) {
         if (request !== pcmCaptureSequence || !isRecording) return;
-        var input = event.inputBuffer.getChannelData(0);
         var remaining = Math.floor((window.LixityAudioTake.maximumBytes - 44) / 2) - pcmTotalSamples;
-        var copy = new Float32Array(input.subarray(0, remaining));
-        if (copy.length) { pcmRecordedChunks.push(copy); pcmTotalSamples += copy.length; }
-        if (copy.length < input.length) {
+        var chunk = input.subarray(0, remaining);
+        if (chunk.length) { pcmRecordedChunks.push(chunk); pcmTotalSamples += chunk.length; }
+        if (chunk.length < input.length) {
           toggleRecording(); recordingState("ready", "teleprompter_take_limit");
         }
-      };
-      pcmSourceNode.connect(pcmProcessorNode); pcmProcessorNode.connect(context.destination);
+      }, function() {
+        if (request === pcmCaptureSequence && isRecording) captureFailed();
+      });
+      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) { capture.close(); return; }
+      pcmProcessorNode = capture; sameContext();
+      pcmProcessorNode.connect(pcmSourceNode);
       recordBtn.removeAttribute("aria-busy"); recordBtn.classList.add("is-active");
       recordBtn.setAttribute("aria-label", label("teleprompter_recording"));
       recordingState("running", "teleprompter_take_running");

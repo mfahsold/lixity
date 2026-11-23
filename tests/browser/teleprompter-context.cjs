@@ -228,6 +228,7 @@ async function dossierContext(browser, width, artifacts) {
     await page.evaluate(() => { document.getElementById('synthetic-teleprompter-take').pause(); URL.revokeObjectURL(window.teleprompterTakeUrl); });
     await page.evaluate(() => {
       window.studioCalls = []; window.teleprompterSamplesDelivered = false;
+      document.body.dataset.readOnly = 'true';
       document.addEventListener('lixity:open-speech-studio', event => window.studioCalls.push(event.detail));
       // Feed deterministic silent PCM through the actual take encoder/card path.
       window.AudioContext = class {

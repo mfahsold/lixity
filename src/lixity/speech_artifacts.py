@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
-from .audio_audit import _wav_format
+from .audio_audit import _wav_format, _wave_reader_is_integer_pcm
 from .io import FileUtils
 from .log import get_logger
 from .research.repository import Repository
@@ -83,7 +83,8 @@ def _measure(audio: bytes, source_sha256: str, chapter: int,
         _wav_format(io.BytesIO(audio))
         with wave.open(io.BytesIO(audio), "rb") as source:
             channels, width, rate, frames, compression, _ = source.getparams()
-            if (compression != "NONE" or channels not in (1, 2) or width != 2
+            if (not _wave_reader_is_integer_pcm(source) or compression != "NONE"
+                    or channels not in (1, 2) or width != 2
                     or not 8000 <= rate <= 192000 or frames < 1):
                 raise ValueError("Chapter audio requires mono or stereo 16-bit PCM WAV, 8–192 kHz")
             if len(source.readframes(frames + 1)) != frames * channels * width:

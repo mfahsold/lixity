@@ -20,6 +20,10 @@ Passing tests establish only their assertions; confirm that those assertions
 cover the requested behavior. Check an issue's premise against the base before
 implementing it. Fix an incorrect verification before changing correct code.
 
+For a warning, reproduce it in the emitting runtime and verify the same
+operation after the fix. Record deliberate compatibility cases with their
+replacement path. [Warning triage](CONTRIBUTING.md#trace-runtime-warnings)
+
 For an interaction regression, assert the author-visible outcome after the
 actual trigger. An open disclosure or a Playwright field fill can succeed while
 the field starts outside the viewport. Hold a pending response explicitly when

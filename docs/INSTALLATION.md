@@ -717,6 +717,10 @@ and the service appends the process' stderr to `service-PORT.log`. `lixity servi
 use the state-folder table above to locate `service-PORT.log` without restarting,
 then use `tail -f` to follow it on systems with that command.
 
+An interrupted buffered response appears at DEBUG level during ordinary
+navigation. Interrupted server error responses, streamed transfers and the
+correlated website download failure remain visible at WARNING level.
+
 | Setting | Effect |
 | --- | --- |
 | `--debug` (start/restart) | DEBUG level; controlled request routes and error status |

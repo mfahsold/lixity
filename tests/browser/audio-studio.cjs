@@ -283,11 +283,11 @@ server.serve_forever()
         assert.match(await take.locator('.speech-player-time').textContent(), /0:0[012]\s*\/\s*0:0[123]/);
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `take-${width}.png`)});
         await page.evaluate(() => {
-          window.originalProcessor = AudioContext.prototype.createScriptProcessor;
-          AudioContext.prototype.createScriptProcessor = function(...args) {
-            const processor = window.originalProcessor.apply(this, args);
+          window.originalProcessor = window.AudioWorkletNode;
+          window.AudioWorkletNode = function(...args) {
+            const processor = new window.originalProcessor(...args);
             // Model a device that starts but supplies no buffers before being stopped.
-            Object.defineProperty(processor, 'onaudioprocess', {set() {}, configurable: true});
+            Object.defineProperty(processor.port, 'onmessage', {set() {}, configurable: true});
             return processor;
           };
         });
@@ -296,7 +296,7 @@ server.serve_forever()
         await page.locator('.voice-rec-btn').click();
         assert.equal(await page.locator('.voice-save-btn').isEnabled(), false,
           'An empty replacement take cannot save the previous audio with a new transcript');
-        await page.evaluate(() => {AudioContext.prototype.createScriptProcessor = window.originalProcessor;});
+        await page.evaluate(() => {window.AudioWorkletNode = window.originalProcessor;});
         await page.locator('.voice-rec-btn').click();
         await page.waitForFunction(() => document.querySelector('.voice-rec-btn')?.classList.contains('is-recording'));
         await page.locator('#modal-speech [data-speech-action=close]').click();

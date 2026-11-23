@@ -86,6 +86,38 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 `node --check path/to/file.js` catches syntax errors before a browser run.
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
+#### Trace runtime warnings
+
+Record the emitting command or browser action, runtime version, and first
+relevant source frame. For an installed service, compare the installed and
+running versions with `lixity doctor` and use the log for the affected port.
+Keep captures with project context in ignored local storage.
+[Service diagnostics](docs/INSTALLATION.md#logs)
+
+| Where the warning appears | How to reproduce it |
+| --- | --- |
+| Python CLI or server | Add `-W default::DeprecationWarning -W default::FutureWarning` before `-m lixity` in the affected invocation. Repeat the focused test with `-W error`, then use `make check` on the supported interpreter. |
+| Isolated package build | Run `PYTHONWARNINGS=error .venv/bin/python scripts/check_release.py --build --smoke` to include the build backend and the installed-wheel entry points. |
+| Node tool | Prefix the affected command with `NODE_OPTIONS=--trace-deprecation`. Install editor build dependencies from their lockfile with `(cd scripts/editor && npm ci)`, then check the bundle with `npm run --prefix scripts/editor check`. |
+| Browser | Use the repository's Playwright pin and repeat the actual interaction. Capture console warnings and page errors, plus the affected browser and viewport. `scripts/run_browser_suites.py --only SUITE --diagnostics DIR` retains bounded synthetic evidence. |
+| GitHub Actions | Match the job to the exact commit and action pin. Trace a bundled dependency warning to the action release and check the upstream fix before changing a pin. Use `make workflow-check` for YAML validation. |
+
+Keep intentional API deprecations covered by their compatibility tests and
+move maintained callers to the successor API. Treat rejected inputs,
+interrupted transfers and unhandled failures according to their diagnostic
+meaning. Verify that a quieter normal path still exposes the operational
+failure a maintainer needs to investigate. For a warning in an upstream action,
+record its owner and tracking link until a qualified replacement is available.
+
+The pinned Pages deployment action can emit Node `DEP0040` from its bundled
+dependencies during a successful deployment. Check the job conclusion and
+the deployed source SHA. [Upstream tracking issue](https://github.com/actions/deploy-pages/issues/434)
+
+Portable review HTML opened from `file://` can emit the `ScriptProcessorNode`
+deprecation during its local recording workflow. Native browser recording
+loads the packaged `AudioWorklet` from the loopback service. Exercise both
+entry points for recording changes. [Browser coverage](tests/browser/README.md)
+
 #### Reproduce a performance finding
 
 Use the included public-domain texts and synthetic chapters for analysis

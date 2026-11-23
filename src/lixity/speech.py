@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
+from .audio_audit import _wave_reader_is_integer_pcm
 from .log import get_logger, speech_diagnostic_id, speech_diagnostic_scope
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .sentences import split_sentences
@@ -315,6 +316,8 @@ def generate_silence_wav(
 def _read_pcm(data: bytes, *, allow_empty: bool = False) -> tuple[tuple[int, int, int], bytes]:
     try:
         with wave.open(io.BytesIO(data), "rb") as reader:
+            if not _wave_reader_is_integer_pcm(reader):
+                raise ValueError("Audio segment requires integer PCM WAV")
             params = (reader.getnchannels(), reader.getsampwidth(), reader.getframerate())
             count = reader.getnframes()
             frames = reader.readframes(count)

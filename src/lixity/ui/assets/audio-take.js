@@ -118,6 +118,37 @@
     }});
     return new Uint8Array(buffer);
   }
+  async function openPcmCapture(context, receive, onFailure) {
+    var node, release;
+    if (document.body.dataset.readOnly === "true") {
+      // Standalone file:// exports cannot reliably load an AudioWorklet module.
+      node = context.createScriptProcessor(4096, 1, 1);
+      node.onaudioprocess = function(event) {
+        receive(new Float32Array(event.inputBuffer.getChannelData(0)));
+      };
+      release = function() { node.onaudioprocess = null; };
+    } else {
+      if (!context.audioWorklet || typeof window.AudioWorkletNode !== "function") {
+        throw new DOMException("PCM capture requires AudioWorklet", "NotSupportedError");
+      }
+      await context.audioWorklet.addModule((document.body.dataset.api || "/api") + "/audio-capture.js");
+      node = new window.AudioWorkletNode(context, "lixity-pcm-capture", {
+        channelCount:1, channelCountMode:"explicit", outputChannelCount:[1],
+      });
+      node.port.onmessage = function(event) { receive(event.data); };
+      node.onprocessorerror = onFailure;
+      release = function() {
+        node.onprocessorerror = null;
+        node.port.onmessage = null;
+        node.port.close();
+      };
+    }
+    return {
+      connect:function(source) { source.connect(node); node.connect(context.destination); },
+      close:function() { release(); node.disconnect(); },
+    };
+  }
   window.LixityAudioTake = Object.freeze({create:create, validate:validate, importFiles:importFiles,
-    withTranscript:withTranscript, referenceEligibility:referenceEligibility, download:download, encodeWav:encodeWav, maximumBytes:maximumBytes});
+    withTranscript:withTranscript, referenceEligibility:referenceEligibility, download:download,
+    encodeWav:encodeWav, openPcmCapture:openPcmCapture, maximumBytes:maximumBytes});
 })();

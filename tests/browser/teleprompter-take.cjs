@@ -39,19 +39,25 @@ const textContrast = locator => locator.evaluate(element => {
         document.documentElement.dataset.theme=theme;
       },{labels, theme});
       await page.evaluate(()=>{
-        window.testCapture={requests:[],stops:0,closes:0,resumes:0,revoked:[],mode:'pending'};
+        window.testCapture={requests:[],stops:0,closes:0,resumes:0,portsClosed:0,revoked:[],mode:'pending'};
         const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
         URL.createObjectURL=value=>create(value);URL.revokeObjectURL=url=>{testCapture.revoked.push(url);revoke(url);};
         Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:()=>new Promise((resolve,reject)=>testCapture.requests.push({resolve,reject}))}});
         window.AudioContext=class {
-          constructor(options){this.sampleRate=options?.sampleRate||48000;this.state='suspended';this.destination={};}
+          constructor(options){this.sampleRate=options?.sampleRate||48000;this.state='suspended';this.destination={};
+            this.audioWorklet={addModule:()=>testCapture.mode==='module-pending'
+              ? new Promise(resolve=>{testCapture.resolveModule=resolve;}) : Promise.resolve()};}
           resume(){testCapture.resumes++; if(testCapture.mode==='resume-error')return Promise.reject(new Error('synthetic closed context'));this.state='running';return Promise.resolve();}
           close(){testCapture.closes++;this.state='closed';return Promise.resolve();}
           createMediaStreamSource(){return {connect(){},disconnect(){}};}
-          createScriptProcessor(){const processor={connect(){},disconnect(){}};testCapture.processor=processor;return processor;}
+        };
+        window.AudioWorkletNode=class {
+          constructor(){this.port={close(){testCapture.portsClosed++;}};testCapture.processor=this;}
+          connect(){}
+          disconnect(){}
         };
         window.resolveCapture=()=>testCapture.requests.at(-1).resolve({getTracks:()=>[{stop:()=>testCapture.stops++}]});
-        window.feedCapture=()=>testCapture.processor.onaudioprocess({inputBuffer:{getChannelData:()=>new Float32Array(48000)}});
+        window.feedCapture=()=>testCapture.processor.port.onmessage({data:new Float32Array(48000)});
         document.addEventListener('lixity:open-speech-studio',event=>{window.handedTake=event.detail;});
       });
       for(const file of ['design-tokens.css','components.css','teleprompter.css','speech-player.css'])await page.addStyleTag({content:fs.readFileSync('src/lixity/ui/assets/'+file,'utf8')});
@@ -137,6 +143,14 @@ const textContrast = locator => locator.evaluate(element => {
         await page.evaluate(()=>{document.body.dataset.manuscriptSourceSha256='synthetic-source';LixityTeleprompter.close();});
         await page.locator('#reader-teleprompter').click();await page.evaluate(()=>testCapture.mode='resume-error');await record.click();await page.evaluate(()=>resolveCapture());
         await page.waitForFunction(()=>document.querySelector('#teleprompter-record-status')?.dataset.state==='failed');
+        assert.equal(await record.evaluate(el=>el.classList.contains('is-active')),false);
+        // A worklet arriving after dismissal cannot reactivate capture or retain a port.
+        await page.evaluate(()=>testCapture.mode='module-pending');
+        await record.click();await page.evaluate(()=>resolveCapture());
+        await page.waitForFunction(()=>typeof testCapture.resolveModule==='function');
+        const beforeModule=await page.evaluate(()=>({stops:testCapture.stops,ports:testCapture.portsClosed}));
+        await page.evaluate(()=>{LixityTeleprompter.close();testCapture.resolveModule();});
+        await page.waitForFunction(before=>testCapture.stops===before.stops+1&&testCapture.portsClosed===before.ports+1,beforeModule);
         assert.equal(await record.evaluate(el=>el.classList.contains('is-active')),false);assert.deepEqual(errors,[]);
       } finally {await page.close();}
     }

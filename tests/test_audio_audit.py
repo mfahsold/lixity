@@ -336,23 +336,25 @@ def test_available_ffmpeg_decodes_external_formats(tmp_path: Path, extension: st
     assert audio.read_bytes() == before
 
 
-def _float_wav(path: Path) -> Path:
+def _float_wav(path: Path, *, extended: bool = False) -> Path:
     samples = struct.pack("<ff", 0.5000000596046448, -0.25) * 1600
-    fmt = struct.pack("<HHIIHH", 3, 2, 16000, 128000, 8, 32)
+    fmt = struct.pack("<HHIIHH", 0xFFFE if extended else 3, 2, 16000, 128000, 8, 32)
+    if extended:
+        fmt += struct.pack("<HHI", 22, 32, 3) + bytes.fromhex("0300000000001000800000aa00389b71")
     chunks = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(samples)) + samples
     path.write_bytes(b"RIFF" + struct.pack("<I", 4 + len(chunks)) + b"WAVE" + chunks)
     return path
 
 
-@pytest.mark.parametrize("extension", ["flac", "mp3", "float.wav"])
+@pytest.mark.parametrize("extension", ["flac", "mp3", "float.wav", "extensible-float.wav"])
 def test_ffmpeg_pcm32_is_portable_to_wave_without_extensible_support(
     tmp_path: Path, monkeypatch, extension: str,
 ) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         pytest.skip("FFmpeg is unavailable for compressed chapter audio")
-    audio = _float_wav(tmp_path / "float.wav")
-    if extension != "float.wav":
+    audio = _float_wav(tmp_path / "float.wav", extended=extension == "extensible-float.wav")
+    if extension in ("flac", "mp3"):
         source = audio
         audio = tmp_path / f"chapter.{extension}"
         subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-i", str(source), str(audio)],  # noqa: S603 -- synthetic local fixture
@@ -362,15 +364,11 @@ def test_ffmpeg_pcm32_is_portable_to_wave_without_extensible_support(
 
     def pre312_open(file, mode="rb"):
         # Python 3.10/3.11 rejects WAVE_FORMAT_EXTENSIBLE before examining its
-        # PCM subtype. Exercise that boundary even on newer development Python.
-        if mode == "rb":
-            if isinstance(file, (str, Path)):
-                with Path(file).open("rb") as handle:
-                    header = handle.read(4096)
-            else:
-                position = file.tell()
-                header = file.read(4096)
-                file.seek(position)
+        # PCM subtype. Exercise that boundary for FFmpeg's output even on
+        # newer Python. The source stream uses the real reader.
+        if mode == "rb" and isinstance(file, (str, Path)):
+            with Path(file).open("rb") as handle:
+                header = handle.read(4096)
             cursor = 12
             while cursor + 10 <= len(header):
                 length = struct.unpack_from("<I", header, cursor + 4)[0]
@@ -386,10 +384,21 @@ def test_ffmpeg_pcm32_is_portable_to_wave_without_extensible_support(
     assert result["audio"]["channels"] == 2
     assert result["audio"]["sample_rate_hz"] == 16000
     assert result["audio"]["sample_width_bits"] == 32
-    if extension == "float.wav":
+    if extension.endswith(".wav"):
         assert result["signal"]["channel_metrics"][0]["dc_offset"] == 0.5000000596046448
         assert result["signal"]["channel_metrics"][1]["dc_offset"] == -0.25
     assert audio.read_bytes() == original
+
+
+def test_integer_pcm_consumers_reject_float_samples(tmp_path: Path) -> None:
+    from lixity.speech import concatenate_wavs
+    from lixity.speech_record import analyze_signal
+
+    samples = _float_wav(tmp_path / "float.wav").read_bytes()
+    with pytest.raises(ValueError, match="WAV"):
+        concatenate_wavs([samples])
+    with pytest.raises(ValueError, match="WAV"):
+        analyze_signal(samples)
 
 
 @pytest.mark.parametrize("repair_riff_size", [False, True])

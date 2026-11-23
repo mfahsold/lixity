@@ -179,8 +179,13 @@
       var atEnd = dock.scrollTop > 0 && Math.ceil(dock.scrollTop + dock.clientHeight) >= dock.scrollHeight - 1;
       dock.style.setProperty("--context-available-height", height);
       // A smaller scrollport must not leave a previously reached document end
-      // behind during a nested heading arrival. Other reading offsets stay put.
-      if (atEnd) dock.scrollTop = dock.scrollHeight - dock.clientHeight;
+      // behind. Writing scrollTop cancels a pending smooth jump up the dock.
+      if (atEnd) {
+        var destination = passageArrival && !passageArrival.timer && passageArrival.target;
+        var jumpingUp = destination && dock.contains(destination) &&
+          destination.getBoundingClientRect().top < dock.getBoundingClientRect().top + dock.clientTop;
+        if (!jumpingUp) dock.scrollTop = dock.scrollHeight - dock.clientHeight;
+      }
     }
   }
   function scheduleDockFit() {

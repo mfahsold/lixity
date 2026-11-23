@@ -111,6 +111,8 @@ def test_first_publication_and_reruns_select_one_verified_artifact_set():
     assert "--build" not in publish and "--smoke" not in publish
     assert "actions/download-artifact@" in publish
     assert "name: verified-release-candidate" in publish
+    assert "skip-decompress: true" in publish
+    assert 'python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate' in publish
     assert 'scripts/check_release.py --dist .release-candidate/dist --tag "$RELEASE_TAG"' in publish
     assert "if: steps.release_state.outputs.state != 'published'" in publish
     assert "if: steps.release_state.outputs.state == 'published'" in publish
@@ -119,6 +121,8 @@ def test_first_publication_and_reruns_select_one_verified_artifact_set():
     assert "name: dist" in publish and "path: dist/" in publish
     pypi = job(source, "pypi")
     assert "actions/download-artifact@" in pypi
+    assert "skip-decompress: true" in pypi
+    assert 'python -m zipfile -e "$RUNNER_TEMP/distribution-archive/"* dist' in pypi
     assert "if: github.event_name == 'push'" in pypi
 
 
@@ -165,6 +169,8 @@ def test_release_candidate_workflow_qualifies_source_browser_and_native_before_t
     ready = job(source, "ready")
     assert f"needs: [{', '.join(RELEASE_GATES)}]" in ready
     assert "name: verified-release-candidate" in ready
+    assert "skip-decompress: true" in ready
+    assert 'python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate' in ready
     assert "scripts/check_release.py --dist .release-candidate/dist" in ready
 
 

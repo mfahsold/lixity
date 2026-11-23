@@ -79,18 +79,37 @@ def test_response_preparation_failure_is_not_mistaken_for_client_abort():
         response._json({"ok": True})
 
 
-def test_abort_warning_is_generic_and_timestamped_without_debug():
+@pytest.mark.parametrize(("status", "log_level", "event_level"), [
+    (200, "INFO", None),
+    (200, "DEBUG", "DEBUG"),
+    (500, "INFO", "WARNING"),
+])
+def test_buffered_abort_logging_level_is_generic_and_timestamped(status, log_level, event_level):
     response = ResponseHarness(DisconnectWriter(BrokenPipeError(), fail_at=2))
-    log.configure(level="INFO", force=True)
+    log.configure(level=log_level, force=True)
     try:
         output = io.StringIO()
         with redirect_stderr(output):
-            response._json({"ok": True, "text": "Synthetic private-looking content"})
+            response._json({"ok": status == 200, "text": "Synthetic private-looking content"}, status)
     finally:
         log.configure(level="INFO", force=True)
-    assert "HTTP 200" in output.getvalue()
-    assert "UTC WARNING lixity.server" in output.getvalue()
+    if event_level is None:
+        assert output.getvalue() == ""
+        return
+    assert f"HTTP {status}" in output.getvalue()
+    assert f"UTC {event_level} lixity.server" in output.getvalue()
     assert "Synthetic private-looking content" not in output.getvalue()
+
+
+def test_stream_abort_remains_visible_without_debug():
+    response = ResponseHarness(DisconnectWriter(BrokenPipeError(), fail_at=2))
+    log.configure(level="INFO", force=True)
+    output = io.StringIO()
+    content = b"synthetic"
+    with redirect_stderr(output):
+        assert not response._send_stream(206, io.BytesIO(content), len(content), "application/pdf")
+    assert response.close_connection is True
+    assert "UTC WARNING lixity.server Client disconnected while streaming HTTP 206" in output.getvalue()
 
 
 def test_normal_response_keeps_its_headers_and_unicode_json():

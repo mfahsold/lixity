@@ -50,6 +50,10 @@ MOZ_APP_DATA="$firefox_run_dir/app-data" MOZ_LOCAL_APP_DATA="$firefox_run_dir/lo
   node tests/browser/reader-toolbar.cjs --firefox
 ```
 
+`manuscript-search.cjs --firefox` reports Firefox's scroll-linked rendering
+advisory at source line 0. The suite still checks focus, visible results,
+and every other console warning or error. [Firefox rendering advisory](https://firefox-source-docs.mozilla.org/performance/scroll-linked_effects.html)
+
 `reader-audio.cjs` checks static chapter playback, seek/volume controls, explicit
 track selection, WAV downloads and unchanged dossier disclosure at desktop/mobile
 sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises the
@@ -121,8 +125,9 @@ calls a real provider or uses private manuscript/audio fixtures.
 `audio-permission.cjs` exercises the actual browser `getUserMedia` API against
 native HTTP response headers. Chromium supplies a synthetic microphone device;
 browser permission is granted or denied explicitly without replacing the API or
-relaxing Permissions-Policy. It checks recording, 24 kHz WAV storage and reference
-activation at desktop/mobile widths, plus actionable permission-denial feedback.
+relaxing Permissions-Policy. It checks the workspace-scoped AudioWorklet URL,
+24 kHz mono PCM WAV storage, reference activation and a warning-free granted
+path at desktop/mobile widths, plus actionable permission-denial feedback.
 This suite is in the everyday fast group so policy regressions cannot hide behind
 the synthetic stream used for deterministic lifecycle tests.
 

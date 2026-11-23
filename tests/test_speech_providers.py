@@ -279,7 +279,8 @@ def float_wav(*, extended=False):
     fmt = struct.pack('<HHIIHH', 0xFFFE if extended else 3, 1, 24000, 96000, 4, 32)
     if extended:
         fmt += struct.pack('<HHI', 22, 32, 4) + bytes.fromhex('0300000000001000800000aa00389b71')
-    chunks = b'fmt ' + struct.pack('<I', len(fmt)) + fmt + b'data' + struct.pack('<I', 9600) + bytes(9600)
+    samples = struct.pack('<f', 0.25) * 2400
+    chunks = b'fmt ' + struct.pack('<I', len(fmt)) + fmt + b'data' + struct.pack('<I', len(samples)) + samples
     return b'RIFF' + struct.pack('<I', len(chunks) + 4) + b'WAVE' + chunks
 
 
@@ -302,7 +303,7 @@ def test_complete_float_wav_retains_all_frames_when_normalized(extended):
         pytest.skip('FFmpeg is required to decode float WAV')
     params, frames = _read_pcm(_normalize_wav(float_wav(extended=extended)))
     assert params == (1, 2, 24000)
-    assert len(frames) == 2400 * 2
+    assert frames == struct.pack('<h', 8192) * 2400
 
 
 @pytest.mark.parametrize('sample_width', [1, 2, 3, 4])

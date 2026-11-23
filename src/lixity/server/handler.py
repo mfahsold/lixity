@@ -22,6 +22,7 @@ from ..ui.metric_reference import METRIC_REFERENCE_PATH, metric_reference_docume
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome
 from .constants import (
+    AUDIO_CAPTURE_ROUTE,
     MAX_ARTIFACT_BYTES,
     MAX_IMAGE_PAYLOAD_BYTES,
     MAX_MEDIA_PAYLOAD_BYTES,
@@ -67,6 +68,7 @@ class LixityServerHandler(
         "/api/editor-bootstrap.js": "_handle_editor_asset",
         "/api/editor-bundle.js": "_handle_editor_asset",
         DIAGRAM_LIBRARY_ROUTE: "_handle_diagram_library",
+        AUDIO_CAPTURE_ROUTE: "_handle_audio_capture_asset",
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
         "/api/runtime": "_handle_runtime",
@@ -236,6 +238,9 @@ class LixityServerHandler(
     def _handle_diagram_library(self) -> None:
         self._send(200, _bundle((DIAGRAM_LIBRARY_FILE,)).encode("utf-8"),
                    "application/javascript; charset=utf-8", headers={"Cache-Control": "private, max-age=86400"})
+
+    def _handle_audio_capture_asset(self) -> None:
+        self._send(200, _bundle(("audio-capture.js",)).encode("utf-8"), MIME_TYPES[".js"])
 
     def _handle_workspace_close(self, payload: dict[str, Any]) -> None:
         registry = getattr(self.server, "workspaces", None)

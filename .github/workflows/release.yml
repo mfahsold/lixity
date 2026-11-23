@@ -78,10 +78,13 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: verified-release-candidate
-          path: .release-candidate
+          path: ${{ runner.temp }}/candidate-archive
+          # Verify the download digest before extracting with Python's zipfile.
+          skip-decompress: true
       - name: Verify the candidate against the tagged source and checksums
         if: steps.release_state.outputs.state != 'published'
         run: |
+          python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate
           python scripts/check_release.py --dist .release-candidate/dist --tag "$RELEASE_TAG"
           mv .release-candidate/dist dist
       - name: Attest the new release artifacts
@@ -167,7 +170,11 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: dist
-          path: dist
+          path: ${{ runner.temp }}/distribution-archive
+          skip-decompress: true
+      - name: Extract the verified distribution archive
+        if: github.event_name == 'push'
+        run: python -m zipfile -e "$RUNNER_TEMP/distribution-archive/"* dist
       - name: Recover immutable GitHub artifacts for catch-up
         if: github.event_name == 'workflow_dispatch'
         env:

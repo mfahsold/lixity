@@ -170,6 +170,7 @@ class TestLixityServer(unittest.TestCase):
                 status, _, headers = self.make_request("/")
                 self.assertEqual(status, 200)
                 self.assertIn("microphone=()", headers.get("permissions-policy", ""))
+                self.assertNotIn("/api/audio-capture.js", headers["content-security-policy"])
         finally:
             restore_handler_state(original_state)
 
@@ -178,6 +179,7 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(headers.get("permissions-policy"),
                          "camera=(), microphone=(), geolocation=(), usb=(), serial=()")
+        self.assertNotIn("/api/audio-capture.js", headers["content-security-policy"])
 
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
         original_state = snapshot_handler_state()

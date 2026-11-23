@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep the dossier section list reachable when the reading pane resizes during
+  a smooth return from the end of a document.
+- Keep ordinary buffered-response cancellations in debug logging and preserve
+  warnings for interrupted server errors, streamed transfers and website ZIPs.
+- Use one AudioWorklet for native microphone and teleprompter recording while
+  retaining local WAV capture in portable review copies.
+- Detect floating-point WAV files consistently when auditing or normalizing
+  audio on Python 3.15 and earlier supported interpreters.
+- Install browser CI dependencies in an isolated Python environment and
+  extract release artifacts after the download action verifies their checksums.
+
 ## [0.9.1] - 2026-11-23
 
 The first published release with the changes listed under 0.9.0.

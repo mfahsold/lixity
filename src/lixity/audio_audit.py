@@ -48,6 +48,8 @@ _SILENCE_DBFS = -50.0
 _MIN_SILENCE_SECONDS = 0.1
 _WINDOW_SECONDS = 0.02
 _DECODE_TIMEOUT_SECONDS = 120
+_WAVE_FORMAT_PCM = 0x0001
+_WAVE_FORMAT_EXTENSIBLE = 0xFFFE
 
 
 @contextmanager
@@ -148,11 +150,11 @@ def _portable_decoded_wav(path: Path) -> None:
         tag = int.from_bytes(content[:2], "little")
         bits = int.from_bytes(content[14:16], "little")
         pcm_guid = bytes.fromhex("0100000000001000800000aa00389b71")
-        extensible_pcm = (tag == 0xFFFE and len(content) >= 40
+        extensible_pcm = (tag == _WAVE_FORMAT_EXTENSIBLE and len(content) >= 40
                           and int.from_bytes(content[16:18], "little") >= 22
                           and int.from_bytes(content[18:20], "little") == 32
                           and content[24:40] == pcm_guid)
-        if bits != 32 or not (tag == 1 or extensible_pcm):
+        if bits != 32 or not (tag == _WAVE_FORMAT_PCM or extensible_pcm):
             raise ValueError("Audio decoder did not produce 32-bit integer PCM")
         if extensible_pcm:
             stream.seek(offset - 4)
@@ -162,18 +164,27 @@ def _portable_decoded_wav(path: Path) -> None:
             stream.write(b"JUNK" + (length - 24).to_bytes(4, "little"))
 
 
+def _wave_reader_is_integer_pcm(reader: wave.Wave_read) -> bool:
+    """Check the frame format before measuring or rewriting sample bytes."""
+    # Python 3.15 added IEEE float and getformat(). Earlier wave readers accept
+    # only integer PCM, including the PCM subtype of extensible WAV.
+    get_format = getattr(reader, "getformat", None)
+    return get_format is None or get_format() in (_WAVE_FORMAT_PCM, _WAVE_FORMAT_EXTENSIBLE)
+
+
 @contextmanager
 def _decoded(stream: BinaryIO, audio_format: str) -> Iterator[tuple[wave.Wave_read, str]]:
     if audio_format == "wav":
         _wav_format(stream)
         try:
             with wave.open(stream, "rb") as reader:
-                yield reader, "stdlib-wave"
-            return
+                if _wave_reader_is_integer_pcm(reader):
+                    yield reader, "stdlib-wave"
+                    return
         except wave.Error as exc:
             # Unsupported encodings (including floating point WAV) need FFmpeg;
             # malformed/truncated PCM must not silently become a shorter file.
-            if "unknown format" not in str(exc):
+            if not str(exc).startswith(("unknown format:", "unknown extended format")):
                 raise ValueError("Invalid or truncated WAV input") from exc
         except (EOFError, OSError) as exc:
             raise ValueError("Invalid or truncated WAV input") from exc

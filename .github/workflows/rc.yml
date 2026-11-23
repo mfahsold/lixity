@@ -46,9 +46,11 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: verified-release-candidate
-          path: .release-candidate
+          path: ${{ runner.temp }}/candidate-archive
+          skip-decompress: true
       - name: Verify the candidate archives from this run
         run: |
+          python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate
           python scripts/check_release.py --dist .release-candidate/dist
           test -s .release-candidate/lixity-release.cdx.json
       - name: Record qualified release candidate commit

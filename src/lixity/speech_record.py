@@ -16,6 +16,7 @@ import wave
 from pathlib import Path
 from typing import Any
 
+from .audio_audit import _wave_reader_is_integer_pcm
 from .io import sanitized_subprocess_env
 from .speech_qwen import SAMPLE_RATE
 from .speech_references import SpeechReference, save_reference
@@ -243,6 +244,8 @@ def _trim_wav_duration(wav_data: bytes, target_seconds: float, expected_rate: in
     """Ensure exact duration and rate format in WAV output."""
     try:
         with wave.open(io.BytesIO(wav_data), "rb") as reader:
+            if not _wave_reader_is_integer_pcm(reader):
+                return wav_data
             channels = reader.getnchannels()
             sampwidth = reader.getsampwidth()
             framerate = reader.getframerate()
@@ -270,6 +273,8 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
     """Descriptive signal analysis matching calibration requirements."""
     try:
         with wave.open(io.BytesIO(wav_bytes), "rb") as w:
+            if not _wave_reader_is_integer_pcm(w) or w.getsampwidth() != 2:
+                raise ValueError("Signal analysis requires 16-bit integer PCM WAV")
             rate = w.getframerate()
             n = w.getnframes()
             data = array.array("h")

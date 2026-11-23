@@ -20,6 +20,8 @@ import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .audio_audit import _wave_reader_is_integer_pcm
+
 if TYPE_CHECKING:
     from .speech_profiles import AudioProfile
     from .speech_references import SpeechReference
@@ -180,12 +182,13 @@ def _normalize_wav(data: bytes) -> bytes:
         params, _frames = _read_pcm(data)
     except ValueError:
         try:
-            with wave.open(io.BytesIO(data), "rb"):
-                pass
+            with wave.open(io.BytesIO(data), "rb") as reader:
+                integer_pcm = _wave_reader_is_integer_pcm(reader)
         except (wave.Error, EOFError):
-            params = None  # Float/extended WAV formats require an explicit decoder.
-        else:
+            integer_pcm = False
+        if integer_pcm:
             raise ValueError("Speech provider returned missing or truncated PCM audio") from None
+        params = None  # Non-integer or unsupported WAV formats need the decoder.
     if params == (1, 2, 24000):
         return data
     ffmpeg = shutil.which("ffmpeg")

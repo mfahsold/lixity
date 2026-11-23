@@ -43,7 +43,14 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
-      - run: python -m pip install ".[dev]"
+      - name: Install Python dependencies in an isolated environment
+        run: |
+          python -m venv "$RUNNER_TEMP/browser-venv"
+          export PATH="$RUNNER_TEMP/browser-venv/bin:$PATH"
+          export PIP_CACHE_DIR="$RUNNER_TEMP/pip-cache"
+          mkdir -p "$PIP_CACHE_DIR"
+          python -m pip install ".[dev]"
+          printf '%s\n' "$RUNNER_TEMP/browser-venv/bin" >> "$GITHUB_PATH"
       - run: npm install --no-save playwright@1.59.1 axe-core@4.13.0
       - name: Run browser regression suites (shard ${{ matrix.shard }})
         id: suites

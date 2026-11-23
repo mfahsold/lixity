@@ -127,27 +127,26 @@ def test_malformed_root_config_is_selection_error_without_warning_fallback(tmp_p
         workspace.discover(root=str(tmp_path))
 
 
-@pytest.mark.parametrize("operation", ["stat", "read"])
+@pytest.mark.parametrize("operation", ["lstat", "read"])
 def test_root_config_io_failure_is_not_a_valid_discovery_default(tmp_path, monkeypatch, operation):
     target = tmp_path / "lixity.toml"
     target.write_text('manuscript = "draft.md"\n', encoding="utf-8")
     (tmp_path / "draft.md").write_text("A valid configured manuscript.\n", encoding="utf-8")
     (tmp_path / "manuscript.md").write_text("Wrong conventional manuscript.\n", encoding="utf-8")
-    original_stat, original_open = Path.stat, os.open
+    original_lstat, original_open = Path.lstat, os.open
 
-    def failed_stat(path, *args, **kwargs):
+    def failed_lstat(path, *args, **kwargs):
         if os.fspath(path) == str(target):
             raise OSError(errno.EIO, "Synthetic configuration metadata failure", str(target))
-        return original_stat(path, *args, **kwargs)
+        return original_lstat(path, *args, **kwargs)
 
     def failed_read(path, *args, **kwargs):
         if os.fspath(path) == str(target):
             raise PermissionError(errno.EACCES, "Synthetic configuration read failure", str(target))
         return original_open(path, *args, **kwargs)
 
-    if operation == "stat":
-        # Python 3.10 caches the os.stat binding used by Path.stat.
-        monkeypatch.setattr(Path, "stat", failed_stat)
+    if operation == "lstat":
+        monkeypatch.setattr(Path, "lstat", failed_lstat)
     else:
         monkeypatch.setattr(os, "open", failed_read)
     with pytest.raises((OSError, ValueError), match=r"[Cc]onfig|[Cc]ould not"):

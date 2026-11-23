@@ -13,6 +13,7 @@ import json, os, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+from lixity.server.workspaces import WorkspaceRegistry
 import lixity.speech_status as speech_status
 speech_status.worker_health = lambda target, **kwargs: {'target':target, 'state':'unavailable', 'model':None}
 root = Path(sys.argv[1]); source = root / 'manuscript.md'
@@ -36,6 +37,7 @@ LixityServerHandler.exports_dir = str(root / 'exports')
 LixityServerHandler.language = 'de'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+server.workspaces = WorkspaceRegistry(LixityServerHandler)
 print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'source':str(source)}), flush=True)
 server.serve_forever()
 `, artifacts);
@@ -46,11 +48,25 @@ server.serve_forever()
       const context = await browser.newContext({viewport: {width, height: 900}});
       await context.grantPermissions(['microphone'], {origin: server.fixture.url});
       const page = await context.newPage();
-      const errors = [];
+      const errors = [], warnings = [];
       page.on('pageerror', error => errors.push(error.message));
+      page.on('console', message => { if (message.type() === 'warning') warnings.push(message.text()); });
       try {
         const response = await page.goto(server.fixture.url);
         const policy = response.headers()['permissions-policy'];
+        const workspace = new URL(page.url());
+        assert.match(workspace.pathname, /^\/w\/[0-9a-f]{32}\/$/);
+        const workletUrl = new URL('api/audio-capture.js', workspace).href;
+        const scripts = response.headers()['content-security-policy'].split('; ')
+          .find(directive => directive.startsWith('script-src ')).split(' ');
+        assert.match(scripts[1], /^'nonce-[A-Za-z0-9_-]+'$/);
+        assert.deepEqual(scripts.slice(2), [workletUrl], 'Allow only the scoped worklet as an external script');
+        assert.equal(await page.locator('body').getAttribute('data-read-only'), 'false');
+        // AudioWorklet module fetches do not emit Playwright page response events.
+        // Verify the asset separately, then exercise the real recording and WAV.
+        const worklet = await page.request.get(workletUrl);
+        assert.equal(worklet.status(), 200);
+        assert.match(worklet.headers()['content-type'], /^application\/javascript\b/);
         const microphone = await page.evaluate(async () => {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({audio: true});
@@ -91,7 +107,7 @@ server.serve_forever()
         await page.locator('.voice-take-card textarea').fill(transcript);
         await page.locator('#speech-take_confirmed').check();
         assert.equal(await page.locator('.voice-save-btn').isEnabled(),true);
-        const submitted = page.waitForRequest(request => new URL(request.url()).pathname === '/api/audio-microphone');
+        const submitted = page.waitForRequest(request => request.url() === new URL('api/audio-microphone', workspace).href);
         const reloaded = page.waitForEvent('load');
         reloaded.catch(() => {});
         await page.locator('.voice-save-btn').click();
@@ -109,6 +125,7 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-engine').inputValue(), 'qwen3-base');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `granted-${width}.png`)});
         assert.deepEqual(errors, []);
+        assert.deepEqual(warnings, [], 'The native microphone flow runs without browser warnings');
       } finally { await context.close(); }
     }
 

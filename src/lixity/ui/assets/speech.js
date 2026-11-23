@@ -959,7 +959,7 @@
   function releaseRecording() {
     isRecordingVoice = false; recordingPending = false;
     clearInterval(recTimerInterval); recTimerInterval = null;
-    if (audioProcessor) { audioProcessor.onaudioprocess = null; audioProcessor.disconnect(); audioProcessor = null; }
+    if (audioProcessor) { audioProcessor.close(); audioProcessor = null; }
     if (audioSource) { audioSource.disconnect(); audioSource = null; }
     if (audioStream) { audioStream.getTracks().forEach(function(t) { t.stop(); }); audioStream = null; }
     if (fields.takeWidget) fields.takeWidget.clearLiveAnalyser();
@@ -983,6 +983,9 @@
       status(label("mic_unavailable")); recordingFeedback("failed", label("mic_unavailable")); return;
     }
     var sequence = ++recordingSequence, captureContext = context();
+    function current() {
+      return sequence === recordingSequence && dialog.open && mode === "reference" && captureContext === context();
+    }
     recordingPending = true; fields.recBtn.disabled = true; status(label("mic_pending"));
     recordingFeedback("busy");
     var stage = "audio_context_create";
@@ -991,17 +994,36 @@
       audioCtx = new AudioCtxClass({sampleRate: 24000});
       stage = "audio_context_resume";
       await audioCtx.resume();
-      if (sequence !== recordingSequence || !dialog.open || mode !== "reference" || captureContext !== context()) return;
+      if (!current()) return;
       stage = "microphone_request";
       var stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
-      if (sequence !== recordingSequence || !dialog.open || mode !== "reference" || captureContext !== context()) {
+      if (!current()) {
         stream.getTracks().forEach(function(t) { t.stop(); }); return;
       }
       audioStream = stream;
       stage = "audio_source_create";
       audioSource = audioCtx.createMediaStreamSource(stream);
       stage = "capture_processor_create";
-      audioProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+      var capture = await window.LixityAudioTake.openPcmCapture(audioCtx, function(samples) {
+        if (!isRecordingVoice || !current()) return;
+        var limit = 30 * audioCtx.sampleRate;
+        var remaining = limit - totalRecordedSamples;
+        if (remaining <= 0) return;
+        var chunk = samples.subarray(0, remaining);
+        recordedChunks.push(chunk); totalRecordedSamples += chunk.length;
+        if (totalRecordedSamples >= limit) stopVoiceRecording();
+      }, function() {
+        if (!current()) return;
+        recordingDiagnostic("capture_processor_runtime", "OperationError");
+        releaseRecording();
+        status(label("mic_failed")); recordingFeedback("failed", label("mic_failed"));
+      });
+      if (!current()) {
+        capture.close();
+        if (sequence === recordingSequence) releaseRecording();
+        return;
+      }
+      audioProcessor = capture;
       stage = "analyser_create";
       var analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; audioSource.connect(analyser);
       recordedChunks = []; totalRecordedSamples = 0; isRecordingVoice = true; recordingPending = false;
@@ -1015,15 +1037,8 @@
       fields.audio.pause(); fields.takePlayer.pause(); fields.takePlayer.removeAttribute("src"); fields.takePlayer.load();
       fields.takeCard.hidden = false; fields.takeStats.textContent = ""; fields.saveVoiceBtn.disabled = true;
       fields.takeWidget.setLiveAnalyser(analyser);
-      audioProcessor.onaudioprocess = function(e) {
-        if (!isRecordingVoice) return;
-        var remaining = 30 * audioCtx.sampleRate - totalRecordedSamples;
-        var copy = new Float32Array(e.inputBuffer.getChannelData(0).subarray(0, remaining));
-        recordedChunks.push(copy); totalRecordedSamples += copy.length;
-        if (totalRecordedSamples >= 30 * audioCtx.sampleRate) setTimeout(function() { if (isRecordingVoice) stopVoiceRecording(); }, 0);
-      };
       stage = "capture_connect";
-      audioSource.connect(audioProcessor); audioProcessor.connect(audioCtx.destination);
+      audioProcessor.connect(audioSource);
       fields.recBtn.disabled = false; fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
       fields.recTimer.hidden = false; fields.recTimer.textContent = "00:00"; recStartTime = Date.now();
       recTimerInterval = setInterval(function() {

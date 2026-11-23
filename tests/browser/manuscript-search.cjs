@@ -37,7 +37,9 @@ print(json.dumps(fixtures))
 `, {root});
 
 (async () => {
-  const browser = await (process.argv.includes('--firefox') ? launchFirefox : launchChromium)();
+  const firefox = process.argv.includes('--firefox');
+  const browser = await (firefox ? launchFirefox : launchChromium)();
+  let scrollAdvisories = 0;
   try {
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, javaScriptEnabled: false});
@@ -84,7 +86,14 @@ print(json.dumps(fixtures))
       await page.addInitScript(() => localStorage.setItem('lixity.manuscript.mode', 'inspect'));
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      page.on('console', message => { if (['error', 'warning'].includes(message.type())) errors.push(message.text()); });
+      page.on('console', message => {
+        const text = message.text();
+        if (firefox && message.type() === 'warning' && message.location().lineNumber === 0 &&
+            text.startsWith('[JavaScript Warning: "This site appears to use a scroll-linked positioning effect.') &&
+            text.includes('https://firefox-source-docs.mozilla.org/performance/scroll-linked_effects.html')) {
+          scrollAdvisories++;
+        } else if (['error', 'warning'].includes(message.type())) errors.push(text);
+      });
       await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
         ? {json: {ok: true, locked: true, records: []}}
         : {contentType: 'text/html', body: fixture.html}));
@@ -183,6 +192,7 @@ print(json.dumps(fixtures))
       await page.locator('.toolbar').screenshot({path: `/tmp/lixity-manuscript-search-${locale}-${width}.png`});
       await page.close();
     }
+    if (scrollAdvisories) console.log(`Firefox scroll-linked rendering advisory observed ${scrollAdvisories} time(s).`);
     console.log('Manuscript search: present, filters chapters and paragraphs, counts hits, ' +
       'localized actions/inert text in seven locales at 1440/320; full search/marker/tab regressions at both widths passed.');
   } finally {
