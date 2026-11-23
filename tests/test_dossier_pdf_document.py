@@ -3,12 +3,14 @@
 import pytest
 
 from lixity.pdf_document import CENTRE, LEFT, Table
+from lixity.pdf_font import _build_cmap, _parse_cmap
 from lixity.pdf_layouts import dossier_pdf
 from lixity.research import api
 from lixity.research.dossier_pdf import compose_dossier_pdf
 from lixity.research.models import Reference
 from tests.research_support import revise_record
-from tests.test_pdf_export import CHOSEN, HAVE_FONTS
+from tests.test_pdf_export import CHOSEN, HAVE_FONTS, SERIF
+from tests.test_pdf_integrity import fixture_font, tables
 from tests.test_pdf_page_information import captured_layout
 from tests.test_research_geography import geography
 
@@ -61,6 +63,12 @@ def test_dossier_keeps_excerpt_labels_with_their_quotation(monkeypatch):
 
 
 def test_pdf_places_follow_selected_saved_revision(monkeypatch, tmp_path):
+    # Standard Georgia can render the dossier text without offering U+2192.
+    cmap = _parse_cmap(tables(SERIF.read_bytes())[b"cmap"])
+    cmap.pop(ord("→"), None)
+    font = tmp_path / "serif-without-arrow.ttf"
+    font.write_bytes(fixture_font(SERIF, {b"cmap": _build_cmap(cmap)}))
+    monkeypatch.setenv("LIXITY_PDF_FONT_TEXT", str(font))
     api.init(tmp_path, title="Synthetic geographic notes")
     dossier = api.create_dossier(tmp_path, "Synthetisches Dossier", "## Notizen\n\nText.",
                                  language="de", geography=geography())
@@ -80,7 +88,7 @@ def test_pdf_places_follow_selected_saved_revision(monkeypatch, tmp_path):
     historical_text = " ".join(line.text for page in historical for line in page.lines)
     current_text = " ".join(line.text for page in current for line in page.lines)
     for value in ("Fassung 1", "Orte und Wege", "Synthetic gate", "Basalt archway", "1924",
-                  "13,4°", "52,5°", "Canal journey", "≈ 1,30 km", "Departure → Arrival",
+                  "13,4°", "52,5°", "Canal journey", "≈ 1,30 km", "1. Departure · 2. Arrival",
                   "Marshland", "Unlocated estate", "Großkreisabschnitte"):
         assert value in historical_text
     assert "Orte und Wege" in [title for page in historical for title, _y in page.bookmarks]

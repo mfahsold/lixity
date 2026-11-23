@@ -9,7 +9,7 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
-> **Version scope:** this source documentation describes the prepared **v0.9.0**. Verify packages at
+> **Version scope:** this source documentation describes the prepared **v0.9.1**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -62,7 +62,7 @@ installer. No AppImage, DEB, RPM or bundled desktop installer is published here.
 
 The next packaging work targets **Linux first**, with an isolated, supported
 runtime and explicit install, upgrade, rollback and removal checks. Python 3.12
-is the agreed minimum for the next development baseline; the 0.9.0
+is the agreed minimum for the next development baseline; the 0.9.1
 package still declares Python 3.10+. A future installer must preserve project
 files and retained research, and restart only the service it owns. Optional
 speech and OCR environments remain separate from the basic application.
@@ -109,7 +109,7 @@ lixity service start --open
 
 Use the [published release notes](https://github.com/mfahsold/lixity/releases/latest)
 for changes and compatibility of the installed release. The
-[development notes](releases/v0.9.0.md) describe this source version.
+[development notes](releases/v0.9.1.md) describe this source version.
 `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 

@@ -35,6 +35,8 @@ comparison stays visible.
 
 For release artifacts, verify the real build output against the input contract
 of the pinned publication tool before pushing the tag.
+Exercise generated PDF wording with a supported fallback font. A locally
+preferred font can hide missing glyphs in the platform fallback.
 
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not

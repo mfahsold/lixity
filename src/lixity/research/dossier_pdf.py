@@ -62,7 +62,8 @@ def _geography_blocks(dossier: Dossier, labels: dict[str, str]) -> list[Manuscri
         if props.description:
             blocks.append(_literal_block("paragraph", props.description))
         if props.waypoint_labels:
-            blocks.append(_literal_block("paragraph", " → ".join(props.waypoint_labels)))
+            waypoints = " · ".join(f"{index}. {label}" for index, label in enumerate(props.waypoint_labels, 1))
+            blocks.append(_literal_block("paragraph", waypoints))
     if summary["route_length_km"] is not None:
         blocks.append(_literal_block("note", labels["geography_method"]))
     return blocks

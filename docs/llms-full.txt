@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.9.0.
+> The individually published files remain authoritative. Product version 0.9.1.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -27,9 +27,9 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > share an offline analysis engine. Measurements describe the supplied text and
 > help an author decide what to review.
 
-Documentation source version: 0.9.0. Check the [latest GitHub release](https://github.com/mfahsold/lixity/releases/latest)
+Documentation source version: 0.9.1. Check the [latest GitHub release](https://github.com/mfahsold/lixity/releases/latest)
 and [PyPI](https://pypi.org/project/lixity/) for published packages.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.0.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.1.md) describe this
 source version. Product versions, response schemas and archive schemas are separate.
 
 ## Discover the installed interface

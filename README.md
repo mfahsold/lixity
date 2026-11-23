@@ -251,14 +251,14 @@ their own projects.
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.9.0**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.9.1**, in the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the numbering reset; use the current
 > release rather than the numerically largest tag. Product, JSON response and
 > archive schema versions are independent.
 
 Use the [latest published release](https://github.com/mfahsold/lixity/releases/latest)
 for published packages and their upgrade notes. The source
-[release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.0.md) describe
+[release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md) describe
 the version prepared in this repository. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for work
 in progress. For local updates and website availability, see the

@@ -197,7 +197,7 @@ def main() -> int:
         run_sync()
         print("\nNext steps:")
         print(f"  1. Review and refine docs/releases/v{version_str}.md")
-        print("  2. If UI or examples changed: make examples && make docs-sync")
+        print("  2. Follow the documentation generation and preview procedure in CONTRIBUTING.md")
         print(f"  3. Validate release: make release-check RELEASE_TAG=v{version_str}")
         print("  4. Follow the release qualification and publication procedure in CONTRIBUTING.md")
         return 0
