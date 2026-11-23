@@ -23,7 +23,6 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
 .analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0; }
 .analysis-review-head h2 { margin: 0; }
-#analysis-review { gap: var(--space-3); }
 #analysis-review-body { display: flex; flex-direction: column; gap: var(--space-3); }
 #analysis-review-body > p { margin: 0; }
 .review-routes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
@@ -44,7 +43,7 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 @container analysis-outline (max-width: 42rem) {
-  .lixity-workspace #analysis-review { padding: var(--space-3); gap: var(--space-2); }
+  .lixity-workspace #analysis-review { padding: var(--space-3); }
   #analysis-review-body { gap: var(--space-2); }
 }
 .manuscript-pdf { min-width: 0; }
