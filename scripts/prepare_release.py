@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import re
 import sys
 from pathlib import Path
@@ -48,6 +49,56 @@ def update_version_file(version: str) -> None:
     content = f'__version__ = "{version}"\n'
     path.write_text(content, encoding="utf-8")
     print(f"[OK] Updated {path.relative_to(ROOT)} to {version}")
+
+
+def update_desktop_manifests(version: str, *, release_date: str | None = None) -> None:
+    """Keep desktop Rust/Tauri and Linux AppStream manifests aligned with __version__."""
+    cargo_toml = ROOT / "desktop/Cargo.toml"
+    if cargo_toml.is_file():
+        text = cargo_toml.read_text(encoding="utf-8")
+        updated, count = re.subn(
+            r'(?m)^version = "\d+\.\d+\.\d+"$',
+            f'version = "{version}"',
+            text,
+            count=1,
+        )
+        if count == 1 and updated != text:
+            cargo_toml.write_text(updated, encoding="utf-8")
+            print(f"[OK] Updated {cargo_toml.relative_to(ROOT)} to {version}")
+
+    tauri_conf = ROOT / "desktop/src-tauri/tauri.conf.json"
+    if tauri_conf.is_file():
+        data = json.loads(tauri_conf.read_text(encoding="utf-8"))
+        if data.get("version") != version:
+            data["version"] = version
+            tauri_conf.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            print(f"[OK] Updated {tauri_conf.relative_to(ROOT)} to {version}")
+
+    metainfo = ROOT / "desktop/packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"
+    if metainfo.is_file():
+        text = metainfo.read_text(encoding="utf-8")
+        date_attr = f' date="{release_date}"' if release_date else ""
+        entry = (
+            f'    <release version="{version}"{date_attr}>\n'
+            f'      <url type="details">https://github.com/mfahsold/lixity/releases/tag/v{version}</url>\n'
+            f'    </release>'
+        )
+        existing = re.compile(
+            rf'    <release version="{re.escape(version)}"[^>]*>\n.*?\n    </release>',
+            re.DOTALL,
+        )
+        if existing.search(text):
+            updated = existing.sub(lambda _: entry, text, count=1)
+        elif "  <releases>\n" in text:
+            updated = text.replace("  <releases>\n", f"  <releases>\n{entry}\n", 1)
+        else:
+            updated = text
+        if updated != text:
+            metainfo.write_text(updated, encoding="utf-8")
+            print(f"[OK] Updated {metainfo.relative_to(ROOT)} for {version}")
 
 
 def scaffold_release_notes(version: str) -> Path:
@@ -148,8 +199,16 @@ def run_sync() -> None:
 
 def preparation_snapshot(version: str) -> dict[Path, bytes | None]:
     """Capture files preparation can change, including pins written before a sync failure."""
-    paths = {ROOT / "src/lixity/_version.py", ROOT / "README.md", ROOT / "CITATION.cff", ROOT / "CHANGELOG.md",
-             ROOT / "docs/releases" / f"v{version}.md"}
+    paths = {
+        ROOT / "src/lixity/_version.py",
+        ROOT / "README.md",
+        ROOT / "CITATION.cff",
+        ROOT / "CHANGELOG.md",
+        ROOT / "docs/releases" / f"v{version}.md",
+        ROOT / "desktop/Cargo.toml",
+        ROOT / "desktop/src-tauri/tauri.conf.json",
+        ROOT / "desktop/packaging/linux/io.github.mfahsold.Lixity.metainfo.xml",
+    }
     for pattern in ("*.md", "*.html", "*.txt"):
         paths.update((ROOT / "docs").rglob(pattern))
     return {path: path.read_bytes() if path.is_file() else None for path in paths}
@@ -190,6 +249,7 @@ def main() -> int:
         before = preparation_snapshot(version_str)
         print(f"--- Preparing Lixity release v{version_str} ---")
         update_version_file(version_str)
+        update_desktop_manifests(version_str, release_date=release_date)
         update_changelog(version_str, release_date=release_date)
         scaffold_release_notes(version_str)
         # Import sync_docs from scripts dir

@@ -161,3 +161,35 @@ def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatc
     monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build", check_result=["index.html"]))
     with pytest.raises(RuntimeError, match=r"index\.html"):
         prepare_script.run_sync()
+
+
+def test_prepare_release_synchronizes_desktop_manifests(prepare_script):
+    root = prepare_script.ROOT
+    (root / "desktop/src-tauri").mkdir(parents=True)
+    (root / "desktop/packaging/linux").mkdir(parents=True)
+    cargo = root / "desktop/Cargo.toml"
+    cargo.write_text('[workspace.package]\nversion = "0.9.1"\nedition = "2021"\n', encoding="utf-8")
+    tauri = root / "desktop/src-tauri/tauri.conf.json"
+    tauri.write_text('{\n  "productName": "Lixity",\n  "version": "0.9.1"\n}\n', encoding="utf-8")
+    metainfo = root / "desktop/packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"
+    metainfo.write_text(
+        "<component>\n  <releases>\n"
+        '    <release version="0.9.1" date="2026-11-23">\n'
+        '      <url type="details">https://github.com/mfahsold/lixity/releases/tag/v0.9.1</url>\n'
+        "    </release>\n"
+        "  </releases>\n</component>\n",
+        encoding="utf-8",
+    )
+
+    prepare_script.update_desktop_manifests("0.10.0")
+    assert 'version = "0.10.0"' in cargo.read_text(encoding="utf-8")
+    assert '"version": "0.10.0"' in tauri.read_text(encoding="utf-8")
+    xml_pending = metainfo.read_text(encoding="utf-8")
+    assert '<release version="0.10.0">' in xml_pending
+    assert '<release version="0.9.1" date="2026-11-23">' in xml_pending
+
+    # Recording an explicit release date updates the existing 0.10.0 entry idempotently.
+    prepare_script.update_desktop_manifests("0.10.0", release_date="2026-12-01")
+    xml_dated = metainfo.read_text(encoding="utf-8")
+    assert xml_dated.count('version="0.10.0"') == 1
+    assert '<release version="0.10.0" date="2026-12-01">' in xml_dated

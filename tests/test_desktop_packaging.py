@@ -268,3 +268,80 @@ def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
     assert not (win_py / "Scripts" / "pip.exe").exists()
     assert not (win_py / "DLLs" / "tcl86t.dll").exists()
     assert not (win_py / "tcl").exists()
+
+
+def test_render_package_manifests_emits_homebrew_and_winget_without_placeholders(tmp_path):
+    script = DESKTOP / "scripts" / "render_package_manifests.py"
+    artifacts = tmp_path / "dist-desktop"
+    artifacts.mkdir()
+    arm_sha = "a" * 64
+    x64_sha = "b" * 64
+    nsis_sha = "c" * 64
+    msi_sha = "d" * 64
+    (artifacts / "SHA256SUMS-desktop.txt").write_text(
+        f"{arm_sha}  Lixity_0.10.0_aarch64.dmg\n"
+        f"{x64_sha}  Lixity_0.10.0_x64.dmg\n"
+        f"{nsis_sha}  Lixity_0.10.0_x64-setup.exe\n"
+        f"{msi_sha}  Lixity_0.10.0_x64_en-US.msi\n",
+        encoding="utf-8",
+    )
+
+    out = tmp_path / "manifests"
+    res = subprocess.run(  # noqa: S603 - fixed repository script
+        [
+            sys.executable,
+            str(script),
+            "--version",
+            "0.10.0",
+            "--artifacts-dir",
+            str(artifacts),
+            "--out-dir",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    summary = json.loads(res.stdout)
+    assert summary["macos_intel_included"] is True
+    assert len(summary["files"]) == 5
+
+    cask = (out / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
+    assert 'version "0.10.0"' in cask
+    assert arm_sha in cask and x64_sha in cask
+    assert "@" not in cask
+
+    wg_inst = (out / "winget" / "mfahsold.Lixity.installer.yaml").read_text(encoding="utf-8")
+    assert "PackageVersion: 0.10.0" in wg_inst
+    assert nsis_sha.upper() in wg_inst and msi_sha.upper() in wg_inst
+    assert "@" not in wg_inst
+
+    # Also verify clean ARM64-only fallback when Intel macOS DMG is absent.
+    (artifacts / "SHA256SUMS-desktop.txt").write_text(
+        f"{arm_sha}  Lixity_0.10.0_aarch64.dmg\n"
+        f"{nsis_sha}  Lixity_0.10.0_x64-setup.exe\n"
+        f"{msi_sha}  Lixity_0.10.0_x64_en-US.msi\n",
+        encoding="utf-8",
+    )
+    out_arm = tmp_path / "manifests-arm"
+    res_arm = subprocess.run(  # noqa: S603 - fixed repository script
+        [
+            sys.executable,
+            str(script),
+            "--version",
+            "0.10.0",
+            "--artifacts-dir",
+            str(artifacts),
+            "--out-dir",
+            str(out_arm),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert res_arm.returncode == 0, res_arm.stdout + res_arm.stderr
+    cask_arm = (out_arm / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
+    assert "depends_on arch: :arm64" in cask_arm
+    assert arm_sha in cask_arm
+    assert "@" not in cask_arm
