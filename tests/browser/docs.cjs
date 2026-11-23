@@ -1465,18 +1465,20 @@ async function checkSandboxQuotationPairs(page) {
         await expect(page).toHaveURL(origin + '/lixity/#installation');
         await expect(page.locator('#installation h2')).toBeInViewport();
         await page.locator('#installation a[href="guides/installation.html"]').click();
-        assert.ok(page.url().endsWith('/guides/installation.html'), 'An eager visitor can reach installation through the header and its dedicated section');
+        await expect(page, 'An eager visitor can reach installation through the header and its dedicated section')
+          .toHaveURL(origin + '/lixity/guides/installation.html');
         await page.goto(origin + '/lixity/');
         await page.locator('.hero-cta a.primary').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await expect(page.locator('#product-tour-preview')).toBeInViewport();
         await page.locator('#guides a[href="guides/first-look.html"]').click();
-        assert.ok(page.url().endsWith('/guides/first-look.html'), 'Written guidance remains available in documentation');
+        await expect(page, 'Written guidance remains available in documentation')
+          .toHaveURL(origin + '/lixity/guides/first-look.html');
         await page.locator('.ctl[href="../demo/report.html"]').click();
-        assert.ok(page.url().endsWith('/demo/report.html'));
+        await expect(page).toHaveURL(origin + '/lixity/demo/report.html');
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../guides/first-look.html"]').click();
-        assert.ok(page.url().endsWith('/guides/first-look.html'), 'The report returns to the walkthrough');
+        await expect(page, 'The report returns to the walkthrough').toHaveURL(origin + '/lixity/guides/first-look.html');
         await page.locator('.site-breadcrumbs a[href="../#guides"]').click();
         await expect(page).toHaveURL(origin + '/lixity/#guides');
         await expect(page.locator('#guides h2').first()).toBeInViewport();
@@ -1484,8 +1486,11 @@ async function checkSandboxQuotationPairs(page) {
         await page.locator('.site-header .brand[href="./"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
         await page.locator('.hero-cta a.primary').click();
+        await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await page.locator('.tour-explore[href="demo/report.html"]').click();
-        assert.ok(page.url().endsWith('/demo/report.html'), 'The single discovery path leads from the tour to the demo');
+        await expect(page, 'The single discovery path leads from the tour to the demo')
+          .toHaveURL(origin + '/lixity/demo/report.html');
+        await expect(page.locator('h1')).toHaveText(demoTitle);
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
@@ -1494,7 +1499,7 @@ async function checkSandboxQuotationPairs(page) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         }
         await page.locator('#guides a[href="guides/research-pdf.html"]').click();
-        assert.ok(page.url().endsWith('/guides/research-pdf.html'));
+        await expect(page).toHaveURL(origin + '/lixity/guides/research-pdf.html');
         if (javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
           await page.reload();
@@ -1503,7 +1508,7 @@ async function checkSandboxQuotationPairs(page) {
         await page.locator('.site-header .site-return a[href="../#guides"]').click();
         await expect(page).toHaveURL(origin + '/lixity/#guides');
         await page.locator('#guides a[href="guides/interpretation.html"]').click();
-        assert.ok(page.url().endsWith('/guides/interpretation.html'));
+        await expect(page).toHaveURL(origin + '/lixity/guides/interpretation.html');
         if (javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
           await page.locator('.site-header .brand, .site-return a[href="../"]').first().click();
@@ -1519,7 +1524,7 @@ async function checkSandboxQuotationPairs(page) {
         const newestArticle = page.locator('article h2 a').first();
         const articleURL = new URL(await newestArticle.getAttribute('href'), page.url());
         await newestArticle.click();
-        assert.equal(page.url(), articleURL.href);
+        await expect(page).toHaveURL(articleURL.href);
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
           'https://mfahsold.github.io' + articleURL.pathname, 'Canonical URL matches the published page');
         await page.locator('.site-breadcrumbs a[href="index.html"]').click();
