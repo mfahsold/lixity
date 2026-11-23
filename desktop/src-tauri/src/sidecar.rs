@@ -82,13 +82,8 @@ pub fn sidecar_log_dir() -> Option<PathBuf> {
     Some(dir)
 }
 
-fn open_sidecar_stderr() -> Stdio {
-    if std::env::var("LIXITY_DESKTOP_STDERR_INHERIT").ok().as_deref() == Some("1") {
-        return Stdio::inherit();
-    }
-    let Some(dir) = sidecar_log_dir() else {
-        return Stdio::inherit();
-    };
+fn sidecar_log_path() -> Option<PathBuf> {
+    let dir = sidecar_log_dir()?;
     let log_path = dir.join("desktop-sidecar.log");
     if let Ok(meta) = fs::metadata(&log_path) {
         if meta.len() > MAX_LOG_BYTES {
@@ -96,6 +91,30 @@ fn open_sidecar_stderr() -> Stdio {
             let _ = fs::rename(&log_path, rotated);
         }
     }
+    Some(log_path)
+}
+
+/// Append a host diagnostic line to `desktop-sidecar.log` (never records manuscript data).
+pub fn log_desktop_event(level: &str, message: &str) {
+    let Some(log_path) = sidecar_log_path() else {
+        return;
+    };
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
+        let _ = writeln!(file, "[{ts}] [{level}] {message}");
+    }
+}
+
+fn open_sidecar_stderr() -> Stdio {
+    if std::env::var("LIXITY_DESKTOP_STDERR_INHERIT").ok().as_deref() == Some("1") {
+        return Stdio::inherit();
+    }
+    let Some(log_path) = sidecar_log_path() else {
+        return Stdio::inherit();
+    };
     match OpenOptions::new().create(true).append(true).open(&log_path) {
         Ok(file) => Stdio::from(file),
         Err(_) => Stdio::inherit(),
@@ -171,7 +190,10 @@ impl PythonSidecar {
         let initial_nonce = random_token_hex();
 
         let mut cmd = Command::new(&python);
+        // Isolated mode ignores PYTHON* variables. Pass -B explicitly so a
+        // writable installation cannot add bytecode to its signed resources.
         cmd.arg("-I")
+            .arg("-B")
             .arg("-m")
             .arg("lixity")
             .arg("serve")
@@ -186,10 +208,7 @@ impl PythonSidecar {
             cmd.arg("--no-project");
         }
 
-        cmd.env("PYTHONNOUSERSITE", "1")
-            .env("PYTHONSAFEPATH", "1")
-            .env("PYTHONDONTWRITEBYTECODE", "1")
-            .stdin(Stdio::piped())
+        cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(open_sidecar_stderr());
 

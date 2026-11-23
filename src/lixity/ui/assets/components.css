@@ -21,13 +21,32 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-compact); margin: var(--space-2) 0 var(--space-3); }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
-.analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-block-end: var(--space-2); }
+.analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0; }
 .analysis-review-head h2 { margin: 0; }
+#analysis-review { gap: var(--space-3); }
+#analysis-review-body { display: flex; flex-direction: column; gap: var(--space-3); }
+#analysis-review-body > p { margin: 0; }
 .review-routes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
+.lixity-workspace #analysis-review .review-route {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.lixity-workspace #analysis-review .review-route > p { flex: 1 1 14rem; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
-.review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
+.review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
+@container analysis-outline (max-width: 42rem) {
+  .lixity-workspace #analysis-review { padding: var(--space-3); gap: var(--space-2); }
+  #analysis-review-body { gap: var(--space-2); }
+}
 .manuscript-pdf { min-width: 0; }
 .manuscript-pdf > summary { display: flex; align-items: center; gap: .5rem; list-style: none; cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
 .manuscript-pdf > summary::-webkit-details-marker { display: none; }

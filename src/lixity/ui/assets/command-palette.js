@@ -177,16 +177,31 @@
         subtitle: cmdText("cmd_toggle_theme_sub", "Switch workspace color scheme"),
         icon: "lightbulb",
         action: function () {
-          var themeBtn = document.querySelector("#theme-toggle, [data-theme-toggle]");
-          if (themeBtn) {
-            themeBtn.click();
-          } else {
-            var isDark = document.body.classList.toggle("theme-dark");
-            try { localStorage.setItem("lixity-theme", isDark ? "dark" : "light"); } catch (_) {}
-          }
+          window.LixityComponents.toggleTheme();
         }
       }
     ];
+
+    if (window.LixityReader && !document.body.classList.contains("manuscript-writing")) {
+      commands.push({
+        id: "view-analysis-overview",
+        category: catViews,
+        title: cmdText("reading_overview", "Analysis overview"),
+        subtitle: cmdText("reading_help_overview", "Open measurements, chapter matrix and style comparisons"),
+        icon: "layout",
+        action: window.LixityReader.showOverview
+      });
+    }
+    if (window.LixityDesktopBridge) {
+      commands.push({
+        id: "tools-system-status",
+        category: catViews,
+        title: cmdText("cmd_system_status_title", "System Status & Optional Extensions"),
+        subtitle: cmdText("cmd_system_status_sub", "Inspect local PDF/OCR, Zotero, audio and runtime status"),
+        icon: "settings",
+        action: window.LixityDesktopBridge.openSystemStatus
+      });
+    }
 
     if (document.querySelector("#manuscript-write") || document.querySelector("#manuscript-close")) {
       commands.push({
@@ -384,19 +399,6 @@
         }
       }
     ]);
-
-    if (window.LixityDesktopBridge && typeof window.LixityDesktopBridge.openSystemStatus === "function") {
-      commands.push({
-        id: "tools-system-status",
-        category: catAction,
-        title: cmdText("cmd_system_status_title", "System Status & Optional Extensions"),
-        subtitle: cmdText("cmd_system_status_sub", "Inspect local PDF/OCR, Zotero, audio and runtime status"),
-        icon: "settings",
-        action: function () {
-          window.LixityDesktopBridge.openSystemStatus();
-        }
-      });
-    }
 
     return commands.concat(buildChapterCommands(workbench));
   }

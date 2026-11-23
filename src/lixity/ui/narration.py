@@ -177,11 +177,11 @@ def render_scenes_panel(
                 f'<td class="num">{N(item.get("sensory_per_1000"))}</td>'
             )
         parts.append(
-            f'<tr><th><a href="#{esc(target)}" data-jump="#{esc(target)}">'
+            f'<tr><th scope="row"><a href="#{esc(target)}" data-jump="#{esc(target)}">'
             f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]}'
             f'</a> {group_badge}{pov_badge}</th>'
-            f'<td>{item["words"]}</td><td>{item["sentences"]}</td>'
-            f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td>{hook_cells}{dynamic_cell}{showing_cells}</tr>'
+            f'<td class="num">{item["words"]}</td><td class="num">{item["sentences"]}</td>'
+            f'<td class="num">{N(item["features"].get("asl"))}</td><td class="num">{dialog_text}</td>{hook_cells}{dynamic_cell}{showing_cells}</tr>'
         )
     if scenes["items"]:
         parts.append('</tbody></table></div>')

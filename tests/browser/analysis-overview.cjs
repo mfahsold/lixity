@@ -92,7 +92,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
   let writes = 0;
   try {
     for (const [locale, html] of Object.entries(fixtures.locales)) for (const width of
-      (locale === 'en' ? [1440,1280,1024,768,390,320] : [1440,320])) {
+      (locale === 'en' ? [2560,1440,1280,1024,768,390,320] : [1440,320])) {
       const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true, reducedMotion: 'reduce'});
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', route => {
@@ -130,6 +130,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
         'The exhaustive section navigation is replaced by the workflow chooser');
       assert.equal(await page.locator('#analysis-outline-nav').isVisible(), false,
         'A second exhaustive feature list does not compete with the workflow chooser');
+      assert.equal(await page.locator('.analysis-outline-layout').evaluate(element => getComputedStyle(element).display), 'block',
+        'The guided overview does not reserve a hidden outline column');
       const orientation = await navigation.evaluate(nav => {
         const bounds = nav.getBoundingClientRect();
         return {bounds:bounds.toJSON(), width:nav.clientWidth, content:nav.scrollWidth,
@@ -138,8 +140,14 @@ async function pinnedIdentity(page, panel, cellIndex) {
       assert.ok(orientation.content <= orientation.width + 1, 'Workflow choices fit without horizontal clipping');
       assert.ok(orientation.entries.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
         'Every workflow label is wholly visible');
-      if (width<=390) assert.equal(new Set(orientation.entries.map(rect=>Math.round(rect.top))).size,3,
-        'Mobile workflow entries form a readable single column');
+      const previews = navigation.locator('.analysis-workflow-preview:visible');
+      if (width<=390) {
+        assert.equal(new Set(orientation.entries.map(rect=>Math.round(rect.top))).size,3,
+          'Mobile workflow entries form a readable single column');
+        assert.equal(await previews.count(), 0, 'Compact task choices fit above the measured overview');
+      } else if (width>=1280) {
+        assert.equal(await previews.count(), 3, 'Wide task choices show which analysis sections they contain');
+      }
       if (locale === 'de' && width === 320) {
         await page.setViewportSize({width, height: 640});
         const jump = page.locator('#analysis-review-body a[href="#analysis-measurements"]');

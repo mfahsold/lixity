@@ -7,6 +7,21 @@ use std::path::PathBuf;
 pub const MIN_ZOOM: f64 = 0.8;
 pub const MAX_ZOOM: f64 = 1.6;
 pub const DEFAULT_ZOOM: f64 = 1.0;
+pub const ZOOM_STEP: f64 = 0.1;
+
+/// Clamp and quantize a WebView zoom factor to the audited `[0.80, 1.60]` range.
+pub fn clamp_zoom(factor: f64) -> f64 {
+    if factor.is_finite() {
+        ((factor.clamp(MIN_ZOOM, MAX_ZOOM)) * 100.0).round() / 100.0
+    } else {
+        DEFAULT_ZOOM
+    }
+}
+
+/// Apply an incremental zoom delta (e.g. `+0.1` or `-0.1`) without floating-point drift.
+pub fn step_zoom(current: f64, delta: f64) -> f64 {
+    clamp_zoom(clamp_zoom(current) + delta)
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DesktopPreferences {
@@ -48,11 +63,7 @@ impl DesktopPreferences {
         self.theme = self
             .theme
             .filter(|t| matches!(t.as_str(), "light" | "dark"));
-        self.zoom = if self.zoom.is_finite() {
-            ((self.zoom.clamp(MIN_ZOOM, MAX_ZOOM)) * 100.0).round() / 100.0
-        } else {
-            DEFAULT_ZOOM
-        };
+        self.zoom = clamp_zoom(self.zoom);
         self.active_view = self
             .active_view
             .filter(|v| matches!(v.as_str(), "analysis" | "research" | "project"));
@@ -84,7 +95,7 @@ impl DesktopPreferences {
                 if !num.is_finite() {
                     return Err("Zoom must be a finite number".to_string());
                 }
-                self.zoom = ((num.clamp(MIN_ZOOM, MAX_ZOOM)) * 100.0).round() / 100.0;
+                self.zoom = clamp_zoom(num);
             }
             "active_view" => {
                 if value.is_null() {
@@ -173,5 +184,18 @@ mod tests {
         assert!(prefs
             .apply_update("unknown_key", serde_json::json!(1))
             .is_err());
+    }
+
+    #[test]
+    fn clamps_and_steps_zoom_factors_without_drift() {
+        assert_eq!(clamp_zoom(f64::NAN), DEFAULT_ZOOM);
+        assert_eq!(clamp_zoom(f64::INFINITY), DEFAULT_ZOOM);
+        assert_eq!(clamp_zoom(0.25), MIN_ZOOM);
+        assert_eq!(clamp_zoom(3.5), MAX_ZOOM);
+        assert_eq!(step_zoom(1.0, ZOOM_STEP), 1.1);
+        assert_eq!(step_zoom(1.1, ZOOM_STEP), 1.2);
+        assert_eq!(step_zoom(1.2, -ZOOM_STEP), 1.1);
+        assert_eq!(step_zoom(MIN_ZOOM, -ZOOM_STEP), MIN_ZOOM);
+        assert_eq!(step_zoom(MAX_ZOOM, ZOOM_STEP), MAX_ZOOM);
     }
 }

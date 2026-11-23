@@ -586,6 +586,13 @@
     overviewAnchor = capture();
     workbench.dispatch({type: "surface", value: "overview"});
   }
+  function showOverview() {
+    if (document.body.classList.contains("manuscript-writing")) return;
+    if (workbench.state().view !== "analysis") switchActiveView("analysis", true);
+    openOverview();
+    (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
+    document.getElementById("workbench-overview-back").focus({preventScroll: true});
+  }
   function passageContext(panel) {
     var chapter = panel.closest(".chapter"), heading = chapter && chapter.querySelector("h2, h3");
     return (heading ? heading.textContent.trim() + " · " : "") +
@@ -1052,11 +1059,7 @@
       workbench.dispatch({type: "tool", value: button.dataset.contextTool});
     }); });
   });
-  document.getElementById("workbench-overview-open").addEventListener("click", function() {
-    openOverview();
-    (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
-    document.getElementById("workbench-overview-back").focus({preventScroll: true});
-  });
+  document.getElementById("workbench-overview-open").addEventListener("click", showOverview);
   document.getElementById("workbench-overview-back").addEventListener("click", function() {
     rememberPassageLocation(overviewAnchor && overviewAnchor.panel);
     workbench.dispatch({type: "surface", value: "document"}); restore(overviewAnchor, true);
@@ -1422,6 +1425,7 @@
     pendingComparisonPassage: pendingComparisonPassage,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
     openOverview: openOverview,
+    showOverview: showOverview,
     inspectPassage: function(panel, point) {
       if (!panel) return;
       retain(function() {

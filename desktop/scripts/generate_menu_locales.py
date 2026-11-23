@@ -216,8 +216,10 @@ DESKTOP_MENU_BASE: dict[str, dict[str, str]] = {
 
 CATALOG_BINDINGS: dict[str, str] = {
     "item_view_analysis": "cmd_view_analysis_title",
+    "item_view_analysis_overview": "reading_overview",
     "item_view_research": "cmd_view_research_title",
     "item_view_project": "cmd_view_project_title",
+    "item_toggle_theme": "cmd_toggle_theme_title",
     "item_teleprompter": "cmd_audio_teleprompter_title",
     "item_export_pdf": "cmd_export_pdf_title",
 }

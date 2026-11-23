@@ -123,10 +123,15 @@ server.serve_forever()
       passage.dataset.paragraphSha256 = original;
       return available;
     }, target), false, 'A changed passage cannot select an old decision');
+    await page.locator('#workbench-overview-open').click();
+    await openAnalysisSection(page, 'analysis-measurements');
+    await page.locator('#workbench-overview-back').click();
+    await expect(page.locator('#flags')).toBeHidden();
     await page.locator('#triage-status-filter').selectOption('unreviewed', {force:true});
     await page.locator(`#${target} .reader-paragraph-actions`).click();
     await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
     await page.locator('#reader-inspector-body [data-reader-action="review"]').click();
+    await expect(page.locator('#flags')).toBeVisible();
     await expect(rows.first().locator('.triage-saved-state')).toHaveText('Deliberately kept');
     await expect(rows.first().locator('.triage-choice')).toBeFocused();
     assert.equal(await page.locator('#triage-status-filter').inputValue(), '', 'A conflicting filter cannot hide the selected decision');

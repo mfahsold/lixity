@@ -52,7 +52,7 @@ def update_version_file(version: str) -> None:
 
 
 def update_desktop_manifests(version: str, *, release_date: str | None = None) -> None:
-    """Keep desktop Rust/Tauri and Linux AppStream manifests aligned with __version__."""
+    """Keep desktop manifests and the workspace crate in Cargo.lock aligned."""
     cargo_toml = ROOT / "desktop/Cargo.toml"
     if cargo_toml.is_file():
         text = cargo_toml.read_text(encoding="utf-8")
@@ -65,6 +65,20 @@ def update_desktop_manifests(version: str, *, release_date: str | None = None) -
         if count == 1 and updated != text:
             cargo_toml.write_text(updated, encoding="utf-8")
             print(f"[OK] Updated {cargo_toml.relative_to(ROOT)} to {version}")
+
+    cargo_lock = ROOT / "desktop/Cargo.lock"
+    if cargo_lock.is_file():
+        text = cargo_lock.read_text(encoding="utf-8")
+        updated, count = re.subn(
+            r'(?m)^(\[\[package\]\]\nname = "lixity-desktop"\nversion = ")\d+\.\d+\.\d+("$)',
+            lambda match: f"{match[1]}{version}{match[2]}",
+            text,
+        )
+        if count != 1:
+            raise ValueError("Cargo.lock must contain one lixity-desktop package")
+        if updated != text:
+            cargo_lock.write_text(updated, encoding="utf-8", newline="\n")
+            print(f"[OK] Updated {cargo_lock.relative_to(ROOT)} to {version}")
 
     tauri_conf = ROOT / "desktop/src-tauri/tauri.conf.json"
     if tauri_conf.is_file():
@@ -206,6 +220,7 @@ def preparation_snapshot(version: str) -> dict[Path, bytes | None]:
         ROOT / "CHANGELOG.md",
         ROOT / "docs/releases" / f"v{version}.md",
         ROOT / "desktop/Cargo.toml",
+        ROOT / "desktop/Cargo.lock",
         ROOT / "desktop/src-tauri/tauri.conf.json",
         ROOT / "desktop/packaging/linux/io.github.mfahsold.Lixity.metainfo.xml",
     }

@@ -64,6 +64,10 @@ def test_desktop_icons_are_synchronized_and_valid_containers():
 def test_desktop_metadata_versions_and_targets_align_with_package():
     tauri_conf = json.loads((DESKTOP / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
     assert tauri_conf["version"] == __version__
+    cargo = (DESKTOP / "Cargo.toml").read_text(encoding="utf-8")
+    assert f'[workspace.package]\nversion = "{__version__}"\n' in cargo
+    lock = (DESKTOP / "Cargo.lock").read_text(encoding="utf-8")
+    assert f'[[package]]\nname = "lixity-desktop"\nversion = "{__version__}"\n' in lock
     for rel_icon in tauri_conf["bundle"]["icon"]:
         assert (DESKTOP / "src-tauri" / rel_icon).is_file(), f"Missing icon: {rel_icon}"
 

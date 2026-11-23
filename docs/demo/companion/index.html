@@ -161,13 +161,32 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-compact); margin: var(--space-2) 0 var(--space-3); }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
-.analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-block-end: var(--space-2); }
+.analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0; }
 .analysis-review-head h2 { margin: 0; }
+#analysis-review { gap: var(--space-3); }
+#analysis-review-body { display: flex; flex-direction: column; gap: var(--space-3); }
+#analysis-review-body > p { margin: 0; }
 .review-routes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
+.lixity-workspace #analysis-review .review-route {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.lixity-workspace #analysis-review .review-route > p { flex: 1 1 14rem; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
-.review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
+.review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
+@container analysis-outline (max-width: 42rem) {
+  .lixity-workspace #analysis-review { padding: var(--space-3); gap: var(--space-2); }
+  #analysis-review-body { gap: var(--space-2); }
+}
 .manuscript-pdf { min-width: 0; }
 .manuscript-pdf > summary { display: flex; align-items: center; gap: .5rem; list-style: none; cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
 .manuscript-pdf > summary::-webkit-details-marker { display: none; }
@@ -1081,15 +1100,27 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
 .kpi-group { display: grid; gap: .4rem; }
 .kpi-drawer { border-top: 1px dashed var(--line); }
 .kpi-drawer .kpi-row { margin-top: .35rem; }
-.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: var(--space-2); }
-.kpi { contain: layout style; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .65rem .85rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 4.2rem; position: relative; overflow: hidden; min-width: 0; transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); } & .kpi-bar { position: absolute; inset-inline-start: 0; inset-block-end: 0; height: 2px; width: var(--v); background: var(--accent); opacity: .55; border-radius: 0 var(--radius-xs) 0 0; transition: width .3s var(--ease); } & b { display: block; font-size: 1.25rem; font-weight: var(--weight-strong); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; } & span { color: var(--muted); font-size: var(--text-micro); line-height: 1.35; margin-top: .25rem; text-wrap: balance; overflow-wrap: anywhere; } }
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: var(--space-3); }
+.kpi { contain: layout style; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .7rem .9rem; display: flex; flex-direction: column; justify-content: space-between; min-height: 4.35rem; position: relative; overflow: hidden; min-width: 0; transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); &:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); } & .kpi-bar { position: absolute; inset-inline-start: 0; inset-block-end: 0; height: 2px; width: var(--v); background: var(--accent); opacity: .55; border-radius: 0 var(--radius-xs) 0 0; transition: width .3s var(--ease); } & b { display: block; font-size: 1.25rem; font-weight: var(--weight-strong); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.2; } & span { color: var(--muted); font-size: var(--text-micro); line-height: 1.35; margin-top: .25rem; text-wrap: balance; overflow-wrap: anywhere; } }
 .kpi-link { cursor: pointer; user-select: none; &:hover b { color: var(--accent); } &:active { transform: translateY(0); } }
-.readability { margin-top: .35rem; padding-top: .6rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.readability { margin-top: .35rem; padding-top: .75rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .readability h3 { margin: 0 0 .2rem; font-size: var(--text-small); }
-.readability dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-2); margin: .45rem 0 0; font-size: var(--text-small); }
+.readability dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-3); margin: .5rem 0 0; font-size: var(--text-small); }
 .readability dl dd { display: flex; align-items: baseline; gap: .15rem .55rem; flex-wrap: wrap; margin: .15rem 0 0; font-variant-numeric: tabular-nums; }
 .readability dl dd span { color: var(--muted); }
-:is(#analysis-measurements, .scene-measurements) { border-block: 1px solid var(--line); padding-block: var(--space-1); & > summary { font-size: var(--text-control); } &[open] > summary { margin-bottom: var(--space-3); } & > .kpis { padding-bottom: var(--space-4); } }
+#analysis-measurements {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--panel-padding) var(--space-3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .02);
+  & > summary { font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); padding-inline: 0; }
+  &[open] > summary { margin-bottom: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--line); }
+  & > .kpis { padding-bottom: var(--space-1); }
+  & .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); }
+}
+.lixity-workspace #analysis-measurements { border-radius: var(--radius-sm); box-shadow: none; }
+.scene-measurements { border-block: 1px solid var(--line); padding-block: var(--space-1); & > summary { font-size: var(--text-control); } &[open] > summary { margin-bottom: var(--space-3); } & > .kpis { padding-bottom: var(--space-4); } }
 /* --- Sentence-length architecture ------------------------------------- */
 .dist { display: grid; gap: .5rem; & .row { display: grid; grid-template-columns: minmax(0, 13rem) minmax(4rem, 1fr) max-content; align-items: center; gap: .75rem; font-size: var(--text-small); } & .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } &.scrollable { max-height: 22rem; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; scrollbar-color: var(--muted) transparent; &::-webkit-scrollbar { width: .45rem; } &::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--radius-pill); } } & .bar { height: 6px; background: var(--line); border-radius: var(--radius-pill); overflow: hidden; & i { display: block; height: 100%; background: var(--accent); } } & .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; } }
 /* --- Toolbar ---------------------------------------------------------- */
@@ -1502,7 +1533,7 @@ display: block; inline-size: max-content; max-inline-size: 100%; margin-inline-s
 color: var(--muted); font-size: var(--text-small); font-weight: var(--weight-medium); white-space: normal;
 }
 #matrix .bar-cell:has(.chapter-revision-delta) { padding-block-end: var(--space-2); }
-.scene-overview th:first-child { width: 14rem; }
+.scene-overview th:first-child { width: 14rem; white-space: normal; }
 @media (max-width: 600px) {
 #matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child { width: 8.5rem; min-width: 8.5rem; max-width: 8.5rem; }
 }
@@ -1527,8 +1558,8 @@ color: var(--muted); font-size: var(--text-small); font-weight: var(--weight-med
 .dim-cutoff > summary { cursor: pointer; }
 .dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
 .dim-view-controls {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  align-items: start; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  align-items: start; gap: var(--space-3); padding: var(--space-3);
 }
 .dim-view-control { display: grid; gap: var(--space-1); min-width: 0; }
 .dim-view-control label { font-weight: var(--weight-semibold); }
@@ -2311,10 +2342,10 @@ line-height: var(--line-compact);
 #register-targets table { min-width: 48rem; }
 #register-targets thead th, #register-targets td:nth-child(n+4) { white-space: nowrap; }
 .scene-overview { margin: .4rem 0 .9rem; max-height: 26rem; overflow: auto; }
-.scene-overview table { min-width: 36rem; table-layout: fixed; }
-.scene-overview thead th, .scene-overview td { white-space: nowrap; }
-.scene-overview thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; }
-.scene-overview th:first-child { white-space: normal; }
+.scene-overview table { min-width: 36rem; }
+.scene-overview th { white-space: normal; }
+.scene-overview thead th { text-wrap: balance; }
+.scene-overview tbody th { top: auto; }
 .scene-overview a { color: var(--accent); text-underline-offset: .15em; }
 .scene-overview tbody th small { display: block; color: var(--muted); font-weight: normal; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
@@ -4088,6 +4119,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
 }
+.manuscript-reading.workbench-overview .manuscript-reader-controls {
+  padding-inline: var(--space-3);
+}
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
 @media (max-height: 600px) {
@@ -4844,7 +4878,7 @@ body.lixity-workspace.reader-focus {
 .analysis-outline-document { display: grid; gap: var(--space-4); align-content: start; }
 .analysis-outline-document > * { min-width: 0; max-width: 100%; }
 @container analysis-outline (min-width: 52rem) {
-  .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
+  body:not(.has-guided-analysis) .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
   .analysis-outline-document { grid-column: 1; grid-row: 1; }
   .analysis-outline-contents {
     grid-column: 2; grid-row: 1; position: sticky;
@@ -5185,7 +5219,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.9.1</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A0e054af9-36a6-429f-9555-c207626f8a58\u0026version_id=urn%3Auuid%3Ad2022edb-749c-472a-a283-bf139d535535":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Aa86b46b6-8d50-4fba-9f24-7ba14975e8d9\u0026source_id=urn%3Auuid%3A0e054af9-36a6-429f-9555-c207626f8a58\u0026version_id=urn%3Auuid%3Ad2022edb-749c-472a-a283-bf139d535535":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3Ae3131aaf-7d76-4227-84db-8b38034b84b0\u0026version_id=urn%3Auuid%3Aee5acbc1-2332-4a7a-8415-80655627d9c1":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Aa86b46b6-8d50-4fba-9f24-7ba14975e8d9\u0026source_id=urn%3Auuid%3Ae3131aaf-7d76-4227-84db-8b38034b84b0\u0026version_id=urn%3Auuid%3Aee5acbc1-2332-4a7a-8415-80655627d9c1":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:a86b46b6-8d50-4fba-9f24-7ba14975e8d9","source_sha256":"6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:a008c373-d5e2-4212-8c78-d53c639184e3","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:00b5fb92-f776-489c-b6c8-d0386e4d8a8b","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:0e054af9-36a6-429f-9555-c207626f8a58/urn:uuid:d2022edb-749c-472a-a283-bf139d535535)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:a86b46b6-8d50-4fba-9f24-7ba14975e8d9","source_id":"urn:uuid:0e054af9-36a6-429f-9555-c207626f8a58","source_version_id":"urn:uuid:d2022edb-749c-472a-a283-bf139d535535","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Aa86b46b6-8d50-4fba-9f24-7ba14975e8d9\u0026source_id=urn%3Auuid%3A0e054af9-36a6-429f-9555-c207626f8a58\u0026version_id=urn%3Auuid%3Ad2022edb-749c-472a-a283-bf139d535535","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:00b5fb92-f776-489c-b6c8-d0386e4d8a8b","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:e3131aaf-7d76-4227-84db-8b38034b84b0/urn:uuid:ee5acbc1-2332-4a7a-8415-80655627d9c1)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:a86b46b6-8d50-4fba-9f24-7ba14975e8d9","source_id":"urn:uuid:e3131aaf-7d76-4227-84db-8b38034b84b0","source_version_id":"urn:uuid:ee5acbc1-2332-4a7a-8415-80655627d9c1","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Aa86b46b6-8d50-4fba-9f24-7ba14975e8d9\u0026source_id=urn%3Auuid%3Ae3131aaf-7d76-4227-84db-8b38034b84b0\u0026version_id=urn%3Auuid%3Aee5acbc1-2332-4a7a-8415-80655627d9c1","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:a008c373-d5e2-4212-8c78-d53c639184e3","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:a008c373-d5e2-4212-8c78-d53c639184e3","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"a72c27715b22fee096813745e006f87fc29e0ca625e4ae21b7bcbed778b61429"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3Aaed9e1a9-2701-4021-80ef-8cb5d67da7cc\u0026version_id=urn%3Auuid%3Ae7861fd4-5a92-4efe-8118-d35a95009618":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Af707b72e-4bf5-43d3-87a7-204928282cf7\u0026source_id=urn%3Auuid%3Aaed9e1a9-2701-4021-80ef-8cb5d67da7cc\u0026version_id=urn%3Auuid%3Ae7861fd4-5a92-4efe-8118-d35a95009618":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A00b35530-afba-4f36-b28c-aa3e395f99df\u0026version_id=urn%3Auuid%3A66263a5b-2ee1-4e1a-b3b1-4b4a6585a6f1":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Af707b72e-4bf5-43d3-87a7-204928282cf7\u0026source_id=urn%3Auuid%3A00b35530-afba-4f36-b28c-aa3e395f99df\u0026version_id=urn%3Auuid%3A66263a5b-2ee1-4e1a-b3b1-4b4a6585a6f1":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:f707b72e-4bf5-43d3-87a7-204928282cf7","source_sha256":"6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:4a377585-3ffd-45e9-aed4-4bc9910de1ce","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:102b1902-7fc9-41e2-b035-468f2a6a6bcc","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:aed9e1a9-2701-4021-80ef-8cb5d67da7cc/urn:uuid:e7861fd4-5a92-4efe-8118-d35a95009618)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:f707b72e-4bf5-43d3-87a7-204928282cf7","source_id":"urn:uuid:aed9e1a9-2701-4021-80ef-8cb5d67da7cc","source_version_id":"urn:uuid:e7861fd4-5a92-4efe-8118-d35a95009618","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Af707b72e-4bf5-43d3-87a7-204928282cf7\u0026source_id=urn%3Auuid%3Aaed9e1a9-2701-4021-80ef-8cb5d67da7cc\u0026version_id=urn%3Auuid%3Ae7861fd4-5a92-4efe-8118-d35a95009618","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:102b1902-7fc9-41e2-b035-468f2a6a6bcc","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:00b35530-afba-4f36-b28c-aa3e395f99df/urn:uuid:66263a5b-2ee1-4e1a-b3b1-4b4a6585a6f1)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:f707b72e-4bf5-43d3-87a7-204928282cf7","source_id":"urn:uuid:00b35530-afba-4f36-b28c-aa3e395f99df","source_version_id":"urn:uuid:66263a5b-2ee1-4e1a-b3b1-4b4a6585a6f1","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Af707b72e-4bf5-43d3-87a7-204928282cf7\u0026source_id=urn%3Auuid%3A00b35530-afba-4f36-b28c-aa3e395f99df\u0026version_id=urn%3Auuid%3A66263a5b-2ee1-4e1a-b3b1-4b4a6585a6f1","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:4a377585-3ffd-45e9-aed4-4bc9910de1ce","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:4a377585-3ffd-45e9-aed4-4bc9910de1ce","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"55673e30bf837c2633313f611479d1786ecf36a7659c5761c7d2f9a9d9f0c6e4"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
@@ -5551,11 +5585,29 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       .replace(/'/g, "&#39;");
   }
 
+  function applyTheme(theme) {
+    if (theme !== "dark" && theme !== "light") return;
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("lixity-theme", theme); } catch (_) { /* The theme still applies to this page. */ }
+  }
+
+  function toggleTheme() {
+    var theme = document.documentElement.dataset.theme;
+    var isDark = theme ? theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(isDark ? "light" : "dark");
+  }
+
+  try {
+    if (!document.documentElement.dataset.theme) applyTheme(localStorage.getItem("lixity-theme"));
+  } catch (_) { /* The system color scheme remains available. */ }
+
   window.LixityComponents = {
     CHROME_SELECTOR: SHARED_CHROME_SELECTOR,
     TOOLBAR_SELECTOR: SHARED_TOOLBAR_SELECTOR,
     escapeHtml: escapeHtml,
     escapeAttr: escapeHtml,
+    applyTheme: applyTheme,
+    toggleTheme: toggleTheme,
     uiLabel: _uiLabel,
     uiFormat: _uiFormat,
     uiCountFormat: _uiCountFormat,
@@ -7723,16 +7775,31 @@ document.addEventListener("keydown", function(event) {
         subtitle: cmdText("cmd_toggle_theme_sub", "Switch workspace color scheme"),
         icon: "lightbulb",
         action: function () {
-          var themeBtn = document.querySelector("#theme-toggle, [data-theme-toggle]");
-          if (themeBtn) {
-            themeBtn.click();
-          } else {
-            var isDark = document.body.classList.toggle("theme-dark");
-            try { localStorage.setItem("lixity-theme", isDark ? "dark" : "light"); } catch (_) {}
-          }
+          window.LixityComponents.toggleTheme();
         }
       }
     ];
+
+    if (window.LixityReader && !document.body.classList.contains("manuscript-writing")) {
+      commands.push({
+        id: "view-analysis-overview",
+        category: catViews,
+        title: cmdText("reading_overview", "Analysis overview"),
+        subtitle: cmdText("reading_help_overview", "Open measurements, chapter matrix and style comparisons"),
+        icon: "layout",
+        action: window.LixityReader.showOverview
+      });
+    }
+    if (window.LixityDesktopBridge) {
+      commands.push({
+        id: "tools-system-status",
+        category: catViews,
+        title: cmdText("cmd_system_status_title", "System Status & Optional Extensions"),
+        subtitle: cmdText("cmd_system_status_sub", "Inspect local PDF/OCR, Zotero, audio and runtime status"),
+        icon: "settings",
+        action: window.LixityDesktopBridge.openSystemStatus
+      });
+    }
 
     if (document.querySelector("#manuscript-write") || document.querySelector("#manuscript-close")) {
       commands.push({
@@ -7930,19 +7997,6 @@ document.addEventListener("keydown", function(event) {
         }
       }
     ]);
-
-    if (window.LixityDesktopBridge && typeof window.LixityDesktopBridge.openSystemStatus === "function") {
-      commands.push({
-        id: "tools-system-status",
-        category: catAction,
-        title: cmdText("cmd_system_status_title", "System Status & Optional Extensions"),
-        subtitle: cmdText("cmd_system_status_sub", "Inspect local PDF/OCR, Zotero, audio and runtime status"),
-        icon: "settings",
-        action: function () {
-          window.LixityDesktopBridge.openSystemStatus();
-        }
-      });
-    }
 
     return commands.concat(buildChapterCommands(workbench));
   }

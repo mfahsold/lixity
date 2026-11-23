@@ -60,27 +60,24 @@ The published **v0.9.1** release is a Python package with a local browser
 interface. The `uv` route above manages Python for you; published standalone
 desktop installers have not shipped on GitHub Releases yet.
 
-On the unreleased development branch (`desktop/`), a cross-platform **Rust /
-Tauri v2 desktop host** bundles an isolated `python-build-standalone` 3.12
-runtime alongside the single canonical Python analysis engine and UI. It
-targets feature parity across **macOS** (`.app`, `.dmg`, Homebrew Cask
-template), **Windows** (7-language per-user NSIS `.exe`, WiX `.msi`, WinGet
-manifests) and **Linux** (`.deb`, `.rpm`, `.AppImage`, Flatpak/AppStream),
-including native OS menus, folder/save dialogs, atomic streaming exports and
-cross-platform `cpal`+`hound` microphone capture.
+The unreleased **Rust / Tauri v2 desktop host** in `desktop/` bundles an isolated
+`python-build-standalone` 3.12 runtime alongside the shared Python analysis
+engine and UI. The release build matrix targets macOS disk images for Apple
+Silicon and Intel, Windows x64 NSIS and WiX installers, and Linux x64 Debian
+packages and AppImages. The host adds native OS menus, folder and save dialogs,
+atomic streaming exports and cross-platform `cpal`+`hound` microphone capture.
 
-Desktop installers preserve manuscript folders, retained research archives and
-local state across upgrades and uninstalls, and restart only the loopback
-engine they own. Python 3.12 is the bundled desktop baseline; the 0.9.1 Python
-package still declares Python 3.10+. Optional speech and OCR workers remain
-separate from the core desktop application.
+The desktop host runs its own loopback engine. Manuscript folders and retained
+research archives live outside the installed app. Python 3.12 is the bundled
+desktop baseline. The 0.9.1 Python package supports Python 3.10 and later.
+Optional speech and OCR workers remain separate from the core desktop application.
 
 The shared analysis core remains in Python (`src/lixity/`); Rust currently
 implements the native desktop host rather than a second analysis engine. See
 [`desktop/README.md`](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
 and the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-second-product-path).
-Clean-VM install, upgrade, rollback and OS signing/notarization verification
-remain release gates before publishing desktop installers.
+Clean-machine checks must cover installation, upgrade, rollback and preservation
+of project data. OS signing and notarization remain release gates.
 
 ### Install uv if it is not available
 

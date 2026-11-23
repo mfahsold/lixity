@@ -26,11 +26,6 @@
     return (document.body && document.body.dataset && document.body.dataset.api) || "/api";
   }
 
-  function clickViewTab(viewName) {
-    var tab = document.querySelector('.view-nav-tab[data-view-tab="' + viewName + '"]');
-    if (tab) tab.click();
-  }
-
   var statusDialog = null;
   var statusBody = null;
   var statusFooter = null;
@@ -233,7 +228,7 @@
         break;
       }
       case "file-export-pdf": {
-        clickViewTab("project");
+        switchActiveView("project", true);
         var pdfDetails = document.getElementById("manuscript-pdf");
         if (pdfDetails) {
           pdfDetails.open = true;
@@ -242,27 +237,24 @@
         break;
       }
       case "view-analysis":
-        clickViewTab("analysis");
+        switchActiveView("analysis", true);
+        break;
+      case "view-analysis-overview":
+        if (window.LixityReader) window.LixityReader.showOverview();
         break;
       case "view-research":
-        clickViewTab("research");
+        switchActiveView("research", true);
         break;
       case "view-project":
-        clickViewTab("project");
+        switchActiveView("project", true);
         break;
       case "view-teleprompter": {
         var tpBtn = document.getElementById("reader-teleprompter");
         if (tpBtn) tpBtn.click();
         break;
       }
-      case "view-zoom-in":
-        adjustZoom(0.1);
-        break;
-      case "view-zoom-out":
-        adjustZoom(-0.1);
-        break;
-      case "view-zoom-reset":
-        setZoom(1.0);
+      case "view-toggle-theme":
+        window.LixityComponents.toggleTheme();
         break;
       case "tools-system-status":
         openSystemStatus();
@@ -275,27 +267,8 @@
     }
   }
 
-  var currentZoom = 1.0;
   var savedToastEl = null;
   var savedToastTimer = null;
-
-  function applyZoom(factor) {
-    var clamped = Math.round(Math.max(0.8, Math.min(1.6, Number(factor) || 1.0)) * 100) / 100;
-    currentZoom = clamped;
-    document.documentElement.style.zoom = clamped === 1.0 ? "" : String(clamped);
-    return clamped;
-  }
-
-  function setZoom(factor) {
-    var clamped = applyZoom(factor);
-    if (window.lixityDesktop && typeof window.lixityDesktop.setPreference === "function") {
-      window.lixityDesktop.setPreference("zoom", clamped).catch(function () {});
-    }
-  }
-
-  function adjustZoom(delta) {
-    setZoom(currentZoom + delta);
-  }
 
   function notifySavedExport(outcome) {
     if (!outcome || !outcome.saved || !outcome.path || !window.lixityDesktop ||
@@ -311,8 +284,8 @@
       savedToastEl.setAttribute("aria-live", "polite");
       savedToastEl.style.cssText =
         "position:fixed;right:1rem;bottom:1rem;z-index:9500;display:flex;align-items:center;gap:0.6rem;" +
-        "padding:0.65rem 0.9rem;border-radius:10px;background:var(--surface,#fff);color:var(--ink,#1f2328);" +
-        "border:1px solid var(--border,#d0d7de);box-shadow:0 8px 24px rgba(0,0,0,0.18);font-size:0.875rem;";
+        "padding:0.65rem 0.9rem;border-radius:10px;background:var(--surface,#fff);color:var(--fg,#19263d);" +
+        "border:1px solid var(--line,#dce2ef);box-shadow:0 8px 24px rgba(0,0,0,0.18);font-size:0.875rem;";
       document.body.appendChild(savedToastEl);
     }
     var fileLabel = String(outcome.path).split(/[\\/]/).pop() || outcome.path;
@@ -363,28 +336,27 @@
       }
     });
 
-    // Hydrate display preferences that outlive ephemeral 127.0.0.1:0 loopback ports.
+    var root = document.documentElement;
+    var initialTheme = root.dataset.theme;
+    var lastTheme = initialTheme;
+    // Persist the theme across ephemeral ports and let Rust apply native zoom.
     if (typeof window.lixityDesktop.getPreferences === "function") {
       window.lixityDesktop.getPreferences().then(function (prefs) {
-        if (!prefs || typeof prefs !== "object") return;
-        if (typeof prefs.zoom === "number") applyZoom(prefs.zoom);
-        if (prefs.theme === "dark" || prefs.theme === "light") {
-          document.body.classList.toggle("theme-dark", prefs.theme === "dark");
-          try { localStorage.setItem("lixity-theme", prefs.theme); } catch (_) {}
+        if (prefs && root.dataset.theme === initialTheme && (prefs.theme === "dark" || prefs.theme === "light")) {
+          lastTheme = prefs.theme;
+          window.LixityComponents.applyTheme(prefs.theme);
         }
       }).catch(function () {});
     }
 
-    // Persist dark/light mode changes back to the desktop preferences store.
-    if (typeof MutationObserver === "function" && typeof window.lixityDesktop.setPreference === "function") {
-      var lastTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";
+    if (typeof window.lixityDesktop.setPreference === "function") {
       new MutationObserver(function () {
-        var nextTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";
-        if (nextTheme !== lastTheme) {
+        var nextTheme = root.dataset.theme;
+        if ((nextTheme === "dark" || nextTheme === "light") && nextTheme !== lastTheme) {
           lastTheme = nextTheme;
           window.lixityDesktop.setPreference("theme", nextTheme).catch(function () {});
         }
-      }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      }).observe(root, {attributes: true, attributeFilter: ["data-theme"]});
     }
   }
 
@@ -425,7 +397,6 @@
     checkForUpdates: checkForUpdates,
     openPath: openPath,
     handleMenuAction: handleMenuAction,
-    setZoom: setZoom,
     notifySavedExport: notifySavedExport,
     decodeBase64Wav: decodeBase64Wav,
     recordWavTake: recordWavTake

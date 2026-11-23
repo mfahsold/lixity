@@ -10,7 +10,7 @@ use crate::downloads::{
     RevealAllowlist, SaveOutcome,
 };
 use crate::menu::build_app_menu;
-use crate::preferences::{load_preferences, update_preference, DesktopPreferences};
+use crate::preferences::{load_preferences, update_preference, DesktopPreferences, DEFAULT_ZOOM};
 use crate::recent::{clear_recent, list_recent, record_recent, remove_recent, RecentProject};
 use crate::security::{
     bridge_init_script, handshake_url, is_allowed_app_url, is_allowed_external_url,
@@ -23,7 +23,7 @@ use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
 
@@ -55,6 +55,12 @@ pub struct WindowLaunchSpec<'a> {
 fn file_path_to_pathbuf(fp: FilePath) -> Result<PathBuf, String> {
     fp.into_path()
         .map_err(|_| "Selected OS path could not be converted to a local filesystem path".to_string())
+}
+
+fn refresh_app_menu(app: &AppHandle, locale: &str) {
+    if let Ok(app_menu) = build_app_menu(app, locale) {
+        let _ = app.set_menu(app_menu);
+    }
 }
 
 #[tauri::command]
@@ -204,9 +210,14 @@ pub fn spawn_desktop_window(
         builder = builder.inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
-    builder
+    let window = builder
         .build()
-        .map_err(|e| format!("Failed opening desktop window: {e}"))
+        .map_err(|e| format!("Failed opening desktop window: {e}"))?;
+    let prefs = load_preferences();
+    if (prefs.zoom - DEFAULT_ZOOM).abs() > f64::EPSILON {
+        let _ = window.set_zoom(prefs.zoom);
+    }
+    Ok(window)
 }
 
 #[tauri::command]
@@ -290,9 +301,7 @@ pub fn record_recent_project(
 ) -> Result<Vec<RecentProject>, String> {
     state.reveal.allow(std::path::Path::new(&path));
     let updated = record_recent(&path, title, language)?;
-    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
-        let _ = app.set_menu(app_menu);
-    }
+    refresh_app_menu(&app, &state.locale);
     Ok(updated)
 }
 
@@ -303,9 +312,7 @@ pub fn remove_recent_project(
     path: String,
 ) -> Result<Vec<RecentProject>, String> {
     let updated = remove_recent(&path)?;
-    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
-        let _ = app.set_menu(app_menu);
-    }
+    refresh_app_menu(&app, &state.locale);
     Ok(updated)
 }
 
@@ -315,9 +322,7 @@ pub fn clear_recent_projects(
     state: State<'_, DesktopState>,
 ) -> Result<(), String> {
     clear_recent()?;
-    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
-        let _ = app.set_menu(app_menu);
-    }
+    refresh_app_menu(&app, &state.locale);
     Ok(())
 }
 
@@ -328,10 +333,19 @@ pub fn get_preferences() -> DesktopPreferences {
 
 #[tauri::command]
 pub fn set_preference(
+    app: AppHandle,
     key: String,
     value: serde_json::Value,
 ) -> Result<DesktopPreferences, String> {
-    update_preference(&key, value)
+    let updated = update_preference(&key, value)?;
+    if key == "zoom" {
+        for window in app.webview_windows().values() {
+            if window.label() != "splashscreen" {
+                let _ = window.set_zoom(updated.zoom);
+            }
+        }
+    }
+    Ok(updated)
 }
 
 #[tauri::command]

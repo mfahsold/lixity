@@ -20,12 +20,7 @@ from typing import Any
 
 
 def _stripped_env() -> dict[str, str]:
-    env: dict[str, str] = {
-        "PYTHONNOUSERSITE": "1",
-        "PYTHONSAFEPATH": "1",
-        "PYTHONDONTWRITEBYTECODE": "1",
-        "LC_ALL": "C.UTF-8",
-    }
+    env: dict[str, str] = {"LC_ALL": "C.UTF-8"}
     if os.name == "nt":
         for key in ("SYSTEMROOT", "TEMP", "TMP", "USERPROFILE"):
             if key in os.environ:
@@ -36,6 +31,10 @@ def _stripped_env() -> dict[str, str]:
                 env[key] = os.environ[key]
         env["PATH"] = ""
     return env
+
+
+def _bytecode_state(bundle_dir: Path) -> dict[Path, int]:
+    return {path: path.stat().st_mtime_ns for path in bundle_dir.rglob("*.pyc")}
 
 
 def _http_request(
@@ -63,11 +62,19 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
     if not python_exe.is_file():
         raise FileNotFoundError(f"Bundled Python executable missing: {python_exe}")
 
+    python_command = [str(python_exe), "-I", "-B"]
     env = _stripped_env()
+    bytecode_before = _bytecode_state(bundle_dir)
+    subprocess.run(  # noqa: S603 - explicit bundled interpreter
+        [*python_command, "-c", "import sys; assert sys.flags.isolated and sys.flags.dont_write_bytecode"],
+        env=env,
+        check=True,
+        timeout=20,
+    )
 
     # 1. Version check under stripped environment
     ver_proc = subprocess.run(  # noqa: S603 - explicit bundled interpreter
-        [str(python_exe), "-I", "-m", "lixity", "--version"],
+        [*python_command, "-m", "lixity", "--version"],
         env=env,
         capture_output=True,
         text=True,
@@ -88,8 +95,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         # 2. Deterministic offline analysis check
         analyze_proc = subprocess.run(  # noqa: S603 - explicit bundled interpreter
             [
-                str(python_exe),
-                "-I",
+                *python_command,
                 "-m",
                 "lixity",
                 "analyze",
@@ -117,8 +123,7 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
         t0 = time.perf_counter()
         with subprocess.Popen(  # noqa: S603 - explicit bundled interpreter
             [
-                str(python_exe),
-                "-I",
+                *python_command,
                 "-m",
                 "lixity",
                 "serve",
@@ -187,6 +192,9 @@ def verify_bundle(bundle_dir: Path) -> dict[str, Any]:
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     proc.wait(timeout=5)
+
+    if _bytecode_state(bundle_dir) != bytecode_before:
+        raise AssertionError("Desktop runtime modified bytecode inside its signed resources")
 
     return {
         "ok": True,

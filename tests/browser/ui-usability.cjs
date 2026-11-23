@@ -61,7 +61,7 @@ server.serve_forever()
       const range=document.createRange();range.selectNodeContents(cell);
       return {text:cell.textContent,lines:new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size};
     }));
-    assert.equal(numericCells.length,4,'Both scenes expose their numeric values');
+    assert.equal(numericCells.length,12,'Both scenes expose six numeric values');
     assert.ok(numericCells.every(cell=>cell.lines===1),
       'Scene numbers and their units remain on one line: '+JSON.stringify(numericCells));
     if(width===320) {

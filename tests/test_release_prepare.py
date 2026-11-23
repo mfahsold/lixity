@@ -169,6 +169,10 @@ def test_prepare_release_synchronizes_desktop_manifests(prepare_script):
     (root / "desktop/packaging/linux").mkdir(parents=True)
     cargo = root / "desktop/Cargo.toml"
     cargo.write_text('[workspace.package]\nversion = "0.9.1"\nedition = "2021"\n', encoding="utf-8")
+    lock = root / "desktop/Cargo.lock"
+    locked = 'version = 4\n\n[[package]]\nname = "lixity-desktop"\nversion = "0.9.1"\n\n' \
+             '[[package]]\nname = "dependency"\nversion = "0.9.1"\n'
+    lock.write_text(locked, encoding="utf-8")
     tauri = root / "desktop/src-tauri/tauri.conf.json"
     tauri.write_text('{\n  "productName": "Lixity",\n  "version": "0.9.1"\n}\n', encoding="utf-8")
     metainfo = root / "desktop/packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"
@@ -183,6 +187,7 @@ def test_prepare_release_synchronizes_desktop_manifests(prepare_script):
 
     prepare_script.update_desktop_manifests("0.10.0")
     assert 'version = "0.10.0"' in cargo.read_text(encoding="utf-8")
+    assert lock.read_text(encoding="utf-8") == locked.replace('version = "0.9.1"', 'version = "0.10.0"', 1)
     assert '"version": "0.10.0"' in tauri.read_text(encoding="utf-8")
     xml_pending = metainfo.read_text(encoding="utf-8")
     assert '<release version="0.10.0">' in xml_pending

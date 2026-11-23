@@ -44,7 +44,7 @@ project. Label local actions when the public demo uses a fixed copy.
 | A recoverable writing session | Edit, undo, read the saved revision and resolve an external change. Cover real IME, dead keys, screen readers, interrupted saves and disk failure. |
 | Explain and act on findings | Open a measurement, explain why the passage was selected and return to the right text. Include multiple interface languages and short or multilingual manuscripts. |
 | Keep useful manuscript versions | Evaluate named checkpoints and a readable comparison. Check whether the existing recovery flow covers the author's need for deliberate versions. |
-| Easier first-run setup | Verify clean-machine install, upgrade, rollback and OS signing/notarization for the unreleased cross-platform Rust/Tauri v2 desktop installers (macOS `.dmg`, Windows NSIS/`.msi`, Linux `.deb`/`.AppImage`/Flatpak) in [Installation](INSTALLATION.md#packaging-direction). |
+| Easier first-run setup | Verify clean-machine installation, upgrade, rollback and distribution signatures for the unreleased [desktop installer targets](INSTALLATION.md#packaging-direction) on macOS, Windows and Linux. |
 
 The [previous planning assessment](https://github.com/mfahsold/lixity/blob/cf8286212bd4ab9c7f39d488e9e8f3fd659bdab7/docs/PRODUCT.md#what-should-come-next)
 records the earlier implementation milestones. The [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)

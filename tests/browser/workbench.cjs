@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-workbench-'));
 const fixtures = pythonFixture(`
@@ -33,10 +34,18 @@ const dossier = {id: 'garden', project_id: 'synthetic-project', title: 'Garden c
   revision: 1, body: '## Garden\n\nA saved synthetic note.', sections: ['Garden'],
   citations: [], tags: [], claims: []};
 
-async function createPage(browser, html, width) {
+async function createPage(browser, html, width, desktop = false) {
   const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
   const errors = [], writes = [];
   page.on('pageerror', error => errors.push(error.message));
+  if (desktop) await page.addInitScript(() => {
+    window.desktopPreferenceWrites = [];
+    window.lixityDesktop = {
+      version: 1,
+      getPreferences: async () => ({theme: 'light'}),
+      setPreference: async (key, value) => window.desktopPreferenceWrites.push([key, value]),
+    };
+  });
   await page.route('http://lixity.test/**', route => {
     const url = new URL(route.request().url());
     if (route.request().method() !== 'GET') {
@@ -70,6 +79,37 @@ async function documentState(page) {
 (async () => {
   const browser = await launchChromium();
   try {
+    const desktop = await createPage(browser, fixtures.en, 1440, true);
+    try {
+      const {page} = desktop;
+      const sendMenu = action => page.evaluate(id =>
+        window.dispatchEvent(new CustomEvent('lixity:desktop-menu', {detail: id})), action);
+      const overview = page.locator('#workbench-overview-back');
+      const manuscriptTab = page.locator('#tab-view-analysis');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+      assert.deepEqual(await page.evaluate(() => desktopPreferenceWrites), []);
+      await sendMenu('view-research');
+      await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
+      await sendMenu('view-analysis-overview');
+      await expect(manuscriptTab).toHaveAttribute('aria-selected', 'true');
+      await expect(overview).toBeFocused();
+      await expect(page.locator('#analysis-measurements')).toBeVisible();
+      await overview.click();
+      await page.locator('#tab-view-project').click();
+      await page.evaluate(() => window.LixityCommandPalette.open());
+      const search = page.locator('#command-palette-search');
+      await search.fill('Analysis overview');
+      await search.press('Enter');
+      await expect(manuscriptTab).toHaveAttribute('aria-selected', 'true');
+      await expect(overview).toBeFocused();
+      await sendMenu('view-toggle-theme');
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+      assert.deepEqual(await page.evaluate(() => desktopPreferenceWrites), [['theme', 'dark']]);
+      assert.deepEqual(desktop.errors, []);
+    } finally {
+      await desktop.page.close();
+    }
+
     const {page: shortcutPage} = await createPage(browser, fixtures.en, 1440);
     try {
       const prompter = shortcutPage.locator('#teleprompter-modal');

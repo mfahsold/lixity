@@ -1,7 +1,7 @@
 # Lixity Desktop Host (Rust / Tauri v2)
 
 Cross-platform native desktop host for **macOS**, **Windows**, and **Linux** sharing the
-single canonical Lixity analysis engine and UI.
+single canonical Lixity analysis engine and UI. The host is unreleased.
 
 ## Architecture
 
@@ -13,20 +13,27 @@ single canonical Lixity analysis engine and UI.
   - Atomic blob and streaming loopback exports with SHA-256 verification (`save_blob`, `save_export_stream`)
   - Cross-platform interactive & timed 24 kHz mono PCM microphone capture and level calibration (`cpal` + `hound`)
   - 7-language native OS menu bar with dynamic Recent Projects submenu (`generated/menu-locales.json`)
+  - Direct access to the shared Analysis overview from View, with native page
+    zoom and a theme preference that persists across desktop sessions
   - Drag-and-drop project/manuscript opening, single-instance handoff, macOS Dock reopen, window geometry persistence, and dirty-editor/active-audio close guards
   - Explicit opt-in GitHub Releases version check (zero automatic background traffic)
 - **Isolated Python runtime (`scripts/build_runtime_bundle.py`)**: builds a self-contained
   relocatable `python-build-standalone` 3.12 runtime plus Lixity and its core dependencies.
-  Verified under a stripped environment (`PATH=""`, `PYTHONNOUSERSITE=1`) by
-  `scripts/smoke_desktop_runtime.py`.
+  `scripts/smoke_desktop_runtime.py` verifies isolated operation with `python -I -B`
+  and checks that running the app leaves bundled Python bytecode unchanged.
 
 ## Native Installers
 
-| Platform | Formats | Packaging Assets |
+| Platform | Release build matrix | Additional packaging assets |
 | --- | --- | --- |
-| macOS (ARM64 / x64) | `.app`, `.dmg`, Homebrew Cask | `src-tauri/Info.plist`, `packaging/macos/Entitlements.plist`, `scripts/sign_macos_bundle.sh`, `packaging/homebrew/lixity.rb.in` |
-| Windows (x64) | NSIS `.exe` (7 languages, per-user), WiX `.msi`, WinGet | `packaging/windows/nsis-hooks.nsh`, `packaging/winget/` |
-| Linux (x64 / ARM64) | `.deb`, `.rpm`, `.AppImage`, Flatpak | `packaging/linux/lixity.desktop.in`, `packaging/linux/io.github.mfahsold.Lixity.metainfo.xml`, `packaging/flatpak/io.github.mfahsold.Lixity.yml` |
+| macOS (Apple Silicon and Intel) | `.dmg` containing `Lixity.app` | Homebrew Cask template |
+| Windows (x64) | NSIS `.exe` (seven languages, per-user), WiX `.msi` | WinGet manifest templates |
+| Linux (x64) | `.deb`, `.AppImage` | RPM configuration, Flatpak manifest, AppStream metadata |
+
+The isolated runtime manifest also describes ARM64 Windows and Linux targets.
+Those targets, RPM and Flatpak require their own installer verification.
+Clean-machine installation, upgrades, rollback and distribution signatures
+remain release gates.
 
 ## Local Build & Verification
 
@@ -41,9 +48,9 @@ python desktop/scripts/generate_menu_locales.py --check
 python desktop/scripts/generate_desktop_icons.py --check
 
 # 3. Test, lint and bundle native installers (requires Rust stable + tauri-cli v2)
-cargo test --manifest-path desktop/Cargo.toml --all-targets
-cargo clippy --manifest-path desktop/Cargo.toml --all-targets -- -D warnings
-(cd desktop && cargo tauri build)
+cargo test --locked --manifest-path desktop/Cargo.toml --all-targets
+cargo clippy --locked --manifest-path desktop/Cargo.toml --all-targets -- -D warnings
+(cd desktop && cargo tauri build -- --locked)
 
 # 4. Verify installer containers and emit SHA256SUMS
 python desktop/scripts/verify_desktop_artifacts.py desktop/target/release/bundle --target "$(rustc -vV | awk '/host:/ {print $2}')"
@@ -54,6 +61,7 @@ python desktop/scripts/verify_desktop_artifacts.py desktop/target/release/bundle
 - `.github/workflows/desktop.yml` — runs isolated runtime smoke tests, `cargo test`, and
   `cargo clippy -- -D warnings` on Ubuntu 22.04, macOS, and Windows. Dispatch with
   `build_bundle=true` to also compile, verify, and upload native installers.
-- `.github/workflows/desktop-release.yml` — builds and verifies native installers across
-  macOS, Windows, and Linux, combines `SHA256SUMS-desktop.txt`, and generates GitHub
-  build provenance attestations.
+- `.github/workflows/desktop-release.yml` — builds and verifies the release matrix,
+  combines `SHA256SUMS-desktop.txt`, renders Homebrew and WinGet manifests, and
+  generates GitHub build provenance attestations. The workflow packages macOS
+  disk images after signing the embedded app. The build outputs are CI artifacts.

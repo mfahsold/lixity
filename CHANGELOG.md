@@ -28,6 +28,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep manuscript measurements reachable in the analysis overview on narrow
+  screens and reveal a flagged passage's review list before moving focus.
+- Use the same analysis overview from the reader, command palette and desktop
+  menu. Apply desktop zoom in the native webview and restore the saved theme
+  across local desktop sessions.
+- Keep signed desktop runtime resources intact after startup and use the same
+  locked Rust dependencies for the host checks and installer builds.
 - Keep the dossier section list reachable when the reading pane resizes during
   a smooth return from the end of a document.
 - Keep ordinary buffered-response cancellations in debug logging and preserve

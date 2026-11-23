@@ -36,14 +36,23 @@ def render_analysis_workflows(
         f'<div class="analysis-workflows" data-analysis-workflows="{payload}">',
         '<div class="analysis-workflow-entries">',
     ]
-    for workflow in groups:
+    for workflow, sections in groups.items():
         title = escape(label(labels, f"workflow_{workflow}"))
         hint = escape(label(labels, f"workflow_{workflow}_hint"))
+        title_id = f"analysis-workflow-{workflow}-title"
+        hint_id = f"analysis-workflow-{workflow}-hint"
+        preview_items = [escape(label(labels, available[section])) for section in sections]
+        preview = (
+            f'<small class="analysis-workflow-preview" aria-hidden="true">{" · ".join(preview_items)}</small>'
+            if preview_items
+            else ""
+        )
         parts.append(
             f'<button type="button" class="ctl analysis-workflow-entry" '
             f'data-analysis-workflow="{workflow}" aria-pressed="false" '
+            f'aria-labelledby="{title_id}" aria-describedby="{hint_id}" '
             f'aria-controls="manuscript-analysis-panels">'
-            f"<strong>{title}</strong><span>{hint}</span></button>"
+            f'<strong id="{title_id}">{title}</strong><span id="{hint_id}">{hint}</span>{preview}</button>'
         )
     parts.append(
         '</div><div class="analysis-workflow-sections" role="group" '

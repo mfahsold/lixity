@@ -126,7 +126,8 @@ def test_reader_cap_removes_later_prose_and_diagnostics_before_rendering(publica
     for sentinel in ('MIDDLE_NOVEL_PROSE', 'LATE_NOVEL_SENTINEL', 'PRIVATE_MARKER_NOTE', 'PRIVATE_APPENDIX_NOTE', 'LATE_ENTRY_BODY'):
         assert sentinel not in page
     assert 'data-paragraph-evidence=' not in page
-    assert 'analysis-overview' not in page
+    for private_control in ('analysis-overview', 'analysis-outline-document', 'workbench-overview-open'):
+        assert f'id="{private_control}"' not in page
     publication = site_data(bundle)['publication']
     assert 'EARLY_NOVEL_PROSE' not in json.dumps(publication)
 

@@ -1,8 +1,7 @@
 .analysis-workflow-entries {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .75rem;
-  margin-block: 1rem;
+  gap: var(--space-3);
 }
 .analysis-workflow-entry {
   display: flex;
@@ -12,19 +11,51 @@
   white-space: normal;
   text-align: start;
   min-width: 0;
-  padding: .85rem;
-  gap: .35rem;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-1);
+  background: var(--surface);
+  border-color: var(--line);
+}
+.analysis-workflow-entry:hover {
+  background: var(--surface-alt);
+  border-color: var(--accent);
 }
 .analysis-workflow-entry strong,
-.analysis-workflow-entry span { overflow-wrap: anywhere; }
-.analysis-workflow-entry span { font-size: .85em; opacity: .8; font-weight: normal; }
-.analysis-workflow-entry[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
-.analysis-workflow-sections { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
+.analysis-workflow-entry span,
+.analysis-workflow-entry .analysis-workflow-preview { overflow-wrap: anywhere; }
+.analysis-workflow-entry strong { color: var(--fg); font-weight: var(--weight-semibold); }
+.analysis-workflow-entry span { font-size: var(--text-note); color: var(--fg-secondary); line-height: var(--line-tight); font-weight: normal; }
+.analysis-workflow-preview {
+  margin-top: auto;
+  padding-block-start: var(--space-1);
+  font-size: var(--text-caption);
+  line-height: var(--line-tight);
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+button.ctl.analysis-workflow-entry[aria-pressed="true"] {
+  background: var(--accent-light);
+  color: var(--fg);
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+button.ctl.analysis-workflow-entry[aria-pressed="true"] strong { color: var(--accent); }
+button.ctl.analysis-workflow-entry[aria-pressed="true"] .analysis-workflow-preview { color: var(--fg-secondary); }
+.analysis-workflow-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-top: 1px solid var(--line);
+}
 .analysis-workflow-sections[hidden],
 .analysis-workflows [hidden],
 #analysis-outline-document[data-guided-analysis="1"] #manuscript-analysis-panels > [hidden] { display: none !important; }
-@media (max-width: 640px) {
-  .analysis-workflow-entries { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+@container analysis-outline (max-width: 42rem) {
+  .analysis-workflow-entries { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  button.ctl.analysis-workflow-entry { padding: var(--space-2) var(--space-3); }
+  .analysis-workflow-preview { display: none; }
 }
 
 body:not(.has-guided-analysis) .analysis-workflows { display: none; }
@@ -32,6 +63,5 @@ body:not(.has-guided-analysis) .analysis-workflows { display: none; }
 .has-guided-analysis #analysis-sections,
 .has-guided-analysis #analysis-outline-nav { display: none !important; }
 
-.has-guided-analysis .analysis-outline-layout { display: block; }
 .has-guided-analysis .analysis-outline-contents { display: none !important; }
 .has-guided-analysis.workbench-overview .analysis-outline-document > .toolbar { display: none; }

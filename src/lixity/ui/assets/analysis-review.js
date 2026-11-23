@@ -98,6 +98,7 @@
     if (!row) return false;
     // The regular overview action retains the reader's return position.
     document.getElementById("workbench-overview-open").click();
+    if (window.LixityAnalysisNavigation) window.LixityAnalysisNavigation.reveal(row);
     if (chapter.value && chapter.value !== row.dataset.triageChapter) chapter.value = "";
     if (severity.value && severity.value !== row.dataset.triageSeverity) severity.value = "";
     if (filter && filter.value && filter.value !== row.dataset.reviewState) filter.value = "";

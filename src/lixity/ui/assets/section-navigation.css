@@ -81,7 +81,7 @@
 .analysis-outline-document { display: grid; gap: var(--space-4); align-content: start; }
 .analysis-outline-document > * { min-width: 0; max-width: 100%; }
 @container analysis-outline (min-width: 52rem) {
-  .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
+  body:not(.has-guided-analysis) .analysis-outline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; gap: var(--space-5); align-items: start; }
   .analysis-outline-document { grid-column: 1; grid-row: 1; }
   .analysis-outline-contents {
     grid-column: 2; grid-row: 1; position: sticky;

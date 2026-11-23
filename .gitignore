@@ -10,6 +10,7 @@ build/
 dist/
 desktop/build/
 desktop/target/
+desktop/src-tauri/gen/
 *.egg-info/
 *.egg
 .eggs/

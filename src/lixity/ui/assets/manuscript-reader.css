@@ -9,6 +9,9 @@
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--fg) 8%, transparent);
 }
+.manuscript-reading.workbench-overview .manuscript-reader-controls {
+  padding-inline: var(--space-3);
+}
 .manuscript-reader-controls[hidden] { display: none; }
 .manuscript-reader-controls > .toolbar-sections { flex-basis: 100%; min-width: 0; margin: 0; }
 @media (max-height: 600px) {

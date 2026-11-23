@@ -200,6 +200,10 @@ server.serve_forever()
         const box = element.getBoundingClientRect(), last = element.querySelector('tbody tr:last-child').getBoundingClientRect();
         return last.bottom <= box.bottom + 1 && last.top >= box.top - 1;
       }), true, 'Keyboard scrolling reaches the complete final scene row');
+      assert.ok(await overview.evaluate(element => {
+        const first = element.querySelector('tbody tr');
+        return Math.abs(first.getBoundingClientRect().top - first.cells[0].getBoundingClientRect().top) < 1;
+      }), 'Scene names scroll vertically with their values');
       await overview.evaluate(element => { element.scrollTop = 0; element.scrollLeft = element.scrollWidth; });
       assert.equal(await overview.evaluate(element => {
         const box = element.getBoundingClientRect(), identity = element.querySelector('tbody th').getBoundingClientRect();
@@ -209,6 +213,12 @@ server.serve_forever()
       const identityWidth = await overview.locator('tbody th').first().evaluate(element => element.getBoundingClientRect().width);
       assert.ok(identityWidth <= (width === 320 ? 160 : 240),
         `The identity column leaves space for measured values (${width}px viewport, ${identityWidth}px identity)`);
+      assert.ok(await overview.locator('tbody th').first().evaluate(cell => {
+        const bounds = cell.getBoundingClientRect(), range = document.createRange();
+        range.selectNodeContents(cell.querySelector('a'));
+        return Array.from(range.getClientRects(), rect => rect.left >= bounds.left && rect.right <= bounds.right)
+          .every(Boolean);
+      }), 'Scene titles wrap inside the pinned column without covering measurements');
       assert.equal(await overview.locator('tbody tr').count(), 19, 'Scrolling preserves every scene row');
       await page.locator('#scenes').screenshot({path: path.join(artifacts, `native-${width}-closed.png`)});
       const firstLink = page.locator('#scenes .scene-overview a').first();

@@ -30,8 +30,10 @@ pub struct MenuLabels {
     pub item_paste: String,
     pub item_select_all: String,
     pub item_view_analysis: String,
+    pub item_view_analysis_overview: String,
     pub item_view_research: String,
     pub item_view_project: String,
+    pub item_toggle_theme: String,
     pub item_teleprompter: String,
     pub item_zoom_in: String,
     pub item_zoom_out: String,
@@ -139,6 +141,11 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
                 .build(app)?,
         )
         .item(
+            &MenuItemBuilder::with_id("view-analysis-overview", &l.item_view_analysis_overview)
+                .accelerator("CmdOrCtrl+Shift+A")
+                .build(app)?,
+        )
+        .item(
             &MenuItemBuilder::with_id("view-research", &l.item_view_research)
                 .accelerator("CmdOrCtrl+2")
                 .build(app)?,
@@ -152,6 +159,11 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
         .item(
             &MenuItemBuilder::with_id("view-teleprompter", &l.item_teleprompter)
                 .accelerator("CmdOrCtrl+Shift+T")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::with_id("view-toggle-theme", &l.item_toggle_theme)
+                .accelerator("CmdOrCtrl+Shift+D")
                 .build(app)?,
         )
         .separator()
@@ -195,12 +207,25 @@ mod tests {
     #[test]
     fn resolves_all_seven_locales_and_falls_back_to_english() {
         assert_eq!(labels_for_locale("de_DE.UTF-8").menu_file, "Datei");
+        assert_eq!(
+            labels_for_locale("de_DE.UTF-8").item_view_analysis_overview,
+            "Analyseübersicht"
+        );
+        assert_eq!(
+            labels_for_locale("en_US.UTF-8").item_view_analysis_overview,
+            "Analysis overview"
+        );
         assert_eq!(labels_for_locale("fr-CA").menu_file, "Fichier");
         assert_eq!(labels_for_locale("es_ES").menu_file, "Archivo");
         assert_eq!(labels_for_locale("it_IT").menu_file, "File");
         assert_eq!(labels_for_locale("pt_BR").menu_file, "Arquivo");
         assert_eq!(labels_for_locale("nl_NL").menu_file, "Bestand");
         assert_eq!(labels_for_locale("ja_JP").menu_file, "File");
+        for loc in ["de", "en", "fr", "es", "it", "pt", "nl"] {
+            let labels = labels_for_locale(loc);
+            assert!(!labels.item_view_analysis_overview.trim().is_empty());
+            assert!(!labels.item_toggle_theme.trim().is_empty());
+        }
     }
 
     #[test]

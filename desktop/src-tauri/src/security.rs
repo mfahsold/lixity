@@ -62,7 +62,7 @@ pub fn handshake_url(port: u16, nonce: &str, next_path: &str) -> Result<Url, Str
 /// Initialization script injected before page scripts to expose a minimal frozen bridge.
 ///
 /// The page never gets direct filesystem or shell plugin access; every capability routes
-/// through the 8 audited Rust commands in `commands.rs`.
+/// through the audited Rust commands in `commands.rs`.
 pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
     format!(
         r#"(function () {{

@@ -77,11 +77,29 @@
       .replace(/'/g, "&#39;");
   }
 
+  function applyTheme(theme) {
+    if (theme !== "dark" && theme !== "light") return;
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("lixity-theme", theme); } catch (_) { /* The theme still applies to this page. */ }
+  }
+
+  function toggleTheme() {
+    var theme = document.documentElement.dataset.theme;
+    var isDark = theme ? theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(isDark ? "light" : "dark");
+  }
+
+  try {
+    if (!document.documentElement.dataset.theme) applyTheme(localStorage.getItem("lixity-theme"));
+  } catch (_) { /* The system color scheme remains available. */ }
+
   window.LixityComponents = {
     CHROME_SELECTOR: SHARED_CHROME_SELECTOR,
     TOOLBAR_SELECTOR: SHARED_TOOLBAR_SELECTOR,
     escapeHtml: escapeHtml,
     escapeAttr: escapeHtml,
+    applyTheme: applyTheme,
+    toggleTheme: toggleTheme,
     uiLabel: _uiLabel,
     uiFormat: _uiFormat,
     uiCountFormat: _uiCountFormat,
