@@ -2421,5 +2421,21 @@
   "zotero_retained": "Saved sources",
   "zotero_tag_filter": "Search the Zotero catalogue for this tag",
   "zotero_type": "Zotero type",
-  "zotero_type_help": "Item type in the external Zotero catalogue. Lixity reads metadata and explicit captures only."
+  "zotero_type_help": "Item type in the external Zotero catalogue. Lixity reads metadata and explicit captures only.",
+  "cmd_system_status_sub": "Inspect local PDF/OCR, Zotero, audio workers and runtime status",
+  "cmd_system_status_title": "System Status & Optional Extensions",
+  "desktop_env_audio_workers": "Local audio workers",
+  "desktop_env_available": "Available",
+  "desktop_env_check_updates": "Check for Updates…",
+  "desktop_env_checking_updates": "Checking GitHub Releases…",
+  "desktop_env_error": "Could not inspect environment",
+  "desktop_env_loading": "Checking local environment…",
+  "desktop_env_note": "Core manuscript analysis runs offline without optional extensions. External tools stay separate from the core app.",
+  "desktop_env_open_logs": "Open Logs Folder",
+  "desktop_env_open_release": "Open release notes",
+  "desktop_env_optional_missing": "Optional / not configured",
+  "desktop_env_title": "System Status & Optional Extensions",
+  "desktop_env_up_to_date": "Up to date",
+  "desktop_env_update_available": "Newer release available",
+  "desktop_env_updates_desktop_only": "Release checks are available in the Lixity Desktop app."
 }

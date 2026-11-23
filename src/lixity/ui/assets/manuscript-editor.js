@@ -310,6 +310,13 @@
     body.workbench-overview #manuscript-write, body.workbench-overview #manuscript-close,
     body.reader-focus #manuscript-write, body.reader-focus #manuscript-close {display:none!important;}
   `; document.head.append(css);
+  function notifyDesktopDirty() {
+    if (window.lixityDesktop && typeof window.lixityDesktop.setDirtyState === 'function') {
+      try {
+        window.lixityDesktop.setDirtyState({ unsavedEditor: Boolean(dirty || inflight || comparisonDirty()) });
+      } catch (_) { /* Desktop bridge is advisory; browser beforeunload remains active. */ }
+    }
+  }
   function show(state, message) {
     freshness.hidden = !dirty && (!snapshot || snapshot.revision === document.body.dataset.manuscriptSourceSha256);
     const changed = lastState !== state;
@@ -318,6 +325,7 @@
     if (changed && window.LixityMotion && window.LixityMotion.status) window.LixityMotion.status(status);
     retry.hidden = state === 'saved' || state === 'saving';
     reload.hidden = !paused;
+    notifyDesktopDirty();
   }
   let pulseGeneration = 0;
   let sessionBaselineLines = [];
@@ -592,6 +600,7 @@
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
     finally {
       inflight = false;
+      notifyDesktopDirty();
       if (dirty && !paused && !composing) timer = setTimeout(flush, 800);
     }
   }

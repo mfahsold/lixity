@@ -372,13 +372,31 @@
         subtitle: cmdText("cmd_export_storyboard_sub", "Visual storyboard for Obsidian Canvas"),
         icon: "share-2",
         action: function () {
+          var apiBase = (document.body && document.body.dataset && document.body.dataset.api) || "/api";
+          if (window.lixityDesktop && typeof window.lixityDesktop.saveExport === "function") {
+            window.lixityDesktop.saveExport({ path: apiBase + "/canvas", method: "GET" }, "storyboard.canvas").catch(function () {});
+            return;
+          }
           var link = document.createElement("a");
-          link.href = "/api/canvas";
+          link.href = apiBase + "/canvas";
           link.download = "storyboard.canvas";
           link.click();
         }
       }
     ]);
+
+    if (window.LixityDesktopBridge && typeof window.LixityDesktopBridge.openSystemStatus === "function") {
+      commands.push({
+        id: "tools-system-status",
+        category: catAction,
+        title: cmdText("cmd_system_status_title", "System Status & Optional Extensions"),
+        subtitle: cmdText("cmd_system_status_sub", "Inspect local PDF/OCR, Zotero, audio and runtime status"),
+        icon: "settings",
+        action: function () {
+          window.LixityDesktopBridge.openSystemStatus();
+        }
+      });
+    }
 
     return commands.concat(buildChapterCommands(workbench));
   }

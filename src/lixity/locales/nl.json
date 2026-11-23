@@ -2421,5 +2421,21 @@
   "zotero_retained": "Opgeslagen bronnen",
   "zotero_tag_filter": "Dit label in de Zotero-catalogus zoeken",
   "zotero_type": "Zotero-type",
-  "zotero_type_help": "Itemtype in de externe Zotero-catalogus. Lixity leest alleen metadata en expliciete overnames."
+  "zotero_type_help": "Itemtype in de externe Zotero-catalogus. Lixity leest alleen metadata en expliciete overnames.",
+  "cmd_system_status_sub": "Controleer PDF/OCR, Zotero, audio-workers en lokale runtime-status",
+  "cmd_system_status_title": "Systeemstatus en optionele uitbreidingen",
+  "desktop_env_audio_workers": "Lokale audio-workers",
+  "desktop_env_available": "Beschikbaar",
+  "desktop_env_check_updates": "Controleren op updates…",
+  "desktop_env_checking_updates": "GitHub Releases controleren…",
+  "desktop_env_error": "Kon de omgeving niet inspecteren",
+  "desktop_env_loading": "Lokale omgeving controleren…",
+  "desktop_env_note": "De kernanalyse werkt offline zonder optionele uitbreidingen. Externe hulpmiddelen blijven gescheiden.",
+  "desktop_env_open_logs": "Logmap openen",
+  "desktop_env_open_release": "Release-opmerkingen openen",
+  "desktop_env_optional_missing": "Optioneel / niet ingesteld",
+  "desktop_env_title": "Systeemstatus en optionele uitbreidingen",
+  "desktop_env_up_to_date": "Actueel",
+  "desktop_env_update_available": "Nieuwere versie beschikbaar",
+  "desktop_env_updates_desktop_only": "Versiecontroles zijn beschikbaar in de Lixity Desktop-app."
 }

@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Add authenticated desktop-host loopback mode (`--_desktop-mode`, ephemeral
+  `port=0`, stdin bootstrap secret, single-use `/_desktop/handshake` cookie
+  exchange, host-only `/_desktop/nonce`, parent-process watchdog and
+  `/api/desktop/environment` diagnostics) alongside progressive
+  `window.lixityDesktop` hooks in the browser UI.
+- Add the cross-platform Rust/Tauri v2 desktop host workspace (`desktop/`) with
+  isolated `python-build-standalone` 3.12 runtime bundling, stripped-environment
+  smoke verification, 7-language native OS menu generation, `cpal`+`hound`
+  cross-platform audio capture/calibration, packaging templates and a three-OS
+  desktop CI workflow.
+
 ### Fixed
 
 - Keep the dossier section list reachable when the reading pane resizes during

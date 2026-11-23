@@ -2421,5 +2421,21 @@
   "zotero_retained": "Gespeicherte Quellen",
   "zotero_tag_filter": "Im Zotero-Katalog nach diesem Tag suchen",
   "zotero_type": "Zotero-Typ",
-  "zotero_type_help": "Eintragstyp im externen Zotero-Katalog. Lixity liest nur Metadaten und ausdrückliche Übernahmen."
+  "zotero_type_help": "Eintragstyp im externen Zotero-Katalog. Lixity liest nur Metadaten und ausdrückliche Übernahmen.",
+  "cmd_system_status_sub": "Status von PDF/OCR, Zotero, Audio-Workern und Laufzeit prüfen",
+  "cmd_system_status_title": "Systemstatus & optionale Erweiterungen",
+  "desktop_env_audio_workers": "Lokale Audio-Worker",
+  "desktop_env_available": "Verfügbar",
+  "desktop_env_check_updates": "Nach neuer Version suchen…",
+  "desktop_env_checking_updates": "Prüfe GitHub Releases…",
+  "desktop_env_error": "Umgebung konnte nicht geprüft werden",
+  "desktop_env_loading": "Prüfe lokale Umgebung…",
+  "desktop_env_note": "Die Manuskriptanalyse läuft offline ohne optionale Erweiterungen. Externe Werkzeuge bleiben getrennt von der Kern-App.",
+  "desktop_env_open_logs": "Protokollordner öffnen",
+  "desktop_env_open_release": "Release-Hinweise öffnen",
+  "desktop_env_optional_missing": "Optional / nicht eingerichtet",
+  "desktop_env_title": "Systemstatus & optionale Erweiterungen",
+  "desktop_env_up_to_date": "Aktuell",
+  "desktop_env_update_available": "Neuere Version verfügbar",
+  "desktop_env_updates_desktop_only": "Versionsprüfungen stehen in der Lixity-Desktop-App zur Verfügung."
 }

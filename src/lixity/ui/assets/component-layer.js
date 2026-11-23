@@ -120,7 +120,14 @@
       }
       return el;
     },
+    isDesktop: function () {
+      return Boolean(window.lixityDesktop && window.lixityDesktop.version >= 1);
+    },
     downloadBlob: function (blob, filename, revokeMs) {
+      if (window.lixityDesktop && typeof window.lixityDesktop.saveBlob === "function") {
+        window.lixityDesktop.saveBlob(blob, filename || "download").catch(function () {});
+        return "";
+      }
       var url = URL.createObjectURL(blob);
       var link = document.createElement("a");
       link.href = url;

@@ -2070,7 +2070,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             ("<footer></footer>" if controls else
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             diagram_library,
-            f"<script>{_bundle(scripts + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
+            f"<script>{_bundle(scripts + (('desktop-bridge.js',) if can_edit else ()) + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",
         ]

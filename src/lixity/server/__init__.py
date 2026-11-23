@@ -29,6 +29,7 @@ run_server, LixityServerHandler`` keeps working.
 from __future__ import annotations
 
 from .constants import DEFAULT_HOST, DEFAULT_PORT, LANGUAGE_CHOICES, MAX_PAYLOAD_BYTES, MIME_TYPES
+from .desktop import DesktopSession
 from .handler import LixityServerHandler
 from .runtime import run_server
 from .views import build_server_dashboard, collect_artifacts, sanitize_filename
@@ -39,6 +40,7 @@ __all__ = [
     "LANGUAGE_CHOICES",
     "MAX_PAYLOAD_BYTES",
     "MIME_TYPES",
+    "DesktopSession",
     "LixityServerHandler",
     "build_server_dashboard",
     "collect_artifacts",

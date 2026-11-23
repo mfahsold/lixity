@@ -1,0 +1,68 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lixity",
+  "version": "0.9.1",
+  "identifier": "io.github.mfahsold.Lixity",
+  "build": {
+    "frontendDist": "./placeholder-dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "Productivity",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "Copyright (c) Matthias Fahsold — AGPL-3.0-or-later",
+    "shortDescription": "Local offline manuscript workspace for close reading, traceable research and linguistic analysis.",
+    "longDescription": "Lixity keeps your manuscript, deterministic linguistic measurements and traceable research dossiers in one offline workspace.",
+    "targets": ["app", "dmg", "nsis", "msi", "deb", "appimage"],
+    "resources": {
+      "../build/runtime/current/*": "runtime/"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown Manuscript",
+        "description": "Markdown manuscript file",
+        "mimeType": "text/markdown",
+        "role": "Editor"
+      },
+      {
+        "ext": ["toml"],
+        "name": "Lixity Project Configuration",
+        "description": "Lixity project configuration (lixity.toml)",
+        "mimeType": "application/toml",
+        "role": "Editor"
+      }
+    ],
+    "macOS": {
+      "entitlements": "../packaging/macos/Entitlements.plist",
+      "minimumSystemVersion": "12.0"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["German", "English", "French", "Spanish", "Italian", "Portuguese", "Dutch"]
+      }
+    },
+    "linux": {
+      "deb": {
+        "section": "editors",
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    }
+  }
+}

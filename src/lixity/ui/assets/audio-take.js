@@ -95,8 +95,13 @@
     var verified = await validate(value);
     if (!["wav", "json"].includes(kind)) fail("format");
     var blob = kind === "wav" ? verified.blob : new Blob([JSON.stringify(verified.metadata, null, 2) + "\n"], {type:"application/json"});
+    var targetName = kind === "wav" ? verified.metadata.audio.filename : verified.metadata.audio.filename.replace(/\.wav$/i, ".json");
+    if (window.LixityComponents && typeof window.LixityComponents.downloadBlob === "function") {
+      window.LixityComponents.downloadBlob(blob, targetName, 1000);
+      return;
+    }
     var url = URL.createObjectURL(blob), link = document.createElement("a");
-    link.href = url; link.download = kind === "wav" ? verified.metadata.audio.filename : verified.metadata.audio.filename.replace(/\.wav$/i, ".json");
+    link.href = url; link.download = targetName;
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   }

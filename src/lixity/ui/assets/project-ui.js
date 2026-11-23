@@ -739,7 +739,18 @@ if (openChooser) {
     }
   }
 
-  chooseButton.addEventListener("click", function() {
+  chooseButton.addEventListener("click", async function() {
+    if (window.lixityDesktop && typeof window.lixityDesktop.pickProjectDirectory === "function") {
+      try {
+        var picked = await window.lixityDesktop.pickProjectDirectory();
+        if (picked && typeof picked.path === "string" && picked.path.trim()) {
+          selectOpenPath(picked.path.trim());
+        }
+      } catch (error) {
+        LixityLog.error("desktop pickProjectDirectory error:", error);
+      }
+      return;
+    }
     if (!openChooser.hidden) {
       closeOpenChooser(chooseButton);
       return;

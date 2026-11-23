@@ -1796,6 +1796,7 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
                 "instances created by that controller."
             )
             p.add_argument("--_service-token", help=argparse.SUPPRESS)
+            p.add_argument("--_desktop-mode", action="store_true", help=argparse.SUPPRESS)
             p.add_argument(
                 "path",
                 nargs="?",
@@ -2503,7 +2504,7 @@ def _main(argv: list[str] | None = None) -> int:
         args.language = project_config.get("language", "en")
 
     if args.command == "serve":
-        from .server import run_server
+        from .server import DesktopSession, run_server
         from .service import ManagedServe
 
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
@@ -2525,8 +2526,13 @@ def _main(argv: list[str] | None = None) -> int:
             if value is not None
         }
         managed = None
+        desktop_session = None
         try:
-            if args._service_token is not None:
+            if args._desktop_mode and args._service_token is not None:
+                raise ValueError("Desktop mode cannot be combined with managed service launch")
+            if args._desktop_mode:
+                desktop_session = DesktopSession.from_stdin()
+            elif args._service_token is not None:
                 managed = ManagedServe(args._service_token, args.port)
             run_server(
                 target_path=args.path,
@@ -2534,14 +2540,15 @@ def _main(argv: list[str] | None = None) -> int:
                 port=args.port,
                 language=args.language,
                 title=args.title or project_config.get("title"),
-                no_project=args.no_project,
+                no_project=args.no_project or (args._desktop_mode and args.path is None),
                 thresholds=fp_thresholds,
-                open_browser=args.open,
+                open_browser=False if args._desktop_mode else args.open,
                 research_dir=args.research_project,
                 project_open_overrides=project_open_overrides,
                 debug=args.debug,
-                announce=True,
+                announce=not args._desktop_mode,
                 on_ready=managed.ready if managed is not None else None,
+                desktop_session=desktop_session,
             )
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:

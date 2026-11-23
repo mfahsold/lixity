@@ -60,6 +60,8 @@ class ResponseMixin(WorkspaceState):
             path = "/" + pieces[3]
         if path in ("/", "/index.html"):
             return "/"
+        if path in ("/_desktop/handshake", "/_desktop/nonce"):
+            return path
         if path in getattr(self, "GET_ROUTES", {}):
             return path
         if path.startswith("/api/") and path[len("/api/"):] in getattr(self, "POST_ROUTES", {}):
@@ -184,6 +186,11 @@ class ResponseMixin(WorkspaceState):
             # AudioWorklet loads through script-src and cannot attach a document nonce.
             worklet = self.api_base.removesuffix("/api") + AUDIO_CAPTURE_ROUTE
             script_policy += f" http://{self.headers['Host']}{worklet}"
+        connect_src = (
+            "connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost"
+            if self._desktop_session() is not None
+            else "connect-src 'self'"
+        )
         policy = "; ".join(
             (
                 "default-src 'none'",
@@ -192,7 +199,7 @@ class ResponseMixin(WorkspaceState):
                 "img-src 'self' data: blob: https://tile.openstreetmap.org",
                 "font-src 'self' data:",
                 "media-src 'self' blob:",
-                "connect-src 'self'",
+                connect_src,
                 "frame-src 'self'" if self.source_input and not editor_view else "frame-src 'none'",
                 "base-uri 'none'",
                 "form-action 'none'",
@@ -405,6 +412,17 @@ class ResponseMixin(WorkspaceState):
         if self._same_origin():
             return True
         self._json({"ok": False, "message": message}, 403)
+        return False
+
+    def _desktop_session(self) -> Any:
+        return getattr(self.server, "desktop_session", None)
+
+    def _require_desktop_session(self) -> bool:
+        """Require authenticated desktop cookie or host secret when running in desktop mode."""
+        session = self._desktop_session()
+        if session is None or session.is_authorized(self.headers):
+            return True
+        self._json({"ok": False, "message": "Desktop session authentication required"}, 403)
         return False
 
     def _server_port(self) -> int:

@@ -1,0 +1,65 @@
+{
+  "schema_version": "lixity-desktop-runtime-manifest/1",
+  "python_series": "3.12",
+  "core_dependencies": ["pydantic", "rich", "orjson"],
+  "excluded_optional_runtimes": [
+    "spacy",
+    "stanza",
+    "torch",
+    "qwen-tts",
+    "coqui-tts",
+    "mlx-audio",
+    "poppler",
+    "tesseract"
+  ],
+  "targets": {
+    "aarch64-apple-darwin": {
+      "os": "macos",
+      "arch": "arm64",
+      "python_relpath": "python/bin/python3",
+      "archive_pattern": "cpython-3.12.*-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    },
+    "x86_64-apple-darwin": {
+      "os": "macos",
+      "arch": "x86_64",
+      "python_relpath": "python/bin/python3",
+      "archive_pattern": "cpython-3.12.*-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    },
+    "x86_64-pc-windows-msvc": {
+      "os": "windows",
+      "arch": "x86_64",
+      "python_relpath": "python/python.exe",
+      "archive_pattern": "cpython-3.12.*-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    },
+    "aarch64-pc-windows-msvc": {
+      "os": "windows",
+      "arch": "arm64",
+      "python_relpath": "python/python.exe",
+      "archive_pattern": "cpython-3.12.*-aarch64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    },
+    "x86_64-unknown-linux-gnu": {
+      "os": "linux",
+      "arch": "x86_64",
+      "python_relpath": "python/bin/python3",
+      "archive_pattern": "cpython-3.12.*-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    },
+    "aarch64-unknown-linux-gnu": {
+      "os": "linux",
+      "arch": "arm64",
+      "python_relpath": "python/bin/python3",
+      "archive_pattern": "cpython-3.12.*-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "archive_url": null,
+      "archive_sha256": null
+    }
+  }
+}

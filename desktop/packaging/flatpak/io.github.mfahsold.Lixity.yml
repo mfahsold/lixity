@@ -1,0 +1,34 @@
+# Flathub-ready Flatpak manifest skeleton for Lixity Desktop (Linux).
+# Uses the pinned GNOME Platform runtime so WebKitGTK 4.1, PipeWire audio and
+# Enchant/Hunspell spellcheck dictionaries behave identically across distros.
+app-id: io.github.mfahsold.Lixity
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: lixity-desktop
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --filesystem=home:rw
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/lixity/cargo
+modules:
+  - name: lixity-desktop
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 lixity-desktop /app/bin/lixity-desktop
+      - cp -a runtime /app/bin/runtime
+      - install -Dm644 io.github.mfahsold.Lixity.desktop /app/share/applications/io.github.mfahsold.Lixity.desktop
+      - install -Dm644 io.github.mfahsold.Lixity.svg /app/share/icons/hicolor/scalable/apps/io.github.mfahsold.Lixity.svg
+    sources:
+      - type: dir
+        path: ../../build/flatpak-stage

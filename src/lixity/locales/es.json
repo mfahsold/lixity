@@ -2421,5 +2421,21 @@
   "zotero_retained": "Fuentes guardadas",
   "zotero_tag_filter": "Buscar esta etiqueta en el catálogo de Zotero",
   "zotero_type": "Tipo de Zotero",
-  "zotero_type_help": "Tipo de entrada en el catálogo externo de Zotero. Lixity solo lee metadatos y capturas explícitas."
+  "zotero_type_help": "Tipo de entrada en el catálogo externo de Zotero. Lixity solo lee metadatos y capturas explícitas.",
+  "cmd_system_status_sub": "Consultar PDF/OCR, Zotero, workers de audio y entorno local",
+  "cmd_system_status_title": "Estado del sistema y extensiones opcionales",
+  "desktop_env_audio_workers": "Workers de audio locales",
+  "desktop_env_available": "Disponible",
+  "desktop_env_check_updates": "Buscar actualizaciones…",
+  "desktop_env_checking_updates": "Consultando GitHub Releases…",
+  "desktop_env_error": "No se pudo inspeccionar el entorno",
+  "desktop_env_loading": "Comprobando el entorno local…",
+  "desktop_env_note": "El análisis principal funciona sin conexión ni extensiones opcionales. Las herramientas externas permanecen separadas.",
+  "desktop_env_open_logs": "Abrir carpeta de registros",
+  "desktop_env_open_release": "Abrir notas de la versión",
+  "desktop_env_optional_missing": "Opcional / sin configurar",
+  "desktop_env_title": "Estado del sistema y extensiones opcionales",
+  "desktop_env_up_to_date": "Actualizado",
+  "desktop_env_update_available": "Nueva versión disponible",
+  "desktop_env_updates_desktop_only": "La comprobación de versiones está disponible en la aplicación Lixity Desktop."
 }

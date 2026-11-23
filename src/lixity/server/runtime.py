@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import errno
+import json
 import os
 import socket
+import sys
+import threading
 import time
 import webbrowser
 from collections.abc import Callable, Mapping
@@ -16,6 +19,7 @@ from ..log import configure as configure_logging
 from ..style_fingerprint import FingerprintThresholds
 from ..workspace import resolve_project_target
 from .constants import DEFAULT_HOST, DEFAULT_PORT
+from .desktop import DesktopSession
 from .handler import LixityServerHandler
 from .workspaces import WorkspaceRegistry
 
@@ -26,6 +30,7 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = True
     daemon_threads = True
     workspaces: WorkspaceRegistry
+    desktop_session: DesktopSession | None = None
 
     def get_request(self) -> tuple[socket.socket, Any]:
         request, client_address = super().get_request()
@@ -63,24 +68,26 @@ def run_server(
     announce: bool = False,
     debug: bool = False,
     on_ready: Callable[[], None] | None = None,
+    desktop_session: DesktopSession | None = None,
 ) -> None:
     """Runs the Lixity dashboard development server on loopback."""
     if host not in {"127.0.0.1", "localhost"}:
         raise ValueError("Only loopback addresses (127.0.0.1, localhost) are permitted")
 
-    # Probe whether the port is already occupied before doing any setup work.
-    # A quick connect attempt is the most reliable cross-platform check.
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _probe:
-        _probe.settimeout(0.5)
-        _in_use = _probe.connect_ex((host, port)) == 0
-    if _in_use:
-        raise RuntimeError(
-            f"Port {port} is already in use.\n"
-            f"      If Lixity is already running, open http://{host}:{port}/ in your browser.\n"
-            f"      To start on a different port:  lixity serve --port <PORT>\n"
-            f"      To stop an existing instance:  kill $(lsof -ti :{port})  # macOS/Linux\n"
-            f"                                     Stop-Process -Id (Get-NetTCPConnection -LocalPort {port}).OwningProcess  # Windows"
-        )
+    # Probe whether an explicit port is already occupied before doing setup work.
+    # Port 0 requests an OS-assigned ephemeral loopback port.
+    if port != 0:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _probe:
+            _probe.settimeout(0.5)
+            _in_use = _probe.connect_ex((host, port)) == 0
+        if _in_use:
+            raise RuntimeError(
+                f"Port {port} is already in use.\n"
+                f"      If Lixity is already running, open http://{host}:{port}/ in your browser.\n"
+                f"      To start on a different port:  lixity serve --port <PORT>\n"
+                f"      To stop an existing instance:  kill $(lsof -ti :{port})  # macOS/Linux\n"
+                f"                                     Stop-Process -Id (Get-NetTCPConnection -LocalPort {port}).OwningProcess  # Windows"
+            )
 
     is_debug = bool(debug or os.environ.get("LIXITY_DEBUG", "").lower() in ("1", "true", "yes"))
     configure_logging(level="DEBUG" if is_debug else None)
@@ -127,11 +134,13 @@ def run_server(
     if server is None:
         raise RuntimeError("Failed to bind local HTTP server")
     server.workspaces = workspaces
-    url = f"http://{host}:{port}/"
+    server.desktop_session = desktop_session
+    bound_port = int(getattr(server, "server_port", port))
+    url = f"http://{host}:{bound_port}/"
     info = LixityServerHandler.dashboard_info
     debug_tag = " (debug mode active)" if is_debug else ""
 
-    if announce:
+    if announce and desktop_session is None:
         print(
             f"[OK] Lixity server running: {url}{debug_tag}\n"
             f"     {info.get('chapters')} chapters · {info.get('paragraphs')} paragraphs · "
@@ -139,15 +148,24 @@ def run_server(
             f"     Stop with Ctrl+C"
         )
 
-    if open_browser:
+    if open_browser and desktop_session is None:
         webbrowser.open(url)
 
+    watchdog_stop = threading.Event()
     try:
+        if desktop_session is not None:
+            desktop_session.start_parent_watchdog(server.shutdown, stop_event=watchdog_stop)
+            sys.stdout.write(
+                json.dumps(desktop_session.ready_payload(host, bound_port), ensure_ascii=False)
+                + "\n"
+            )
+            sys.stdout.flush()
         if on_ready is not None:
             on_ready()
         server.serve_forever()
     except KeyboardInterrupt:
-        if announce:
+        if announce and desktop_session is None:
             print("\n[OK] Lixity server stopped.")
     finally:
+        watchdog_stop.set()
         server.server_close()

@@ -29,6 +29,7 @@ from .constants import (
     MAX_PAYLOAD_BYTES,
     MIME_TYPES,
 )
+from .desktop import DesktopSession, desktop_environment_summary
 from .discovery import api_index
 from .pdf_context import project_settings_token
 from .routes_analysis_review import AnalysisReviewRoutesMixin
@@ -72,6 +73,7 @@ class LixityServerHandler(
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
         "/api/runtime": "_handle_runtime",
+        "/api/desktop/environment": "_handle_desktop_environment",
         "/api/speech": "_handle_speech",
         "/api/speech-job": "_handle_speech_job",
         "/api/speech-audio": "_handle_speech_audio",
@@ -179,10 +181,17 @@ class LixityServerHandler(
             self._reject_untrusted_host()
             return
 
+        path = self.path.split("?", 1)[0]
+        if path == "/_desktop/handshake" and not getattr(self, "_workspace_dispatched", False):
+            self._handle_desktop_handshake()
+            return
+
+        if not self._require_desktop_session():
+            return
+
         registry = getattr(self.server, "workspaces", None)
         if registry is not None and not getattr(self, "_workspace_dispatched", False) and registry.dispatch(self, "GET"):
             return
-        path = self.path.split("?", 1)[0]
         if path.startswith(METRIC_REFERENCE_PATH) and path.endswith(".html"):
             language = path[len(METRIC_REFERENCE_PATH):-5]
             if language in LANGUAGE_CODES and language != "generic":
@@ -256,6 +265,59 @@ class LixityServerHandler(
             self._json({"ok": False, "message": str(exc)}, 409)
             return
         self._json({"ok": True})
+
+    def _handle_desktop_handshake(self) -> None:
+        session = self._desktop_session()
+        if session is None:
+            self._json({"ok": False, "message": "Not found"}, 404)
+            return
+        query = self._parse_query(
+            required=("nonce",),
+            optional=("next",),
+            non_empty=("nonce",),
+            error_message="Desktop handshake requires a single nonce",
+        )
+        if query is None:
+            return
+        try:
+            destination = DesktopSession.validate_next_path(query.get("next"))
+        except ValueError as exc:
+            self._error(str(exc), 400)
+            return
+        if session.consume_handshake(query["nonce"]) is None:
+            self._json({"ok": False, "message": "Invalid or expired desktop handshake"}, 403)
+            return
+        self._send(
+            303,
+            b"",
+            "text/plain; charset=utf-8",
+            headers={
+                "Location": destination,
+                "Set-Cookie": session.session_cookie_header(),
+            },
+        )
+
+    def _handle_desktop_nonce(self) -> None:
+        session = self._desktop_session()
+        if session is None:
+            self._json({"ok": False, "message": "Not found"}, 404)
+            return
+        if not session.is_host_secret(self.headers):
+            self._json({"ok": False, "message": "Desktop host secret required"}, 403)
+            return
+        self._json({"ok": True, "nonce": session.issue_handshake_nonce()})
+
+    def _handle_desktop_environment(self) -> None:
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        probe_zotero = query.get("probe_zotero", ["0"])[0] in ("1", "true")
+        probe_ocr = query.get("probe_ocr", ["0"])[0] in ("1", "true")
+        self._json(
+            desktop_environment_summary(
+                desktop_mode=self._desktop_session() is not None,
+                probe_zotero=probe_zotero,
+                probe_ocr=probe_ocr,
+            )
+        )
 
     def _handle_runtime(self) -> None:
         """Observe the app and actual audio workers without exposing manuscript bindings."""
@@ -367,19 +429,29 @@ class LixityServerHandler(
         self._send(200, content, ctype, headers=headers)
 
     def do_POST(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path == "/_desktop/nonce" and not getattr(self, "_workspace_dispatched", False):
+            if not self._trusted_host():
+                self._reject_untrusted_host()
+                return
+            self._handle_desktop_nonce()
+            return
+
+        if not self._trusted_host():
+            self._reject_untrusted_host()
+            return
+        if not self._require_desktop_session():
+            return
+
         registry = getattr(self.server, "workspaces", None)
         if registry is not None and not getattr(self, "_workspace_dispatched", False):
-            if not self._trusted_host() or not self._same_origin():
+            if not self._same_origin():
                 self._json({"ok": False, "message": "Untrusted request"}, 403)
                 return
             if registry.dispatch(self, "POST"):
                 return
-        path = self.path.split("?", 1)[0]
         if not path.startswith("/api/"):
             self._json({"ok": False, "message": "Not found"}, 404)
-            return
-        if not self._trusted_host():
-            self._reject_untrusted_host()
             return
         if not self._require_same_origin():
             return

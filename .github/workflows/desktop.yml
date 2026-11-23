@@ -1,0 +1,92 @@
+name: desktop
+on:
+  workflow_dispatch:
+    inputs:
+      build_bundle:
+        description: Also run tauri bundle packaging after runtime smoke and Rust tests
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "src/lixity/server/desktop.py"
+      - "src/lixity/server/runtime.py"
+      - "src/lixity/server/_base.py"
+      - "src/lixity/server/handler.py"
+      - ".github/workflows/desktop.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop-matrix:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-14
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux WebKitGTK 4.1 and ALSA build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libasound2-dev patchelf
+
+      - name: Install uv and managed Python 3.12 standalone runtime
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip uv build
+          uv python install 3.12
+
+      - name: Verify desktop menu locales and icon synchronization
+        run: |
+          python desktop/scripts/generate_menu_locales.py --check
+          python desktop/scripts/generate_desktop_icons.py --check
+
+      - name: Build Lixity wheel and isolated desktop runtime bundle
+        shell: bash
+        run: |
+          python -m build --wheel --outdir dist
+          python desktop/scripts/build_runtime_bundle.py \
+            --target "${{ matrix.target }}" \
+            --auto-uv \
+            --output desktop/build/runtime/current
+
+      - name: Smoke-test isolated desktop runtime bundle
+        run: python desktop/scripts/smoke_desktop_runtime.py desktop/build/runtime/current
+
+      - name: Verify Rust toolchain and run desktop host checks
+        shell: bash
+        run: |
+          rustc --version
+          cargo --version
+          cargo test --manifest-path desktop/Cargo.toml --all-targets
+          cargo clippy --manifest-path desktop/Cargo.toml --all-targets -- -D warnings
+
+      - name: Build platform desktop bundle (optional dispatch)
+        if: inputs.build_bundle == true
+        shell: bash
+        run: |
+          cargo install tauri-cli --version "^2.2" --locked
+          cargo tauri build --config desktop/src-tauri/tauri.conf.json
