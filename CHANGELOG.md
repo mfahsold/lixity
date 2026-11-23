@@ -26,6 +26,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   separate choices up front.
 - Include the full measured character overview, chapter table and matching
   passages with neighboring context in saved manuscript additions.
+- Use the selected manuscript’s project settings throughout dossier review
+  and creation. Keep other proposals available when scene or place settings
+  need attention. Share Markdown excerpts and chapter tables between generators.
 - Share chapter-delta response fields between editor comparisons, revision
   history and standalone text comparisons. Read the paragraph comparison
   marker position from the prepared dashboard data.

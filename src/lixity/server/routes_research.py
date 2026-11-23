@@ -15,25 +15,28 @@ import re
 import stat
 import tempfile
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
-from ..config import read_explicit_project_config
 from ..io import FileUtils
-from ..project_structure import MAX_CONFIG_BYTES
 from ..research import api as research_api
 from ..research.character_evidence import (
     CharacterEvidenceChanged,
     character_dossier_text,
     character_evidence,
 )
-from ..research.dossiers import generated_character_binding
+from ..research.dossiers import (
+    DRAFT_CONFIRMATION_ERROR,
+    generated_character_binding,
+    read_dossier_manuscript,
+)
 from ..research.limits import (
     MAX_DOSSIER_BODY_CHARS,
     MAX_IMAGE_BYTES,
     MAX_PDF_BYTES,
     MAX_SOURCE_BYTES,
 )
+from ..research.manuscript_drafts import DRAFT_KIND_CHOICES, DRAFT_KINDS, DraftKind
 from ..research.media import MEDIA_TYPES
 from ..research.models import Reference, Source, SourceVersion
 from ..research.repository import Repository, ResearchConflictError, ResearchError
@@ -83,18 +86,18 @@ class ResearchRoutesMixin(ResponseMixin):
             return
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         kind_raw = query.get("kind", ["all"])[0]
-        if kind_raw not in ("all", "character", "scene", "location"):
-            self._json({"ok": False, "message": "kind must be all, character, scene, or location"}, 400)
+        if kind_raw not in DRAFT_KINDS:
+            self._error(f"kind must be {DRAFT_KIND_CHOICES}", 400)
             return
-        kind = cast(Literal["all", "character", "scene", "location"], kind_raw)
         exclude_existing = query.get("include_existing", ["0"])[0] not in ("1", "true")
         try:
             data = research_api.manuscript_dossier_drafts(
                 root,
                 manuscript,
                 language=query.get("language", [None])[0] or self.language,
-                kind=kind,
+                kind=cast(DraftKind, kind_raw),
                 exclude_existing=exclude_existing,
+                settings_root=self.get_author_project_root(),
             )
             self._json({"ok": True, **data})
         except (ResearchError, OSError, ValueError, TypeError) as exc:
@@ -134,8 +137,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 return
             dossier, name = binding
             project_id = dossier["project_id"]
-            text, source_sha = FileUtils.read_source_snapshot(source)
-            settings = read_explicit_project_config(manuscript_root, maximum_bytes=MAX_CONFIG_BYTES)
+            text, source_sha, settings = read_dossier_manuscript(source, manuscript_root)
             if markdown:
                 proposal = character_dossier_text(text, source_sha, character=name, language=self.language, settings=settings)
                 if not proposal["passage_count"]:
@@ -166,15 +168,12 @@ class ResearchRoutesMixin(ResponseMixin):
             return
         draft_id = str(payload.get("draft_id") or "").strip() or None
         kind_raw = str(payload.get("kind") or "character")
-        if kind_raw not in ("all", "character", "scene", "location"):
-            self._json({"ok": False, "message": "kind must be all, character, scene, or location"}, 400)
+        if kind_raw not in DRAFT_KINDS:
+            self._error(f"kind must be {DRAFT_KIND_CHOICES}", 400)
             return
-        kind = cast(Literal["all", "character", "scene", "location"], kind_raw)
         preview_sha256 = payload.get("preview_sha256")
-        if "preview_sha256" in payload and (
-            not isinstance(preview_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", preview_sha256) or not draft_id
-        ):
-            self._error("A draft ID and valid preview digest are required to confirm a manuscript draft", 400)
+        if "preview_sha256" in payload and not isinstance(preview_sha256, str):
+            self._error(DRAFT_CONFIRMATION_ERROR, 400)
             return
         project_id = payload.get("project_id")
         if project_id is not None and not isinstance(project_id, str):
@@ -187,11 +186,12 @@ class ResearchRoutesMixin(ResponseMixin):
                 root,
                 manuscript,
                 draft_id=draft_id,
-                kind=kind,
+                kind=cast(DraftKind, kind_raw),
                 language=language,
                 actor=actor,
                 preview_sha256=preview_sha256,
                 expected_project_id=project_id,
+                settings_root=self.get_author_project_root(),
             )
             self._json({"ok": True, **res})
         except ResearchConflictError as exc:

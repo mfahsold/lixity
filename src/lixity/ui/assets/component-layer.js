@@ -429,6 +429,10 @@
         btn.setAttribute("aria-pressed", String(active));
       });
     },
+    appendMarkdownBlock: function (existing, block) {
+      if (!existing || /\n\r?\n$/.test(existing)) return existing + block;
+      return existing + (existing.endsWith("\n") ? "\n" : "\n\n") + block;
+    },
     syncEmptySelect: function (selectOrId) {
       var select = typeof selectOrId === "string" ? document.getElementById(selectOrId) : selectOrId;
       if (!select) return;
@@ -448,8 +452,8 @@
         var target = document.getElementById(tplBtn.getAttribute("data-template-target") || "");
         var body = tplBtn.getAttribute("data-template-body") || "";
         if (target && body) {
-          var existing = target.value.trim();
-          target.value = existing ? (existing + "\n\n" + body) : body;
+          target.value = window.LixityComponents.appendMarkdownBlock(target.value, body);
+          target.dispatchEvent(new Event("input", {bubbles: true}));
           target.focus();
         }
         var tagTargetId = tplBtn.getAttribute("data-template-tag-target");

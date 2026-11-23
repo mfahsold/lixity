@@ -5,7 +5,7 @@ import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, cast
 from unicodedata import normalize
 
 from pydantic import ValidationError
@@ -17,7 +17,7 @@ from . import editorial
 from .geography import summarize_geography
 from .images import image_descriptions, resolve_dossier_images, resolve_dossier_media
 from .manuscript import dossier_manuscript_evidence
-from .manuscript_drafts import extract_manuscript_dossier_drafts
+from .manuscript_drafts import DRAFT_KINDS, DraftKind, extract_manuscript_dossier_drafts
 from .models import LANGUAGES, Dossier, Language, Passage, Reference, Tombstone
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, digest
 from .revisions import EvidenceCitationReader, dossier_withdrawal, source_updates
@@ -685,8 +685,7 @@ def _get_dossier(
 
 def _generated_character_name(snapshot: Snapshot, dossier_id: str) -> str | None:
     """Resolve the generated binding from the immutable original dossier."""
-    if any(identifier == dossier_id and operation in ("withdraw", "purge")
-           for operation, _kind, identifier in snapshot.lifecycle):
+    if any((operation, "dossier", dossier_id) in snapshot.lifecycle for operation in ("withdraw", "purge")):
         return None
     original = snapshot.revisions.get((dossier_id, 1))
     if not isinstance(original, Dossier) or not {"character", "manuscript-draft"}.issubset(original.tags):
@@ -712,7 +711,7 @@ def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[d
     return (_existing_dossier_reference(snapshot, dossier), name) if name is not None else None
 
 
-DraftKind = Literal["all", "character", "scene", "location"]
+DRAFT_CONFIRMATION_ERROR = "A draft ID and valid preview digest are required to confirm a manuscript draft"
 _DRAFT_ORIGIN_TAG = "manuscript-draft:"
 _DRAFT_TITLE_PREFIXES = {
     "character": ("figur:", "character:"),
@@ -737,14 +736,15 @@ def _draft_digest(value: Any) -> str:
 
 
 def _draft_origin(draft: Mapping[str, Any], root: Path, manuscript: Path) -> str:
-    kind, label = _draft_legacy_key(draft)
-    identity = [kind, label]
-    if kind in ("scene", "register"):
+    if draft["kind"] == "scene":
+        kind = "register" if draft["id"] == "scenes:manuscript" else "scene"
         label = manuscript.relative_to(root).as_posix() if manuscript.is_relative_to(root) else manuscript.as_posix()
         identity = [kind, label, draft["id"]]
-    if kind == "scene":
-        hints = draft["evidence_hints"]
-        identity.extend([hints.get("scene_scope"), hints.get("scene_source_sha256")])
+        if kind == "scene":
+            hints = draft["evidence_hints"]
+            identity.extend([hints.get("scene_scope"), hints.get("scene_source_sha256")])
+    else:
+        identity = list(_draft_legacy_key(draft))
     return _DRAFT_ORIGIN_TAG + _draft_digest(identity)[:32]
 
 
@@ -784,10 +784,10 @@ def _covered_drafts(
     drafts: Sequence[Mapping[str, Any]], snapshot: Snapshot, root: Path, manuscript: Path,
 ) -> dict[str, list[Dossier]]:
     origins, legacy = _saved_draft_keys(snapshot)
-    labels = Counter(_draft_legacy_key(item) for item in drafts)
+    keys = [_draft_legacy_key(item) for item in drafts]
+    labels = Counter(keys)
     covered: dict[str, list[Dossier]] = {}
-    for item in drafts:
-        key = _draft_legacy_key(item)
+    for item, key in zip(drafts, keys, strict=True):
         matches = origins.get(_draft_origin(item, root, manuscript), [])
         if labels[key] == 1:
             matches = [*matches, *legacy.get(key, [])]
@@ -796,13 +796,23 @@ def _covered_drafts(
     return covered
 
 
+def read_dossier_manuscript(
+    manuscript: str | Path, settings_root: str | Path,
+) -> tuple[str, str, dict[str, Any]]:
+    """Capture one manuscript source and the explicit project-local analysis settings."""
+    root = Path(settings_root).expanduser().resolve()
+    settings = read_explicit_project_config(root, maximum_bytes=MAX_CONFIG_BYTES) if root.is_dir() else {}
+    text, source_sha256 = FileUtils.read_source_snapshot(str(manuscript))
+    return text, source_sha256, settings
+
+
 def _draft_report(
     root: Path, manuscript: Path, *, language: str | None, kind: DraftKind, snapshot: Snapshot | None,
+    settings_root: str | Path | None,
 ) -> dict[str, Any]:
-    settings = read_explicit_project_config(root, maximum_bytes=MAX_CONFIG_BYTES) if root.is_dir() else {}
+    text, source_sha256, settings = read_dossier_manuscript(manuscript, root if settings_root is None else settings_root)
     requested = language or (str(settings.get("language")) if settings.get("language") else "en")
     language = "auto" if requested.strip().lower() == "auto" else supported_language(requested)
-    text, source_sha256 = FileUtils.read_source_snapshot(str(manuscript))
     payload = extract_manuscript_dossier_drafts(text, language=language, settings=settings, kind=kind)
     project_id = snapshot.project.id if snapshot is not None else None
     analysis = _draft_digest([str(root), project_id, str(manuscript), source_sha256, settings, language])
@@ -820,12 +830,14 @@ def manuscript_dossier_drafts(
     language: str | None = None,
     kind: DraftKind = "all",
     exclude_existing: bool = True,
+    settings_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Extract read-only dossier drafts from a manuscript using deterministic metrics."""
     repository = Repository(project)
     source = Path(manuscript).expanduser().resolve()
     snapshot = repository.snapshot(kinds=frozenset({"dossier"})) if repository.data.is_dir() else None
-    payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot)
+    payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot,
+                            settings_root=settings_root)
     drafts = payload["drafts"]
     if snapshot is not None:
         covered = _covered_drafts(drafts, snapshot, repository.root, source)
@@ -857,27 +869,25 @@ def create_dossier_from_manuscript(
     actor: str = "local-author",
     preview_sha256: str | None = None,
     expected_project_id: str | None = None,
+    settings_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Create a Dossier explicitly from a deterministic manuscript draft."""
     if preview_sha256 is not None and (not draft_id or not re.fullmatch(r"[0-9a-f]{64}", preview_sha256)):
-        raise ResearchError("A draft ID and valid preview digest are required to confirm a manuscript draft")
+        raise ResearchError(DRAFT_CONFIRMATION_ERROR)
     if draft_id is not None:
         prefix = draft_id.partition(":")[0]
-        if prefix in ("scene", "scenes"):
-            kind = "scene"
-        elif prefix == "character":
-            kind = "character"
-        elif prefix == "location":
-            kind = "location"
-        else:
+        draft_kind = "scene" if prefix == "scenes" else prefix
+        if draft_kind == "all" or draft_kind not in DRAFT_KINDS:
             raise ResearchError(f"Unknown manuscript dossier draft ID: {draft_id}")
+        kind = cast(DraftKind, draft_kind)
     repository = Repository(project)
     snapshot = repository.snapshot()
     if expected_project_id is not None and expected_project_id != snapshot.project.id:
         raise ResearchConflictError("Selected research project changed; reload manuscript suggestions")
     source = Path(manuscript).expanduser().resolve()
     try:
-        payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot)
+        payload = _draft_report(repository.root, source, language=language, kind=kind, snapshot=snapshot,
+                                settings_root=settings_root)
     except (OSError, ValueError) as exc:
         if preview_sha256 is None:
             raise

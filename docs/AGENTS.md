@@ -1502,13 +1502,18 @@ an archive write; omission alone receives a default.
   `skipped_existing`. Use `include_existing=1` to preview all suggestions.
   In an initialized archive the response includes `project_id`. Each file-based
   draft includes `preview_sha256` for its exact text, source and project settings.
-  Scene evidence uses `scene_scope: register|scene|chapter`. Place evidence
+  The native routes use the selected manuscript workspace for those settings.
+  A combined request can return an `unavailable` map with `scene` or `location`
+  settings errors alongside the available drafts. An explicit request for the
+  affected kind fails with its settings error.
+  Scene evidence uses `scene_scope: register|scene|chapter` and marks
+  size-limited extracts with `excerpt_limited: true`. Place evidence
   includes `basis: configured|inferred` and a counted prose match.
   With `include_existing=1`, covered proposals carry `already_covered: true`.
   A covered character proposal carries `existing_dossier` when it can be linked
   to exactly one current generated dossier. Its `id`, `title`, `revision`,
   `project_id` and `snapshot` identify that accepted dossier read. The editor
-  can prepare a separate revision after rechecking the proposal and dossier.
+  reads the selected character's full current analysis for a separate revision.
 - `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
   for a current dossier whose first revision was generated from a character
   suggestion. Native current dossier details advertise

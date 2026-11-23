@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from ..cli_help import GroupedHelpFormatter
 from ..site import docs_url
 from .limits import MAX_IMAGE_BYTES, MAX_RESEARCH_OBJECT_BYTES
+from .manuscript_drafts import DRAFT_KINDS
 
 OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "sources": (("text", "md", "json"), "json"),
@@ -195,7 +196,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ),
     (
         "dossier-drafts",
-        "Preview deterministic character and scene dossier drafts from a manuscript; read-only JSON",
+        "Preview deterministic character, scene and place dossiers from a manuscript; read-only JSON",
         "Dossiers, claims and decisions",
         (),
     ),
@@ -1574,31 +1575,26 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument(
                 "--offset", type=int, default=0, help="Zero-based reference offset"
             )
-        elif name == "dossier-drafts":
+        elif name in ("dossier-drafts", "dossier-from-manuscript"):
+            creating = name == "dossier-from-manuscript"
             command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            if creating:
+                command.add_argument("--draft-id", help="Specific draft ID from dossier-drafts")
+                command.add_argument("--preview-sha256", help="Confirm the preview digest returned for the selected draft")
             command.add_argument(
                 "--kind",
-                choices=("all", "character", "scene", "location"),
-                default="all",
-                help="Draft kind filter (default: all)",
+                choices=DRAFT_KINDS,
+                default="character" if creating else "all",
+                help=("Fallback draft kind if --draft-id is omitted (default: character)"
+                      if creating else "Draft kind filter (default: all)"),
             )
             command.add_argument("--language", help="Analysis language override")
-        elif name == "dossier-from-manuscript":
-            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
-            command.add_argument("--draft-id", help="Specific draft ID from dossier-drafts")
-            command.add_argument("--preview-sha256", help="Confirm the preview digest returned for the selected draft")
-            command.add_argument(
-                "--kind",
-                choices=("all", "character", "scene", "location"),
-                default="character",
-                help="Fallback draft kind if --draft-id is omitted (default: character)",
-            )
-            command.add_argument("--language", help="Analysis language override")
-            command.add_argument(
-                "--actor",
-                default="local-author",
-                help="Author attribution for saved changes (default: local-author)",
-            )
+            if creating:
+                command.add_argument(
+                    "--actor",
+                    default="local-author",
+                    help="Author attribution for saved changes (default: local-author)",
+                )
         elif name in ("dossier-image", "dossier-media"):
             command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
             command.add_argument(

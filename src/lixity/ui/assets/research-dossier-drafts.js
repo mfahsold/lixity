@@ -30,10 +30,23 @@ function setManuscriptDraftStatus(message) {
 }
 
 function existingCharacterDossier(draft) {
-  var record = draft.existing_dossier;
-  return draft.kind === "character" && draft.already_covered === true && record &&
+  return draft.kind === "character" && draft.already_covered === true ? manuscriptDossierReference(draft) : null;
+}
+
+function manuscriptDossierReference(draft) {
+  var record = draft && draft.existing_dossier;
+  return record &&
     typeof record.id === "string" && record.id && typeof record.title === "string" && Number.isInteger(record.revision) && record.revision > 0 &&
     typeof record.project_id === "string" && /^[a-f0-9]{64}$/.test(record.snapshot) ? record : null;
+}
+
+function currentManuscriptDraftCatalogue(state, data = {}) {
+  return state && manuscriptDraftsState === state && acceptResearchContext(state.context, data);
+}
+
+function selectedManuscriptDraft(state) {
+  var id = state.selectedByKind[state.activeKind];
+  return state.drafts.find(function(draft) { return draft.kind === state.activeKind && draft.id === id; });
 }
 
 function firstManuscriptDraftKind(drafts) {
@@ -51,8 +64,8 @@ function prepareManuscriptDossierAppend(draft, envelope) {
   if (current.trim() === proposed || current.includes("\n\n" + nested)) {
     return {body: current};
   }
-  var boundary = current.endsWith("\n\n") || !current ? "" : current.endsWith("\n") ? "\n" : "\n\n";
-  var body = current + boundary + "## " + uiLabel("research_dossier_draft_refresh_heading") + "\n\n" + nested;
+  var block = "## " + uiLabel("research_dossier_draft_refresh_heading") + "\n\n" + nested;
+  var body = window.LixityComponents.appendMarkdownBlock(current, block);
   if (body.length > draft.max_body_chars && Array.from(body).length > draft.max_body_chars) return {blocked: "too-large"};
   return {body: body, preview: proposed};
 }
@@ -108,13 +121,8 @@ function renderManuscriptDraftsView(host, state) {
   }
 
   function preview(draft) {
-    var hints = draft.evidence_hints || {};
     var existing = existingCharacterDossier(draft);
-    var basis = hints.scene_scope === "chapter" || hints.chapter_fallback === true
-      ? "research_dossier_draft_scene_chapter_fallback"
-      : draft.kind === "location" && ["configured", "inferred"].includes(hints.basis)
-        ? "research_dossier_draft_location_" + hints.basis : null;
-    var canSave = !state.saving && !state.stale && /^[a-f0-9]{64}$/.test(draft.preview_sha256);
+    var canSave = !state.saving && !state.stale;
     var action = existing ? 'data-draft-stage-existing' : 'data-create-manuscript-draft';
     var actionLabel = existing ? "research_dossier_draft_stage_existing" : "research_dossier_draft_create";
     return '<section id="r-manuscript-draft-preview" class="research-card">' +
@@ -123,7 +131,6 @@ function renderManuscriptDraftsView(host, state) {
       (existing ? '<p class="ctl-note">' + label("research_dossier_draft_stage_help") + '</p>' : '') + '</div>' +
       '<button type="button" class="ctl primary" ' + action + '="' + escapeHtml(draft.id) + '"' +
       (canSave ? "" : " disabled") + '>' + label(actionLabel) + '</button></div>' +
-      (basis ? '<p class="ctl-note" data-draft-basis>' + label(basis) + '</p>' : '') +
       (existing ? '' :
       '<h6>' + label("research_dossier_draft_preview") + '</h6>' +
       '<div data-draft-preview-body><div class="research-prose markdown-body research-dossier-body-rendered">' +
@@ -141,15 +148,20 @@ function renderManuscriptDraftsView(host, state) {
     html += '<div class="chip-row" data-draft-stale><p class="ctl-note err" role="alert">' +
       label("research_dossier_draft_stale") + '</p><button type="button" class="ctl ctl-sm" data-draft-reload>' +
       label("research_dossier_draft_reload") + '</button></div>';
-  } else if (state.error) html += '<p class="ctl-note err" role="alert">' + escapeHtml(state.error) + '</p>';
+  } else if (state.error) html += '<p class="ctl-note err" role="alert" data-draft-error>' + escapeHtml(state.error) + '</p>';
   if (state.includeExisting) {
     host.innerHTML = html + (selected ? catalogue(groups.character, "research_dossier_draft_existing_choices", "character-existing") + preview(selected) :
       '<p class="ctl-note">' + label("research_dossier_draft_existing_empty") + '</p>');
     return;
   }
+  var unavailable = ["scene", "location"].filter(function(kind) { return typeof state.unavailable?.[kind] === "string"; });
+  html += unavailable.map(function(kind) {
+    return '<p class="ctl-note err" data-draft-unavailable="' + kind + '" role="status">' +
+      label("research_dossier_draft_" + kind + "_unavailable") + '</p>';
+  }).join("");
   if (!groups.character.length) {
     html += '<div class="chip-row"><p class="ctl-note">' +
-      label(drafts.length ? "research_dossier_draft_no_characters" : "research_dossier_draft_empty") + '</p>' +
+      label(drafts.length || unavailable.length ? "research_dossier_draft_no_characters" : "research_dossier_draft_empty") + '</p>' +
       '<button type="button" class="ctl" data-draft-manual-character>' +
       label("research_dossier_draft_manual_character") + '</button></div>';
   }
@@ -165,7 +177,7 @@ function renderManuscriptDraftsView(host, state) {
         escapeHtml(kindLabels[kind]) + " (" + number.format(groups[kind].length) + ")</button>";
     }).join("") + '</div>';
   if (!selected) {
-    host.innerHTML = html + (state.activeKind === "character" ? '' :
+    host.innerHTML = html + (state.activeKind === "character" || unavailable.includes(state.activeKind) ? '' :
       '<p class="ctl-note">' + escapeHtml(uiFormat("research_dossier_draft_no_kind", {kind: kindLabels[state.activeKind]})) + '</p>');
     return;
   }
@@ -210,9 +222,9 @@ async function readManuscriptDrafts(includeExisting) {
 async function stageCharacterDraft(id, context, expected, canOpen) {
   var draft = await researchApiGet("research/dossier-character?format=markdown&id=" + encodeURIComponent(id));
   if (!canOpen() || !acceptResearchContext(context, draft || {})) return "stale";
-  if (draft && draft.code === "character-dossier-too-large") return "too-large";
-  if (draft && draft.code === "character-dossier-empty") return "unavailable";
-  var existing = draft && draft.existing_dossier;
+  if (draft?.code === "character-dossier-too-large") return "too-large";
+  if (draft?.code === "character-dossier-empty") return "unavailable";
+  var existing = manuscriptDossierReference(draft);
   if (!draft || !draft.ok || !existing || existing.id !== id || existing.project_id !== context.projectId ||
       typeof draft.body !== "string" || !draft.body.trim() || !Number.isInteger(draft.max_body_chars) ||
       draft.max_body_chars <= 0) return "unavailable";
@@ -220,6 +232,12 @@ async function stageCharacterDraft(id, context, expected, canOpen) {
   return window.LixityResearchDrafts.stageDossierBody(id, function(envelope) {
     return prepareManuscriptDossierAppend(draft, envelope);
   });
+}
+
+function manuscriptDraftStageMessage(result) {
+  var labels = {same: "research_dossier_draft_staged_same", stale: "research_dossier_draft_revision_retry",
+    unavailable: "research_dossier_draft_unavailable", "too-large": "research_dossier_draft_too_large"};
+  return result === "staged" ? "" : uiLabel(labels[result] || "research_status_unavailable");
 }
 
 document.addEventListener("click", async function(event) {
@@ -237,11 +255,7 @@ document.addEventListener("click", async function(event) {
     var result = await stageCharacterDraft(button.dataset.recordId, context, null, function() {
       return button.isConnected;
     });
-    if (result === "same") message = uiLabel("research_dossier_draft_staged_same");
-    else if (result === "stale") message = uiLabel("research_dossier_draft_revision_retry");
-    else if (result === "unavailable") message = uiLabel("research_dossier_draft_unavailable");
-    else if (result === "too-large") message = uiLabel("research_dossier_draft_too_large");
-    else if (result !== "staged") message = uiLabel("research_status_unavailable");
+    message = manuscriptDraftStageMessage(result);
   } catch (_) {
     message = uiLabel("research_status_unavailable");
   } finally {
@@ -253,189 +267,156 @@ document.addEventListener("click", async function(event) {
   }
 });
 
+async function loadManuscriptDraftCatalogue(host, trigger) {
+  if (host.getAttribute("aria-busy") === "true" || manuscriptDraftsState?.saving) return;
+  var previous = currentManuscriptDraftCatalogue(manuscriptDraftsState) ? manuscriptDraftsState : null;
+  var includeExisting = trigger.hasAttribute("data-draft-load-existing") ||
+    Boolean(previous?.includeExisting && trigger.hasAttribute("data-draft-reload"));
+  var sameMode = previous?.includeExisting === includeExisting;
+  var token = researchContextToken();
+  var loadFocused = document.activeElement === trigger;
+  var state = null;
+  function ownsLoad() { return token === researchContextToken() && (!state || currentManuscriptDraftCatalogue(state)); }
+
+  host.setAttribute("aria-busy", "true");
+  setManuscriptDraftStatus(uiLabel("research_loading"));
+  host.replaceChildren();
+  try {
+    if (!researchSelectionProjectId && researchProjectInfoPending) await researchProjectInfoPending;
+    if (!ownsLoad()) return;
+    state = {context: researchReadContext(), drafts: [],
+      selectedByKind: sameMode ? previous.selectedByKind : Object.create(null),
+      activeKind: includeExisting ? "character" : sameMode ? previous.activeKind : null,
+      includeExisting: includeExisting, saving: false, stale: false, error: "", saved: null};
+    manuscriptDraftsState = state;
+    setManuscriptDraftMode(state);
+    var data = await readManuscriptDrafts(includeExisting);
+    if (!currentManuscriptDraftCatalogue(state, data)) return;
+    state.drafts = includeExisting ? data.drafts.filter(existingCharacterDossier) : data.drafts;
+    state.unavailable = data.unavailable;
+    if (!state.drafts.some(function(draft) { return draft.kind === state.activeKind; })) {
+      state.activeKind = firstManuscriptDraftKind(state.drafts);
+    }
+    renderManuscriptDraftsView(host, state);
+  } catch (_) {
+    if (ownsLoad()) host.innerHTML = '<p class="ctl-note err" role="alert">' +
+      escapeHtml(uiLabel("research_status_unavailable")) + "</p>";
+  } finally {
+    host.removeAttribute("aria-busy");
+    if (ownsLoad()) {
+      setManuscriptDraftStatus();
+      if (loadFocused && document.activeElement === document.body) {
+        (host.querySelector('[data-draft-select][aria-pressed="true"]') ||
+          manuscriptDraftsBox.querySelector('[aria-pressed="true"]'))?.focus();
+      }
+    }
+  }
+}
+
+async function reviewManuscriptDraft(host, state, button, draft) {
+  var existing = existingCharacterDossier(draft);
+  if (!existing || !window.LixityResearchDrafts) return;
+  state.saving = true;
+  state.error = "";
+  host.querySelector('[data-draft-error]')?.remove();
+  button.setAttribute("aria-disabled", "true");
+  setManuscriptDraftStatus(uiLabel("research_loading"));
+  var result;
+  try {
+    result = await stageCharacterDraft(existing.id, state.context, existing, function() {
+      return currentManuscriptDraftCatalogue(state) && selectedManuscriptDraft(state) === draft && button.isConnected;
+    });
+  } catch (_) {
+    result = "failed";
+  } finally {
+    state.saving = false;
+    button.removeAttribute("aria-disabled");
+  }
+  if (!currentManuscriptDraftCatalogue(state)) return;
+  var message = manuscriptDraftStageMessage(result);
+  setManuscriptDraftStatus(result === "same" ? message : "");
+  state.stale = result === "stale";
+  if (result !== "same" && result !== "stale") state.error = message;
+  if (state.stale || state.error) {
+    var restore = host.contains(document.activeElement);
+    renderManuscriptDraftsView(host, state);
+    if (restore) host.querySelector(state.stale ? "[data-draft-reload]" : '[data-draft-select][aria-pressed="true"]')?.focus();
+  }
+}
+
+async function saveManuscriptDraft(host, state, button, draft) {
+  var saveFocused = document.activeElement === button;
+  state.saving = true;
+  state.error = "";
+  button.disabled = true;
+  var created;
+  try {
+    created = await researchApiPost("research-dossier-from-manuscript", {
+      draft_id: draft.id, preview_sha256: draft.preview_sha256, project_id: state.context.projectId || undefined,
+    });
+  } catch (error) {
+    created = {ok: false, message: error?.message};
+  } finally {
+    state.saving = false;
+  }
+  if (!currentManuscriptDraftCatalogue(state, created || {})) return;
+  var saved = created?.ok;
+  if (saved) {
+    state.drafts = state.drafts.filter(function(item) { return item !== draft; });
+    delete state.selectedByKind[draft.kind];
+    if (!state.drafts.some(function(item) { return item.kind === state.activeKind; })) {
+      state.activeKind = firstManuscriptDraftKind(state.drafts);
+    }
+    if (typeof created.dossier_id === "string" && created.dossier_id) {
+      state.saved = {id: created.dossier_id, title: created.title || draft.title};
+    }
+  } else if (created?.code === "stale-draft" || created?.http_status === 409) state.stale = true;
+  else state.error = created?.message || uiLabel("research_status_unavailable");
+
+  var currentFocus = document.activeElement;
+  var lostFocus = saveFocused && currentFocus === document.body;
+  var selection = '[data-draft-select][aria-pressed="true"]';
+  var focusSelector = currentFocus?.dataset?.draftKind ? '[data-draft-kind][aria-pressed="true"]' : selection;
+  if (!saved && (currentFocus === button || lostFocus)) {
+    focusSelector = state.stale ? "[data-draft-reload]" : "[data-create-manuscript-draft]";
+  }
+  var restoreFocus = host.contains(currentFocus) || lostFocus;
+  renderManuscriptDraftsView(host, state);
+  if (restoreFocus) {
+    (host.querySelector(focusSelector) || host.querySelector(selection) ||
+      host.querySelector('[data-draft-open-saved], [data-draft-manual-character]') ||
+      document.getElementById("r-manuscript-dossier-btn"))?.focus();
+  }
+  if (saved) await refreshResearchDossiers();
+}
+
 manuscriptDraftsBox?.addEventListener("click", async function (event) {
-  var loadTrigger = event.target.closest("#r-manuscript-dossier-btn, [data-draft-reload], [data-draft-load-existing]");
-  if (loadTrigger) {
-    var draftsHost = document.getElementById("r-manuscript-drafts");
-    var previous = manuscriptDraftsState;
-    if (!draftsHost || draftsHost.getAttribute("aria-busy") === "true" || (previous && previous.saving)) return;
-    if (previous && !acceptResearchContext(previous.context, {})) previous = null;
-    var includeExisting = loadTrigger.hasAttribute("data-draft-load-existing") ||
-      Boolean(previous && previous.includeExisting && loadTrigger.hasAttribute("data-draft-reload"));
-    var sameMode = previous && previous.includeExisting === includeExisting;
-    var token = researchContextToken();
-    var state = null;
-    var loadFocused = document.activeElement === loadTrigger;
-    draftsHost.setAttribute("aria-busy", "true");
-    setManuscriptDraftStatus(uiLabel("research_loading"));
-    draftsHost.replaceChildren();
-    try {
-      if (!researchSelectionProjectId && researchProjectInfoPending) await researchProjectInfoPending;
-      if (token !== researchContextToken()) return;
-      state = {context: researchReadContext(), drafts: [],
-        selectedByKind: sameMode ? previous.selectedByKind : Object.create(null),
-        activeKind: includeExisting ? "character" : sameMode ? previous.activeKind : null,
-        includeExisting: includeExisting, saving: false, stale: false, error: "", saved: null};
-      manuscriptDraftsState = state;
-      setManuscriptDraftMode(state);
-      var data = await readManuscriptDrafts(includeExisting);
-      if (manuscriptDraftsState !== state || !acceptResearchContext(state.context, data)) return;
-      state.drafts = includeExisting ? data.drafts.filter(existingCharacterDossier) : data.drafts;
-      if (!state.activeKind || !state.drafts.some(function(draft) { return draft.kind === state.activeKind; })) {
-        state.activeKind = firstManuscriptDraftKind(state.drafts);
-      }
-      renderManuscriptDraftsView(draftsHost, state);
-    } catch (_) {
-      if (token === researchContextToken() && (!state || manuscriptDraftsState === state)) {
-        draftsHost.innerHTML = '<p class="ctl-note err" role="alert">' + escapeHtml(uiLabel("research_status_unavailable")) + "</p>";
-      }
-    } finally {
-      draftsHost.removeAttribute("aria-busy");
-      if (token === researchContextToken() && (!state || manuscriptDraftsState === state)) {
-        setManuscriptDraftStatus();
-        if (loadFocused && document.activeElement === document.body) {
-          var selected = draftsHost.querySelector('[data-draft-select][aria-pressed="true"]');
-          var mode = manuscriptDraftsBox.querySelector('[aria-pressed="true"]');
-          (selected || mode)?.focus();
-        }
-      }
-    }
-    return;
-  }
+  var host = document.getElementById("r-manuscript-drafts");
+  if (!host) return;
+  var load = event.target.closest("#r-manuscript-dossier-btn, [data-draft-reload], [data-draft-load-existing]");
+  if (load) return loadManuscriptDraftCatalogue(host, load);
+  if (event.target.closest("[data-draft-manual-character]")) return openManualCharacterDossier();
+  if (!host.contains(event.target)) return;
 
-  if (event.target.closest("[data-draft-manual-character]")) {
-    openManualCharacterDossier();
-    return;
-  }
-
-  var draftSelection = event.target.closest("[data-draft-kind], [data-draft-select]");
-  if (draftSelection) {
-    var draftsHost = draftSelection.closest("#r-manuscript-drafts");
-    var state = manuscriptDraftsState;
-    if (!draftsHost || !state || state.saving || !acceptResearchContext(state.context, {})) return;
-    var kind = draftSelection.dataset.draftKind;
+  var state = manuscriptDraftsState;
+  if (!currentManuscriptDraftCatalogue(state) || state.saving) return;
+  var selection = event.target.closest("[data-draft-kind], [data-draft-select]");
+  if (selection) {
+    var kind = selection.dataset.draftKind;
     if (manuscriptDraftKinds.includes(kind)) state.activeKind = kind;
-    else if (state.drafts.some(function(draft) {
-      return draft.kind === state.activeKind && draft.id === draftSelection.dataset.draftSelect;
-    })) state.selectedByKind[state.activeKind] = draftSelection.dataset.draftSelect;
-    else return;
-    renderManuscriptDraftsView(draftsHost, state);
+    else state.selectedByKind[state.activeKind] = selection.dataset.draftSelect;
+    renderManuscriptDraftsView(host, state);
     setManuscriptDraftStatus();
-    var activeSelection = draftsHost.querySelector((kind ? "[data-draft-kind]" : "[data-draft-select]") + '[aria-pressed="true"]');
-    if (activeSelection) activeSelection.focus();
+    host.querySelector((kind ? "[data-draft-kind]" : "[data-draft-select]") + '[aria-pressed="true"]')?.focus();
     return;
   }
 
-  var stage = event.target.closest("[data-draft-stage-existing]");
-  if (stage) {
-    var draftsHost = stage.closest("#r-manuscript-drafts");
-    var state = manuscriptDraftsState;
-    var id = stage.dataset.draftStageExisting;
-    if (!draftsHost || !state || !state.includeExisting || state.saving || state.stale ||
-        id !== state.selectedByKind.character || !acceptResearchContext(state.context, {})) return;
-    var draft = state.drafts.find(function(item) { return item.id === id; });
-    var existing = draft && existingCharacterDossier(draft);
-    if (!existing || !window.LixityResearchDrafts) return;
-    state.saving = true;
-    state.error = "";
-    stage.setAttribute("aria-disabled", "true");
-    setManuscriptDraftStatus(uiLabel("research_loading"));
-    var message = "";
-    try {
-      var checked = await readManuscriptDrafts(true);
-      if (manuscriptDraftsState !== state || !acceptResearchContext(state.context, checked) ||
-          state.selectedByKind.character !== id) return;
-      var current = checked.drafts.find(function(item) { return item.id === id; });
-      var verified = current && existingCharacterDossier(current);
-      if (!verified || current.preview_sha256 !== draft.preview_sha256 || verified.id !== existing.id ||
-          verified.revision !== existing.revision || verified.project_id !== existing.project_id) {
-        state.stale = true;
-        return;
-      }
-      var result = await stageCharacterDraft(verified.id, state.context, verified, function() {
-        return manuscriptDraftsState === state && state.selectedByKind.character === id;
-      });
-      if (result === "stale") state.stale = true;
-      else if (result === "same") message = uiLabel("research_dossier_draft_staged_same");
-      else if (result === "too-large") state.error = uiLabel("research_dossier_draft_too_large");
-      else if (result === "unavailable") state.error = uiLabel("research_dossier_draft_unavailable");
-      else if (result !== "staged") state.error = uiLabel("research_status_unavailable");
-    } catch (_) {
-      state.error = uiLabel("research_status_unavailable");
-    } finally {
-      state.saving = false;
-      stage.removeAttribute("aria-disabled");
-      if (manuscriptDraftsState === state && acceptResearchContext(state.context, {})) {
-        setManuscriptDraftStatus(message);
-        if (state.stale || state.error) {
-          var restore = document.activeElement === stage || draftsHost.contains(document.activeElement);
-          renderManuscriptDraftsView(draftsHost, state);
-          if (restore) {
-            var target = draftsHost.querySelector(state.stale ? "[data-draft-reload]" : '[data-draft-select][aria-pressed="true"]');
-            if (target) target.focus();
-          }
-        }
-      }
-    }
-    return;
-  }
-
-  var createDraftBtn = event.target.closest("[data-create-manuscript-draft]");
-  if (createDraftBtn) {
-    var draftsHost = createDraftBtn.closest("#r-manuscript-drafts");
-    var state = manuscriptDraftsState;
-    var draftId = createDraftBtn.dataset.createManuscriptDraft;
-    if (!draftsHost || !state || state.includeExisting || state.saving || state.stale || draftId !== state.selectedByKind[state.activeKind] ||
-        !acceptResearchContext(state.context, {})) return;
-    var draft = state.drafts.find(function(item) { return item.id === draftId; });
-    if (!draft || draft.already_covered || !/^[a-f0-9]{64}$/.test(draft.preview_sha256)) return;
-    var loadDraftsBtn = document.getElementById("r-manuscript-dossier-btn");
-    var saveFocused = document.activeElement === createDraftBtn;
-    state.saving = true;
-    state.error = "";
-    createDraftBtn.disabled = true;
-    var created;
-    try {
-      created = await researchApiPost("research-dossier-from-manuscript", {
-        draft_id: draftId, preview_sha256: draft.preview_sha256, project_id: state.context.projectId || undefined,
-      });
-    } catch (error) {
-      created = {ok: false, message: error && error.message};
-    } finally {
-      state.saving = false;
-    }
-    if (manuscriptDraftsState !== state || !acceptResearchContext(state.context, created || {})) return;
-    var saved = created && created.ok;
-    if (saved) {
-      state.drafts = state.drafts.filter(function(item) { return item.id !== draftId; });
-      if (state.selectedByKind[draft.kind] === draftId) delete state.selectedByKind[draft.kind];
-      if (draft.kind === state.activeKind && !state.drafts.some(function(item) { return item.kind === state.activeKind; })) {
-        state.activeKind = firstManuscriptDraftKind(state.drafts);
-      }
-      if (typeof created.dossier_id === "string" && created.dossier_id) {
-        state.saved = {id: created.dossier_id, title: created.title || draft.title};
-      }
-    } else if (created && (created.code === "stale-draft" || created.http_status === 409)) {
-      state.stale = true;
-    } else {
-      state.error = (created && created.message) || uiLabel("research_status_unavailable");
-    }
-    var currentFocus = document.activeElement;
-    var focusSelector = draftsHost.contains(currentFocus) && currentFocus.dataset.draftKind
-      ? '[data-draft-kind][aria-pressed="true"]'
-      : '[data-draft-select][aria-pressed="true"]';
-    var restoreFocus = draftsHost.contains(currentFocus) || (saveFocused && currentFocus === document.body);
-    if (!saved && (currentFocus === createDraftBtn || (saveFocused && currentFocus === document.body))) {
-      focusSelector = state.stale ? "[data-draft-reload]" : "[data-create-manuscript-draft]";
-    }
-    renderManuscriptDraftsView(draftsHost, state);
-    if (restoreFocus) {
-      var nextFocus = draftsHost.querySelector(focusSelector) ||
-        draftsHost.querySelector('[data-draft-select][aria-pressed="true"]') ||
-        draftsHost.querySelector('[data-draft-open-saved], [data-draft-manual-character]') || loadDraftsBtn;
-      if (nextFocus) nextFocus.focus();
-    }
-    if (saved) await refreshResearchDossiers();
-    return;
+  var button = event.target.closest("[data-draft-stage-existing], [data-create-manuscript-draft]");
+  if (!button || state.stale) return;
+  var draft = selectedManuscriptDraft(state);
+  if (!draft) return;
+  if (state.includeExisting && button.dataset.draftStageExisting === draft.id) return reviewManuscriptDraft(host, state, button, draft);
+  if (!state.includeExisting && button.dataset.createManuscriptDraft === draft.id && !draft.already_covered) {
+    return saveManuscriptDraft(host, state, button, draft);
   }
 });

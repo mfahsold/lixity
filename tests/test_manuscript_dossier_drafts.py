@@ -14,8 +14,13 @@ from lixity.characters import _name_pattern, character_presence
 from lixity.cli import main as lixity_cli_main
 from lixity.mcp import _TOOLS, handle_message
 from lixity.research import api as research_api
-from lixity.research.character_evidence import _chapter_passages, character_dossier_text
+from lixity.research.character_evidence import (
+    _auto_character_names,
+    _chapter_passages,
+    character_dossier_text,
+)
 from lixity.research.manuscript_drafts import DRAFT_SCHEMA, extract_manuscript_dossier_drafts
+from lixity.scenes import SceneSettingsError
 from lixity.server.pdf_context import research_context_token
 from lixity.ui.research_panel import render_research_panel
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -65,7 +70,7 @@ def test_extract_manuscript_dossier_drafts_character_and_scene() -> None:
     matteo = next(d for d in char_drafts if d["evidence_hints"]["character"] == "Matteo")
     assert "character" in matteo["tags"]
     assert "manuscript-draft" in matteo["tags"]
-    assert "chapters" in matteo["body"]
+    assert "Chapters with matches 3/3." in matteo["body"]
 
     scene_only = extract_manuscript_dossier_drafts(SAMPLE_MANUSCRIPT, language="en", kind="scene")
     assert len(scene_only["drafts"]) >= 1
@@ -356,6 +361,52 @@ def test_configured_place_drafts_use_counted_prose_and_exact_unicode_names(tmp_p
     assert proposals["Mühle"]["evidence_hints"]["first_hit"]["quote"].startswith("…")
 
 
+def test_configured_place_matches_nfc_and_reports_chapters_without_mentions() -> None:
+    manuscript = "## Arrival\n\nShe arrived in Mühle.\n\n## Pause\n\nShe rested at home."
+    name = "Mu\u0308hle"
+    result = extract_manuscript_dossier_drafts(manuscript, settings={"locations": [name]}, kind="location")
+    place, = result["drafts"]
+    assert place["evidence_hints"]["location"] == name
+    assert place["evidence_hints"]["chapters"] == [1]
+    assert place["evidence_hints"]["first_hit"]["quote"] == "She arrived in Mühle."
+    assert "| 1 | 1 |\n| 2 | 0 |" in place["body"]
+
+
+def test_inferred_places_do_not_run_character_detection(monkeypatch: pytest.MonkeyPatch) -> None:
+    def unwanted(*_args, **_kwargs):
+        pytest.fail("Place inference should only use declared characters")
+
+    monkeypatch.setattr("lixity.research.manuscript_drafts._auto_character_names", unwanted)
+    result = extract_manuscript_dossier_drafts("She sailed toward Northport. We waited in Northport.", kind="location")
+    place, = result["drafts"]
+    assert place["evidence_hints"]["location"] == "Northport"
+
+
+@pytest.mark.parametrize(("scene_settings", "message"), [
+    (False, "scene_analysis must be a table"),
+    ({"groups": {"Walk": {}}, "assignments": {"2:1": "Walk"}}, "no longer match"),
+])
+def test_all_drafts_keep_other_categories_when_scene_settings_fail(scene_settings, message: str) -> None:
+    manuscript = "## Arrival\n\nAnna reached Mühle."
+    settings = {"characters": {"Anna": {}}, "locations": ["Mühle"], "scene_analysis": scene_settings}
+    report = extract_manuscript_dossier_drafts(manuscript, settings=settings)
+    assert {draft["kind"] for draft in report["drafts"]} == {"character", "location"}
+    assert report["unavailable"].keys() == {"scene"}
+    assert message in report["unavailable"]["scene"]
+    with pytest.raises(SceneSettingsError, match=message):
+        extract_manuscript_dossier_drafts(manuscript, settings=settings, kind="scene")
+
+
+def test_all_drafts_keep_scenes_when_locations_have_invalid_configuration() -> None:
+    manuscript = "## Arrival\n\nShe reached the village."
+    settings = {"locations": "a scalar is not a list"}
+    report = extract_manuscript_dossier_drafts(manuscript, settings=settings)
+    assert [draft["id"] for draft in report["drafts"]] == ["scenes:manuscript", "scene:1:1"]
+    assert report["unavailable"] == {"location": "locations must be a list of names"}
+    with pytest.raises(ValueError, match="locations must be a list of names"):
+        extract_manuscript_dossier_drafts(manuscript, settings=settings, kind="location")
+
+
 @pytest.mark.parametrize(("language", "direction", "reference"), [
     ("de", "Sie zog nach Nordhafen.", "In Nordhafen begann die Reise."),
     ("en", "She sailed toward Nordhafen.", "The ferry waited in Nordhafen."),
@@ -394,6 +445,26 @@ def test_scene_drafts_include_all_units_in_order_with_scope_and_passages() -> No
     assert "das ganze Kapitel" in units[-1]["body"]
 
 
+def test_scene_edges_preserve_full_measured_sentences_and_repeat_positions() -> None:
+    opening = "She noticed " + "the lantern, the key, and the old books, " * 12 + "did you see it?"
+    manuscript = f"## Arrival\n\n{opening} The door opened. {opening}"
+    _, scene = extract_manuscript_dossier_drafts(manuscript, kind="scene")["drafts"]
+    assert scene["body"].count(f"> {opening}") == 2
+    assert "Opening passage" in scene["body"] and "Closing passage" in scene["body"]
+    assert "excerpt_limited" not in scene["evidence_hints"]
+
+
+def test_oversized_scene_edges_use_marked_excerpts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("lixity.research.manuscript_drafts.MAX_DOSSIER_BODY_CHARS", 700)
+    opening = "She noticed " + "the lantern, the key, and the old books, " * 24 + "did you see it?"
+    _, scene = extract_manuscript_dossier_drafts(f"## Arrival\n\n{opening} Please enter.", kind="scene")["drafts"]
+    assert len(scene["body"]) <= 700
+    assert scene["evidence_hints"]["excerpt_limited"] is True
+    assert "> She noticed" in scene["body"] and "…" in scene["body"]
+    assert "> Please enter." in scene["body"]
+    assert WORKSPACE_LABELS["en"]["research_dossier_draft_scene_excerpts_limited"] in scene["body"]
+
+
 def test_character_draft_first_passage_uses_counted_alias_and_readable_excerpt() -> None:
     prose = ("Quiet footsteps return to the courtyard. " * 8) + (
         "nox waits near the wall. After the watch has passed, she follows the frozen lane. " * 4
@@ -410,6 +481,27 @@ def test_character_draft_first_passage_uses_counted_alias_and_readable_excerpt()
     assert "nox waits near the wall." in first["quote"]
     assert "remains in a note" not in draft["body"]
     assert "Declared viewpoint chapters" in draft["body"]
+
+
+@pytest.mark.parametrize("language", ["de", "en", "es", "fr", "it", "nl", "pt"])
+def test_compact_character_draft_localizes_its_body_and_preserves_generated_binding(language: str) -> None:
+    result = extract_manuscript_dossier_drafts(
+        "## Arrival\n\nRowan returned.", settings={"characters": {"Rowan": {}}}, language=language,
+        kind="character",
+    )
+    character, = result["drafts"]
+    labels = WORKSPACE_LABELS[language]
+    title = "Figur: Rowan" if language == "de" else "Character: Rowan"
+    assert character["title"] == title and character["id"] == "character:rowan"
+    assert f"## {labels['research_dossier_character_heading']}" in character["body"]
+    assert labels["research_dossier_character_scope"] in character["body"]
+    assert "> Rowan returned." in character["body"]
+
+
+def test_auto_character_limit_uses_stable_order_for_tied_counts() -> None:
+    names = ["Yara", "Xena", "Wanda", "Vera", "Ulla", "Tilda", "Selma", "Rosa", "Paula", "Orla", "Nora", "Mila", "Lora", "Kaya", "Jara"]
+    body = "\n\n".join(f"{name} arrived.\n\n{name} waited." for name in names)
+    assert _auto_character_names([(1, "Arrival", body)]) == sorted(names)[:12]
 
 
 def test_manuscript_dossier_drafts_excludes_existing_by_default(tmp_path: Path) -> None:

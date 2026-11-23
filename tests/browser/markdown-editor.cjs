@@ -32,6 +32,7 @@ const { launchChromium, launchFirefox } = require('../../scripts/browser_tools.c
     <textarea id="body-field" class="ctl" rows="8"></textarea>
   </div>
   <button id="after-editor">Continue</button>
+  <button id="template" data-template-target="body-field" data-template-body="## Scene">Scene template</button>
 </body>
 </html>`);
 
@@ -96,6 +97,13 @@ const { launchChromium, launchFirefox } = require('../../scripts/browser_tools.c
   await field.press('Tab');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'after-editor', 'Tab leaves the editor without trapping keyboard users');
   assert.equal(await field.inputValue(), beforeTab, 'Tab navigation does not change authored text');
+  await field.fill('    Indented note\n');
+  await page.locator('#template').click();
+  const expanded = '    Indented note\n\n## Scene';
+  assert.equal(await field.inputValue(), expanded, 'A template preserves existing Markdown');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'body-field');
+  assert.ok((await page.locator('.editor-stats').textContent()).includes(`${expanded.length} chars`),
+    'The editor observes the inserted template');
   await browser.close();
   console.log('Markdown editor browser tests passed successfully.');
 })().catch(err => {

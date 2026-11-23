@@ -587,6 +587,9 @@ reload the suggestions and review the new draft. After saving, **Open saved
 dossier** opens that record. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
+Place previews include a chapter table and the first matching passage.
+Scene previews use the measured opening and closing sentences. A problem in
+scene settings or the place list leaves the other suggestions available.
 
 Open a generated character dossier and choose **Add from manuscript**.
 The preview contains the character overview, every chapter's mention count,

@@ -24,6 +24,13 @@ from ..pipeline import resolve_document_config
 from ..scenes import _chapter_recurring_names
 from ..sentences import split_prose_sentence_spans, split_sentence_spans
 from ..workspace_labels import workspace_labels_for
+from .dossier_markdown import (
+    chapter_heading,
+    chapter_line_range,
+    chapter_mention_table,
+    dossier_quote,
+    name_mentions_summary,
+)
 
 CHARACTER_EVIDENCE_SCHEMA = "dossier-character-local/1"
 _MAX_AUTO_CHARACTERS = 12
@@ -36,13 +43,38 @@ class CharacterEvidenceChanged(ValueError):
     """The source or rules changed between reads."""
 
 
+def character_dialogue_evidence(profile: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if profile is None:
+        return None
+    return {
+        "status": profile["status"], "turns": profile["turns"],
+        "min_turns": profile["min_turns"], "words": profile["words"],
+        "mean_sentence_words": profile["dialogue_asl"], "question_excl_pct": profile["question_excl_rate"],
+    }
+
+
+def character_dialogue_markdown(voice: Mapping[str, Any], labels: Mapping[str, str], language: str) -> str:
+    def label(suffix: str) -> str:
+        return labels["research_dossier_character_" + suffix]
+
+    facts = [f"- **{label('turns')}:** {num(voice['turns'], language, 0)}"]
+    if voice["mean_sentence_words"] is not None:
+        facts.append(f"- **{label('sentence_words')}:** {num(voice['mean_sentence_words'], language)}")
+    if voice["question_excl_pct"] is not None:
+        facts.append(f"- **{label('questions')}:** {pct(voice['question_excl_pct'], language)}")
+    body = "\n".join(facts)
+    if voice["status"] == "insufficient_turns":
+        body += "\n\n" + label("dialogue_sample").format(minimum=num(voice["min_turns"], language, 0))
+    return body
+
+
 def _auto_character_names(chapters: Sequence[tuple[int, str, str]]) -> list[str]:
     counts: Counter[str] = Counter()
     for _number, _title, body in chapters:
         paragraphs = prose_paragraphs(body, _front_matter=False)
         for name in _chapter_recurring_names(paragraphs):
             counts[name] += sum(1 for paragraph in paragraphs if name in paragraph)
-    return [name for name, _count in counts.most_common(_MAX_AUTO_CHARACTERS)]
+    return sorted(counts, key=lambda name: (-counts[name], name.casefold(), name))[:_MAX_AUTO_CHARACTERS]
 
 
 def _neighboring_prose(
@@ -171,17 +203,12 @@ def _character_evidence(
 
     voices = character_voice_profiles(text, patterns, config)
     profile = next((entry for entry in voices["characters"] if entry["name"] == character), None)
-    dialogue = None if profile is None else {
-        "status": profile["status"], "turns": profile["turns"],
-        "min_turns": profile["min_turns"], "words": profile["words"],
-        "mean_sentence_words": profile["dialogue_asl"], "question_excl_pct": profile["question_excl_rate"],
-    }
     return resolved_language.key, {
         "schema_version": CHARACTER_EVIDENCE_SCHEMA, "character": character, "aliases": aliases,
         "mentions": sum(row["mentions"] for row in chapter_rows),
         "chapters_with_mentions": len(ordered_chapters),
         "longest_gap": max((b - a - 1 for a, b in pairwise(ordered_chapters)), default=0),
-        "declared_pov_chapters": declared, "dialogue": dialogue,
+        "declared_pov_chapters": declared, "dialogue": character_dialogue_evidence(profile),
         "chapters": chapter_rows, "passages": selected_passages, "passage_count": len(selected_passages),
         "analysis_sha256": analysis_sha256, "source_sha256": source_sha256, "line_scope": "chapter_body",
     }
@@ -217,13 +244,6 @@ def character_evidence(
     return report
 
 
-def _dossier_quote(label: str, text: str) -> str:
-    """Quote every source line so that prose cannot become dossier structure."""
-    lines = [f"> **{label}**", ">"]
-    lines.extend(f"> {line}" if line else ">" for line in text.split("\n"))
-    return "\n".join(lines)
-
-
 def character_dossier_text(
     text: str,
     source_sha256: str,
@@ -248,10 +268,8 @@ def character_dossier_text(
         return f"- **{label(suffix)}:** {value}"
 
     chapters = report["chapters"]
-    summary = label("summary_one" if report["mentions"] == 1 else "summary").format(
-        name=character, mentions=number(report["mentions"]), covered=number(report["chapters_with_mentions"]),
-        chapters=number(len(chapters)),
-    )
+    summary = name_mentions_summary(character, report["mentions"], report["chapters_with_mentions"],
+                                    len(chapters), labels, language_key)
     blocks = [f"## {label('heading')}", summary, label("scope")]
     facts = []
     if report["aliases"]:
@@ -265,38 +283,25 @@ def character_dossier_text(
 
     voice = report["dialogue"]
     if voice:
-        voice_facts = [fact("turns", number(voice["turns"]))]
-        if voice["mean_sentence_words"] is not None:
-            voice_facts.append(fact("sentence_words", number(voice["mean_sentence_words"], 1)))
-        if voice["question_excl_pct"] is not None:
-            voice_facts.append(fact("questions", pct(voice["question_excl_pct"], language_key, 1)))
-        blocks.extend((f"### {label('dialogue')}", "\n".join(voice_facts)))
-        if voice["status"] == "insufficient_turns":
-            blocks.append(label("dialogue_sample").format(minimum=number(voice["min_turns"])))
+        blocks.extend((f"### {label('dialogue')}", character_dialogue_markdown(voice, labels, language_key)))
 
-    distribution = [f"| {labels['research_chapter']} | {label('mentions')} |", "| --- | ---: |"]
-    distribution.extend(f"| {number(row['chapter'])} | {number(row['mentions'])} |" for row in chapters)
-    blocks.extend((f"## {label('distribution')}", "\n".join(distribution), f"## {label('passages')}"))
+    distribution = chapter_mention_table(((row["chapter"], row["mentions"]) for row in chapters), labels, language_key)
+    blocks.extend((f"## {label('distribution')}", distribution, f"## {label('passages')}"))
     if report["passages"]:
         blocks.append(label("context_hint"))
     else:
         blocks.append(label("empty"))
     passage_groups = groupby(report["passages"], key=lambda row: (row["chapter"], row["chapter_title"]))
     for (chapter, source_title), passages in passage_groups:
-        chapter_label = labels["publication_chapter"].format(number=number(chapter))
-        title = " ".join(source_title.split())
-        if title and title.casefold() != chapter_label.casefold():
-            chapter_label += f" · {title}"
-        blocks.append(f"### {chapter_label}")
+        blocks.append(f"### {chapter_heading(chapter, source_title, labels, language_key)}")
         for row in passages:
-            start, end = row["start_line"], row["end_line"]
-            lines = label("lines_one" if start == end else "lines").format(start=number(start), end=number(end))
+            lines = chapter_line_range(row["start_line"], row["end_line"], labels, language_key)
             blocks.append(f"**{lines}**")
             if row["context_before"]:
-                blocks.append(_dossier_quote(label("context_before"), row["context_before"]))
-            blocks.append(_dossier_quote(labels["research_read_passage"], row["text"]))
+                blocks.append(dossier_quote(row["context_before"], label=label("context_before")))
+            blocks.append(dossier_quote(row["text"], label=labels["research_read_passage"]))
             if row["context_after"]:
-                blocks.append(_dossier_quote(label("context_after"), row["context_after"]))
+                blocks.append(dossier_quote(row["context_after"], label=label("context_after")))
 
     return {
         "body": "\n\n".join(blocks), "analysis_sha256": report["analysis_sha256"],

@@ -71,7 +71,9 @@
   color: var(--fg);
 }
 [data-research-nav-section],
-[data-ribbon-section] {
+[data-ribbon-section],
+#r-manuscript-draft-preview,
+.research-draft-preview-actions > .ctl {
   scroll-margin-top: calc(var(--workbench-return-height, 0px) + var(--pane-ribbon-height, 3.5rem) + var(--space-4));
 }
 .research-section-card {

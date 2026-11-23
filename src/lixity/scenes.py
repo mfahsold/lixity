@@ -22,6 +22,11 @@ _INTRA_SCENE_MIN_WORDS = 120
 _COHESION_MIN_WINDOW_WORDS = 10
 _COHESION_DROP_THRESHOLD = 0.05
 
+
+class SceneSettingsError(ValueError):
+    """Scene settings are invalid or assignments no longer match the manuscript."""
+
+
 _IMPLICIT_TIME_RE = re.compile(
     r"^\s*(?:"
     r"(?:the\s+(?:next|following)\s+(?:morning|afternoon|evening|night|day|week|month|year)|"
@@ -359,7 +364,10 @@ def scene_report(
     no population uncertainty is estimated for it. Group medians and MAD are
     descriptive and include the measured scene, not external quality baselines.
     """
-    assignments, targets, planned, titles = _settings({} if settings is None else settings)
+    try:
+        assignments, targets, planned, titles = _settings({} if settings is None else settings)
+    except ValueError as exc:
+        raise SceneSettingsError(str(exc)) from exc
     analyzer = CorpusAnalyzer(config, sample_text=text)
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
@@ -481,7 +489,7 @@ def scene_report(
                 f"({', '.join(identifiers) or 'none'}); "
                 f"{dividers} recognized scene divider{'s' if dividers != 1 else ''}."
             )
-        raise ValueError(
+        raise SceneSettingsError(
             "Scene assignments no longer match this manuscript: " + ", ".join(sorted(unplanned))
             + "\n" + "\n".join(details)
             + "\nReview scene_analysis.assignments after merging or removing scenes. "

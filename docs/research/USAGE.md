@@ -644,6 +644,8 @@ language. `--kind` accepts `all`, `character`, `scene` or `location`. Previewing
 defaults to `all`. A creation without `--draft-id` selects the first new
 character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
 to confirm the manuscript, settings and saved text you reviewed.
+The CLI reads settings from `--project`. The browser reads settings from the
+selected manuscript workspace, including when its research archive is elsewhere.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
 **New dossiers**. The preview shows the full text that will become the
@@ -655,7 +657,8 @@ manually** opens the same form and fills the template if the form is empty.
 
 In a generated character dossier, choose **Add from manuscript**. You can also
 choose **Add to a character dossier** under **From manuscript** and select one.
-Lixity checks the proposal and the current dossier revision. The review shows
+Lixity reads the selected character from the current manuscript and checks the
+current dossier revision. The review shows
 the character overview, all chapter counts and every matching passage in order,
 with up to two neighboring sentences on each side where available. Use **Edit
 dossier text** to change the addition. Choose **Save dossier version** to store
@@ -665,16 +668,20 @@ dossier size limit, **Character in the manuscript** provides the complete
 paginated reading.
 
 The scene register and individual scenes can be saved independently. Scenes
-follow the manuscript order and show opening and closing text. A chapter
-without a recognized scene separator is measured as a whole chapter and labeled
-accordingly.
+follow manuscript order and show the measured opening and closing sentences.
+A sentence that would exceed the dossier size limit is shown as an excerpt.
+A chapter without a recognized scene separator is measured as a whole chapter
+and labeled accordingly. In the combined list, a scene settings error or an
+invalid place list appears alongside the available proposals. An explicit
+`--kind scene` or `--kind location` request reports its settings error.
 
 Set `locations = ["Bern", "Hafen Nord"]` in the project-root `lixity.toml` to
 track named places. A configured empty list disables place suggestions. With
 no list, repeated capitalized names near spatial cues, including a directional
 cue, can yield up to twelve candidates. Read the cited prose to decide whether
 the name refers to a place. The count follows whole-name matches in prose.
-Headings and code blocks are outside this count.
+The preview shows the count per chapter, including zeros, and the first
+matching passage. Headings and code blocks are outside this count.
 
 In a generated character dossier, **Character in the manuscript** reads the
 currently selected manuscript. It shows the name-mention count, every chapter's

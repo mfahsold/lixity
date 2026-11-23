@@ -311,7 +311,7 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   await expect(body).toContainText('Mara waited for Ivo.');
   await expect(body).toContainText('The tide moved back.');
   await expect(body).not.toContainText('The hill beyond the river');
-  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_scene_chapter_fallback);
+  await expect(preview.getByText(labels.research_dossier_draft_scene_chapter_fallback, {exact: true})).toHaveCount(1);
   assert.deepEqual(await listRecords(), initialRecords, 'Opening complete previews leaves the archive unchanged');
   const savedScene = await save(firstScene);
   await expect(choose(firstScene)).toHaveCount(0);
@@ -342,7 +342,7 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   assert.equal(location.evidence_hints.mentions, 3);
   assert.deepEqual(location.evidence_hints.chapters, [2, 3]);
   assert.equal(location.evidence_hints.first_hit.chapter, 2);
-  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_inferred);
+  await expect(preview.getByText(labels.research_dossier_draft_location_inferred, {exact: true})).toHaveCount(1);
   await expect(body).toContainText('A courier slept in Greyhaven until the bell rang.');
   await expect(body).not.toContainText('A forged note from Greyhaven');
   await preview.scrollIntoViewIfNeeded();
@@ -394,10 +394,38 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   assert.equal(explicit.evidence_hints.basis, 'configured');
   assert.equal(explicit.evidence_hints.mentions, 2);
   await expect(body).toContainText('Lanterns glowed in Silverbank after dusk.');
-  await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_configured);
+  await expect(preview.getByText(labels.research_dossier_draft_location_configured, {exact: true})).toHaveCount(1);
   await expect(page.locator('#r-filter-dossiers-tags')).not.toContainText(/manuscript-draft:[a-f0-9]{32}/);
-  await preview.scrollIntoViewIfNeeded();
+  await preview.evaluate(node => node.scrollIntoView({block: 'start', behavior: 'instant'}));
+  await expect.poll(() => create(silverbank).evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return rect.top >= 0 && rect.bottom <= innerHeight &&
+      node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
+  }), {message: 'Sticky research controls leave the proposal save action reachable at 320px'}).toBe(true);
   await page.screenshot({path: path.join(artifacts, 'location-draft-mobile.png')});
+
+  const validSettings = fs.readFileSync(settings, 'utf8');
+  const beforeInvalidSettings = await listRecords();
+  try {
+    for (const [unavailableKind, validKind, availableId, invalidSettings] of [
+      ['scene', 'location', silverbank, validSettings + '"invalid" = "Not a scene number"\n'],
+      ['location', 'scene', 'scene:3:2', validSettings.replace(/^locations = .*$/m, 'locations = 42')],
+    ]) {
+      fs.writeFileSync(settings, invalidSettings);
+      await reload();
+      const notice = catalogue.locator('[data-draft-unavailable]');
+      await expect(notice).toHaveCount(1);
+      await expect(notice).toHaveText(labels[`research_dossier_draft_${unavailableKind}_unavailable`]);
+      await kind(unavailableKind).press('Enter');
+      await expect(kind(unavailableKind)).toBeFocused();
+      await expect(preview).toHaveCount(0);
+      await select(validKind, availableId);
+      await expect(notice).toHaveCount(1);
+    }
+    assert.deepEqual(await listRecords(), beforeInvalidSettings, 'Browsing partial catalogue results does not write');
+  } finally {
+    fs.writeFileSync(settings, validSettings);
+  }
 }
 
 async function checkExistingCharacterDraft(browser, fixture) {
@@ -420,9 +448,11 @@ async function checkExistingCharacterDraft(browser, fixture) {
   const listUrl = fixture.url + '/api/research/dossiers';
   const countDossiers = async () => (await (await page.request.get(listUrl)).json()).dossiers.length;
   const writeAttempts = [], errors = [];
+  let catalogueReads = 0;
   page.on('pageerror', error => errors.push(error.message));
   page.on('request', request => {
     const path = new URL(request.url()).pathname;
+    if (path === '/api/research/manuscript-dossier-drafts') catalogueReads++;
     if (request.method() === 'POST' && /^\/api\/(research-dossier(?:-from-manuscript)?|research-record-revise)$/.test(path)) {
       writeAttempts.push({path, body: request.postDataJSON()});
     }
@@ -583,17 +613,21 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await selectCharacter(rowan);
     const manuscript = path.join(artifacts, 'synthetic-project', 'manuscript.md');
     const source = fs.readFileSync(manuscript, 'utf8');
+    const catalogueReadsBeforeStage = catalogueReads;
+    const latestParagraph = 'Rowan returned quietly to the landing.';
     try {
-      fs.writeFileSync(manuscript, source + '\n\nRowan returned quietly to the landing.\n');
+      fs.writeFileSync(manuscript, source + '\n\n' + latestParagraph + '\n');
       await stage.press('Enter');
-      await expect(stale).toBeVisible();
+      await expect(stagePreview).toContainText(latestParagraph);
+      await expect(stale).toHaveCount(0);
+      await discard.press('Enter');
       await expect(dialog).toBeHidden();
-      assert.deepEqual(await record(), second, 'A stale manuscript proposal cannot stage an edit');
+      assert.deepEqual(await record(), second, 'Reviewing fresh manuscript evidence does not save it');
+      assert.equal(catalogueReads, catalogueReadsBeforeStage, 'Preparing an exact dossier reads no duplicate catalogue');
+      assert.deepEqual(writeAttempts, []);
     } finally {
       fs.writeFileSync(manuscript, source);
     }
-    await readSuggestions(reloadExisting, true);
-    await selectCharacter(rowan);
     await stage.press('Enter');
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
@@ -606,6 +640,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await expect(save).toBeEnabled();
     await expect(stageEdit).toBeFocused();
     await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(stagePreview).not.toContainText(latestParagraph);
     await expect(stagePreview).not.toContainText('Keep the hand-drawn compass.');
     await expect(body).toBeHidden();
     await expect(manualTitle).toHaveValue('A separate unsaved dossier');
@@ -1045,7 +1080,7 @@ server.serve_forever()
       await placeKind.press('Enter');
       await expect(placeKind).toBeFocused();
       await draftList.locator('[data-draft-select="location:silverbank"]').press('Enter');
-      await expect(preview.locator('[data-draft-basis]')).toHaveText(labels.research_dossier_draft_location_configured);
+      await expect(preview.getByText(labels.research_dossier_draft_location_configured, {exact: true})).toHaveCount(1);
       await expect(preview.locator('[data-draft-preview-body] .research-dossier-body-rendered')).toContainText('Lanterns glowed in Silverbank after dusk.');
       await sceneKind.press('Enter');
       await expect(sceneKind).toBeFocused();

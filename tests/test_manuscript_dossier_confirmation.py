@@ -110,6 +110,7 @@ def test_confirmation_checks_exact_content_source_and_settings(tmp_path: Path) -
         draft = next(item for item in report["drafts"] if item["id"] == "scene:1:2")
         binding = {"project_id": report["project_id"], "research_token": token, "draft_id": draft["id"]}
         assert server.request(endpoint, payload={**binding, "preview_sha256": None}).status == 400
+        assert server.request(endpoint, payload={**binding, "preview_sha256": "invalid"}).status == 400
         binding["preview_sha256"] = draft["preview_sha256"]
         assert server.request(endpoint, payload={**binding, "project_id": "different-project"}).status == 409
         assert server.request(endpoint, payload={**binding, "manuscript": str(other_source)}).status == 409
@@ -130,6 +131,49 @@ def test_confirmation_checks_exact_content_source_and_settings(tmp_path: Path) -
             "draft_id": "scene:1:3", "research_token": token,
         })
         assert status == 200 and direct["draft"]["id"] == "scene:1:3"
+
+
+def test_server_drafts_use_manuscript_settings_with_a_separate_archive(tmp_path: Path) -> None:
+    workspace, archive = tmp_path / "author", tmp_path / "archive"
+    workspace.mkdir()
+    archive.mkdir()
+    manuscript = workspace / "draft.md"
+    manuscript.write_text(
+        "## Abfahrt\n\nAnna durchquerte Bern. Nanni blieb in Oslo.\n", encoding="utf-8",
+    )
+    settings = workspace / "lixity.toml"
+    initial = 'locations = ["Bern"]\n[characters.Anna]\naliases = ["Nanni"]\n'
+    settings.write_text(initial, encoding="utf-8")
+    archive_settings = archive / "lixity.toml"
+    archive_settings.write_text('locations = ["Oslo"]\n', encoding="utf-8")
+    api.init(archive, title="Separate synthetic archive")
+    existing = api.create_dossier(archive, "Figur: Anna", "Eigene Notizen.", tags=["manuscript-draft", "character"])
+    assert set(_previews(archive, manuscript, kind="location")) == {"location:oslo"}
+    query = {"research_token": research_context_token(archive)}
+    previews = "/api/research/manuscript-dossier-drafts?" + urlencode({**query, "kind": "location"})
+    full = "/api/research/dossier-character?" + urlencode({**query, "id": existing["dossier_id"], "format": "markdown"})
+    handler = make_handler(workspace, research_dir=archive, source_input=manuscript, language="de")
+    with LoopbackServer(handler) as server:
+        status, proposal = server.request_json(full)
+        assert status == 200
+        assert proposal["mentions"] == 2
+        status, report = server.request_json(previews)
+        assert status == 200
+        draft, = report["drafts"]
+        assert draft["id"] == "location:bern"
+        assert draft["evidence_hints"]["basis"] == "configured"
+        confirmation = {**query, "draft_id": draft["id"], "preview_sha256": draft["preview_sha256"],
+                        "project_id": report["project_id"]}
+        settings.write_text(initial.replace('"Bern"', '"Oslo"'), encoding="utf-8")
+        endpoint = "/api/research-dossier-from-manuscript"
+        status, conflict = server.request_json(endpoint, payload=confirmation)
+        assert status == 409 and conflict["code"] == "stale-draft"
+        assert Repository(archive).snapshot().digest == existing["snapshot"]
+        settings.write_text(initial, encoding="utf-8")
+        archive_settings.write_text("locations = []\n", encoding="utf-8")
+        status, saved = server.request_json(endpoint, payload=confirmation)
+        assert status == 200 and saved["draft"] == draft
+    assert api.get_dossier(archive, saved["dossier_id"])["body"] == draft["body"]
 
 
 def test_confirming_a_character_does_not_recompute_stale_scene_settings(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ from typing import Any
 
 from . import __version__
 from . import api as _api
+from .research.manuscript_drafts import DRAFT_KIND_CHOICES, DRAFT_KINDS
 from .status import DEFAULT_Z_MILD, DEFAULT_Z_STRONG, FLAG_MIN_SEVERITY
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -323,8 +324,8 @@ _TOOLS = (
                 },
                 "kind": {
                     "type": "string",
-                    "enum": ["all", "character", "scene", "location"],
-                    "description": "Draft kind filter (all, character, scene, or location).",
+                    "enum": list(DRAFT_KINDS),
+                    "description": f"Draft kind filter ({DRAFT_KIND_CHOICES}).",
                     "default": "all",
                 },
             },
@@ -643,12 +644,12 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             from .research.manuscript_drafts import extract_manuscript_dossier_drafts
 
             kind_arg = str(arguments.get("kind") or "all")
-            if kind_arg not in {"all", "character", "scene", "location"}:
+            if kind_arg not in DRAFT_KINDS:
                 return {
                     "content": [
                         {
                             "type": "text",
-                            "text": "lixity_manuscript_dossier_drafts kind must be all, character, scene, or location.",
+                            "text": f"lixity_manuscript_dossier_drafts kind must be {DRAFT_KIND_CHOICES}.",
                         }
                     ],
                     "isError": True,
