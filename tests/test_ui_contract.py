@@ -543,7 +543,7 @@ class TestJsDomContract(unittest.TestCase):
         html = (
             _full_dashboard()
             + _full_dashboard(("manuscript-pdf", "research-reader"))
-            + _full_dashboard(("analysis-review", "motif-search"))
+            + _full_dashboard(("analysis-review", "motif-search"), manuscript_pdf_token="a" * 64)
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
@@ -727,13 +727,10 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn('value="2.5"', html)
         self.assertIn('value="3.5"', html)
         self.assertIn('value="0.05"', html)
-        # JS posts all thresholds with the settings payload
-        script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
-        self.assertIn("payload.z_mild = parseFloat(zm.value)", script)
-        self.assertIn("payload.z_strong = parseFloat(zs.value)", script)
-        self.assertIn("payload.fdr_q = parseFloat(fq.value)", script)
-        self.assertIn("payload.flag_min_severity = parseInt(fs.value, 10)", script)
-        self.assertIn("payload.dim_score_threshold = parseFloat(dt.value)", script)
+        # Preset updates and submission use the same field metadata.
+        self.assertCountEqual(re.findall(r'data-threshold-key="([a-z_]+)"', html), (
+            "z_mild", "z_strong", "fdr_q", "fdr_method", "dim_score_threshold", "flag_min_severity",
+        ))
 
     def test_nda_draft_has_only_the_five_authorized_fields(self):
         title = '<img src=x onerror="window.ndaInjected=true">'

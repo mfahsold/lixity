@@ -1,4 +1,5 @@
 const {openProjectActions} = require('./support/project-actions.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 // Native PDF export stays explicit, project-bound, read-only and recoverable.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -219,6 +220,7 @@ server.serve_forever()
       await openProjectActions(page);
       await page.locator('#manuscript-pdf-title').click();
       assert.equal(await form.isVisible(), true, 'A loaded native manuscript offers PDF export');
+      await assertSelectGeometry(select, 'Manuscript PDF layout');
       assert.equal(await form.getAttribute('data-project-token'), 'synthetic-token');
       assert.equal(await select.inputValue(), 'editor', 'Editorial A4 is the initial choice');
       assert.deepEqual(await select.locator('option').evaluateAll(options => options.map(option => option.value)),

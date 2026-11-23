@@ -9,7 +9,7 @@
   "eyebrow": "Un espace de travail local pour écrire",
   "headline": "Révisez votre manuscrit.\nGardez vos recherches à portée de main.",
   "intro": "Comprenez pourquoi un passage est signalé, comparez un brouillon et gardez personnages et sources à côté du texte. Lixity utilise votre manuscrit Markdown ou texte brut sur votre ordinateur.",
-  "demo": "Explorer la démo",
+  "demo": "Explorer la démo (en anglais)",
   "tour": "Visite guidée (anglais)",
   "demo_note": "Manuscrit fictif en anglais. Démo en lecture seule. Sans compte ni téléversement.",
   "preview": "Le véritable espace de travail : lisez votre prose sans distraction, puis affichez rythme, dialogues et motifs de scène quand vous le souhaitez.",
@@ -57,7 +57,7 @@
   "discover": "Voir la visite guidée",
   "editor_link": "Portée et disponibilité de l’éditeur (anglais)",
   "workflow": "Lisez, écrivez et observez les effets d’une modification. L’analyse intégrée fonctionne hors ligne. Les services facultatifs de parole et de cartographie et les clients d’IA connectés ont leurs propres exigences de connexion et de traitement des données.",
-  "sandbox_cta": "Tester un passage en ligne",
+  "sandbox_cta": "Tester un passage (interface en anglais)",
   "compare_title": "Comment Lixity se distingue",
   "compare_lead": "Lixity ne remplace pas un éditeur humain et ne réécrit pas vos phrases. Il complète les suites bureautiques d’auteur, outils open source, correcteurs cloud et planificateurs là où confidentialité locale, mesures déterministes et provenance des sources comptent.",
   "compare_col_aspect": "Priorité",
@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Fiches personnages, étiquettes et tableau ; saisie manuelle",
   "compare_cld_dossiers": "Aucun dossier de personnages ou de scènes",
   "compare_pln_dossiers": "Chronologies, cartes de scènes et arcs ; planification pure sans analyse de texte",
-  "dossier_example": "Voir un exemple de dossier PDF (anglais)"
+  "dossier_example": "Voir un exemple de dossier PDF (anglais)",
+  "reading_copy": "Version de lecture (en anglais)",
+  "read_alt": "Manuscrit avec titre de chapitre, texte et barre de recherche",
+  "linguistics_alt": "Comparaison des chapitres avec écarts en couleur et mesures du rythme des phrases",
+  "research_alt": "Chronologie des affirmations datées, avec les dates non placées dans une liste à part",
+  "share_alt": "Note de révision sur un paragraphe du manuscrit avec les actions Enregistrer et Annuler"
 }

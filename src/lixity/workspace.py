@@ -133,6 +133,10 @@ class AmbiguousManuscriptError(ValueError):
     """A folder contains several possible manuscripts and needs a selector."""
 
 
+class ConfiguredManuscriptMissingError(ValueError):
+    """A project's explicit manuscript path no longer identifies a file."""
+
+
 def configured_manuscript(
     root: str | Path, *, project_config: Mapping[str, Any] | None = None,
 ) -> str | None:
@@ -229,7 +233,7 @@ def discover(
         try:
             info = os.stat(configured)
         except FileNotFoundError as exc:
-            raise ValueError(f"Configured manuscript not found: {configured}") from exc
+            raise ConfiguredManuscriptMissingError(f"Configured manuscript not found: {configured}") from exc
         if not stat.S_ISREG(info.st_mode):
             raise ValueError(f"Configured manuscript must be a regular file: {configured}")
         return Workspace(root=base, manuscript=configured)

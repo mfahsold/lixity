@@ -11,11 +11,11 @@
 .toolbar-sections.section-navigation a[aria-current="true"] { background: transparent; border-color: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 2px; }
 :is(.research-dossier-contents, .analysis-outline-contents) { margin-block: var(--space-3); }
 :is(.research-dossier-contents, .analysis-outline-contents) > summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
-:is(.research-dossier-contents, .analysis-outline-contents) .section-navigation { padding: .25rem .5rem .25rem 1rem; }
+:is(.research-dossier-contents, .analysis-outline-contents) .section-navigation { padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4); }
 :is(.research-dossier-contents, .analysis-outline-contents) ul { list-style: none; margin: 0; padding: 0; }
-:is(.research-dossier-contents, .analysis-outline-contents) ul ul { padding-inline-start: 1rem; }
+:is(.research-dossier-contents, .analysis-outline-contents) ul ul { padding-inline-start: var(--space-4); }
 :is(.research-dossier-contents, .analysis-outline-contents) li { margin: 0; }
-:is(.research-dossier-contents, .analysis-outline-contents) a { display: block; padding: .35rem .5rem; overflow-wrap: anywhere; line-height: 1.45; }
+:is(.research-dossier-contents, .analysis-outline-contents) a { display: block; padding: var(--space-1) var(--space-2); overflow-wrap: anywhere; line-height: var(--line-compact); }
 @media (max-width: 900px) {
   :is(.research-dossier-contents, .analysis-outline-contents) a { min-height: 2.75rem; align-content: center; }
   .analysis-outline-contents { display: none; }
@@ -26,8 +26,10 @@
 
 /* One bounded orientation link remains reachable after the full list scrolls away. */
 .research-dossier-location {
-  position: sticky; top: 0; z-index: 2; display: flex; align-items: center;
-  height: 44px; min-width: 0; padding-inline: .5rem;
+  position: sticky;
+  top: max(var(--dossier-ribbon-inset, 0px), var(--dossier-scrollport-inset, 0px));
+  z-index: 2; display: flex; align-items: center; gap: var(--space-1);
+  min-block-size: 2.75rem; min-width: 0; padding-inline: var(--space-2); margin-block-end: var(--space-2);
   background: var(--surface);
   border-block: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   color: var(--accent); font-size: var(--text-small); text-decoration: none;
@@ -39,6 +41,9 @@
 /* A document's available width decides whether its full outline fits beside it.
    Accepted source and native disclosure nodes keep their owners in both modes. */
 .research-dossier-folder { container: dossier-reading / inline-size; min-width: 0; }
+.research-tab-pane:where(:has(> .research-pane-navigation)) .research-dossier-folder {
+  --dossier-ribbon-inset: calc(var(--workbench-return-height, 0px) + var(--space-2) + var(--pane-ribbon-height, 0px));
+}
 .research-dossier-layout, .research-dossier-document { min-width: 0; }
 .research-dossier-document { display: grid; gap: var(--space-4); align-content: start; }
 @container dossier-reading (min-width: 52rem) {
@@ -46,7 +51,8 @@
   .research-dossier-document { grid-column: 1; grid-row: 1; }
   .research-dossier-contents {
     grid-column: 2; grid-row: 1; position: sticky;
-    top: calc(1rem + var(--workbench-return-height, 0px)); align-self: start;
+    top: max(calc(var(--space-4) + var(--workbench-return-height, 0px)), var(--dossier-ribbon-inset, 0px));
+    align-self: start;
     min-width: 0; --outline-available-height: calc(100dvh - 2rem - var(--workbench-return-height, 0px));
     margin: 0; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--line);
     font-size: var(--text-control);
@@ -58,7 +64,9 @@
   .research-dossier-location { display: none; }
 }
 /* The side tool and two-document review keep their existing compact scrollport. */
-:is(.workspace-context-panel, .research-decision-review) .research-dossier-folder { container-type: normal; }
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-folder {
+  container-type: normal; --dossier-ribbon-inset: 0px;
+}
 :is(.workspace-context-panel, .research-decision-review) .research-dossier-layout { display: block; }
 :is(.workspace-context-panel, .research-decision-review) .research-dossier-contents {
   position: static; max-height: none; margin-block: var(--space-3); padding-inline-start: 0;

@@ -17,12 +17,14 @@
 .research-character-body th[scope="row"] { position: static; font-size: inherit; font-weight: inherit; }
 .research-character-filter { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .research-character-filter > select { min-inline-size: 0; max-inline-size: 100%; }
-[data-character-passage-chapter] { max-inline-size: 72ch; margin-block-end: var(--space-4); }
+[data-character-passage-chapter] { max-inline-size: var(--measure-reading); margin-block-end: var(--space-4); }
 [data-character-passage] { margin: var(--space-3) 0; }
+[data-character-jump] { margin-block-start: var(--space-2); max-inline-size: 100%; white-space: normal; }
 [data-character-passage] > :where(blockquote, .research-character-context) {
   border-inline-start: 2px solid transparent; padding-inline-start: var(--space-3);
-  margin: var(--space-1) 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  margin-block: var(--space-1); margin-inline: 0;
+  line-height: var(--line-reading); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 [data-character-passage] > blockquote { color: var(--fg); border-inline-start-color: var(--line-strong); }
 .research-character-context { color: var(--fg-secondary); }
-.research-character-context-caption { font-size: var(--text-note); font-weight: var(--weight-semibold); }
+.research-character-context-caption { font-size: var(--text-note); font-weight: var(--weight-semibold); line-height: var(--line-compact); }

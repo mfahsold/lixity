@@ -77,6 +77,30 @@ const origin = 'https://pages.example';
     await expect(state.page.locator('html')).toHaveAttribute('lang', 'it');
     assert.equal(await state.page.evaluate(() => localStorage.getItem('lixity-site-language')), 'it');
     await state.context.close();
+    const sandbox = 'sandbox/index.html';
+    for (const [route, saved, languages, expected] of [
+      [sandbox, 'de', ['en'], 'de'],
+      [sandbox, 'nl', ['ja', 'de-AT'], 'de'],
+      [sandbox + '?lang=en&preset=effi-briest', 'de', ['de'], 'en'],
+      [sandbox + '?lang=fr&preset=pride-prejudice', 'de', ['de'], 'en'],
+    ]) {
+      state = await open({route, saved, languages});
+      const {page} = state;
+      await expect(page.locator('html')).toHaveAttribute('lang', expected);
+      const passage = await page.locator('#input').inputValue();
+      const words = await page.locator('#k-words').textContent();
+      if (route.includes('preset=effi-briest')) assert.match(passage, /Pfarr-/);
+      const next = expected === 'de' ? 'en' : 'de';
+      await page.locator('#lang-toggle').click();
+      await expect(page.locator('html')).toHaveAttribute('lang', next);
+      await expect(page).toHaveTitle(next === 'de' ? /Absatz lokal prüfen/ : /Review a passage locally/);
+      assert.equal(new URL(page.url()).searchParams.get('lang'), next);
+      await expect(page.locator('#input')).toHaveValue(passage);
+      await expect(page.locator('#k-words')).toHaveText(words);
+      assert.equal(await page.evaluate(() => localStorage.getItem('lixity-site-language')), saved);
+      assert.deepEqual(state.errors, []);
+      await state.context.close();
+    }
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
       for (const width of [320, 1440]) {
         state = await open({route: language === 'en' ? 'index.html' : `index-${language}.html`, languages: ['de'], width});
@@ -85,11 +109,19 @@ const origin = 'https://pages.example';
         if (language === 'en' || language === 'de') {
           await state.page.screenshot({path: path.join(artifacts, `${language}-${width}.png`), fullPage: true});
         }
+        const sandboxLanguage = language === 'de' ? 'de' : 'en';
+        const link = state.page.locator('#sandbox-cta');
+        await expect(link).toHaveAttribute('hreflang', sandboxLanguage);
+        await expect(state.page.locator('.tour-explore')).toHaveAttribute('hreflang', 'en');
+        await link.click();
+        await expect(state.page).toHaveURL(`${origin}/lixity/${sandbox}?lang=${sandboxLanguage}`);
+        await expect(state.page.locator('html')).toHaveAttribute('lang', sandboxLanguage);
+        await expect(state.page.locator('#nav-demo')).toHaveAttribute('hreflang', 'en');
         assert.deepEqual(state.errors, []);
         await state.context.close();
       }
     }
     console.log(`Screenshots: ${artifacts}`);
-    console.log('Public language suggestions, saved choices, direct links, storage failure and seven responsive pages passed.');
+    console.log('Public language suggestions, Sandbox language and preset links, storage failure and seven responsive pages passed.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

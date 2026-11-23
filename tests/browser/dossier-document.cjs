@@ -77,7 +77,7 @@ server.serve_forever()
         const downloadPdf = async (host, revision, name) => {
           const button = host.getByRole('button', {name: 'PDF herunterladen', exact: true});
           await expect(button).toBeVisible();
-          await expect(button).toHaveAccessibleDescription(`Fassung ${revision} · Gespeicherte Inhalte und Quellenzitate`);
+      await expect(button).toHaveAccessibleDescription(`Fassung ${revision} · Gespeicherter Text, vorhandene Ortsangaben und Quellenzitate`);
           await expect(button).toHaveAttribute('data-record-revision', String(revision));
           const requestCount = requests.length;
           const downloading = page.waitForEvent('download');
@@ -117,7 +117,20 @@ server.serve_forever()
           }
         }
         await downloadPdf(card, 2, 'current-card');
+        const toolbar = card.locator('.research-dossier-toolbar');
+        await expect(toolbar.locator('[data-dossier-pdf-scope]')).toBeVisible();
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        if (width === 320) {
+          await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+          try {
+            for (const group of [toolbar, card.locator('.research-prose-bar')]) {
+              assert.ok(await group.evaluate(node => node.scrollWidth <= node.clientWidth),
+                'Dossier actions wrap within their group at 200% text size');
+            }
+          } finally {
+            await page.evaluate(() => document.documentElement.style.removeProperty('font-size'));
+          }
+        }
         await card.locator('.research-dossier-folder').screenshot({path: path.join(artifacts, `dossier-pdf-${width}.png`)});
         await page.locator(`#research-dossiers-list [data-research-history=dossier][data-record-id="${id}"]`).click();
         const revisions = page.locator('#research-revision-versions');

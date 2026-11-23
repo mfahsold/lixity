@@ -8,6 +8,7 @@
   if (!controls || !chapters) return;
   const language = (document.documentElement.lang || 'en').split('-')[0];
   const L = key => (typeof window.uiLabel === 'function' ? window.uiLabel(key) : key);
+  const {formatSigned, visibleChange, percentagePointChange, chapterChanges, baselineLabel} = LixityRevisionMeasurements;
   const words = [
     'editor_write', 'editor_read_refresh', 'editor_undo', 'editor_redo',
     'editor_saving', 'editor_saved_locally', 'editor_unsaved_retry', 'editor_conflict_retained',
@@ -85,12 +86,7 @@
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
   document.body.prepend(freshness);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
-  const pulseWords = [
-    'editor_pulse_words', 'editor_pulse_since', 'editor_pulse_asl', 'editor_pulse_dialogue',
-    'editor_pulse_revisions', 'editor_pulse_title', 'editor_pulse_baseline',
-    'editor_pulse_entropy', 'editor_pulse_sticky', 'editor_pulse_indirect',
-  ].map(L);
-  const pulseDate = new Intl.DateTimeFormat(language, {dateStyle: 'medium'});
+  const recoveryDate = new Intl.DateTimeFormat(language, {dateStyle: 'medium', timeStyle: 'short'});
   const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
   const pulseBtn = document.createElement('button'); pulseBtn.type = 'button'; pulseBtn.id = 'manuscript-session-pulse'; pulseBtn.className = 'ctl manuscript-pulse-btn';
   pulseBtn.setAttribute('aria-expanded', 'false');
@@ -183,7 +179,7 @@
     if (!comparisonSnapshot || inflight) return;
     paused = true; pending = null; snapshot = comparisonSnapshot; comparisonSnapshot = null;
     editor.replace(comparisonFields[2].field.value); dirty = true;
-    comparison.close(); versions.open = false; show('unsaved', text(15)); editor.focus();
+    comparison.close(); versions.open = false; show('unsaved', L('editor_pending_changes')); editor.focus();
   }, null, {icon: 'check', className: 'ctl primary'});
   const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape', className: 'ctl'});
   const comparisonActions = document.createElement('div'); comparisonActions.className = 'modal-footer'; comparisonActions.append(comparisonCancel,comparisonUse);
@@ -203,7 +199,9 @@
       comparisonSnapshot = current;
       comparisonFields[0].field.value = snapshot.text; comparisonFields[0].identity.textContent = baseRevision.slice(0,12);
       comparisonFields[1].field.value = current.text; comparisonFields[1].identity.textContent = current.revision.slice(0,12);
-      comparisonFields[2].field.value = recovered ? recovered.text : editor.text(); comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : text(6);
+      comparisonFields[2].field.value = recovered ? recovered.text : editor.text();
+      comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : '';
+      comparisonFields[2].identity.hidden = !recovered;
       comparisonOriginal = comparisonFields[2].field.value;
       comparisonSettings = null;
       comparisonFields.forEach(({summary}) => {summary.textContent = L('editor_compare_metrics_loading');});
@@ -343,70 +341,61 @@
     if (v === null || v === undefined || Number.isNaN(v)) return '–';
     return Number(v).toLocaleString(language, {minimumFractionDigits: digits, maximumFractionDigits: digits});
   }
-  function fmtSigned(v, digits) {
-    if (v === null || v === undefined || Number.isNaN(v)) return '';
-    const sign = v > 0 ? '+' : '';
-    return sign + fmtNum(v, digits);
+  function fmtPercent(value, digits) {
+    return (value / 100).toLocaleString(language, {
+      style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits,
+    });
   }
-  function formatPercentagePointChange(value) {
-    return L('measurement_percentage_point_change').replace('{value}', fmtSigned(value, 1));
-  }
-  function formatMetricsLine(snap, deltas, {comparison = false} = {}) {
+  function formatMetricsLine(snap, deltas) {
     if (!snap) return '';
-    const parts = [fmtNum(snap.words, 0) + ' ' + pulseWords[0]];
-    if (deltas && deltas.words !== null && deltas.words !== undefined && deltas.words !== 0) {
-      parts[0] += ' (Δ ' + fmtSigned(deltas.words, 0) + ')';
+    const parts = [fmtNum(snap.words, 0) + ' ' + L(snap.words === 1 ? 'words_one' : 'words')];
+    if (visibleChange(deltas?.words, 0)) {
+      parts[0] += ' (Δ ' + formatSigned(deltas.words, 0) + ')';
     }
     if (snap.asl !== null && snap.asl !== undefined) {
-      const averageLabel = comparison ? L('measurement_words_per_sentence') : pulseWords[2];
-      let aslPart = averageLabel + ' ' + fmtNum(snap.asl, 1);
-      if (deltas && deltas.asl !== null && deltas.asl !== undefined && Math.abs(deltas.asl) >= 0.05) {
-        aslPart += ' (Δ ' + fmtSigned(deltas.asl, 1) + ')';
+      let aslPart = L('measurement_words_per_sentence') + ' ' + fmtNum(snap.asl, 1);
+      if (visibleChange(deltas?.asl, 1)) {
+        aslPart += ' (Δ ' + formatSigned(deltas.asl, 1) + ')';
       }
       parts.push(aslPart);
     }
     if (snap.dialogue_ratio !== null && snap.dialogue_ratio !== undefined) {
-      let dialoguePart = pulseWords[3] + ' ' + fmtNum(snap.dialogue_ratio, 0) + ' %';
-      if (typeof deltas?.dialogue_ratio === 'number' && Math.abs(deltas.dialogue_ratio) >= 0.05) {
-        dialoguePart += ' (Δ ' + formatPercentagePointChange(deltas.dialogue_ratio) + ')';
+      let dialoguePart = L('editor_pulse_dialogue') + ' ' + fmtPercent(snap.dialogue_ratio, 0);
+      if (visibleChange(deltas?.dialogue_ratio, 1)) {
+        dialoguePart += ' (Δ ' + percentagePointChange(deltas.dialogue_ratio) + ')';
       }
       parts.push(dialoguePart);
     }
     if (snap.length_entropy !== null && snap.length_entropy !== undefined) {
-      let entPart = pulseWords[7] + ' ' + fmtNum(snap.length_entropy, 2);
-      if (deltas && deltas.length_entropy !== null && deltas.length_entropy !== undefined && Math.abs(deltas.length_entropy) >= 0.005) {
-        entPart += ' (Δ ' + fmtSigned(deltas.length_entropy, 2) + ')';
+      let entPart = L('editor_pulse_entropy') + ' ' + fmtNum(snap.length_entropy, 2);
+      if (visibleChange(deltas?.length_entropy, 2)) {
+        entPart += ' (Δ ' + formatSigned(deltas.length_entropy, 2) + ')';
       }
       parts.push(entPart);
     }
     if (snap.sticky_pct !== null && snap.sticky_pct !== undefined) {
-      let stickyPart = pulseWords[8] + ' ' + fmtNum(snap.sticky_pct, 1) + ' %';
-      if (deltas && deltas.sticky_pct !== null && deltas.sticky_pct !== undefined && Math.abs(deltas.sticky_pct) >= 0.05) {
-        stickyPart += ' (Δ ' + formatPercentagePointChange(deltas.sticky_pct) + ')';
+      let stickyPart = L('editor_pulse_sticky') + ' ' + fmtPercent(snap.sticky_pct, 1);
+      if (visibleChange(deltas?.sticky_pct, 1)) {
+        stickyPart += ' (Δ ' + percentagePointChange(deltas.sticky_pct) + ')';
       }
       parts.push(stickyPart);
     }
     if (snap.indirect_speech_per_1000 !== null && snap.indirect_speech_per_1000 !== undefined) {
-      let indPart = pulseWords[9] + ' ' + fmtNum(snap.indirect_speech_per_1000, 1);
-      if (deltas && deltas.indirect_speech_per_1000 !== null && deltas.indirect_speech_per_1000 !== undefined && Math.abs(deltas.indirect_speech_per_1000) >= 0.05) {
-        indPart += ' (Δ ' + fmtSigned(deltas.indirect_speech_per_1000, 1) + ')';
+      let indPart = L('editor_pulse_indirect') + ' ' + fmtNum(snap.indirect_speech_per_1000, 1);
+      if (visibleChange(deltas?.indirect_speech_per_1000, 1)) {
+        indPart += ' (Δ ' + formatSigned(deltas.indirect_speech_per_1000, 1) + ')';
       }
       parts.push(indPart);
     }
     return parts.join(' · ');
   }
   function formatChapterDelta(ch) {
-    const bits = [];
-    if (typeof ch.words_delta === 'number' && ch.words_delta !== 0) {
-      bits.push(fmtSigned(ch.words_delta, 0) + ' ' + pulseWords[0]);
-    }
-    if (typeof ch.asl_delta === 'number' && Math.abs(ch.asl_delta) >= 0.05) {
-      bits.push(L('measurement_words_per_sentence') + ' Δ ' + fmtSigned(ch.asl_delta, 1));
-    }
-    if (typeof ch.dialog_pct_delta === 'number' && Math.abs(ch.dialog_pct_delta) >= 0.05) {
-      bits.push(pulseWords[3] + ' Δ ' + formatPercentagePointChange(ch.dialog_pct_delta));
-    }
-    return bits.join(' · ');
+    const {words_delta: words, asl_delta: average, dialog_pct_delta: dialogue} = chapterChanges(ch);
+    return [
+      words && words + ' ' + L(Math.abs(ch.words_delta) === 1 ? 'words_one' : 'words'),
+      average && L('measurement_words_per_sentence') + ' Δ ' + average,
+      dialogue && L('editor_pulse_dialogue') + ' Δ ' + dialogue,
+    ].filter(Boolean).join(' · ');
   }
   function renderComparisonResults(data) {
     const m = (data && data.measurements) || {};
@@ -420,7 +409,7 @@
     comparisonFields.forEach(({summary}, index) => {
       const [metrics, deltas] = pairs[index];
       summary.textContent = metrics
-        ? L('editor_compare_metrics_measured') + ' · ' + formatMetricsLine(metrics, deltas, {comparison: true})
+        ? L('editor_compare_metrics_measured') + ' · ' + formatMetricsLine(metrics, deltas)
         : L('editor_compare_metrics_unavailable');
     });
     const diffKey = data && data.primary_diff;
@@ -430,15 +419,7 @@
       comparisonChapters.hidden = true;
       return;
     }
-    const matched = diff.chapter_deltas.filter(ch => (
-      ch.match_status === 'matched' &&
-      (typeof ch.changed === 'boolean' ? ch.changed : (
-        ch.base_num !== ch.num ||
-        (typeof ch.words_delta === 'number' && ch.words_delta !== 0) ||
-        (typeof ch.asl_delta === 'number' && Math.abs(ch.asl_delta) >= 0.05) ||
-        (typeof ch.dialog_pct_delta === 'number' && Math.abs(ch.dialog_pct_delta) >= 0.05)
-      ))
-    ));
+    const matched = diff.chapter_deltas.filter(ch => ch.match_status === 'matched' && ch.changed);
     const {ambiguous, unmatched} = diff.chapter_matching || {};
     if (!matched.length && !ambiguous && !unmatched) {
       comparisonChapters.hidden = true;
@@ -553,15 +534,11 @@
       }
       const revisions = tlRes.revisions;
       pulseBtn.textContent = formatMetricsLine(deltaRes.current, deltaRes.has_baseline ? deltaRes.deltas : null);
-      if (deltaRes.has_baseline && Number.isFinite(deltaRes.base?.created_at)) {
-        const baselineDate = new Date(deltaRes.base.created_at * 1000);
-        if (Number.isFinite(baselineDate.getTime())) {
-          pulseBtn.append(' · ' + pulseWords[1].replace('{date}', pulseDate.format(baselineDate)));
-        }
-      }
+      const since = deltaRes.has_baseline ? baselineLabel(deltaRes.base) : '';
+      if (since) pulseBtn.append(' · ' + since);
       pulseWrap.hidden = false;
       const head = document.createElement('div');
-      head.textContent = pulseWords[5] + ' (' + String(revisions.length) + ' ' + pulseWords[4] + ')';
+      head.textContent = L('editor_pulse_title') + ' (' + fmtNum(revisions.length, 0) + ' ' + L('editor_pulse_revisions') + ')';
       pulsePopover.replaceChildren(head);
       if (revisions.length >= 2) {
         const chart = document.createElement('div');
@@ -569,7 +546,7 @@
         pulsePopover.append(chart);
       } else {
         const noteEl = document.createElement('div');
-        noteEl.textContent = pulseWords[6];
+        noteEl.textContent = L('editor_pulse_baseline');
         pulsePopover.append(noteEl);
       }
     } catch (_) {
@@ -583,7 +560,7 @@
   }
   function changes() {
     generation++;
-    dirty = true; show('unsaved', text(6));
+    dirty = true; show('unsaved', L('editor_pending_changes'));
     scheduleGutterMark();
     scheduleSave();
   }
@@ -610,7 +587,7 @@
     try {
       const result = await request('/manuscript-edit', sent);
       snapshot.revision = result.revision; snapshot.text = sent.text; pending = null; dirty = editor.text() !== sent.text;
-      show(dirty ? 'unsaved' : 'saved', text(dirty ? 6 : 5));
+      show(dirty ? 'unsaved' : 'saved', dirty ? L('editor_pending_changes') : text(5));
       refreshPulse().catch(() => {});
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
     finally {
@@ -631,7 +608,12 @@
   async function refreshRecovery() {
     const current = await request('/manuscript-edit');
     recovery.replaceChildren(new Option(text(16), ''));
-    current.recovery.forEach(row => {const option = new Option((row.kind === 'draft' ? text(6) : text(8)) + ' · ' + new Date(row.created * 1000).toLocaleString(), row.id); option.dataset.kind = row.kind; recovery.append(option);});
+    current.recovery.forEach(row => {
+      const name = row.kind === 'draft' ? L('editor_compare_draft') : text(8);
+      const option = new Option(name + ' · ' + recoveryDate.format(new Date(row.created * 1000)), row.id);
+      option.dataset.kind = row.kind;
+      recovery.append(option);
+    });
     syncRecoveryActions();
   }
   function visibleReaderLine() {

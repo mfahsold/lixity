@@ -659,7 +659,7 @@ function researchDossierPdfContent(detail) {
       !Number.isInteger(detail.revision) || detail.revision < 1) return null;
   var version = uiFormat("research_revision_number", {revision: detail.revision});
   return {
-    action: '<div class="research-record-actions row">' +
+    action: '<div class="research-record-actions">' +
       '<button type="button" class="ctl ctl-sm" data-dossier-pdf-export data-record-id="' + escapeHtml(detail.id) +
       '" data-record-revision="' + detail.revision + '" data-project-id="' + escapeHtml(detail.project_id) +
       '" data-research-token="' + escapeHtml(token) + '">' + escapeHtml(uiLabel("manuscript_pdf_download")) + '</button>' +
@@ -733,8 +733,8 @@ function researchDossierDetailHtml(detail, readOnly, options) {
   var dossierActions = (pdf?.action || "") +
     (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "");
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
-    (dossierActions ? '<div class="row">' + dossierActions + '</div>' : "") +
-    (pdf?.scope || "") +
+    (dossierActions ? '<div class="ctl-group research-dossier-toolbar"><div class="row">' +
+      dossierActions + '</div>' + (pdf?.scope || "") + '</div>' : "") +
     (!options.recordView && !window.LixitySite.readOnly && !detail.availability &&
       detail.character_analysis_available === true && researchContextToken() && window.LixityDossierCharacter ?
       window.LixityDossierCharacter.html() : "") +

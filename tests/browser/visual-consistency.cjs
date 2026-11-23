@@ -96,6 +96,52 @@ async function checkTypography(page, label) {
   assert.equal((await textRole(page.locator('.project-header h1'))).family, body.family,
     `${label} project identity uses the interface font`);
 }
+async function checkMarkdownSchemes(page, systemTheme) {
+  const schemes = await page.evaluate(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-theme');
+    const host = document.createElement('div');
+    host.className = 'research-prose';
+    host.style.backgroundColor = 'var(--surface)';
+    host.style.boxShadow = 'var(--shadow-modal)';
+    host.innerHTML = renderSafeMarkdown(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
+      .map(kind => `> [!${kind}]\n> A synthetic note.`).join('\n\n'));
+    document.body.append(host);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d');
+    const rgb = (...colors) => {
+      context.clearRect(0, 0, 1, 1);
+      for (const color of colors) { context.fillStyle = color; context.fillRect(0, 0, 1, 1); }
+      return `rgb(${Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3).join(',')})`;
+    };
+    try {
+      return Object.fromEntries(['auto', 'light', 'dark'].map(scheme => {
+        root.dataset.theme = scheme;
+        const colors = Array.from(host.querySelectorAll('.markdown-alert'), alert => {
+          const css = getComputedStyle(alert);
+          const title = getComputedStyle(alert.querySelector('.markdown-alert-title'));
+          return {kind: alert.classList[1], title: rgb(title.color), body: rgb(css.color),
+            fill: rgb(getComputedStyle(host).backgroundColor, css.backgroundColor)};
+        });
+        return [scheme, {colors, shadow: getComputedStyle(host).boxShadow}];
+      }));
+    } finally {
+      host.remove();
+      if (previous === null) root.removeAttribute('data-theme');
+      else root.setAttribute('data-theme', previous);
+    }
+  });
+  assert.deepEqual(schemes.auto, schemes[systemTheme], 'Auto and explicit themes resolve the same presentation colors');
+  assert.notEqual(schemes.light.shadow, schemes.dark.shadow, 'Dialog shadow responds to the selected theme');
+  for (const theme of ['light', 'dark']) {
+    assert.equal(schemes[theme].colors.length, 5);
+    for (const {kind, title, body, fill} of schemes[theme].colors) {
+      assert.ok(contrast(title, fill) >= 4.5 && contrast(body, fill) >= 4.5,
+        `${theme} ${kind} text contrast: ${title} and ${body} against ${fill}`);
+    }
+  }
+}
 // The design tokens are the single source for radius and type sizes: every
 // control shares one radius, badges and tags are pills, and the sampled text
 // roles stay on the published ladder.
@@ -233,6 +279,7 @@ async function checkScale(page, label) {
             'Mobile project fields retain useful width instead of accumulating nested card padding');
         }
         await checkTypography(app, `${theme} ${width}px`);
+        if (width === 1440) await checkMarkdownSchemes(app, theme);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);
         await checkControlBoxes(site, `${theme} ${width}px site`);

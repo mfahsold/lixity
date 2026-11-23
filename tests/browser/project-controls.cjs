@@ -1,4 +1,5 @@
 const {openProjectActions} = require('./support/project-actions.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const fs = require('node:fs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
@@ -81,6 +82,7 @@ async function checkExplicitProjectLanguage(browser) {
       await openProjectActions(page);
       await page.locator('#btn-modal-new-project').click();
       const importLanguage = page.locator('#import-proj-lang');
+      await assertSelectGeometry(importLanguage, 'Import language');
       assert.equal(await importLanguage.inputValue(), configured === 'generic' ? 'generic' : '');
       await page.locator('#import-file-input').setInputFiles({name:'synthetic.md',mimeType:'text/markdown',
         buffer:Buffer.from('# Synthetic\n\n## First\n\nHello world.\n\n```\n## Fake\n```\n')});
@@ -99,6 +101,7 @@ async function checkExplicitProjectLanguage(browser) {
       submissions.length = 0;
       await page.locator('#tab-btn-scratch').click();
       const select = page.locator('#new-proj-lang');
+      await assertSelectGeometry(select, 'New project language');
       assert.equal(await select.inputValue(), configured === 'generic' ? 'generic' : '');
       await page.locator('#new-proj-title').fill('Synthetic project');
       if (configured !== 'generic') {
@@ -112,6 +115,63 @@ async function checkExplicitProjectLanguage(browser) {
       assert.equal(submissions[0].language, 'generic', 'The explicitly selected generic profile reaches the API unchanged');
     } finally { await page.close(); }
   }
+}
+
+async function checkNativeDocxPreview(browser) {
+  const {startNativeServer} = require('./support/native-server.cjs');
+  const server = await startNativeServer(`
+import json, sys
+from contextlib import ExitStack
+from pathlib import Path
+from threading import Event
+from tests.support import LoopbackServer, make_handler
+from tests.test_manuscript_import import _create_synthetic_docx_bytes
+root = Path(sys.argv[1])
+docx = root / 'preview.docx'
+docx.write_bytes(_create_synthetic_docx_bytes())
+manuscript = root / 'preview.md'
+manuscript.write_text('## Synthetic chapter\\n\\nMira walked down to the harbour.\\n', encoding='utf-8')
+with ExitStack() as running:
+    urls = {}
+    for language in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
+        handler = make_handler(root, source_input=manuscript, language=language)
+        handler.refresh()
+        urls[language] = running.enter_context(LoopbackServer(handler)).base
+    print(json.dumps({'urls': urls, 'file': str(docx), 'manuscript': str(manuscript)}), flush=True)
+    Event().wait()
+`, screenshotDir);
+  const before = fs.readFileSync(server.fixture.manuscript);
+  const originalDocx = fs.readFileSync(server.fixture.file);
+  try {
+    for (const [language, url] of Object.entries(server.fixture.urls)) for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport:{width,height:900},locale:language === 'en' ? 'de' : 'en'});
+      try {
+        await page.goto(url);
+        await openImportDialog(page);
+        const post = page.waitForResponse(response => response.url().endsWith('/api/manuscript-import-preview'));
+        await page.locator('#import-file-input').setInputFiles(server.fixture.file);
+        const response = await post;
+        assert.equal(response.status(), 200);
+        const preview = await response.json();
+        const notes = page.locator('#import-fpc-loss li');
+        await notes.last().waitFor({state:'visible'});
+        const labels = fixtures[language].labels;
+        const rows = await notes.allTextContents();
+        assert.doesNotMatch(rows.join('\n'), /undefined/, 'The browser reads the actual diagnostic fields');
+        const expected = [
+          ['block', 'table', 6], ['paragraph', 'drawing', 6], ['paragraph', 'footnote', 6]
+        ].map(([location, element, number]) =>
+          labels['import_loss_' + location].replace('{number}', number) + ' · ' + labels['import_loss_' + element]);
+        assert.deepEqual(rows, expected, `${language}/${width}: real conversion notes explain what's omitted and where`);
+        assert.deepEqual(preview.loss_report.map(item => item.position), [6, 6, 6]);
+        assert.ok(preview.loss_report.every(item => item.detail && item.location));
+        assert.equal(await page.locator('#import-fpc-loss').evaluate(el => el.scrollWidth <= el.clientWidth), true);
+        assert.deepEqual(fs.readFileSync(server.fixture.manuscript), before, 'Preview changes no existing manuscript');
+        assert.deepEqual(fs.readFileSync(server.fixture.file), originalDocx, 'Preview preserves the Word source');
+      } finally {await page.close();}
+    }
+    console.log('Word import: actual native conversion notes, source locations, and unchanged sources in seven desktop/mobile locales');
+  } finally {await server.close();}
 }
 
 async function checkNativeWorkspaceTabs(browser) {
@@ -156,9 +216,32 @@ server.serve_forever()
         const sourceText = await first.locator('#chapters').textContent();
         const second = await context.newPage(); await second.goto(server.fixture.url + firstUrl);
         await openProjectActions(second); await second.locator('#btn-modal-open-project').click();
-        await second.locator('#open-proj-path').fill(server.fixture.paths[1]);
+        const ambiguous = fs.realpathSync(fs.mkdtempSync(path.join(directory, 'Ambiguous-')));
+        fs.writeFileSync(path.join(ambiguous, 'Alpha.md'), '## Synthetic\n\nChoose this draft.\n');
+        fs.writeFileSync(path.join(ambiguous, 'Beta.md'), '## Synthetic\n\nAnother draft.\n');
+        const removed = fs.mkdirSync(path.join(ambiguous, 'Removed'), {recursive:true});
+        const openPath = second.locator('#open-proj-path');
         const openSubmit = second.locator('#btn-submit-open-project');
         assert.equal(await openSubmit.getAttribute('form'), 'form-project-open');
+        await openPath.fill(ambiguous);
+        const refused = second.waitForResponse(response => response.url().endsWith('/api/project-open'));
+        await openSubmit.click();
+        assert.equal((await (await refused).json()).code, 'ambiguous-manuscript');
+        await second.waitForFunction(label => document.querySelector('#open-project-status').textContent === label,
+          fixtures.en.labels.wizard_path_ambiguous_manuscript);
+        assert.equal(await openPath.inputValue(), ambiguous);
+        await second.locator('#open-proj-choose').click();
+        const removedEntry = second.locator('#open-project-chooser-list button').filter({hasText:'Removed'});
+        await removedEntry.waitFor();
+        fs.rmdirSync(removed);
+        await removedEntry.click();
+        await second.waitForFunction(label => document.querySelector('#open-project-chooser-status').textContent === label,
+          fixtures.en.labels.wizard_path_missing);
+        assert.equal(await second.locator('#open-project-chooser-path').textContent(), ambiguous,
+          'A removed child leaves the previous folder and its selectable manuscripts in view');
+        assert.equal(await second.locator('#open-project-chooser-list button').filter({hasText:'Alpha.md'}).isVisible(), true);
+        await second.locator('#open-project-chooser-close').click();
+        await openPath.fill(server.fixture.paths[1]);
         await openSubmit.click();
         await second.waitForURL(url => url.pathname !== firstUrl && /^\/w\/[a-f0-9]{32}\/$/.test(url.pathname));
         assert.equal(await first.locator('#chapters').textContent(), sourceText, 'Opening another project cannot replace an existing tab');
@@ -296,6 +379,7 @@ async function restoreFileReads(page) {
   try {
     if (process.argv.includes('--runtime-only')) {await checkNativeWorkspaceTabs(browser); return;}
     if (process.argv.includes('--language-only')) {await checkExplicitProjectLanguage(browser); return;}
+    if (process.argv.includes('--docx-only')) {await checkNativeDocxPreview(browser); return;}
     const page = await browser.newPage({viewport: {width: 1440, height: 900}});
     // Keep chooser interception enabled between waits: removing the last listener
     // makes Playwright toggle it asynchronously and race the next activation.
@@ -667,6 +751,11 @@ async function restoreFileReads(page) {
     console.log(readStateOnly
       ? 'Project controls: pending reads/imports, latest-selection protection, read-error recovery and modal file-picker keyboard access passed'
       : `Project controls: explicit selection/drop/load, keyboard access, pending reads/imports, retry, NDA capability gating and seven mobile locales passed; screenshots: ${screenshotDir}`);
-    if (!readStateOnly) {await checkProjectNavigationOrder(browser); await checkNativeWorkspaceTabs(browser); await checkExplicitProjectLanguage(browser);}
+    if (!readStateOnly) {
+      await checkProjectNavigationOrder(browser);
+      await checkNativeWorkspaceTabs(browser);
+      await checkExplicitProjectLanguage(browser);
+      await checkNativeDocxPreview(browser);
+    }
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

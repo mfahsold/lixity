@@ -1235,54 +1235,34 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
   pending(false);
 })();
 var settingsForm = document.getElementById("settings-form");
+function thresholdValue(field) {
+  if (field.type === "number") return field.valueAsNumber;
+  return field.dataset.thresholdKey === "flag_min_severity" ? Number(field.value) : field.value;
+}
 if (settingsForm) {
   var presetSelect = document.getElementById("set-threshold-preset");
-  var presets = presetSelect && presetSelect.dataset.presets ? JSON.parse(presetSelect.dataset.presets) : null;
-  var thresholdControlMap = {
-    z_mild: "set-z-mild",
-    z_strong: "set-z-strong",
-    fdr_q: "set-fdr-q",
-    fdr_method: "set-fdr-method",
-    dim_score_threshold: "set-dim-threshold",
-    flag_min_severity: "set-flag-min-sev"
-  };
+  var presets = JSON.parse(presetSelect.dataset.presets);
+  var thresholdFields = Array.from(settingsForm.querySelectorAll("[data-threshold-key]"));
   function syncThresholdPreset() {
-    if (!presetSelect || !presets) return;
-    var matched = "custom";
-    Object.keys(presets).some(function(name) {
-      var target = presets[name];
-      var ok = Object.keys(thresholdControlMap).every(function(key) {
-        var el = document.getElementById(thresholdControlMap[key]);
-        if (!el) return true;
-        return key === "fdr_method" ? el.value === String(target[key]) : Number(el.value) === Number(target[key]);
+    var matched = Object.keys(presets).find(function(name) {
+      return thresholdFields.every(function(field) {
+        return thresholdValue(field) === presets[name][field.dataset.thresholdKey];
       });
-      if (ok) { matched = name; return true; }
-      return false;
     });
-    presetSelect.value = matched;
-    syncSelectPills("set-threshold-preset");
+    presetSelect.value = matched || "custom";
   }
-  if (presetSelect && presets) {
-    presetSelect.addEventListener("change", function() {
-      var chosen = presets[presetSelect.value];
-      if (!chosen) return;
-      Object.keys(thresholdControlMap).forEach(function(key) {
-        var el = document.getElementById(thresholdControlMap[key]);
-        if (el && chosen[key] != null) {
-          el.value = String(chosen[key]);
-          el.setCustomValidity("");
-        }
-      });
-      syncAllSelectPills();
+  presetSelect.addEventListener("change", function() {
+    var chosen = presets[presetSelect.value];
+    if (!chosen) return;
+    thresholdFields.forEach(function(field) {
+      field.value = String(chosen[field.dataset.thresholdKey]);
+      field.setCustomValidity("");
     });
-    Object.keys(thresholdControlMap).forEach(function(key) {
-      var el = document.getElementById(thresholdControlMap[key]);
-      if (el) {
-        el.addEventListener("input", syncThresholdPreset);
-        el.addEventListener("change", syncThresholdPreset);
-      }
-    });
-  }
+  });
+  thresholdFields.forEach(function(field) {
+    field.addEventListener("input", syncThresholdPreset);
+    field.addEventListener("change", syncThresholdPreset);
+  });
   settingsForm.addEventListener("input", function() {
     settingsForm.querySelectorAll("input").forEach(function(input) { input.setCustomValidity(""); });
   });
@@ -1296,7 +1276,7 @@ if (settingsForm) {
       input.setCustomValidity("");
     });
     document.getElementById("settings-thresholds").open = true;
-    syncAllSelectPills();
+    syncThresholdPreset();
   });
 }
 var fdrFilter = document.getElementById("heatmap-fdr-only");
@@ -1315,11 +1295,10 @@ if (fdrFilter) {
 var projectSelectionRevision = 0;
 async function runAction(action, payload, button, canReload, acceptResponse) {
   var selectionRevision = ["project-open", "project-create", "load"].includes(action) ? ++projectSelectionRevision : null;
-  var status = document.getElementById("ctl-status");
-  if (status) {
-    status.className = "ctl-status";
-    status.textContent = "…";
-  }
+  var savingSettings = action === "settings";
+  var status = document.getElementById(savingSettings ? "settings-save-status" : "ctl-status");
+  var setStatus = window.LixityComponents.setStatus;
+  setStatus(status, savingSettings ? uiLabel("settings_applying") : "…", "loading");
   if (button) { button.disabled = true; button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
   var t0 = performance.now();
   var url = API + "/" + action;
@@ -1333,10 +1312,13 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
     if (!res.ok) data.ok = false;
     LixityLog.api("POST", url, performance.now() - t0, res.status);
     if (acceptResponse && !acceptResponse()) return data;
-    if (status) {
-      status.className = "ctl-status " + (data.ok ? "ok" : "err");
-      status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
+    var message = data.message;
+    if (savingSettings) {
+      if (data.ok) message = uiLabel("settings_applied");
+      else if (data.code === "stale-context") message = uiLabel("settings_stale_context");
+      else if (data.code === "invalid-language") message = uiLabel("settings_invalid_language");
     }
+    setStatus(status, message, data.ok === true, {prefix: !savingSettings});
     if (data.ok && data.reload) {
       setTimeout(function () { if (!canReload || canReload()) {
         if (typeof data.workspace_url === "string" && /^\/w\/[a-f0-9]{32}\/$/.test(data.workspace_url)) {
@@ -1349,10 +1331,7 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
   } catch (err) {
     if (acceptResponse && !acceptResponse()) return {ok: false, message: String(err)};
     LixityLog.error("runAction (" + action + ") error:", err);
-    if (status) {
-      status.className = "ctl-status err";
-      status.textContent = "✗ " + err;
-    }
+    setStatus(status, savingSettings ? uiLabel("settings_connection_failed") : String(err), false, {prefix: !savingSettings});
     return { ok: false, message: String(err) };
   } finally {
     if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
@@ -1390,18 +1369,9 @@ async function submitSettings() {
   payload.language = document.getElementById("set-language").value;
   var title = document.getElementById("set-title");
   if (title.value !== settings.dataset.titleInitial) payload.title = title.value;
-  var zm = document.getElementById("set-z-mild");
-  var zs = document.getElementById("set-z-strong");
-  var fq = document.getElementById("set-fdr-q");
-  var fs = document.getElementById("set-flag-min-sev");
-  var dt = document.getElementById("set-dim-threshold");
-  if (zm) payload.z_mild = parseFloat(zm.value);
-  if (zs) payload.z_strong = parseFloat(zs.value);
-  if (fq) payload.fdr_q = parseFloat(fq.value);
-  var fm = document.getElementById("set-fdr-method");
-  if (fm) payload.fdr_method = fm.value;
-  if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
-  if (dt) payload.dim_score_threshold = parseFloat(dt.value);
+  settings.querySelectorAll("[data-threshold-key]").forEach(function(field) {
+    payload[field.dataset.thresholdKey] = thresholdValue(field);
+  });
   var author = document.getElementById("set-author-name");
   var authorEnabled = author && author.dataset.authorSettingEnabled === "true";
   if (authorEnabled && author.value.trim() !== settings.dataset.authorInitial) {
@@ -1493,12 +1463,6 @@ function syncSelectPills(selectId) {
   });
 }
 
-function syncAllSelectPills() {
-  document.querySelectorAll("[data-sync-select]").forEach(function (group) {
-    syncSelectPills(group.dataset.syncSelect);
-  });
-}
-
 (function initSelectPillGroups() {
   var groups = document.querySelectorAll("[data-sync-select]");
   if (!groups.length) return;
@@ -1533,9 +1497,4 @@ function syncAllSelectPills() {
     }).observe(scopeStatus, { childList: true, characterData: true, subtree: true });
   }
 
-  var dimRetained = document.getElementById("dim-retained");
-  if (dimRetained) {
-    new MutationObserver(function () {
-    }).observe(dimRetained, { childList: true, characterData: true, subtree: true });
-  }
 })();

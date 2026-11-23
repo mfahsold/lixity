@@ -49,7 +49,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         fingerprint=analysis.fingerprint, scenes=scenes, title='Synthetic navigation',
         labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]},
         language_key=locale, controls=True, enabled_actions=['analyze', 'research-reader'],
-        manuscript_pdf_token='synthetic-navigation-project',
+        manuscript_pdf_token='a' * 64, manuscript_source_sha256='b' * 64,
         reader_document=reader_blocks(text, config, analysis.paragraphs), paragraph_evidence=analysis.evidence)
 print(json.dumps(result))
 `, {root});
@@ -82,6 +82,13 @@ async function createPage(browser, locale, width, motion = 'reduce') {
       return route.fulfill({status: 400, json: {ok: false, message: 'Read-only navigation fixture'}});
     }
     if (url.origin !== 'http://lixity.test') return route.abort();
+    if (url.pathname === '/api/manuscript-delta') return route.fulfill({json: {
+      ok: true, schema_version: 'lixity-timeline/1', current: {revision: 'b'.repeat(64)},
+      has_baseline: true, base: {created_at: 1708000000}, chapter_deltas: [
+        {num: 1, match_status: 'matched', words_delta: 12345, asl_delta: 0.05, dialog_pct_delta: 25},
+        {num: 2, match_status: 'ambiguous', words_delta: 12345},
+      ],
+    }});
     if (url.pathname.startsWith('/api/')) return route.fulfill({json: {
       ok: true, initialized: false, records: [], sources: [], dossiers: [], claims: [], decisions: [],
     }});
@@ -724,6 +731,20 @@ async function finish(page, errors, writes) {
             'Axis captions use the owning localized label pack, not missing global UI keys');
           await page.screenshot({path: path.join(artifacts, `metric-origin-${locale}-${width}.png`)});
           await page.keyboard.press('Escape');
+          await openAnalysisSection(page, 'matrix');
+          const baseline = page.locator('#matrix-revision-baseline');
+          await baseline.waitFor({state: 'visible'});
+          assert.equal(await baseline.locator('a').getAttribute('href'), `/guides/metrics/${locale}.html#revisions`);
+          const differences = page.locator('#matrix tr[data-chapter-num="1"] .chapter-revision-delta');
+          assert.deepEqual(await differences.allTextContents(), await page.evaluate(() => {
+            const lang = document.documentElement.lang;
+            const signed = (value, digits) => new Intl.NumberFormat(lang, {minimumFractionDigits: digits,
+              maximumFractionDigits: digits, signDisplay: 'always'}).format(value);
+            return [signed(12345, 0), signed(0.05, 1), uiLabel('measurement_percentage_point_change').replace('{value}', signed(25, 1))];
+          }));
+          assert.ok(await differences.evaluateAll(nodes => nodes.every(delta => delta.scrollWidth <= delta.clientWidth)));
+          assert.equal(await page.locator('#matrix tr[data-chapter-num="2"] .chapter-revision-delta').count(), 0);
+          if (locale === 'de') await page.screenshot({path: path.join(artifacts, `matrix-differences-${width}.png`)});
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });

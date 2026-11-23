@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import html as html_mod
 import re
+from bisect import bisect_left, bisect_right
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import lru_cache
+from itertools import accumulate
 from typing import TYPE_CHECKING, Any
 from unicodedata import normalize
 from urllib.parse import urlsplit
@@ -326,6 +328,26 @@ def split_chapters(text: str, config: CorpusConfig) -> list[tuple[int, str, str]
     paragraph profiler intentionally omits their content.
     """
     return [(number, title, body) for number, title, body, _line in _chapter_spans(text, config)]
+
+
+def chapter_body_line_offsets(text: str, config: CorpusConfig) -> dict[int, int]:
+    """Map a chapter-body line to a manuscript line by adding its offset."""
+    source = before_appendix(text, config)
+    line_offsets = [0, *accumulate(len(line) for line in source.splitlines(keepends=True))]
+    headings = chapter_heading_spans(source, config)
+    heading_lines = [line for _start, _end, line, _title in headings]
+    offsets = {}
+    for number, _title, body, heading_line in _chapter_spans(text, config):
+        next_heading = bisect_right(heading_lines, heading_line)
+        stop = headings[next_heading][0] if next_heading < len(headings) else len(source)
+        offset = source.rfind(body, line_offsets[heading_line - 1], stop)
+        # The accepted body must be a complete line-aligned suffix of this source span.
+        if offset < 0 or source[offset + len(body):stop].strip():
+            continue
+        line_offset = bisect_left(line_offsets, offset)
+        if line_offsets[line_offset] == offset:
+            offsets[number] = line_offset
+    return offsets
 
 
 def split_scenes(body: str) -> tuple[list[str], int]:

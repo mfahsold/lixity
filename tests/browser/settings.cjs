@@ -137,6 +137,8 @@ server.serve_forever()
         const result=await response;
         assert.equal(result.status(),200,await result.text());
         assert.equal((await result.json()).ok,true);
+        await page.waitForFunction(label=>document.querySelector('#settings-save-status').textContent===label,
+          data.fixtures.en.labels.settings_applied);
         await reloaded;
         await page.locator('#tab-view-project').click();
       }
@@ -913,7 +915,9 @@ server.serve_forever()
         if(request.url().endsWith('/api/settings')) {
           settingsPosts.push(request.postDataJSON());
           if(pending) await pending;
-          return route.fulfill({status:400,json:{ok:false,message:'Synthetic settings failure'}});
+          return settingsPosts.length === 1
+            ? route.fulfill({status:409,json:{ok:false,code:'stale-context',message:'Synthetic stale project'}})
+            : route.fulfill({status:400,json:{ok:false,message:'Synthetic settings failure'}});
         }
         if(request.url().includes('/api/')) return route.fulfill({json:{ok:true,initialized:false}});
         return route.fulfill({contentType:'text/html',body:data.fixtures[language][loaded?'loaded':'empty']});
@@ -955,6 +959,14 @@ server.serve_forever()
       assert.equal(await saveDefaults.isDisabled(),false);
       assert.ok((await saveDefaults.locator('..').textContent()).includes(data.fixtures[language].labels.settings_save_analysis_defaults));
       await page.locator('#settings-thresholds > summary').click();
+      const preset=page.locator('#set-threshold-preset');
+      await preset.selectOption('developmental');
+      assert.equal(await page.locator('#set-z-mild').inputValue(),'3');
+      await page.locator('#set-z-mild').fill('2.8');
+      assert.equal(await preset.inputValue(),'custom');
+      await page.locator('#settings-reset').click();
+      assert.equal(await preset.inputValue(),'balanced');
+      assert.equal(await page.locator('#settings-thresholds [data-sync-select]').count(),0);
       for(const id of ['set-z-mild','set-z-strong','set-fdr-q','set-fdr-method','set-dim-threshold','set-flag-min-sev']) {
         const field=page.locator('#'+id);
         assert.equal(await field.isVisible(),true);
@@ -992,6 +1004,7 @@ server.serve_forever()
       if(language==='en') {
         assert.equal(await author.isDisabled(),true,'Pending save keeps the submitted author draft stable');
         assert.equal(await page.locator('[data-action=settings]').isDisabled(),true);
+        assert.equal(await page.locator('#settings-save-status').textContent(),data.fixtures.en.labels.settings_applying);
         release(); pending=null;
       }
       await page.waitForFunction(()=>!document.querySelector('[data-action=settings]').disabled);
@@ -1001,7 +1014,8 @@ server.serve_forever()
       assert.equal(settingsPosts[0].title,undefined,'Changing the author does not persist the unchanged display title');
       assert.equal(settingsPosts[0].fdr_q,0.05);
       assert.equal(Object.hasOwn(settingsPosts[0],'save_analysis_defaults'),false,'Unchecked Apply retains session behavior');
-      assert.ok((await page.locator('#ctl-status').textContent()).includes('Synthetic settings failure'));
+      assert.equal(await page.locator('#settings-save-status').textContent(),data.fixtures[language].labels.settings_stale_context);
+      assert.equal(await page.locator('#settings-save-status').isVisible(),true);
       await saveDefaults.check();
       await page.locator('#set-language').selectOption('auto');
       await page.locator('#set-fdr-q').fill('0.013000000000003');
@@ -1014,6 +1028,7 @@ server.serve_forever()
       assert.equal(settingsPosts.at(-1).fdr_q,0.013000000000003);
       assert.equal(settingsPosts.at(-1).project_token,'a'.repeat(64));
       assert.equal(await saveDefaults.isChecked(),true,'Failed saves retain the opt-in draft for retry');
+      assert.equal(await page.locator('#settings-save-status').textContent(),'Synthetic settings failure');
       await page.locator('#settings-form').screenshot({path:path.join(identityArtifacts,`${language}-${width}.png`)});
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),language+' '+width);
       loaded=false; await page.reload(); await page.locator('#tab-view-project').click();

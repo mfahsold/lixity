@@ -17,18 +17,16 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from bisect import bisect_left, bisect_right
+from bisect import bisect_right
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from itertools import accumulate, pairwise
+from itertools import pairwise
 from typing import TYPE_CHECKING, Any
 
 from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import (
-    _chapter_spans,
-    before_appendix,
-    chapter_heading_spans,
+    chapter_body_line_offsets,
     counting_inline_text,
     parse_markdown_blocks,
     prose_text,
@@ -214,19 +212,11 @@ def _reader_block_ranges(
     """Align the counted chapter projection to exact profiled line anchors."""
     by_line = {(p.chapter_num, p.start_line, p.end_line): (index, p)
                for index, p in enumerate(paragraphs)}
-    source = before_appendix(text, config)
-    line_offsets = [0, *accumulate(len(line) for line in source.splitlines(keepends=True))]
-    headings = chapter_heading_spans(source, config)
-    heading_lines = [line for _start, _end, line, _title in headings]
+    offsets = chapter_body_line_offsets(text, config)
     output: dict[int, list[_ReaderBlock]] = {}
-    for number, _title, body, heading_line in _chapter_spans(text, config):
-        next_heading = bisect_right(heading_lines, heading_line)
-        stop = headings[next_heading][0] if next_heading < len(headings) else len(source)
-        offset = source.rfind(body, line_offsets[heading_line - 1], stop)
-        if offset < 0 or source[offset + len(body):stop].strip():
-            continue
-        line_offset = bisect_left(line_offsets, offset)
-        if line_offsets[line_offset] != offset:
+    for number, _title, body in split_chapters(text, config):
+        line_offset = offsets.get(number)
+        if line_offset is None:
             continue
         chunks: list[str] = []
         projected: list[_ReaderBlock] = []

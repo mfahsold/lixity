@@ -79,6 +79,16 @@ class NarratorConflict(ValueError):
         )
 
 
+class VoiceProfileInUse(ValueError):
+    """A saved passage direction still refers to a profile marked for removal."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "A removed voice profile is used by saved speech direction; "
+            "review or remove that direction before deleting the profile"
+        )
+
+
 def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
     """Whether ``delivery`` keeps the narrator's voice identity.
 
@@ -459,8 +469,7 @@ def check_profile_removals(project: str | Path, audio: object) -> None:
     if removed:
         state, _ = _read(root)
         if any(entry.direction.profile_id in removed for entry in state.entries):
-            raise ValueError('A removed voice profile is used by saved speech direction; '
-                             'review or remove that direction before deleting the profile')
+            raise VoiceProfileInUse()
 
 
 def direction_state(project: str | Path, source: str | Path, *, language: str = 'en') -> dict[str, Any]:

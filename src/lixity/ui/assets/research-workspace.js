@@ -66,13 +66,18 @@ async function readResearchProjectInfo(freshRead) {
     activeRootEl.title = rootPath;
     activeRootEl.textContent = uiLabel("research_project") + " " + rootName;
     if (status.initialized) {
-      activeRootEl.textContent = uiFormat("research_project_summary", {
-        root: rootName,
-        sources: status.sources_count || 0,
-        dossiers: status.dossiers_count || 0,
-        claims: status.claims_count || 0,
-        decisions: status.decisions_count || 0
-      });
+      var counts = Object.entries({sources: status.sources_count, dossiers: status.dossiers_count,
+        claims: status.claims_count, decisions: status.decisions_count});
+      if (counts.every(function([, count]) { return Number.isSafeInteger(count) && count >= 0; })) {
+        var number = new Intl.NumberFormat(document.documentElement.lang || undefined);
+        var summary = {root: rootName};
+        counts.forEach(function([kind, count]) {
+          summary[kind] = uiCountFormat("research_project_count_" + kind, count, {count: number.format(count)});
+        });
+        activeRootEl.textContent = uiFormat("research_project_summary", summary);
+      } else {
+        activeRootEl.textContent += " · " + uiLabel("research_project_counts_unavailable");
+      }
     }
   } else if (activeRootEl && status && !status.ok) {
     activeRootEl.className = "ctl-status err";

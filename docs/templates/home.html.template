@@ -20,6 +20,7 @@ $alternates
 <meta name="fediverse:creator" content="@lixity@mastodon.social"/>
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
+<script src="assets/site-language.js" defer></script>
 <script src="assets/site.js" defer></script>
 <script src="assets/product-tour.js" defer></script>
 <meta property="og:type" content="website"/>
@@ -54,19 +55,19 @@ $alternates
 <aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
-<div class="hero-cta"><a class="ctl primary" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a> <a class="ctl" href="sandbox/index.html" id="sandbox-cta">$sandbox_cta <span aria-hidden="true">→</span></a></div><p class="home-note">$demo_note</p></div>
+<div class="hero-cta"><a class="ctl primary" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a> <a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta">$sandbox_cta <span aria-hidden="true">→</span></a></div><p class="home-note">$demo_note</p></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
 <source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
 <source src="videos/product-tour.mp4" type="video/mp4"/>
-<a href="demo/report.html">$demo</a>
+<a href="demo/report.html" hreflang="en">$demo</a>
 </video>
 <div class="tour-caption" aria-hidden="true" hidden><span>$tour_read</span></div>
 </div>
 <figcaption>
-<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
-<p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html">$demo</a></p>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html" hreflang="en">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
+<p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html" hreflang="en">$demo</a></p>
 <details id="tour-transcript"><summary>$tour_transcript</summary><ol>
 $tour_cues
 </ol></details>
@@ -74,10 +75,10 @@ $tour_cues
 </figure>
 </section>
 <section class="home-section" id="features"><h2>$tasks_title</h2><p>$workflow</p><div class="home-tasks">
-<article id="writing"><figure class="home-task-media"><img src="screenshots/dashboard-reader-focus.png" width="$reader_focus_width" height="$reader_focus_height" alt="Focused reading and review markers in the Lixity manuscript workspace" loading="lazy" decoding="async"/></figure><h3>$read_title</h3><p>$read_text</p><a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased" lang="en">$editor_link</a></article>
-<article id="linguistic-analysis"><figure class="home-task-media"><img src="screenshots/dashboard-heatmap.png" width="$heatmap_width" height="$heatmap_height" alt="Chapter-by-feature deviation heatmap and sentence rhythm metrics" loading="lazy" decoding="async"/></figure><h3>$linguistics_title</h3><p>$linguistics_text</p><a href="guides/metrics/${lang}.html">$linguistics_link</a></article>
-<article id="research-workspace"><figure class="home-task-media"><img src="screenshots/dashboard-research-timeline.png" width="$research_timeline_width" height="$research_timeline_height" alt="Research timeline linking dossiers, claims and historical evidence" loading="lazy" decoding="async"/></figure><h3>$research_title</h3><p>$research_text</p><a href="guides/research-pdf.html" lang="en">Research, dossiers and evidence (English)</a></article>
-<article id="reading-copies"><figure class="home-task-media"><img src="screenshots/dashboard-editorial.png" width="$editorial_width" height="$editorial_height" alt="Editorial overview with style bands and standalone reading copies" loading="lazy" decoding="async"/></figure><h3>$share_title</h3><p>$share_text</p><a href="demo/warehouse-4-dossier.pdf">$dossier_example</a> · <a href="demo/reader/index.html" lang="en">Reading copy (English)</a></article>
+<article id="writing"><figure class="home-task-media"><img src="screenshots/dashboard-reader-focus.png" width="$reader_focus_width" height="$reader_focus_height" alt="$read_alt" loading="lazy" decoding="async"/></figure><h3>$read_title</h3><p>$read_text</p><div class="home-task-links"><a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased" hreflang="en">$editor_link</a></div></article>
+<article id="linguistic-analysis"><figure class="home-task-media"><img src="screenshots/dashboard-heatmap.png" width="$heatmap_width" height="$heatmap_height" alt="$linguistics_alt" loading="lazy" decoding="async"/></figure><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a></div></article>
+<article id="research-workspace"><figure class="home-task-media"><img src="screenshots/dashboard-research-timeline.png" width="$research_timeline_width" height="$research_timeline_height" alt="$research_alt" loading="lazy" decoding="async"/></figure><h3>$research_title</h3><p>$research_text</p><div class="home-task-links"><a href="guides/research-pdf.html" lang="en" hreflang="en">Research, dossiers and evidence (English)</a></div></article>
+<article id="reading-copies"><figure class="home-task-media"><img src="screenshots/dashboard-editorial.png" width="$editorial_width" height="$editorial_height" alt="$share_alt" loading="lazy" decoding="async"/></figure><h3>$share_title</h3><p>$share_text</p><div class="home-task-links"><a href="demo/warehouse-4-dossier.pdf" hreflang="en">$dossier_example</a><a href="demo/reader/index.html" hreflang="en">$reading_copy</a></div></article>
 </div></section>
 <section class="home-principle" id="measurement-context"><span class="principle-mark" aria-hidden="true">“</span><div><h2>$principle</h2><p>$principle_text</p></div></section>
 <section class="home-section home-compare" id="compare"><h2>$compare_title</h2><p class="compare-lead">$compare_lead</p><div class="compare-table-wrap"><table class="compare-table"><thead><tr><th scope="col">$compare_col_aspect</th><th scope="col" class="compare-lixity">$compare_col_lixity</th><th scope="col">$compare_col_desktop</th><th scope="col">$compare_col_oss</th><th scope="col">$compare_col_cloud</th><th scope="col">$compare_col_planners</th></tr></thead><tbody><tr><th scope="row">$compare_row_method</th><td class="compare-lixity">$compare_lix_method</td><td>$compare_dsk_method</td><td>$compare_oss_method</td><td>$compare_cld_method</td><td>$compare_pln_method</td></tr><tr><th scope="row">$compare_row_dossiers</th><td class="compare-lixity">$compare_lix_dossiers</td><td>$compare_dsk_dossiers</td><td>$compare_oss_dossiers</td><td>$compare_cld_dossiers</td><td>$compare_pln_dossiers</td></tr><tr><th scope="row">$compare_row_research</th><td class="compare-lixity">$compare_lix_research</td><td>$compare_dsk_research</td><td>$compare_oss_research</td><td>$compare_cld_research</td><td>$compare_pln_research</td></tr><tr><th scope="row">$compare_row_privacy</th><td class="compare-lixity">$compare_lix_privacy</td><td>$compare_dsk_privacy</td><td>$compare_oss_privacy</td><td>$compare_cld_privacy</td><td>$compare_pln_privacy</td></tr><tr><th scope="row">$compare_row_license</th><td class="compare-lixity">$compare_lix_license</td><td>$compare_dsk_license</td><td>$compare_oss_license</td><td>$compare_cld_license</td><td>$compare_pln_license</td></tr></tbody></table></div></section>

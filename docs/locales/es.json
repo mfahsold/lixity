@@ -9,7 +9,7 @@
   "eyebrow": "Un espacio de trabajo local para escribir",
   "headline": "Revisa tu manuscrito.\nTen la documentación a mano.",
   "intro": "Descubre por qué se marcó un pasaje, compara un borrador y ten a mano los personajes y las fuentes. Lixity utiliza tu manuscrito en Markdown o texto plano en tu equipo.",
-  "demo": "Explorar la demo",
+  "demo": "Explorar la demo (en inglés)",
   "tour": "Visita guiada (inglés)",
   "demo_note": "Manuscrito ficticio en inglés. Demo de solo lectura. Sin cuenta ni subida de archivos.",
   "preview": "El espacio de trabajo real: lee tu prosa sin distracciones y revela ritmo, diálogos y patrones de escena solo cuando lo decidas.",
@@ -57,7 +57,7 @@
   "discover": "Ver el recorrido",
   "editor_link": "Alcance y disponibilidad del editor (inglés)",
   "workflow": "Lee, escribe y comprueba el efecto de un cambio. El análisis integrado funciona sin conexión. Los servicios opcionales de voz y mapas y los clientes de IA conectados tienen sus propios requisitos de red y tratamiento de datos.",
-  "sandbox_cta": "Probar un pasaje en línea",
+  "sandbox_cta": "Probar un pasaje (interfaz en inglés)",
   "compare_title": "Dónde se diferencia Lixity",
   "compare_lead": "Lixity no sustituye a un editor humano ni reescribe tu prosa. Complementa suites de escritorio, editores open source, correctores en la nube y planificadores donde importan la privacidad local, las señales deterministas y la procedencia de fuentes.",
   "compare_col_aspect": "Enfoque",
@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Fichas de personajes, etiquetas y corcho; mantenimiento manual",
   "compare_cld_dossiers": "Sin dosieres de personajes ni escenas",
   "compare_pln_dossiers": "Líneas temporales, fichas de escena y arcos; solo planificación sin análisis de texto",
-  "dossier_example": "Ver una ficha de ejemplo en PDF (inglés)"
+  "dossier_example": "Ver una ficha de ejemplo en PDF (inglés)",
+  "reading_copy": "Copia de lectura (en inglés)",
+  "read_alt": "Manuscrito con título de capítulo, texto y barra de búsqueda",
+  "linguistics_alt": "Comparación de capítulos con diferencias destacadas en color y datos sobre el ritmo de las oraciones",
+  "research_alt": "Cronología de afirmaciones fechadas con las fechas sin situar en una lista separada",
+  "share_alt": "Nota de revisión en un párrafo del manuscrito con las opciones Guardar y Cancelar"
 }

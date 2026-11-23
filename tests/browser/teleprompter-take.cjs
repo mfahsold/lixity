@@ -6,16 +6,38 @@ const path = require('node:path');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const labels=pythonFixture('import json; from lixity.workspace_labels import WORKSPACE_LABELS; print(json.dumps(WORKSPACE_LABELS["de"]))');
 
+const textContrast = locator => locator.evaluate(element => {
+  const channels = color => color.match(/[\d.]+/g).map(Number);
+  const luminance = rgb => rgb.slice(0, 3).map(value => value / 255)
+    .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+  const layers = [];
+  for (let node = element; node; node = node.parentElement) {
+    const [red, green, blue, alpha = 1] = channels(getComputedStyle(node).backgroundColor);
+    layers.push({rgb: [red, green, blue], alpha});
+    if (alpha === 1) break;
+  }
+  const background = layers.reduceRight((base, {rgb, alpha}) =>
+    rgb.map((value, index) => value * alpha + base[index] * (1 - alpha)), [255, 255, 255]);
+  const foreground = luminance(channels(getComputedStyle(element).color));
+  const backdrop = luminance(background);
+  return (Math.max(foreground, backdrop) + .05) / (Math.min(foreground, backdrop) + .05);
+});
+
 (async () => {
   const browser = await launchChromium();
   const artifacts = fs.mkdtempSync('/tmp/lixity-teleprompter-take-');
   try {
     for (const width of [1440,320]) {
-      const page=await browser.newPage({viewport:{width,height:900}}), errors=[];
+      const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'}), errors=[];
       page.on('pageerror',error=>errors.push(error.message));
       await page.route('http://localhost:41739/**',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html lang="en"><body data-speech-capable="false" data-manuscript-source-sha256="synthetic-source"><form id="settings-form" data-project-token="synthetic-project"></form><button id="reader-teleprompter">Teleprompter</button><main id="chapters"><section class="chapter" id="ch-1"><h2>Garden</h2><div class="ptext" data-start="3" data-end="3" data-paragraph-sha256="synthetic-paragraph"><div class="ptext-inner"><p>A synthetic reading script is not a transcript.</p></div></div></section></main></body></html>'}));
       await page.goto('http://localhost:41739/');
-      await page.evaluate(labels=>{window.uiLabel=key=>labels[key]||key;document.documentElement.dataset.theme='dark';},labels);
+      const theme = width === 1440 ? 'light' : 'dark';
+      await page.evaluate(({labels, theme})=>{
+        window.uiLabel=key=>labels[key]||key;
+        document.documentElement.dataset.theme=theme;
+      },{labels, theme});
       await page.evaluate(()=>{
         window.testCapture={requests:[],stops:0,closes:0,resumes:0,revoked:[],mode:'pending'};
         const create=URL.createObjectURL.bind(URL),revoke=URL.revokeObjectURL.bind(URL);
@@ -33,10 +55,26 @@ const labels=pythonFixture('import json; from lixity.workspace_labels import WOR
         document.addEventListener('lixity:open-speech-studio',event=>{window.handedTake=event.detail;});
       });
       for(const file of ['design-tokens.css','components.css','teleprompter.css','speech-player.css'])await page.addStyleTag({content:fs.readFileSync('src/lixity/ui/assets/'+file,'utf8')});
-      for(const file of ['audio-take.js','speech-player.js','teleprompter.js'])await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
+      for(const file of ['icons.js','audio-take.js','speech-player.js','teleprompter.js'])await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
       const record=page.locator('.teleprompter-btn-record'),state=page.locator('#teleprompter-record-status'),card=page.locator('.teleprompter-take-card');
       try {
-        await page.locator('#reader-teleprompter').click();await record.click();
+        await page.locator('#reader-teleprompter').click();
+        const play = page.locator('.teleprompter-btn-primary');
+        await play.hover();
+        const start = await textContrast(play);
+        await play.click();
+        const pause = await textContrast(play);
+        await play.click();
+        const context = page.locator('.teleprompter-dossier-toggle');
+        await context.click();
+        const note = page.locator('.teleprompter-sidebar-empty');
+        await note.waitFor();
+        const sidebar = await textContrast(note);
+        await context.click();
+        assert.ok([start, pause, sidebar].every(value => value >= 4.5),
+          `Contrast at ${width}px with the ${theme} app theme: start ${start}, pause ${pause}, sidebar ${sidebar}`);
+        assert.equal(await page.locator('#teleprompter-modal').evaluate(el=>getComputedStyle(el).colorScheme),'dark');
+        await record.click();
         assert.equal(await state.getAttribute('data-state'),'pending','Permission pending is visible before audio capture begins');
         assert.ok(await state.isVisible());assert.equal(await record.evaluate(el=>el.classList.contains('is-active')),false);
         await page.evaluate(()=>testCapture.requests.at(-1).reject(new DOMException('Denied','NotAllowedError')));

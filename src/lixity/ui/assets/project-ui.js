@@ -59,6 +59,17 @@ function updateImportLanguagePreview() {
   }
 }
 
+function docxConversionNote(item) {
+  var element = item && item.element;
+  if (!["table", "drawing", "footnote"].includes(element)) return uiLabel("import_loss_other");
+  var description = uiLabel("import_loss_" + element);
+  if (!Number.isSafeInteger(item.position) || item.position < 1) return description;
+  var position = uiFormat(element === "table" ? "import_loss_block" : "import_loss_paragraph", {
+    number: item.position.toLocaleString(document.documentElement.lang || "en")
+  });
+  return position + " · " + description;
+}
+
 function processImportedFiles(files) {
   if (!files || !files.length) return;
   var submitBtn = document.getElementById("btn-submit-import-project");
@@ -147,7 +158,7 @@ function processImportedFiles(files) {
           var list = document.createElement("ul");
           data.loss_report.forEach(function (item) {
             var li = document.createElement("li");
-            li.textContent = item.element + ": " + item.reason;
+            li.textContent = docxConversionNote(item);
             list.appendChild(li);
           });
           lossEl.append(titleSpan, list);
@@ -502,6 +513,19 @@ function openExistingProject(path, browse) {
 
 renderRecentProjects();
 
+function projectPathMessage(data) {
+  switch (data && data.code) {
+    case "path-missing": return uiLabel("wizard_path_missing");
+    case "path-unreadable": return uiLabel("wizard_path_unreadable");
+    case "invalid-project-path": return uiLabel("wizard_path_invalid");
+    case "unsupported-manuscript-type": return uiLabel("wizard_path_unsupported_type");
+    case "ambiguous-manuscript": return uiLabel("wizard_path_ambiguous_manuscript");
+    case "configured-manuscript-missing": return uiLabel("wizard_path_configured_manuscript_missing");
+    case "manuscript-missing": return uiLabel("wizard_path_manuscript_missing");
+    default: return "";
+  }
+}
+
 async function submitProjectForm(form, action, payload, button) {
   if (button && button.disabled) return;
   var feedback = form.querySelector(".project-form-status");
@@ -520,7 +544,7 @@ async function submitProjectForm(form, action, payload, button) {
     if (modal && typeof modal.close === "function") modal.close();
   } else if (feedback) {
     feedback.className = "ctl-status project-form-status err";
-    feedback.textContent = uiFormat("wizard_action_failed", {
+    feedback.textContent = projectPathMessage(result) || uiFormat("wizard_action_failed", {
       reason: (result && result.message) || uiLabel("wizard_unknown_error")
     });
     feedback.hidden = false;
@@ -633,11 +657,7 @@ if (openChooser) {
 
   async function loadOpenChooser(path, focusEntry) {
     var request = ++chooseRequest;
-    currentChoosePath = "";
-    parentChoosePath = null;
-    choosePath.textContent = "";
     chooseParent.disabled = true;
-    chooseList.replaceChildren();
     chooseList.setAttribute("aria-busy", "true");
     chooseFolder.disabled = true;
     chooseMessage(uiLabel("wizard_choose_loading"), false);
@@ -649,23 +669,13 @@ if (openChooser) {
       LixityLog.api("GET", url, performance.now() - t0, response.status);
       if (request !== chooseRequest || openChooser.hidden) return;
       if (!response.ok || !data.ok || typeof data.path !== "string" || !Array.isArray(data.entries)) {
-        if (path) {
-          chooseMessage(uiLabel("wizard_choose_stale_path") || (data.message || uiLabel("wizard_unknown_error")), true);
-          setTimeout(function() {
-            if (request === chooseRequest && !openChooser.hidden) {
-              loadOpenChooser(null, focusEntry);
-            }
-          }, 1200);
-          return;
-        }
-        chooseMessage(uiFormat("wizard_choose_failed", {
-          reason: data.message || uiLabel("wizard_unknown_error")
-        }), true);
+        chooseMessage(projectPathMessage(data) || uiLabel("wizard_choose_unavailable"), true);
         return;
       }
       currentChoosePath = data.path;
       parentChoosePath = typeof data.parent === "string" ? data.parent : null;
       choosePath.textContent = currentChoosePath;
+      chooseList.replaceChildren();
       if (chooseProject) {
         var probe = data.project && typeof data.project === "object" ? data.project : null;
         if (probe && probe.detected === true) {
@@ -718,10 +728,14 @@ if (openChooser) {
     } catch (error) {
       LixityLog.error("loadOpenChooser error:", error);
       if (request === chooseRequest && !openChooser.hidden) {
-        chooseMessage(uiFormat("wizard_choose_failed", { reason: String(error) }), true);
+        chooseMessage(uiLabel("wizard_choose_unavailable"), true);
       }
     } finally {
-      if (request === chooseRequest) chooseList.removeAttribute("aria-busy");
+      if (request === chooseRequest) {
+        chooseList.removeAttribute("aria-busy");
+        chooseParent.disabled = !parentChoosePath;
+        chooseFolder.disabled = !currentChoosePath;
+      }
     }
   }
 
@@ -730,9 +744,18 @@ if (openChooser) {
       closeOpenChooser(chooseButton);
       return;
     }
+    var path = openPathInput.value.trim() || currentChoosePath || null;
+    currentChoosePath = "";
+    parentChoosePath = null;
+    choosePath.textContent = "";
+    chooseList.replaceChildren();
+    if (chooseProject) {
+      chooseProject.textContent = "";
+      chooseProject.classList.remove("detected");
+    }
     openChooser.hidden = false;
     chooseButton.setAttribute("aria-expanded", "true");
-    loadOpenChooser(openPathInput.value.trim() || currentChoosePath || null, false);
+    loadOpenChooser(path, false);
   });
   chooseClose.addEventListener("click", function() { closeOpenChooser(chooseButton); });
   chooseHome.addEventListener("click", function() { loadOpenChooser(null, true); });
@@ -915,6 +938,14 @@ window.LixityManuscriptLinks = {
   contextToken: researchContextToken,
   errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
+  findParagraph: function(anchor) {
+    if (!anchor || !Number.isSafeInteger(anchor.start_line) || anchor.start_line < 1 ||
+        !Number.isSafeInteger(anchor.end_line) || anchor.end_line < anchor.start_line ||
+        typeof anchor.paragraph_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(anchor.paragraph_sha256)) return null;
+    var matches = document.querySelectorAll('#chapters .ptext[data-start="' + anchor.start_line +
+      '"][data-end="' + anchor.end_line + '"][data-paragraph-sha256="' + anchor.paragraph_sha256 + '"]');
+    return matches.length === 1 ? matches[0] : null;
+  },
   navigate: function(panel) {
     switchActiveView("analysis");
     setPassageScrollMargin(panel);

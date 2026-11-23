@@ -315,7 +315,7 @@ server.serve_forever()
       '/api/research-zotero', '/api/research-zotero',
       '/api/research-zotero-ingest', '/api/research-zotero']);
     assert.equal(fs.readFileSync(path.join(fixture.project, 'manuscript.md'), 'utf8'), '');
-    await expect(page.locator('#r-active-root')).toContainText('1 sources, 1 dossiers, 0 claims, 0 decisions');
+    await expect(page.locator('#r-active-root')).toContainText('1 source, 1 dossier, 0 claims, 0 decisions');
     await expect(page.locator('#r-active-root')).toContainText(path.basename(fixture.project), 'The active root stays readable as its folder name');
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 1);
@@ -372,7 +372,7 @@ server.serve_forever()
     const claimId = claims.claims[0].id;
     assert.deepEqual(claims.claims[0].scope.actors, ['Archivist', 'Reader']);
     assert.equal(claims.claims[0].dossier_id, dossiers.dossiers[0].id);
-    await expect(page.locator('#r-active-root')).toContainText('1 claims');
+    await expect(page.locator('#r-active-root')).toContainText('1 claim,');
     if (!await page.locator('#r-link-composer').evaluate(node => node.open)) await page.locator('#r-link-composer > summary').click();
     await page.locator('#r-link-claim-select').selectOption(claimId);
     await page.locator('[data-rtab=search]').click();
@@ -477,7 +477,7 @@ server.serve_forever()
     const decisions = await (await page.request.get(fixture.url + '/api/research/decisions')).json();
     assert.equal(decisions.decisions[0].claim_id, claimId);
     assert.equal(decisions.decisions[0].deviation_from_fact, true);
-    await expect(page.locator('#r-active-root')).toContainText('1 decisions');
+    await expect(page.locator('#r-active-root')).toContainText('1 decision)');
     await page.locator('#research-manager').screenshot({path: path.join(artifacts, 'decisions-desktop.png')});
     if (!await page.locator('#r-decision-composer').evaluate(node => node.open)) await page.locator('#r-decision-composer > summary').click();
     await page.locator('#r-decision-title').fill('General artistic choice');

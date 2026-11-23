@@ -51,11 +51,18 @@ function files(root) {
     for (const viewport of [{width: 1440, height: 950}, {width: 390, height: 850}]) {
       const page = await browser.newPage({viewport, reducedMotion: 'reduce'});
       const errors = [], writes = [], statuses = [];
+      let exampleCounts = null;
       page.on('pageerror', error => errors.push(error.message));
       await page.route('**/api/**', async route => {
         const request = route.request(), url = new URL(request.url());
         if (request.method() !== 'GET') { writes.push(url.pathname); await route.abort(); return; }
         if (url.pathname === '/api/research/status') {
+          if (exampleCounts) {
+            const response = await route.fetch();
+            const payload = await response.json();
+            await route.fulfill({response, json: {...payload, ...exampleCounts}});
+            return;
+          }
           let release;
           const held = new Promise(resolve => {release = resolve;});
           statuses.push({url: request.url(), release});
@@ -108,6 +115,14 @@ function files(root) {
       await expect.poll(() => statuses.length, {timeout: 2000}).toBe(5);
       statuses[3].release(); statuses[4].release();
       await page.evaluate(() => Promise.all([window.statusDeparted, window.statusReturned]));
+
+      const summary = page.locator('#r-active-root');
+      exampleCounts = {sources_count: 12600, dossiers_count: 1, claims_count: 0, decisions_count: 1};
+      await page.evaluate(() => refreshResearchProjectInfo());
+      await expect(summary).toHaveText('Project: synthetic-project (12,600 sources, 1 dossier, 0 claims, 1 decision)');
+      exampleCounts.decisions_count = undefined;
+      await page.evaluate(() => refreshResearchProjectInfo());
+      await expect(summary).toHaveText('Project: synthetic-project · Record counts are unavailable.');
       assert.deepEqual(errors, [], 'The rendered context flow has no runtime errors');
       assert.deepEqual(writes, [], 'The browser journey issues no writes');
       await page.close();

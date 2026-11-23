@@ -287,6 +287,36 @@ async function companionOverviewReturn(browser, motion) {
  await page.close();
  console.log(`Compact dossier resumed-response returns passed with ${motion} motion`);
 }
+async function dossierRibbon(page, compact) {
+ const summary=page.locator('#research-dossiers-list [data-research-detail=dossier]');
+ await summary.click();
+ const folder=summary.locator('..').locator('.research-dossier-folder');
+ const location=folder.locator('[data-section-location]');
+ const heading=folder.locator('.research-dossier-body-rendered h2').first();
+ const content=folder.locator('[data-section-contents]');
+ const orientation=compact?location:content;
+ await heading.evaluate(node=>node.scrollIntoView());
+ await settle(page);
+ const fits=()=>orientation.evaluate(node=>{
+  const ribbon=node.closest('.research-tab-pane').querySelector(':scope > .research-pane-navigation');
+  const above=ribbon.getBoundingClientRect(), at=node.getBoundingClientRect();
+  return at.top>=above.bottom-1 && at.bottom<=innerHeight;
+ });
+ await expect.poll(fits,{message:'The dossier outline remains reachable beneath the research ribbon'}).toBe(true);
+ if(compact) {
+  await location.click();
+  await expect(content).toHaveAttribute('open','');
+ }
+ const target=await heading.getAttribute('id');
+ await content.locator(`[data-section-link="${target}"]`).click();
+ await expect.poll(()=>heading.evaluate((node,compact)=>{
+  const selector=compact?'[data-section-location]':'.research-pane-navigation';
+  const owner=node.closest(compact?'.research-dossier-folder':'.research-tab-pane');
+  return node.getBoundingClientRect().top>=owner.querySelector(selector).getBoundingClientRect().bottom-1;
+ },compact),{message:'A dossier heading clears the active sticky navigation levels'}).toBe(true);
+ await page.screenshot({path:path.join(artifacts,`dossier-ribbon-${compact?'compact':'wide'}.png`)});
+ await summary.click();
+}
 (async () => {
  const browser = await launchChromium();
  try {
@@ -467,8 +497,12 @@ async function companionOverviewReturn(browser, motion) {
    }
    await settle(page);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
    await page.screenshot({path:path.join(artifacts,`sections-${locale}-${width}-${motion}.png`)});
+   if(locale==='en' && (width===320 || width===1440) && motion==='reduce') {
+    await page.locator('#tab-view-research').click();
+    await dossierRibbon(page,width===320);
+   }
+   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);
    await page.close();
   }
   const noScript = await browser.newPage({javaScriptEnabled:false,viewport:{width:1440,height:950}});

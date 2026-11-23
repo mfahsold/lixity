@@ -16,7 +16,6 @@ from ..config import (
     ANALYSIS_SETTINGS_KEYS,
     PERSISTED_SETTINGS_KEYS,
     apply_config_to_thresholds,
-    load_project_config,
     prepare_project_settings,
     read_explicit_project_config,
     read_project_config,
@@ -28,13 +27,20 @@ from ..manuscript_import import convert_docx, preview_docx
 from ..project_structure import MAX_CONFIG_BYTES, inspect_project
 from ..research import api as research_api
 from ..research.repository import Repository, ResearchError
+from ..speech_direction import VoiceProfileInUse, check_profile_removals
 from ..speech_profiles import requires_audio_migration
-from ..workspace import resolve_project_target
+from ..workspace import (
+    AmbiguousManuscriptError,
+    ConfiguredManuscriptMissingError,
+    resolve_project_target,
+)
 from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
 from .pdf_context import project_settings_token
 from .views import build_server_dashboard, sanitize_filename
+
+_MANUSCRIPT_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
 
 
 def _project_markers(directory: Path) -> bool:
@@ -96,15 +102,15 @@ class ProjectRoutesMixin(ResponseMixin):
         try:
             target = Path(requested).expanduser().resolve() if requested else Path.home().resolve()
             if not target.exists():
-                self._json({"ok": False, "message": "Path does not exist"}, 404)
+                self._error("Path does not exist", 404, error_code="path-missing")
                 return
             if target.is_file():
-                if target.suffix.lower() not in {".md", ".markdown", ".txt"}:
-                    self._json({"ok": False, "message": "Unsupported manuscript file type"}, 400)
+                if target.suffix.lower() not in _MANUSCRIPT_SUFFIXES:
+                    self._error("Unsupported manuscript file type", error_code="unsupported-manuscript-type")
                     return
                 target = target.parent
             if not target.is_dir():
-                self._json({"ok": False, "message": "Path is not a directory"}, 400)
+                self._error("Path is not a directory", error_code="invalid-project-path")
                 return
 
             selected: list[tuple[int, str, str, str, str, bool]] = []
@@ -123,7 +129,7 @@ class ProjectRoutesMixin(ResponseMixin):
                     try:
                         if entry.is_dir():
                             kind = "directory"
-                        elif entry.is_file() and Path(entry.name).suffix.lower() in {".md", ".markdown", ".txt"}:
+                        elif entry.is_file() and Path(entry.name).suffix.lower() in _MANUSCRIPT_SUFFIXES:
                             kind = "manuscript"
                         else:
                             continue
@@ -140,10 +146,10 @@ class ProjectRoutesMixin(ResponseMixin):
                         selected.pop()
                         truncated = True
         except PermissionError:
-            self._json({"ok": False, "message": "Directory is not readable"}, 403)
+            self._error("Directory is not readable", 403, error_code="path-unreadable")
             return
         except (OSError, RuntimeError, ValueError):
-            self._json({"ok": False, "message": "Invalid project path"}, 400)
+            self._error("Invalid project path", error_code="invalid-project-path")
             return
 
         probe = _project_probe(target)
@@ -169,19 +175,19 @@ class ProjectRoutesMixin(ResponseMixin):
         if not isinstance(save_defaults, bool):
             if publication_save:
                 self._log.warning("Publication profiles stage=save_rejected reason=invalid_defaults")
-            self._json({"ok": False, "message": "save_analysis_defaults must be a boolean"}, 400)
+            self._error("save_analysis_defaults must be a boolean")
             return
         if save_defaults and "language" in payload and (
                 not isinstance(payload["language"], str) or not payload["language"].strip()):
             if publication_save:
                 self._log.warning("Publication profiles stage=save_rejected reason=invalid_language")
-            self._json({"ok": False, "message": "language must be a supported language code"}, 400)
+            self._error("language must be a supported language code", error_code="invalid-language")
             return
         lang = str(payload.get("language") or self.language).strip().lower()
         if lang not in LANGUAGE_CHOICES:
             if publication_save:
                 self._log.warning("Publication profiles stage=save_rejected reason=invalid_language")
-            self._json({"ok": False, "message": f"Unknown language: {lang}"}, 400)
+            self._error(f"Unknown language: {lang}", error_code="invalid-language")
             return
 
         try:
@@ -192,7 +198,8 @@ class ProjectRoutesMixin(ResponseMixin):
                     not current_token or payload.get("project_token") != current_token):
                 if publication_save:
                     self._log.warning("Publication profiles stage=save_rejected reason=context_changed")
-                self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
+                self._error("The selected project or its settings changed; reload before saving", 409,
+                            error_code="stale-context")
                 return
             title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
             title_custom = title is not None if "title" in payload else self.title_custom
@@ -222,7 +229,8 @@ class ProjectRoutesMixin(ResponseMixin):
             if "project_token" in payload and project_settings_token(root, self.source_input) != current_token:
                 if publication_save:
                     self._log.warning("Publication profiles stage=save_rejected reason=context_changed")
-                self._json({"ok": False, "message": "Project settings changed while preparing; reload before saving"}, 409)
+                self._error("Project settings changed while preparing; reload before saving", 409,
+                            error_code="stale-context")
                 return
             with warnings.catch_warnings():
                 warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
@@ -237,9 +245,6 @@ class ProjectRoutesMixin(ResponseMixin):
                 )
             if prepared:
                 if audio_profile_removal and root is not None:
-                    from ..research.repository import Repository
-                    from ..speech_direction import check_profile_removals
-
                     # Direction writes use this same project lock. Validate all
                     # retained references while it is held through commit.
                     with Repository(root).locked():
@@ -251,7 +256,7 @@ class ProjectRoutesMixin(ResponseMixin):
             if publication_save:
                 self._log.warning("Publication profiles stage=save_failed error=%s errno=%s",
                                   type(exc).__name__, exc.errno if isinstance(exc, OSError) else None)
-            self._json({"ok": False, "message": str(exc)}, 400)
+            self._error(str(exc), error_code="voice-profile-in-use" if isinstance(exc, VoiceProfileInUse) else None)
             return
 
         self.__class__.language = lang
@@ -424,24 +429,44 @@ class ProjectRoutesMixin(ResponseMixin):
 
         try:
             target_path = Path(target_raw).expanduser().resolve()
-        except (OSError, RuntimeError) as exc:
-            self._json({"ok": False, "message": f"Invalid project path: {exc}"}, 400)
+            if not target_path.exists():
+                self._error(f"Path does not exist: {target_path}", 404, error_code="path-missing")
+                return
+            if target_path.is_file() and target_path.suffix.lower() not in _MANUSCRIPT_SUFFIXES:
+                self._error("Unsupported manuscript file type (use .md, .markdown, or .txt)",
+                            error_code="unsupported-manuscript-type")
+                return
+        except PermissionError as exc:
+            self._error(str(exc), 403, error_code="path-unreadable")
             return
-        if not target_path.exists():
-            self._json({"ok": False, "message": f"Path does not exist: {target_path}"}, 404)
+        except (OSError, RuntimeError, ValueError) as exc:
+            self._error(f"Invalid project path: {exc}", error_code="invalid-project-path")
             return
 
         try:
-            if target_path.is_file() and target_path.suffix.lower() not in {".md", ".markdown", ".txt"}:
-                raise ValueError(
-                    "Unsupported manuscript file type (use .md, .markdown, or .txt)"
-                )
             target = resolve_project_target(target_path, empty="research")
+        except AmbiguousManuscriptError as exc:
+            self._error(str(exc), error_code="ambiguous-manuscript")
+            return
+        except ConfiguredManuscriptMissingError as exc:
+            self._error(str(exc), error_code="configured-manuscript-missing")
+            return
+        except FileNotFoundError as exc:
+            self._error(str(exc), error_code="manuscript-missing")
+            return
+        except PermissionError as exc:
+            self._error(str(exc), error_code="path-unreadable")
+            return
+        except (OSError, RuntimeError, ValueError) as exc:
+            self._error(str(exc))
+            return
+
+        try:
             ws_root, manuscript = target.root, target.manuscript
             if target.research_only:
                 research_api.list_sources(target_path)
 
-            settings = load_project_config(ws_root)
+            settings = read_explicit_project_config(ws_root)
             overrides = self.project_open_overrides
             same_project = (
                 bool(self.workspace_root)

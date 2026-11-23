@@ -544,7 +544,7 @@ class _ManuscriptStyle:
 
 
 _DOCUMENT_STYLE = _ManuscriptStyle("document", 12.0, 16.2, 8.1)
-_DOSSIER_STYLE = replace(_DOCUMENT_STYLE, bookmark_headings=True)
+_DOSSIER_STYLE = replace(_DOCUMENT_STYLE, mode="dossier", paragraph_gap=7.0, bookmark_headings=True)
 _DocumentSections = Sequence[tuple[str, Sequence[ManuscriptBlock | _TableData]]]
 
 
@@ -576,6 +576,7 @@ def _render_manuscript(document: Document, sections: _DocumentSections,
                        style: _ManuscriptStyle, *, start_on_page: bool = False) -> None:
     """Place semantic manuscript blocks through one flow for all reading formats."""
     sheet = style.mode == "sheet"
+    dossier = style.mode == "dossier"
     body_role = "mono" if sheet else "text"
     new_page = start_on_page
     for chapter_index, (heading, blocks) in enumerate(sections):
@@ -584,7 +585,7 @@ def _render_manuscript(document: Document, sections: _DocumentSections,
             heading_runs = _manuscript_runs(ManuscriptBlock("heading", heading), sheet=sheet)
             visible_heading = "".join(text for text, _role in heading_runs)
             heading_size = style.size if sheet else (17.0 if style.mode == "editor" else 13.5)
-            if style.mode == "document":
+            if style.mode in {"document", "dossier"}:
                 heading_size = 16.0
             document.add(Block(
                 visible_heading, role="mono" if sheet else "heading", size=heading_size,
@@ -619,7 +620,7 @@ def _render_manuscript(document: Document, sections: _DocumentSections,
             if semantic.kind == "heading":
                 role = "mono" if sheet else "heading"
                 size = style.size if sheet else (13.0 if style.mode == "editor" else max(11.0, style.size * 1.12))
-                if style.mode == "document":
+                if style.mode in {"document", "dossier"}:
                     size = max(style.size, 20.0 - semantic.level * 2.0)
                 align = GRID if sheet else LEFT
                 before = 0.0 if sheet else style.leading
@@ -642,6 +643,20 @@ def _render_manuscript(document: Document, sections: _DocumentSections,
                     before = style.leading * 0.25
                     after = max(after, style.leading * 0.4)
                 first_paragraph = True
+            if dossier:
+                if semantic.kind == "heading":
+                    after = style.paragraph_gap
+                elif semantic.kind == "list_item":
+                    before = 0.0
+                    after = style.paragraph_gap * 0.5
+                elif semantic.kind == "quote":
+                    before = 0.0
+                if semantic.keep_with_next:
+                    # Line and context labels belong to the excerpt below.
+                    size = style.size * 0.875
+                    if semantic.kind == "paragraph":
+                        before = style.paragraph_gap * 0.5
+                    after = 0.0
             indent = (style.size * 1.4 if style.mode == "book" and
                       semantic.kind == "paragraph" and not first_paragraph else 0.0)
             document.add(Block(
@@ -753,19 +768,18 @@ def document_pdf(
 ) -> bytes:
     """Render neutral A4 text; title and author are metadata, not added prose."""
     sections = _book_sections(chapters, body, include_title=True)
-    document = _neutral_document(sections, choice, {"title": title, "author": author, **(metadata or {})})
+    document = _neutral_document(sections, choice, {"title": title, "author": author, **(metadata or {})},
+                                 baseline=_DOCUMENT_STYLE.leading)
     _render_manuscript(document, sections, _DOCUMENT_STYLE)
     return document.render()
 
 
 def _neutral_document(sections: _DocumentSections, choice: FontChoice | None,
-                      metadata: Mapping[str, str]) -> Document:
-    document = Document(
+                      metadata: Mapping[str, str], *, baseline: float | None = None) -> Document:
+    return Document(
         _manuscript_fonts(choice, sections), page_size=A4,
-        margins=(72.0, 72.0, 72.0, 72.0), metadata=metadata,
+        margins=(72.0, 72.0, 72.0, 72.0), baseline=baseline, metadata=metadata,
     )
-    document.baseline = _DOCUMENT_STYLE.leading
-    return document
 
 
 def _dossier_table(rows: list[str]) -> _TableData | None:
@@ -847,7 +861,7 @@ def dossier_pdf(
     document.add(Block(title, role="heading", size=22.0, leading=1.2,
                        bookmark=title, keep_with_next=True))
     document.add(Block(revision_label, role="text", size=10.0, leading=1.4,
-                       space_after=_DOCUMENT_STYLE.paragraph_gap, keep_with_next=True))
+                       space_after=_DOSSIER_STYLE.paragraph_gap, keep_with_next=True))
     for block in blocks:
         if isinstance(block, _TableData):
             _collect_table(document.fonts, block)

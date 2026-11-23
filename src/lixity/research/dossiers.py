@@ -690,9 +690,12 @@ def _generated_character_name(snapshot: Snapshot, dossier_id: str) -> str | None
     original = snapshot.revisions.get((dossier_id, 1))
     if not isinstance(original, Dossier) or not {"character", "manuscript-draft"}.issubset(original.tags):
         return None
-    for prefix in ("Figur: ", "Character: "):
-        if original.title.startswith(prefix):
-            return original.title.removeprefix(prefix).strip() or None
+    # The origin tag confirms the name independently of the translated type label.
+    _, _, suffix = original.title.partition(":")
+    name = suffix.strip()
+    if name and (original.title.startswith(("Figur: ", "Character: "))
+                 or _draft_identity_tag(("character", _draft_label(name))) in original.tags):
+        return name
     return None
 
 
@@ -735,6 +738,10 @@ def _draft_digest(value: Any) -> str:
     return digest(json.dumps(value, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8"))
 
 
+def _draft_identity_tag(identity: Sequence[Any]) -> str:
+    return _DRAFT_ORIGIN_TAG + _draft_digest(identity)[:32]
+
+
 def _draft_origin(draft: Mapping[str, Any], root: Path, manuscript: Path) -> str:
     if draft["kind"] == "scene":
         kind = "register" if draft["id"] == "scenes:manuscript" else "scene"
@@ -745,7 +752,7 @@ def _draft_origin(draft: Mapping[str, Any], root: Path, manuscript: Path) -> str
             identity.extend([hints.get("scene_scope"), hints.get("scene_source_sha256")])
     else:
         identity = list(_draft_legacy_key(draft))
-    return _DRAFT_ORIGIN_TAG + _draft_digest(identity)[:32]
+    return _draft_identity_tag(identity)
 
 
 def _saved_draft_keys(snapshot: Snapshot) -> tuple[dict[str, list[Dossier]], dict[tuple[str, str], list[Dossier]]]:

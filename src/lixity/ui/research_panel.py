@@ -13,6 +13,7 @@ from .components import (
     label,
     loading_state,
     panel_label,
+    select_control,
     status_banner,
     tag_input_with_suggestions,
     template_preset_bar,
@@ -354,7 +355,12 @@ def render_research_panel(
         form_field(
             "r-dos-collection-select",
             "research_dossier_collection",
-            f'<select class="ctl" id="r-dos-collection-select" data-help="{L("research_filter_collection_help")}" title="{L("research_dossier_collection")}"><option value="all">{L("research_dossier_collection_all")}</option></select>',
+            select_control(
+                "r-dos-collection-select",
+                f'<option value="all">{L("research_dossier_collection_all")}</option>',
+                help_text=label(labels, "research_filter_collection_help"),
+                attributes={"title": label(labels, "research_dossier_collection")},
+            ),
         )
     )
     parts.append('<span class="ctl-note" id="r-dos-collection-note" hidden></span>')

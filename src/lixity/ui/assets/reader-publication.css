@@ -1,15 +1,15 @@
 /* Curated reading uses the shared text/media renderers without edit surfaces. */
 .publication-site .page { max-width: 90rem; }
 .publication-header { border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
-.publication-introduction { max-width: 70ch; white-space: pre-wrap; margin-bottom: 1rem; }
+.publication-introduction { max-inline-size: var(--measure-reading); white-space: pre-wrap; margin-block-end: var(--space-4); }
 .publication-progress-controls { display: grid; gap: .6rem; margin: 1rem 0; }
-.publication-progress-controls h2 { margin: 0; font-size: 1.1rem; }
+.publication-progress-controls h2 { margin: 0; font-size: var(--text-subhead); line-height: var(--line-heading); }
 .publication-progress-controls .row { margin: 0; align-items: center; }
 .publication-progress-controls > button { justify-self: start; }
 .publication-progress-controls form[hidden] { display: none; }
 .publication-progress-controls select { max-width: 100%; }
 .publication-reading-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, 1fr); gap: 2rem; align-items: start; width: 100%; min-width: 0; }
-.publication-reading-layout:not(:has(.publication-novel)) { display: block; max-width: 75ch; margin-inline: auto; }
+.publication-reading-layout:not(:has(.publication-novel)) { display: block; max-inline-size: var(--measure-reading); margin-inline: auto; }
 .publication-context { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; min-width: 0; }
 .publication-reading-layout:not(:has(.publication-novel)) .publication-context { position: static; max-height: none; overflow: visible; }
 .publication-context h2 { margin-top: 0; }
@@ -19,14 +19,13 @@
 .publication-context article { border-top: 1px solid var(--line); padding-block: 1rem; }
 .publication-context article h3 { margin-top: 0; }
 .publication-context .research-prose { overflow-wrap: anywhere; }
-.publication-site .reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; }
 .publication-site .chapter { margin-block: 2rem; }
 .publication-site #chapters > .chapter:first-child { margin-top: 0; }
-.publication-site #chapters { margin-top: 0; font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
+.publication-site #chapters { margin-block-start: 0; }
 .publication-site footer { margin-top: 2rem; }
 .publication-navigation { flex-wrap: wrap; margin-block: 1rem; }
 .publication-audio { margin-block: 1rem; min-width: 0; }
-.publication-audio summary { font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+.publication-audio summary { font-size: var(--text-subhead); font-weight: var(--weight-semibold); cursor: pointer; }
 .publication-audio[open] summary { margin-bottom: 1rem; }
 .publication-audio > audio { max-width: 100%; }
 .publication-audio .row { flex-wrap: wrap; }

@@ -24,7 +24,7 @@ Eine vorläufige Notiz verortet die Öffnung einer Kiste am Kai. Ihre unterzeich
 
 1. In der [Demo unter **Research → Dossiers**](../demo/report.html#research-manager) das Dossier **Warehouse 4 case notes** öffnen. Es hält die Recherche zur Szene zusammen.
 
-2. Unter **Claims** die Aussage **Where the crate was opened** untersuchen. Die verknüpften Quellenpassagen enthalten die vorläufige Notiz und ihre Korrektur. Die aktuelle Aussage und ihre frühere Fassung bleiben unterscheidbar.
+2. Unter **Claims & evidence** die Aussage **Where the crate was opened** untersuchen. Die verknüpften Quellenpassagen enthalten die vorläufige Notiz und ihre Korrektur. Die aktuelle Aussage und ihre frühere Fassung bleiben unterscheidbar.
 
 3. Unter **Decisions** die Entscheidung **Keep the inspection at dawn** lesen: Die Kiste bleibt in den Kaiszenen geschlossen; ihr Inhalt wird erst nach dem Transport entdeckt. Beide Quellenpassagen bleiben erhalten.
 
@@ -42,7 +42,7 @@ Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. E
 
 ## Passt der kürzere Rhythmus zur Handlung?
 
-Die Demo startet in derselben Manuskriptansicht wie die lokale App. Öffne in der Arbeitsbereichsnavigation **Try the draft examples**. Über **Compare chapters 1 and 2** siehst du in der Kapitelmatrix, wie viele Wörter die Sätze in der Hafenbeschreibung und in der Handlungsszene im Schnitt haben. Einen eigenen Absatz kannst du direkt in der [Browser-Sandbox](../sandbox/index.html) ausprobieren.
+Die Demo startet in derselben Manuskriptansicht wie die lokale App. Öffne in der Arbeitsbereichsnavigation **Try the draft examples**. Über **Compare chapters 1 and 2** siehst du in der Kapitelmatrix, wie viele Wörter die Sätze in der Hafenbeschreibung und in der Handlungsszene im Schnitt haben. Einen eigenen Absatz kannst du direkt in der [deutschen Browser-Sandbox](../sandbox/index.html?lang=de) ausprobieren.
 
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 

@@ -16,11 +16,14 @@ from ..dialogue import character_voice_profiles
 from ..format import num, pct
 from ..markdown_parser import (
     CountedChapterPassage,
+    chapter_body_line_offsets,
     counted_chapter_passages,
+    counting_inline_text,
     prose_paragraphs,
     split_chapters,
 )
-from ..pipeline import resolve_document_config
+from ..models import CorpusConfig
+from ..pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from ..scenes import _chapter_recurring_names
 from ..sentences import split_prose_sentence_spans, split_sentence_spans
 from ..workspace_labels import workspace_labels_for
@@ -159,7 +162,7 @@ def _character_evidence(
     settings: Mapping[str, Any],
     chapter: int | None = None,
     expected_analysis_sha256: str | None = None,
-) -> tuple[str, dict[str, Any]]:
+) -> tuple[CorpusConfig, dict[str, Any]]:
     """Measure name matches, their context and available dialogue evidence once."""
     config, resolved_language = resolve_document_config(text, language, project_config=settings)
     resolved = resolve_character_settings(None, settings)
@@ -203,7 +206,7 @@ def _character_evidence(
 
     voices = character_voice_profiles(text, patterns, config)
     profile = next((entry for entry in voices["characters"] if entry["name"] == character), None)
-    return resolved_language.key, {
+    return config, {
         "schema_version": CHARACTER_EVIDENCE_SCHEMA, "character": character, "aliases": aliases,
         "mentions": sum(row["mentions"] for row in chapter_rows),
         "chapters_with_mentions": len(ordered_chapters),
@@ -212,6 +215,24 @@ def _character_evidence(
         "chapters": chapter_rows, "passages": selected_passages, "passage_count": len(selected_passages),
         "analysis_sha256": analysis_sha256, "source_sha256": source_sha256, "line_scope": "chapter_body",
     }
+
+
+def _attach_reader_anchors(page: Sequence[dict[str, Any]], text: str, config: CorpusConfig) -> None:
+    """Link the start of a matching passage to an exact displayed paragraph."""
+    if not page:
+        return
+    offsets = chapter_body_line_offsets(text, config)
+    by_line = {(p.chapter_num, p.start_line): p for p in document_paragraph_texts(text, config)}
+    for row in page:
+        offset = offsets.get(row["chapter"])
+        if offset is None:
+            continue
+        paragraph = by_line.get((row["chapter"], offset + row["start_line"]))
+        if paragraph is None or paragraph.end_line > offset + row["end_line"]:
+            continue
+        displayed = counting_inline_text(paragraph.text)
+        if displayed and (row["text"] == displayed or row["text"].startswith(displayed + "\n\n")):
+            row["reader_anchor"] = paragraph_identity(paragraph)
 
 
 def character_evidence(
@@ -226,7 +247,7 @@ def character_evidence(
     expected_analysis_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Return chapter counts and a page of full matching prose for one character."""
-    _, report = _character_evidence(
+    config, report = _character_evidence(
         text, source_sha256, character=character, language=language, settings=settings,
         chapter=chapter, expected_analysis_sha256=expected_analysis_sha256,
     )
@@ -239,6 +260,7 @@ def character_evidence(
             break
         page.append(row)
         text_bytes += size
+    _attach_reader_anchors(page, text, config)
     end = offset + len(page)
     report.update(passages=page, offset=offset, next_offset=end if end < report["passage_count"] else None)
     return report
@@ -253,9 +275,10 @@ def character_dossier_text(
     settings: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Prepare a complete, readable character analysis for a dossier revision."""
-    language_key, report = _character_evidence(
+    config, report = _character_evidence(
         text, source_sha256, character=character, language=language, settings=settings,
     )
+    language_key = config.language
     labels = workspace_labels_for(language_key)
 
     def label(suffix: str) -> str:

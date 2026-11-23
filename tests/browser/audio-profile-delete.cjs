@@ -28,11 +28,20 @@ engine = "qwen3"
 [audio.profiles.spare]
 name = "Spare"
 engine = "qwen3"
+[audio.profiles.other]
+name = "Other source"
+engine = "qwen3"
 ''')
 view = direction_state(root, source, language='de')
 save_direction(root, source, {'anchor': view['passages'][0]['anchor'], 'profile_id': 'second'},
                expected_source_sha256=view['source_sha256'], expected_settings_sha256=view['settings_sha256'],
                expected_direction_sha256=view['direction_sha256'], language='de')
+other = root / 'other.md'
+other.write_text('## Other\\n\\nThe river rises.\\n')
+other_view = direction_state(root, other, language='de')
+save_direction(root, other, {'anchor': other_view['passages'][0]['anchor'], 'profile_id': 'other'},
+               expected_source_sha256=other_view['source_sha256'], expected_settings_sha256=other_view['settings_sha256'],
+               expected_direction_sha256=other_view['direction_sha256'], language='de')
 LixityServerHandler.workspace_root = str(root)
 LixityServerHandler.source_input = str(source)
 LixityServerHandler.exports_dir = str(root / 'exports')
@@ -52,7 +61,25 @@ server.serve_forever()
       await page.locator('#speech-profile').selectOption('second');
       await page.locator('[data-speech-action=remove_profile]').click();
       assert.equal(await page.locator('#speech-profile option[value=second]').count(), 1);
-      assert.match(await page.locator('#speech-status').textContent(), /regie/i);
+      const guidance = await page.locator('#speech-status').textContent();
+      assert.match(guidance, /regie/i);
+      const configBefore = fs.readFileSync(temp + '/lixity.toml');
+      await page.locator('#speech-profile').selectOption('other');
+      await page.locator('[data-speech-action=remove_profile]').click();
+      assert.equal(await page.locator('#speech-profile option[value=other]').count(), 0);
+      await page.route('**/api/settings', async route => {
+        const response = await route.fetch();
+        assert.equal(response.status(), 400);
+        const body = await response.json();
+        assert.equal(body.code, 'voice-profile-in-use');
+        await route.fulfill({response, json:{...body, message:'Changed diagnostic text'}});
+      });
+      await page.locator('[data-speech-action=save]').click();
+      await page.locator('#speech-status').filter({hasText: guidance}).waitFor();
+      assert.deepEqual(fs.readFileSync(temp + '/lixity.toml'), configBefore);
+      await page.unroute('**/api/settings');
+      await page.locator('[data-speech-action=profiles_discard]').click();
+      assert.equal(await page.locator('#speech-profile option[value=other]').count(), 1);
       await page.locator('#speech-profile').selectOption('spare');
       await page.locator('[data-speech-action=remove_profile]').click();
       assert.equal(await page.locator('#speech-profile option[value=spare]').count(), 0);

@@ -1304,6 +1304,23 @@ async function checkSandboxQuotationPairs(page) {
           const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
           const publication = publicationRoutes.has(route) || publicationAnalysisRoutes.has(route);
           const metricReference = metricReferenceRoutes.has(route);
+          if (route === 'guides/first-look-de.html' && width === 320) {
+            const resized = await page.locator('.guide > p').first().evaluate(prose => {
+              const root = document.documentElement;
+              const previous = root.style.fontSize;
+              const ordinary = parseFloat(getComputedStyle(prose).fontSize);
+              root.style.fontSize = '200%';
+              try {
+                return {
+                  scale: parseFloat(getComputedStyle(prose).fontSize) / ordinary,
+                  fits: root.scrollWidth <= innerWidth,
+                };
+              } finally {
+                root.style.fontSize = previous;
+              }
+            });
+            assert.deepEqual(resized, {scale: 2, fits: true}, 'Guide prose follows text size without horizontal overflow');
+          }
           if (route === 'sandbox/index.html') {
             await checkSandboxReferences(page, await page.locator('html').getAttribute('lang'));
           }

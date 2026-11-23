@@ -132,6 +132,36 @@ def test_project_open_reads_the_manuscript_once_through_the_shared_snapshot_read
     assert reads == ["snapshot"]
 
 
+def test_project_open_resolves_analysis_defaults_in_the_explicit_root(tmp_path: Path):
+    (tmp_path / "lixity.toml").write_text('language = "nl"\nz_mild = 4.0\n', encoding="utf-8")
+    project = tmp_path / "new"
+    project.mkdir()
+    source = project / "manuscript.md"
+    source.write_text("## A chapter\n\nA synthetic sentence.\n", encoding="utf-8")
+    handler = recording_handler(tmp_path / "previous")
+
+    handler._handle_project_open({"path": str(source)})
+    assert handler.response[0] == 200
+    assert handler.language == "en"
+    assert handler.thresholds.z_mild == 2.5
+
+    (project / "lixity.toml").write_text('language = "de"\nz_mild = 3.0\n', encoding="utf-8")
+    handler._handle_project_open({"path": str(source)})
+    assert handler.response[0] == 200
+    assert handler.language == "de"
+    assert handler.thresholds.z_mild == 3.0
+
+
+def test_project_open_identifies_a_missing_configured_manuscript(tmp_path: Path):
+    (tmp_path / "lixity.toml").write_text('manuscript = "moved.md"\n', encoding="utf-8")
+    (tmp_path / "other.md").write_text("## Another manuscript\n\nSynthetic prose.\n", encoding="utf-8")
+    handler = recording_handler(tmp_path / "previous")
+    handler._handle_project_open({"path": str(tmp_path)})
+    assert handler.response[0] == 400
+    assert handler.response[1]["code"] == "configured-manuscript-missing"
+    assert handler.source_input is None
+
+
 def test_dashboard_reads_shared_project_configuration_once(tmp_path: Path):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("# Synthetic title\n\n## Morning\n\nA synthetic sentence.\n", encoding="utf-8")

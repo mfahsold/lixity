@@ -67,6 +67,11 @@ class _FirstHit(TypedDict):
     quote: str
 
 
+def _draft_title(kind: str, name: str, labels: Mapping[str, str]) -> str:
+    # Keep the name after the first colon for the saved character binding.
+    return labels["research_dossier_draft_title"].format(kind=kind, name=name)
+
+
 def _name_key(name: str) -> str:
     return normalize("NFC", name.casefold())
 
@@ -191,7 +196,7 @@ def _extract_location_drafts(
         ))
         drafts.append({
             **_named_draft_id("location", name),
-            "kind": "location", "title": f"{place_label}: {name}", "summary": summary,
+            "kind": "location", "title": _draft_title(place_label, name, labels), "summary": summary,
             "tags": ["manuscript-draft", "location"], "body": body,
             "evidence_hints": {"location": name, "basis": basis, "mentions": total,
                                "chapters": sorted(by_chapter), "first_hit": first_hit},
@@ -237,11 +242,9 @@ def _character_draft(
     if first_hit:
         blocks.extend(_first_hit_blocks(first_hit, labels, language))
 
-    # Generated character bindings read the original title prefix on older archives.
-    prefix = "Figur" if language == "de" else "Character"
     return {
         **_named_draft_id("character", name),
-        "kind": "character", "title": f"{prefix}: {name}", "summary": summary,
+        "kind": "character", "title": _draft_title(labels["research_tpl_character"], name, labels), "summary": summary,
         "tags": ["manuscript-draft", "character"], "body": "\n\n".join(blocks),
         "evidence_hints": {"character": name, "mentions": total, "chapters": chapters,
                            **({"first_hit": dict(first_hit)} if first_hit else {})},
@@ -294,7 +297,7 @@ def _individual_scene_drafts(
             body = "\n\n".join(blocks)
         drafts.append({
             "id": f"scene:{scene['id']}", "kind": "scene",
-            "title": f"{heading}: {scene['scene_title']}", "summary": f"{position} · {stats}",
+            "title": _draft_title(heading, scene["scene_title"], labels), "summary": f"{position} · {stats}",
             "tags": ["manuscript-draft", "scene"], "body": body,
             "evidence_hints": {
                 "scene": scene["scene_title"], "scene_scope": scope, "chapter": scene["chapter"],

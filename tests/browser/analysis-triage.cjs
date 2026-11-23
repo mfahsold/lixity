@@ -16,12 +16,17 @@ const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
+from lixity.manuscript_editing import ManuscriptStore
 from lixity.server import LixityServerHandler
 base = Path(sys.argv[1]); project = base / 'project'; project.mkdir()
 text = '## First\\n\\nShe walks. She waits. She watches.\\n\\nShe walks. She waits. She watches. She walked. She waited. She watched.\\n\\n## Second\\n\\nHe walks. He waits. He watches. He walked. He waited. He watched.\\n'
+text = text.replace('\\n\\nShe walks. She waits. She watches. She walked.', '\\n\\n> The gate remained shut.\\n\\nShe walks. She waits. She watches. She walked.', 1)
 text = text.replace('\\n\\n## Second', '\\n\\n' + 'Brass lamps on granite. ' * 30 + '\\n\\n## Second')
 text += '\\n' + 'Silver dust. Granite gates. Silent fog. ' * 30 + '\\n'
-source = project / 'manuscript.md'; source.write_text(text)
+source = project / 'manuscript.md'; source.write_text(text.replace('She walks. She waits. She watches.', '“She walks.”', 1))
+store = ManuscriptStore(project, source)
+opened = store.open()
+store.save(opened['document'], opened['revision'], 'a' * 32, text)
 (project / 'lixity.toml').write_text('manuscript = "manuscript.md"\\nlanguage = "en"\\n')
 LixityServerHandler.workspace_root = str(project); LixityServerHandler.source_input = str(source)
 LixityServerHandler.exports_dir = str(project / 'exports'); LixityServerHandler.language = 'en'
@@ -53,29 +58,46 @@ server.serve_forever()
     await page.goto(server.fixture.url);
     const sourceRevision = createHash('sha256').update(original).digest('hex');
     const projectToken = await page.locator('body').getAttribute('data-manuscript-project-token');
-    let deltaRevision = '0'.repeat(64);
+    let staleDelta = true;
     const deltaURL = /\/api\/manuscript-delta\?project_token=[a-f0-9]{64}$/;
-    const chapterDelta = page.locator('#heatmap-ch-1 .chapter-delta-badge');
-    const progress = page.locator('#triage-progress');
-    await page.route(deltaURL, route => {
+    const reviewURL = '**/api/analysis-review?project_token=*';
+    const chapterDelta = page.locator('#matrix tr[data-chapter-num="1"] .chapter-revision-delta');
+    const baseline = page.locator('#matrix-revision-baseline');
+    let measured;
+    await page.route(deltaURL, async route => {
       assert.equal(new URL(route.request().url()).searchParams.get('project_token'), projectToken);
-      return route.fulfill({json:{
-        ok:true, schema_version:'lixity-timeline/1', has_baseline:true, current:{revision:deltaRevision},
-        deltas:{words:71}, chapter_deltas:[{num:1, match_status:'matched', words_delta:71}],
-      }});
+      const response = await route.fetch();
+      measured = await response.json();
+      assert.equal(measured.current.revision, sourceRevision);
+      const current = staleDelta ? {...measured.current, revision:'0'.repeat(64)} : measured.current;
+      return route.fulfill({response, json:{...measured, current}});
     });
-    await overview();
-    await expect(progress).not.toContainText('+71 W');
+    await page.route(reviewURL, route => route.fulfill({status:503, json:{ok:false}}));
+    const staleResponse = page.waitForResponse(response => deltaURL.test(response.url()));
+    await openAnalysisSection(page, 'matrix');
+    await staleResponse;
+    await expect(baseline).toBeHidden();
     await expect(chapterDelta).toHaveCount(0);
-    deltaRevision = sourceRevision;
-    await page.locator('#triage-reload').evaluate(button => button.click());
-    await expect(progress).toContainText('+71 W');
-    await expect(chapterDelta).toHaveText('↑ +71 W');
-    deltaRevision = '0'.repeat(64);
-    await page.locator('#triage-reload').evaluate(button => button.click());
-    await expect(progress).not.toContainText('+71 W');
-    await expect(chapterDelta).toHaveCount(0);
+    await openAnalysisSection(page, 'flags');
+    await expect(page.locator('#triage-save-status')).toContainText('could not be confirmed');
+    staleDelta = false;
+    await openAnalysisSection(page, 'matrix');
+    await expect(baseline).toContainText('Chapter changes · since ');
+    await expect(baseline.locator('a')).toHaveAttribute('href', '/guides/metrics/en.html#revisions');
+    assert.deepEqual(measured.chapter_deltas.map(row => [row.num, row.match_status, row.words_delta]), [[1, 'matched', 4], [2, 'matched', 0]]);
+    const displayedWords = page.locator('#matrix tr[data-chapter-num="1"] [data-revision-metric="words_delta"]');
+    assert.equal(Number(await displayedWords.evaluate(cell => cell.firstChild.textContent)), measured.chapter_deltas[0].words,
+      'The chapter matrix and retained revisions count the same passage including the blockquote');
+    await expect(chapterDelta).toHaveCount(3);
+    await expect(chapterDelta.first()).toHaveText('+4');
+    await expect(chapterDelta.last()).toContainText('percentage points');
+    await expect(page.locator('#matrix tr[data-chapter-num="2"] .chapter-revision-delta')).toHaveCount(0);
+    const matrixLink = page.locator('#matrix tr[data-chapter-num="1"] a.chapter-link');
+    await matrixLink.click();
+    await expect(page.locator('#chapters')).toBeVisible();
+    await page.unroute(reviewURL);
     await page.unroute(deltaURL);
+    await overview();
     assert.ok(await rows.count() >= 2);
     await expect(page.locator('#flags .flag-row[role="button"]')).toHaveCount(0);
     await expect(page.locator('#flags [data-marker-kind]')).toHaveCount(0);

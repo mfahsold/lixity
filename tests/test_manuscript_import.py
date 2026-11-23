@@ -54,6 +54,7 @@ def _create_synthetic_docx_bytes() -> bytes:
             <w:p>
               <w:r><w:drawing/></w:r>
               <w:r><w:t>The bell rang twice.</w:t></w:r>
+              <w:r><w:footnoteReference w:id="1"/></w:r>
             </w:p>
           </w:body>
         </w:document>"""

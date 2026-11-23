@@ -228,15 +228,6 @@ a.chapter-link:hover { color: var(--accent-hover); }
 dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-.ctl-select { position: relative; display: grid; min-inline-size: 0; }
-.ctl-select > select.ctl {
-  appearance: none; width: 100%; text-overflow: ellipsis;
-  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
-}
-.ctl-select > .lixity-icon {
-  position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
-  inline-size: var(--space-4); block-size: var(--space-4); pointer-events: none;
-}
 button.ctl:where(:enabled):active, a.ctl:active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
@@ -255,6 +246,21 @@ button.ctl.primary:enabled:hover, a.ctl.primary:hover { background: var(--action
 button.ctl.primary:enabled:active, a.ctl.primary:active { box-shadow: none; }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact { min-height: 2rem; padding: .25rem .6rem; font-size: var(--text-small); }
+.ctl-select { position: relative; display: grid; min-inline-size: 0; }
+/* Reserve the chevron space after the control-size variants set block padding. */
+.ctl-select > select.ctl {
+  appearance: none; inline-size: 100%; text-overflow: ellipsis;
+  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
+}
+.ctl-select > .lixity-icon {
+  position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
+  inline-size: var(--space-4); block-size: var(--space-4); pointer-events: none;
+}
+.ctl-select > select:disabled + .lixity-icon { color: var(--muted); }
+@media (forced-colors: active) {
+  .ctl-select > select.ctl { appearance: auto; padding-inline-end: var(--space-3); }
+  .ctl-select > .lixity-icon { display: none; }
+}
 details.nda { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .6rem 1rem; margin-top: .6rem; }
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
@@ -452,7 +458,7 @@ summary.ctl { font-family: var(--font); font-size: var(--text-control); line-hei
 /* --- Markdown enhancements -------------------------------------------- */
 .markdown-highlight, mark.markdown-highlight { background-color: rgba(234, 179, 8, .25); color: inherit; padding: .08em .25em; border-radius: 2px; }
 .lixity-wikilink { text-decoration: underline; text-decoration-style: dashed; }
-details.markdown-alert summary.markdown-alert-title { cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: .5rem; }
+details.markdown-alert summary.markdown-alert-title { cursor: pointer; user-select: none; list-style: none; }
 details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { display: none; }
 /* --- Markdown Editor -------------------------------------------------- */
 .markdown-editor-wrap { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }

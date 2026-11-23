@@ -109,9 +109,15 @@
         '<p class="research-character-context-caption">' + textLabel("context_" + side) + '</p>' +
         '<p>' + escapeHtml(text) + '</p></div>';
     }
-    function renderPassages(items, append, lineScope) {
+    function readerSourceChanged(source) {
+      var current = document.body.dataset;
+      return source.projectToken !== current.manuscriptProjectToken || source.digest !== current.manuscriptSourceSha256;
+    }
+    function renderPassages(items, append, lineScope, source) {
       if (!append) passages.replaceChildren();
       var group = passages.lastElementChild, first = null;
+      var reader = window.LixityManuscriptLinks;
+      var canNavigate = reader && source.projectToken && /^[a-f0-9]{64}$/.test(source.digest) && !readerSourceChanged(source);
       items.forEach(function(passage) {
         if (!group || group.dataset.characterPassageChapter !== String(passage.chapter)) {
           group = document.createElement("section");
@@ -129,6 +135,24 @@
         figure.innerHTML = (lines ? '<figcaption class="ctl-note">' + escapeHtml(lines) + '</figcaption>' : "") +
           contextText(passage.context_before, "before") + '<blockquote>' + excerptText(passage) + '</blockquote>' +
           contextText(passage.context_after, "after");
+        if (canNavigate && reader.findParagraph(passage.reader_anchor)) {
+          var jump = window.LixityComponents.el("button", {className: "ctl ctl-sm", type: "button",
+            text: uiLabel("manuscript_link_open_passage"), attrs: {"data-character-jump": ""}});
+          jump.addEventListener("click", function() {
+            if (jump.getAttribute("aria-disabled") === "true") return;
+            var changed = readerSourceChanged(source);
+            var target = !changed && panel._characterCurrent() ? reader.findParagraph(passage.reader_anchor) : null;
+            if (!target) {
+              status.textContent = uiLabel(key(changed ? "jump_source_changed" : "jump_unavailable"));
+              jump.setAttribute("aria-disabled", "true");
+              return;
+            }
+            var dialog = panel.closest("dialog[open]");
+            if (dialog) dialog.close();
+            reader.navigate(target);
+          });
+          figure.appendChild(jump);
+        }
         group.appendChild(figure);
         if (!first) first = figure;
       });
@@ -140,6 +164,7 @@
       var request = ++serial;
       var chapter = activeChapter;
       var expected = refresh ? null : digest;
+      var projectToken = document.body.dataset.manuscriptProjectToken;
       var query = new URLSearchParams({id: detail.id, offset: String(offset)});
       if (chapter) query.set("chapter", chapter);
       if (expected) query.set("analysis_sha256", expected);
@@ -173,7 +198,8 @@
       }
       digest = data.analysis_sha256;
       nextOffset = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
-      var first = renderPassages(data.passages, offset > 0, data.line_scope);
+      var source = {projectToken: projectToken, digest: data.source_sha256};
+      var first = renderPassages(data.passages, offset > 0, data.line_scope, source);
       passages.hidden = false;
       content.hidden = false;
       more.hidden = nextOffset === null;
@@ -181,6 +207,9 @@
       status.textContent = data.passage_count ? uiFormat(key("loaded"), {
         loaded: format.format(offset + data.passages.length), total: format.format(data.passage_count)
       }) : uiLabel(key("empty"));
+      if (projectToken && readerSourceChanged(source) && data.passages.some(function(passage) { return passage.reader_anchor; })) {
+        status.textContent += " " + uiLabel(key("jump_source_changed"));
+      }
       if (trigger === more && (document.activeElement === trigger || document.activeElement === document.body) && first) {
         first.tabIndex = -1;
         first.focus({preventScroll: true});

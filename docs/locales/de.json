@@ -9,7 +9,7 @@
   "eyebrow": "Ein lokaler Arbeitsraum für Autorinnen und Autoren",
   "headline": "Überarbeite dein Manuskript.\nBehalte die Recherche im Blick.",
   "intro": "Sieh, warum eine Stelle markiert wurde, vergleiche einen Entwurf und halte Figuren und Quellen beim Schreiben griffbereit. Lixity arbeitet auf deinem Rechner mit deinem Manuskript in Markdown oder als Textdatei.",
-  "demo": "Demo ausprobieren",
+  "demo": "Demo ausprobieren (Englisch)",
   "tour": "Kurzer Rundgang",
   "demo_note": "Erfundenes englisches Manuskript. Interaktive Demo nur zum Lesen. Kein Konto, kein Upload.",
   "preview": "Lies dein Manuskript und blende Hinweise zu Rhythmus, Dialog und Szenen ein, wenn du eine Textstelle genauer prüfen möchtest.",
@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Figuren-Steckbriefe, Tags & Pinnwand; manuell gepflegt",
   "compare_cld_dossiers": "Keine Figuren- oder Szenendossiers",
   "compare_pln_dossiers": "Zeitstrahlen, Szenenkarten und Figurenbögen; reine Planung ohne Textanalyse",
-  "dossier_example": "Beispiel-Dossier als PDF öffnen (Englisch)"
+  "dossier_example": "Beispiel-Dossier als PDF öffnen (Englisch)",
+  "reading_copy": "Lesefassung (Englisch)",
+  "read_alt": "Manuskript mit Kapitelüberschrift, Text und Suchleiste",
+  "linguistics_alt": "Kapitelmatrix mit farbigen Abweichungen und Angaben zum Satzrhythmus",
+  "research_alt": "Zeitleiste mit datierten Thesen und separat aufgelisteten offenen Zeitangaben",
+  "share_alt": "Überarbeitungshinweis an einem Manuskriptabsatz mit den Aktionen Speichern und Abbrechen"
 }

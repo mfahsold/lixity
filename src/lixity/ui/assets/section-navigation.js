@@ -134,8 +134,11 @@
         // A stacked companion can be partly above the viewport. Keep only its
         // compact orientation link inside the visible portion of that scrollport.
         if (options.location) {
-          var inset = Math.max(0, -bounds.top) + "px";
-          if (options.location.style.top !== inset) options.location.style.top = inset;
+          var inset = bounds.top < 0 ? -bounds.top + "px" : "";
+          var style = options.location.style;
+          if (style.getPropertyValue("--dossier-scrollport-inset") !== inset) {
+            style.setProperty("--dossier-scrollport-inset", inset);
+          }
         }
         var marker = top + (bottom - top) * .3;
         selected = available[0];

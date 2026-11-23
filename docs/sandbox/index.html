@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://mfahsold.github.io/lixity/sandbox/index.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="1942"/>
+<meta property="og:image:height" content="1926"/>
 <meta property="og:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity Browser-Sandbox: Absatz lokal prüfen"/>
@@ -19,7 +19,7 @@
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity manuscript workspace with sentence rhythm, dialogue analysis, and inline evidence."/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity Browser-Sandbox: Absatz lokal prüfen", "url": "https://mfahsold.github.io/lixity/sandbox/index.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/sandbox/index.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1942}, "inLanguage": ["de", "en"], "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity Browser-Sandbox: Absatz lokal prüfen", "url": "https://mfahsold.github.io/lixity/sandbox/index.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/sandbox/index.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1926}, "inLanguage": ["de", "en"], "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}}
 </script>
 <link rel="stylesheet" href="../assets/design-tokens.css"/>
 <link rel="stylesheet" href="../assets/components.css"/>
@@ -112,7 +112,7 @@
   <header>
     <a class="brand" href="../index-de.html" id="home-link">Lixity</a>
     <nav>
-      <a class="ctl ctl-sm" href="../demo/report.html" id="nav-demo">Vollständiger Demo-Bericht</a>
+      <a class="ctl ctl-sm" href="../demo/report.html" hreflang="en" id="nav-demo">Demo-Bericht (Englisch)</a>
       <a class="ctl ctl-sm" href="../guides/installation.html" id="nav-install">Lokal installieren</a>
       <button type="button" class="ctl ctl-sm" id="lang-toggle" lang="en" aria-label="Switch to English">EN</button>
     </nav>
@@ -123,7 +123,7 @@
   <h1 id="title">Rhythmus und Wiederholungen im Text prüfen</h1>
   <p class="lead" id="lead">Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Ändere die Länge eines Satzes und beobachte seinen Balken unter „Satz für Satz“.</p>
 
-  <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html">Demo-Bericht</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
+  <noscript><p class="lead">Diese interaktive Browser-Sandbox analysiert deinen Text 100 % lokal im Browser mit JavaScript, ohne dass Daten an einen Server übertragen werden. Aktiviere JavaScript für die Live-Auswertung oder öffne direkt den statischen <a href="../demo/report.html" hreflang="en">Demo-Bericht (Englisch)</a> bzw. die <a href="../guides/installation.html">Installationsanleitung</a> für die lokale CLI- und Desktop-Nutzung auf Windows, macOS und Linux.</p></noscript>
 
   <div class="grid">
     <section class="panel" aria-labelledby="editor-title">
@@ -255,7 +255,7 @@
           <li>Ganze Romane mit Kapitelmatrix (z* &amp; Benjamini-Hochberg-FDR)</li>
           <li>Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion &amp; Inquit-Dichte</li>
           <li>Manuskript-Editor mit Live-Sitzungspuls &amp; SQLite-Revisionsdiff</li>
-          <li>Vorlese-Teleprompter &amp; quellenverifizierte Recherche-Dossiers</li>
+          <li>Teleprompter zum Vorlesen und Dossiers mit verknüpften Quellen</li>
         </ul>
       </div>
     </div>
@@ -274,6 +274,7 @@
   </footer>
 </div>
 
+<script src="../assets/site-language.js"></script>
 <script>
 (function () {
   'use strict';
@@ -302,7 +303,8 @@
   ]);
   const I18N = {
     de: {
-      home: '../index-de.html', demo: 'Vollständiger Demo-Bericht', install: 'Lokal installieren', toggle: 'EN', switchLanguage: 'Switch to English',
+      pageTitle: 'Lixity Browser-Sandbox: Absatz lokal prüfen',
+      home: '../index-de.html', demo: 'Demo-Bericht (Englisch)', install: 'Lokal installieren', toggle: 'EN', switchLanguage: 'Switch to English',
       pill: '100 % lokal im Browser · Kein Server-Upload',
       title: 'Rhythmus und Wiederholungen im Text prüfen',
       lead: 'Bearbeite die Textprobe oder öffne eine eigene Szene als .txt- oder .md-Datei. Ändere die Länge eines Satzes und beobachte seinen Balken unter „Satz für Satz“.',
@@ -346,13 +348,14 @@
         'Ganze Romane mit Kapitelmatrix (z* & Benjamini-Hochberg-FDR)',
         'Figuren-Netzwerk, POV-Abstände, Szenen-Kohäsion & Inquit-Dichte',
         'Manuskript-Editor mit Live-Sitzungspuls & SQLite-Revisionsdiff',
-        'Vorlese-Teleprompter & quellenverifizierte Recherche-Dossiers'
+        'Teleprompter zum Vorlesen und Dossiers mit verknüpften Quellen'
       ],
       footer: 'Hinweis: Diese Browser-Sandbox analysiert einzelne Passagen direkt auf deinem Gerät. Für ganze Romane mit Kapitelmatrix, Tempus- & Registeranalyse, Vorlese-Regie und lokaler SQLite-Revisionshistorie starte Lixity lokal auf deinem Rechner.',
       privacy: 'Website-Messung', privacyHref: '../index-de.html#website-measurement',
       legal: 'Impressum', legalHref: '../index-de.html#impressum'
     },
     en: {
+      pageTitle: 'Lixity Browser Sandbox: Review a passage locally',
       home: '../index.html', demo: 'Full Interactive Demo', install: 'Install Locally', toggle: 'DE', switchLanguage: 'Auf Deutsch wechseln',
       pill: '100% local in your browser · Zero server upload',
       title: 'Explore rhythm and repetition in a passage',
@@ -397,14 +400,20 @@
         'Full novels with chapter matrix (z* & Benjamini-Hochberg FDR)',
         'Character network, POV spacing, scene cohesion & attribution tags',
         'Manuscript editor with live session pulse & SQLite revision diff',
-        'Read-aloud teleprompter & source-verified research dossiers'
+        'Read-aloud teleprompter and dossiers with linked sources'
       ],
       footer: 'Note: This browser sandbox analyzes single passages directly on your device. For full novels with a chapter matrix, tense & register analysis, read-aloud direction, and local SQLite revision history, run Lixity locally.',
       privacy: 'Website measurement', privacyHref: '../index.html#website-measurement',
       legal: 'Legal notice (Impressum)', legalHref: '../index.html#impressum'
     }
   };
-  let lang = (navigator.language || 'de').toLowerCase().startsWith('de') ? 'de' : 'en';
+  const parameters = new URLSearchParams(window.location.search);
+  const initialPreset = parameters.get('preset');
+  const hasPreset = Object.hasOwn(PRESETS, initialPreset);
+  const requestedLanguage = parameters.get('lang');
+  const defaultLanguage = window.LixitySiteLanguage?.preferred(Object.keys(I18N)) || 'en';
+  const presetLanguage = initialPreset === 'pride-prejudice' || initialPreset === DRAFT_PRESETS.en ? 'en' : 'de';
+  let lang = Object.hasOwn(I18N, requestedLanguage) ? requestedLanguage : hasPreset ? presetLanguage : defaultLanguage;
   let focusedEcho = '';
   let lastSnapshot = null;
   const el = id => document.getElementById(id);
@@ -658,6 +667,7 @@
   function applyLang() {
     const t = I18N[lang];
     document.documentElement.lang = lang;
+    document.title = t.pageTitle;
     el('home-link').href = t.home;
     el('nav-demo').textContent = t.demo;
     el('nav-install').textContent = t.install;
@@ -724,15 +734,18 @@
     analyze();
   }
 
+  function replaceParameter(key, value) {
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+    window.history.replaceState(null, '', url);
+  }
+
   function setPreset(key, updateUrl) {
-    if (!PRESETS[key]) return;
+    if (!Object.hasOwn(PRESETS, key)) return;
     focusedEcho = '';
     input.value = PRESETS[key];
-    if (updateUrl && window.history && window.history.replaceState) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('preset', key);
-      window.history.replaceState(null, '', url.toString());
-    }
+    if (updateUrl) replaceParameter('preset', key);
     analyze();
   }
 
@@ -769,11 +782,7 @@
   el('preset-clear').addEventListener('click', () => {
     focusedEcho = '';
     input.value = '';
-    if (window.history && window.history.replaceState) {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('preset');
-      window.history.replaceState(null, '', url.toString());
-    }
+    replaceParameter('preset', null);
     analyze();
   });
   el('direct-speech-btn').addEventListener('click', toggleDirectSpeech);
@@ -817,16 +826,14 @@
     }
   });
 
-  el('lang-toggle').addEventListener('click', () => { lang = lang === 'de' ? 'en' : 'de'; applyLang(); });
+  el('lang-toggle').addEventListener('click', () => {
+    lang = lang === 'de' ? 'en' : 'de';
+    replaceParameter('lang', lang);
+    applyLang();
+  });
   input.addEventListener('input', analyze);
 
-  const initialPreset = new URLSearchParams(window.location.search).get('preset');
-  if (initialPreset && PRESETS[initialPreset]) {
-    lang = initialPreset === 'pride-prejudice' || initialPreset === DRAFT_PRESETS.en ? 'en' : 'de';
-    input.value = PRESETS[initialPreset];
-  } else {
-    input.value = PRESETS[lang === 'de' ? 'effi-briest' : 'pride-prejudice'];
-  }
+  input.value = PRESETS[hasPreset ? initialPreset : lang === 'de' ? 'effi-briest' : 'pride-prejudice'];
   applyLang();
 })();
 </script>

@@ -76,6 +76,7 @@ class ImportLossItem:
     element: str
     location: str
     detail: str
+    position: int | None = None
 
 
 @dataclass
@@ -241,7 +242,7 @@ def preview_docx(
     p_index = 0
     output_bytes = 0
 
-    for child in body:
+    for block_number, child in enumerate(body, start=1):
         tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
 
         if tag == "tbl":
@@ -249,8 +250,9 @@ def preview_docx(
             loss_report.append(
                 ImportLossItem(
                     element="table",
-                    location=f"Block {p_index + 1}",
+                    location=f"Block {block_number}",
                     detail="Table structure omitted from narrative manuscript text.",
+                    position=block_number,
                 )
             )
             continue
@@ -268,6 +270,7 @@ def preview_docx(
                     element="drawing",
                     location=f"Paragraph {p_index}",
                     detail="Embedded drawing or image omitted; images can be attached to research dossiers.",
+                    position=p_index,
                 )
             )
 
@@ -277,6 +280,7 @@ def preview_docx(
                     element="footnote",
                     location=f"Paragraph {p_index}",
                     detail="Footnote reference omitted from primary manuscript text.",
+                    position=p_index,
                 )
             )
 

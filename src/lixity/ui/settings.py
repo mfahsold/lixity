@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
+from ..format import precise_num
 from ..publication import PUBLICATION_FIELDS
 from ..registers import REGISTER_PROFILE_TEMPLATES
 from ..site import docs_url
@@ -24,40 +25,28 @@ from .components import (
 )
 
 
-def _segmented_select(
+def _threshold_select(
     *,
     select_id: str,
     label_text: str,
     help_text: str,
     default_value: str,
     described_by: str,
-    options: Sequence[tuple[str, str, str, bool]],
+    options: Sequence[tuple[str, str]],
+    selected: str,
     select_attrs: Mapping[str, str] | None = None,
     note_html: str = "",
-    data_help_on_select: bool = True,
 ) -> str:
-    """Render a native <select> paired with a synchronized .settings-seg-group."""
-    esc_label = esc(label_text)
-    badge = help_badge(help_text, label_text)
     option_html = "".join(
-        f'<option value="{esc(val)}"{" selected" if selected else ""}>{esc(opt_label)}</option>'
-        for val, opt_label, _pill_label, selected in options
-    )
-    pill_html = "".join(
-        f'<button type="button" class="ctl ctl-sm" data-value="{esc(val)}" '
-        f'aria-pressed="{"true" if selected else "false"}">{esc(pill_label)}</button>'
-        for val, _opt_label, pill_label, selected in options
+        f'<option value="{esc(value)}"{" selected" if value == selected else ""}>{esc(name)}</option>'
+        for value, name in options
     )
     return form_field(
         select_id,
-        f"{esc_label} {badge}",
-        (
-            select_control(
-                select_id, option_html, help_text=help_text if data_help_on_select else "",
-                attributes={"data-default": default_value, "aria-describedby": described_by, **(select_attrs or {})},
-            )
-            + f'<div class="chip-row settings-seg-group" role="group" aria-label="{esc_label}" '
-            f'data-sync-select="{esc(select_id)}">{pill_html}</div>'
+        f"{esc(label_text)} {help_badge(help_text, label_text)}",
+        select_control(
+            select_id, option_html,
+            attributes={"data-default": default_value, "aria-describedby": described_by, **(select_attrs or {})},
         ),
         label_class="",
         note_html=note_html,
@@ -83,6 +72,7 @@ def settings_form(
     language_key: str | None = None,
 ) -> str:
     translated = panel_label(labels)
+    number_language = language_key or current_language
 
     defaults = FingerprintThresholds()
     publication_values: dict[str, str | bool] = {"enabled": (publication or {}).get("enabled") is True}
@@ -252,19 +242,19 @@ def settings_form(
         f'<summary data-help="{translated("settings_thresholds_hint")}">{translated("settings_thresholds_optional")}</summary>',
         panel_guide(translated("settings_thresholds_hint")),
         '<div class="settings-grid">',
-        _segmented_select(
+        _threshold_select(
             select_id="set-threshold-preset",
             label_text=label(labels, "settings_preset_label"),
             help_text=label(labels, "settings_preset_hint"),
-            default_value="balanced",
+            default_value=defaults.preset_name(),
             described_by="set-threshold-preset-help settings-scope-help",
             select_attrs={"data-presets": presets_json},
+            selected=active_preset,
             options=[
-                (key, label(labels, label_key), label(labels, label_key), key == active_preset)
+                (key, label(labels, label_key))
                 for key, label_key in preset_choices
             ],
-            note_html=f'<p class="ctl-note" id="set-threshold-preset-help" hidden>{translated("settings_preset_hint")}</p>',
-            data_help_on_select=False,
+            note_html=f'<p class="ctl-note" id="set-threshold-preset-help">{translated("settings_preset_hint")}</p>',
         ),
     ])
     fields = (
@@ -285,18 +275,16 @@ def settings_form(
         if policy.maximum_exclusive:
             constraints.append('data-max-exclusive="true"')
         help_text = label(labels, "help_" + key)
-        if key == "fdr_q" and thresholds.fdr_method.lower() == "by":
-            help_text = help_text.replace("Benjamini–Hochberg", "Benjamini–Yekutieli").replace(
-                "Benjamini-Hochberg", "Benjamini–Yekutieli"
-            )
-        default_note = esc(label(labels, "settings_default")).replace("{value}", str(default))
+        default_note = esc(label(labels, "settings_default")).replace(
+            "{value}", precise_num(default, number_language, minimum_decimals=0))
         parts.append(
             form_field(
                 control_id,
                 f'{translated(key)} {help_badge(help_text, label(labels, key))}',
                 f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
                 f'{" ".join(constraints)} required '
-                f'data-default="{default!r}" data-help="{esc(help_text, quote=True)}" aria-describedby="{control_id}-help settings-scope-help"/>',
+                f'data-default="{default!r}" data-threshold-key="{key}" data-help="{esc(help_text, quote=True)}" '
+                f'aria-describedby="{control_id}-help settings-scope-help"/>',
                 label_class="",
                 note_html=f'<p class="ctl-note" id="{control_id}-help">{default_note}</p>',
             )
@@ -304,38 +292,38 @@ def settings_form(
         if key == "fdr_q":
             method = thresholds.fdr_method.lower()
             default_method = defaults.fdr_method.lower()
+            methods = {"bh": "Benjamini–Hochberg", "by": "Benjamini–Yekutieli"}
             method_default = esc(label(labels, "settings_default")).replace(
-                "{value}", "Benjamini–Hochberg" if default_method == "bh" else "Benjamini–Yekutieli")
+                "{value}", methods[default_method])
             parts.append(
-                _segmented_select(
+                _threshold_select(
                     select_id="set-fdr-method",
                     label_text=label(labels, "settings_fdr_method"),
                     help_text=label(labels, "help_fdr"),
                     default_value=default_method,
                     described_by="set-fdr-method-help settings-scope-help",
-                    options=[
-                        ("bh", "Benjamini–Hochberg", "Benjamini–Hochberg", method == "bh"),
-                        ("by", "Benjamini–Yekutieli", "Benjamini–Yekutieli", method == "by"),
-                    ],
+                    select_attrs={"data-threshold-key": "fdr_method"},
+                    options=[(code, methods[code]) for code in FingerprintThresholds.fdr_methods],
+                    selected=method,
                     note_html=f'<p class="ctl-note" id="set-fdr-method-help">{method_default}</p>',
                 )
             )
     parts.append(
-        _segmented_select(
+        _threshold_select(
             select_id="set-flag-min-sev",
             label_text=label(labels, "flag_min_severity"),
             help_text=label(labels, "help_flag_min_severity"),
-            default_value="2",
+            default_value=str(defaults.flag_min_severity),
             described_by="flag-severity-help settings-scope-help",
+            select_attrs={"data-threshold-key": "flag_min_severity"},
+            selected=str(thresholds.flag_min_severity),
             options=[
                 (
                     str(severity),
                     f'{label(labels, f"severity_{severity}")} ≥ {severity}'
-                    + (f' · {label(labels, "settings_default_short")}' if severity == 2 else ""),
-                    f'{label(labels, f"severity_{severity}")} ≥ {severity}',
-                    severity == thresholds.flag_min_severity,
+                    + (f' · {label(labels, "settings_default_short")}' if severity == defaults.flag_min_severity else ""),
                 )
-                for severity in (1, 2, 3)
+                for severity in FingerprintThresholds.flag_severities
             ],
             note_html=f'<p class="ctl-note" id="flag-severity-help" hidden>{translated("help_flag_min_severity")}</p>',
         )
@@ -363,9 +351,10 @@ def settings_form(
                                 context_token=site_publication_context_token),
         '<div class="settings-actions">',
         f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings" title="{translated("apply")}" data-help="{translated("settings_apply_hint")}">{translated("apply")}</button>',
-        f'<span class="ctl-note">{translated("settings_apply_hint")}</span>',
         f'<span hidden id="settings-order-error">{translated("threshold_order")}</span>',
-        '</div></form>',
+        '</div>',
+        status_banner("settings-save-status"),
+        '</form>',
     ])
     return "".join(parts)
 

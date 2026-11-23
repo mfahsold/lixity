@@ -13,7 +13,7 @@
   var reload = document.getElementById("triage-reload");
   var native = panel.dataset.reviewCapable === "true" && !window.LixitySite.readOnly;
   if (!rows.length && !native) return;
-  var accepted = null, pending = false, cursor = null, revisionDelta = null;
+  var accepted = null, pending = false, cursor = null;
   function token() { return document.body.dataset.manuscriptProjectToken; }
   function label(key) { return uiLabel("triage_" + key); }
   function visible() { return rows.filter(function(row) {return !row.hidden;}); }
@@ -24,18 +24,9 @@
         filter && filter.value && row.dataset.reviewState !== filter.value);
     });
     var count = visible().length;
-    var deltaSuffix = "";
-    if (revisionDelta && revisionDelta.has_baseline && revisionDelta.deltas) {
-      var d = revisionDelta.deltas;
-      var parts = [];
-      if (typeof d.words === "number" && d.words !== 0) parts.push((d.words > 0 ? "+" : "") + d.words + " W");
-      if (typeof d.asl === "number" && Math.abs(d.asl) >= 0.05) parts.push("Δ " + (d.asl > 0 ? "+" : "") + d.asl.toFixed(1) + " ASL");
-      if (parts.length) deltaSuffix = " · " + parts.join(" · ");
-    }
     progress.textContent = uiFormat("triage_progress", {shown:count, total:rows.length}) +
       (accepted ? " · " + uiFormat("triage_completed", {completed:accepted.completed, total:accepted.total}) : "") +
-      (accepted && accepted.unmatched_decisions ? " · " + uiCountFormat("triage_unmatched", accepted.unmatched_decisions) : "") +
-      deltaSuffix;
+      (accepted && accepted.unmatched_decisions ? " · " + uiCountFormat("triage_unmatched", accepted.unmatched_decisions) : "");
     if (next) next.disabled = !count;
   }
   function controls(disabled) {
@@ -45,7 +36,6 @@
   }
   function failed() {
     accepted = null;
-    setRevisionDelta(null);
     controls(true);
     rows.forEach(function(row) {
       row.dataset.reviewState = "unknown";
@@ -84,45 +74,15 @@
     reload.hidden = true;
     return true;
   }
-  function setRevisionDelta(deltaRes) {
-    revisionDelta = deltaRes;
-    document.querySelectorAll("#heatmap .chapter-delta-badge").forEach(function(badge) { badge.remove(); });
-    if (!deltaRes || !deltaRes.has_baseline || !Array.isArray(deltaRes.chapter_deltas)) return;
-    deltaRes.chapter_deltas.forEach(function(ch) {
-      var row = document.getElementById("heatmap-ch-" + ch.num);
-      var cell = row && row.querySelector("td.ch");
-      if (!cell || (ch.match_status && ch.match_status !== "matched")) return;
-      var parts = [];
-      if (typeof ch.words_delta === "number" && ch.words_delta !== 0) {
-        parts.push((ch.words_delta > 0 ? "↑ +" : "↓ ") + ch.words_delta + " W");
-      }
-      if (typeof ch.asl_delta === "number" && Math.abs(ch.asl_delta) >= 0.1) {
-        parts.push("Δ " + (ch.asl_delta > 0 ? "+" : "") + ch.asl_delta.toFixed(1) + " ASL");
-      }
-      if (!parts.length) return;
-      var badge = document.createElement("span");
-      badge.className = "badge chapter-delta-badge";
-      badge.style.marginInlineStart = "6px";
-      badge.style.opacity = "0.85";
-      badge.textContent = parts.join(" · ");
-      cell.append(badge);
-    });
-  }
   async function load() {
     if (!native || pending) return;
     pending = true; controls(true);
     status.textContent = label("loading"); status.className = "ctl-status";
     var selected = token();
     var query = "?project_token=" + encodeURIComponent(selected);
-    var [data, deltaRes] = await Promise.all([
-      jsonApi(API + "/analysis-review" + query),
-      jsonApi(API + "/manuscript-delta" + query).catch(function() { return null; }),
-    ]);
+    var data = await jsonApi(API + "/analysis-review" + query);
     pending = false;
     if (selected !== token() || !accept(data)) {failed(); return;}
-    var matchesSource = deltaRes && deltaRes.ok && deltaRes.schema_version === "lixity-timeline/1" &&
-      deltaRes.current && deltaRes.current.revision === accepted.source_sha256;
-    setRevisionDelta(matchesSource ? deltaRes : null);
     apply();
     status.textContent = "";
   }

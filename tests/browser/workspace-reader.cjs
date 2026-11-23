@@ -6,6 +6,7 @@ const path = require('node:path');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-workspace-reader-'));
@@ -83,6 +84,7 @@ server.serve_forever()
         const claim = body.getByText('Preserved synthetic claim', {exact:true});
         await toggle.press('Enter');
         await dossiers.selectOption(server.fixture.linked);
+        await assertSelectGeometry(dossiers, `Dossier companion (${width}px)`);
         await expect(associations).toBeChecked();
         await expect(usage).toBeVisible();
         const originalClaim = await claim.elementHandle();

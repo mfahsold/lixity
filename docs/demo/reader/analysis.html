@@ -55,7 +55,9 @@
   --radius-pill: 999px;
   --shadow: 0 1px 2px rgba(0, 0, 0, .04);
   --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
-  --shadow-modal: 0 20px 48px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  --shadow-modal-ink: light-dark(rgb(0 0 0 / .22), rgb(0 0 0 / .75));
+  --shadow-modal-outline: light-dark(rgb(0 0 0 / .04), rgb(255 255 255 / .08));
+  --shadow-modal: 0 20px 48px -10px var(--shadow-modal-ink), 0 0 0 1px var(--shadow-modal-outline);
   --ease: cubic-bezier(.2, .7, .3, 1);
   --ease-out: var(--ease);
   --dur-fast: 140ms;
@@ -78,11 +80,14 @@
   --weight-semibold: 600;
   --weight-strong: 650;
   --weight-bold: 700;
+  --line-heading: 1.25;
   --line-tight: 1.4;
   --line-body: 1.6;
   --line-compact: 1.5;
   --line-control: 1.35;
   --line-reading: 1.7;
+  --line-manuscript: 1.8;
+  --measure-reading: 72ch;
   --space-1: .25rem;
   --space-2: .5rem;
   --space-3: .75rem;
@@ -125,13 +130,13 @@
   --status-warning-fg: light-dark(#854d0e, #fde68a);
   --status-warning-bg: light-dark(#fff7ed, #713f12);
   --status-warning-border: light-dark(#e6bc85, #92400e);
+  --status-important-fg: light-dark(#6f39af, #d0afff);
   --status-neutral-fg: var(--muted);
   --status-neutral-bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.06));
   --status-neutral-border: var(--line);
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) { :root { --shadow-modal: 0 28px 56px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08); } }
 
 /* Shared component vocabulary: panels, status, focus, tables, badges,
 controls, layout primitives and renderer utilities. One recipe per
@@ -363,15 +368,6 @@ a.chapter-link:hover { color: var(--accent-hover); }
 dialog moves beneath a stationary pointer after showing a status message. */
 button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-.ctl-select { position: relative; display: grid; min-inline-size: 0; }
-.ctl-select > select.ctl {
-  appearance: none; width: 100%; text-overflow: ellipsis;
-  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
-}
-.ctl-select > .lixity-icon {
-  position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
-  inline-size: var(--space-4); block-size: var(--space-4); pointer-events: none;
-}
 button.ctl:where(:enabled):active, a.ctl:active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
@@ -390,6 +386,21 @@ button.ctl.primary:enabled:hover, a.ctl.primary:hover { background: var(--action
 button.ctl.primary:enabled:active, a.ctl.primary:active { box-shadow: none; }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact { min-height: 2rem; padding: .25rem .6rem; font-size: var(--text-small); }
+.ctl-select { position: relative; display: grid; min-inline-size: 0; }
+/* Reserve the chevron space after the control-size variants set block padding. */
+.ctl-select > select.ctl {
+  appearance: none; inline-size: 100%; text-overflow: ellipsis;
+  padding-inline: var(--space-3) calc(var(--space-3) + var(--space-4) + var(--space-1));
+}
+.ctl-select > .lixity-icon {
+  position: absolute; inset-block: 0; inset-inline-end: var(--space-3); margin-block: auto;
+  inline-size: var(--space-4); block-size: var(--space-4); pointer-events: none;
+}
+.ctl-select > select:disabled + .lixity-icon { color: var(--muted); }
+@media (forced-colors: active) {
+  .ctl-select > select.ctl { appearance: auto; padding-inline-end: var(--space-3); }
+  .ctl-select > .lixity-icon { display: none; }
+}
 details.nda { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .6rem 1rem; margin-top: .6rem; }
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
@@ -587,7 +598,7 @@ summary.ctl { font-family: var(--font); font-size: var(--text-control); line-hei
 /* --- Markdown enhancements -------------------------------------------- */
 .markdown-highlight, mark.markdown-highlight { background-color: rgba(234, 179, 8, .25); color: inherit; padding: .08em .25em; border-radius: 2px; }
 .lixity-wikilink { text-decoration: underline; text-decoration-style: dashed; }
-details.markdown-alert summary.markdown-alert-title { cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: .5rem; }
+details.markdown-alert summary.markdown-alert-title { cursor: pointer; user-select: none; list-style: none; }
 details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { display: none; }
 /* --- Markdown Editor -------------------------------------------------- */
 .markdown-editor-wrap { display: flex; flex-direction: column; width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
@@ -943,7 +954,7 @@ code, pre { font-family: var(--font-mono); }
 .site-export-card { background: var(--surface-alt); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); }
 .site-export-section { display: flex; flex-direction: column; gap: var(--space-3); }
 .site-export-profile-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.site-export-profile-row select.ctl { flex: 1 1 12rem; min-width: 0; }
+.site-export-profile-row > .ctl-select { flex: 1 1 12rem; }
 .site-export-includes { display: flex; flex-direction: column; gap: var(--space-2); }
 .wizard-options-section { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
@@ -966,9 +977,9 @@ code, pre { font-family: var(--font-mono); }
 #metric-context-values td { font-variant-numeric: tabular-nums; }
 #metric-context-values .ctl { text-align: start; justify-content: flex-start; }
 .metric-context-selected { background: var(--accent-light); }
-h1 { font-size: 1.45rem; font-weight: var(--weight-strong); margin: 0 0 .25rem; letter-spacing: -.02em; overflow-wrap: anywhere; }
+h1 { font-size: var(--text-heading); font-weight: var(--weight-strong); line-height: var(--line-heading); margin: 0 0 var(--space-1); letter-spacing: -.02em; overflow-wrap: anywhere; }
 .project-header { margin-bottom: 0; }
-.project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: .5rem; }
+.project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: var(--weight-medium); letter-spacing: -.025em; margin-block-end: var(--space-2); }
 .project-meta { margin: .35rem 0 0; color: var(--muted); font-size: var(--text-small); }
 .settings-form {
 margin: 0;
@@ -999,6 +1010,7 @@ margin: 0;
 .settings-section .settings-advanced { background: var(--surface-raised, var(--surface)); border-color: color-mix(in srgb, var(--line) 80%, transparent); margin: 0; }
 .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .settings-form > .settings-actions { margin-top: .5rem; padding-top: 1rem; border-top: 1px solid var(--line); justify-content: flex-start; }
+.settings-form > .ctl-status { margin: 0; overflow-wrap: anywhere; }
 .speech-export-section, .speech-render-section {
 display: grid; gap: .75rem;
 & > p { margin: 0; }
@@ -1025,10 +1037,12 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
 .research-dossier-folder { display: grid; gap: var(--space-4); min-width: 0; }
 .research-dossier-document {
 & > :is(section, .research-dossier-character) {
-min-width: 0; padding-block-start: var(--space-3); border-top: 1px solid var(--line);
-& > h4 { margin-block: 0 var(--space-3); }
+  min-width: 0; padding-block-start: var(--space-3); border-block-start: 1px solid var(--line);
 }
-& > nav { align-items: center; }
+& > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+& > section > :is(h4, p) { margin: 0; }
+& > section > h4, & > .research-dossier-character > summary > h4 { font-size: var(--text-body); line-height: var(--line-tight); }
+& > section > .ctl { justify-self: start; }
 }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }
@@ -1474,6 +1488,11 @@ td.flag-excerpt { min-width: 16rem; max-width: 24rem; overflow: hidden; text-ove
 /* Keep the record identity beside wide chapter/figure comparisons. */
 #matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 8.5rem; max-width: 14rem; box-shadow: 1px 0 0 var(--line); }
 #matrix thead th:nth-child(2), #characters thead th:first-child, .scene-overview thead th:first-child { z-index: 3; }
+#matrix .chapter-revision-delta {
+display: block; inline-size: max-content; max-inline-size: 100%; margin-inline-start: auto;
+color: var(--muted); font-size: var(--text-small); font-weight: var(--weight-medium); white-space: normal;
+}
+#matrix .bar-cell:has(.chapter-revision-delta) { padding-block-end: var(--space-2); }
 .scene-overview th:first-child { width: 14rem; }
 @media (max-width: 600px) {
 #matrix :is(th, td):nth-child(2), #characters :is(th, td):first-child, .scene-overview th:first-child { width: 8.5rem; min-width: 8.5rem; max-width: 8.5rem; }
@@ -1707,7 +1726,7 @@ color: var(--fg-heading);
 & kbd { flex-shrink: 0; font-family: var(--font-mono, monospace); color: var(--fg); font-size: 0.68rem; font-weight: 600; line-height: 1.2; padding: 1px 5px; border-radius: var(--radius-xs); background: light-dark(rgba(0, 0, 0, .06), rgba(255, 255, 255, .12)); border: 1px solid light-dark(rgba(0, 0, 0, .14), rgba(255, 255, 255, .2)); box-shadow: 0 1px 0 light-dark(rgba(0, 0, 0, .08), rgba(0, 0, 0, .3)); margin-left: 0.25rem; }
 & kbd + kbd { margin-left: 0.2rem; }
 }
-.tooltip-copy { display: block; font-size: var(--text-note); line-height: 1.35; color: var(--fg-secondary); }
+.tooltip-copy { display: block; font-size: var(--text-note); line-height: var(--line-control); color: var(--fg-secondary); }
 /* Fallback pure CSS tooltip when JS is disabled */
 body:not(.has-js-tooltips) .help:hover::after,
 body:not(.has-js-tooltips) .help:focus::after { content: attr(data-help); position: absolute; bottom: calc(100% + 6px); left: 0; z-index: calc(var(--z-tooltip) - 1); max-width: min(18rem, 80vw); box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, .12), rgba(0, 0, 0, .45)); }
@@ -1722,7 +1741,7 @@ opacity: 0;
 transform: translateX(-4px);
 transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .16s var(--ease);
 &.visible { opacity: 1; transform: none; }
-&.saved { border-color: var(--present); color: var(--present); }
+&.saved { border-color: var(--status-success-border); color: var(--status-success-fg); }
 &.failed { border-color: var(--flag); color: var(--flag); }
 &.gone { opacity: 0; }
 }
@@ -1969,7 +1988,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 #modal-research-revision { width: min(94vw, 58rem); max-width: 58rem; }
 .research-revision-dossier { min-width: 0; }
 .research-revision-dossier-detail { min-width: 0; }
-.research-revision-dossier-title { margin: 0 0 var(--space-4); font-size: 1.35rem; line-height: var(--line-compact); }
+.research-revision-dossier-title { margin: 0 0 var(--space-4); font-size: var(--text-heading); line-height: var(--line-heading); }
 @media (max-width: 540px) {
 .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
 .research-revision-readonly dd { margin-bottom: .55rem; }
@@ -2065,19 +2084,20 @@ while reading: let it scroll away instead of sticking there. */
 *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 /* Shared dossier document typography. */
-.research-dossier-body-wrap { margin: 0.5rem 0 1rem; }
-.research-prose-bar { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
-.research-prose-bar .dossier-image-actions { margin: 0; margin-inline-end: auto; }
+.research-dossier-toolbar { gap: var(--space-2); }
+.research-dossier-toolbar .research-record-actions { margin: 0; gap: var(--space-2); align-items: center; min-inline-size: 0; }
+.research-dossier-toolbar > .ctl-note { margin: 0; }
+.research-dossier-body-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); min-inline-size: 0; }
+.research-prose-bar { display: flex; justify-content: space-between; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.research-prose-bar .dossier-image-actions { margin: 0; }
 .research-dossier-actions { padding-block: var(--space-3); border-block-start: 1px solid var(--line); }
 .research-dossier-actions > summary { cursor: pointer; color: var(--muted); }
 .research-dossier-actions[open] > summary { margin-block-end: var(--space-3); }
 .research-dossier-actions .row { flex-wrap: wrap; }
-.research-section-actions { margin-block: 0 var(--space-3); }
+.research-section-actions { margin-block: 0 var(--space-2); }
 .research-section-actions .ctl { background: transparent; border-color: transparent; color: var(--muted); }
 .research-section-actions .ctl:hover, .research-section-actions .ctl:focus-visible { color: var(--accent); border-color: var(--line); }
-.research-dossier-document .research-prose > :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote) { max-inline-size: 72ch; }
-.research-dossier-document .research-prose > :first-child { margin-block-start: 0; }
-.research-dossier-body-source { white-space: pre-wrap; word-break: break-word; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.75rem; font-size: var(--text-small); max-height: 25rem; overflow-y: auto; }
+.research-dossier-body-source { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-3); font-size: var(--text-small); max-height: 25rem; overflow-y: auto; }
 .research-dossier-sections { margin: 0.45rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .research-zotero-link { display: inline-block; margin-block: .4rem; font-size: var(--text-control); color: var(--accent); text-decoration: underline; white-space: normal; }
 .research-zotero-link:hover, .research-zotero-link:focus-visible { color: var(--accent); text-decoration: underline; }
@@ -2116,12 +2136,12 @@ select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
 .view-pane > *, #workspace-analysis-body > * { min-width: 0; margin-block: 0; }
 /* --- Project Workspace Cards & Spacing Harmony --- */
 #controls { display: flex; flex-direction: column; gap: var(--space-5); padding: 0; border: 0; background: transparent; box-shadow: none; }
-#controls > h2 { margin: 0; font-size: clamp(1.4rem, 2.5vw, 1.85rem); font-weight: var(--weight-bold, 700); }
+#controls > h2 { margin: 0; font-size: var(--text-heading); font-weight: var(--weight-bold); line-height: var(--line-heading); }
 #controls > .project-overview,
 #controls > .ctl-group,
 #controls > #nda-draft.panel { margin: 0; padding: var(--panel-padding); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
 #controls > #nda-draft.panel { box-shadow: none; }
-#controls > #ctl-status { padding: .65rem 1rem; background: var(--surface-raised, var(--surface)); border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: var(--text-small); color: var(--muted); margin: 0; }
+#controls > #ctl-status { padding: var(--space-3) var(--space-4); background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); margin: 0; }
 #controls details.nda, #controls details#legal { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); padding: .75rem 1rem; margin: 0; }
 @media (max-width: 540px) {
 #controls > :is(.project-overview, .ctl-group, #nda-draft.panel), #controls details.nda, #controls details#legal { padding: var(--space-3); }
@@ -2131,7 +2151,7 @@ select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
 @media (max-width: 480px) { .view-navigation { gap: var(--space-1); } .view-nav-tab { padding: var(--space-2); font-size: var(--text-control); } }
 /* The interactive workspace has application chrome; exported reports keep
 their document layout. The same native shell is used by the public demo. */
-.lixity-workspace .workspace-shell .project-header h1 { font-family: var(--font); font-size: 1.125rem; font-weight: var(--weight-semibold); line-height: 1.45; letter-spacing: 0; }
+.lixity-workspace .workspace-shell .project-header h1 { font-family: var(--font); font-size: var(--text-subhead); font-weight: var(--weight-semibold); line-height: var(--line-tight); letter-spacing: 0; }
 .lixity-workspace .workspace-shell .sub { font-size: var(--text-small); }
 .lixity-workspace .kpi:hover { transform: none; box-shadow: none; }
 .lixity-workspace .toolbar { gap: .65rem 1rem; }
@@ -2195,12 +2215,13 @@ line-height: var(--line-reading);
 font-size: var(--text-body);
 color: var(--fg);
 overflow-wrap: break-word;
-& :is(h1, h2, h3, h4, h5, h6) { line-height: 1.3; color: var(--fg); font-weight: var(--weight-semibold); }
-& h1 { font-size: 1.35rem; border-bottom: 1px solid var(--line); padding-bottom: 0.35rem; margin: 1.2rem 0 0.6rem; }
-& h2 { font-size: 1.18rem; border-bottom: 1px solid var(--line-subtle, var(--line)); padding-bottom: 0.25rem; margin: 1.1rem 0 0.5rem; }
-& h3 { font-size: 1.05rem; margin: 0.9rem 0 0.4rem; }
-& :is(h4, h5, h6) { font-size: var(--text-body); margin: 0.8rem 0 0.3rem; }
-& p { margin: 0 0 0.9rem; max-width: 72ch; }
+& :is(h1, h2, h3, h4, h5, h6) { line-height: var(--line-heading); color: var(--fg-heading); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+& :is(h1, h2) { margin: var(--space-4) 0 var(--space-2); padding-block-end: var(--space-1); }
+& h1 { font-size: var(--text-heading); border-block-end: 1px solid var(--line); }
+& h2 { font-size: var(--text-subhead); border-block-end: 1px solid var(--line-subtle); }
+& :is(h3, h4, h5, h6) { font-size: var(--text-body); margin: var(--space-3) 0 var(--space-1); }
+& h3 { font-weight: var(--weight-strong); }
+& p { margin: 0 0 var(--space-4); max-inline-size: var(--measure-reading); }
 & :is(ul, ol) { margin: 0 0 0.7rem; padding-left: 1.3rem; }
 & li { margin-bottom: 0.25rem; }
 & blockquote { margin: 0.7rem 0; padding: 0.4rem 0.8rem; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 var(--radius) var(--radius) 0; }
@@ -2222,24 +2243,37 @@ line-height: var(--line-compact);
 & del { text-decoration: line-through; opacity: 0.75; }
 & .task-list-item { list-style-type: none; margin-left: -1rem; display: flex; align-items: baseline; gap: 0.45rem; }
 }
+.research-dossier-body-rendered {
+  & > :is(h1, h2, h3, h4, h5, h6, ul, ol, blockquote) { max-inline-size: var(--measure-reading); }
+  & > :is(h1, h2, h3, h4, h5, h6):has(+ .research-section-actions) { margin-block-end: var(--space-1); }
+  & > blockquote { padding: var(--space-2) var(--space-3); }
+  & > :first-child { margin-block-start: 0; }
+  & > :last-child, & > blockquote > :last-child { margin-block-end: 0; }
+}
 .task-list-item-checkbox { margin: 0; vertical-align: middle; cursor: default; }
-/* GitHub Alert Callouts */
-.markdown-alert { margin: 0.9rem 0; padding: 0.65rem 0.9rem; border-left: 4px solid var(--alert-border, var(--accent)); background: var(--alert-bg, var(--bg-subtle, rgba(0, 0, 0, 0.02))); border-radius: var(--radius-xs) var(--radius) var(--radius) var(--radius-xs); color: var(--fg); }
-.markdown-alert-title { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.35rem 0; font-weight: var(--weight-semibold, 600); font-size: var(--text-small, 0.9em); color: var(--alert-color, var(--accent)); line-height: 1.2; }
-.markdown-alert-icon { flex-shrink: 0; width: 1rem; height: 1rem; fill: currentColor; }
-.markdown-alert-content { font-size: var(--text-body); line-height: var(--line-reading); }
-.markdown-alert-content p { margin: 0; }
-.markdown-alert-content p + p { margin-top: 0.5rem; }
-.markdown-alert-note { --alert-border: #0969da; --alert-color: #0969da; --alert-bg: rgba(9, 105, 218, 0.06); }
-.markdown-alert-tip { --alert-border: #1a7f37; --alert-color: #1a7f37; --alert-bg: rgba(26, 127, 55, 0.06); }
-.markdown-alert-important { --alert-border: #8250df; --alert-color: #8250df; --alert-bg: rgba(130, 80, 223, 0.06); }
-.markdown-alert-warning { --alert-border: #9a6700; --alert-color: #9a6700; --alert-bg: rgba(154, 103, 0, 0.07); }
-.markdown-alert-caution { --alert-border: #cf222e; --alert-color: #cf222e; --alert-bg: rgba(207, 34, 46, 0.06); }
-[data-theme="dark"] .markdown-alert-note { --alert-border: #2f81f7; --alert-color: #2f81f7; --alert-bg: rgba(47, 129, 247, 0.12); }
-[data-theme="dark"] .markdown-alert-tip { --alert-border: #3fb950; --alert-color: #3fb950; --alert-bg: rgba(63, 185, 80, 0.12); }
-[data-theme="dark"] .markdown-alert-important { --alert-border: #a371f7; --alert-color: #a371f7; --alert-bg: rgba(163, 113, 247, 0.12); }
-[data-theme="dark"] .markdown-alert-warning { --alert-border: #d29922; --alert-color: #d29922; --alert-bg: rgba(210, 153, 34, 0.12); }
-[data-theme="dark"] .markdown-alert-caution { --alert-border: #f85149; --alert-color: #f85149; --alert-bg: rgba(248, 81, 73, 0.12); }
+/* Authored Markdown notices follow the active scheme through semantic colors. */
+.markdown-alert {
+  --alert-ink: var(--accent);
+  margin-block: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 4px solid var(--alert-ink);
+  border-radius: var(--radius-xs) var(--radius) var(--radius) var(--radius-xs);
+  background: color-mix(in srgb, var(--alert-ink) 8%, var(--surface));
+  color: var(--fg);
+  & .markdown-alert-title {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin: 0 0 var(--space-2); color: var(--alert-ink);
+    font-size: var(--text-note); font-weight: var(--weight-semibold); line-height: var(--line-heading);
+  }
+  & .markdown-alert-icon { flex: none; inline-size: var(--text-body); block-size: var(--text-body); fill: currentColor; }
+  & .markdown-alert-content { font-size: var(--text-body); line-height: var(--line-reading); }
+  & .markdown-alert-content p { margin: 0; }
+  & .markdown-alert-content p + p { margin-block-start: var(--space-2); }
+}
+.markdown-alert-tip { --alert-ink: var(--status-success-fg); }
+.markdown-alert-important { --alert-ink: var(--status-important-fg); }
+.markdown-alert-warning { --alert-ink: var(--status-warning-fg); }
+.markdown-alert-caution { --alert-ink: var(--flag); }
 /* Math & LaTeX formatting */
 .math-inline { font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif; font-size: 0.95em; padding: 0.1rem 0.35rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.04)); border-radius: var(--radius-xs); display: inline-flex; align-items: baseline; gap: 0.15rem; white-space: nowrap; }
 .math-display { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.35rem; margin: 0.85rem 0; padding: 0.75rem 1rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.03)); border: 1px solid var(--line-subtle, var(--line)); border-radius: var(--radius); overflow-x: auto; font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif; font-size: 1.05em; }
@@ -2362,7 +2396,7 @@ prose invalidates the whole book during paragraph enhancement on mobile. */
 .lixity-workspace.has-reading .project-header .sub { display: none; }
 .lixity-workspace.has-reading .workspace-bar { padding: .4rem 0; }
 .lixity-workspace.has-reading .workspace-bar > .row { gap: .35rem; }
-.lixity-workspace.has-reading .workspace-bar .ctl { padding: .35rem .5rem; font-size: var(--text-control); }
+.lixity-workspace.has-reading .workspace-bar :is(button, a, summary).ctl { padding: .35rem var(--space-2); font-size: var(--text-control); }
 }
 /* Reading controls are adjacent tools; repeated section spacing should not
 turn the short mobile entry into several screens of application chrome. */
@@ -2411,7 +2445,7 @@ body[data-read-only="true"] [data-requires-live] { display: none !important; }
   .voice-active-card, .voice-ref-item { flex-wrap: wrap; }
   dialog, .modal-card { max-width: calc(100vw - 1rem); }
   .template-grid { grid-template-columns: 1fr; }
-  .site-export-profile-row { flex-direction: column; align-items: stretch; }
+  .site-export-profile-row > * { flex-basis: 100%; }
 }
 
 /* Context dock & reader polish */
@@ -3887,25 +3921,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) var(--space-1) 0;
   min-height: 0;
 }
-.workspace-context-panel .workspace-reader-panel .workspace-reader-head #workspace-reader-close {
+.workspace-reader-head :is(#workspace-reader-close, [data-passage-research-close]) {
   background: transparent;
   border: 0;
   color: var(--muted);
   padding: 0;
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
+  min-inline-size: 2rem;
+  min-block-size: 2rem;
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  font-size: var(--text-body);
   border-radius: var(--radius-sm);
   cursor: pointer;
   line-height: 1;
-  transition: background .15s ease, color .15s ease;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-.workspace-context-panel .workspace-reader-panel .workspace-reader-head #workspace-reader-close:hover {
+.workspace-reader-head :is(#workspace-reader-close, [data-passage-research-close]):hover {
   background: var(--surface-hover);
   color: var(--fg);
 }
@@ -3920,12 +3953,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .workspace-reader-divider:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
 .workspace-reader-panel .workspace-reader-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); align-items: flex-end; }
 .workspace-reader-panel .setting-field { margin: 0; flex: 1 1 10rem; }
-.workspace-reader-panel .setting-field label { font-size: var(--text-small); font-weight: 500; color: var(--muted); margin-bottom: var(--space-1); }
-.workspace-reader-panel .setting-field select.ctl { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.4rem 0.65rem; }
+.workspace-reader-panel .setting-field select.ctl { background-color: var(--surface-raised); border-color: var(--line); }
 #workspace-reader-associations-field { margin-block-end: var(--space-2); }
 #workspace-reader-body[data-hide-dossier-text-associations] [data-dossier-text-association] { display: none; }
-.workspace-reader-panel h3 { font-size: var(--text-body); }
-.workspace-reader-panel .research-dossier-body-source { white-space: pre-wrap; overflow-wrap: anywhere; }
+#workspace-reader-body > h3 { font-size: var(--text-subhead); line-height: var(--line-heading); }
 .workspace-reader-panel .research-passage-quote { overflow-wrap: anywhere; }
 .workspace-reader-panel .table-wrap { max-width: 100%; overflow-x: auto; margin: 0.75rem 0; }
 .workspace-reader-panel .research-table { width: 100%; min-width: 100%; }
@@ -3965,34 +3996,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
   gap: var(--space-2);
   color: var(--fg);
 }
-.passage-research .workspace-reader-head button.ctl {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  padding: 0;
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  line-height: 1;
-}
-.passage-research .workspace-reader-head button.ctl:hover {
-  color: var(--fg);
-  background: var(--surface-hover);
-}
 .passage-research-item { padding-block: var(--space-3); border-top: 1px solid var(--line-subtle, var(--line)); }
 .passage-research-item .ctl { max-width: 100%; white-space: normal; text-align: start; overflow-wrap: anywhere; }
 .passage-research-record { margin-bottom: var(--space-3); }
 .passage-research-record > .ctl-note { margin-block: var(--space-1); }
 @media (pointer: coarse) {
-  .passage-research .workspace-reader-head button.ctl,
-  .workspace-context-panel .workspace-reader-panel .workspace-reader-head #workspace-reader-close { min-width: 2.75rem; min-height: 2.75rem; }
+  .workspace-reader-head :is(#workspace-reader-close, [data-passage-research-close]) { min-inline-size: 2.75rem; min-block-size: 2.75rem; }
 }
 .passage-research-item .passage-record-title { display: block; width: 100%; padding: var(--space-1) var(--space-2); margin-inline: calc(-1 * var(--space-2)); border-color: transparent; background: transparent; color: var(--accent); font-weight: var(--weight-semibold); }
 .passage-research-item .passage-record-title:hover { background: var(--accent-light); color: var(--accent); }
@@ -4325,8 +4334,8 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .chapter + .chapter { border-top: 1px solid var(--line); padding-top: 2.5rem; }
 .manuscript-reading .chapter-head { display: block; margin-bottom: 1.25rem; }
 .manuscript-reading .chapter-head h2 {
-  font-family: var(--font-title); font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 500;
-  line-height: 1.25; color: var(--fg);
+  font-family: var(--font-title); font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: var(--weight-medium);
+  line-height: var(--line-heading); color: var(--fg);
 }
 .manuscript-reading .chapter-head .meta,
 .manuscript-reading .chapter-toggle,
@@ -4341,11 +4350,14 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .ptext.flash { background: transparent; box-shadow: none; }
 .manuscript-reading .ptext-inner,
 .manuscript-reading .ptext.open .ptext-inner { min-width: 0; overflow: visible; padding: 0; background: transparent; position: relative; transition: none; }
-.manuscript-reading .ptext-inner > p {
-  max-width: none; margin: 0; font-family: var(--font-title);
-  font-size: var(--reader-font-size, 1.125rem); line-height: var(--reader-leading, 1.8);
-  color: var(--fg); overflow-wrap: anywhere; white-space: pre-line;
+.manuscript-reading .ptext-inner > p,
+.reader-structural {
+  font-family: var(--font-title);
+  font-size: var(--reader-font-size, var(--text-subhead));
+  line-height: var(--reader-leading, var(--line-manuscript));
+  color: var(--fg); overflow-wrap: anywhere;
 }
+.manuscript-reading .ptext-inner > p { max-inline-size: none; margin: 0; white-space: pre-line; }
 .manuscript-reading .ptext-inner > .paragraph-values,
 .manuscript-reading .ptext-inner > .manuscript-link-feedback,
 .manuscript-reading .ptext-inner > .manuscript-link-controls,
@@ -4445,8 +4457,12 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-focus .workspace-context-panel { display: none !important; }
 #dashboard-freshness .status-item { flex-wrap: wrap; min-width: 0; }
 #dashboard-freshness .status-detail { white-space: normal; overflow: visible; max-width: none; }
-.reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-title); font-size: var(--reader-font-size, 1.125rem); line-height: var(--reader-leading, 1.8); margin: 1em 0; }
-.reader-structural.reader-heading { font-size: 1.25em; font-weight: 600; }
+.reader-structural { white-space: pre-wrap; margin-block: 1em; }
+.reader-structural.reader-heading {
+  font-size: calc(1.25 * var(--reader-font-size, var(--text-subhead)));
+  font-weight: var(--weight-semibold); line-height: var(--line-heading);
+}
+.reader-structural.reader-code { font-family: var(--font-mono); }
 .reader-coverage { font-family: var(--font); font-size: var(--text-note); color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
   .analysis-toggle, .context-tool-tabs .ctl { transition: background-color 120ms ease, border-color 120ms ease; }
@@ -4745,11 +4761,11 @@ body.lixity-workspace.reader-focus {
 .toolbar-sections.section-navigation a[aria-current="true"] { background: transparent; border-color: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 2px; }
 :is(.research-dossier-contents, .analysis-outline-contents) { margin-block: var(--space-3); }
 :is(.research-dossier-contents, .analysis-outline-contents) > summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
-:is(.research-dossier-contents, .analysis-outline-contents) .section-navigation { padding: .25rem .5rem .25rem 1rem; }
+:is(.research-dossier-contents, .analysis-outline-contents) .section-navigation { padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4); }
 :is(.research-dossier-contents, .analysis-outline-contents) ul { list-style: none; margin: 0; padding: 0; }
-:is(.research-dossier-contents, .analysis-outline-contents) ul ul { padding-inline-start: 1rem; }
+:is(.research-dossier-contents, .analysis-outline-contents) ul ul { padding-inline-start: var(--space-4); }
 :is(.research-dossier-contents, .analysis-outline-contents) li { margin: 0; }
-:is(.research-dossier-contents, .analysis-outline-contents) a { display: block; padding: .35rem .5rem; overflow-wrap: anywhere; line-height: 1.45; }
+:is(.research-dossier-contents, .analysis-outline-contents) a { display: block; padding: var(--space-1) var(--space-2); overflow-wrap: anywhere; line-height: var(--line-compact); }
 @media (max-width: 900px) {
   :is(.research-dossier-contents, .analysis-outline-contents) a { min-height: 2.75rem; align-content: center; }
   .analysis-outline-contents { display: none; }
@@ -4760,8 +4776,10 @@ body.lixity-workspace.reader-focus {
 
 /* One bounded orientation link remains reachable after the full list scrolls away. */
 .research-dossier-location {
-  position: sticky; top: 0; z-index: 2; display: flex; align-items: center;
-  height: 44px; min-width: 0; padding-inline: .5rem;
+  position: sticky;
+  top: max(var(--dossier-ribbon-inset, 0px), var(--dossier-scrollport-inset, 0px));
+  z-index: 2; display: flex; align-items: center; gap: var(--space-1);
+  min-block-size: 2.75rem; min-width: 0; padding-inline: var(--space-2); margin-block-end: var(--space-2);
   background: var(--surface);
   border-block: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   color: var(--accent); font-size: var(--text-small); text-decoration: none;
@@ -4773,6 +4791,9 @@ body.lixity-workspace.reader-focus {
 /* A document's available width decides whether its full outline fits beside it.
    Accepted source and native disclosure nodes keep their owners in both modes. */
 .research-dossier-folder { container: dossier-reading / inline-size; min-width: 0; }
+.research-tab-pane:where(:has(> .research-pane-navigation)) .research-dossier-folder {
+  --dossier-ribbon-inset: calc(var(--workbench-return-height, 0px) + var(--space-2) + var(--pane-ribbon-height, 0px));
+}
 .research-dossier-layout, .research-dossier-document { min-width: 0; }
 .research-dossier-document { display: grid; gap: var(--space-4); align-content: start; }
 @container dossier-reading (min-width: 52rem) {
@@ -4780,7 +4801,8 @@ body.lixity-workspace.reader-focus {
   .research-dossier-document { grid-column: 1; grid-row: 1; }
   .research-dossier-contents {
     grid-column: 2; grid-row: 1; position: sticky;
-    top: calc(1rem + var(--workbench-return-height, 0px)); align-self: start;
+    top: max(calc(var(--space-4) + var(--workbench-return-height, 0px)), var(--dossier-ribbon-inset, 0px));
+    align-self: start;
     min-width: 0; --outline-available-height: calc(100dvh - 2rem - var(--workbench-return-height, 0px));
     margin: 0; padding-inline-start: var(--space-2); border-inline-start: 1px solid var(--line);
     font-size: var(--text-control);
@@ -4792,7 +4814,9 @@ body.lixity-workspace.reader-focus {
   .research-dossier-location { display: none; }
 }
 /* The side tool and two-document review keep their existing compact scrollport. */
-:is(.workspace-context-panel, .research-decision-review) .research-dossier-folder { container-type: normal; }
+:is(.workspace-context-panel, .research-decision-review) .research-dossier-folder {
+  container-type: normal; --dossier-ribbon-inset: 0px;
+}
 :is(.workspace-context-panel, .research-decision-review) .research-dossier-layout { display: block; }
 :is(.workspace-context-panel, .research-decision-review) .research-dossier-contents {
   position: static; max-height: none; margin-block: var(--space-3); padding-inline-start: 0;
@@ -4947,15 +4971,15 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 /* Curated reading uses the shared text/media renderers without edit surfaces. */
 .publication-site .page { max-width: 90rem; }
 .publication-header { border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
-.publication-introduction { max-width: 70ch; white-space: pre-wrap; margin-bottom: 1rem; }
+.publication-introduction { max-inline-size: var(--measure-reading); white-space: pre-wrap; margin-block-end: var(--space-4); }
 .publication-progress-controls { display: grid; gap: .6rem; margin: 1rem 0; }
-.publication-progress-controls h2 { margin: 0; font-size: 1.1rem; }
+.publication-progress-controls h2 { margin: 0; font-size: var(--text-subhead); line-height: var(--line-heading); }
 .publication-progress-controls .row { margin: 0; align-items: center; }
 .publication-progress-controls > button { justify-self: start; }
 .publication-progress-controls form[hidden] { display: none; }
 .publication-progress-controls select { max-width: 100%; }
 .publication-reading-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(19rem, 1fr); gap: 2rem; align-items: start; width: 100%; min-width: 0; }
-.publication-reading-layout:not(:has(.publication-novel)) { display: block; max-width: 75ch; margin-inline: auto; }
+.publication-reading-layout:not(:has(.publication-novel)) { display: block; max-inline-size: var(--measure-reading); margin-inline: auto; }
 .publication-context { position: sticky; top: 1rem; max-height: calc(100dvh - 2rem); overflow: auto; min-width: 0; }
 .publication-reading-layout:not(:has(.publication-novel)) .publication-context { position: static; max-height: none; overflow: visible; }
 .publication-context h2 { margin-top: 0; }
@@ -4965,14 +4989,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .publication-context article { border-top: 1px solid var(--line); padding-block: 1rem; }
 .publication-context article h3 { margin-top: 0; }
 .publication-context .research-prose { overflow-wrap: anywhere; }
-.publication-site .reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; }
 .publication-site .chapter { margin-block: 2rem; }
 .publication-site #chapters > .chapter:first-child { margin-top: 0; }
-.publication-site #chapters { margin-top: 0; font-size: var(--reader-font-size, 1.15rem); line-height: 1.65; }
+.publication-site #chapters { margin-block-start: 0; }
 .publication-site footer { margin-top: 2rem; }
 .publication-navigation { flex-wrap: wrap; margin-block: 1rem; }
 .publication-audio { margin-block: 1rem; min-width: 0; }
-.publication-audio summary { font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+.publication-audio summary { font-size: var(--text-subhead); font-weight: var(--weight-semibold); cursor: pointer; }
 .publication-audio[open] summary { margin-bottom: 1rem; }
 .publication-audio > audio { max-width: 100%; }
 .publication-audio .row { flex-wrap: wrap; }
@@ -4986,61 +5009,52 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 }
 
 .project-overview { margin: 0; min-width: 0; }
-.project-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.project-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .project-overview-heading h3 { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); }
 .project-overview-heading .ctl { flex-shrink: 0; }
-.project-overview-workflow h4, .project-overview-outputs h4 { font-size: var(--text-section-title, 1rem); font-weight: var(--weight-semibold); margin: 1rem 0 .5rem; }
-.project-overview-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.project-overview :is(h3, h4) { line-height: var(--line-heading); }
+:is(.project-overview-workflow, .project-overview-outputs) h4 { font-size: var(--text-section-title); font-weight: var(--weight-semibold); margin: var(--space-4) 0 var(--space-2); }
+.project-overview-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
 .project-overview-action { min-width: 0; }
-.project-overview-action .ctl-note { max-width: 28rem; margin: .3rem 0; font-size: var(--text-small); color: var(--muted); line-height: 1.45; }
-.project-overview-technical {
-  margin-top: 1rem;
+.project-overview-action .ctl-note { max-inline-size: 28rem; margin-block: var(--space-1); }
+:is(.project-overview-technical, .project-overview-browser) {
+  margin-block-start: var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--surface-raised, var(--surface));
-  padding: .5rem .85rem;
+  background: var(--surface-raised);
+  padding: var(--space-2) var(--space-3);
+  &[open] { padding-block-end: var(--space-3); }
+  & > summary { cursor: pointer; font-size: var(--text-control); font-weight: var(--weight-semibold); user-select: none; }
+  &[open] > summary { margin-block-end: var(--space-2); border-block-end: 1px solid var(--line); padding-block-end: var(--space-2); }
 }
-.project-overview-technical > summary { cursor: pointer; font-size: var(--text-control); font-weight: var(--weight-semibold); user-select: none; }
-.project-overview-technical[open] { padding-bottom: .85rem; }
-.project-overview-technical[open] > summary { margin-bottom: .6rem; border-bottom: 1px solid var(--line); padding-bottom: .45rem; }
-.project-overview-technical .project-overview-columns { margin-top: .75rem; }
-.project-overview-root { display: flex; flex-wrap: wrap; gap: .25rem .65rem; margin: .5rem 0 1rem; font-size: .85rem; }
+.project-overview-technical .project-overview-columns { margin-block-start: var(--space-3); }
+.project-overview-root { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); margin: var(--space-2) 0 var(--space-4); font-size: var(--text-control); }
 .project-overview-root span { color: var(--muted); }
 .project-overview code { overflow-wrap: anywhere; white-space: normal; }
-.project-overview-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.project-overview-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .project-overview-group { min-width: 0; }
-.project-overview-group h4, .project-overview-findings h4 { font-size: .95rem; font-weight: var(--weight-semibold); margin: 0 0 .5rem; }
+:is(.project-overview-group, .project-overview-findings) h4 { font-size: var(--text-section-title); font-weight: var(--weight-semibold); margin: 0 0 var(--space-2); }
 .project-overview-list, .project-overview-issues { list-style: none; margin: 0; padding: 0; }
-.project-overview-row { padding: .65rem 0; border-top: 1px solid var(--line); min-width: 0; }
-.project-overview-row-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem .65rem; }
-.project-overview-row-heading strong { font-size: .9rem; font-weight: var(--weight-medium); }
-.project-overview-row code { display: block; margin: .3rem 0; font-size: .8rem; }
-.project-overview-state, .project-overview-row .ctl-note { color: var(--muted); font-size: .8rem; }
-.project-overview-row .ctl { margin-top: .35rem; }
-.project-overview-artifacts { margin-top: .75rem; }
+.project-overview-row { padding-block: var(--space-3); border-block-start: 1px solid var(--line); min-width: 0; }
+.project-overview-row-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.project-overview-row-heading strong { font-size: var(--text-control); font-weight: var(--weight-medium); }
+.project-overview-row code { display: block; margin-block: var(--space-1); font-size: var(--text-note); }
+.project-overview-state { color: var(--muted); font-size: var(--text-note); }
+.project-overview-row .ctl { margin-block-start: var(--space-1); }
+.project-overview-artifacts { margin-block-start: var(--space-3); }
 .project-overview-artifacts .project-overview-row-heading strong { overflow-wrap: anywhere; }
-.project-overview-browser {
-  margin-top: 1rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised, var(--surface));
-  padding: .5rem .85rem;
-}
-.project-overview-browser[open] { padding-bottom: .85rem; }
-.project-overview-browser summary { cursor: pointer; font-size: var(--text-control); font-weight: var(--weight-semibold); user-select: none; }
-.project-overview-browser[open] > summary { margin-bottom: .6rem; border-bottom: 1px solid var(--line); padding-bottom: .45rem; }
 .project-overview-output-group {
-  margin-top: .65rem;
-  border-top: 1px solid var(--line);
-  padding-top: .45rem;
+  margin-block-start: var(--space-3);
+  border-block-start: 1px solid var(--line);
+  padding-block-start: var(--space-2);
 }
-.project-overview-output-group summary { cursor: pointer; font-size: .85rem; font-weight: 600; }
-.project-overview-search { display: flex; flex-direction: column; gap: .3rem; margin: .75rem 0; font-size: .85rem; }
+.project-overview-output-group summary { cursor: pointer; font-size: var(--text-control); font-weight: var(--weight-semibold); }
+.project-overview-search { display: flex; flex-direction: column; gap: var(--space-1); margin-block: var(--space-3); font-size: var(--text-control); }
 .project-overview-search input { max-width: 100%; }
-.project-overview-findings { margin-top: 1.25rem; }
-.project-overview-issues li { padding: .45rem 0; font-size: .85rem; }
-.project-overview-issues strong { margin-right: .45rem; }
-.project-overview-issues code { display: block; margin-top: .2rem; font-size: .8rem; }
+.project-overview-findings { margin-block-start: var(--panel-padding); }
+.project-overview-issues li { padding-block: var(--space-2); font-size: var(--text-control); }
+.project-overview-issues strong { margin-inline-end: var(--space-2); }
+.project-overview-issues code { display: block; margin-block-start: var(--space-1); font-size: var(--text-note); }
 @media (max-width: 620px) {
   .project-overview-columns { grid-template-columns: minmax(0, 1fr); }
   .project-overview-heading { align-items: flex-start; flex-wrap: wrap; }
@@ -5055,7 +5069,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <meta property="og:url" content="https://mfahsold.github.io/lixity/demo/reader/analysis.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="1942"/>
+<meta property="og:image:height" content="1926"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Warehouse 4 — chapter analysis"/>
@@ -5063,7 +5077,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1942, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Warehouse 4 — chapter analysis", "description": "Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.", "url": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/demo/reader/analysis.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1926, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
 </script>
 </head>
 <body class="lixity-report" data-read-only="true"><main class="page">

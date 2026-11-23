@@ -38,7 +38,7 @@ assert.equal(staged.status, 0, staged.stderr);
       await page.goto('https://tour.test/index-de.html');
       await expect(page.locator('.hero-cta a')).toHaveCount(2);
       await expect(page.locator('.hero-cta a').first()).toHaveAttribute('href', '#product-tour-preview');
-      await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', 'sandbox/index.html');
+      await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', 'sandbox/index.html?lang=de');
       assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
@@ -64,6 +64,21 @@ assert.equal(staged.status, 0, staged.stderr);
       const caption = await page.locator('.tour-caption').boundingBox();
       const frame = await video.boundingBox();
       assert.ok(caption.x >= frame.x && caption.x + caption.width <= frame.x + frame.width + 1);
+      if (width === 390) {
+        const enlarged = await page.locator('.tour-screen').evaluate(screen => {
+          const root = document.documentElement;
+          const previous = root.style.fontSize;
+          root.style.fontSize = '200%';
+          try {
+            const frame = screen.querySelector('video').getBoundingClientRect();
+            const caption = screen.querySelector('.tour-caption').getBoundingClientRect();
+            return caption.top >= frame.bottom - 1 && caption.bottom <= screen.getBoundingClientRect().bottom + 1;
+          } finally {
+            root.style.fontSize = previous;
+          }
+        });
+        assert.ok(enlarged, 'At 200% text size the complete caption fits below the video on mobile');
+      }
       await button.click();
       await page.locator('#impressum').scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);

@@ -313,18 +313,21 @@ class TestLixityServer(unittest.TestCase):
             )
             self.assertEqual(status, 200, body)
             self.assertEqual(json.loads(body)["entries"], [])
-            for target, expected in ((root / "missing", 404), (root / "item.pdf", 400)):
+            for target, expected, code in ((root / "missing", 404, "path-missing"),
+                                           (root / "item.pdf", 400, "unsupported-manuscript-type")):
                 status, body, _ = self.make_request(
                     f"/api/project-paths?path={quote(str(target), safe='')}"
                 )
                 self.assertEqual(status, expected, body)
                 self.assertFalse(json.loads(body)["ok"])
+                self.assertEqual(json.loads(body)["code"], code)
             with patch(
                 "lixity.server.routes_project.os.scandir", side_effect=PermissionError("denied")
             ):
                 status, body, _ = self.make_request(path)
             self.assertEqual(status, 403, body)
             self.assertFalse(json.loads(body)["ok"])
+            self.assertEqual(json.loads(body)["code"], "path-unreadable")
             for headers in ({"Origin": "http://evil.example"}, {"Host": "evil.example"}):
                 status, body, _ = self.make_request(path, headers=headers)
                 self.assertEqual(status, 403, body)

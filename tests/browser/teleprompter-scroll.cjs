@@ -7,7 +7,10 @@ const path = require('node:path');
  try {
   const page = await browser.newPage({viewport:{width:1280,height:900}});
   await page.setContent('<button id="reader-teleprompter">Read</button><main id="chapters">'+[1,2].map(n=>`<section class="chapter" id="ch-${n}"><h2>Chapter ${n}</h2><div class="ptext" data-start="${n}" data-end="${n}" data-paragraph-sha256="paragraph-${n}"><div class="ptext-inner"><p>${'A synthetic sentence with several words. '.repeat(200)}</p></div></div></section>`).join('')+'</main>');
-  await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets/teleprompter.css'),'utf8')});
+  const assets = path.join(__dirname,'../../src/lixity/ui/assets');
+  for (const filename of ['design-tokens.css', 'teleprompter.css']) {
+   await page.addStyleTag({content:fs.readFileSync(path.join(assets,filename),'utf8')});
+  }
   await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets/teleprompter.js'),'utf8')});
   await page.locator('#reader-teleprompter').click();
   const pane=page.locator('.teleprompter-scroll-pane');

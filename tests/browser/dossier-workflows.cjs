@@ -229,6 +229,46 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
       await expect(alongside.locator('[data-character-passage]').first()).toContainText('Mara took the lantern.');
       await expect(alongside.locator('[data-character-distribution] tbody tr')).toHaveCount(3);
     }
+    await page.locator('#tab-view-research').click();
+    if (legacy) await page.setViewportSize({width: 320, height: 900});
+    const expectedPassage = legacy ? 'Rowan kept watch. Rowan counted the lamps.' : 'Mara waited for Ivo. Mara took the lantern.';
+    const paragraph = page.locator('#chapters .ptext').filter({hasText: expectedPassage});
+    const jump = passages.first().locator('[data-character-jump]');
+    await expect(jump).toHaveText('Go to manuscript passage');
+    await jump.press('Enter');
+    await expect(paragraph).toBeFocused();
+    assert.equal(await page.evaluate(() => LixityWorkbench.state().analysisVisible), false);
+    await expect.poll(() => paragraph.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= readingViewportTop() - 1 && rect.top < innerHeight;
+    })).toBe(true);
+    if (!legacy) {
+      // Revalidate at activation, including when the previously offered target was replaced.
+      await page.locator('#tab-view-research').click();
+      const identity = await paragraph.getAttribute('data-paragraph-sha256');
+      await paragraph.evaluate(node => { node.dataset.paragraphSha256 = '0'.repeat(64); });
+      await jump.press('Enter');
+      const status = analysis.locator('[data-character-status]');
+      await expect(status).toHaveText('This passage is unavailable in the manuscript reader.');
+      await expect(jump).toBeDisabled();
+      await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
+      await paragraph.evaluate((node, hash) => { node.dataset.paragraphSha256 = hash; }, identity);
+
+      const source = path.join(artifacts, 'synthetic-project', 'manuscript.md');
+      const original = fs.readFileSync(source, 'utf8');
+      try {
+        fs.writeFileSync(source, original.replace(expectedPassage, expectedPassage + ' The wind shifted.'));
+        await filter.selectOption('3');
+        const reload = analysis.locator('[data-character-reload]');
+        await expect(reload).toBeVisible();
+        await reload.press('Enter');
+        await expect(passages.first()).toContainText('Mara took the lantern. The wind shifted.');
+        await expect(analysis.locator('[data-character-jump]')).toHaveCount(0);
+        await expect(status).toContainText('The reader shows a different manuscript version.');
+      } finally {
+        fs.writeFileSync(source, original);
+      }
+    }
     assert.deepEqual(await (await page.request.get(recordUrl)).json(), before,
       'Reading character analysis preserves the authored text and exact archive revision');
     assert.ok(requestMethods.every(method => method === 'GET'), 'Opening existing character dossiers performs reads');
@@ -1130,6 +1170,10 @@ server.serve_forever()
       await expect(character.getByText(labels.research_dossier_character_passages, {exact: true}).first()).toBeVisible();
       await expect(character.getByText(labels.research_dossier_character_context_hint, {exact: true})).toBeVisible();
       const firstMatch = character.locator('[data-character-passage]').first();
+      const jump = firstMatch.locator('[data-character-jump]');
+      await expect(jump).toHaveText(labels.manuscript_link_open_passage);
+      assert.ok(await jump.evaluate(button => button.scrollWidth <= button.clientWidth),
+        `${language} manuscript jump fits at 320px`);
       await expect(firstMatch.locator('[data-character-context="before"] p').first()).toHaveText(labels.research_dossier_character_context_before);
       await expect(firstMatch.locator('[data-character-context="after"] p').first()).toHaveText(labels.research_dossier_character_context_after);
       if (language === 'de') {

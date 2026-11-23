@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Character sheets, tags & corkboard; maintained manually",
   "compare_cld_dossiers": "No character or scene dossiers",
   "compare_pln_dossiers": "Timelines, scene cards, and character arcs; planning only, without prose analysis",
-  "dossier_example": "View a sample dossier PDF (English)"
+  "dossier_example": "View a sample dossier PDF (English)",
+  "reading_copy": "Reading copy (English)",
+  "read_alt": "Manuscript with a chapter heading, prose and a search bar",
+  "linguistics_alt": "Chapter comparison with colored deviations and sentence rhythm figures",
+  "research_alt": "Timeline of dated claims with unplaced dates listed separately",
+  "share_alt": "Revision note on a manuscript paragraph with Save and Cancel actions"
 }

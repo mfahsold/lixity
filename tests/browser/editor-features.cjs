@@ -82,19 +82,23 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.locator('#manuscript-comparison-base').inputValue(),original);
     assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), external);
     assert.match(await page.locator('#manuscript-comparison-draft').inputValue(),/My draft/);
+    assert.equal(await page.locator('#manuscript-comparison').getByText('Unsaved — retry').count(), 0,
+      'Opening the comparison uses draft language rather than a failure message');
+    assert.ok((await page.locator('#manuscript-recovery option[data-kind="draft"]').allTextContents())
+      .every(label => label.startsWith('Draft to review')));
     const summaries = page.locator('#manuscript-comparison .manuscript-compare-metrics');
     const baseSummary = summaries.nth(0);
     const currentSummary = summaries.nth(1);
     const draftSummary = summaries.nth(2);
     const chaptersCompare = page.locator('#manuscript-comparison-chapters');
     await baseSummary.filter({hasText:'Average words per sentence'}).waitFor();
-    await currentSummary.filter({hasText:'25 %'}).waitFor();
+    await currentSummary.filter({hasText:'25%'}).waitFor();
     await draftSummary.filter({hasText:'Average words per sentence'}).waitFor();
     await page.locator('#manuscript-comparison-draft').fill('# External\n\n“Rain falls. Storm clouds” bring rain again soon.\n');
-    await draftSummary.filter({hasText:'50 % (Δ +25.0 percentage points)'}).waitFor();
+    await draftSummary.filter({hasText:'50% (Δ +25.0 percentage points)'}).waitFor();
     await chaptersCompare.filter({hasText:'+25.0 percentage points'}).waitFor();
     await page.locator('#manuscript-comparison-draft').fill('# External\n\n“Rain falls.” It was only a matter of the time that he had to go.\n');
-    await draftSummary.filter({hasText:'50.0 % (Δ +50.0 percentage points)'}).waitFor();
+    await draftSummary.filter({hasText:'50.0% (Δ +50.0 percentage points)'}).waitFor();
     await page.locator('#manuscript-comparison-draft').fill(reviewed);
     await draftSummary.filter({hasText:'Average words per sentence 2.5'}).waitFor();
     page.once('dialog', dialog => dialog.dismiss());

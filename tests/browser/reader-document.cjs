@@ -87,6 +87,16 @@ print(json.dumps(full_dashboard()))
       assert.equal(await main.locator('.ptext').count(), 1);
       assert.equal(await main.locator('img, script').count(), 0);
       assert.equal(await main.locator('.reader-structural [data-reader-paragraph]').count(), 0);
+      const subheading = main.locator('.reader-heading').filter({hasText: 'At the quay'});
+      const fontSize = locator => locator.evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+      const normalHeading = await fontSize(subheading);
+      const normalProse = await fontSize(main.locator('.ptext p'));
+      await page.locator('#reader-settings > summary').click();
+      await page.locator('#reader-text-larger').click();
+      assert.ok(await fontSize(subheading) > normalHeading, 'Authored subheadings follow the reading size');
+      assert.ok(await fontSize(main.locator('.ptext p')) > normalProse, 'Continuous prose follows the same size setting');
+      await page.locator('#reader-text-smaller').click();
+      await page.locator('#reader-settings > summary').click();
       const original = await main.locator('.ptext p').textContent();
       const field = page.locator('#text-search');
       for (const query of ['Preface unique', 'quotation unique', 'note unique', 'Appendix unique']) {

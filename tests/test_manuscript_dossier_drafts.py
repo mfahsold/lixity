@@ -204,8 +204,8 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
     project = tmp_path
     manuscript = project / "novel.md"
     long_passage = "😀 **Anna** rief Nanni. " + "Die übrige Beschreibung bleibt lesbar. " * 20 + "Letzter Satz."
-    middle = [f"Anna nannte die Nummer {num}." for num in range(23)]
-    prose = "\n\n".join(["## Ankunft", "Die Wache schlief. Die Glocke läutete.", long_passage, *middle,
+    middle = [f"Anna nannte die Nummer {max(1, num)}." for num in range(23)]
+    prose = "\n\n".join(["---\ntitle: Eine fiktive Geschichte\n---", "## Ankunft", "Die Wache schlief. Die Glocke läutete.", long_passage, *middle,
                           "## Pause", "Nur die anderen gingen weiter.",
                           "## Rückkehr", "> Das Ufer war leer.\n>\n> Nanni blieb noch.\n>\n> Später sank die Sonne.",
                           "`Anna` [Weiter](https://example.test/Anna).", "```text\nAnna steht nur im Codeblock.\n```"])
@@ -265,6 +265,13 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
         assert passage["context_before"] == "Die Wache schlief. Die Glocke läutete."
         assert passage["context_after"] == ""
         assert [passage["text"][span["start"]:span["end"]] for span in passage["matches"]] == ["Anna", "Nanni"]
+        line = prose.splitlines().index(long_passage) + 1
+        assert passage["reader_anchor"] == {"start_line": line, "end_line": line,
+                                            "paragraph_sha256": sha256(passage["text"].encode()).hexdigest()}
+        duplicate_lines = [number for number, text in enumerate(prose.splitlines(), 1) if text == middle[0]]
+        duplicate_anchors = [row["reader_anchor"] for row in first["passages"][1:3]]
+        assert [anchor["start_line"] for anchor in duplicate_anchors] == duplicate_lines
+        assert duplicate_anchors[0]["paragraph_sha256"] == duplicate_anchors[1]["paragraph_sha256"]
         accepted = first["analysis_sha256"]
         next_page = path(id=record["dossier_id"], analysis_sha256=accepted, offset=first["next_offset"])
         status, rest = server.request_json(next_page)
@@ -273,6 +280,7 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
         assert rest["passages"][-1]["text"] == "Nanni blieb noch."
         assert rest["passages"][-1]["context_before"] == "Das Ufer war leer."
         assert rest["passages"][-1]["context_after"] == "Später sank die Sonne."
+        assert "reader_anchor" not in rest["passages"][-1]
         assert rest["next_offset"] is None
         proposal_path = path(id=record["dossier_id"], format="markdown")
         status, proposal = server.request_json(proposal_path)
@@ -284,6 +292,7 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
         for key in ("analysis_sha256", "mentions", "chapters_with_mentions", "passage_count"):
             assert proposal[key] == first[key]
         assert proposal["chapter_count"] == len(first["chapters"])
+        assert "reader_anchor" not in proposal
         body = proposal["body"]
         assert "## Figur im Manuskript" in body
         assert "Namensnennungen pro Kapitel" in body
@@ -484,18 +493,37 @@ def test_character_draft_first_passage_uses_counted_alias_and_readable_excerpt()
 
 
 @pytest.mark.parametrize("language", ["de", "en", "es", "fr", "it", "nl", "pt"])
-def test_compact_character_draft_localizes_its_body_and_preserves_generated_binding(language: str) -> None:
-    result = extract_manuscript_dossier_drafts(
-        "## Arrival\n\nRowan returned.", settings={"characters": {"Rowan": {}}}, language=language,
-        kind="character",
-    )
+def test_character_draft_localizes_title_and_body_and_preserves_binding(tmp_path: Path, language: str) -> None:
+    research_api.init(tmp_path, title="Synthetic archive")
+    source = tmp_path / "draft.md"
+    source.write_text("## Arrival\n\nRowan returned.", encoding="utf-8")
+    (tmp_path / "lixity.toml").write_text("[characters.Rowan]\n", encoding="utf-8")
+    result = research_api.manuscript_dossier_drafts(tmp_path, source, language=language, kind="character")
     character, = result["drafts"]
     labels = WORKSPACE_LABELS[language]
-    title = "Figur: Rowan" if language == "de" else "Character: Rowan"
+    separator = "\u202f: " if language == "fr" else ": "
+    title = labels["research_tpl_character"] + separator + "Rowan"
     assert character["title"] == title and character["id"] == "character:rowan"
     assert f"## {labels['research_dossier_character_heading']}" in character["body"]
     assert labels["research_dossier_character_scope"] in character["body"]
     assert "> Rowan returned." in character["body"]
+    saved = research_api.create_dossier_from_manuscript(
+        tmp_path, source, language=language, draft_id=character["id"], preview_sha256=character["preview_sha256"],
+    )
+    identifier = saved["dossier_id"]
+    assert research_api.get_dossier(tmp_path, identifier, include_character_binding=True)["character_analysis_available"]
+    research_api.revise_record(
+        tmp_path, "dossier", identifier, changes={"title": "Keeper of the gate"}, expected_snapshot=saved["snapshot"],
+        expected_revision=1, change_kind="correction", reason="Use the working title",
+    )
+    other_language = "en" if language == "de" else "de"
+    existing, = research_api.manuscript_dossier_drafts(
+        tmp_path, source, language=other_language, kind="character", exclude_existing=False,
+    )["drafts"]
+    assert existing["already_covered"] is True
+    assert existing["existing_dossier"]["id"] == identifier
+    assert existing["existing_dossier"]["title"] == "Keeper of the gate"
+    assert existing["existing_dossier"]["revision"] == 2
 
 
 def test_auto_character_limit_uses_stable_order_for_tied_counts() -> None:

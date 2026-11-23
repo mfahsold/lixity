@@ -625,7 +625,12 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertEqual(alternates, {**{code: page_url(code) for code in LANGUAGES},
                                               'x-default': SITE})
                 self.assertIn(f'href="{page_url(language)}"', text)
-                self.assertIn('href="demo/report.html"', text)
+                self.assertIn('href="demo/report.html" hreflang="en"', text)
+                sandbox_language = "de" if language == "de" else "en"
+                self.assertIn(f'href="sandbox/index.html?lang={sandbox_language}" hreflang="{sandbox_language}"', text)
+                content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))
+                for key in ("read_alt", "linguistics_alt", "research_alt", "share_alt"):
+                    self.assertIn(f'alt="{html.escape(content[key], quote=True)}"', text)
                 self.assertIn('href="guides/installation.html"', text)
 
     def test_missing_translation_fails_instead_of_falling_back(self):

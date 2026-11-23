@@ -37,7 +37,10 @@ engine = "qwen3"
     response = send(port, "/api/settings", payload={"project_token": context(source, handler)["project_token"],
                                                       "audio": audio})
     assert response.status == 400
-    assert "direction" in json.loads(response.body)["message"].lower()
+    assert json.loads(response.body) == {"ok": False, "code": "voice-profile-in-use", "message": (
+        "A removed voice profile is used by saved speech direction; "
+        "review or remove that direction before deleting the profile"
+    )}
     assert config.read_bytes() == old
 
 

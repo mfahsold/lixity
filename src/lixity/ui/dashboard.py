@@ -44,6 +44,7 @@ from .analysis_navigation import render_analysis_workflows
 from .components import (
     ANALYSIS_SECTIONS,
     FAVICON_DATA_URI,
+    analysis_language_options,
     analysis_outline_nav,
     artifacts_panel,
     attr_json,
@@ -73,6 +74,7 @@ from .components import (
     project_header,
     script_json,
     section_nav,
+    select_control,
     status_banner,
     status_strip,
     table_wrap_start,
@@ -546,17 +548,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if current_language is None:
         current_language = language_key
     if not language_options:
-        language_options = [
-            ("auto", "auto"),
-            ("de", "Deutsch"),
-            ("en", "English"),
-            ("fr", "Français"),
-            ("es", "Español"),
-            ("it", "Italiano"),
-            ("pt", "Português"),
-            ("nl", "Nederlands"),
-            ("generic", "generic"),
-        ]
+        language_options = analysis_language_options(labels)
 
     total_words = metrics.tokens if metrics is not None else sum(c.words for c in chapters)
     if flag_min_severity is None:
@@ -1067,7 +1059,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             + form_field(
                 "workspace-reader-collection",
                 L("research_dossier_collection"),
-                f'<select class="ctl" id="workspace-reader-collection" data-help="{L("research_filter_collection_help")}"><option value="all">{L("research_dossier_collection_all")}</option></select>',
+                select_control(
+                    "workspace-reader-collection",
+                    f'<option value="all">{L("research_dossier_collection_all")}</option>',
+                    help_text=label(labels, "research_filter_collection_help"),
+                ),
                 extra_class="grow",
                 label_class="",
             )
@@ -1076,7 +1072,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             + form_field(
                 "workspace-reader-dossier",
                 L("reader_choose"),
-                f'<select class="ctl" id="workspace-reader-dossier" data-help="{L("reader_hint")}"><option value="">{L("reader_choose")}</option></select>',
+                select_control(
+                    "workspace-reader-dossier",
+                    f'<option value="">{L("reader_choose")}</option>',
+                    help_text=label(labels, "reader_hint"),
+                ),
                 extra_class="grow",
                 label_class="",
             )
@@ -1949,6 +1949,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if chapters:
         parts.append(panel_start("matrix", labels, "chapter_table"))
         parts.append(panel_guide(L("chapter_table_reading")))
+        if can_edit and manuscript_pdf_token:
+            parts.append(
+                '<p id="matrix-revision-baseline" class="ctl-note" hidden>'
+                f'{metric_reference_link(labels, "revisions", label_key="editor_compare_chapters_heading")} · <span></span></p>'
+            )
         if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
             parts.append(
                 f'<div class="cockpit-toolbar">'
@@ -1975,9 +1980,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'<th scope="col" class="num">{help_term(labels, "chapter_deviation", L("deviation"))}</th>'
             )
         parts.append("</tr></thead><tbody>")
-        max_asl = max((c.asl for c in chapters), default=1.0) or 1.0
-        max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0
-        for c in chapters:
+        measured_chapters = {chapter.num: chapter for chapter in metrics.chapters} if metrics is not None else {}
+        measurements = [measured_chapters.get(chapter.num) or chapter for chapter in chapters]
+        max_asl = max((chapter.asl for chapter in measurements), default=1.0) or 1.0
+        max_dialog = max((chapter.dialog_pct for chapter in measurements), default=1.0) or 1.0
+        for c, chapter_values in zip(chapters, measurements, strict=True):
             chapter_flagged = sum(p.severity >= flag_min_severity for _, p in by_chapter.get(c.num, []))
             row_hint = ' data-flags="1"' if chapter_flagged else ""
             chapter_title = c.title if c.title.strip() else f'{label(labels, "chapter")} {c.num}'
@@ -1987,14 +1994,16 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 else '<span class="text-muted">0</span>'
             )
             parts.append(
-                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint}>'
+                f'<tr class="row-link" data-jump="#ch-{c.num}" data-chapter-num="{c.num}"{row_hint}>'
                 f'<td>{c.num}</td><td>{chapter_link(c.num, chapter_title, flags=bool(chapter_flagged))}</td>'
-                f'<td class="num">{N(c.words, 0)}</td>'
-                f'<td class="num bar-cell"><i style="--v:{c.asl / max_asl * 100:.0f}%"></i>'
-                f"{N(c.asl, 1)}</td>"
-                f'<td class="num bar-cell"><i style="--v:{c.dialog_pct / max_dialog * 100:.0f}%"></i>'
-                f"{P(c.dialog_pct)}</td>"
-                f'<td class="num">{P(c.function_word_pct)}</td>'
+                f'<td class="num" data-revision-metric="words_delta">{N(chapter_values.words, 0)}</td>'
+                f'<td class="num bar-cell" data-revision-metric="asl_delta">'
+                f'<i style="--v:{chapter_values.asl / max_asl * 100:.0f}%"></i>'
+                f"{N(chapter_values.asl, 1)}</td>"
+                f'<td class="num bar-cell" data-revision-metric="dialog_pct_delta">'
+                f'<i style="--v:{chapter_values.dialog_pct / max_dialog * 100:.0f}%"></i>'
+                f"{P(chapter_values.dialog_pct)}</td>"
+                f'<td class="num">{P(chapter_values.function_word_pct)}</td>'
                 f'<td><span class="badge {tense_class(c.dominant)}">{esc(tense_label(labels, c.dominant))}</span></td>'
                 f'<td class="num">{flag_markup}</td>'
             )
@@ -2035,6 +2044,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if controls:
         parts.append(license_terms(labels))
     scripts = _JS_FILES if controls else _REPORT_JS_FILES
+    if can_edit:
+        scripts += ("revision-measurements.js",)
     if not controls and (motifs_panel or (paragraph_evidence and (has_pacing or showing))):
         scripts += (_PASSAGE_NAVIGATION_SCRIPT,)
     parts.extend(

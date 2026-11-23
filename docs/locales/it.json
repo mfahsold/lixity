@@ -9,7 +9,7 @@
   "eyebrow": "Uno spazio di lavoro locale per chi scrive",
   "headline": "Rivedi il manoscritto.\nTieni a portata di mano la ricerca.",
   "intro": "Scopri perché un passaggio è stato segnalato, confronta una bozza e tieni personaggi e fonti accanto al testo. Lixity usa il manoscritto in Markdown o testo semplice sul tuo computer.",
-  "demo": "Esplora la demo",
+  "demo": "Esplora la demo (in inglese)",
   "tour": "Visita guidata (inglese)",
   "demo_note": "Manoscritto inventato in inglese. Demo di sola lettura. Nessun account o caricamento.",
   "preview": "Lo spazio di lavoro reale: leggi la tua prosa senza distrazioni e mostra ritmo, dialoghi e schemi di scena solo quando lo scegli tu.",
@@ -57,7 +57,7 @@
   "discover": "Guarda il tour",
   "editor_link": "Ambito e disponibilità dell’editor (inglese)",
   "workflow": "Leggi, scrivi e verifica l’effetto di una modifica. L’analisi integrata funziona offline. I servizi facoltativi di voce e mappe e i client di IA connessi hanno requisiti propri per la rete e il trattamento dei dati.",
-  "sandbox_cta": "Prova un brano nel browser",
+  "sandbox_cta": "Prova un brano (interfaccia in inglese)",
   "compare_title": "Dove Lixity si distingue",
   "compare_lead": "Lixity non sostituisce un editor umano e non riscrive le tue frasi. Affianca suite desktop, strumenti open source, correttori cloud e planner di scene dove contano privacy locale, segnali deterministici e provenienza delle fonti.",
   "compare_col_aspect": "Focus",
@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Schede personaggio, tag e bacheca; gestione manuale",
   "compare_cld_dossiers": "Nessun dossier per personaggi o scene",
   "compare_pln_dossiers": "Linee temporali, schede scena e archi; sola pianificazione senza analisi del testo",
-  "dossier_example": "Apri un dossier di esempio in PDF (inglese)"
+  "dossier_example": "Apri un dossier di esempio in PDF (inglese)",
+  "reading_copy": "Copia per la lettura (in inglese)",
+  "read_alt": "Manoscritto con titolo del capitolo, testo e barra di ricerca",
+  "linguistics_alt": "Confronto dei capitoli con scostamenti evidenziati a colori e misure del ritmo delle frasi",
+  "research_alt": "Cronologia delle affermazioni datate con un elenco separato delle date non collocate",
+  "share_alt": "Nota di revisione su un paragrafo del manoscritto con i comandi Salva e Annulla"
 }

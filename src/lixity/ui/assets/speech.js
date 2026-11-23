@@ -95,7 +95,11 @@
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
     } : {});
     var data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || data.error || label("failed"));
+    if (!response.ok || !data.ok) {
+      var error = new Error(data.message || data.error || label("failed"));
+      error.code = data.code;
+      throw error;
+    }
     return data;
   }
   function node(tag, parent, className, text) {
@@ -808,7 +812,7 @@
       location.reload();
       return true;
     } catch (error) {
-      if (serial == null || valid(serial)) status(error.message.includes("A removed voice profile is used by saved speech direction") ? label("profile_referenced") : error.message);
+      if (serial == null || valid(serial)) status(error.code === "voice-profile-in-use" ? label("profile_referenced") : error.message);
       return false;
     }
     finally {

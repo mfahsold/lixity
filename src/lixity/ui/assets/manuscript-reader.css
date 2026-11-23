@@ -268,8 +268,8 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .chapter + .chapter { border-top: 1px solid var(--line); padding-top: 2.5rem; }
 .manuscript-reading .chapter-head { display: block; margin-bottom: 1.25rem; }
 .manuscript-reading .chapter-head h2 {
-  font-family: var(--font-title); font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 500;
-  line-height: 1.25; color: var(--fg);
+  font-family: var(--font-title); font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: var(--weight-medium);
+  line-height: var(--line-heading); color: var(--fg);
 }
 .manuscript-reading .chapter-head .meta,
 .manuscript-reading .chapter-toggle,
@@ -284,11 +284,14 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .ptext.flash { background: transparent; box-shadow: none; }
 .manuscript-reading .ptext-inner,
 .manuscript-reading .ptext.open .ptext-inner { min-width: 0; overflow: visible; padding: 0; background: transparent; position: relative; transition: none; }
-.manuscript-reading .ptext-inner > p {
-  max-width: none; margin: 0; font-family: var(--font-title);
-  font-size: var(--reader-font-size, 1.125rem); line-height: var(--reader-leading, 1.8);
-  color: var(--fg); overflow-wrap: anywhere; white-space: pre-line;
+.manuscript-reading .ptext-inner > p,
+.reader-structural {
+  font-family: var(--font-title);
+  font-size: var(--reader-font-size, var(--text-subhead));
+  line-height: var(--reader-leading, var(--line-manuscript));
+  color: var(--fg); overflow-wrap: anywhere;
 }
+.manuscript-reading .ptext-inner > p { max-inline-size: none; margin: 0; white-space: pre-line; }
 .manuscript-reading .ptext-inner > .paragraph-values,
 .manuscript-reading .ptext-inner > .manuscript-link-feedback,
 .manuscript-reading .ptext-inner > .manuscript-link-controls,
@@ -388,8 +391,12 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 .reader-focus .workspace-context-panel { display: none !important; }
 #dashboard-freshness .status-item { flex-wrap: wrap; min-width: 0; }
 #dashboard-freshness .status-detail { white-space: normal; overflow: visible; max-width: none; }
-.reader-structural { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-title); font-size: var(--reader-font-size, 1.125rem); line-height: var(--reader-leading, 1.8); margin: 1em 0; }
-.reader-structural.reader-heading { font-size: 1.25em; font-weight: 600; }
+.reader-structural { white-space: pre-wrap; margin-block: 1em; }
+.reader-structural.reader-heading {
+  font-size: calc(1.25 * var(--reader-font-size, var(--text-subhead)));
+  font-weight: var(--weight-semibold); line-height: var(--line-heading);
+}
+.reader-structural.reader-code { font-family: var(--font-mono); }
 .reader-coverage { font-family: var(--font); font-size: var(--text-note); color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) {
   .analysis-toggle, .context-tool-tabs .ctl { transition: background-color 120ms ease, border-color 120ms ease; }

@@ -6,6 +6,7 @@ const path = require('node:path');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {assertSelectGeometry} = require('./support/select-geometry.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-read-only-site-'));
 const fixtures = pythonFixture(String.raw`
 import json
@@ -119,6 +120,13 @@ print(json.dumps(documents))
           await page.locator('#site-export-profile').selectOption('public');
           await page.locator('#site-export-max-chapter').selectOption('1');
           if (mode === 'reader') {
+            await assertSelectGeometry(page.locator('#site-export-mode'), `Export mode (${locale}, ${width}px)`);
+            await assertSelectGeometry(page.locator('#site-export-profile'), `Export profile (${locale}, ${width}px)`);
+            await assertSelectGeometry(page.locator('#site-export-max-chapter'), `Chapter cap (${locale}, ${width}px)`);
+            const [profile, chapter] = await Promise.all([
+              page.locator('#site-export-profile').boundingBox(), page.locator('#site-export-max-chapter').boundingBox(),
+            ]);
+            assert.ok(Math.abs(profile.height - chapter.height) < 1, 'The profile field has natural height when the row wraps');
             const chapters = page.locator('#site-export-analysis-chapters');
             const language = page.locator('#site-export-analysis-language');
             const full = page.locator('#site-export-analysis-full');

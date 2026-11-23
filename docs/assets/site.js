@@ -35,33 +35,25 @@ if (themeButton) themeButton.addEventListener('click', () => {
 
 // Website language is a browsing preference, never an analysis setting.
 const languageLinks = [...document.querySelectorAll('.language-picker a[hreflang]')];
-if (languageLinks.length) {
+if (languageLinks.length && window.LixitySiteLanguage) {
   const available = new Map(languageLinks.map(link => [link.hreflang, link]));
-  const preferenceKey = 'lixity-site-language';
-  function rememberLanguage(language) {
-    try { localStorage.setItem(preferenceKey, language); } catch { /* Navigation still works. */ }
-  }
+  const {preferred, remember} = window.LixitySiteLanguage;
   document.querySelectorAll('.language-picker a[hreflang], .language-list a[hreflang]').forEach(link => {
-    link.addEventListener('click', () => rememberLanguage(link.hreflang));
+    link.addEventListener('click', () => remember(link.hreflang));
   });
-  let preferred;
-  try { preferred = localStorage.getItem(preferenceKey); } catch { /* Use browser preferences. */ }
-  if (!available.has(preferred)) {
-    preferred = (navigator.languages || [navigator.language]).map(language =>
-      language.toLowerCase().split('-')[0]).find(language => available.has(language));
-  }
+  const language = preferred([...available.keys()]);
   const suggestion = document.getElementById('language-suggestion');
-  if (suggestion && preferred && preferred !== root.lang) {
-    const target = available.get(preferred);
+  if (suggestion && language && language !== root.lang) {
+    const target = available.get(language);
     const link = suggestion.querySelector('a');
     link.href = target.getAttribute('href');
-    link.hreflang = preferred;
-    link.lang = preferred;
+    link.hreflang = language;
+    link.lang = language;
     link.textContent = target.dataset.languageAction;
-    link.addEventListener('click', () => rememberLanguage(preferred));
+    link.addEventListener('click', () => remember(language));
     suggestion.hidden = false;
     suggestion.querySelector('button').addEventListener('click', () => {
-      rememberLanguage(root.lang);
+      remember(root.lang);
       suggestion.hidden = true;
       document.querySelector('.language-picker summary').focus();
     });

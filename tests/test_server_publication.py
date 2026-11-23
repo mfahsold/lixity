@@ -74,6 +74,7 @@ def test_saving_analysis_defaults_requires_current_project_context(tmp_path: Pat
         payload["project_token"] = token
     handler._handle_settings(payload)
     assert handler.response[0] == 409
+    assert handler.response[1]["code"] == "stale-context"
     assert handler.language == "en"
     assert handler.dashboard_html == "Old HTML"
     assert not (tmp_path / "lixity.toml").exists()
@@ -133,6 +134,7 @@ def test_saving_a_language_default_cannot_turn_invalid_input_into_the_active_lan
     handler._handle_settings({"language": invalid, "save_analysis_defaults": True,
                               "project_token": project_settings_token(tmp_path, str(manuscript))})
     assert handler.response[0] == 400
+    assert handler.response[1]["code"] == "invalid-language"
     assert handler.language == "en"
     assert not (tmp_path / "lixity.toml").exists()
 

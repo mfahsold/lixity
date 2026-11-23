@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 from .._version import __version__
 from ..format import num as format_num
 from ..format import pct as format_pct
+from ..language import get_language_profile
 from ..language_data import (
     EN_LABELS,
     GROUP_LABELS,
@@ -33,7 +34,15 @@ from ..language_data import (
     UI_LABELS,
 )
 from ..site import docs_url
-from ..status import LANGUAGE_CODES, TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
+from ..status import (
+    LANGUAGE_CHOICES,
+    LANGUAGE_CODES,
+    TENSE_MIXED,
+    TENSE_NEUTRAL,
+    TENSE_PAST,
+    TENSE_PRESENT,
+    Status,
+)
 from ..workspace_labels import workspace_labels_for
 from .metric_reference import METRIC_REFERENCE_PATH
 
@@ -55,6 +64,13 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
     """Localised label with English fallback (never raises)."""
     source = labels if labels else _DEFAULT_LABELS
     return source.get(key, _DEFAULT_LABELS.get(key, key))
+
+
+def analysis_language_options(labels: Mapping[str, str] | None) -> list[tuple[str, str]]:
+    """Display named profiles in their own language and special choices in the UI locale."""
+    special = {"auto": "settings_language_auto", "generic": "settings_language_generic"}
+    return [(code, label(labels, special[code]) if code in special else get_language_profile(code).name)
+            for code in LANGUAGE_CHOICES]
 
 
 def esc(value: object, quote: bool = True) -> str:
@@ -373,7 +389,9 @@ def metric_reference_base(language: str, *, local: bool = False) -> str:
     return path if local else docs_url(path)
 
 
-def metric_reference_link(labels: Mapping[str, str] | None, section: str, *, element_id: str = "") -> str:
+def metric_reference_link(
+    labels: Mapping[str, str] | None, section: str, *, element_id: str = "", label_key: str = "metric_reference_link",
+) -> str:
     """Link to the method in the dashboard's language without leaving the workspace."""
     base = (labels or {}).get("_metric_reference_base")
     if not base:
@@ -381,7 +399,7 @@ def metric_reference_link(labels: Mapping[str, str] | None, section: str, *, ele
     identifier = f' id="{esc(element_id)}"' if element_id else ""
     return (
         f'<a{identifier} href="{esc(base + "#" + section)}" target="_blank" rel="noopener noreferrer">'
-        f'{esc(label(labels, "metric_reference_link"))}</a>'
+        f'{esc(label(labels, label_key))}</a>'
     )
 
 
@@ -628,13 +646,15 @@ def manuscript_pdf_controls(
     L = panel_label(labels)
     from ..pdf_export import PDF_LAYOUTS
 
-    disabled = "" if available else " disabled"
+    attributes = {"name": "layout"}
+    if not available:
+        attributes["disabled"] = ""
     choices = "".join(f'<option value="{layout}">{L("manuscript_pdf_" + layout)}</option>'
                       for layout in PDF_LAYOUTS)
     layout_field = form_field(
         "manuscript-pdf-layout",
         L("manuscript_pdf_layout"),
-        f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>{choices}</select>',
+        select_control("manuscript-pdf-layout", choices, attributes=attributes),
         label_class="",
     )
     status_html = status_banner(

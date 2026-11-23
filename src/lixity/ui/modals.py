@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from ..language import LANGUAGE_CHOICES, LANGUAGE_PROFILES
+from ..language import LANGUAGE_CHOICES
 from .components import (
+    analysis_language_options,
     checkbox_field,
     close_button,
     esc,
@@ -15,6 +16,7 @@ from .components import (
     modal_footer,
     modal_shell,
     panel_label,
+    select_control,
     status_banner,
     ui_icon,
 )
@@ -30,10 +32,8 @@ def _language_author_row(
         '<div class="form-row">'
         '<div class="grow">'
         f'<label for="{prefix}-proj-lang" class="form-label">{help_term(labels, "language", L("language"))}</label>'
-        f'<select class="ctl full-width" id="{prefix}-proj-lang" required>'
-        f'{language_options_html}'
-        '</select>'
-        f'<span class="ctl-note wizard-hint">{L("wizard_language_hint")}</span>'
+        + select_control(f"{prefix}-proj-lang", language_options_html, attributes={"required": ""})
+        + f'<span class="ctl-note wizard-hint">{L("wizard_language_hint")}</span>'
         '</div>'
         '<div class="grow-2">'
         f'<label for="{prefix}-proj-author" class="form-label">{L("wizard_author")}</label>'
@@ -55,12 +55,9 @@ def render_project_modals(
 
     L = panel_label(labels)
 
-    # Project creation cannot preserve `auto`: the server currently converts
-    # it to English. Require an explicit supported choice instead of silently
-    # selecting the first language when the current choice is unavailable.
-    choices = language_options if language_options is not None else [
-        (key, profile.name) for key, profile in LANGUAGE_PROFILES.items()
-    ]
+    # Creation requires a concrete profile. Preserve the placeholder if the
+    # current settings use detection or a profile the host does not offer.
+    choices = language_options if language_options is not None else analysis_language_options(labels)
     project_languages = [(code, name) for code, name in choices if code in LANGUAGE_CHOICES and code != "auto"]
     configured = current_language if current_language is not None else language_key
     selected = configured if any(code == configured for code, _name in project_languages) else ""
@@ -96,17 +93,17 @@ def render_project_modals(
         f'<p class="ctl-note">{L("site_export_intro")}</p>',
         '<div class="form-group site-export-card">',
         f'<label class="form-label" for="site-export-mode">{L("publication_export_mode")}</label>',
-        '<select class="ctl full-width" id="site-export-mode">',
-        *(f'<option value="{mode}">{L("publication_export_" + mode)}</option>'
-          for mode in ("review", "reader", "companion")),
-        '</select>',
+        select_control("site-export-mode", "".join(
+            f'<option value="{mode}">{L("publication_export_" + mode)}</option>'
+            for mode in ("review", "reader", "companion")
+        )),
         '<p class="ctl-note" id="site-export-scope"></p>',
         '</div>',
         '<div id="site-export-publication-options" class="site-export-section site-export-card" hidden>',
         '<div class="form-group">',
         f'<label class="form-label" for="site-export-profile">{L("publication_export_profile")}</label>',
         '<div class="site-export-profile-row">',
-        '<select class="ctl" id="site-export-profile" aria-describedby="site-export-profile-state"></select>',
+        select_control("site-export-profile", "", attributes={"aria-describedby": "site-export-profile-state"}),
         f'<button type="button" class="ctl" id="site-export-edit-profiles">{L("publication_export_edit_profiles")}</button>',
         '</div>',
         '<p class="ctl-note" id="site-export-profile-state" role="status" aria-live="polite"></p>',
@@ -114,7 +111,7 @@ def render_project_modals(
         '</div>',
         '<div class="form-group">',
         f'<label class="form-label" for="site-export-max-chapter">{L("publication_export_cap")}</label>',
-        '<select class="ctl full-width" id="site-export-max-chapter"></select>',
+        select_control("site-export-max-chapter", ""),
         f'<p class="ctl-note">{L("publication_export_cap_hint")}</p>',
         '</div>',
         f'<fieldset id="site-export-analysis-options" class="settings-section" hidden><legend>{L("publication_analysis_options")}</legend>',

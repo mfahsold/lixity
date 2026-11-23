@@ -9,7 +9,7 @@
   "eyebrow": "Een lokale werkruimte voor schrijvers",
   "headline": "Herzie je manuscript.\nHoud je bronnen bij de hand.",
   "intro": "Zie waarom een passage is gemarkeerd, vergelijk een concept en houd personages en bronnen naast de tekst. Lixity gebruikt je manuscript in Markdown of platte tekst op je eigen computer.",
-  "demo": "Bekijk de demo",
+  "demo": "Bekijk de demo (Engels)",
   "tour": "Korte rondleiding (Engels)",
   "demo_note": "Fictief Engels manuscript. Demo alleen om te lezen. Geen account of upload.",
   "preview": "De echte werkplek: lees je proza ongestoord en toon ritme, dialoog en scènepatronen pas wanneer jij dat wilt.",
@@ -57,7 +57,7 @@
   "discover": "Bekijk de rondleiding",
   "editor_link": "Bereik en beschikbaarheid van de editor (Engels)",
   "workflow": "Lees, schrijf en bekijk wat een wijziging doet. De ingebouwde analyse werkt offline. Optionele spraak- en kaartdiensten en gekoppelde AI-clients hebben eigen vereisten voor netwerk en gegevensverwerking.",
-  "sandbox_cta": "Test een passage in de browser",
+  "sandbox_cta": "Test een passage (Engelse interface)",
   "compare_title": "Waar Lixity verschilt",
   "compare_lead": "Lixity vervangt geen redacteur en herschrijft geen zinnen. Het vult desktop-auteursuites, open-source romaneditors, cloud-stijlcheckers en scèneplanners aan waar lokale privacy, deterministische metingen en herleidbare herkomst van bewaarde bronnen tellen.",
   "compare_col_aspect": "Focus",
@@ -96,5 +96,10 @@
   "compare_oss_dossiers": "Personagekaarten, tags & prikbord; handmatig bijgehouden",
   "compare_cld_dossiers": "Geen personage- of scènedossiers",
   "compare_pln_dossiers": "Tijdlijnen, scènekaarten en verhaalbogen; alleen planning zonder tekstanalyse",
-  "dossier_example": "Bekijk een voorbeelddossier als pdf (Engels)"
+  "dossier_example": "Bekijk een voorbeelddossier als pdf (Engels)",
+  "reading_copy": "Leesversie (Engels)",
+  "read_alt": "Manuscript met hoofdstuktitel, tekst en zoekbalk",
+  "linguistics_alt": "Hoofdstukken vergeleken met gekleurde afwijkingen en cijfers over zinsritme",
+  "research_alt": "Tijdlijn met gedateerde beweringen en een aparte lijst voor ongeplaatste datums",
+  "share_alt": "Revisienotitie bij een alinea met de acties Opslaan en Annuleren"
 }

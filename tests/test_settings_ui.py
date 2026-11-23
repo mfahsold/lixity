@@ -9,6 +9,7 @@ from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.project_identity import manuscript_identity_check
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from lixity.ui.components import analysis_language_options
 from lixity.ui.settings import settings_form
 from lixity.workspace_labels import WORKSPACE_LABELS
 from tests.locales import LOCALES
@@ -47,6 +48,21 @@ class TestSettingsUi(unittest.TestCase):
         control_label = rendered.split('<label for="set-language">', 1)[1].split('</label>', 1)[0]
         self.assertIn("Manuscript language", control_label)
         self.assertIn("interface language", rendered.split('id="set-language-help">', 1)[1].split('</p>', 1)[0])
+
+    def test_analysis_language_options_share_the_engine_codes_and_localize_special_choices(self):
+        for locale in LOCALES:
+            with self.subTest(locale=locale):
+                labels = labels_for(locale)
+                options = dict(analysis_language_options(labels))
+                self.assertEqual(tuple(options), LANGUAGE_CHOICES)
+                self.assertEqual(options["auto"], labels["settings_language_auto"])
+                self.assertEqual(options["generic"], labels["settings_language_generic"])
+                self.assertEqual(options[locale], get_language_profile(locale).name)
+
+    def test_german_threshold_default_uses_a_localized_note_and_a_machine_value(self):
+        rendered = settings_markup("de")
+        self.assertIn('id="set-fdr-q" value="0.05"', rendered)
+        self.assertIn('id="set-fdr-q-help">Standard: 0,05</p>', rendered)
 
     def test_project_details_and_analysis_controls_have_separate_accessible_groups(self):
         rendered = settings_markup(author_setting_enabled=True, project_token="a" * 64)

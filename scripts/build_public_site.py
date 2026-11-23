@@ -70,6 +70,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields.update(image_dimensions)
         fields['canonical'] = page_url(lang)
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
+        fields['sandbox_language'] = 'de' if lang == 'de' else 'en'
         fields['tour_url'] = 'guides/first-look-de.html' if lang == 'de' else 'guides/first-look.html'
         fields['alternates'] = '\n'.join(
             f'<link rel="alternate" hreflang="{code}" href="{page_url(code)}"/>'

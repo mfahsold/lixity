@@ -20,6 +20,33 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Group dossier actions with the version note and align the section headings.
+  Keep the outline below the research toolbar, and space PDF excerpt labels
+  closer to their passages while retaining the body type size.
+- Share heading, prose and metadata roles across the workspace, reading
+  exports and Pages. Apply semantic notice colors and modal shadows through
+  the selected theme, including system mode.
+- Reuse native select controls in project, dossier and export flows. Scale
+  guide text with browser font preferences and let tour captions wrap below
+  narrow players.
+- Give analysis settings a single control per choice, explain the editorial
+  presets in plain language, and show localized save feedback beside Apply.
+  Language choices and threshold values come from the shared engine settings.
+- Explain project path failures in the interface language and keep the folder
+  chooser on the last loaded folder. Show where the Word import preview omits
+  a table, image or footnote.
+- Use the selected project's configuration for language and thresholds when
+  opening a project, including when it sits inside another project folder.
+- Localize generated dossier titles and distinguish suggestions, previews and
+  saves. Show singular and plural project research counts in all seven locales.
+- Open matching character evidence in the manuscript when the paragraph and
+  source revision match the displayed reader. Keep excerpts readable when no
+  jump is available.
+- Show the chapter matrix's dated revision deltas next to their measurements.
+  The matrix and the editor's comparison use the same chapter counts and
+  display conventions. Tense review loads independently.
+- Localize homepage image descriptions and send authors to the matching
+  German or English sandbox. Label English demo links on localized Pages.
 - Preview the complete manuscript dossier draft before saving and confirm
   its source, settings and content. Keep the scene register and each scene
   separately selectable. Use actual prose matches for place suggestions

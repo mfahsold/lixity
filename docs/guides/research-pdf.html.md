@@ -134,7 +134,9 @@ back up the archive. Retention-confirmed manuscript links require record/manifes
 
 ## Edit dossiers and review decisions
 
-Under **Research → Dossiers → From manuscript**, choose a character, scene or place suggestion and review the proposed text before saving. A character suggestion starts with mention counts and a first passage. Open the generated dossier’s **Character in the manuscript** section for the chapter table and full matching passages with neighboring sentences where available. **Add from manuscript** lets you review that material and save it alongside your notes. Go back to the text to check who a name refers to before using the suggestion.
+Under **Research → Dossiers → From manuscript**, select **New suggestions** to find a character, scene or place. Review the proposed text before creating the dossier. A character suggestion starts with mention counts and a first passage.
+
+In a generated character dossier, open **Character in the manuscript** to see the chapter table and matching passages with neighboring sentences where available. Choose **Preview addition** to review the material before saving a new dossier version alongside your notes. **From manuscript → Add to a character dossier** opens the same review for the dossier you choose. Read the passages in context to check who a name refers to.
 
 Open a dossier to read its notes, linked claims and source quotations. Use **Edit section** beside a unique heading for a bounded change, or **Edit** for the full record. Select correction or supersession, give a reason and save explicitly. An unchanged save keeps the existing revision; a changed save appends history. For an external editor, use the [export → edit → preview → apply procedure](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#edit-an-exported-markdown-dossier). Ordinary source import does not create an authored dossier.
 
@@ -156,13 +158,13 @@ For the whole draft, use the [manuscript PDF layouts](#manuscript-export). For a
 
 ## Organize claim periods and causal interpretations
 
-Inside **Claims**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
+Inside **Claims & evidence**, choose **Timeline**. It places valid four-digit CE years, `YYYY-MM` months, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under **Unplaced periods**. Reading makes no archive changes, and creation dates never stand in for historical periods.
 
 The timeline sorts claims by the calendar value in their period and shows how the placed spans relate. Every dated claim is one row on a shared axis; the badge repeats its placed range and **Placed periods** lists the full cards below. Free-text periods such as *present day* are not calendar values, so they stay under **Unplaced periods** with a reason and a formatting hint. To place a claim, enter a value like `1926`, `1926-03`, `1926-03-15` or `1924–1926`; the claim form shows these formats and a save reports an unplaceable period as a warning. The axis shows only what you entered; placement never verifies a historical fact.
 
 [Video walkthrough](../videos/research-timeline.mp4)
 
-*Short walkthrough: open **Claims**, switch to **Timeline**, follow a row to its claim and read the placement hint ([also as GIF](../videos/research-timeline.gif)).*
+*Open **Claims & evidence**, switch to **Timeline**, follow a row to its claim and read the placement hint ([also as GIF](../videos/research-timeline.gif)).*
 
 ![Claims timeline with a shared axis, placed period badges and a placement hint for free-text periods](../screenshots/dashboard-research-timeline.png)
 
@@ -323,9 +325,9 @@ For the managed app instead, use `lixity service start --open` and **Open Projec
 
 <a id="manuscript-export"></a>
 
-## Export print-ready PDFs and editorial copies
+## Export manuscript and editorial PDFs
 
-Open **PDF export** in the workspace bar (or run `lixity pdf`) to compose pure-Python PDFs with TrueType subsetting, Identity-H CID / ToUnicode glyph mapping, orphan/widow control, and PDF bookmarks. Each of the five layouts targets a distinct stage of drafting, editing, or printing:
+Open **Project actions → PDF export** or run `lixity pdf`. Choose a layout for drafting, editing or a reading copy. Check font coverage and the recipient’s requirements before sending a PDF for production.
 
 | Layout (`--layout`) | Page & Margins | Typography & Grid | Editorial / Print Features |
 | --- | --- | --- | --- |
@@ -339,7 +341,7 @@ Open **PDF export** in the workspace bar (or run `lixity pdf`) to compose pure-P
 # Editorial copy with 34 mm correction margin and gutter line numbers
 lixity pdf manuscript.md --layout editor -o editorial.pdf
 
-# Print-ready A5 book spread with mirrored margins and imprint
+# A5 reading copy with mirrored margins and optional imprint
 lixity pdf manuscript.md --layout book -o print-a5.pdf
 ```
 
@@ -349,15 +351,17 @@ Override system-discovered fonts via `LIXITY_PDF_FONT_SERIF`, `LIXITY_PDF_FONT_S
 
 ## Export reading versions with curated dossiers & selective analysis
 
-Use **Project actions → Reading website** (or `POST /api/site-export`) to build a standalone, offline HTML/JS/CSS ZIP bundle. A preflight check (**Check bundle** / `/api/site-preflight`) validates sizes and budgets before download.
+Use **Project actions → Reading website** or `POST /api/site-export` to prepare a standalone offline website as a ZIP. Choose **Check export** to inspect the selected content and package size before using **Download ZIP**. The corresponding preflight endpoint is `/api/site-preflight`.
 
-| Mode | Manuscript Scope | Dossiers & Research | Analysis & Audio |
+| Copy type | Manuscript scope | Dossiers and research | Analysis and audio |
 | --- | --- | --- | --- |
-| `review` (Internal review) | Full manuscript | Optional full internal research archive (`include_research`) and raw retained source files (`include_source_files`) | Full workspace view; no curated profile or chapter cap |
-| `reader` (Curated reading copy) | Hard cutoff at `1..max_chapter` (omits later chapters from the ZIP) | Curated **Publication Profile** (`site_publications`): selected dossiers, pinned revisions, section filters, spoiler gates | Optional selective `analysis.html` (`chapters`, `language`, `full`) computed **strictly on chapters `1..max_chapter`**; optional chapter WAV audio (`include_audio`) |
-| `companion` (Standalone companion) | **No manuscript text** included | Curated **Publication Profile** with dossiers, citations, and offline map geometry | No manuscript analysis or chapter audio |
+| Review copy: manuscript and analysis (`review`) | Full manuscript | Optional authored entries, revision history, source metadata and cited excerpts (`include_research`). The separate `include_source_files` option adds retained originals, full extracted text and media. | Full workspace view; no curated profile or chapter cap |
+| Manuscript + selected background (`reader`) | Hard cutoff at `1..max_chapter` (omits later chapters from the ZIP) | Curated **Publication Profile** (`site_publications`): selected dossiers, pinned revisions, section filters, spoiler gates | Optional selective `analysis.html` (`chapters`, `language`, `full`) computed **strictly on chapters `1..max_chapter`**; optional chapter WAV audio (`include_audio`) |
+| Selected background only (`companion`) | **No manuscript text** included | Curated **Publication Profile** with dossiers, citations, and offline map geometry | No manuscript analysis or chapter audio |
 
-**Curating dossiers for different readers, editors, or analysts:** Open **Project → Settings → Publication profiles** to define multiple named profiles (e.g., *Historical Consultant*, *Beta Readers Ch. 1–5*, *Copy Editor*). Each profile entry controls:
+Each copy is a reading snapshot. Use the [archive backup and restoration workflow](#backup) to retain the research archive for recovery.
+
+Open **Project → Settings → Reading website profiles** to define separate profiles for readers such as a historical consultant or an editor. Use each profile entry to choose the material that reader receives.
 
 - **Dossier & pinned revision:** Pick specific dossiers and optionally pin an immutable `revision` instead of tracking future edits.
 
