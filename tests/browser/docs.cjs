@@ -1229,6 +1229,8 @@ async function checkSandboxQuotationPairs(page) {
   try {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     origin = 'http://127.0.0.1:' + server.address().port;
+    // The report can restore a saved workspace view in the URL fragment.
+    const isDemoReportURL = url => url.origin === origin && url.pathname === '/lixity/demo/report.html' && !url.search;
     browser = await launchChromium();
     const modes = fullMatrix
       ? [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]
@@ -1475,7 +1477,7 @@ async function checkSandboxQuotationPairs(page) {
         await expect(page, 'Written guidance remains available in documentation')
           .toHaveURL(origin + '/lixity/guides/first-look.html');
         await page.locator('.ctl[href="../demo/report.html"]').click();
-        await expect(page).toHaveURL(origin + '/lixity/demo/report.html');
+        await expect(page).toHaveURL(isDemoReportURL);
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../guides/first-look.html"]').click();
         await expect(page, 'The report returns to the walkthrough').toHaveURL(origin + '/lixity/guides/first-look.html');
@@ -1488,8 +1490,7 @@ async function checkSandboxQuotationPairs(page) {
         await page.locator('.hero-cta a.primary').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await page.locator('.tour-explore[href="demo/report.html"]').click();
-        await expect(page, 'The single discovery path leads from the tour to the demo')
-          .toHaveURL(origin + '/lixity/demo/report.html');
+        await expect(page, 'The single discovery path leads from the tour to the demo').toHaveURL(isDemoReportURL);
         await expect(page.locator('h1')).toHaveText(demoTitle);
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../"]').click();
