@@ -16,7 +16,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # Minimum Tauri v2.11.1 mitigates GHSA-7gmj-67g7-phm9 (Windows WebView2 origin confusion).
-tauri = { version = "2.11.1", features = ["macos-private-api"] }
+tauri = { version = "2.11.1", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
@@ -42,10 +42,3 @@ windows-sys = { version = "0.59", features = [
   "Win32_System_JobObjects",
   "Win32_System_Threading",
 ] }
-
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "s"
-panic = "abort"
-strip = true

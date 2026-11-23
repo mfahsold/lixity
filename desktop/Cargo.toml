@@ -8,3 +8,10 @@ edition = "2021"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/mfahsold/lixity"
 authors = ["Matthias Fahsold <mfahsold@googlemail.com>"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
