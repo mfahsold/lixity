@@ -18,7 +18,8 @@ For an interaction regression, assert the author-visible outcome after the
 actual trigger. An open disclosure or a Playwright field fill can succeed while
 the field starts outside the viewport. Hold a pending response explicitly when
 testing ordering. After a rollout, repeat the critical action on the target
-listener and distinguish package version, running version and source identity.
+listener. Use the [rollout verification](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
+to distinguish package version, running version and source identity.
 
 For an analytical adapter, exercise a measured positive case and an unavailable
 case. An empty list with a valid schema can hide an incorrect projection. Compare
@@ -38,19 +39,16 @@ Do not repeat large file or tool output when a targeted query answers the questi
 
 ## Prevent UI clipping and layout collisions
 
-When editing browser surfaces, verify live geometry across breakpoints (320px–1837px):
-1. **Multi-tier sticky headroom:** Dynamic sticky bars must propagate cumulative height
-   into paragraph and anchor `scroll-margin-top` so text targets never hide beneath chrome.
-2. **Desktop toolbar integrity:** Toolbars must remain single-row on desktop displays;
-   use progressive container-query label suppression rather than multi-row button wrapping.
-3. **Non-colliding panels:** Floating inspection or evidence cards must not spawn directly
-   over active sidebars or produce duplicate dismiss controls (`✕`) in the same column.
-4. **Automated truncation detection:** All localized selectors and labels must verify
-   `scrollWidth <= clientWidth` in Playwright suites before asserting a pass.
-5. **Enrich existing touchpoints for temporal features:** When adding progression or
-   time-series capabilities, anchor them in established surfaces (editor status bar,
-   comparison dialogs, chapter matrix cells). Do not invent standalone telemetry
-   panels or heavy analytical dashboards that clutter the author's workspace.
+Check live geometry at the affected breakpoints from 320px to 2560px.
+
+- Propagate the measured height of all sticky bars into paragraph and anchor
+  `scroll-margin-top` so the destination remains visible.
+- Keep desktop toolbars on one row from 1024px to 2560px. Use progressive
+  container-query label collapsing to fit the available toolbar width.
+- Open floating cards clear of active sidebars and keep one dismiss control
+  per surface.
+- Verify `scrollWidth <= clientWidth` for localized controls and labels in
+  Playwright before reporting a pass.
 
 ## Evolve one current product path
 
@@ -83,9 +81,9 @@ Normal valid paths must remain warning-free: the suite runs under `-W error`.
 Treat acceptance criteria as checkable requirements. Promote durable behavior
 to maintained tests; keep one-off issue scripts and reports in ignored
 `.planning/` or `/tmp`. Never cite those local files as public documentation.
-Use the affected checks in [CONTRIBUTING.md](CONTRIBUTING.md), inspect the final
-diff, and report exactly what passed or remains unverified. Document intentional
-public behavior changes in the existing maintained entrypoints.
+Use the [affected checks](CONTRIBUTING.md#select-the-checks-for-your-change),
+inspect the final diff, and report what passed or remains unverified. Document
+intentional public behavior changes in the existing maintained entry points.
 
 ## Escalation
 

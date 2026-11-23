@@ -1,7 +1,9 @@
 # Rust evaluation (proposed scope and acceptance criteria)
 
-**Status: proposed evaluation only. No rebuild decision has been taken.
-Research reviewed 2026-11-10.**
+**Design record and evaluation criteria. Research reviewed 2026-11-10.**
+The nominal-suffix experiment below concluded with the Python implementation.
+Any new experiment begins with a measured bottleneck in the current
+[architecture](ARCHITECTURE.md#evolution-without-a-second-product-path).
 This document owns the question "under which measurable conditions would a
 Rust implementation (engine parts and/or performance-critical UI paths) be
 preferable to the current Python implementation", the evidence required to

@@ -1,33 +1,13 @@
 # Understanding editorial metrics
 
-Read a passage before deciding whether a measurement matters. The
-[interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
-is the maintained introduction; [Methods](https://mfahsold.github.io/lixity/METHODS.md)
-defines formulas and [Stability](https://mfahsold.github.io/lixity/STABILITY.md)
-describes validation and limits.
+Start with a passage you want to review. Check what was counted, which text
+forms the comparison baseline, and what the unit means. Then read the
+highlighted wording in context.
 
-## What a signal means
-
-Some displays compare a passage with its chapter or manuscript; others use
-configured thresholds or language-specific formulas. Check the displayed unit,
-baseline and active settings. There is no universal z-score rule for every
-measure. A strong difference may be intentional, and an unavailable value is not
-zero or a favorable result.
-
-| Measure | Use it to ask | It does not establish |
-| --- | --- | --- |
-| Average sentence length | Where does sentence rhythm change? | A universal ideal length, pacing or quality |
-| Sticky sentences | Where do function-word chains slow a sentence? | Whether a complex subordinate clause is deliberate |
-| Dialogue & dialogue tags | How much quoted speech appears, and how heavy are attribution tags? | Who speaks when attribution is omitted |
-| Word echoes & indirect speech | Where do content words repeat nearby, or reported speech dominate? | Whether repetition or indirectness is intentional |
-| Tense cues | Which counted forms explain this flag? | Full grammatical parsing or an accidental tense error |
-| Cohesion drop & scene breaks | Where does adjacent-sentence lexical overlap drop? | Whether a scene break is missing or stylistic |
-| Lexical diversity | How do comparable samples differ? | Text-length independence or vocabulary quality |
-
-FDR adjustments qualify statistical comparisons under their assumptions; they
-do not certify meaningful prose differences or eliminate false positives. See
-the methods for the scope of each correction. Keep the manuscript, counted-text
-examples and coverage warnings in view when making an editorial decision.
-
-[Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) ·
-[CLI analysis commands](https://mfahsold.github.io/lixity/USAGE.md#which-command-for-which-question)
+| Question | Reference |
+| --- | --- |
+| How do I get from a highlighted value to its passage? | [Read and explore](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore) |
+| What does an individual measurement mean? | [Measurement reference](https://mfahsold.github.io/lixity/guides/metrics/en.html) · [Metrikreferenz auf Deutsch](https://mfahsold.github.io/lixity/guides/metrics/de.html) |
+| How do I interpret a chapter comparison? | [Interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html) |
+| Which formulas and uncertainty rules apply? | [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) · [Stability and limitations](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md) |
+| Can I repeat the analysis from the terminal? | [Linguistic text analysis](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#linguistic-text-analysis) |

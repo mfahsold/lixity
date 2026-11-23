@@ -107,8 +107,10 @@ lixity doctor
 lixity service start --open
 ```
 
-See the [release notes](releases/v0.9.0.md)
-for changes and compatibility. `uv tool update-shell` configures new terminals;
+Use the [published release notes](https://github.com/mfahsold/lixity/releases/latest)
+for changes and compatibility of the installed release. The
+[development notes](releases/v0.9.0.md) describe this source version.
+`uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
 If `lixity` is not found, run `uv tool list` to confirm that Lixity is installed,
@@ -119,44 +121,21 @@ it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 
-**Since v0.7.6:** use one regular app address. Opening a project
-creates an independent view under that same address; existing tabs keep their
-project. **Project → Settings → Audio and services → Services & audio queue** lists open views and verifies each actual audio worker.
-A view URL is valid only while this server runs; after restart, reopen the project
-from the app home. Custom ports remain available for explicit development instances.
+Use **Open Project** to reconnect an existing folder. Choose **Analyze a
+manuscript** to preview an import into a new folder. To keep multiple projects
+open, start from the same app address in a new tab for each one. Tabs with the
+same workspace URL share its selected project. Reopen projects from the home
+address after a service restart. [First-session walkthrough](ONBOARDING.md)
+· [Service management](#running-the-server)
 
-The app opens `http://127.0.0.1:8765/` with an empty workspace; it does not
-search your terminal's current folder. Choose **Open Project** for an existing
-folder or **Analyze a manuscript** to preview a copy into a new project.
-Confirm the manuscript language, then read a passage in **Manuscript**.
-Use **Analysis** for diagnostics or **… → Explore passage** for one paragraph.
-[Onboarding](ONBOARDING.md) explains the next steps.
-
-Check, stop and return to the managed workspace with:
-
-```sh
-lixity service status
-lixity service stop
-lixity service start --open
-```
-
-Open your project again, or supply its path while the service is stopped:
-`lixity service start --open ./my-novel`. For the full saved launch settings,
-use `lixity service restart --open`; it restores the startup project, not a later
-browser selection. [Service lifecycle](#running-the-server) covers custom ports,
-logs and startup at login.
-
-For a terminal result instead:
+For an initial result in your terminal, run:
 
 ```sh
 lixity analyze manuscript.md --language en
 ```
 
-English is the default; `--language auto` explicitly requests detection.
-Short text may leave measurements unavailable. The [workspace manual](WORKSPACE.md) owns browser workflows;
-[CLI reference](USAGE.md) owns commands and configuration. Built-in analysis runs locally. Optional
-[map backgrounds](research/USAGE.md#keep-places-and-journeys-in-a-dossier) and
-[OCR workers](research/OCR_INTEGRATION.md) have separate network/data boundaries.
+Use the manuscript's actual language. The [CLI reference](USAGE.md) covers
+language selection, configuration and focused analysis commands.
 
 ### Pinned release and installation scope
 
@@ -206,73 +185,45 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 ### External speech providers and local audio inspection
 
-Direction/timeline and SSML export need no speech model, worker or API key.
-For synthesis, run a separately managed service that implements
-`POST /v1/audio/speech`, then explicitly configure its base URL, model and voice
-in an `openai-compatible` profile. MLX-Audio has its own `mlx-audio` profile so
-Lixity can pass its model-specific language and direction fields explicitly. The minimal Lixity installation adds no
-inference dependency and does not install or start that service. The fixed
-`mlx-audio` ZONOS3 binding is local-worker-specific rather than a generic provider:
-its UI hides provider credentials and URL fields, while `audio-status` checks the
-isolated Python runtime and cached checkpoint without loading either. HTTPS endpoints
-and explicitly configured local HTTP addresses (localhost, loopback or private
-LAN IPs) are supported. URLs cannot contain credentials, query parameters or
-fragments. Optional authentication refers to an environment-variable name via
-`api_key_env`; set the actual key in the environment of the process that renders.
-For `lixity service start`/`restart`, prefer `LIXITY_SPEECH_API_KEY` or another
-`LIXITY_`-prefixed name: the managed systemd launcher forwards that prefix by
-name without putting values in its command line or service record. Supply the
-variable in the new start/restart environment; an already running service does
-not inherit later terminal changes. Direct CLI rendering can use any valid name.
-Opening a dialog, exporting a plan or checking provider status sends no text.
-Provider readiness remains unknown until an explicit render.
+Speech-plan and SSML export work without a model, worker or API key. To render
+with a separate service exposing `POST /v1/audio/speech`, configure an
+`openai-compatible` profile with its base URL, model and voice.
+Lixity accepts HTTPS and explicitly configured local HTTP addresses
+(localhost, loopback or private LAN IPs). Use `api_key_env` for the name of the
+environment variable. Supply the secret to the process that will render. The
+managed systemd launcher forwards variables with the `LIXITY_` prefix by name,
+so use a name such as `LIXITY_SPEECH_API_KEY` when launching that service.
+A running app keeps the environment it received at startup.
+[Provider configuration](AUDIO.md#audio-export-and-external-providers-unreleased)
 
-On an Apple Silicon Mac, keep MLX-Audio in a separate Python 3.11+ environment:
+For the development checkout's local ZONOS3 path on Apple Silicon, use a
+separate Python 3.11+ environment:
 
 ```sh
 uv venv --python 3.11 "$HOME/.local/share/lixity/runtimes/mlx-audio"
 uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" \
   'mlx-audio[stt,tts,server]'
-"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" -m mlx_audio.server \
-  --host 127.0.0.1 --port 8000
 ```
 
-MLX-Audio and its model weights are optional and are not installed by Lixity.
-The first selected model can require an explicit download and substantial memory;
-16 GB unified memory is not a guarantee that every model fits. The recommended
-local German TTS path uses `mlx-community/ZONOS3-Mini` with fixed `liesel` or
-`wolfgang` voice, or an explicitly saved project reference. The MLX checkpoint
-also contains grouped fixed voices for English, French, Italian, Portuguese and
-Spanish. Lixity runs the TTS checkpoint in a short-lived worker inside the
-isolated MLX environment because the tested MLX-Audio 0.6.6 HTTP broker produced
-silent ZONOS3 WAV files. This worker writes one bounded normalized WAV and deletes
-its temporary reference copy on return. The recommended STT path continues to use
-the running service and `mlx-community/parakeet-tdt-0.6b-v3`.
+Lixity uses that environment to start an isolated ZONOS3 worker for synthesis.
+The `mlx-audio` profile uses local model files and offers the model's speed
+control. Check the executable and cached checkpoint before rendering:
 
 ```sh
 lixity audio-status --project ./novel --engine mlx-audio --json
 ```
 
-A local ZONOS3 status target reports `transport: "isolated-process"`, executable
-availability and model-cache presence. It deliberately reports no runtime path.
-`ready` means the prerequisites were found; the command still does not load the
-model or synthesize a sample. Model and voice licenses remain separate from
-MLX-Audio's license.
+For optional transcription, run the MLX-Audio HTTP service in that environment:
 
-Existing settings require the reviewed `audio-migrate --to-schema-4` workflow
-before saving an external profile. Keep its backup and use a compatible reader;
-older releases cannot read schema `/4`. Existing native profiles and retained
-reference recordings need no conversion to keep their current behavior.
+```sh
+"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" -m mlx_audio.server \
+  --host 127.0.0.1 --port 8000
+```
 
-Providers return WAV. Mono 16-bit PCM at 24 kHz needs no decoder; other supported
-WAV formats require FFmpeg on the Lixity host for normalization. ZONOS3 produces
-44.1 kHz model audio and is normalized by this shared boundary. MP3 output and
-non-model tempo postprocessing also require FFmpeg; ZONOS3's `speed` condition
-does not. Local `audio-inspect` reads PCM WAV
-with the standard library; other WAV formats, FLAC and MP3 require FFmpeg.
-`audio-verify` does not install or run speech recognition. Supply a timestamped
-transcript explicitly when text or pause comparison is wanted. See the
-[audio usage guide](AUDIO.md#audio-export-and-external-providers-unreleased).
+Use the [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon) for render and
+transcription commands, supported direction, model downloads and licensing.
+Install FFmpeg if your workflow requires [WAV normalization or audio formats
+beyond PCM WAV](AUDIO.md#audio-export-and-external-providers-unreleased).
 
 ### Native audio model lifecycle (unreleased)
 
@@ -543,7 +494,7 @@ release and demo. Review
 Stop the managed service before replacing its installation, verify the installed
 code, then run `lixity service restart --open` to reuse the recorded launch settings.
 Reload browser tabs after the restart. Follow the
-[checkout refresh checks](#refresh-an-existing-local-checkout-installation) when
+[checkout refresh checks](#refresh-a-checkout-or-a-packaged-service) when
 comparing a development build with local source; version strings alone do not
 establish parity.
 
@@ -586,10 +537,8 @@ with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
 of another installer's entrypoint. See the official
 [tool update reference](https://docs.astral.sh/uv/reference/cli/#uv-tool-install).
-`restart` reuses recorded launch settings even after `stop`. Plain `start` opens
-an empty workspace unless you provide a project; it does not reuse those settings.
-A project selected later in the browser is not the recorded startup project. Pass
-that project explicitly to `restart` when you want it to become the launch default.
+See [startup project and port settings](#running-the-server) if you want a
+different startup project or run the service on a custom port.
 To roll back, choose and verify the intended older release wheel and its
 checksum, check archive compatibility, and restore a compatible backup if needed
 before using that version. Reopen projects and verify the installed version and
@@ -616,6 +565,8 @@ Linux/macOS or `Get-Command lixity` in PowerShell, then inspect `uv tool list`.
 A non-editable tool installed from a local folder is a copy: changing the
 folder does not update the installed tool. Reinstall the chosen release or
 development source explicitly, verify its version, and restart its service.
+
+<a id="refresh-an-existing-local-checkout-installation"></a>
 
 #### Refresh a checkout or a packaged service
 
@@ -708,46 +659,29 @@ choice. The controller manages instances it created, not arbitrary foreground
 servers or external startup units. If another process owns the port, identify
 that instance or choose another port; do not assume the controller owns it.
 
-Project views on one server have independent selected projects. **Open Project**
-creates a view; CLI analysis, research and build commands do not change it.
-`start` uses fresh launch settings. `restart` uses recorded launch settings plus
-explicit overrides, even after a stop; a project selected later in the browser
-does not replace the startup project. After updates or OCR environment
-changes, restart the appropriate managed instance; a browser reload alone does
-not load new code. Supply OCR variables in the new start/restart environment;
-their values are not saved as launch settings.
+Project views on one server have independent selections. **Open Project** creates
+a view. CLI analysis, research and build commands keep that view's selection.
+`start` uses fresh launch settings. `restart` reuses the saved settings even
+after a stop and accepts explicit overrides. To set a browser-selected project
+as the launch default, pass its path to `restart`. After changing the installed
+code or OCR environment, restart the intended instance. Supply OCR variables in
+that launch environment. [Refresh and verify a build](#refresh-a-checkout-or-a-packaged-service)
 
-Reloading the dashboard validates the selected
-manuscript before serving saved analysis. If it is missing/unreadable or a rebuild
-fails, the app retains its last successful view with an **Analysis freshness**
-notice and **Retry refresh**. Restore the file/access or correct the input/settings,
-then retry; the notice clears after successful validation. That saved view is not
-evidence that the source is current. With no prior successful snapshot, the usual
-missing-file view remains. This request-time check does not watch external
-configuration changes or replace a service restart after installing new code.
-
-Since v3.0.1, foreground `serve` and managed start/restart accept
-`--min-chapters N` (an integer of at least 2, default 2). Restart retains the
-saved threshold unless overridden; see the [service command reference](USAGE.md#lixity-service).
+If the reader shows an **Analysis freshness** notice, follow the
+[source recovery steps](WORKSPACE.md#source-availability-and-saved-analysis).
 
 <details>
 <summary>Backend selection, stored launch settings and logs</summary>
 
 `--backend auto` prefers an available Linux user systemd manager and otherwise
-uses a detached process. `--backend process` explicitly chooses the latter;
+uses a detached process. `--backend process` explicitly chooses the latter.
 `--backend systemd` fails when no usable user manager exists. These managed units
 are transient and do not enable startup at login. Backend selection applies to
 each invocation and is not saved: repeat `--backend process` on restart to keep
 that choice; otherwise restart uses `auto`. `lixity service status --json`
-reports readiness, installed/running versions and backend without log paths; see the
-[command contract](USAGE.md#lixity-service) for states and exit codes.
-Since v0.7.4, its `lixity-service-status/1` response exits 0 for a known stopped,
-starting or unmanaged-port busy state as well as a running instance. Check
-`running` for readiness; unknown state exits 1 with `running: null`. Human
-stopped status still exits 1; other lifecycle JSON is unchanged.
-Since v0.7.3, status reads existing storage without creating
-folders, repairing permissions or waiting for a lifecycle write. Unreadable or
-changing state remains uncertain; it does not trigger an alternate runtime path.
+reports readiness, installed and running versions, and backend. Check
+`running` for readiness. See the [command contract](USAGE.md#lixity-service)
+for exit codes and unknown states.
 
 Use `lixity doctor --json` (or `--port PORT` for another instance) to compare the
 imported CLI, distribution and running-service versions, module/interpreter
@@ -999,26 +933,12 @@ Without make, create the environment as above and use its Python to run
 Keep an editable engine checkout separate from manuscript folders; reuse the
 package rather than copying engine code into every book project.
 
-For contributors, `make check` is the everyday local source check and
-`make browser` covers rendered changes. Before preparing a release, use
-`make release-check RELEASE_TAG=vX.Y.Z`, plus `make browser-full` for UI changes.
-Tagged releases first run the full source and browser gates, then build and
-attest packages and deploy Pages from the published tag. The research-platform
-workflow remains a manual cross-platform check; manual Pages dispatch is a
-deliberate preview. See [release preparation](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#preparing-a-release)
-for the gates and recovery. Pushing `main` alone updates neither the deployed
-site nor a local installation.
-
-Installing an update changes the installed package, not another checkout or an
-already running process; restart the managed service to load it. A **Reading
-website** / `lixity export-site` output is a separate fixed project snapshot:
-regenerate it deliberately after source/archive changes. It neither publishes
-to Pages nor follows later edits automatically.
-
-A local Linux check does not replace Windows/macOS verification for
-platform-sensitive changes. See
-[contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
-for the canonical paths and focused/manual-full platform options.
+Follow the [contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
+for development verification and release qualification. Reload an editable
+installation through the [checkout refresh procedure](#refresh-a-checkout-or-a-packaged-service).
+A generated reading website is a fixed project snapshot. Refresh it with
+[an explicit export](WORKSPACE.md#export-a-reading-website) after manuscript or
+archive changes.
 
 ## Read documentation offline
 
@@ -1081,7 +1001,7 @@ Set `LIXITY_OCR_BACKEND=tesseract` for local recognition. `deu+eng` is an exampl
 German/English language selection; choose the actual scan languages in
 `LIXITY_OCR_LANGUAGES`. Restart the server manually with those environment values.
 
-Since 2.0.0, **Research → Set up OCR and Zotero** offers an explicit
+**Research → Set up OCR and Zotero** offers an explicit
 metadata-only check even before opening a project. It installs nothing and writes
 no configuration. A reachable Zotero API does not establish library, collection
 or attachment access; those remain separate explicit browse actions.

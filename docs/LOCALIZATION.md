@@ -44,6 +44,14 @@ Direct links remain authoritative; technical manuals stay in English and never
 show a language suggestion. Website preferences never change manuscript analysis,
 project configuration or the local app's interface language.
 
+The Sandbox uses a German or English interface. Its entry from the German
+product page uses `?lang=de`; the other product pages open `?lang=en`. This
+explicit selection takes precedence over a linked sample's language and the
+shared website preference. A plain Sandbox URL uses a supported saved website
+preference or the browser's languages. Switching within the Sandbox updates
+its URL while retaining the current text and the saved website preference.
+Public demo links identify the English reading and analysis interface.
+
 ## Product vocabulary and ownership
 
 This is the central terminology contract. [Methods](METHODS.md) owns formulas,

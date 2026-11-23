@@ -1,9 +1,10 @@
-# Measurement interpretation
+# Lektoratsmetriken verstehen
 
-The maintained technical explanation is [Understanding editorial metrics](Editorial-Metrics.md),
-with the full [methods](https://mfahsold.github.io/lixity/METHODS.md) and
-[interpretation limits](https://mfahsold.github.io/lixity/STABILITY.md) in English.
-This existing URL is retained for older links; it no longer duplicates the manual.
+Die [deutsche Metrikreferenz](https://mfahsold.github.io/lixity/guides/metrics/de.html)
+erklärt, was Lixity zählt, wie eine Auffälligkeit zustande kommt und welche Frage
+du dir beim Lesen der markierten Passage stellen kannst.
 
-For a localized product introduction, visit [Lixity in German](https://mfahsold.github.io/lixity/index-de.html).
-For exploratory linguistic work, start with the [text-analysis workflow](https://mfahsold.github.io/lixity/USAGE.md#linguistic-text-analysis).
+Im [bebilderten Einstieg](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+siehst du, wie du von einer Kennzahl zur Textstelle kommst. Die technischen
+[Methoden](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) und
+[Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md) stehen auf Englisch bereit.

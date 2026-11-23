@@ -649,14 +649,14 @@ The CLI reads settings from `--project`. The browser reads settings from the
 selected manuscript workspace, including when its research archive is elsewhere.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**New dossiers**. The preview shows the full text that will become the
+**New suggestions**. The preview shows the full text that will become the
 dossier. If the manuscript or settings change before saving, reload and review
 the revised proposal. **Open saved dossier** opens the created record.
 **New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
 
-In a generated character dossier, choose **Add from manuscript**. You can also
+In a generated character dossier, choose **Preview addition**. You can also
 choose **Add to a character dossier** under **From manuscript** and select one.
 Lixity reads the selected character from the current manuscript and checks the
 current dossier revision. The review shows
@@ -667,6 +667,9 @@ it after your existing notes or **Discard draft** to leave the draft. Lixity
 records that the addition came from the manuscript. If the addition exceeds the
 dossier size limit, **Character in the manuscript** provides the complete
 paginated reading.
+When a matching passage has a verified target in the current reader, choose
+**Go to manuscript passage** to open the paragraph. If the reader shows an
+earlier manuscript version, reload the page to follow the link from the dossier.
 
 The scene register and individual scenes can be saved independently. Scenes
 follow manuscript order and show the measured opening and closing sentences.
@@ -1838,15 +1841,15 @@ finished. Preserve the pre-migration backup until restoration has been tested.
 Use the [backup scope comparison](../PROJECT_BACKUP.md) if the same recovery
 plan needs a manuscript or project assets.
 
-Close Zotero before starting; `--confirm-zotero-closed` is the caller's explicit
-confirmation, not automatic process detection. Specify the **data directory**
-containing `zotero.sqlite`, not the application profile.
+Close Zotero before starting. `--confirm-zotero-closed` is the caller's explicit
+confirmation. Use Zotero's **Settings → Advanced → Show Data Directory** to find
+the directory containing `zotero.sqlite`. The [Zotero data directory guide](https://www.zotero.org/support/zotero_data)
+explains the location and contents.
 
 ```sh
 lixity research zotero-backup --project ./novel --data-dir /path/to/Zotero --output ./paired-backup --confirm-zotero-closed
 lixity research zotero-restore --from ./paired-backup --to ./restored-pair
 lixity research audit --project ./restored-pair/project
-lixity research reindex --project ./restored-pair/project
 ```
 
 Both destinations must be new; existing directories are never overwritten.
@@ -1860,9 +1863,10 @@ not switch a running Zotero instance or restart Lixity.
 Symlinks and special files are rejected; the paired inventory is limited to
 10 GiB. External linked attachments, manuscripts and application profiles are
 excluded. Use Zotero stored attachments for self-contained media backup, and
-back up excluded project material separately. Verify restored Zotero data in a
-separate instance before adopting it; byte verification alone does not establish
-application-level usability or that an external attachment was included.
+back up excluded project material separately. Verify the restored Zotero data
+in a separate instance before adopting it. Open a representative stored
+attachment and check an existing Lixity citation in the restored project. Rebuild
+the search cache if needed with `lixity research reindex --project ./restored-pair/project`.
 
 <a id="search-current-authored-records-since-v1190"></a>
 
@@ -2016,10 +2020,9 @@ language and discourse mode. Matching a source is not a writing-quality objectiv
 
 ## Storage, lifecycle and recovery
 
-Restoration verifies the complete regular-file inventory against the export
-manifest before publishing the archive. Undeclared files, noncanonical inventory
-paths, missing files and checksum mismatches are rejected. This checks archive
-integrity; an unsigned manifest does not establish who created an archive.
+Keep the accepted store and its backups intact. Use [Export and restoration](#export-and-restoration)
+for backup verification and the [local data model](DATA_MODEL.md#authority-and-identity)
+when inspecting archive files.
 
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
@@ -2093,60 +2096,31 @@ included `lixity.toml` are placed separately. Inspect the destination before
 retrying if publication reports an error. Rebuild the disposable index when
 needed with `lixity research reindex --project ./restored-novel`.
 
-Since v0.7.2, import and export validate every manifest in the accepted ancestry,
-including its content hash, supported schema, project identity, consecutive
-generation and root termination. Missing or damaged ancestors fail explicitly;
-they are not silently omitted from a backup. Inventory paths use the same
-containment checks as repository objects. An invalid backup is rejected before
-publishing the restored store; rejected history leaves an existing export untouched.
-Valid archives keep their existing format and immutable bytes.
+Choose a new output outside `research/` and `.lixity/research/`. Export can
+replace an existing file. It holds the project writer lock while copying the
+accepted snapshot into a verified candidate and enforces the 10 GiB uncompressed
+limit, including the manifest. A failure before replacement preserves the
+previous output. If the command reports publication with uncertain durability,
+inspect and restore-test that output before retrying. The [archive model](DATA_MODEL.md#backup-validation-and-publication)
+describes backup validation and publication. Verify a restored copy with an
+audit and a representative retained citation.
 
-**Since v0.7.3:** export holds the project writer lock while
-selecting a snapshot and copying its records/blobs into a complete compressed
-candidate. Concurrent writers receive the existing busy diagnostic and can retry
-after export finishes. Compression time and source size affect that interval.
-Copied content addresses are verified. Before output replacement, failures leave
-an existing backup untouched. Choose an output outside `research/` and
-`.lixity/research/`: export rejects these protected store/cache destinations,
-including symlink aliases. A backup elsewhere in the project is permitted.
-Export also checks restore's existing 10 GiB
-uncompressed-payload ceiling, including the export manifest, before creating a
-candidate. If directory synchronization fails after replacement,
-the error identifies published output with unconfirmed durability: inspect and
-restore-test it before retrying. Restore rejects malformed metadata and duplicate
-archive members with bounded format errors, including valid JSON of the wrong
-shape. Optional lengths in older valid inventories remain supported.
+### Recover from an interrupted write
 
-Writes use an OS lock, immutable publication and atomic HEAD replacement.
-Uncommitted objects left after interruption are ignored, not selected by date.
-Locks release when the process exits. A stale expected HEAD fails rather than
-overwriting another ingestion. Interrupted initialization may leave an incomplete
-directory: preserve it for inspection; `init` refuses to overwrite it.
-Writer diagnostics distinguish a busy writer from read-only, permission and
-other I/O failures at the canonical project lock.
-A write's expected snapshot must come from the content actually inspected or
-previewed. After a conflict, review the changed content before submitting its
-new snapshot; replacing only the hash with a fresh status result does not review
-the change. A lock file's existence does
-not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
+Use the reported outcome to decide how to continue. See the [write state reference](DATA_MODEL.md#validation-and-publication).
 
-Since v0.7.2, a failed post-commit cleanup reports the accepted snapshot and the
-local files still pending removal; it does not return ordinary purge success or
-claim those bytes were erased. A failure while acknowledging HEAD publication
-separately reports whether the new HEAD was observed or the outcome is unknown;
-failed directory synchronization does not establish durability. Preserve the
-archive, reload and inspect its state before another write. Do not blindly repeat
-a create/purge operation or restore an old HEAD. Correct the reported filesystem
-problem and inspect only the named unreferenced cleanup artifacts. A successful
-logical purge is not a secure-erasure guarantee for filesystem snapshots, other
-backups or independently retained copies.
+| Reported outcome | Next step |
+| --- | --- |
+| Writer busy | Let the current operation finish, then preview again. For permission or read-only errors, resolve the filesystem problem first. The lock file can exist while idle. |
+| Reviewed snapshot changed | Reload and review the affected content before accepting with the new snapshot. |
+| Publication uncertain | Preserve the store. Reload and audit the accepted snapshot before making another write. |
+| Accepted snapshot, cleanup pending | Check the reported filesystem error and the named unreferenced files. Copies in independent backups or filesystem snapshots remain subject to their own retention policies. |
+| Initialization interrupted | Preserve the incomplete directory for inspection. Initialization refuses to overwrite it. |
 
-Files are flushed before publication; directory syncing is used on POSIX.
-If an interrupted authored edit leaves a valid next-revision file outside the
-accepted snapshot, the next save preserves its bytes under a content-addressed
-`.unpublished` filename in that revision directory before retrying. It is a
-recovery artifact, not an accepted revision or an automatic merge. Accepted
-history is never replaced; malformed or foreign files stop the save.
+A later save can preserve an interrupted edit's valid next revision under a
+content-addressed `.unpublished` filename. Review these files as recovery
+material. The selected HEAD determines which revisions are accepted.
+
 ### Migrate manifest storage
 
 **Since v0.7.6:** new archives use compressed manifest storage.
@@ -2179,15 +2153,6 @@ rollback requires stopping writers and restoring the complete pre-migration
 backup with the intended program version. Restart with the current installation
 and audit after migration. There is one current storage/UI path, no compatibility
 mode to select.
-
-The current manifest `entries.maxItems` contract is deliberately relaxed from
-25,000 to 100,000. This changes admission capacity only: no accepted manifest is
-rewritten and no revision is removed. The independent 32 MiB canonical JSON
-limit and bounded gzip decompression remain enforced. A manifest with 100,000
-longest-kind entries and six-digit revision references fits that byte limit;
-actual input must still pass record/reference/history validation. Extremely
-large numeric values or other oversized serialized input remain bounded by the
-byte limit. Capacity warnings begin at 90% of the current entry limit.
 
 ## Origin URL and capture provenance
 
@@ -2425,19 +2390,10 @@ the RFC's illustrative `research/1` bundle. Unknown fields/versions fail closed.
 Check installed support with `lixity about --json` and entity contracts with
 `lixity research schema`.
 
-| First accepted write | Required record/manifest version |
-| --- | --- |
-| Authored revision or origin URL | v2 |
-| Structured Zotero capture | v3 |
-| New Poppler/Tesseract provenance | v4 |
-| Decision acknowledgement | v5 |
-| Causal claim relation | v6 |
-| Manuscript quote association | v7 |
-| Dossier geography (since v0.7.0) | v8 |
-| Retained-only PDF or MP4/WebM media | v9 |
-
-Reading alone does not upgrade archives or rewrite old record bytes. Back up
-the complete store before opting in; use compatible readers/writers afterward.
+The [local data model](DATA_MODEL.md#schema-evolution-and-compatibility) maps
+each write capability to its required record and manifest versions. Reading
+alone keeps the format unchanged. Back up the complete store before opting in
+to a higher format and use compatible readers and writers afterward.
 Historical v3.0.1 supports through v6, v0.6.0 through v7, and v0.7.0/v0.7.1 through v8.
 Clients without v9 support cannot open an archive after its first v9 media
 capture. Physical manifest compression has a separate compatibility boundary:

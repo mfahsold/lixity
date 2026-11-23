@@ -1,10 +1,12 @@
 # Repository guidance
 
 > [!IMPORTANT]
-> **Agent Documentation Architecture**:
-> - **`AGENTS.md` (Repository Root — this document)**: Operational instructions, coding constraints, and development gates for AI agents and maintainers **working on the Lixity codebase**.
-> - **`docs/AGENTS.md` (Documentation & GitHub Pages)**: Shipped API, JSON schema contracts, and heuristic boundaries for external AI agents and programs **using Lixity as a tool**.
-> - **`AGENT_PROFILE.md`**: Core operational disciplines for delegated agent execution (verify before asserting, surgical diffs, explicit unknowns).
+> **Documentation ownership**
+>
+> This file defines repository constraints and required checks.
+> [CONTRIBUTING.md](CONTRIBUTING.md) owns maintainer procedures.
+> [AGENT_PROFILE.md](AGENT_PROFILE.md) owns agent verification practices.
+> [docs/AGENTS.md](docs/AGENTS.md) documents the shipped automation contract.
 
 Lixity is a shared manuscript-analysis engine, CLI and local browser app for
 authors. Keep book-specific content and adapters in their own projects; reuse
@@ -24,69 +26,23 @@ and investigate reported bugs before changing behavior.
   Statistical code uses the standard library. Discuss new required dependencies
   before adding them.
 - Package version lives in `src/lixity/_version.py`. A release tag must match
-  it (`make release-check RELEASE_TAG=vX.Y.Z`); `make docs-sync` then
-  rewrites documentation version pins and generated artifacts (`llms-full.txt`,
-  guide markdown), and `make docs-generated-check` validates them.
+  it. Follow [release preparation](CONTRIBUTING.md#preparing-a-release) for
+  version pins, generated documentation and artifact verification.
 - Version numbering was reset: prefer the current 0.x release, never the
   numerically largest tag (old 1.x/3.x tags predate it).
 - Product, JSON-response and archive schema numbers are independent; keep
   public JSON contracts stable or version any intentional change explicitly.
 
-## Commands
+## Operational entry points
 
-- First setup: `make install-dev` (creates `.venv` with dev extras; leave
-  global Python alone).
-- `make check` is the canonical gate: `lint` (Ruff, pinned version) +
-  `typecheck` (`mypy --strict` on `src` only) + `test` (full pytest suite).
-- `make test` runs with `-W error`: any new warning fails it, so ordinary
-  paths must stay warning-free. Without make, prefix with `PYTHONPATH=src`.
-- Run the affected module first: `PYTHONPATH=src .venv/bin/python -m pytest
-  tests/test_NAME.py -W error -q`. `--ff -x` reruns previous failures and
-  stops at the next one; `--lf` is a repair loop, not a complete pass.
-- Markers: `-m native_pdf` requires Poppler (`pdftotext`, `pdftoppm`) and
-  reports an explicit skip when missing. The `portability` marker covers only
-  Windows/macOS seams; a Linux pass does not establish equivalent behavior.
-- UI changes: `make browser` (fast Playwright group) or `make browser-changed`
-  (maps modified git paths to suites). Browser checks need Node and Playwright
-  with Chromium, per `tests/browser/README.md`;
-  run `make browser-full` before a release affecting rendered output. Inspect
-  rendered desktop and mobile states, not just HTML strings. Ensure multi-tier
-  sticky header geometries dynamically scale paragraph `scroll-margin-top` so
-  jump targets never clip under sticky chrome, and maintain single-row desktop
-  toolbar integrity across all container widths (1024px to 2560px) via progressive
-  container-query label collapsing.
-- Docs work: `make docs-check` stands alone; `make docs-sync` rewrites
-  version pins. Regenerating `make examples` and `make screenshots` is
-  required when UI assets or published guides change; bundled assets are
-  compared byte-wise and a stale demo fails the checks. On Pages, root
-  documents must be linked by absolute GitHub URL (`../README.md` breaks).
-- Pages preview & rollout: `python3 scripts/stage_pages.py --output /tmp/NEW_DIR`
-  for local preview (only explicitly staged paths publish). Because
-  `pages.yml` uses `workflow_dispatch`, use `make pages-deploy`
-  (runs `gh workflow run pages.yml --ref main` with keyring credentials rather
-  than narrow ambient `GH_TOKEN`/`GIT_ASKPASS` overrides) after pushing `docs/`
-  changes to `main` for an authorized documentation rollout. A source edit
-  alone does not authorize deployment; tagged releases publish their verified
-  Pages build.
-- Dashboard & rollout: use one managed port for project views. Identify the
-  listener and intended executable with `service status --port PORT --json`
-  and `doctor --port PORT --json`. From a checkout, `make doctor` uses its
-  own virtual environment and `LIXITY_PORT`. Use `make run`
-  (foreground) or `make start`/`stop`/`restart` (managed); non-default
-  ports use `LIXITY_PORT`. For a packaged rollout, build and smoke-test the
-  wheel, install it into the selected environment, then restart its managed
-  port. Verify the new process, intended project and changed behavior through
-  that listener. Matching version strings alone establish neither artifact
-  parity nor loaded behavior. See [installation and rollout](docs/INSTALLATION.md#running-the-server).
-- CI runs `tests` automatically for pull requests targeting `main`; `tests`,
-  `browser`, `research-platforms` and `release-candidate` (`rc.yml`,
-  `make rc-gate`) support manual dispatch. Tagged releases reuse the source,
-  sharded browser and full native platform gates; `release` runs on `v*` tags.
-  Local checks (`make check`, `make fast-check`, `make docs-check`,
-  `make browser-changed`, `make github-check`) are the everyday gate;
-  `make release-verify RELEASE_TAG=vX.Y.Z` verifies published GitHub, PyPI,
-  Pages and Zenodo status end to end. Change workflow YAML only with
-  `make workflow-check` (needs `actionlint`).
+| Work | Start here |
+| --- | --- |
+| Set up the checkout and verify source | `make install-dev`, then run the affected tests and `make check`. Keep global Python untouched. [Development checks](CONTRIBUTING.md#development-setup) |
+| Verify UI behavior | `make browser` or `make browser-changed`. Inspect rendered desktop and mobile states using the [agent geometry checks](AGENT_PROFILE.md#prevent-ui-clipping-and-layout-collisions) and [browser instructions](tests/browser/README.md). |
+| Update documentation and shared UI | `make docs-check`. Regenerate examples and screenshots when UI assets or published guides change. Use the [generation and preview procedure](CONTRIBUTING.md#updating-documentation-and-pages) for order and scope. |
+| Change GitHub workflows | `make workflow-check` with `actionlint`. See [CI and release gates](CONTRIBUTING.md#preparing-a-release). |
+| Inspect or roll out the local app | Use one managed port for project views. Follow the [checkout or packaged rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service). |
+| Publish documentation or a release | Follow the [Pages and Wiki procedures](CONTRIBUTING.md#updating-documentation-and-pages) or [release procedure](CONTRIBUTING.md#preparing-a-release). These are separately authorized operations. |
 
 ## Data boundaries
 
@@ -133,10 +89,9 @@ and investigate reported bugs before changing behavior.
 - Commit product code, relevant tests, reusable tooling and maintained product
   documentation only. Task plans, session notes and scratch output stay in the
   ignored `.planning/` and `.artifacts/` dirs or `/tmp`, never under `docs/`.
-- Keep README, command references, changelog, HTML guides and `llms.txt`
-  aligned when behavior changes, and label unreleased behavior and RFC
-  proposals as such. Use `scripts/sync_docs.py` for release pins; a source
-  change does not authorize a release or restart a running service.
+- Update the affected canonical documentation and changelog when behavior
+  changes. Follow the [documentation workflow](CONTRIBUTING.md#updating-documentation-and-pages)
+  for derived pages and unreleased labels.
 - Before committing, inspect both `git diff --cached --name-status` and the
   full cached diff. Stage explicit product paths; do not force-add ignored
   planning, do not assume `.gitignore` removes already tracked files, and
@@ -157,7 +112,3 @@ and investigate reported bugs before changing behavior.
   running server), heuristic limits and schema versions.
 - `docs/ARCHITECTURE.md` and `docs/INSTALLATION.md` — layering, trust
   boundaries, prerequisites and service lifecycle.
-
-Typical checks: `make check` for source, `make browser` for UI, `make
-docs-check` for documentation. Optional browser coverage is documented in
-`tests/browser/README.md`.

@@ -1209,12 +1209,19 @@ they do not estimate literary quality or a reader's experienced immersion.
   else `null`), `asl_cv` (when `sentences > 0`, else `null`), `dialogue_ratio`
   (when `tokens > 0`, else `null`), `mattr` (when window-eligible, else `null`),
   and per-chapter `{num, title, words, asl, dialog_pct}` snapshots.
-- `ManuscriptStore.delta(base_revision, target_revision)` computes exact
-  arithmetic differences `target[m] - base[m]` without interpolation. When
-  either endpoint is `null` or no baseline revision exists, the delta is `null`.
-  By default, `base` resolves to the earliest revision on `target`'s UTC
-  calendar day (session start), falling back to the immediate predecessor
-  revision when no earlier same-day revision exists.
+- `ManuscriptStore.delta(base_revision, target_revision)` subtracts the
+  baseline from the target for comparable measurements. Count differences are
+  integers. Decimal differences are rounded to the field's precision. An
+  unavailable endpoint yields a `null` difference.
+- A default comparison for the latest recorded revision considers the most
+  recent 100 entries. It uses the earliest other entry at or before the target
+  on the same UTC calendar day, or the preceding entry if none falls on that
+  day. A current file outside the recorded history has no implicit baseline.
+- When measurement rules or settings differ, Lixity remeasures verified
+  retained text under the effective configuration. Automatic language selection
+  uses the target to choose a common language. If a comparison cannot be
+  established, `has_baseline` is `false` and `deltas` is `null`. The stored
+  timeline remains available as recorded and gaps remain visible.
 
 <a id="dramaturgical--structural-heuristics-unreleased"></a>
 

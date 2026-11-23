@@ -5,6 +5,7 @@ import sys
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -112,6 +113,7 @@ class TestDocumentation(unittest.TestCase):
         text = (
             f"[v0.7.1 release notes]({prefix}v0.7.1.md)\n"
             f"[Release notes]({prefix}v0.7.1.md)\n"
+            "[release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.7.1.md)\n"
             f"Since v0.6.0: [historical note]({prefix}v0.6.0.md)\n"
         )
         with tempfile.TemporaryDirectory() as directory:
@@ -509,6 +511,7 @@ class TestDocumentation(unittest.TestCase):
 
             def check_link(directory: Path, source: str, target: str) -> None:
                 path, _, anchor = target.partition("#")
+                path = path.partition("?")[0]
                 if path == DOCS_BASE or path.startswith(DOCS_BASE + "/"):
                     resolved = (output / path.removeprefix(DOCS_BASE).lstrip("/")).resolve()
                 elif path.startswith(("https://", "http://", "mailto:")):
@@ -527,6 +530,22 @@ class TestDocumentation(unittest.TestCase):
                     check_link(md.parent, md.relative_to(output).as_posix(), m.group(1))
             for command, (manual, _, _) in COMMAND_HELP.items():
                 check_link(output, f"lixity {command} --help", docs_url(manual))
+            wiki_dir = ROOT / "docs" / "wiki"
+            wiki_base = "https://github.com/mfahsold/lixity/wiki"
+            repo_docs = "https://github.com/mfahsold/lixity/blob/main/docs/"
+            wiki_pages = {path.stem for path in wiki_dir.glob("*.md")}
+            for page in wiki_dir.glob("*.md"):
+                source = page.relative_to(ROOT).as_posix()
+                for target in re.findall(r"\]\(([^)]+)\)", page.read_text(encoding="utf-8")):
+                    path, _, anchor = target.partition("#")
+                    if path == wiki_base or path.startswith(wiki_base + "/"):
+                        slug = path.removeprefix(wiki_base).lstrip("/") or "Home"
+                        if slug not in wiki_pages or (anchor and anchor not in anchors(wiki_dir / f"{slug}.md")):
+                            broken.append(f"{source} -> {target}")
+                    elif target.startswith(repo_docs):
+                        check_link(wiki_dir, source, docs_url(target.removeprefix(repo_docs)))
+                    else:
+                        check_link(wiki_dir, source, target)
             self.assertEqual(broken, [], f"Broken links in the published site: {broken}")
 
             raw_md_hrefs: list[str] = []
@@ -548,13 +567,67 @@ class TestDocumentation(unittest.TestCase):
                 f"GitHub Pages HTML pages must not link to raw .md files: {raw_md_hrefs}",
             )
 
+    def test_wiki_sync_previews_before_publishing_and_preserves_wiki_only_pages(self):
+        import os
+        import shutil
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+
+        import sync_wiki
+
+        git = shutil.which("git")
+        if not git:
+            self.skipTest("Git is required for a disposable wiki clone")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            home = root / "checkout"
+            home.mkdir()
+            remote = root / "remote.git"
+            source = root / "source"
+            source.mkdir()
+            git_env = {
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "GIT_AUTHOR_NAME": "Wiki Test",
+                "GIT_AUTHOR_EMAIL": "wiki-test@example.test",
+                "GIT_COMMITTER_NAME": "Wiki Test",
+                "GIT_COMMITTER_EMAIL": "wiki-test@example.test",
+            }
+
+            def command(*args, cwd=home):
+                return subprocess.check_output([git, *args], cwd=cwd, text=True)  # noqa: S603
+
+            with patch.dict(os.environ, git_env), patch.multiple(sync_wiki, WIKI_DIR=source, WIKI_REMOTE=str(remote)):
+                command("init", "--quiet", "--initial-branch=published")
+                (home / "Home.md").write_text("Old overview\n", encoding="utf-8")
+                (home / "Community.md").write_text("Wiki-only page\n", encoding="utf-8")
+                command("add", "Home.md", "Community.md")
+                command("commit", "--quiet", "-m", "Initialize published wiki")
+                command("clone", "--quiet", "--bare", str(home), str(remote))
+                previous = command("rev-parse", "HEAD", cwd=remote)
+                (source / "Home.md").write_text("Updated overview\n", encoding="utf-8")
+                (source / "Notes.txt").write_text("Scratch file\n", encoding="utf-8")
+
+                self.assertEqual(sync_wiki.main([]), 0)
+                self.assertEqual(command("rev-parse", "HEAD", cwd=remote), previous)
+                self.assertEqual(sync_wiki.main(["--publish"]), 0)
+                published = command("rev-parse", "HEAD", cwd=remote)
+                self.assertNotEqual(published, previous)
+                self.assertEqual(command("show", "HEAD:Home.md", cwd=remote), "Updated overview\n")
+                self.assertEqual(command("show", "HEAD:Community.md", cwd=remote), "Wiki-only page\n")
+                self.assertEqual(command("ls-tree", "--name-only", "HEAD", cwd=remote).splitlines(),
+                                 ["Community.md", "Home.md"])
+                self.assertEqual(sync_wiki.main(["--publish"]), 0)
+                self.assertEqual(command("rev-parse", "HEAD", cwd=remote), published)
+
     def test_repository_root_documents_are_linked_by_absolute_url(self):
         """Nothing outside docs/ is published, so cross-references must be absolute."""
         root_docs = {"README.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "CHANGELOG.md"}
         offenders: list[str] = []
         for md in (ROOT / "docs").rglob("*.md"):
             for m in re.finditer(r"\]\((?!https?://|mailto:|#)([^)]+)\)", md.read_text(encoding="utf-8")):
-                target = m.group(1).split("#")[0]
+                target = unquote(urlsplit(m.group(1)).path)
                 if (md.parent / target).resolve() in {ROOT / name for name in root_docs}:
                     offenders.append(f"{md.relative_to(ROOT)} -> {target}")
         self.assertEqual(
@@ -571,7 +644,7 @@ class TestDocumentation(unittest.TestCase):
                 target = m.group(2).strip()
                 if target.startswith(("http://", "https://", "mailto:", "#")):
                     continue
-                path_part = target.split("#")[0]
+                path_part = unquote(urlsplit(target).path)
                 if not path_part:
                     continue
                 resolved = (md_file.parent / path_part).resolve()

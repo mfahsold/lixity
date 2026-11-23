@@ -1,13 +1,10 @@
-# German product introduction
+# Lixity kennenlernen
 
-Technical instructions are maintained in English. This existing wiki URL remains
-available so older links still reach the current documentation.
+- [Produktübersicht auf Deutsch](https://mfahsold.github.io/lixity/index-de.html)
+- [Bebilderter Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
+- [Deutsche Sandbox mit Beispieltexten](https://mfahsold.github.io/lixity/sandbox/index.html?lang=de)
+- [Metrikreferenz auf Deutsch](https://mfahsold.github.io/lixity/guides/metrics/de.html)
 
-- [German product introduction](https://mfahsold.github.io/lixity/index-de.html)
-- [Illustrated German product tour](https://mfahsold.github.io/lixity/guides/first-look-de.html)
-- [English quickstart](Quickstart.md)
-- [Installation and updates](https://mfahsold.github.io/lixity/INSTALLATION.md)
-- [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)
-
-The product website offers a browser-language suggestion and a manual switcher;
-its language choice does not change the manuscript's analysis language.
+Die ausführlichen technischen Anleitungen sind auf Englisch verfügbar.
+[Installation und Updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) ·
+[Erste Sitzung](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)

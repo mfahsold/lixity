@@ -3,8 +3,8 @@
 **Historical design evidence, checked 2026-09-25.** This page records the basis
 for the [original research design](README.md#design-history); it is not the user
 manual, a current dependency list or a claim that the proposed integrations ship.
-Use [Research usage](USAGE.md) for implemented tasks and
-[Implemented scope](IMPLEMENTATION.md) for capability boundaries.
+Use [Research usage](USAGE.md#find-a-task) for implemented tasks and
+[research limits](USAGE.md#limits) for capability boundaries.
 
 This is a targeted selection of primary publications and official documentation,
 not a systematic review.

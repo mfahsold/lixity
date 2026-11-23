@@ -5,14 +5,14 @@ your own voice, or prepare a direction plan for another service. This manual own
 the audio workflow in both the local browser app and the CLI. The
 [documentation map](README.md), [browser workspace manual](WORKSPACE.md) and
 [CLI reference](USAGE.md) cover the surrounding project workflow. Install native
-workers or the optional Apple-Silicon path through
-[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
+workers or the optional Apple Silicon runtime through
+[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection).
 
-The recording, direction and teleprompter workflows are available in 0.8.1.
-Development options such as the MLX-Audio transcription command require an
-installation that includes them and the documented service setup. Check
-`lixity --version` and each command's `--help`. Audio settings, direction, timeline and transcript schema
-numbers are independent of the application version.
+Recording, direction and the teleprompter are available from 0.8.1. The MLX-Audio
+commands and the [new native worker lifecycle](INSTALLATION.md#native-audio-model-lifecycle-unreleased)
+require a development build that includes them. Use `lixity --version` and the
+installed command's `--help` to check your build. Audio settings, direction,
+timeline and transcript schemas have their own versions.
 
 | I want to… | Start here | CLI route |
 | --- | --- | --- |
@@ -20,12 +20,12 @@ numbers are independent of the application version.
 | Record, import or clone my own voice | [Author voice](#author-voice-recording-and-listening) and [ZONOS3 reference](#use-a-reference-with-zonos3) | `audio-reference`, `read-aloud` |
 | Set the recording level | [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) | `audio-microphone`, `audio-calibrate` |
 | Read and record with cues | [Teleprompter](#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) | Browser workflow |
-| Correct spoken names or use IPA | [Spelling substitutions](#pronunciation-substitutions) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction-unreleased) | Project profile configuration |
+| Correct spoken names or use IPA | [Spelling substitutions](#pronunciation-substitutions) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction) | Project profile configuration |
 | Shape delivery for a passage | [Passage direction](#passage-direction) | `audio-direction` |
-| Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers-unreleased) | `audio-export-plan` |
-| Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio-unreleased) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
+| Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers) | `audio-export-plan` |
+| Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
 | Prepare transcript evidence from one recording | [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon) | `audio-transcribe` |
-| Keep chapter audio for a reader export | [Chapter recording import](#retain-or-import-chapter-audio-unreleased) | `audio-import` |
+| Keep chapter audio for a reader export | [Chapter recording import](#retain-or-import-chapter-audio) | `audio-import` |
 | Check a worker or change settings format | [Audio status](#audio-status) and [schema upgrades](#audio-settings-upgrades-and-recovery) | `audio-status`, `audio-migrate` |
 
 Use `lixity read-aloud --help` or `lixity audio-reference --help` for installed
@@ -37,42 +37,38 @@ synthesizes audio.
 1. Open the intended project and manuscript in the
    [local workspace](WORKSPACE.md). Audio profiles and saved references belong to
    that explicit project. For command-line work, use `--project ./novel`.
-2. Open **Project → Settings → Audio and services**. Choose **Voice profiles**
-   to select the engine, language, voice or recording and standard pauses.
-   Save profile changes explicitly. The current manuscript control is
-   **Listen and direct**; it opens the **Listen & direct** tab.
+2. Open **Project → Settings → Audio and services → Voice profiles** to select
+   the engine, language, voice or recording and pauses. Save the profile, then
+   open **Listen and direct** in the manuscript view.
 3. Inspect a plan first. **Export direction → Preview export** works without a
    running synthesis service. It still needs valid project/profile settings.
-4. To generate audio, install a matching worker. Apple Silicon can use the
-   isolated `mlx-audio` ZONOS3 worker with a fixed voice or saved author reference;
-   other native models use their registered workers, and remote providers remain
-   explicit. See [Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
-   **Services & audio queue** and `audio-status` show the available worker, cached
-   model and model match. Status does not install, load or switch one.
+4. For synthesis, set up the [matching native worker](INSTALLATION.md#optional-qwen-audio-worker),
+   the [Apple Silicon runtime](#mlx-audio-on-apple-silicon) or an
+   [explicit provider](#audio-export-and-external-providers). Check the selected
+   worker in **Services & audio queue** or with `audio-status`.
 5. Choose **Preview paragraph** for a short passage, listen to its actual words
    and delivery, then render the chapter. Save a download when needed. The
-   [chapter recording rules](#retain-or-import-chapter-audio-unreleased) explain
+   [chapter recording rules](#retain-or-import-chapter-audio) explain
    what is retained for reader exports.
+
+Inspect the plan and worker status before synthesis. The plan JSON includes
+manuscript text and private direction.
 
 ```sh
 lixity read-aloud --project ./novel --preview --plan-only
 lixity audio-status --project ./novel
+```
+
+Then generate a short preview and render the chapter with the selected profile.
+
+```sh
 lixity read-aloud --project ./novel --preview --speed 1.0 -o preview.wav
-lixity read-aloud --project ./novel --engine mlx-audio --language de \
-  --voice liesel --speed 1.1 --no-direction -o zonos-preview.wav
 lixity read-aloud --project ./novel --chapter 1 --progress -o chapter-1.wav
 ```
 
-**Unreleased native workers:** models load for a concrete render and are released
-by default after five idle minutes following completion. All supported native
-workers share the configurable policy described in
-[Installation](INSTALLATION.md#native-audio-model-lifecycle-unreleased). Status
-checks do not load a model. The first render after release includes loading time.
-
-Only the last two commands synthesize audio. Plan JSON includes manuscript text
-and private direction. Local workers keep synthesis on the configured computer;
-a configured Jetson receives text through the operator's SSH forward, and an
-explicit remote provider receives the effective spoken text when rendering.
+Synthesis sends the effective spoken text to the selected runtime. A configured
+Jetson receives it through the operator's SSH forward. An explicitly selected
+remote provider receives it during rendering.
 
 Prerequisites depend on the task:
 
@@ -80,16 +76,15 @@ Prerequisites depend on the task:
 - Synthesis needs the exact engine's optional runtime and local model files, or
   an explicitly configured external service. Core analysis dependencies do not
   install inference models.
-- MP3 output and adapter-level tempo postprocessing require FFmpeg on the Lixity
-  computer. ZONOS3 is the exception: it applies `speed` inside the model as a
-  `speaking_rate` condition and needs no FFmpeg tempo pass. New default profiles
-  use `1.1`; this is a control value, not a guaranteed linear duration ratio.
+- MP3 output, WAV normalization and tempo postprocessing can require FFmpeg on
+  the Lixity computer. Check [tempo controls](#cache-tempo-and-saved-settings) and
+  the prerequisite for the selected engine before rendering.
 - Browser recording needs browser microphone permission. Hardware gain and
   calibration use tools and devices on the server computer; they do not grant
   that permission or select the browser's input.
 - A voice reference needs a reviewed 1–30 second mono, 24 kHz, 16-bit PCM WAV
   and the exact spoken transcript. A complete chapter recording has
-  [different import limits](#retain-or-import-chapter-audio-unreleased).
+  [different import limits](#retain-or-import-chapter-audio).
 
 ## `lixity read-aloud`
 
@@ -496,8 +491,8 @@ lixity audio-reference create --project ./novel --audio voice-work/reference.wav
 ```
 
 The returned JSON `id` identifies an immutable project-local record in
-`.lixity/audio-references/`; include the private reference audio and transcript
-in a protected project backup. The same JSON contains a `quality` object with
+`.lixity/audio-references/`. See [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately)
+to retain its recording and reviewed transcript. The same JSON contains a `quality` object with
 level, noise floor, clipping and bandwidth measurements. Check an existing
 reference with `lixity audio-reference inspect --project ./novel --reference-id ID`.
 A `band_limited` or `digitally_silent_pauses` note means the recording lacks
@@ -784,7 +779,7 @@ your use. OpenVoice does not list German among its native languages, so German
 conversion quality is not guaranteed.
 
 Install and start the optional worker through
-[Coqui/OpenVoice setup](INSTALLATION.md#experimental-coqui-and-openvoice-audio-unreleased).
+[Coqui/OpenVoice setup](INSTALLATION.md#experimental-coqui-and-openvoice-audio).
 A Thorsten profile uses `engine = "coqui"`, `voice = "thorsten"` and
 `language = "de"`; an OpenVoice profile uses `engine = "coqui-reference"`,
 `voice = "reference"`, an existing `reference_id` and `language = "de"`.
@@ -1015,8 +1010,8 @@ advertised spoken projection. Repeated wording at another location is a differen
 passage. Changed or moved paragraphs are preserved as stale records and require
 explicit review/removal; they are never automatically reassigned. Overlapping
 ranges and missing saved profiles fail before synthesis. The native dialog lists
-stale records with explicit removal controls. Saved direction is private author
-metadata and must be included in project backups when it should survive a move.
+stale records with explicit removal controls. To retain this private metadata
+when moving a project, follow [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately).
 
 The shared planner first resolves ranges, then applies the selected profile's
 literal pronunciation substitutions, then splits at direction and transport
@@ -1126,8 +1121,8 @@ representation, including free-form delivery, reference voices and provider
 voice mappings. Export does not guarantee that a particular engine accepts all
 SSML features. No export starts a worker or contacts a provider.
 
-An external speech profile uses an explicit provider binding. Upgrade existing
-settings through the backed-up migration before saving schema `/4`:
+An external speech profile uses an explicit provider binding and audio settings
+schema `/4` or later. For older projects, use the backed-up upgrade:
 
 ```bash
 lixity audio-migrate --project ./novel --to-schema-4
@@ -1206,7 +1201,7 @@ reference data and cache keys retain their behavior.
 ### MLX-Audio on Apple Silicon
 
 Start the MLX-Audio service for speech recognition as described in
-[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased).
+[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection).
 TTS uses a separate short-lived worker and imports MLX only in the isolated Python
 3.11 runtime. This is deliberate: the tested MLX-Audio 0.6.6 HTTP broker returned
 silent ZONOS3 WAV output, while the direct model path returned valid 44.1 kHz audio.
@@ -1329,7 +1324,7 @@ full audit JSON for download; it does not create a saved chapter recording. See 
 ## Retain or import chapter audio
 
 A complete chapter recording can accompany the same chapter in a
-[reader export](WORKSPACE.md#include-existing-chapter-recordings-unreleased). It is separate from a 1–30 second voice
+[reader export](WORKSPACE.md#include-existing-chapter-recordings). It is separate from a 1–30 second voice
 reference and from a teleprompter take's optional transcript metadata.
 
 In **Listen & direct**, select the intended chapter, open **Chapter recording**,
@@ -1358,8 +1353,8 @@ chapter, origin and measured format/duration.
 Successful browser chapter generation retains its WAV in the project. CLI
 `read-aloud --project ./novel --chapter N -o chapter.wav` also retains completed
 WAV output; previews, manuscript-wide renders and MP3 files do not take that
-CLI retention path. Retained recordings live in `.lixity/audio/exports/`, outside the
-segment cache and temporary job download. Include them in project backups.
+CLI retention path. Retained recordings live in `.lixity/audio/exports/`. Copy
+them with their metadata using [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately).
 
 Reader export includes only recordings matching the exact current manuscript
 hash and its selected chapter range. A text change anywhere in the manuscript
@@ -1371,19 +1366,18 @@ fidelity or permission to distribute a voice.
 
 ## Audio status
 
-`lixity audio-status [--project PATH] [--engine ENGINE] [--json]` inspects
-registered native workers without synthesis. Engines are `qwen3`, `qwen3-design`,
-`qwen3-base`, `coqui`, `coqui-reference`, `f5-tts`, `ims-toucan` and
-`openai-compatible`. Qwen has local and Jetson targets; the other native engines
-have local transports only. With an explicit project, it lists saved
-profile identities and compares the selected profile's model with each worker. `--engine` explicitly compares a model variant
-even without a saved profile. `model_matches: null` means no model identity or selected profile is known; it
-is not a successful or failed match. It does not output manuscript prose, voice
-descriptions, pronunciation replacements or delivery instructions. Missing or
-invalid project settings fail explicitly. This is a snapshot, not a guarantee
-that the worker will remain available during a later render. For a selected
-external profile, status reports `configured: true`, `state: unknown` and
-`model_matches: null`; it does not probe either the provider or native workers.
+`lixity audio-status [--project PATH] [--engine ENGINE] [--json]` inspects the
+selected engine without synthesis. Use `audio-status --help` for the installed
+engine choices. With `--project`, status lists saved profile identities and
+compares the selected profile's model against the relevant worker. Use `--engine`
+to inspect a model explicitly. Qwen has local and Jetson targets. Other native
+engines have local transports. `model_matches: null` means the comparison is
+unknown. Missing or invalid project settings return a diagnostic. The result
+omits manuscript prose and private delivery and pronunciation text.
+
+For a configured `openai-compatible` profile, readiness remains unknown until
+synthesis. The `mlx-audio` engine instead checks the isolated runtime and local
+checkpoint cache. See [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon).
 The browser's **Services & audio queue** shows open project views and the shared
 FIFO queue: one active render and up to three waiting jobs. Cancellation and
 context checks apply before queued work starts. **Ready** requires the expected
@@ -1394,12 +1388,13 @@ for view lifetime and application start/restart behavior.
 
 ## Audio settings upgrades and recovery
 
-Use the reviewed migration matching the feature you need: `/3` for Coqui,
-`/4` for explicit providers, `/5` for IPA and structured prosody. Preview first,
-review the snapshot, then apply with that exact token and a new backup outside
-the project. The feature sections show the respective commands. Back up private
-voice references and direction separately; a migration ZIP covers configuration.
-Follow [configuration recovery](#audio-configuration-recovery) on a project copy.
+The minimum settings format is `/3` for Coqui, `/4` for explicit providers and
+`/5` for IPA and structured prosody. Upgrade only if your current settings are
+older than the format you need. Preview the candidate, then apply with its exact
+snapshot token and a new backup outside the project. The migration ZIP covers
+configuration. Use [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately)
+for recordings and directions and [configuration recovery](#audio-configuration-recovery)
+to check the restored settings in a project copy.
 
 ### Replace removed Piper profiles
 
@@ -1444,10 +1439,11 @@ without inserting paragraph pauses between fragments. Recognised editorial
 markers are omitted unless `--keep-markers` is supplied. The manuscript is not
 edited. Unknown chapters, unsupported voices and unsupported languages fail explicitly.
 
-WAV output at speed 1.0 needs no FFmpeg; other tempo factors and MP3 output require
-FFmpeg on the machine running Lixity before synthesis, including for Jetson workers.
-Missing, malformed,
-empty or mismatched PCM and failed conversion are errors. Streamed atomic output
+Writing mono 16-bit PCM WAV at 24 kHz needs no conversion. Install FFmpeg on the
+Lixity computer for MP3 output, for worker WAVs that need normalization and for
+tempo postprocessing. ZONOS3 applies speed inside the model, while its 44.1 kHz
+output still needs normalization. Missing, malformed, empty or mismatched PCM
+and failed conversion are errors. Streamed atomic output
 preserves an existing file on failure. The native job result offers a temporary download:
 WAV output is capped at 200 MiB during rendering, including inserted silence;
 results are bound to the selected source/settings and selection generation, with
@@ -1458,7 +1454,7 @@ repetitions, pronunciation and expressive reading still need human review.
 Successful encoding or an ASR transcript does not establish narration quality.
 
 Completed chapter WAVs also have a separate
-[retained project artifact](#retain-or-import-chapter-audio-unreleased). A temporary
+[retained project artifact](#retain-or-import-chapter-audio). A temporary
 job download, a cached segment and a retained chapter are different files with
 different lifetimes.
 

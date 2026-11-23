@@ -1,47 +1,30 @@
 # Quickstart
 
-The [first-session walkthrough](https://mfahsold.github.io/lixity/ONBOARDING.md)
-is the maintained guide. For a first look without installing anything, open the
-[read-only demo](https://mfahsold.github.io/lixity/demo/report.html) or test
-your own paragraph offline in the [Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)
-(with classic presets for *Effi Briest* and *Pride & Prejudice*).
+Try the [read-only demo in English](https://mfahsold.github.io/lixity/demo/report.html)
+or compare a short passage in the [browser sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?lang=en).
+For a session with your own manuscript, follow the
+[first-session walkthrough](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md).
 
 ## 1. Installation
 
-Follow [installation](https://mfahsold.github.io/lixity/INSTALLATION.md) for the
-isolated application install, prerequisites and updates. Keep optional speech
-workers separate from the normal application environment.
+The [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#cli-current-release)
+covers the isolated install and how to check or update it.
 
-## 2. Starting the Workbench
+## 2. Starting the workbench
 
-After installation:
+[Running the server](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#running-the-server)
+covers starting the app, opening projects through one local port and finding the
+active installation.
 
-```sh
-lixity service start --open
-```
+## 3. Opening a manuscript
 
-The default app address is `http://127.0.0.1:8765/`.
+Use **Open Project** for an existing project. Use **Analyze a manuscript** to
+preview and copy a file into a new project. Check the language and destination
+before importing. [Open or import?](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#open-or-import)
 
-## 3. Opening a Manuscript
+## 4. The three main workspaces
 
-Choose **Open Project** for an existing folder and its research archive. Choose
-**Analyze a manuscript** to preview a file and copy it into a new project;
-opening a folder and importing a copy are different operations.
-Use UTF-8 Markdown with `## Chapter title` headings unless the project defines a
-custom chapter pattern. The file importer in 0.8.0 also accepts one `.txt` or
-`.docx` file. Review the destination and language before confirming.
-
-## 4. The Three Main Workspaces
-
-Start in **Manuscript** and read a paragraph. Press `D` for **Direct Speech Mode**
-to dim narration and hear your dialogue, or click **Write** to edit in place
-with live session deltas and revision comparison. Turn **Analysis** on to inspect
-layers (sentence length, sticky sentences, dialogue-tag density, word echoes,
-indirect speech); choose **… → Explore passage** for context. **Research**
-holds sources, claims and dossiers. **Project** holds project setup and settings.
-Opening a view does not save a decision or rewrite prose.
-
-Continue with the [workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)
-or [CLI reference](https://mfahsold.github.io/lixity/USAGE.md). To return later,
-start the service and reopen the project from the app home; project-view URLs
-expire when the server restarts.
+**Manuscript** is where you read, write and inspect highlighted passages.
+**Research** holds sources, claims and dossiers. **Project** holds settings and
+project structure. Find the actions in the
+[workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md).

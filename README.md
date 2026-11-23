@@ -37,8 +37,8 @@ draft. Open the highlighted passage and decide whether it needs attention. The
 demo identifies the development version that generated the snapshot.
 Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
-[Methods & limits](https://mfahsold.github.io/lixity/METHODS.md) ·
-[Stability](https://mfahsold.github.io/lixity/STABILITY.md).
+[Methods & limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) ·
+[Stability](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
 
 **Seven interface languages:**
 [Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
@@ -48,7 +48,7 @@ Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
 [Português](https://mfahsold.github.io/lixity/index-pt.html) ·
 [Nederlands](https://mfahsold.github.io/lixity/index-nl.html)
-([language coverage](https://mfahsold.github.io/lixity/LOCALIZATION.md)).
+([language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md)).
 
 <a id="start-here"></a>
 
@@ -72,64 +72,32 @@ lixity service start --open
 The default address is `http://127.0.0.1:8765/`. Choose **Open Project** to
 continue in an existing folder. Choose **Analyze a manuscript** to preview
 importing a file into a new project. The preview accepts Markdown, plain text and
-one Word (.docx) file. Confirm the analysis language before reading the results.
-English is the default. Choose automatic detection to analyze in the detected language.
+one Word (.docx) file. Choose the manuscript language in the preview.
+Automatic detection is available in analysis settings or with `--language auto`.
 
 To work on another project, open the service's root address in a new tab and
 choose **Project actions → Open Project**. Lixity opens a separate view for the
 chosen folder. Tabs with the same `/w/…/` URL share that view.
 
-To return to a running workspace, use the address shown by `lixity service status`.
-After updating the installation, run `lixity service restart --open` on the
-same port and reload the browser. `lixity doctor` reports the CLI and service
-versions. The install command uses the package published on
-[PyPI](https://pypi.org/project/lixity/). The demo follows development.
+`lixity service status` reports the running address. For updates and restarts,
+use the [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
+The install command uses the package published on [PyPI](https://pypi.org/project/lixity/).
+The demo follows the development checkout.
 
-[Open your first project](https://mfahsold.github.io/lixity/ONBOARDING.md) ·
+[Open your first project](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) ·
 [Start with a project path or use a custom port](https://mfahsold.github.io/lixity/guides/installation.html#existing-project) ·
 [Update or remove Lixity](https://mfahsold.github.io/lixity/guides/installation.html#updates)
 
 ## What can you do with Lixity?
 
-Keep manuscript prose, research, and project settings together as you move
-between reading, comparison, research, and sharing:
-
-- **Read and review passages:** read continuous prose, search, and place work
-  markers. The native manuscript editor supports writing, local autosave and
-  reviewed recovery. Use the teleprompter to rehearse a passage aloud, or create
-  a local listening preview with Qwen, Coqui, IMS-Toucan, ZONOS3 or an explicit
-  provider. ZONOS3 on Apple Silicon can reuse a private project voice reference;
-  its tempo is conditioned inside the model, not reprocessed with FFmpeg.
-- **Compare prose patterns.** Explore sentence rhythm, dialogue, repeated
-  wording and changes across versions. The measurement card shows what was
-  counted, why a passage was marked and what to check as you read. Open the
-  source text from a chapter comparison or pattern example. A tense flag or
-  a shorter sentence can suit the scene as written. [Methods and limits](https://mfahsold.github.io/lixity/METHODS.md)
-- **Follow scene research.** Read a dossier beside the manuscript and follow a
-  quotation to its saved claim, source passage and author decision. In the
-  development checkout, preview dossier proposals for characters, scenes and
-  places before saving. A generated character dossier can show where the
-  counted names occur, chapter by chapter. [Research workflows](https://mfahsold.github.io/lixity/research/USAGE.md#manuscript-driven-dossier-drafts)
-- **Connect an AI client (MCP):** run `lixity mcp` for read-only analysis,
-  research inspection and guided editorial prompts. Use `tools/list` to see
-  what's available in your installation. Lixity returns results over local
-  stdio. The connected client controls where it processes them.
-- **Share selected material.** Prepare a manuscript PDF or an offline reading
-  website with the chapters, companion notes and analysis you select. The
-  development checkout also downloads an exact saved dossier version as a PDF.
-
-| Your task | Work in Lixity | What stays under your control |
-| :--- | :--- | :--- |
-| Read and revise a chapter | Continuous prose, search, work markers and passage tools | Analysis marks can be switched off; nothing rewrites the manuscript for you. |
-| Back up a saved project | [Verified backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md) | Explicit file inventory, retained research and checksums; unsaved drafts are excluded. |
-| Edit manuscript prose | Native CodeMirror editor with undo, local autosave and recovery | Conflicting external edits stop autosave; recovery is reviewed before applying. [Scope and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased). |
-| Audit pacing, dialogue, and showing with AI | `lixity mcp` stdio server with read-only tools and structured prompts | Lixity's analysis runs offline; review the connected AI client's data handling before supplying manuscript text. |
-| Understand a change in voice or rhythm | Compare chapters, inspect counted words and sentences, open a measurement explanation | A statistical difference is a prompt for review, not an error or target score. |
-| Investigate language use | Explore sentence lengths, lexical diversity and readability; export JSON with explicit analysis settings | Results describe the supplied text, not a representative population or proof of authorship. |
-| Explain a scene detail | Link a quotation to a claim, its source passages, a dossier and an author decision | Evidence, assertions and creative decisions remain separate; exact linked versions are retained. |
-| Review a character's role | Preview a character dossier and inspect chapter distribution and matching paragraphs in the development checkout | You choose what to save. The analysis counts names and configured variants. Read the passage for implied appearances. |
-| Hear a passage | Prepare direction, pronunciation rules and pauses; review a short recording or synthesis preview | Speech planning needs no worker. Recording needs permission; synthesis uses the explicitly selected service. |
-| Share a reading copy | Choose manuscript, curated companion notes, analysis or a printable PDF | Preview the contents before export; a fixed copy does not expose your live project. |
+| Your task | Start here |
+| :--- | :--- |
+| Read, revise or recover a draft | [Writing tools and recovery](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript) |
+| Understand a change in rhythm or voice | [Explore language patterns](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#explore-language-in-the-browser) |
+| Trace the sources behind a scene | [Read a dossier beside the manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#read-a-dossier-beside-the-manuscript) |
+| Record, rehearse or listen | [Audio and teleprompter](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) |
+| Share selected chapters or notes | [Reading copies and PDFs](#choose-what-leaves-the-project) |
+| Restore a saved project | [Verified backup and restore](https://github.com/mfahsold/lixity/blob/main/docs/PROJECT_BACKUP.md) |
 
 <a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; the paragraph comparison is shown separately"/></a>
 
@@ -170,8 +138,8 @@ coverage. Optional local syntax models add grammatical tense analysis with
 language-specific verb-group rules; parser errors remain possible.
 [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html) ·
 [Metric reference](https://mfahsold.github.io/lixity/guides/metrics/en.html) ·
-[Language coverage](https://mfahsold.github.io/lixity/LOCALIZATION.md) ·
-[Grammatical tense setup](https://mfahsold.github.io/lixity/USAGE.md#grammatical-tense).
+[Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
+[Grammatical tense setup](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense).
 
 ### Keep research connected and versioned
 
@@ -180,54 +148,25 @@ images and maps. Passage associations return to their manuscript context. A link
 earlier version remains distinct from the current entry. Configured terms and
 props locate declared wording and connect it to dossiers. Use the current
 manuscript's chapter counts and surrounding sentences to review a generated
-character dossier. Save a reviewed manuscript addition as a new version to keep
-those passages with your notes.
+character dossier in the development checkout. Open a matching passage in the
+manuscript when the source and paragraph identities match. Save a reviewed
+manuscript addition as a new version to keep those passages with your notes.
 
 Research is scoped to an explicit project. Retaining a source and redistributing
 it are separate choices. Original PDFs, images and videos have their own import
 and export controls. Existing archives require a reviewed migration before
 adopting a newer storage format.
-[Research workflows](https://mfahsold.github.io/lixity/research/USAGE.md) ·
-[Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md).
+[Research workflows](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) ·
+[Data model](https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md).
 
 ### Record, direct and listen
 
-**Available in 0.8.0:** open **Project → Settings → Audio and services**
-for author recordings, voice profiles, microphone settings, services and the audio
-queue. **Listen & direct** is also available from the manuscript toolbar. The
-four audio tabs separate recording, profile/service setup, passage direction and
-hardware levels. A shared player provides elapsed/total time, seeking, volume
-and a measured frequency spectrum.
-
-Record a short author reference or import a WAV, review the actual words and
-confirm the transcript before saving. Browser microphone permission belongs to
-the current local address; changing hardware gain cannot grant it. Permission,
-recording and failure states appear beside the recording button.
-[Recording and troubleshooting](https://mfahsold.github.io/lixity/AUDIO.md#author-voice-recording-and-listening).
-
-The manuscript **Teleprompter** (`P`) combines adjustable scrolling with the
-canonical spoken text, direction cues, pauses and explicit IPA annotations.
-Record a take, edit its transcript, download its WAV plus JSON metadata, or hand
-it to the author-voice studio for review. A reading script is not an exact
-transcript. The scrolling rate is approximate; it does not track live speech.
-[Teleprompter and take exchange](https://mfahsold.github.io/lixity/AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images).
-
-Speech planning and synthesis are separate actions. Export a passage, chapter or
-manuscript as JSON or SSML without a running speech worker. JSON retains the
-supported authored controls; SSML reports portability limits. Optional local
-Qwen, Coqui/OpenVoice and IMS-Toucan setups have different voice, language and
-direction capabilities. IMS-Toucan's optional German/English path supports
-separate IPA overrides and structured passage-level duration/prosody controls;
-it does not interpret free acting prompts. Existing F5 profiles remain readable,
-but the bundled F5 runtime is unavailable.
-[Choose and set up a speech engine](https://mfahsold.github.io/lixity/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
-
-An explicitly configured external speech provider receives selected text when
-you request synthesis. Review audio plans before sharing them. Comparing a
-recording with the planned words requires reviewed, timestamped transcript
-evidence. In the development checkout, `audio-transcribe` sends a chosen
-recording to an explicit MLX-Audio service for optional recognition.
-[Audio workflow and limits](https://mfahsold.github.io/lixity/AUDIO.md#audio-export-and-external-providers-unreleased)
+Use **Listen & direct** or the **Teleprompter** from the manuscript toolbar.
+Record a take and review its transcript, or export a JSON or SSML speech plan
+without a worker. To hear synthesized prose, choose a configured speech engine.
+An external provider receives the selected text when you request its synthesis.
+[Recording and audio workflows](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) ·
+[Worker setup](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-qwen-audio-worker).
 
 ### Choose what leaves the project
 
@@ -236,8 +175,8 @@ recording to an explicit MLX-Audio service for optional recognition.
 | [Review workspace](https://mfahsold.github.io/lixity/demo/report.html) | Manuscript and analysis, optionally internal research and history; for author/editor review. |
 | [Novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html) | Manuscript with explicitly selected dossier notes, plus optional analysis of the exported chapters. |
 | [Standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html) | Selected background material for someone reading the novel elsewhere. |
-| [Manuscript PDF](https://mfahsold.github.io/lixity/WORKSPACE.md#download-a-manuscript-pdf) | Neutral or editorial manuscript, analysis report, A5 book or submission sheet. |
-| [Dossier PDF](https://mfahsold.github.io/lixity/WORKSPACE.md#download-a-dossier-pdf) | A saved dossier version with its notes, tables and pinned quotations in the development checkout. |
+| [Manuscript PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-manuscript-pdf) | Neutral or editorial manuscript, analysis report, A5 book or submission sheet. |
+| [Dossier PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-dossier-pdf) | A saved dossier version with its notes, tables and pinned quotations in the development checkout. |
 
 Reading websites are fixed exports, not live co-editing or project backups.
 A publication profile selects dossier bodies or sections and chapter reveal
@@ -251,7 +190,7 @@ project analysis. Work-marker notes are omitted from curated reader copies.
 copied; missing chapters remain visibly text-only. Export does not run synthesis.
 The reader gets a player and WAV download, without your private voice references,
 speech-profile settings or service endpoints.
-[Include chapter audio](https://mfahsold.github.io/lixity/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
+[Include chapter audio](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 Existing recordings enter through the explicit
 `audio-import --project ROOT --audio WAV --chapter N --source-sha256 HASH`
 command, with optional `--manuscript manuscript.md`. That binding records your selection;
@@ -262,7 +201,7 @@ attribution before downloading. Original source files need an explicit inclusion
 choice and redistribution rights. Website exports are beta; test the copy on the
 recipient's device. The local **Project overview** inspects sources and existing
 outputs without rebuilding analysis; filenames alone do not establish freshness.
-[Export workflow](https://mfahsold.github.io/lixity/WORKSPACE.md#export-a-reading-website) ·
+[Export workflow](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website) ·
 [PDF options](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export).
 
 ### Use the same engine from scripts
@@ -278,24 +217,27 @@ Start with `lixity --help`; `lixity COMMAND --help` explains each command
 without running it. Help in 0.8.0 groups tasks and links the corresponding manual.
 The CLI works without a running browser service. Root-local project settings,
 explicit language selection and the shared pipeline keep browser and automation
-workflows aligned. [Choose a command](https://mfahsold.github.io/lixity/USAGE.md#which-command-for-which-question)
-or start with the [API contracts](https://mfahsold.github.io/lixity/AGENTS.md).
+workflows aligned. [Choose a command](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#which-command-for-which-question)
+or start with the [API contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md).
+For a connected AI client, the [read-only MCP setup](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server)
+describes tool discovery and how to evaluate the client's handling of text.
 
 ## Documentation map
 
-[Find a task in the complete documentation map](https://mfahsold.github.io/lixity/README.md).
+[Find a task in the documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md) ·
+[Wiki](https://github.com/mfahsold/lixity/wiki).
 
-[Additional screenshots and image credits](https://mfahsold.github.io/lixity/screenshots/README.md).
+[Additional screenshots and image credits](https://github.com/mfahsold/lixity/blob/main/docs/screenshots/README.md).
 
 | Looking for | Start here |
 | :--- | :--- |
-| First session | [Install and start](https://mfahsold.github.io/lixity/INSTALLATION.md) · [Walkthrough](https://mfahsold.github.io/lixity/ONBOARDING.md) |
-| Everyday use | [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md) · [CLI and configuration reference](https://mfahsold.github.io/lixity/USAGE.md) |
-| Audio and teleprompter | [Recording, direction, generation and exchange](https://mfahsold.github.io/lixity/AUDIO.md) |
+| First session | [Install and start](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) · [Walkthrough](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) |
+| Everyday use | [Workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md) · [CLI and configuration reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) |
+| Audio and teleprompter | [Recording, direction, generation and exchange](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) |
 | Interpret results | [Reading measurements](https://mfahsold.github.io/lixity/guides/interpretation.html) |
-| Research | [Workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) · [Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md) |
-| Measurements | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Checks and limits](https://mfahsold.github.io/lixity/STABILITY.md#core-validation-status) |
-| Integrations | [API contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
+| Research | [Workflows and compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) · [Data model](https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md) |
+| Measurements | [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) · [Checks and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#core-validation-status) |
+| Integrations | [API contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) · [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
 | Contributing | [Contributor setup and checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
 In the repository, [`src/lixity/`](https://github.com/mfahsold/lixity/tree/main/src/lixity)
@@ -315,11 +257,11 @@ their own projects.
 
 Use the [latest published release](https://github.com/mfahsold/lixity/releases/latest)
 for published packages and their upgrade notes. The source
-[release notes](https://mfahsold.github.io/lixity/releases/v0.9.0.md) describe
+[release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.0.md) describe
 the version prepared in this repository. See the
 [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for work
 in progress. For local updates and website availability, see the
-[installation guide](https://mfahsold.github.io/lixity/INSTALLATION.md).
+[installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md).
 
 Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
 [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
@@ -329,6 +271,6 @@ describes its research context.
 **AGPL-3.0-or-later.** Use Lixity for private or commercial writing, research and
 teaching, including self-publishing your book. A separate written commercial
 license is available for integrations that cannot meet the AGPL.
-[Licensing guide](https://mfahsold.github.io/lixity/LICENSING.md) ·
+[Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) ·
 [Full terms](https://github.com/mfahsold/lixity/blob/main/LICENSE) ·
 [Legal notice and contact](https://mfahsold.github.io/lixity/#impressum).

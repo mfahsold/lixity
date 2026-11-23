@@ -16,7 +16,7 @@ workers and integrations.
 
 | Your next task | Start here |
 | --- | --- |
-| Write, undo or recover a draft | [Write a manuscript](#write-a-manuscript-unreleased) |
+| Write, undo or recover a draft | [Write a manuscript](#write-a-manuscript) |
 | Inspect one language pattern while reading | [Connected first session](#a-connected-first-session), then [Reading paragraphs](#reading-paragraphs) |
 | Investigate rhythm, vocabulary or readability | [Explore language in the browser](#explore-language-in-the-browser) |
 | Understand a marked word or value | [Counted text and paragraph comparison](#counted-text-and-paragraph-comparison), then [Explore a passage](#explore-a-passage) |
@@ -37,7 +37,7 @@ Start the installed local app with `lixity service start --open`. It normally op
 the import preview to create a copy at an explicit destination. Import confirmation
 writes the new project; opening reconnects an existing one. The manuscript stays
 in its project folder. Use your text editor or the native
-[Write workflow](#write-a-manuscript-unreleased).
+[Write workflow](#write-a-manuscript).
 
 The DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
 entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
@@ -209,12 +209,12 @@ Reports without paragraph evidence omit the four evidence-only options.
 
 Lixity computes these choices and their text ranges from the current source and
 project settings. The browser stores the selected metric as a display preference.
-SQLite retains selected aggregate measurements for saved versions. Explicit
-tense review decisions are stored separately in `.lixity/analysis-review.json`.
-The review overview checks the same project configuration and source revision
-before showing saved-version deltas alongside the current analysis. It passes
-the current project token to `GET /api/manuscript-delta`; stale tokens receive a
-conflict response.
+SQLite retains selected aggregate measurements for saved versions. In the
+development build, the chapter matrix uses the same chapter measurements as
+the version comparison. Look for the baseline date and changes below the word,
+sentence-length or quoted-speech value. Deltas require a matched chapter and the
+source revision shown in the reader. Tense review uses its own saved decisions
+in `.lixity/analysis-review.json`. [Revision comparison](#compare-versions-and-resolve-a-conflict)
 
 **Words in quotes and marked speech** shows the counted words in the selection
 and their share of the paragraph. A quote can continue across paragraphs in the
@@ -581,7 +581,7 @@ explicit review/save steps; they are not automatic corrections. **Terms &
 variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
-manuscript** and choose **New dossiers**. Browse the available characters,
+manuscript** and choose **New suggestions**. Browse the available characters,
 places and scenes, then select a suggestion to read its preview.
 **Create dossier** confirms that preview. If the manuscript or settings change,
 reload the suggestions and review the new draft. After saving, **Open saved
@@ -592,7 +592,7 @@ Place previews include a chapter table and the first matching passage.
 Scene previews use the measured opening and closing sentences. A problem in
 scene settings or the place list leaves the other suggestions available.
 
-Open a generated character dossier and choose **Add from manuscript**.
+Open a generated character dossier and choose **Preview addition**.
 The preview contains the character overview, every chapter's mention count,
 and all matching passages with context from the current manuscript. Choose
 **Edit dossier text** to change the addition or **Save dossier version** to
@@ -770,14 +770,16 @@ the underlying coverage and scores have not changed.
 
 In **Project → Settings → Analysis**, expand **Adjust highlights** to inspect controls
 and explanations. **Apply** submits changes; restoring defaults only changes
-the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
-validation. [Configuration](USAGE.md#configuration-corpusconfig) explains persistent
-project metadata and session settings.
+the form. Choose a review profile to fill in the thresholds, then adjust any
+field. The result of applying settings appears beside the button. If the project
+or its settings changed elsewhere, copy any edits you want to keep before
+reloading. [Configuration](USAGE.md#configuration-corpusconfig) explains
+persistent project metadata and session settings.
 
 **Manuscript language (analysis)** selects the language profile for counting and
-also sets the generated interface language. English is the default; `auto`
-requests explicit function-word-based detection. This control is not an
-independent interface-language preference, especially for mixed-language texts.
+also sets the generated interface language. English is the default.
+**Detect automatically** (`auto` in configuration and CLI) estimates the profile
+using function words. Check the result for short or multilingual texts.
 
 The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
 FDR-selected cell; color alone is not a significance decision. Cell details

@@ -1,15 +1,16 @@
 # Verified project backup and restore
 
-Available in 0.8.1. A project backup is a local directory
-bundle, separate from reading websites and research-only exports. Stop manuscript
-editing and other project writers before capture. Selected files are checked for
-changes during copying, but this is not a transactional snapshot of running apps.
+Choose the procedure by what you need to recover. The project bundle is available
+from 0.8.1. Save your changes and stop manuscript editing and other project writers
+before capture. The bundle checks selected files during copying. It captures a
+declared inventory of saved files.
 
 | What you need to recover | Backup and restore |
 | --- | --- |
 | Selected manuscript, explicitly selected settings and assets, and any accepted research | `lixity project-backup` and `lixity project-restore` |
 | Accepted research history and retained sources, with root `lixity.toml` when present | [Research archive export and restoration](research/USAGE.md#export-and-restoration) |
 | Accepted research plus a Zotero data directory and its stored attachments | [Paired Zotero/research backup and restore](research/USAGE.md#paired-zoteroresearch-backup-and-restore) |
+| Saved voice references, passage directions or chapter recordings | [Separate private audio backup](#back-up-private-audio-separately) |
 
 ## Back up and verify a restored copy
 
@@ -26,9 +27,9 @@ Choose a new backup directory outside the project and a restore destination that
 does not exist. Failed verification does not publish a restored project.
 
 Check the restored manuscript selection, settings and file paths. If the restore
-reports `research_included: true`, also run
-`lixity research audit --project ./restored-novel`. To continue in the browser,
-use **Open Project** and select the restored copy in the existing app.
+reports `research_included: true`, run `lixity research audit --project ./restored-novel`
+and check a quotation you expect to find. To continue in the browser, use
+**Open Project** and select the restored copy in the existing app.
 
 ## Inventory and scope
 
@@ -62,6 +63,25 @@ must be visible files inside the project; hidden paths and the managed top-level
 an explicit retention decision: visible filenames are not a guarantee that their
 contents contain no secrets. Research retains only bytes already accepted into
 its store. This is a complete backup of the stated inventory, not a disk image.
+
+## Back up private audio separately
+
+The bundle excludes these three paths. Copy the ones you need to protected backup
+storage while project writers are stopped. Keep their project-relative paths,
+the corresponding manuscript bytes and the root settings that select the saved
+profiles.
+
+| Project path | What to keep and check |
+| --- | --- |
+| `.lixity/audio-references/` | The recorded voice and reviewed transcript in each immutable reference record. Open **Voice profiles** or use `lixity audio-reference inspect --project ./restored-novel --reference-id ID` to verify a selected reference. |
+| `.lixity/audio-directions.json` | Passage range choices bound to the saved manuscript. Review them with `lixity audio-direction inspect --project ./restored-novel`. |
+| `.lixity/audio/exports/` | Complete chapter WAVs and their source-bound metadata. Open the intended chapter and check that **Chapter recording** is ready for reader export. |
+
+Restore these bytes only into the corresponding paths of a separate test copy.
+Keep a verified copy before changing a live project. If a direction is stale or
+a chapter recording is ineligible, check the restored manuscript revision and
+saved settings using the [audio workflow](AUDIO.md). Preserve the original hashes
+and references when investigating the mismatch.
 
 ## Verification limits
 

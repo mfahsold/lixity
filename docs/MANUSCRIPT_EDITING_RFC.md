@@ -1,10 +1,10 @@
 # Integrated manuscript editing
 
-**Status: first native implementation ships in 0.8.1; broader design remains proposed.
-Research reviewed 2026-11-10.**
-The current source includes a locally bundled CodeMirror 6 editor, conditional
-autosave and recovery for selected UTF-8 Markdown/text manuscripts. See the
-[workspace manual](WORKSPACE.md#write-a-manuscript-unreleased) for its limits.
+**Design record. First native implementation shipped in 0.8.1.** The proposal
+and evidence below were reviewed on 2026-11-10. The
+[workspace manual](WORKSPACE.md#write-a-manuscript) describes current behavior and
+limits. The [native editing contract](AGENTS.md#native-manuscript-editing)
+owns request fields, revision guards and recovery semantics.
 Research textareas retain deliberate revision saves, with cross-view draft guards.
 The editor in 0.8.1 also includes localized search/replace, manual three-text
 conflict/recovery comparison and validated literal reader selections.

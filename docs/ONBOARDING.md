@@ -25,7 +25,7 @@ Practice in the read-only [Warehouse 4 demo](demo/report.html) with the
 2. Read a paragraph in **Manuscript** and inspect one [measurement](#read-and-explore).
 3. To revise the passage locally, choose **Write**. Check for **Saved locally**,
    then choose **Close writing** to return to the reader.
-   [Writing and recovery](WORKSPACE.md#write-a-manuscript-unreleased)
+   [Writing and recovery](WORKSPACE.md#write-a-manuscript)
 
 ## Start with a manuscript
 
@@ -174,13 +174,13 @@ public demo lets you explore saved records without writing them.
 ### Review a manuscript dossier
 
 In the current development checkout, open **Research → Dossiers → From
-manuscript → New dossiers**. Choose a character, scene or place proposal and
+manuscript → New suggestions**. Choose a character, scene or place proposal and
 read the preview before saving. For a generated character dossier, **Character
 in the manuscript** shows the chapter distribution and matching passages in the
 currently selected manuscript. A chapter can feature a character without
 naming them.
 
-Use **Add from manuscript** to review a supplement while keeping your earlier
+Use **Preview addition** to review a supplement while keeping your earlier
 notes. **Save dossier version** adds a new archived revision. To take that
 revision to a reading session, reopen it and choose **Download PDF**. The PDF
 keeps the saved text and its pinned source quotations. [Dossier proposals and
@@ -222,6 +222,7 @@ Check that the active project and analysis language match your manuscript.
 Use [service management](INSTALLATION.md#running-the-server) to close, reopen or
 update the local app. The project stays in its folder between sessions.
 
-Back up manuscripts separately: research/Zotero backups exclude them and external
-linked attachments. Use [implemented research usage](research/USAGE.md), not
-[historical proposals](research/README.md), to determine available operations.
+Choose a [project backup](PROJECT_BACKUP.md) to copy saved manuscripts and
+retained research together. For a research-only archive or a Zotero library,
+start with [research backup and recovery](research/USAGE.md#storage-lifecycle-and-recovery).
+Include linked attachments or other files separately when your backup scope requires them.

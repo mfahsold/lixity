@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Synchronize docs/wiki/ markdown pages to the GitHub Wiki repository."""
+"""Preview or publish the Wiki Markdown pages in docs/wiki/."""
 
 from __future__ import annotations
 
+import argparse
 import shutil
 import subprocess
 import sys
@@ -14,9 +15,15 @@ WIKI_DIR = REPO_ROOT / "docs" / "wiki"
 WIKI_REMOTE = "https://github.com/mfahsold/lixity.wiki.git"
 
 
-def main() -> int:
-    if not WIKI_DIR.is_dir():
-        print(f"Error: {WIKI_DIR} does not exist.", file=sys.stderr)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--publish", action="store_true", help="Commit and push the reviewed changes")
+    args = parser.parse_args(argv)
+
+    pages = sorted(path for path in WIKI_DIR.glob("*.md") if path.is_file() and not path.is_symlink())
+    names = [path.name for path in pages]
+    if "Home.md" not in names:
+        print(f"Error: a regular Home.md is required in {WIKI_DIR}.", file=sys.stderr)
         return 1
 
     git = shutil.which("git")
@@ -26,44 +33,49 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="lixity-wiki-sync-") as tmpdir:
         clone_dir = Path(tmpdir) / "repo"
-        print(f"Cloning {WIKI_REMOTE}...")
-        clone_res = subprocess.run(  # noqa: S603
-            [git, "clone", WIKI_REMOTE, str(clone_dir)],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if clone_res.returncode != 0:
-            print("Note: GitHub Wiki repository is not yet initialized on GitHub servers.", file=sys.stderr)
-            print("To initialize: visit https://github.com/mfahsold/lixity/wiki and click 'Save page' on Home.md once.", file=sys.stderr)
-            return 2
+        try:
+            subprocess.run([git, "clone", "--quiet", WIKI_REMOTE, str(clone_dir)], check=True)  # noqa: S603
+            branch = subprocess.check_output(  # noqa: S603
+                [git, "symbolic-ref", "--short", "HEAD"], cwd=clone_dir, text=True,
+            ).strip()
+            revision = subprocess.check_output(  # noqa: S603
+                [git, "rev-parse", "--short", "HEAD"], cwd=clone_dir, text=True,
+            ).strip()
+            print(f"Wiki default branch {branch} at {revision}", flush=True)
+            wiki_only = sorted(path.name for path in clone_dir.glob("*.md") if path.name not in names)
+            if wiki_only:
+                print("Preserving wiki-only pages " + ", ".join(wiki_only), flush=True)
+            for page in pages:
+                target = clone_dir / page.name
+                if target.is_symlink() or (target.exists() and not target.is_file()):
+                    raise ValueError(f"Wiki page is not a regular file: {page.name}")
+                shutil.copyfile(page, target)
 
-        # Copy all files from docs/wiki to clone_dir
-        for src_file in WIKI_DIR.iterdir():
-            if src_file.is_file():
-                shutil.copy2(src_file, clone_dir / src_file.name)
-
-        # Commit and push
-        subprocess.run([git, "add", "-A"], cwd=clone_dir, check=True)  # noqa: S603
-        status_res = subprocess.run(  # noqa: S603
-            [git, "status", "--porcelain"],
-            check=False,
-            cwd=clone_dir,
-            capture_output=True,
-            text=True,
-        )
-        if not status_res.stdout.strip():
-            print("GitHub Wiki is already up to date.")
-            return 0
-
-        subprocess.run(  # noqa: S603
-            [git, "commit", "-m", "docs(wiki): synchronize wiki documentation from docs/wiki"],
-            cwd=clone_dir,
-            check=True,
-        )
-        print("Pushing updates to GitHub Wiki...")
-        subprocess.run([git, "push", "origin", "master"], cwd=clone_dir, check=True)  # noqa: S603
-        print("Successfully synchronized docs/wiki to GitHub Wiki!")
+            subprocess.run([git, "add", "--", *names], cwd=clone_dir, check=True)  # noqa: S603
+            changes = subprocess.check_output(  # noqa: S603
+                [git, "diff", "--cached", "--name-status"], cwd=clone_dir, text=True,
+            )
+            if not changes:
+                print("Managed wiki pages are up to date.")
+                return 0
+            if not args.publish:
+                subprocess.run(  # noqa: S603
+                    [git, "--no-pager", "diff", "--cached", "--no-ext-diff", "--no-textconv"],
+                    cwd=clone_dir, check=True,
+                )
+                print("Preview only. Use --publish to publish these pages.")
+                return 0
+            subprocess.run(  # noqa: S603
+                [git, "commit", "-m", "docs(wiki): synchronize wiki documentation from docs/wiki"],
+                cwd=clone_dir, check=True,
+            )
+            subprocess.run(  # noqa: S603
+                [git, "push", "origin", f"HEAD:refs/heads/{branch}"], cwd=clone_dir, check=True,
+            )
+        except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+            print(f"Could not synchronize the GitHub Wiki: {exc}", file=sys.stderr)
+            return 1
+        print("Wiki pages published.")
         return 0
 
 

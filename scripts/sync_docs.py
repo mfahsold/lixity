@@ -25,6 +25,12 @@ def get_version() -> str:
     return source_version(ROOT)
 
 
+_README_RELEASE_DIR = (
+    r"(?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/|"
+    r"https://github\.com/mfahsold/lixity/blob/main/docs/releases/)"
+)
+
+
 def check_or_sync_files(
     version: str, *, check_only: bool = False, root: Path | None = None
 ) -> list[str]:
@@ -53,18 +59,14 @@ def check_or_sync_files(
                 source_pin,
                 (r"fixed snapshot of \d+\.\d+\.\d+",
                  f"fixed snapshot of {version}"),
-                (r"\[development notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[development notes](https://mfahsold.github.io/lixity/releases/v{version}.md)"),
-                (r"\[release notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[release notes](https://mfahsold.github.io/lixity/releases/v{version}.md)"),
                 (r"This installs \*\*v\d+\.\d+\.\d+\*\*",
                  f"This installs **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
-                (r"\[v\d+\.\d+\.\d+ release notes\]\((docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)",
+                (rf"\[v\d+\.\d+\.\d+ release notes\]\(({_README_RELEASE_DIR})v\d+\.\d+\.\d+\.md\)",
                  rf"[v{version} release notes](\g<1>v{version}.md)"),
-                (r"\[Release notes\]\((docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)",
-                 rf"[Release notes](\g<1>v{version}.md)"),
+                (rf"(\[(?:[Rr]elease notes|development notes)\]\({_README_RELEASE_DIR})v\d+\.\d+\.\d+\.md\)",
+                 rf"\g<1>v{version}.md)"),
             ],
         ),
         (
@@ -80,8 +82,8 @@ def check_or_sync_files(
                  f"this documentation describes **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
-                (r"\[release notes\]\(releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[release notes](releases/v{version}.md)"),
+                (r"(\[(?:release notes|development notes)\]\(releases/)v\d+\.\d+\.\d+\.md\)",
+                 rf"\g<1>v{version}.md)"),
             ],
         ),
         (
@@ -232,9 +234,9 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("README.md"): (
         ("current release-note label",
-         re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v\d+\.\d+\.\d+\.md\)")),
+         re.compile(rf"\[v(\d+\.\d+\.\d+) release notes\]\({_README_RELEASE_DIR}v\d+\.\d+\.\d+\.md\)")),
         ("current release-note target",
-         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes|release notes|development notes)\]\((?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/)v(\d+\.\d+\.\d+)\.md\)")),
+         re.compile(rf"\[(?:v\d+\.\d+\.\d+ release notes|[Rr]elease notes|development notes)\]\({_README_RELEASE_DIR}v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/index.html"): (
         ("current release-note target",
@@ -245,7 +247,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     Path("docs/INSTALLATION.md"): (
         ("worker package install pin", re.compile(r"lixity==(\d+\.\d+\.\d+)")),
         ("current release-note target",
-         re.compile(r"\[release notes\]\(releases/v(\d+\.\d+\.\d+)\.md\)")),
+         re.compile(r"\[(?:release notes|development notes)\]\(releases/v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/llms.txt"): (
         ("current release-note target",

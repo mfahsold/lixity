@@ -1,58 +1,28 @@
 # Implemented research scope
 
-The local research workspace is project-scoped. [Research usage](USAGE.md) owns
-workflows and compatibility; [automation contracts](../AGENTS.md#51-research-api-lixityresearchapi)
-own request/result contracts. Use `lixity research --help`, `research schema` and
-`about --json` to inspect the installed version rather than treating a status
-page as a command reference.
+The former scope summary is preserved in [Historical status](#historical-status).
+Use the references below for decisions about a current installation.
 
 ## Current scope
 
-The shared archive supports authorized text/PDF/PNG/JPEG capture, lexical search,
-exact citations, authored records and immutable history, explicit manuscript quote
-associations, chronology, causal interpretations, review and verified backup/restore.
-Zotero capture is read-only; source editing and ordinary library work stay in
-Zotero. Local PNG/JPEG images and PDF/MP4/WebM attachments can be retained in
-dossiers. Retained-only media creates no extracted text or transcription; PDF
-text extraction is a separate import workflow using optional local tools or an
-explicitly configured worker. Audio synthesis/recording belongs to the separate
-[audio workspace](../AUDIO.md), not research source extraction.
-
-**Since v0.7.1:** exact update dry runs, saved-revision comparisons
-and explicit Markdown dossier export/reconciliation reuse the same revision path.
-Guarded dossier retirement reuses source withdrawal's tombstone storage.
-Current archives support record/manifest capabilities through v9 for retained
-media and use compressed physical manifests. See the manual's
-[compatibility table](USAGE.md#limits) and explicit
-[migration procedure](USAGE.md#migrate-manifest-storage) for older stores.
-Local geographic vectors and the numbered sketch work offline. Visible maps use
-OpenStreetMap by default and send the viewed area and client IP to the provider;
-turn off the background for offline use. [Research workflows](USAGE.md#research-workflows) document these additions
-and their installed-version boundary.
-
-[Architecture](../ARCHITECTURE.md) owns component responsibilities and project
-isolation. Preparation is read-only with respect to the archive; accepted writes
-validate reviewed revisions/pins and commit against one snapshot. Conflicts do not
-authorize retries, automatic repinning or prose edits. Product numbers, response
-schemas and archive versions are independent; see [compatibility](USAGE.md#limits).
+Follow the [research manual](USAGE.md#find-a-task) for supported workflows.
+Use [automation contracts](../AGENTS.md#51-research-api-lixityresearchapi) for
+request and result formats and the [local data model](DATA_MODEL.md) for the
+archive's storage and validation rules. Check a particular installation with
+`lixity research --help`, `lixity about --json` and `lixity research schema`.
 
 ## Verification limits
 
-[Contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
-cover synthetic domain, transport and browser behavior. They establish neither
-historical truth nor recognition accuracy, external-library completeness or
-compatibility with every OCR/Zotero environment. Archive integrity and source
-criticism remain distinct. Private manuscripts are not required as test fixtures.
+[Research limits](USAGE.md#limits) explain what an audit establishes.
+The repository's [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
+cover implementation behavior using public or synthetic inputs.
 
 ## Deferred capabilities
 
-There is no semantic/vector retrieval, automated factual certification, arbitrary
-third-party note import, automatic Zotero synchronization or shared multi-tenant
-cloud service. The [knowledge-horizon proposal](KNOWLEDGE_HORIZON_RFC.md) is not
-implemented. These boundaries are not an execution backlog or a promise to ship.
+The [research design history](README.md#design-history) links to the historical
+proposals and their status. Current capabilities are in the [research manual](USAGE.md).
 
 ## Historical status
 
-The [earlier implementation overview](https://github.com/mfahsold/lixity/blob/123b198db2b3d276b4bba71664e4e6b989377247/docs/research/IMPLEMENTATION.md)
-retains the original component inventory, release sequence and validation notes.
-Current behavior belongs to the references above, not that historical snapshot.
+Read the [last standalone scope summary](https://github.com/mfahsold/lixity/blob/cf8286212bd4ab9c7f39d488e9e8f3fd659bdab7/docs/research/IMPLEMENTATION.md)
+or the [earlier component and release inventory](https://github.com/mfahsold/lixity/blob/123b198db2b3d276b4bba71664e4e6b989377247/docs/research/IMPLEMENTATION.md).

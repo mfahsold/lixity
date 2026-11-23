@@ -4,13 +4,9 @@ Lixity connects close reading, traceable research and linguistic text analysis i
 one local manuscript workspace. Compare chapters, inspect the counted text behind
 a measurement, follow a quotation to retained evidence and prepare a reading copy
 with the background you choose to share.
-The browser app, CLI and Python API provide different ways into the same platform;
-they do not promise identical commands or independently implemented analysis.
-
-Integrated manuscript writing is included in **0.8.1**, with
-undo, local autosave and explicit conflict recovery. Read the
-[editing workflow and current limits](WORKSPACE.md#write-a-manuscript-unreleased)
-before using it. The public demo and exported websites remain read-only.
+The browser app, CLI and Python API share the analysis engine. The browser app
+also supports [writing and recovery](WORKSPACE.md#write-a-manuscript).
+The public demo and exported reading websites are fixed, read-only copies.
 
 The app and its measurement reference support German, English, French, Spanish,
 Italian, Portuguese and Dutch. The technical manuals are maintained in English.
@@ -44,7 +40,7 @@ links the release notes for the documented version, and
 | I want to… | Browser workflow | CLI or detailed reference |
 | --- | --- | --- |
 | Open an existing project or import a copy | [Open or import?](ONBOARDING.md#open-or-import) | [Project commands](USAGE.md) |
-| Write, compare versions and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript-unreleased) · [Compare versions](WORKSPACE.md#compare-versions-and-resolve-a-conflict) | [Editing architecture and remaining work](MANUSCRIPT_EDITING_RFC.md) |
+| Write, compare versions and recover manuscript prose | [Editing workflow](WORKSPACE.md#write-a-manuscript) · [Compare versions](WORKSPACE.md#compare-versions-and-resolve-a-conflict) | [Native editing contract](AGENTS.md#native-manuscript-editing) |
 | Read a passage and understand a highlighted value | [Read and explore](ONBOARDING.md#read-and-explore) | [Measurement reference](guides/metrics/en.html) · [Choose an analysis command](USAGE.md#which-command-for-which-question) |
 | Compare chapters and change analysis settings | [Workspace manual](WORKSPACE.md) | [Configuration](USAGE.md#configuration-corpusconfig) |
 | Follow a quotation into retained evidence | [Research beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) | [Research tasks](research/USAGE.md#find-a-task) |
@@ -75,22 +71,26 @@ require the local application and, where applicable, separately installed tools.
 - [Interpretation guide](guides/interpretation.html): how to read a difference before deciding whether it matters.
 - [Methods](METHODS.md), [validation and limits](STABILITY.md) and [language support](LOCALIZATION.md): formulas, tested coverage and explicit unknowns. Measurements are not literary-quality scores.
 - [Automation contracts](AGENTS.md): discovery, CLI/JSON, Python and HTTP interfaces. Repository agent instructions live separately in [AGENTS.md](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
-- [Architecture](ARCHITECTURE.md) and [research documentation map](research/README.md): implementation boundaries, storage and clearly marked proposals.
-- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md): CodeMirror 6, source fidelity, autosave and recovery; distinguishes the first implementation shipped in 0.8.1 from future work.
-- [Rust evaluation RFC](RUST_EVALUATION_RFC.md): question, evidence and acceptance gates for a possible future native implementation; no rewrite authorized.
+- [Architecture](ARCHITECTURE.md) and [research data model](research/DATA_MODEL.md): implementation boundaries, state ownership and storage.
 - [Lixity agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) routes AI-assisted workflows to the maintained contracts. The source archive also includes the skill.
 - [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development, checks and release workflow.
 - [Licensing](LICENSING.md) and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): usage terms and reporting issues.
 
 ## Which document owns an instruction?
 
-Installation owns environments, optional tools and service lifecycle. Onboarding
-is one short session. The workspace, CLI, audio and research manuals own their
-respective operating instructions; illustrated guides and [articles](blog/index.html)
-provide examples and link back to those manuals. The [wiki](https://github.com/mfahsold/lixity/tree/main/docs/wiki)
-is a short route into the same documentation, not a second command reference.
-Historical release notes and research RFCs are not descriptions of every current
-feature. An RFC being linked does not make its proposals available commands.
+| Information | Maintained reference |
+| --- | --- |
+| Published packages, prerequisites, update and service control | [Installation](INSTALLATION.md) |
+| First session or an everyday browser task | [Onboarding](ONBOARDING.md) and [Workspace](WORKSPACE.md) |
+| Commands, project configuration and machine responses | [CLI reference](USAGE.md) and [Automation contracts](AGENTS.md) |
+| Domain tasks and data recovery | [Audio](AUDIO.md), [Research](research/USAGE.md) and [Project backup](PROJECT_BACKUP.md) |
+| Counting rules, limits and validation | [Methods](METHODS.md), [Stability](STABILITY.md) and [Language support](LOCALIZATION.md) |
+| Changes to source, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) |
+
+The [Wiki](https://github.com/mfahsold/lixity/wiki), illustrated guides and
+[articles](blog/index.html) lead to these references. Rendered manuals are
+available in the [GitHub repository](https://github.com/mfahsold/lixity/blob/main/docs/README.md).
+Pages also serves the plain Markdown for downloads and automation.
 
 For offline reading, retain a matching checkout and start with this file.
 `llms-full.txt` is a generated text bundle of the operating references, not a
@@ -98,3 +98,10 @@ separate manual to edit. [Offline documentation](INSTALLATION.md#read-documentat
 explains the installed help and bundle. Maintainers edit the canonical Markdown
 or HTML page and regenerate mirrors with `make docs-sync`; see the
 [documentation workflow](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages).
+
+## Historical records and proposals
+
+- [Published releases](https://github.com/mfahsold/lixity/releases) link to the code and packages for each tag. The [release-note sources](https://github.com/mfahsold/lixity/tree/main/docs/releases) preserve earlier numbering and migration history. The top of the [changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) shows unreleased changes.
+- [Manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md) records the original design, acceptance criteria and deferred work. The [workspace manual](WORKSPACE.md#write-a-manuscript) and installed API describe current behavior.
+- [Rust evaluation RFC](RUST_EVALUATION_RFC.md) preserves the performance hypothesis and experiment results. [Architecture](ARCHITECTURE.md) describes the implementation in use.
+- The [research documentation map](research/README.md) links to the scientific review, original archive design and later proposals. [Research usage](research/USAGE.md) owns supported operations.

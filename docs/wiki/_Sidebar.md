@@ -1,28 +1,10 @@
-### 📖 [Lixity Wiki](Home.md)
+### Lixity
 
-* **[Home](Home.md)**
-* [Complete documentation map](https://mfahsold.github.io/lixity/README.md)
-* [Workspace manual](https://mfahsold.github.io/lixity/WORKSPACE.md)
-* [CLI reference](https://mfahsold.github.io/lixity/USAGE.md)
-* **[Quickstart](Quickstart.md)**
-* **[Editorial Metrics](Editorial-Metrics.md)**
-* **[Research & Dossiers](Research-and-Dossiers.md)**
-* **[Keyboard Shortcuts](Keyboard-Shortcuts-and-Navigation.md)**
-* **[Audio & Direction](Audio-and-Direction.md)**
-
----
-
-### Product introductions
-* [Deutsch](https://mfahsold.github.io/lixity/index-de.html)
-* [English and language switcher](https://mfahsold.github.io/lixity/)
-
-Technical documentation is maintained in English.
-
----
-
-### 🔗 External Resources
-* 🌐 [Official Website](https://mfahsold.github.io/lixity/)
-* 💻 [Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)
-* 💬 [GitHub Discussions](https://github.com/mfahsold/lixity/discussions)
-* 📦 [PyPI Package](https://pypi.org/project/lixity/)
-* 🦋 [Bluesky](https://bsky.app/profile/lixity.bsky.social) · 🐘 [Mastodon](https://mastodon.social/@lixity)
+- [Wiki home](https://github.com/mfahsold/lixity/wiki)
+- [Quickstart](https://github.com/mfahsold/lixity/wiki/Quickstart)
+- [Editorial metrics](https://github.com/mfahsold/lixity/wiki/Editorial-Metrics)
+- [Research and dossiers](https://github.com/mfahsold/lixity/wiki/Research-and-Dossiers)
+- [Keyboard and navigation](https://github.com/mfahsold/lixity/wiki/Keyboard-Shortcuts-and-Navigation)
+- [Audio and direction](https://github.com/mfahsold/lixity/wiki/Audio-and-Direction)
+- [Schnelleinstieg auf Deutsch](https://github.com/mfahsold/lixity/wiki/Schnelleinstieg-DE)
+- [Lektoratsmetriken auf Deutsch](https://github.com/mfahsold/lixity/wiki/Lektorats-Metriken-DE)

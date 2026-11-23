@@ -39,30 +39,18 @@ allows same-origin embedding; ordinary dashboards deny framing. The bound sessio
 hides project-switching controls. Automatic anchor remapping and continuous
 analysis remain future work.
 
-Product copy should lead with the connected work and local ownership. Describe
-integrated writing as available in 0.8.1; describe the public demo
-as a fixed reading/review snapshot. Interface languages, manuscript languages
-and analysis-resource coverage are separate capabilities. Technical documentation
-stays in English.
+The [workspace manual](WORKSPACE.md#write-a-manuscript) owns writing behavior and
+limits. The [editing RFC](MANUSCRIPT_EDITING_RFC.md) records the original design
+and deferred work. The [product direction](PRODUCT.md) links observed workflows
+to their evidence and availability.
 
-The [manuscript editing RFC](MANUSCRIPT_EDITING_RFC.md) records the proposed
-CodeMirror 6 integration, source-preservation requirements, conditional saves,
-recovery and revision-bound analysis. Its first native editing slice ships in
-0.8.1; the RFC distinguishes implemented behavior from the broader target.
-
-Today the shared engine, CLI and local HTTP server are Python; browser behavior
-uses JavaScript and CSS. Packaging the existing application for Linux comes
-before requiring a backend rewrite. Installation and runtime support are owned
-by the [installation guide](INSTALLATION.md#packaging-direction).
-
-A future Rust backend should be evaluated incrementally against the current
-engine: deterministic outputs, explicit unknowns, language coverage, stable
-JSON contracts and preserved project/archive data. A replacement needs measured
-benefit and parity tests before it becomes the default. The browser interface
-can remain JavaScript; an all-Rust interface is an option to investigate, not a
-chosen architecture. Neither direction authorizes a parallel permanent engine
-or silent project migrations. Release changes follow the explicit migration
-process in [Contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+Python implements the shared engine, CLI and local HTTP server. JavaScript and
+CSS implement the browser interface. The [installation guide](INSTALLATION.md#packaging-direction)
+owns the supported packaging and runtime. Any future native extension requires
+measured benefit, deterministic parity, explicit unknowns, and preserved public
+contracts and project data. The [Rust evaluation RFC](RUST_EVALUATION_RFC.md)
+records the protocol and prior experiments. Compatibility changes follow the
+[reviewed migration process](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
 ## Layers
 
@@ -99,6 +87,13 @@ state (`_state`), dashboard assembly (`views`) and domain route groups. Register
 route tables drive dispatch and discovery. Handlers validate and shape requests,
 then delegate to the shared pipeline or `research.api`; they do not implement a
 second renderer, analysis algorithm or archive writer.
+
+Use codes and structured values for author-facing outcomes that cross a route.
+For example, the settings route reports a stale project token as `stale-context`
+and the form explains how to recover in the active interface language. The
+existing response message remains available to HTTP clients. Controls derive
+language choices and preset values from the engine; the UI catalog supplies
+their wording.
 
 ```mermaid
 flowchart TD
@@ -669,13 +664,16 @@ renderer. Unmeasured chapters and absent axes are omitted.
 
 ### Visual consistency and evidence
 
-The local dashboard and Pages share `ui/assets/design-tokens.css`; components and
-surface styles own actual color, typography, spacing and control rules. Heatmap
+The local dashboard, reading exports and Pages share `ui/assets/design-tokens.css`.
+Components use its heading, body, metadata, reading measure and spacing roles.
+The manuscript reader can override its own font and leading. Authored Markdown
+notices and modal shadows resolve through the selected color scheme, including
+the system setting. Heatmap
 text selects contrast from cell luminance. Native controls, visible boundaries,
 focus outlines and non-color cues support navigation. [WCAG contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
 [target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
 and [text-spacing overrides](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html)
-inform the checks; defaults are product choices, not universal typographic optima.
+inform the checks. The shared defaults define the product's presentation.
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
 

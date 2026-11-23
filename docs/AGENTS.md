@@ -66,8 +66,18 @@ returns the ordinary native dashboard only when its analyzed and current source
 match the requested revision (otherwise 409 or an explicit error). The HTML body
 carries `data-editor-document` and `data-editor-revision`. This HTML route permits
 same-origin framing. Project selection stays with the enclosing workspace.
-Research-link review continues to use the existing
-`research-manuscript-review-local/1` contract. See [editing limits and recovery](WORKSPACE.md#write-a-manuscript-unreleased).
+Research-link review uses `research-manuscript-review-local/1`. See
+[editing limits and recovery](WORKSPACE.md#write-a-manuscript).
+
+## Word import preview
+
+`POST /api/manuscript-import-preview` inspects a `.docx` file and returns the
+converted text, headings, and conversion diagnostics as
+`manuscript-import-preview-local/1`. Preview does not write a manuscript.
+The `loss_report` retains `element`, `location`, and `detail`. The optional
+`position` is a one-based Word document body block for `table` and a one-based
+body paragraph number for `drawing` and `footnote`. These positions identify
+the Word source, before conversion to Markdown.
 
 <a id="project-backups-unreleased"></a>
 
@@ -92,21 +102,13 @@ and missing evidence; do not turn diagnostic scores into quality verdicts.
 
 ## 1. What Lixity does (one paragraph)
 
-Lixity turns a Markdown manuscript into quantitative text linguistics:
-sentence rhythm (with finite-sample burstiness), length-invariant lexical
-diversity (`MATTR`, `MTLD`, exact `HD-D`), readability, dialogue share,
-paragraph-level heuristic tense profiles, and a **self-calibrating style reference**.
-Style references use the manuscript's own skew-aware robust baseline
-(median/MAD with `Sn`/`Qn` fallback, split-MAD, medcouple, and ridge-regularized
-Mahalanobis distances). The browser UI pairs these measurements with live-count
-filter pills, inline triage toggles, weighted tag clouds, and auto-refreshing
-review.
-Heuristic threshold hits, FDR-selected cells and paragraph tense flags are
-different result sets. Readability formulas have their own language-specific
-assumptions; none of these outputs is an objective literary quality score.
-Research sources never enter that baseline automatically. Source analysis
-is `source_internal`; an explicit source–manuscript comparison returns a
-separate lexical/register report, not a recalibrated manuscript fingerprint.
+Lixity measures rhythm, vocabulary, readability, quotation and other language
+patterns in the supplied text. [Methods](METHODS.md) defines the counts, units
+and comparison sets. Threshold hits, FDR-selected cells and paragraph tense
+flags each use separate rules. [Stability](STABILITY.md) explains uncertainty
+and the scope of each comparison. Source analysis uses `source_internal`.
+An explicit source–manuscript comparison returns a separate lexical/register
+report. The manuscript baseline uses manuscript passages.
 **Unreleased:** source HTML visibly identifies this scope and unverified
 user-supplied context, with the retained source/version IDs in a provenance
 disclosure. `AnalysisIdentity` carries these backend-owned fields separately
@@ -151,6 +153,7 @@ controls where it sends manuscript text and results.
 Text analysis tools use their supplied arguments and built-in defaults
 regardless of the subprocess working directory or local user settings.
 The archive audit reads the project explicitly named in its request.
+`python -m lixity.mcp` launches the same server from the chosen Python environment.
 
 - `lixity_about`: Engine version, languages, supported features and thresholds.
 - `lixity_service_status` (unreleased): Observe the managed dashboard on an
@@ -202,12 +205,9 @@ model condition, while free-text direction is unsupported by this adapter. Plan
 and timeline export remain available without loading the runtime. Other MLX or
 OpenAI-compatible HTTP bindings retain unknown provider readiness until render.
 
-Structured editorial prompts are `manuscript_pacing_audit`,
-`manuscript_dialogue_review`, and `manuscript_showing_triage`; discover them with
-`prompts/list`. Lixity processes supplied text locally and returns results over
-stdio. The connected AI client controls whether prompts, manuscript text or
-results are sent to a remote model; local transport does not establish that
-client's privacy policy.
+Structured editorial prompts include `manuscript_pacing_audit`,
+`manuscript_dialogue_review` and `manuscript_showing_triage`. Discover them with
+`prompts/list` on the installed server.
 
 `about` (also `schema --json`) reports installed command metadata, languages,
 feature identifiers/units and default heuristics; it is not a complete JSON
@@ -266,10 +266,14 @@ current dossier decisions. It performs no retention, repinning or semantic
 mention recognition. Dedicated Review and existing exact-version viewers retain
 their roles; see [reader guidance](WORKSPACE.md#link-a-manuscript-quote-to-a-claim).
 
+### Managed service and installed build
+
 `service` manages only its owned local process and starts an empty workspace by
 default. `serve` runs in the foreground. CLI analysis/research/build calls do not
 switch an existing server's project. Since v0.7.4, `service status --json` uses
-`lixity-service-status/1`: `ok` means successful inspection; known running,
+`lixity-service-status/1`. Fields are `schema_version`, `ok`, `running`, `state`,
+`port`, `url`, `pid`, `backend`, `installed_version`, `running_version` and
+`message`. Unavailable metadata can be null. `ok` means successful inspection. Known running,
 starting, stopped and unmanaged-port busy states exit 0. `running` is true only
 for a ready owned instance, false for other known states and null for unknown
 state (`ok: false`, exit 1). It omits log paths, launch settings and raw errors.
@@ -281,10 +285,12 @@ new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
 `doctor --json` uses `lixity-doctor/1` with `installation`, `service`, `schemas`,
-`issues` and `ok`. It reports imported/distribution/service versions and installation
+`issues` and `ok`. Each issue has a `code` and `severity`. It reports
+imported/distribution/service versions and installation
 paths without reading manuscripts/project configuration or repairing/restarting
 anything. A healthy stopped service is valid; discrepancies or unavailable
-observations exit 1. Out-of-range numeric ports or invalid `LIXITY_PORT` return
+observations exit 1. The diagnostic uses `--port`, then `LIXITY_PORT`, then 8765.
+Out-of-range numeric ports or invalid `LIXITY_PORT` return
 the same schema with `ok: false` and `error.code: "invalid-service-port"`;
 non-integer explicit `--port` values remain usage errors (exit 2).
 This optional installation/service diagnostic is not a per-write prerequisite;
@@ -300,10 +306,10 @@ aliases both before writing and immediately before replacement.
 [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
 defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout limits.
 
-### 2.1 MCP server (read-only)
+<a id="21-mcp-server-read-only"></a>
 
-`python -m lixity.mcp` launches the same stdio server as `lixity mcp`.
-See [client configuration and available tools](#model-context-protocol-mcp-server).
+See [MCP client configuration and tools](#model-context-protocol-mcp-server)
+for the read-only stdio interface.
 
 ## 3. JSON contracts
 
@@ -1427,9 +1433,17 @@ selection metadata; file edits alone do not create a content-version lock.
   selected. Correct its configuration/archive, then use **Open Project** to
   continue; initialize Research if needed. A valid existing archive is reused.
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
+  Path errors from this route and `/api/project-paths` can include a `code`
+  such as `path-missing`, `path-unreadable`, `invalid-project-path`, or
+  `unsupported-manuscript-type` alongside the diagnostic `message`. A folder
+  that requires an explicit manuscript selection returns `ambiguous-manuscript`
+  from `project-open`. A folder without a manuscript or research archive can
+  return `manuscript-missing`. A missing file at the configured manuscript path
+  returns `configured-manuscript-missing`.
   Custom/startup titles remain only for the same workspace. A
   different workspace uses its configuration/shared manuscript title resolution
-  for the header and NDA defaults; explicit language/threshold preferences remain.
+  for the header and NDA defaults. New project views use the selected root's
+  language and thresholds. Launch overrides apply to the startup view.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
   Title, author, publication and `site_publications` save to the selected root's `lixity.toml`;
@@ -1441,7 +1455,11 @@ selection metadata; file edits alone do not create a content-version lock.
   configuration discovery above. Unposted threshold fields retain active values.
   Publication requires the opaque `project_token` from `#settings-form`.
   Any supplied token must match the selected root, source and both root configs;
-  missing/stale required tokens return HTTP 409. Title/author and session-only
+  missing/stale required tokens return HTTP 409 with `code: "stale-context"`.
+  An unsupported language returns HTTP 400 with `code: "invalid-language"`.
+  A voice profile still referenced by a saved passage direction returns
+  HTTP 400 with `code: "voice-profile-in-use"`.
+  Title/author and session-only
   threshold requests remain accepted without one; the native UI sends it for
   active contexts. The server validates and renders before committing settings
   and publishing session/cache state. Failures return HTTP 400 without that
@@ -1534,6 +1552,10 @@ an archive write; omission alone receives a default.
   Unicode code points in `text`. The plain-text `context_before` and
   `context_after` fields contain nearby sentences outside the matching
   passage, when available. Presence counts refer to `matches` in `text`.
+  A passage mapped to a displayed paragraph includes `reader_anchor` with its
+  manuscript `start_line`, `end_line` and `paragraph_sha256`. Resolve it against
+  the response's `source_sha256` and the displayed paragraph identity before
+  opening the paragraph. Passages without a verified reader target omit it.
   The optional `chapter` limits passages to that
   chapter. To continue a page, repeat that selection and send `next_offset`
   as `offset` together with `analysis_sha256`. Changed manuscript content or

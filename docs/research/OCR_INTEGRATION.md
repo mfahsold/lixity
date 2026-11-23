@@ -1,23 +1,11 @@
 # Unlimited-OCR integration and deployment boundaries
 
-**Adapter deployment reference; upstream review dated 2026-09-27.** For ordinary
-PDF imports, start with the [research manual](USAGE.md#self-hosted-pdf-and-ocr-extraction)
-and [local Tesseract setup](USAGE.md#use-local-ocr-without-a-worker-service).
-The upstream assessment below is dated evidence, not a refreshed runtime
-recommendation or a requirement for every installation.
-
-This document describes the implemented
-worker boundary introduced in v1.19.0 and the requirements of an independently deployed adapter.
-No model server, weights or production-tested inference runtime ship with the
-Python package. The former experimental CPU bridge was removed in 2.1.0;
-custom model adapters belong to their own deployment projects.
-For import commands and the exact worker JSON, see [Research usage](USAGE.md#worker-interface).
-
-Since v1.24, Lixity also supports locally installed Tesseract without this adapter.
-New native Poppler and Tesseract captures use
-accurate local implementation identifiers and require a v4 archive reader;
-cached legacy provenance is preserved. See [local OCR setup and compatibility](USAGE.md#use-local-ocr-without-a-worker-service).
-The external worker protocol below remains unchanged.
+**Optional adapter reference with an upstream review dated 2026-09-27.** Begin
+with the [PDF import workflow](USAGE.md#self-hosted-pdf-and-ocr-extraction) for
+Poppler and Tesseract setup. For a separately deployed service, use the
+[worker contract](USAGE.md#worker-interface) and the [validation scope](#validation-scope).
+The review records the upstream versions examined at the time. The inference
+runtime and weights belong to the operator's deployment.
 
 ## Assessment
 

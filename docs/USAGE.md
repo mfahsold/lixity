@@ -443,7 +443,7 @@ lixity profile --layer filter --only-notable
 lixity profile --layer filter --only-notable --json
 ```
 
-Choices are `asl`, `function`, `dialogue`, `filter`, `modal`, `nominal` and
+Choices are `asl`, `function`, `dialogue`, `filter`, `sensory`, `modal`, `nominal` and
 `passive`. Human output lists source-file/line anchors, raw values/units and local
 z. `--only-notable` filters output after computing all chapter references; it
 requires `--layer`. The summary keeps full profiled/comparable/notable counts
@@ -1013,29 +1013,15 @@ the [workspace manual](WORKSPACE.md) for browser tasks.
 
 ### `lixity service`
 
-One regular app instance supports independent project views in multiple tabs.
-Open the same app address in another tab and choose **Project actions → Open
-Project**. Each project view has a scoped URL under that origin. Use
-**Project → Audio and services → Services & audio queue** to revisit open views,
-close an idle view or refresh worker and queue status.
-The startup view stays available. At most 16 views are retained; their URLs
-expire on server restart and return HTTP 410 instead of selecting another project.
-Reopen the project from the home address after restarting. Use additional ports
-when you need separate app processes, such as comparing an installed build with
-a development checkout.
-Launch overrides belong to the startup view; newly opened projects use their
-own configuration instead of inheriting another book's analysis language or thresholds.
+A single port supports independent project views. Open the app home address in
+a new tab to select another project. At most 16 views are retained, including the
+startup view. Expired URLs return HTTP 410. Open the project again from home
+after an app restart. New views use the selected project's settings. Explicit
+launch overrides apply to the startup view.
 
-Audio jobs share one FIFO in that app: one render plus at most three waiting
-jobs from other contexts. The dialog reports a waiting position. Cancellation
-and stale-source checks apply before queued work starts; completed outputs retain
-their own bounded retention window. **Ready** for a target means its expected
-model answered the health probe, not merely that the tunnel port accepted TCP.
-The existing external worker and SSH-forward lifecycle remains separate; status
-does not install models, start a tunnel or establish that GPU acceleration works.
-**Available in 0.8.0:** the worker checks cover the local and configured Jetson workers,
-not external providers. The queue does not identify where an external or mixed
-job runs; its processing location is shown as unknown.
+Manage open views and inspect worker status in **Project → Audio and services →
+Services & audio queue**. See the [audio guide](AUDIO.md) for queued jobs and
+engine readiness.
 
 Start the installed workspace without keeping a terminal open:
 
@@ -1050,46 +1036,17 @@ lixity service status --port 8765 --json
 lixity doctor --port 8765 --json
 ```
 
-Use `status`, `restart` and `stop` to manage the owned instance. Start defaults
-to an empty workspace in an application-owned directory unless a project or
-`LIXITY_DIR` is specified. `start` takes fresh launch settings; `restart` reuses
-saved settings with explicit overrides, even after a stop. Neither restores a
-later browser project choice. An already running instance is reported without
-changing its settings. Restarting into a different project clears the prior
-title unless explicitly replaced; plain restart keeps the saved title.
+For an owned instance, `start` takes fresh settings and `restart` reuses saved
+settings with explicit overrides. Set the startup project with the positional
+path or `LIXITY_DIR`. Launch environment values are inherited on each run.
+Set `--min-chapters N` for the minimum available style reference chapters
+(default 2, at least 2). The [installation guide](INSTALLATION.md#running-the-server)
+covers the service backends, ports, startup and logs.
 
-The controller manages its own instances. Stop foreground `lixity serve` with
-Ctrl+C and OS-managed startup units through their manager. A busy port never
-permits terminating an unrelated listener. Backend selection is per invocation;
-repeat an explicit backend on restart. `LIXITY_*` environment values, including
-OCR settings, are inherited on launch and are not saved as startup settings.
-Use `lixity service --help` for lifecycle arguments, or
-[installation and service setup](INSTALLATION.md#running-the-server).
-For foreground `lixity serve PATH`, an invalid explicit path fails before startup.
-A valid directory without a unique manuscript can open an empty workspace;
-`lixity serve --no-project` intentionally starts without selecting a project.
-
-**Changed in v0.7.4:** `lixity service status --json` uses the status-specific
-`lixity-service-status/1` contract: `schema_version`, `ok`, `running`, `state`,
-`port`, `url`, `pid`, `backend`, `installed_version`, `running_version` and
-`message`. `ok` means the inspection succeeded: known `running`, `starting`,
-`stopped` and unmanaged-port `busy` states exit 0. `running` means a ready owned
-instance; it is false for the other known states. An unreadable, invalid or
-changing state remains `unknown`, with `ok: false`, `running: null` and exit 1.
-Unavailable metadata can be null; log paths, launch settings and raw errors are
-omitted. Scripts parsing the older lifecycle envelope must update explicitly.
-
-Human `service status` keeps its existing exit codes: a ready owned instance
-exits 0; stopped, starting, busy and unknown states exit 1. JSON for `start`,
-`restart` and `stop` remains `lixity-service-local/1` with its existing fields and
-success semantics; stopping an already stopped instance succeeds. Stop preserves
-saved launch settings and logs.
-
-Status does not create or repair storage or
-acquire the lifecycle writer lock. Missing private folders are a normal stopped
-state. Unsafe, unreadable or changing records report uncertainty; status does not
-change runtime locations to work around a permission error. Lifecycle commands
-prepare their private storage when explicitly requested.
+`status --json` reports `lixity-service-status/1` without changing app state.
+Check `running: true` to identify a ready instance. Use the
+[service JSON contract](AGENTS.md#managed-service-and-installed-build) for
+exit codes, fields and unknown states.
 
 ### `lixity doctor`
 
@@ -1100,22 +1057,11 @@ lixity doctor
 lixity doctor --json --port 9000
 ```
 
-Since v0.7.4, `doctor` compares the imported CLI version, installed distribution
-metadata and a running service's reported version. It reports the module and
-interpreter paths, supported JSON contract versions and the shared read-only
-service observation. It does not install, repair, restart, create service storage
-or read manuscript/project configuration. Version agreement does not establish
-that an installation matches an unreleased source checkout.
-Use this optional diagnostic when investigating installation/service issues;
-ordinary writes and exports use their own validation and revision/context guards.
-
-JSON uses `lixity-doctor/1` with `ok`, `installation`, `service`, `schemas` and
-`issues` (each issue has `code` and `severity`). A consistent installation with a
-stopped service is healthy and exits 0; reported mismatches or unavailable
-metadata/status exit 1. The port uses `--port`, then `LIXITY_PORT`, then 8765.
-An out-of-range numeric port or invalid `LIXITY_PORT` returns `ok: false` and
-`error: {code: "invalid-service-port", message: ...}` under the same schema, with
-exit 1. A non-integer explicit `--port` is a normal argument usage error (exit 2).
+Use the reported interpreter and module locations to identify the invoked
+installation. Compare its version with the running listener. If you need to
+verify a specific checkout fix, check the running build and exercise its
+affected feature. The [diagnostic JSON contract](AGENTS.md#managed-service-and-installed-build)
+defines the fields, exit codes and error states.
 
 ### `lixity mcp`
 

@@ -230,6 +230,8 @@ purging one source must retain every blob owned by another accepted record.
 Physical deletion and rebuilding a cache are separate from accepting a new HEAD.
 Backups include authoritative records, manifests and blobs, not SQLite or locks.
 
+### Backup validation and publication
+
 **Since v0.7.3:** backup creation holds the existing project
 writer lock until accepted records and blobs have been copied into a closed
 compressed candidate. This includes protection from concurrent purge. The
@@ -248,7 +250,11 @@ flowchart LR
 Failure before replacement preserves the old output. Failure after replacement
 reports published output with uncertain durability; it does not claim rollback.
 Restore validates the metadata object and inventory before selected-path reads.
-No entity/manifest migration or archive-format change is involved.
+It rejects malformed metadata, duplicate members, noncanonical paths and
+undeclared files. The optional lengths in older valid inventories remain
+supported. The full accepted manifest ancestry must pass hash, schema, project,
+generation and termination checks. The unsigned manifest detects corruption.
+Authenticating the backup's creator requires separate evidence.
 
 ## Schema evolution and compatibility
 
@@ -285,6 +291,13 @@ portable backup and restored copy before converting an older plaintext store.
 Portable exports continue to carry canonical `.json` members and restoration
 converts staging to the current layout before publication. Compression does not
 prune accepted history or introduce delta manifests.
+
+The manifest allows up to 100,000 accepted revision entries, up from the
+earlier 25,000-entry limit. Capacity warnings begin at 90 percent. The separate
+32 MiB canonical JSON limit still applies, and the reader bounds gzip input and
+decompressed bytes. Increasing admission capacity requires no rewrite of an
+accepted manifest. Inputs still have to pass record, reference and history
+validation.
 
 ## Proposed work is separate
 
