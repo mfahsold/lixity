@@ -37,7 +37,7 @@ jobs:
             expect_args: "--expect-kind linux-deb --expect-kind linux-appimage"
           - os: macos-latest
             target: aarch64-apple-darwin
-            bundles: app,dmg
+            bundles: app
             expect_args: "--expect-kind macos-dmg"
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -106,19 +106,25 @@ jobs:
         run: |
           npx --yes @tauri-apps/cli@2 build --bundles "${{ matrix.bundles }}"
           if [ "${{ runner.os }}" = "macOS" ] && [ -d "target/release/bundle/macos/Lixity.app" ]; then
-            test -x target/release/bundle/macos/Lixity.app/Contents/Resources/runtime/python/bin/python3 || \
-              test -x target/release/bundle/macos/Lixity.app/Contents/Resources/runtime/python/bin/python3.12
+            test -x target/release/bundle/macos/Lixity.app/Contents/Resources/runtime/python/bin/python3.12
             bash scripts/sign_macos_bundle.sh --adhoc target/release/bundle/macos/Lixity.app
+            VERSION="$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["version"])')"
+            TARGET="${{ matrix.target }}"
+            DMG_ARCH="aarch64"
+            case "$TARGET" in
+              x86_64-*) DMG_ARCH="x64" ;;
+            esac
+            bash scripts/package_macos_dmg.sh \
+              target/release/bundle/macos/Lixity.app \
+              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg"
           fi
           mkdir -p build/installers
           python scripts/verify_desktop_artifacts.py \
             target/release/bundle \
             --target "${{ matrix.target }}" \
             ${{ matrix.expect_args }} \
-            --out-dir build/installers
-          find target/release/bundle -type f \
-            \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
-            -exec cp -v {} build/installers/ \;
+            --out-dir build/installers \
+            --copy-to build/installers
 
       - name: Upload verified native desktop installers
         if: inputs.build_bundle == true

@@ -16,7 +16,7 @@
     "aarch64-apple-darwin": {
       "os": "macos",
       "arch": "arm64",
-      "python_relpath": "python/bin/python3",
+      "python_relpath": "python/bin/python3.12",
       "archive_pattern": "cpython-3.12.*-aarch64-apple-darwin-install_only_stripped.tar.gz",
       "archive_url": null,
       "archive_sha256": null
@@ -24,7 +24,7 @@
     "x86_64-apple-darwin": {
       "os": "macos",
       "arch": "x86_64",
-      "python_relpath": "python/bin/python3",
+      "python_relpath": "python/bin/python3.12",
       "archive_pattern": "cpython-3.12.*-x86_64-apple-darwin-install_only_stripped.tar.gz",
       "archive_url": null,
       "archive_sha256": null
@@ -48,7 +48,7 @@
     "x86_64-unknown-linux-gnu": {
       "os": "linux",
       "arch": "x86_64",
-      "python_relpath": "python/bin/python3",
+      "python_relpath": "python/bin/python3.12",
       "archive_pattern": "cpython-3.12.*-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
       "archive_url": null,
       "archive_sha256": null
@@ -56,7 +56,7 @@
     "aarch64-unknown-linux-gnu": {
       "os": "linux",
       "arch": "arm64",
-      "python_relpath": "python/bin/python3",
+      "python_relpath": "python/bin/python3.12",
       "archive_pattern": "cpython-3.12.*-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
       "archive_url": null,
       "archive_sha256": null

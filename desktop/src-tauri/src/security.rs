@@ -133,6 +133,18 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
         language: language ? String(language) : null
       }});
     }},
+    removeRecentProject: function (path) {{
+      return invoke("remove_recent_project", {{ path: String(path || "") }});
+    }},
+    clearRecentProjects: function () {{
+      return invoke("clear_recent_projects");
+    }},
+    getPreferences: function () {{
+      return invoke("get_preferences");
+    }},
+    setPreference: function (key, value) {{
+      return invoke("set_preference", {{ key: String(key || ""), value: value === undefined ? null : value }});
+    }},
     checkForUpdates: function () {{
       return invoke("check_for_updates");
     }},

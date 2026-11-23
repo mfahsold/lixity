@@ -13,5 +13,8 @@
     <!-- Required by bundled relocatable CPython C extensions (pydantic_core, orjson) -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
+    <!-- Required by CPython ctypes/libffi trampolines under Hardened Runtime -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
 </dict>
 </plist>

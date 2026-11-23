@@ -5,6 +5,7 @@ pub mod commands;
 pub mod dirty_state;
 pub mod downloads;
 pub mod menu;
+pub mod preferences;
 pub mod recent;
 pub mod security;
 pub mod sidecar;
@@ -20,7 +21,9 @@ use recent::list_recent;
 use sidecar::PythonSidecar;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tauri::{AppHandle, DragDropEvent, Manager, RunEvent, WindowEvent};
+use tauri::{
+    AppHandle, DragDropEvent, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
 use window_state::{save_window_geometry, WindowGeometry};
@@ -77,10 +80,15 @@ fn dispatch_dom_event_to_window(
     );
     let windows = app.webview_windows();
     let target = preferred_label
+        .filter(|label| *label != "splashscreen")
         .and_then(|label| windows.get(label))
-        .or_else(|| windows.values().find(|w| w.is_focused().unwrap_or(false)))
+        .or_else(|| {
+            windows
+                .values()
+                .find(|w| w.label() != "splashscreen" && w.is_focused().unwrap_or(false))
+        })
         .or_else(|| windows.get("main"))
-        .or_else(|| windows.values().next());
+        .or_else(|| windows.values().find(|w| w.label() != "splashscreen"));
     if let Some(window) = target {
         let _ = window.eval(&script);
     }
@@ -180,6 +188,10 @@ pub fn run() {
             commands::set_dirty_state,
             commands::list_recent_projects,
             commands::record_recent_project,
+            commands::remove_recent_project,
+            commands::clear_recent_projects,
+            commands::get_preferences,
+            commands::set_preference,
             commands::check_for_updates,
             commands::audio_capture_list_devices,
             commands::audio_capture_calibrate,
@@ -190,58 +202,103 @@ pub fn run() {
             commands::audio_capture_cancel_recording,
         ])
         .setup(move |app| {
-            let resource_dir = app.path().resource_dir().ok();
-            let startup_project = startup_project_from_args();
-            let sidecar = match PythonSidecar::spawn(
-                resource_dir.as_deref(),
-                startup_project.as_deref(),
-            ) {
-                Ok(started) => Arc::new(started),
-                Err(err) => {
-                    app.dialog()
-                        .message(format!(
-                            "Lixity could not start its local analysis engine:\n\n{err}"
-                        ))
-                        .title("Lixity")
-                        .kind(MessageDialogKind::Error)
-                        .blocking_show();
-                    return Err(std::io::Error::other(err).into());
-                }
-            };
-            let dirty = Arc::new(DirtyRegistry::default());
-            let reveal = Arc::new(RevealAllowlist::default());
-            let recorder = Arc::new(InteractiveRecorder::default());
-            if let Some(ref project) = startup_project {
-                reveal.allow(project);
-            }
-
-            let port = sidecar.port;
-            let initial_nonce = sidecar.initial_nonce.as_str().to_string();
-
-            app.manage(DesktopState {
-                sidecar: Arc::clone(&sidecar),
-                dirty: Arc::clone(&dirty),
-                reveal: Arc::clone(&reveal),
-                recorder: Arc::clone(&recorder),
-                app_version: app_version.clone(),
-                locale: locale.clone(),
-            });
-
             let app_menu = build_app_menu(app.handle(), &locale)?;
             app.set_menu(app_menu)?;
 
-            spawn_desktop_window(
-                app.handle(),
-                WindowLaunchSpec {
-                    port,
-                    nonce: &initial_nonce,
-                    workspace_url: "/",
-                    title: "Lixity",
-                    app_version: &app_version,
-                    explicit_label: Some("main"),
-                },
+            // Show an instant, zero-IPC frameless splash screen while the local
+            // Python 3.12 engine boots on a background thread.
+            let _ = WebviewWindowBuilder::new(
+                app,
+                "splashscreen",
+                WebviewUrl::App("splash.html".into()),
             )
-            .map_err(std::io::Error::other)?;
+            .title("Lixity")
+            .inner_size(420.0, 250.0)
+            .resizable(false)
+            .decorations(false)
+            .center()
+            .build();
+
+            let handle = app.handle().clone();
+            let resource_dir = app.path().resource_dir().ok();
+            let startup_project = startup_project_from_args();
+
+            std::thread::spawn(move || {
+                match PythonSidecar::spawn(resource_dir.as_deref(), startup_project.as_deref()) {
+                    Ok(started) => {
+                        let sidecar = Arc::new(started);
+                        let dirty = Arc::new(DirtyRegistry::default());
+                        let reveal = Arc::new(RevealAllowlist::default());
+                        let recorder = Arc::new(InteractiveRecorder::default());
+                        if let Some(ref project) = startup_project {
+                            reveal.allow(project);
+                        }
+
+                        let port = sidecar.port;
+                        let initial_nonce = sidecar.initial_nonce.as_str().to_string();
+
+                        handle.manage(DesktopState {
+                            sidecar,
+                            dirty,
+                            reveal,
+                            recorder,
+                            app_version: app_version.clone(),
+                            locale,
+                        });
+
+                        let main_handle = handle.clone();
+                        let _ = handle.run_on_main_thread(move || {
+                            let launch = spawn_desktop_window(
+                                &main_handle,
+                                WindowLaunchSpec {
+                                    port,
+                                    nonce: &initial_nonce,
+                                    workspace_url: "/",
+                                    title: "Lixity",
+                                    app_version: &app_version,
+                                    explicit_label: Some("main"),
+                                },
+                            );
+                            if let Some(splash) = main_handle.get_webview_window("splashscreen") {
+                                let _ = splash.close();
+                            }
+                            match launch {
+                                Ok(main_window) => {
+                                    let _ = main_window.set_focus();
+                                }
+                                Err(err) => {
+                                    main_handle
+                                        .dialog()
+                                        .message(format!(
+                                            "Lixity could not open its workspace window:\n\n{err}"
+                                        ))
+                                        .title("Lixity")
+                                        .kind(MessageDialogKind::Error)
+                                        .blocking_show();
+                                    main_handle.exit(1);
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        let main_handle = handle.clone();
+                        let _ = handle.run_on_main_thread(move || {
+                            if let Some(splash) = main_handle.get_webview_window("splashscreen") {
+                                let _ = splash.close();
+                            }
+                            main_handle
+                                .dialog()
+                                .message(format!(
+                                    "Lixity could not start its local analysis engine:\n\n{err}"
+                                ))
+                                .title("Lixity")
+                                .kind(MessageDialogKind::Error)
+                                .blocking_show();
+                            main_handle.exit(1);
+                        });
+                    }
+                }
+            });
 
             Ok(())
         })
@@ -283,52 +340,66 @@ pub fn run() {
                 }
             }
         })
-        .on_window_event(|window, event| match event {
-            WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) => {
-                if let Some(target) = paths.iter().find(|p| is_openable_project_path(p)) {
-                    let state = window.state::<DesktopState>();
-                    state.reveal.allow(target);
-                    dispatch_dom_event_to_window(
-                        window.app_handle(),
-                        Some(window.label()),
-                        "lixity:desktop-open-path",
-                        &target.display().to_string(),
-                    );
-                }
+        .on_window_event(|window, event| {
+            if window.label() == "splashscreen" {
+                return;
             }
-            WindowEvent::CloseRequested { api, .. } => {
-                persist_main_window_geometry(window);
-                let state = window.state::<DesktopState>();
-                let label = window.label().to_string();
-                if state.dirty.take_force_closing(&label) {
-                    state.dirty.remove_window(&label);
-                    return;
-                }
-                let is_dirty = state.dirty.is_window_dirty(&label);
-                let active_jobs = if window.app_handle().webview_windows().len() <= 1 {
-                    state.sidecar.active_audio_jobs()
-                } else {
-                    0
-                };
-                if is_dirty || active_jobs > 0 {
-                    api.prevent_close();
-                    let labels = labels_for_locale(&state.locale);
-                    let confirmed = window
-                        .dialog()
-                        .message(labels.close_guard_body)
-                        .title(labels.close_guard_title)
-                        .kind(MessageDialogKind::Warning)
-                        .buttons(MessageDialogButtons::OkCancel)
-                        .blocking_show();
-                    if confirmed {
-                        state.dirty.mark_force_closing(&label);
-                        let _ = window.close();
+            match event {
+                WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) => {
+                    if let Some(target) = paths.iter().find(|p| is_openable_project_path(p)) {
+                        if let Some(state) = window.try_state::<DesktopState>() {
+                            state.reveal.allow(target);
+                        }
+                        dispatch_dom_event_to_window(
+                            window.app_handle(),
+                            Some(window.label()),
+                            "lixity:desktop-open-path",
+                            &target.display().to_string(),
+                        );
                     }
-                } else {
-                    state.dirty.remove_window(&label);
                 }
+                WindowEvent::CloseRequested { api, .. } => {
+                    persist_main_window_geometry(window);
+                    let Some(state) = window.try_state::<DesktopState>() else {
+                        return;
+                    };
+                    let label = window.label().to_string();
+                    if state.dirty.take_force_closing(&label) {
+                        state.dirty.remove_window(&label);
+                        return;
+                    }
+                    let is_dirty = state.dirty.is_window_dirty(&label);
+                    let workspace_windows = window
+                        .app_handle()
+                        .webview_windows()
+                        .keys()
+                        .filter(|k| k.as_str() != "splashscreen")
+                        .count();
+                    let active_jobs = if workspace_windows <= 1 {
+                        state.sidecar.active_audio_jobs()
+                    } else {
+                        0
+                    };
+                    if is_dirty || active_jobs > 0 {
+                        api.prevent_close();
+                        let labels = labels_for_locale(&state.locale);
+                        let confirmed = window
+                            .dialog()
+                            .message(labels.close_guard_body)
+                            .title(labels.close_guard_title)
+                            .kind(MessageDialogKind::Warning)
+                            .buttons(MessageDialogButtons::OkCancel)
+                            .blocking_show();
+                        if confirmed {
+                            state.dirty.mark_force_closing(&label);
+                            let _ = window.close();
+                        }
+                    } else {
+                        state.dirty.remove_window(&label);
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("error while building Lixity desktop host");

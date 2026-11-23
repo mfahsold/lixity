@@ -1093,6 +1093,10 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
         if (!sameExportContext()) return;
         if (outcome && outcome.saved) {
           message("site_export_success");
+          if (outcome.path && window.LixityDesktopBridge &&
+              typeof window.LixityDesktopBridge.notifySavedExport === "function") {
+            window.LixityDesktopBridge.notifySavedExport(outcome);
+          }
         } else {
           status.textContent = "";
         }

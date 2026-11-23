@@ -38,6 +38,19 @@ fn unix_now() -> u64 {
         .unwrap_or(0)
 }
 
+fn write_recent_list(items: &[RecentProject]) -> Result<(), String> {
+    let dest = state_file_path()?;
+    let payload = RecentFile {
+        schema_version: "lixity-desktop-recent/1".to_string(),
+        projects: items.to_vec(),
+    };
+    let serialized = serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?;
+    let tmp = dest.with_extension("json.tmp");
+    fs::write(&tmp, serialized).map_err(|e| format!("Failed writing recent projects: {e}"))?;
+    fs::rename(&tmp, &dest).map_err(|e| format!("Failed replacing recent projects: {e}"))?;
+    Ok(())
+}
+
 pub fn list_recent() -> Vec<RecentProject> {
     let Ok(file) = state_file_path() else {
         return Vec::new();
@@ -76,15 +89,18 @@ pub fn record_recent(
         },
     );
     items.truncate(MAX_RECENT_PROJECTS);
-
-    let dest = state_file_path()?;
-    let payload = RecentFile {
-        schema_version: "lixity-desktop-recent/1".to_string(),
-        projects: items.clone(),
-    };
-    let serialized = serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?;
-    let tmp = dest.with_extension("json.tmp");
-    fs::write(&tmp, serialized).map_err(|e| format!("Failed writing recent projects: {e}"))?;
-    fs::rename(&tmp, &dest).map_err(|e| format!("Failed replacing recent projects: {e}"))?;
+    write_recent_list(&items)?;
     Ok(items)
+}
+
+pub fn remove_recent(path: &str) -> Result<Vec<RecentProject>, String> {
+    let trimmed = path.trim();
+    let mut items = list_recent();
+    items.retain(|entry| entry.path != trimmed);
+    write_recent_list(&items)?;
+    Ok(items)
+}
+
+pub fn clear_recent() -> Result<(), String> {
+    write_recent_list(&[])
 }

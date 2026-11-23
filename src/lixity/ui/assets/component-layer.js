@@ -125,7 +125,12 @@
     },
     downloadBlob: function (blob, filename, revokeMs) {
       if (window.lixityDesktop && typeof window.lixityDesktop.saveBlob === "function") {
-        window.lixityDesktop.saveBlob(blob, filename || "download").catch(function () {});
+        window.lixityDesktop.saveBlob(blob, filename || "download").then(function (outcome) {
+          if (outcome && outcome.saved && outcome.path && window.LixityDesktopBridge &&
+              typeof window.LixityDesktopBridge.notifySavedExport === "function") {
+            window.LixityDesktopBridge.notifySavedExport(outcome);
+          }
+        }).catch(function () {});
         return "";
       }
       var url = URL.createObjectURL(blob);

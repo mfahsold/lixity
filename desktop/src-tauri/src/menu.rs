@@ -33,6 +33,9 @@ pub struct MenuLabels {
     pub item_view_research: String,
     pub item_view_project: String,
     pub item_teleprompter: String,
+    pub item_zoom_in: String,
+    pub item_zoom_out: String,
+    pub item_zoom_reset: String,
     pub item_export_pdf: String,
     pub item_system_status: String,
     pub item_open_logs: String,
@@ -149,6 +152,22 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
         .item(
             &MenuItemBuilder::with_id("view-teleprompter", &l.item_teleprompter)
                 .accelerator("CmdOrCtrl+Shift+T")
+                .build(app)?,
+        )
+        .separator()
+        .item(
+            &MenuItemBuilder::with_id("view-zoom-in", &l.item_zoom_in)
+                .accelerator("CmdOrCtrl+=")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::with_id("view-zoom-out", &l.item_zoom_out)
+                .accelerator("CmdOrCtrl+-")
+                .build(app)?,
+        )
+        .item(
+            &MenuItemBuilder::with_id("view-zoom-reset", &l.item_zoom_reset)
+                .accelerator("CmdOrCtrl+0")
                 .build(app)?,
         )
         .build()?;

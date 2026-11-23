@@ -107,6 +107,15 @@ def test_desktop_metadata_versions_and_targets_align_with_package():
     cargo_toml = (DESKTOP / "Cargo.toml").read_text(encoding="utf-8")
     assert f'version = "{__version__}"' in cargo_toml
 
+    # Splash screen exists and has zero Tauri IPC capability access.
+    assert (src_tauri / "placeholder-dist" / "splash.html").is_file()
+    capability = json.loads((src_tauri / "capabilities" / "desktop-core.json").read_text(encoding="utf-8"))
+    assert "splashscreen" not in capability["windows"]
+    assert capability["windows"] == ["main", "project-*"]
+
+    # macOS DMG packager script exists.
+    assert (DESKTOP / "scripts" / "package_macos_dmg.sh").is_file()
+
     manifest = json.loads((DESKTOP / "runtime-manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "lixity-desktop-runtime-manifest/1"
     assert manifest["python_series"] == "3.12"
@@ -136,6 +145,16 @@ def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files
     (bundle / "deb" / "Lixity_0.9.1_amd64.deb").write_bytes(b"!<arch>\n" + b"\x00" * 1024)
     (bundle / "appimage" / "Lixity_0.9.1_amd64.AppImage").write_bytes(b"\x7fELF" + b"\x00" * 1024)
 
+    # Nested runtime files inside unpacked .app / .AppDir trees must NEVER be
+    # collected or copied as installers.
+    stray_macos = bundle / "macos" / "Lixity.app" / "Contents" / "Resources" / "t64.exe"
+    stray_macos.parent.mkdir(parents=True)
+    stray_macos.write_bytes(b"MZ" + b"\x00" * 1024)
+    stray_appdir = bundle / "appimage" / "Lixity.AppDir" / "usr" / "lib" / "w64.exe"
+    stray_appdir.parent.mkdir(parents=True)
+    stray_appdir.write_bytes(b"MZ" + b"\x00" * 1024)
+
+    copied = tmp_path / "copied"
     ok = subprocess.run(  # noqa: S603 - fixed repository verification script
         [
             sys.executable,
@@ -155,6 +174,8 @@ def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files
             "linux-appimage",
             "--out-dir",
             str(out),
+            "--copy-to",
+            str(copied),
         ],
         capture_output=True,
         text=True,
@@ -164,6 +185,9 @@ def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files
     manifest = json.loads((out / "desktop-artifacts-x86_64-test.json").read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "lixity-desktop-artifacts/1"
     assert len(manifest["artifacts"]) == 5
+    filenames = {item["filename"] for item in manifest["artifacts"]}
+    assert "t64.exe" not in filenames and "w64.exe" not in filenames
+    assert {p.name for p in copied.iterdir()} == filenames
     checksums = (out / "SHA256SUMS-x86_64-test.txt").read_text(encoding="utf-8").splitlines()
     assert len(checksums) == 5
 

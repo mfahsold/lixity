@@ -6,18 +6,22 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
 ARTIFACT_SCHEMA = "lixity-desktop-artifacts/1"
-INSTALLER_EXTENSIONS: dict[str, str] = {
-    ".dmg": "macos-dmg",
-    ".exe": "windows-nsis",
-    ".msi": "windows-msi",
-    ".deb": "linux-deb",
-    ".rpm": "linux-rpm",
-    ".AppImage": "linux-appimage",
+# Map Tauri's top-level bundle output subdirectories to (suffix, artifact kind).
+# Scanning only depth-1 entries under these known directories avoids descending
+# into unpacked app trees (e.g. macos/Lixity.app or appimage/Lixity.AppDir).
+INSTALLER_SUBDIRS: dict[str, tuple[str, str]] = {
+    "dmg": (".dmg", "macos-dmg"),
+    "nsis": (".exe", "windows-nsis"),
+    "msi": (".msi", "windows-msi"),
+    "deb": (".deb", "linux-deb"),
+    "rpm": (".rpm", "linux-rpm"),
+    "appimage": (".AppImage", "linux-appimage"),
 }
 
 
@@ -62,26 +66,25 @@ def collect_artifacts(bundle_dir: Path) -> list[dict[str, Any]]:
         raise FileNotFoundError(f"Bundle directory does not exist: {bundle_dir}")
 
     found: list[dict[str, Any]] = []
-    for path in sorted(bundle_dir.rglob("*")):
-        if not path.is_file():
+    for subdir_name, (suffix, kind) in sorted(INSTALLER_SUBDIRS.items()):
+        subdir = bundle_dir / subdir_name
+        if not subdir.is_dir():
             continue
-        matched_kind: str | None = None
-        for suffix, kind in INSTALLER_EXTENSIONS.items():
-            if path.name.endswith(suffix):
-                matched_kind = kind
-                break
-        if matched_kind is None:
-            continue
-        verify_container_magic(path, matched_kind)
-        found.append(
-            {
-                "filename": path.name,
-                "relative_path": path.relative_to(bundle_dir).as_posix(),
-                "kind": matched_kind,
-                "bytes": path.stat().st_size,
-                "sha256": sha256_file(path),
-            }
-        )
+        for path in sorted(subdir.iterdir()):
+            if not path.is_file() or path.is_symlink():
+                continue
+            if not path.name.endswith(suffix):
+                continue
+            verify_container_magic(path, kind)
+            found.append(
+                {
+                    "filename": path.name,
+                    "relative_path": path.relative_to(bundle_dir).as_posix(),
+                    "kind": kind,
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+            )
     return found
 
 
@@ -109,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional output directory for SHA256SUMS and manifest JSON (defaults to bundle_dir)",
     )
+    parser.add_argument(
+        "--copy-to",
+        type=Path,
+        default=None,
+        help="Optional destination directory to copy ONLY the verified top-level installer files",
+    )
     args = parser.parse_args(argv)
 
     bundle_dir = args.bundle_dir.resolve()
@@ -125,6 +134,15 @@ def main(argv: list[str] | None = None) -> int:
 
     out_dir = (args.out_dir or bundle_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.copy_to is not None:
+        copy_dir = args.copy_to.resolve()
+        copy_dir.mkdir(parents=True, exist_ok=True)
+        for item in artifacts:
+            src = bundle_dir / item["relative_path"]
+            dst = copy_dir / item["filename"]
+            if src != dst:
+                shutil.copy2(src, dst)
 
     checksum_lines = [f"{item['sha256']}  {item['filename']}\n" for item in artifacts]
     (out_dir / f"SHA256SUMS-{args.target}.txt").write_text("".join(checksum_lines), encoding="utf-8")

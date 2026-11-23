@@ -36,10 +36,12 @@ else
     SIGN_FLAGS=(--force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY")
 fi
 
-echo "[1/3] Signing bundled dynamic libraries and Python executables..."
+echo "[1/3] Signing bundled Mach-O libraries and Python executables..."
 if [ -d "$APP_BUNDLE/Contents/Resources/runtime" ]; then
     while IFS= read -r -d '' file; do
-        codesign "${SIGN_FLAGS[@]}" "$file"
+        if file -b "$file" | grep -q "Mach-O"; then
+            codesign "${SIGN_FLAGS[@]}" "$file"
+        fi
     done < <(find "$APP_BUNDLE/Contents/Resources/runtime" -type f \( -name '*.dylib' -o -name '*.so' -o -perm -111 \) -print0)
 fi
 

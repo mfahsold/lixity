@@ -34,6 +34,21 @@ STRIP_STDLIB_DIRS = (
     "ensurepip",
     "lib2to3",
 )
+STRIP_SITE_PACKAGE_PREFIXES = (
+    "pip",
+    "setuptools",
+    "wheel",
+)
+STRIP_LIB_GLOBS = (
+    "pkgconfig",
+    "tcl*",
+    "tk*",
+    "itcl*",
+    "thread*",
+    "libtcl*",
+    "libtk*",
+)
+KEEP_POSIX_BIN_NAMES = ("python3.12",)
 
 
 def host_target_triple() -> str:
@@ -99,7 +114,14 @@ def copy_python_tree(source_root: Path, dest_python: Path) -> None:
     shutil.copytree(source_root, dest_python, symlinks=True)
 
 
-def strip_runtime_bloat(python_root: Path) -> None:
+def _remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def strip_runtime_bloat(python_root: Path, *, keep_exe_name: str = "python3.12") -> None:
     lib_candidates = [*python_root.glob("lib/python3.*"), python_root / "Lib"]
     for lib_dir in lib_candidates:
         if not lib_dir.is_dir():
@@ -108,11 +130,49 @@ def strip_runtime_bloat(python_root: Path) -> None:
             target = lib_dir / name
             if target.is_dir() and not target.is_symlink():
                 shutil.rmtree(target)
+        # Strip packaging/installer tools (pip includes Windows .exe launcher stubs).
+        site_packages = lib_dir / "site-packages"
+        if site_packages.is_dir():
+            for prefix in STRIP_SITE_PACKAGE_PREFIXES:
+                for entry in list(site_packages.glob(prefix)) + list(
+                    site_packages.glob(f"{prefix}-*.dist-info")
+                ):
+                    _remove_path(entry)
+        # Strip Tcl/Tk dynamic extension since tkinter is excluded.
+        dynload = lib_dir / "lib-dynload"
+        if dynload.is_dir():
+            for tk_ext in list(dynload.glob("_tkinter*")):
+                _remove_path(tk_ext)
         for cache_dir in list(lib_dir.rglob("__pycache__")):
             if cache_dir.is_dir() and not cache_dir.is_symlink():
                 shutil.rmtree(cache_dir)
-    # Remove unused static libraries and C headers not needed at runtime.
-    for extra in ("include", "share"):
+
+    # Remove unused Tcl/Tk libraries and pkgconfig metadata.
+    lib_root = python_root / "lib"
+    if lib_root.is_dir():
+        for pattern in STRIP_LIB_GLOBS:
+            for match in list(lib_root.glob(pattern)):
+                _remove_path(match)
+
+    # Prune redundant POSIX bin symlinks (python, python3) and build-host scripts so
+    # native bundlers (e.g. Tauri) do not dereference symlinks into duplicate copies.
+    posix_bin = python_root / "bin"
+    if posix_bin.is_dir():
+        keep_names = {keep_exe_name, *KEEP_POSIX_BIN_NAMES}
+        for entry in list(posix_bin.iterdir()):
+            if entry.name not in keep_names:
+                _remove_path(entry)
+
+    # Remove pip/wheel script launchers on Windows runtimes.
+    win_scripts = python_root / "Scripts"
+    if win_scripts.is_dir():
+        for entry in list(win_scripts.iterdir()):
+            lower = entry.name.lower()
+            if lower.startswith(("pip", "wheel")):
+                _remove_path(entry)
+
+    # Remove unused static libraries, Tcl assets and C headers not needed at runtime.
+    for extra in ("include", "share", "tcl"):
         target = python_root / extra
         if target.is_dir() and not target.is_symlink():
             shutil.rmtree(target)
@@ -123,6 +183,7 @@ def bundled_python_exe(bundle_root: Path, relpath: str) -> Path:
     if candidate.exists():
         return candidate
     for fallback in (
+        bundle_root / "python" / "bin" / "python3.12",
         bundle_root / "python" / "bin" / "python3",
         bundle_root / "python" / "bin" / "python",
         bundle_root / "python" / "python.exe",
@@ -238,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
         offline=args.offline,
     )
     if not args.no_strip:
-        strip_runtime_bloat(output / "python")
+        strip_runtime_bloat(output / "python", keep_exe_name=python_exe.resolve().name)
 
     # Record installed package versions and bundle metadata.
     inspect_cmd = [

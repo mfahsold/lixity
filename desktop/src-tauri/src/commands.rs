@@ -10,7 +10,8 @@ use crate::downloads::{
     RevealAllowlist, SaveOutcome,
 };
 use crate::menu::build_app_menu;
-use crate::recent::{list_recent, record_recent, RecentProject};
+use crate::preferences::{load_preferences, update_preference, DesktopPreferences};
+use crate::recent::{clear_recent, list_recent, record_recent, remove_recent, RecentProject};
 use crate::security::{
     bridge_init_script, handshake_url, is_allowed_app_url, is_allowed_external_url,
     is_valid_workspace_path,
@@ -293,6 +294,44 @@ pub fn record_recent_project(
         let _ = app.set_menu(app_menu);
     }
     Ok(updated)
+}
+
+#[tauri::command]
+pub fn remove_recent_project(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    path: String,
+) -> Result<Vec<RecentProject>, String> {
+    let updated = remove_recent(&path)?;
+    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
+        let _ = app.set_menu(app_menu);
+    }
+    Ok(updated)
+}
+
+#[tauri::command]
+pub fn clear_recent_projects(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+) -> Result<(), String> {
+    clear_recent()?;
+    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
+        let _ = app.set_menu(app_menu);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_preferences() -> DesktopPreferences {
+    load_preferences()
+}
+
+#[tauri::command]
+pub fn set_preference(
+    key: String,
+    value: serde_json::Value,
+) -> Result<DesktopPreferences, String> {
+    update_preference(&key, value)
 }
 
 #[tauri::command]

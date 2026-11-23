@@ -278,6 +278,9 @@ document.addEventListener("click", function (event) {
   if (clearRecent) {
     try {
       localStorage.removeItem(RECENT_PROJECTS_KEY);
+      if (window.lixityDesktop && typeof window.lixityDesktop.clearRecentProjects === "function") {
+        window.lixityDesktop.clearRecentProjects().catch(function () {});
+      }
       renderRecentProjects();
     } catch (_) {
       var recentStatus = clearRecent.closest("[data-recent-projects]").querySelector("[data-recent-project-status]");
@@ -436,6 +439,9 @@ function removeRecentProject(path) {
   try {
     localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
   } catch (_) {}
+  if (window.lixityDesktop && typeof window.lixityDesktop.removeRecentProject === "function") {
+    window.lixityDesktop.removeRecentProject(path).catch(function () {});
+  }
 }
 
 function renderRecentProjects() {
@@ -512,6 +518,23 @@ function openExistingProject(path, browse) {
 }
 
 renderRecentProjects();
+
+if (window.lixityDesktop && typeof window.lixityDesktop.recentProjects === "function") {
+  window.lixityDesktop.recentProjects().then(function(entries) {
+    if (!Array.isArray(entries) || !entries.length) return;
+    var merged = entries
+      .filter(function(item) { return item && typeof item.path === "string" && item.path.trim() && item.exists !== false; })
+      .map(function(item) { return item.path.trim(); });
+    getRecentProjects().forEach(function(localPath) {
+      if (!merged.includes(localPath)) merged.push(localPath);
+    });
+    merged = merged.slice(0, RECENT_PROJECTS_LIMIT);
+    try {
+      localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(merged));
+    } catch (_) {}
+    renderRecentProjects();
+  }).catch(function () {});
+}
 
 function projectPathMessage(data) {
   switch (data && data.code) {

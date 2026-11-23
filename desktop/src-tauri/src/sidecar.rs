@@ -129,14 +129,14 @@ impl PythonSidecar {
 
         let mut candidates: Vec<PathBuf> = Vec::new();
         if let Some(res) = resource_dir {
-            candidates.push(res.join("runtime").join("python").join("bin").join("python3"));
             candidates.push(res.join("runtime").join("python").join("bin").join("python3.12"));
+            candidates.push(res.join("runtime").join("python").join("bin").join("python3"));
             candidates.push(res.join("runtime").join("python").join("python.exe"));
         }
         if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
-                candidates.push(dir.join("runtime").join("python").join("bin").join("python3"));
                 candidates.push(dir.join("runtime").join("python").join("bin").join("python3.12"));
+                candidates.push(dir.join("runtime").join("python").join("bin").join("python3"));
                 candidates.push(dir.join("runtime").join("python").join("python.exe"));
             }
         }

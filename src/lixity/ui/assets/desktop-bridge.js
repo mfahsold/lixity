@@ -255,6 +255,15 @@
         if (tpBtn) tpBtn.click();
         break;
       }
+      case "view-zoom-in":
+        adjustZoom(0.1);
+        break;
+      case "view-zoom-out":
+        adjustZoom(-0.1);
+        break;
+      case "view-zoom-reset":
+        setZoom(1.0);
+        break;
       case "tools-system-status":
         openSystemStatus();
         break;
@@ -265,6 +274,121 @@
         break;
     }
   }
+
+  var currentZoom = 1.0;
+  var savedToastEl = null;
+  var savedToastTimer = null;
+
+  function applyZoom(factor) {
+    var clamped = Math.round(Math.max(0.8, Math.min(1.6, Number(factor) || 1.0)) * 100) / 100;
+    currentZoom = clamped;
+    document.documentElement.style.zoom = clamped === 1.0 ? "" : String(clamped);
+    return clamped;
+  }
+
+  function setZoom(factor) {
+    var clamped = applyZoom(factor);
+    if (window.lixityDesktop && typeof window.lixityDesktop.setPreference === "function") {
+      window.lixityDesktop.setPreference("zoom", clamped).catch(function () {});
+    }
+  }
+
+  function adjustZoom(delta) {
+    setZoom(currentZoom + delta);
+  }
+
+  function notifySavedExport(outcome) {
+    if (!outcome || !outcome.saved || !outcome.path || !window.lixityDesktop ||
+        typeof window.lixityDesktop.revealInFileManager !== "function") return;
+    if (savedToastTimer) {
+      clearTimeout(savedToastTimer);
+      savedToastTimer = null;
+    }
+    if (!savedToastEl || !document.body.contains(savedToastEl)) {
+      savedToastEl = document.createElement("div");
+      savedToastEl.className = "desktop-save-toast";
+      savedToastEl.setAttribute("role", "status");
+      savedToastEl.setAttribute("aria-live", "polite");
+      savedToastEl.style.cssText =
+        "position:fixed;right:1rem;bottom:1rem;z-index:9500;display:flex;align-items:center;gap:0.6rem;" +
+        "padding:0.65rem 0.9rem;border-radius:10px;background:var(--surface,#fff);color:var(--ink,#1f2328);" +
+        "border:1px solid var(--border,#d0d7de);box-shadow:0 8px 24px rgba(0,0,0,0.18);font-size:0.875rem;";
+      document.body.appendChild(savedToastEl);
+    }
+    var fileLabel = String(outcome.path).split(/[\\/]/).pop() || outcome.path;
+    savedToastEl.replaceChildren();
+    var text = document.createElement("span");
+    text.textContent = "✓ " + fileLabel;
+    var revealBtn = document.createElement("button");
+    revealBtn.type = "button";
+    revealBtn.className = "ctl ctl-sm";
+    revealBtn.textContent = label("open", "Open");
+    revealBtn.addEventListener("click", function () {
+      window.lixityDesktop.revealInFileManager(outcome.path).catch(function () {});
+    });
+    var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "ctl ctl-sm";
+    closeBtn.textContent = "✕";
+    closeBtn.setAttribute("aria-label", label("close", "Close"));
+    closeBtn.addEventListener("click", function () {
+      if (savedToastEl) savedToastEl.hidden = true;
+    });
+    savedToastEl.append(text, revealBtn, closeBtn);
+    savedToastEl.hidden = false;
+    savedToastTimer = setTimeout(function () {
+      if (savedToastEl) savedToastEl.hidden = true;
+    }, 9000);
+  }
+
+  function initDesktopEnhancements() {
+    if (!window.lixityDesktop || !(window.lixityDesktop.version >= 1)) return;
+    document.documentElement.classList.add("lixity-desktop");
+    if (window.lixityDesktop.platform) {
+      document.documentElement.dataset.desktopPlatform = String(window.lixityDesktop.platform);
+    }
+
+    // Intercept target="_blank" external links so WKWebView / WebKitGTK route them
+    // reliably to the OS default browser via the audited https/mailto allowlist.
+    document.addEventListener("click", function (event) {
+      var anchor = event.target && event.target.closest ? event.target.closest("a[href]") : null;
+      if (!anchor) return;
+      var href = anchor.getAttribute("href") || "";
+      if (!/^(https:\/\/|mailto:)/i.test(href)) return;
+      if (anchor.target === "_blank" || /^mailto:/i.test(href)) {
+        event.preventDefault();
+        if (typeof window.lixityDesktop.openExternalUrl === "function") {
+          window.lixityDesktop.openExternalUrl(href).catch(function () {});
+        }
+      }
+    });
+
+    // Hydrate display preferences that outlive ephemeral 127.0.0.1:0 loopback ports.
+    if (typeof window.lixityDesktop.getPreferences === "function") {
+      window.lixityDesktop.getPreferences().then(function (prefs) {
+        if (!prefs || typeof prefs !== "object") return;
+        if (typeof prefs.zoom === "number") applyZoom(prefs.zoom);
+        if (prefs.theme === "dark" || prefs.theme === "light") {
+          document.body.classList.toggle("theme-dark", prefs.theme === "dark");
+          try { localStorage.setItem("lixity-theme", prefs.theme); } catch (_) {}
+        }
+      }).catch(function () {});
+    }
+
+    // Persist dark/light mode changes back to the desktop preferences store.
+    if (typeof MutationObserver === "function" && typeof window.lixityDesktop.setPreference === "function") {
+      var lastTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";
+      new MutationObserver(function () {
+        var nextTheme = document.body.classList.contains("theme-dark") ? "dark" : "light";
+        if (nextTheme !== lastTheme) {
+          lastTheme = nextTheme;
+          window.lixityDesktop.setPreference("theme", nextTheme).catch(function () {});
+        }
+      }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }
+  }
+
+  initDesktopEnhancements();
 
   function decodeBase64Wav(raw) {
     var binary = atob(raw.wav_base64);
@@ -301,6 +425,8 @@
     checkForUpdates: checkForUpdates,
     openPath: openPath,
     handleMenuAction: handleMenuAction,
+    setZoom: setZoom,
+    notifySavedExport: notifySavedExport,
     decodeBase64Wav: decodeBase64Wav,
     recordWavTake: recordWavTake
   });
