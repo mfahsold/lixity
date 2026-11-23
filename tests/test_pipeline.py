@@ -1,6 +1,7 @@
 """Shared orchestration and explicit project isolation contracts."""
 
 import unittest
+from math import inf, nextafter
 from unittest.mock import patch
 
 from lixity.config import resolve_thresholds
@@ -171,6 +172,23 @@ class TestDocumentPipeline(unittest.TestCase):
                 self.assertEqual(pacing["sticky_sentence_pct"], len(expected) * 25.0)
                 snapshot = analyze_manuscript_snapshot(text, config=config)
                 self.assertEqual(snapshot["sticky_pct"], pacing["sticky_sentence_pct"])
+
+    def test_sticky_uses_the_inclusive_percentage_boundary_in_shared_reports(self):
+        from lixity.manuscript_editing import analyze_manuscript_snapshot
+        from lixity.pacing import pacing_report
+
+        text = "## One\n\n" + " ".join(["the"] * 29 + ["cedar"] * 71) + "."
+        thresholds = resolve_thresholds(project_config={})
+        for limit, expected_hits in ((29.0, 1), (nextafter(29.0, inf), 0)):
+            config, _ = resolve_document_config(text, "en", sticky_glue_pct=limit)
+            analysis = analyze_document(text, config, thresholds, include_evidence=True)
+            assert analysis.evidence is not None
+            hits = analysis.evidence[0]["layers"]["sticky"]["spans"]
+            self.assertEqual(len(hits), expected_hits)
+            report = pacing_report(text, config)
+            self.assertEqual(report.sticky_sentences, expected_hits)
+            self.assertEqual(analyze_manuscript_snapshot(text, config=config)["sticky_pct"],
+                             expected_hits * 100.0)
 
     def test_supplementary_reports_precomputes_sentence_group_matches_with_evidence(self):
         from lixity import pipeline

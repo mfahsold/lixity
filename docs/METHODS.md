@@ -457,7 +457,9 @@ not satisfy the PELT pruning premise in
 every predecessor corrects optimization of this declared objective; the guard
 is still a modelling choice, not a nondegenerate Gaussian likelihood. Anchoring
 before centred variance updates limits cancellation from large offsets without
-recovering precision already lost in input floats.
+recovering precision already lost in input floats. Power-of-two rescaling
+keeps the global standardization within floating-point range before squaring
+the deviations.
 
 Sn's low/high medians follow the
 [original definition](https://wis.kuleuven.be/stat/robust/papers/publications-1993/rousseeuwcroux-alternativestomedianad-jasa-1993.pdf).
@@ -1232,7 +1234,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   is `glue_pct = 100 * glue_words / N`, where `glue_words` counts lowercased
   tokens present in the active language's `function_words` lexicon. A sentence
   is flagged sticky when `N >= sticky_min_words` and `glue_pct >= sticky_glue_pct`
-  (default `45.0`, configurable in `CorpusConfig` on `(0, 100]`). Corpus and
+  (default `45.0`, configurable in `CorpusConfig` on `(0, 100]`). Multiply the
+  integer count by 100 before dividing so an intermediate rounding error
+  cannot move an exact percentage below the inclusive cutoff. Corpus and
   chapter reports expose `sticky_sentences`, `sticky_sentence_pct`,
   `mean_glue_pct`, `sticky_available` (`false` when the language has no
   `function_words` lexicon, e.g. `generic`), and `sticky_items` (top 50 by

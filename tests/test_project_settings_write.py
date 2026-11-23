@@ -1,6 +1,7 @@
 """Prepared metadata writes preserve unrelated project data and reject races."""
 
 import os
+from math import inf, nextafter
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,7 +12,9 @@ from lixity.config import (
     prepare_project_settings,
     read_explicit_project_config,
 )
+from lixity.dialogue import dialogue_report
 from lixity.dossier_draft_settings import resolve_dossier_draft_settings
+from lixity.models import CorpusConfig
 
 
 def test_combined_metadata_write_preserves_other_tables_and_comments(tmp_path: Path):
@@ -78,12 +81,20 @@ def test_corpus_limits_validate_against_project_values(tmp_path: Path) -> None:
         prepare_project_settings(tmp_path, {"dialogue_paragraph_share": 1.1})
     assert path.read_text() == original
 
-    prepare_project_settings(tmp_path, {"short_sentence_max": 9, "dialogue_paragraph_share": 0.65, "language": "auto"}).commit()
+    changes = {"short_sentence_max": 9, "dialogue_paragraph_share": 0.072, "language": "auto"}
+    prepare_project_settings(tmp_path, changes).commit()
     saved = read_explicit_project_config(tmp_path)
     assert saved["short_sentence_max"] == 9
-    assert saved["dialogue_paragraph_share"] == 0.65
+    assert saved["dialogue_paragraph_share"] == 0.072
     assert saved["language"] == "auto"
     assert 'medium_sentence_max = 14 # Keep\n[custom]\nkeep = true\n' in path.read_text()
+
+    text = '## One\n\n“' + ' '.join(['Harbour'] * 9) + '.” ' + ' '.join(['Stone'] * 116) + '.'
+    exact = saved["dialogue_paragraph_share"]
+    included = dialogue_report(text, CorpusConfig(dialogue_paragraph_share=exact)).chapters[0]
+    excluded = dialogue_report(text, CorpusConfig(dialogue_paragraph_share=nextafter(exact, inf))).chapters[0]
+    assert (included.dialogue_words, included.words, included.dialogue_paragraphs) == (9, 125, 1)
+    assert excluded.dialogue_paragraphs == 0
 
 
 def test_place_name_settings_replace_multiline_list_and_override_inherited_mode(tmp_path: Path) -> None:

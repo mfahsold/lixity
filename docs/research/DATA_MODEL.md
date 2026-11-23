@@ -186,6 +186,8 @@ contiguous authored history, immutable publication and the writer lock. JSON
 Schema alone cannot establish referential integrity or retained-byte availability.
 Citation resolution additionally verifies bytes and exact substrings. Filtered
 list reads validate their loaded kinds; they are not a complete archive audit.
+The dossier PDF snapshot includes extraction activities so it can verify that
+each extraction belongs to the pinned source version before composing the PDF.
 Full writes validate the prospective snapshot before publication.
 
 ```mermaid

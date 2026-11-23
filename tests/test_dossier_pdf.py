@@ -11,6 +11,8 @@ from uuid import uuid4
 import pytest
 
 from lixity.research import api
+from lixity.research.models import Activity, Extraction, Head, Passage, Reference, reference
+from lixity.research.repository import Repository, ResearchStorageError, digest, encode, publish
 from lixity.server.pdf_context import research_context_token
 from tests.support import LoopbackServer, make_handler
 from tests.test_pdf_export import HAVE_FONTS
@@ -52,6 +54,39 @@ def pdf_path(identifier, archive, revision=1, **changes):
     params = {"id": identifier, "revision": revision, "research_token": research_context_token(archive)}
     params.update(changes)
     return "/api/research/dossier-pdf?" + urlencode(params, doseq=True)
+
+
+def test_pdf_rejects_inconsistent_extraction_provenance(dossier_project, monkeypatch):
+    workspace, archive, identifier = dossier_project
+    repository = Repository(archive)
+    snapshot = repository.snapshot()
+    first = api.get_dossier(archive, identifier, revision=1)["citations"][0]
+    passage = snapshot.get(Reference(id=first["passage_id"]), Passage)
+    extraction = snapshot.get(passage.extraction_ref, Extraction)
+    unrelated = next(record for record in snapshot.records.values()
+                     if isinstance(record, Activity) and record.source_version_ref != extraction.source_version_ref)
+
+    # Simulate an inconsistent imported archive whose hashes and original quote
+    # remain valid, but whose extraction activity belongs to a different version.
+    altered = encode(extraction.model_copy(update={"activity_ref": reference(unrelated)}))
+    previous = next(entry for entry in snapshot.manifest.entries if entry.ref == passage.extraction_ref)
+    publish(repository.record_path(previous), altered, replace=True)
+    changed = previous.model_copy(update={"sha256": digest(altered)})
+    entries = [changed if entry is previous else entry for entry in snapshot.manifest.entries]
+    manifest = encode(snapshot.manifest.model_copy(update={"entries": entries}))
+    checksum = digest(manifest)
+    repository.write_manifest(checksum, manifest)
+    publish(repository.data / "HEAD.json", encode(Head(sha256=checksum)), replace=True)
+
+    with pytest.raises(ResearchStorageError, match="Extraction provenance does not match source bytes"):
+        api.get_dossier(archive, identifier, revision=1)
+    monkeypatch.setattr("lixity.research.dossier_pdf.dossier_pdf", lambda **_: b"%PDF synthetic")
+    before = file_bytes(workspace.parent)
+    with LoopbackServer(make_handler(workspace, research_dir=archive)) as server:
+        response = server.request(pdf_path(identifier, archive))
+    assert response.status == 400
+    assert response.json["message"] == "Extraction provenance does not match source bytes"
+    assert file_bytes(workspace.parent) == before
 
 
 @pytest.mark.skipif(not HAVE_FONTS, reason="requires the DejaVu font family")

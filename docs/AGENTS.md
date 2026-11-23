@@ -158,6 +158,10 @@ JSON inside a text content item. Check `isError` before decoding it. The client
 controls where it sends manuscript text and results.
 Text analysis tools use their supplied arguments and built-in defaults
 regardless of the subprocess working directory or local user settings.
+For tools that accept a language, omit it for English or provide a supported
+code from the input schema. Use `auto` to request detection and `generic`
+to select the generic profile. An unrecognized code or a non-string language
+returns `isError`.
 The archive audit reads the project explicitly named in its request.
 `python -m lixity.mcp` launches the same server from the chosen Python environment.
 
@@ -171,6 +175,8 @@ The archive audit reads the project explicitly named in its request.
   performs observation only and omits local paths and project data.
 - `lixity_analyze`: Complete manuscript statistical and linguistic analysis.
 - `lixity_profile`: Paragraph tense and style estimates with chapter and line context.
+  Optional `flag_min_severity` accepts the discrete levels 1, 2 or 3.
+  Omission or null uses the built-in threshold.
 - `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
 - `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks` (with `cohesion_drop` / `cohesion_similarity`), and corpus-level `pacing_plateaus`.
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).

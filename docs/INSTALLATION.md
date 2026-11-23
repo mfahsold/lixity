@@ -580,8 +580,12 @@ parity, compare the installed modules and UI assets with the verified wheel.
 For a checkout service, run `make doctor` to check the virtual environment and
 listener together. If the editable package metadata is stale or development
 dependencies changed, refresh the environment with `make install-dev`.
-Finish active renders and save open drafts. Then run `make restart` and
-`make doctor` with the same `LIXITY_PORT` if you chose a custom port.
+Finish active renders, save open drafts and record the project selections you
+want to reopen. The runtime workspace URLs last for one server process. Then
+run `make restart` and `make doctor` with the same `LIXITY_PORT` if you chose a
+custom port. Reopen the recorded projects at that address and verify the
+affected action in each selected view. Keep local project paths out of shared
+rollout reports.
 
 For a packaged checkout build, build and test the wheel before stopping the
 service:

@@ -9,7 +9,8 @@ from pathlib import Path
 import pytest
 
 from lixity import cli, mcp
-from lixity.status import ABOUT_SECTIONS
+from lixity.status import ABOUT_SECTIONS, LANGUAGE_CHOICES
+from lixity.style_fingerprint import FingerprintThresholds
 
 SAMPLE = "# Chapter One\n\nShe walked home. He had already left the grey house.\n"
 
@@ -92,6 +93,47 @@ def test_mcp_dossier_drafts_rejects_options_outside_text_contract(argument, hint
         "name": "lixity_manuscript_dossier_drafts", "arguments": {"text": SAMPLE, **argument},
     })["result"]
     assert result["isError"] is True and hint in result["content"][0]["text"]
+
+
+@pytest.mark.parametrize("invalid", ["dee", "", 42, None, True])
+def test_mcp_language_errors_are_reported_instead_of_changing_profiles(invalid):
+    tools = _request("tools/list")["result"]["tools"]
+    for tool in tools:
+        schema = tool["inputSchema"]
+        language = schema["properties"].get("language")
+        if language is None:
+            continue
+        assert language["enum"] == list(LANGUAGE_CHOICES)
+        arguments = dict.fromkeys(schema.get("required", ()), SAMPLE)
+        arguments["language"] = invalid
+        result = _request("tools/call", {"name": tool["name"], "arguments": arguments})["result"]
+        assert result["isError"] is True, tool["name"]
+        assert "supported language" in result["content"][0]["text"], tool["name"]
+
+
+@pytest.mark.parametrize(("options", "expected"), [
+    ({}, "en"), ({"language": "generic"}, "generic"), ({"language": " DE "}, "de"), ({"language": "auto"}, "de"),
+])
+def test_mcp_analysis_preserves_explicit_and_default_profiles(options, expected):
+    result = _request("tools/call", {
+        "name": "lixity_analyze",
+        "arguments": {"text": "## Licht\n\nIch bin hier und du bist dort. In der Stadt ist es hell.", **options},
+    })["result"]
+    assert not result.get("isError")
+    assert json.loads(result["content"][0]["text"])["meta"]["language"] == expected
+
+
+@pytest.mark.parametrize("severity", [2.9, True, "2", 0, 4])
+def test_mcp_profile_rejects_coerced_or_unsupported_flag_levels(severity):
+    tools = _request("tools/list")["result"]["tools"]
+    tool = next(tool for tool in tools if tool["name"] == "lixity_profile")
+    schema = tool["inputSchema"]["properties"]["flag_min_severity"]
+    assert schema["enum"] == [*FingerprintThresholds.flag_severities, None]
+    result = _request("tools/call", {
+        "name": "lixity_profile", "arguments": {"text": SAMPLE, "flag_min_severity": severity},
+    })["result"]
+    assert result["isError"] is True
+    assert "flag_min_severity" in result["content"][0]["text"]
 
 
 @pytest.mark.parametrize(("state", "ready"), [

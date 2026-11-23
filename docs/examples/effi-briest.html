@@ -9970,6 +9970,14 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
     if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
 }
+function corpusNumber(text, decimalShift) {
+  if (!text) return NaN;
+  if (!decimalShift) return Number(text);
+  // Move the decimal point before converting. Dividing an already rounded
+  // percentage can move an inclusive cutoff by one representable value.
+  var [digits, exponent = "0"] = text.toLowerCase().split("e");
+  return Number(digits + "e" + (Number(exponent) - decimalShift));
+}
 async function submitSettings() {
   var settings = document.getElementById("settings-form");
   if (!settings) return;
@@ -9998,8 +10006,11 @@ async function submitSettings() {
   if (window.LixityPublicationSettings) Object.assign(payload, window.LixityPublicationSettings.readChanges());
   var submittedCorpusFields = new Map();
   settings.querySelectorAll("[data-corpus-field]").forEach(function(field) {
-    if (field.valueAsNumber !== Number(field.dataset.initial)) {
-      payload[field.dataset.corpusField] = field.valueAsNumber / Number(field.dataset.scale);
+    var shift = Number(field.dataset.decimalShift);
+    var value = corpusNumber(field.value, shift);
+    if (shift && value === 0 && field.validity.valid) field.setCustomValidity(uiLabel("settings_bound_error"));
+    if (value !== corpusNumber(field.dataset.initial, shift)) {
+      payload[field.dataset.corpusField] = value;
       submittedCorpusFields.set(field, field.value);
     }
   });

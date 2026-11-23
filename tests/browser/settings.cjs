@@ -13,10 +13,13 @@ import json
 from tests.locales import LOCALES
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.language import get_language_profile
+from lixity.models import CorpusConfig
 from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.speech_profiles import audio_capabilities
-from lixity.style_fingerprint import FingerprintThresholds
+from lixity.style_fingerprint import FingerprintThresholds, prepare_paragraph_layers
 from lixity.ui import render_dashboard
+from lixity.ui.dashboard import render_prepared_dashboard
+from lixity.ui.render_contracts import DashboardOptions, DashboardRenderInput
 text = ("## Eins\\n\\n" + "Ich gehe. Ich sehe den Regen. Ich höre die Stadt. Ich trinke Kaffee. " * 8
     + "\\n\\n## Zwei\\n\\n"
     + "Das Haus wurde verkauft und die Tür war verschlossen. Die Zeitung lag auf dem Tisch. " * 7)
@@ -27,14 +30,16 @@ baseline = render_dashboard(result.chapters, result.paragraphs, metrics=result.m
     fingerprint=result.fingerprint, labels=language.labels, language_key="de", controls=True,
     enabled_actions=("analyze", "rebuild", "nda-draft"), nda_project_name="Synthetic project")
 fixtures = {}
+settings_input = DashboardRenderInput([], [], prepare_paragraph_layers([]))
 for locale in LOCALES:
     labels = {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}
     checks = {"title": {"status":"missing", "value":None, "source":None},
               "author_name": {"status":"mismatch", "value":'Other <img src=x onerror=alert(1)> Writer', "source":"front_matter"}}
-    fixtures[locale] = {"labels": labels, "loaded": render_dashboard([], [], controls=True,
+    fixtures[locale] = {"labels": labels, "loaded": render_prepared_dashboard(settings_input, DashboardOptions(controls=True,
          language_key=locale, current_language=locale, labels=labels, title="Synthetic project",
          project_author="Synthetic Writer", author_setting_enabled=True, identity_check=checks, project_token="a" * 64,
-         enabled_actions=("analyze","nda-draft"), nda_project_name="Synthetic project"),
+         enabled_actions=("analyze","nda-draft"), nda_project_name="Synthetic project",
+         corpus_config=CorpusConfig(dialogue_paragraph_share=0.29))),
          "empty": render_dashboard([], [], controls=True, language_key=locale, labels=labels,
          enabled_actions=("analyze","nda-draft"))}
 print(json.dumps({"baseline":baseline,"fixtures":fixtures,"audioCapabilities":audio_capabilities()}))
@@ -92,7 +97,7 @@ for width in (1440, 320):
     source = root / 'manuscript.md'
     source.write_text('# Synthetic settings project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n', encoding='utf-8')
     config = root / 'lixity.toml'
-    config.write_text('language = "en"\\nfdr_q = 0.05\\nmin_chapters = 7\\n', encoding='utf-8')
+    config.write_text('language = "en"\\nfdr_q = 0.05\\nmin_chapters = 7\\ndialogue_paragraph_share = 0.29\\n', encoding='utf-8')
     projects.append({'root': str(root), 'source': str(source), 'config': str(config), 'width':width})
 LixityServerHandler.workspace_root = projects[0]['root']
 LixityServerHandler.source_input = projects[0]['source']
@@ -154,23 +159,24 @@ server.serve_forever()
       await limits.locator('summary').focus();
       await page.keyboard.press('Enter');
       const dialogueShare=limits.locator('#set-corpus-dialogue-paragraph-share');
-      assert.equal(Number(await dialogueShare.inputValue()),50);
+      assert.equal(await dialogueShare.inputValue(),'29');
       const labels=await limits.locator('input').evaluateAll(inputs=>inputs.map(input=>({
         name:input.labels[0]?.textContent, help:document.getElementById(input.getAttribute('aria-describedby'))?.textContent,
       })));
       assert.equal(labels.length,10);
       assert.ok(labels.every(field=>field.name&&field.help));
-      await dialogueShare.fill('65');
+      await dialogueShare.fill('7.2');
       await limits.locator('#set-corpus-short-sentence-max').fill('7');
       await page.locator('#set-language').selectOption('auto');
       assert.equal(await page.locator('#set-language').inputValue(),'auto');
       const submitted=await apply();
       assert.equal(submitted.language,'auto');
+      assert.equal(submitted.dialogue_paragraph_share,0.072);
       const saved=fs.readFileSync(project.config,'utf8');
       assert.ok(saved.includes('language = "auto"'));
       assert.ok(saved.includes('fdr_q = 0.013000000000003'));
       assert.ok(saved.includes('min_chapters = 7'));
-      assert.ok(saved.includes('dialogue_paragraph_share = 0.65'));
+      assert.ok(saved.split('\n').includes('dialogue_paragraph_share = 0.072'));
       assert.ok(saved.includes('short_sentence_max = 7'));
       assert.ok(!saved.includes('long_sentence_max'));
       assert.deepEqual(fs.readFileSync(project.source),originals.source,'Saving defaults cannot modify manuscript bytes');
@@ -184,7 +190,7 @@ server.serve_forever()
       assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.013000000000003');
       assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),false);
       await limits.locator('summary').click();
-      assert.equal(Number(await dialogueShare.inputValue()),65);
+      assert.equal(await dialogueShare.inputValue(),'7.2');
       assert.equal(await limits.locator('#set-corpus-short-sentence-max').inputValue(),'7');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await page.locator('#settings-form').screenshot({path:path.join(artifacts,`${width}.png`)});
@@ -204,13 +210,20 @@ server.serve_forever()
       },{times:1});
       await page.locator('[data-action=settings]').click();
       await pendingSave;
-      await dialogueShare.fill('65');
+      await dialogueShare.fill('72e-1');
       await contextSentences.fill('2');
       releaseSave();
       await page.waitForFunction(()=>!document.querySelector('[data-action=settings]').disabled);
       const reverted=await apply();
-      assert.equal(reverted.dialogue_paragraph_share,0.65);
+      assert.equal(reverted.dialogue_paragraph_share,0.072);
       assert.equal(reverted.dossier_drafts.character_context_sentences,2);
+      await limits.locator('summary').click();
+      await dialogueShare.fill('0.07');
+      assert.equal((await apply()).dialogue_paragraph_share,0.0007);
+      await limits.locator('summary').click();
+      await dialogueShare.fill('0.07000000000000001');
+      assert.equal(Number(await dialogueShare.inputValue()),0.07);
+      assert.equal((await apply()).dialogue_paragraph_share,0.0007000000000000001);
       assert.deepEqual(errors,[]);
       await page.close();
     }
@@ -1020,6 +1033,7 @@ server.serve_forever()
       const corpus=page.locator('#settings-corpus-details');
       assert.equal(await corpus.locator('summary').textContent(),data.fixtures[language].labels.settings_corpus_details);
       await corpus.locator('summary').press('Enter');
+      assert.equal(await corpus.locator('#set-corpus-dialogue-paragraph-share').inputValue(),'29');
       const fields=await corpus.locator('input').evaluateAll(inputs=>inputs.map(input=>({
         key:input.dataset.corpusField, name:input.labels[0]?.textContent,
         help:document.getElementById(input.getAttribute('aria-describedby'))?.textContent,

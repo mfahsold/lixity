@@ -105,7 +105,7 @@ def snapshot_settings_digest(
         if key in CorpusConfig.model_fields and key != "language"
     }
     effective["language"] = language or "en"
-    effective["snapshot_method"] = "lixity-snapshot/3"
+    effective["snapshot_method"] = "lixity-snapshot/4"
     payload = json.dumps(effective, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 

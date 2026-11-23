@@ -24,6 +24,7 @@ from .status import (
     FLAG_MIN_SEVERITY,
     LANGUAGE_CHOICES,
 )
+from .style_fingerprint import FingerprintThresholds
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "lixity"
@@ -75,13 +76,14 @@ _MARKERS_DESCRIPTION = (
 _FINGERPRINT_DESCRIPTION = (
     "Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference."
 )
+_ANALYSIS_LANGUAGE_SCHEMA = {
+    "type": "string", "enum": list(LANGUAGE_CHOICES),
+    "description": "Analysis language code (default en). Use auto to detect it from the supplied text.",
+    "default": "en",
+}
 _DOSSIER_DRAFT_PROPERTIES = {
     "text": {"type": "string", "description": "Markdown manuscript text."},
-    "language": {
-        "type": "string", "enum": list(LANGUAGE_CHOICES),
-        "description": "Analysis language code (default en). Use auto to detect it from the supplied text.",
-        "default": "en",
-    },
+    "language": _ANALYSIS_LANGUAGE_SCHEMA,
     "kind": {
         "type": "string", "enum": list(DRAFT_KINDS),
         "description": f"Draft kind filter ({DRAFT_KIND_CHOICES}).",
@@ -121,11 +123,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -138,13 +136,10 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
                 "flag_min_severity": {
                     "type": ["integer", "null"],
+                    "enum": [*FingerprintThresholds.flag_severities, None],
                     "description": f"Paragraph flag floor 1|2|3 (default {int(FLAG_MIN_SEVERITY)}).",
                 },
             },
@@ -159,11 +154,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
                 "genre": {
                     "type": ["string", "null"],
                     "description": "Optional non-prescriptive genre reference corridor (crime_thriller, literary, romance, speculative).",
@@ -180,11 +171,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -201,11 +188,7 @@ _TOOLS = (
                     "type": ["string", "null"],
                     "description": "Optional non-prescriptive genre corridor key.",
                 },
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "additionalProperties": False,
         },
@@ -217,11 +200,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -234,11 +213,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -251,11 +226,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -272,11 +243,7 @@ _TOOLS = (
                     "type": ["array", "object", "null"],
                     "description": "Character names list or alias mapping (e.g. ['Matteo', 'Chiara']).",
                 },
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -301,11 +268,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["text"],
             "additionalProperties": False,
@@ -323,11 +286,7 @@ _TOOLS = (
             "properties": {
                 "base_text": {"type": "string", "description": "Base manuscript Markdown text."},
                 "target_text": {"type": "string", "description": "Target/revised manuscript Markdown text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
             },
             "required": ["base_text", "target_text"],
             "additionalProperties": False,
@@ -356,11 +315,7 @@ _TOOLS = (
             "type": "object",
             "properties": {
                 "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
+                "language": _ANALYSIS_LANGUAGE_SCHEMA,
                 "z_threshold": {
                     "type": "number",
                     "minimum": 0,
@@ -508,6 +463,13 @@ def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
+def _analysis_language(arguments: dict[str, Any]) -> str:
+    language = arguments.get("language", "en")
+    if not isinstance(language, str) or (language := language.strip().lower()) not in LANGUAGE_CHOICES:
+        raise ValueError("Choose a supported language: " + ", ".join(LANGUAGE_CHOICES))
+    return language
+
+
 def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
     """Run a read-only tool; returns an MCP content result (never raises)."""
     payload: Any
@@ -533,7 +495,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "content": [{"type": "text", "text": "lixity_analyze requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.analyze(arguments["text"], str(arguments.get("language") or "en"))
+            payload = _api.analyze(arguments["text"], _analysis_language(arguments))
         elif name == "lixity_profile":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {
@@ -541,9 +503,14 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "isError": True,
                 }
             severity = arguments.get("flag_min_severity")
+            if severity is not None and (
+                type(severity) not in (int, float) or severity not in FingerprintThresholds.flag_severities
+            ):
+                choices = ", ".join(map(str, FingerprintThresholds.flag_severities))
+                raise ValueError(f"flag_min_severity must be one of {choices}, or null")
             payload = _api.profile(
                 arguments["text"],
-                str(arguments.get("language") or "en"),
+                _analysis_language(arguments),
                 flag_min_severity=int(severity) if severity is not None else None,
                 project_config={},
             )
@@ -556,7 +523,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             genre = arguments.get("genre")
             payload = _api.pacing(
                 arguments["text"],
-                str(arguments.get("language") or "en"),
+                _analysis_language(arguments),
                 genre=str(genre) if genre is not None else None,
             )
         elif name == "lixity_scenes":
@@ -567,7 +534,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                 }
             payload = _api.scenes(
                 arguments["text"],
-                language=str(arguments.get("language") or "en"),
+                language=_analysis_language(arguments),
             )
         elif name == "lixity_corridors":
             args_dict = arguments if isinstance(arguments, dict) else {}
@@ -576,7 +543,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             payload = _api.corridors(
                 text=str(text_arg) if text_arg is not None else None,
                 genre=str(genre_arg) if genre_arg is not None else None,
-                language=str(args_dict.get("language") or "en"),
+                language=_analysis_language(args_dict),
             )
         elif name == "lixity_dialogue":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
@@ -584,21 +551,21 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "content": [{"type": "text", "text": "lixity_dialogue requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.dialogue(arguments["text"], str(arguments.get("language") or "en"))
+            payload = _api.dialogue(arguments["text"], _analysis_language(arguments))
         elif name == "lixity_showing":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {
                     "content": [{"type": "text", "text": "lixity_showing requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.showing(arguments["text"], str(arguments.get("language") or "en"))
+            payload = _api.showing(arguments["text"], _analysis_language(arguments))
         elif name == "lixity_motifs":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {
                     "content": [{"type": "text", "text": "lixity_motifs requires a text string."}],
                     "isError": True,
                 }
-            payload = _api.motifs(arguments["text"], language=str(arguments.get("language") or "en"))
+            payload = _api.motifs(arguments["text"], language=_analysis_language(arguments))
         elif name == "lixity_characters":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
                 return {
@@ -611,7 +578,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             payload = _api.characters(
                 arguments["text"],
                 names=names,
-                language=str(arguments.get("language") or "en"),
+                language=_analysis_language(arguments),
             )
         elif name == "lixity_markers":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
@@ -627,7 +594,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "isError": True,
                 }
             payload = _api.fingerprint(
-                arguments["text"], str(arguments.get("language") or "en"), project_config={},
+                arguments["text"], _analysis_language(arguments), project_config={},
             )
         elif name == "revision_diff":
             if (
@@ -644,7 +611,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             payload = compare_texts(
                 arguments["base_text"],
                 arguments["target_text"],
-                language=str(arguments.get("language") or "en"),
+                language=_analysis_language(arguments),
             )
         elif name == "lixity_manuscript_dossier_drafts":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
@@ -656,12 +623,9 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             kind_arg = arguments.get("kind", "all")
             if kind_arg not in DRAFT_KINDS:
                 raise ValueError(f"lixity_manuscript_dossier_drafts kind must be {DRAFT_KIND_CHOICES}")
-            language = arguments.get("language", "en")
-            if not isinstance(language, str) or (language := language.strip().lower()) not in LANGUAGE_CHOICES:
-                raise ValueError("Choose a supported language: " + ", ".join(LANGUAGE_CHOICES))
             payload = extract_manuscript_dossier_drafts(
                 arguments["text"],
-                language=language,
+                language=_analysis_language(arguments),
                 kind=kind_arg,
                 settings={DOSSIER_DRAFT_SETTINGS_KEY: DossierInferenceSettings.model_validate(
                     arguments.get(DOSSIER_DRAFT_SETTINGS_KEY, {})
@@ -674,7 +638,6 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
                     "isError": True,
                 }
             from .pipeline import fingerprint_document, resolve_document_config
-            from .style_fingerprint import FingerprintThresholds
 
             z_raw = arguments.get("z_threshold", DEFAULT_Z_MILD)
             FingerprintThresholds.numeric_inputs["z_mild"].validate("z_threshold", z_raw)
@@ -685,7 +648,7 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             )
             text = arguments["text"]
             config, _ = resolve_document_config(
-                text, str(arguments.get("language") or "en"), project_config={},
+                text, _analysis_language(arguments), project_config={},
             )
             fingerprint = fingerprint_document(text, config, thresholds)
             cells: list[dict[str, Any]] = []

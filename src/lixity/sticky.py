@@ -23,5 +23,5 @@ def measure_function_words(
     """Measure case-normalized tokens in the caller's existing sentence scope."""
     words = len(tokens)
     function_words = sum(token in vocabulary for token in tokens)
-    pct = function_words / words * 100.0 if words else 0.0
+    pct = 100 * function_words / words if words else 0.0
     return FunctionWordMeasurement(words, function_words, pct, words >= min_words and pct >= min_pct)

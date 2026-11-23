@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from typing import Any
 
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
@@ -138,6 +139,12 @@ def _dossier_draft_settings(labels: Mapping[str, str] | None, value: object) -> 
     return "".join(parts)
 
 
+def _corpus_input_number(value: int | float, decimal_shift: int) -> str:
+    """Convert a ratio to percent without first rounding through a binary product."""
+    return (format(Decimal(str(value)).scaleb(decimal_shift).normalize(), "f")
+            if decimal_shift else str(value))
+
+
 def _corpus_detail_settings(
     labels: Mapping[str, str] | None, config: CorpusConfig, language: str,
 ) -> str:
@@ -159,24 +166,26 @@ def _corpus_detail_settings(
         for key in keys:
             field = fields[key]
             control_id = "set-corpus-" + key.replace("_", "-")
-            scale = 100 if key == "dialogue_paragraph_share" else 1
-            value = getattr(config, key) * scale
+            decimal_shift = 2 if key == "dialogue_paragraph_share" else 0
+            value = _corpus_input_number(getattr(config, key), decimal_shift)
             step = "1" if field["type"] == "integer" else "any"
-            bounds = [f'{attribute}="{field[bound] * scale}"' for bound, attribute in (
+            bounds = [f'{attribute}="{_corpus_input_number(field[bound], decimal_shift)}"' for bound, attribute in (
                 ("minimum", "min"), ("maximum", "max"), ("exclusiveMinimum", "min"),
             ) if bound in field]
             exclusive = ' data-min-exclusive="true"' if "exclusiveMinimum" in field else ""
             order = ' data-ascending="true"' if key in ordered else ""
             title = translated("settings_corpus_" + key)
             hint = translated("settings_corpus_" + key + "_hint")
-            default = precise_num(field["default"] * scale, language, minimum_decimals=0)
+            default_number = (float(_corpus_input_number(field["default"], decimal_shift))
+                              if decimal_shift else field["default"])
+            default = precise_num(default_number, language, minimum_decimals=0)
             default_note = translated("settings_default").replace("{value}", default)
             parts.append(form_field(
                 control_id,
                 title,
-                f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" step="{step}" '
-                f'{" ".join(bounds)}{exclusive}{order} required data-corpus-field="{key}" data-scale="{scale}" '
-                f'data-initial="{value!r}" aria-describedby="{control_id}-help"/>',
+                f'<input class="ctl" type="number" id="{control_id}" value="{value}" step="{step}" '
+                f'{" ".join(bounds)}{exclusive}{order} required data-corpus-field="{key}" '
+                f'data-decimal-shift="{decimal_shift}" data-initial="{value}" aria-describedby="{control_id}-help"/>',
                 label_class="",
                 note_html=f'<p class="ctl-note" id="{control_id}-help">{hint} {default_note}</p>',
             ))

@@ -123,6 +123,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep percentage labels and inclusive dialogue-share and function-word
+  comparisons stable when converting between percentages and ratios.
+- Standardize finite chapter series before squaring their deviations so very
+  large and very small values remain comparable in changepoint analysis.
+- Reject unsupported language selectors and coerced paragraph flag levels in
+  text-analysis MCP tools.
+- Reject dossier PDF downloads when a retained extraction has inconsistent
+  source-version provenance.
 - Keep linked term and quote jumps on the verified line range when identical
   paragraphs appear in different chapters. Reuse prepared term variants and
   compute cross-profile overlap flags for returned matches.

@@ -1848,6 +1848,9 @@ class TestStatisticalImprovements(unittest.TestCase):
         self.assertEqual(pelt_changepoints(sub_unit), [6])
         self.assertEqual(pelt_changepoints([x * 0.001 for x in sub_unit]), [6])
         self.assertEqual(pelt_changepoints([x * 1000.0 for x in sub_unit]), [6])
+        self.assertEqual(pelt_changepoints([x * 1e200 for x in sub_unit]), [6])
+        self.assertEqual(pelt_changepoints([x * 1e-200 for x in sub_unit]), [6])
+        self.assertEqual(pelt_changepoints([-1e308] * 6 + [1e308] * 6), [6])
 
         # Default penalty matches explicit 3 * ln(n)
         noisy = [10.0, 12.0, 11.5, 10.5, 11.0, 20.0, 21.0, 19.5, 20.5, 22.0]

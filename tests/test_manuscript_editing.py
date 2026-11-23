@@ -964,6 +964,38 @@ def test_snapshot_indirect_speech_suppresses_unresolved_quotation_context():
     assert unclear["indirect_speech_per_1000"] == 0.0
 
 
+def test_delta_recalculates_inclusive_sticky_cutoff_without_overwriting_history(tmp_path):
+    source = tmp_path / "book.md"
+    original = "## One\n\n" + " ".join(["the"] * 29 + ["cedar"] * 71) + "."
+    revised = "## One\n\n" + " ".join(["the"] * 30 + ["cedar"] * 70) + "."
+    source.write_text(original, encoding="utf-8")
+    settings = {"sticky_glue_pct": 29.0}
+    editor = ManuscriptStore(tmp_path, source, project_config=settings)
+    base = editor.open()
+    target = save(editor, base, revised)
+
+    old_config = {**settings, "language": "en", "snapshot_method": "lixity-snapshot/3"}
+    old_method = sha256(json.dumps(old_config, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    with closing(editor._database()) as connection, connection:
+        connection.execute(
+            "UPDATE manuscript_revisions SET settings_sha256=?, sticky_pct=0 "
+            "WHERE document=? AND revision=?",
+            (old_method, editor.document, base["revision"]),
+        )
+    recorded = editor.timeline()
+    assert [row["sticky_pct"] for row in recorded] == [0.0, 100.0]
+    compared = editor.delta(base_revision=base["revision"], target_revision=target["revision"])
+    assert compared["base"]["sticky_pct"] == 100.0
+    assert compared["deltas"]["sticky_pct"] == 0.0
+    assert editor.timeline() == recorded
+
+    editor.discard(base["revision"])
+    unavailable = editor.delta(base_revision=base["revision"], target_revision=target["revision"])
+    assert unavailable["has_baseline"] is False
+    assert unavailable["deltas"] is None
+    assert editor.timeline() == recorded
+
+
 def test_delta_remeasures_both_retained_quotation_snapshots_with_current_method(tmp_path):
     source = tmp_path / "book.md"
     original = '## One\n\nShe said, "Come." He said, "Rest."'

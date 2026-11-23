@@ -639,16 +639,17 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     # translation-invariance across sub-unit and large-variance metrics.
     if all(math.isfinite(v) for v in values):
         diffs = [v - first for v in values]
-        if all(math.isfinite(d) for d in diffs):
-            d_mean = math.fsum(diffs) / n
-            global_var = math.fsum((d - d_mean) ** 2 for d in diffs) / n
-            global_sd = math.sqrt(global_var)
-            if math.isfinite(global_sd) and global_sd > 0.0:
-                scaled = [(d - d_mean) / global_sd for d in diffs]
-            else:
-                scaled = diffs
-        else:
-            scaled = list(values)
+        if any(not math.isfinite(d) for d in diffs):
+            exponent = math.frexp(max(abs(v) for v in values))[1]
+            anchor = math.ldexp(first, -exponent)
+            diffs = [math.ldexp(v, -exponent) - anchor for v in values]
+        # Power-of-two scaling preserves the relative differences while
+        # keeping the mean and squared deviations in a representable range.
+        exponent = math.frexp(max(abs(d) for d in diffs))[1]
+        normalized = [math.ldexp(d, -exponent) for d in diffs]
+        d_mean = math.fsum(normalized) / n
+        global_sd = math.sqrt(math.fsum((d - d_mean) ** 2 for d in normalized) / n)
+        scaled = [(d - d_mean) / global_sd for d in normalized]
     else:
         scaled = list(values)
 

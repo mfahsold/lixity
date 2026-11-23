@@ -71,7 +71,7 @@ def _geography_blocks(dossier: Dossier, labels: dict[str, str]) -> list[Manuscri
 def compose_dossier_pdf(project: Path, ref: Reference) -> tuple[str, bytes] | None:
     """Render the saved body, authored geography and pinned quotations."""
     repository = Repository(project)
-    snapshot = repository.snapshot(frozenset({"dossier", "passage", "extraction", "source", "source_version"}))
+    snapshot = repository.snapshot(frozenset({"dossier", "passage", "extraction", "activity", "source", "source_version"}))
     dossier = snapshot.revisions.get((ref.id, ref.revision))
     if not isinstance(dossier, Dossier) or any(
         (operation, "dossier", ref.id) in snapshot.lifecycle for operation in ("withdraw", "purge")
