@@ -17,10 +17,14 @@ and investigate reported bugs before changing behavior.
 ## Layout, packaging and constraints
 
 - `src/lixity/` holds the engine, CLI (`cli.py`, console entrypoint
-  `lixity.cli:main`), HTTP server (`server/`), research archive API
-  (`research/`, own `cli.py`) and packaged UI assets (`ui/`). These product
-  components ship in the `lixity` distribution. Repository guides and the
-  agent skill live in `docs/` and `skills/`.
+  `lixity.cli:main`), HTTP server (`server/`, including authenticated desktop
+  loopback mode in `server/desktop.py`), research archive API (`research/`, own
+  `cli.py`) and packaged UI assets (`ui/`). These product components ship in
+  the `lixity` Python distribution. `desktop/` holds the cross-platform
+  Rust/Tauri v2 desktop host (`src-tauri/`), isolated Python 3.12 runtime
+  bundling/verification scripts (`scripts/`), and macOS/Windows/Linux native
+  installer definitions (`packaging/`). Repository guides and the agent skill
+  live in `docs/` and `skills/`.
 - Analysis stays offline and deterministic on Python 3.10+. Runtime
   dependencies are `pydantic`, `rich`, `orjson` and `tomli` on Python 3.10.
   Statistical code uses the standard library. Discuss new required dependencies

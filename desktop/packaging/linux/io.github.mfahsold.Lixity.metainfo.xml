@@ -6,9 +6,7 @@
   <summary xml:lang="de">Lokale Offline-Workbench für Manuskriptanalyse, Lektorat und nachvollziehbare Recherche</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>AGPL-3.0-or-later</project_license>
-  <developer id="io.github.mfahsold">
-    <name>Matthias Fahsold</name>
-  </developer>
+  <developer_name>Matthias Fahsold</developer_name>
   <description>
     <p>
       Lixity is a local, deterministic manuscript-analysis and research workbench for authors and editors.
@@ -24,7 +22,7 @@
   <launchable type="desktop-id">io.github.mfahsold.Lixity.desktop</launchable>
   <url type="homepage">https://mfahsold.github.io/lixity/</url>
   <url type="bugtracker">https://github.com/mfahsold/lixity/issues</url>
-  <url type="vcs-browser">https://github.com/mfahsold/lixity</url>
+  <url type="help">https://github.com/mfahsold/lixity/blob/main/docs/README.md</url>
   <categories>
     <category>Office</category>
     <category>TextEditor</category>

@@ -2,6 +2,9 @@
 
 **Design record and evaluation criteria. Research reviewed 2026-11-10.**
 The nominal-suffix experiment below concluded with the Python implementation.
+*(Scope note: the unreleased Rust / Tauri v2 desktop host under `desktop/` wraps
+the unchanged Python analysis engine and browser UI for native installers; it is
+a packaging/host layer rather than a Rust rewrite of the analysis core.)*
 Any new experiment begins with a measured bottleneck in the current
 [architecture](ARCHITECTURE.md#evolution-without-a-second-product-path).
 This document owns the question "under which measurable conditions would a

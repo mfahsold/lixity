@@ -45,12 +45,21 @@ and deferred work. The [product direction](PRODUCT.md) links observed workflows
 to their evidence and availability.
 
 Python implements the shared engine, CLI and local HTTP server. JavaScript and
-CSS implement the browser interface. The [installation guide](INSTALLATION.md#packaging-direction)
-owns the supported packaging and runtime. Any future native extension requires
-measured benefit, deterministic parity, explicit unknowns, and preserved public
-contracts and project data. The [Rust evaluation RFC](RUST_EVALUATION_RFC.md)
-records the protocol and prior experiments. Compatibility changes follow the
-[reviewed migration process](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+CSS implement the browser interface. **Unreleased (`desktop/`):** a
+cross-platform Rust / Tauri v2 desktop host wraps an isolated
+`python-build-standalone` 3.12 runtime over an authenticated ephemeral loopback
+transport (`--_desktop-mode`, stdin bootstrap secret, single-use
+`/_desktop/handshake` cookie exchange, and a minimal frozen `window.lixityDesktop`
+bridge for native dialogs, atomic/streaming exports, 7-language OS menus,
+drag-and-drop opening, window geometry persistence and cross-platform
+`cpal`+`hound` audio capture). All analysis, editing, rendering and research
+storage stay in the single canonical Python/UI path — never a second engine or
+renderer. The [installation guide](INSTALLATION.md#packaging-direction) owns
+supported packaging and runtime status. Any future native analysis extension
+requires measured benefit, deterministic parity, explicit unknowns, and
+preserved public contracts and project data. The [Rust evaluation RFC](RUST_EVALUATION_RFC.md)
+records the prior analysis-engine protocol and experiments. Compatibility
+changes follow the [reviewed migration process](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
 ## Layers
 
@@ -67,6 +76,7 @@ records the protocol and prior experiments. Compatibility changes follow the
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
 | `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit identity/publication defaults or duplicate writers |
 | `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
+| `desktop/src-tauri` *(unreleased)* | Cross-platform Rust/Tauri v2 desktop host, isolated Python 3.12 sidecar supervision, native dialogs/menus/exports and `cpal`+`hound` audio capture | Second analysis engine, duplicate renderer, background network telemetry or modifying user manuscripts |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
 `lixity.math_core` is the single mathematical vocabulary of the analysis core

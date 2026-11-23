@@ -56,20 +56,31 @@ environments are [separate advanced routes](#python-api-project-environment).
 
 ### Packaging direction
 
-The current application is a Python package with a local browser interface.
-The uv route above manages Python for you; it is not a standalone desktop
-installer. No AppImage, DEB, RPM or bundled desktop installer is published here.
+The published **v0.9.1** release is a Python package with a local browser
+interface. The `uv` route above manages Python for you; published standalone
+desktop installers have not shipped on GitHub Releases yet.
 
-The next packaging work targets **Linux first**, with an isolated, supported
-runtime and explicit install, upgrade, rollback and removal checks. Python 3.12
-is the agreed minimum for the next development baseline; the 0.9.1
-package still declares Python 3.10+. A future installer must preserve project
-files and retained research, and restart only the service it owns. Optional
-speech and OCR environments remain separate from the basic application.
+On the unreleased development branch (`desktop/`), a cross-platform **Rust /
+Tauri v2 desktop host** bundles an isolated `python-build-standalone` 3.12
+runtime alongside the single canonical Python analysis engine and UI. It
+targets feature parity across **macOS** (`.app`, `.dmg`, Homebrew Cask
+template), **Windows** (7-language per-user NSIS `.exe`, WiX `.msi`, WinGet
+manifests) and **Linux** (`.deb`, `.rpm`, `.AppImage`, Flatpak/AppStream),
+including native OS menus, folder/save dialogs, atomic streaming exports and
+cross-platform `cpal`+`hound` microphone capture.
 
-A Rust backend is a longer-term direction to evaluate, not an available runtime
-or a prerequisite for using Lixity. See the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-second-product-path).
-There is no promised installer release date or selected package format yet.
+Desktop installers preserve manuscript folders, retained research archives and
+local state across upgrades and uninstalls, and restart only the loopback
+engine they own. Python 3.12 is the bundled desktop baseline; the 0.9.1 Python
+package still declares Python 3.10+. Optional speech and OCR workers remain
+separate from the core desktop application.
+
+The shared analysis core remains in Python (`src/lixity/`); Rust currently
+implements the native desktop host rather than a second analysis engine. See
+[`desktop/README.md`](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
+and the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-second-product-path).
+Clean-VM install, upgrade, rollback and OS signing/notarization verification
+remain release gates before publishing desktop installers.
 
 ### Install uv if it is not available
 

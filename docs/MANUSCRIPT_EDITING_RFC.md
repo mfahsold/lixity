@@ -168,7 +168,7 @@ Any external spelling service needs a separate privacy and dependency decision.
 | Source fidelity | Byte-identical no-op; explicit handling of CRLF, BOM, unsupported encodings and mixed newlines; marker/comment preservation |
 | Persistence | Two tabs, external edit, marker race, lost acknowledgement/retry, permission failure, disk-full, crash during staging, restart and recovery |
 | Editing | Undo/redo across formatting and autosave; cut/paste, large paste, find/replace, selection after view switches; no focus jumps |
-| Input/accessibility | Chromium and Firefox browser tests; real IME/dead-key and screen-reader checks; actual Linux desktop host tested separately |
+| Input/accessibility | Chromium and Firefox browser tests; real IME/dead-key and screen-reader checks; actual macOS, Windows and Linux desktop hosts (WebKit, WebView2, WebKitGTK) tested separately |
 | Scale | Synthetic 50k/150k/300k-word books, long paragraphs and dense annotations; record hardware, load time, memory and typing/scroll latency distributions |
 | Analysis | Revision mismatch and reordered-result rejection; edited/deleted/repeated-quote anchors; unchanged deterministic results for the same snapshot |
 | Packaging/privacy | Offline packaged install, lazy-loaded assets, license inventory, read-only exports without write controls, no private fixtures |
