@@ -323,9 +323,15 @@ async function pinnedIdentity(page, panel, cellIndex) {
       if (locale === 'en' || locale === 'de') await page.locator('#matrix').screenshot({path: path.join(artifacts, `matrix-${locale}-${width}.png`)});
       await selectSection('characters');
       await pinnedIdentity(page, 'characters', 0);
-      const characterHelp = page.locator('#characters th .help[data-help]').last();
-      assert.equal(await page.locator('#characters th .help[data-help]').count(), 3);
-      await characterHelp.focus();
+      const characterColumnHelp = page.locator('#characters th .help[data-help]');
+      assert.equal(await characterColumnHelp.count(), 3);
+      const characterHelp = characterColumnHelp.last();
+      // The compact workflow can leave the browser in touch mode. Use the
+      // keyboard to reach help, since an automatic focus restore stays quiet.
+      await characterColumnHelp.nth(1).focus();
+      await page.keyboard.press('Tab');
+      assert.ok(await characterHelp.evaluate(element => document.activeElement === element && element.matches(':focus-visible')),
+        `${locale}/${width}: Tab reaches the coverage help in the scrolled table`);
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
       assert.equal(await page.locator('#lixity-tooltip .tooltip-copy').textContent(), await characterHelp.getAttribute('data-help'),
         `${locale}: focused column help explains coverage`);

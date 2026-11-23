@@ -31,6 +31,25 @@ The shared browser launchers mute desktop audio output in both Chromium and
 Firefox. Media timing and analyser data remain available to synthetic playback
 tests; the test browsers do not change the user's browser or system volume.
 
+### Optional Firefox on macOS
+
+Install Firefox with the same Playwright package used for the Chromium checks.
+On macOS 27.2.1, the pinned Firefox timed out before tests started.
+The reader toolbar suite passed with the two temporary Firefox data directories
+in the setup below. [Playwright startup issue](https://github.com/microsoft/playwright/issues/42768)
+
+```sh
+firefox_tools_dir="${BROWSER_TOOLS_DIR:-$HOME/.local/share/lixity/browser-tools}"
+firefox_run_dir="$(mktemp -d "${TMPDIR:-/tmp}/lixity-firefox.XXXXXX")"
+PLAYWRIGHT_BROWSERS_PATH="$firefox_tools_dir/browsers" \
+  "$firefox_tools_dir/node_modules/.bin/playwright" install firefox
+mkdir "$firefox_run_dir/app-data" "$firefox_run_dir/local-data"
+MOZ_APP_DATA="$firefox_run_dir/app-data" MOZ_LOCAL_APP_DATA="$firefox_run_dir/local-data" \
+  PLAYWRIGHT_MODULE="$firefox_tools_dir/node_modules/playwright" \
+  PLAYWRIGHT_BROWSERS_PATH="$firefox_tools_dir/browsers" \
+  node tests/browser/reader-toolbar.cjs --firefox
+```
+
 `reader-audio.cjs` checks static chapter playback, seek/volume controls, explicit
 track selection, WAV downloads and unchanged dossier disclosure at desktop/mobile
 sizes. `--firefox` repeats it in Firefox. `audio-chapter-import.cjs` exercises the
