@@ -656,11 +656,13 @@ manually** opens the same form and fills the template if the form is empty.
 In a generated character dossier, choose **Add from manuscript**. You can also
 choose **Add to a character dossier** under **From manuscript** and select one.
 Lixity checks the proposal and the current dossier revision. The review shows
-what will be added after your existing notes. Use **Edit dossier text** to
-change it. Choose **Save dossier version** to record a new version of the same
-dossier, or choose **Discard draft**. Lixity records that the addition came from
-the manuscript.
-An update requires an unambiguous match to one generated character dossier.
+the character overview, all chapter counts and every matching passage in order,
+with up to two neighboring sentences on each side where available. Use **Edit
+dossier text** to change the addition. Choose **Save dossier version** to store
+it after your existing notes or **Discard draft** to leave the draft. Lixity
+records that the addition came from the manuscript. If the addition exceeds the
+dossier size limit, **Character in the manuscript** provides the complete
+paginated reading.
 
 The scene register and individual scenes can be saved independently. Scenes
 follow the manuscript order and show opening and closing text. A chapter

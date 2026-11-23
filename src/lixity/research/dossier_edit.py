@@ -13,7 +13,7 @@ from uuid import uuid4
 from pydantic import Field, field_validator
 
 from ..config import load_strict_json
-from .limits import MAX_RESEARCH_OBJECT_BYTES
+from .limits import MAX_DOSSIER_BODY_CHARS, MAX_RESEARCH_OBJECT_BYTES
 from .models import Dossier, Identifier, StrictModel
 from .repository import Repository, ResearchError, sync_directory
 from .revisions import _record, prepare_record_revision
@@ -23,9 +23,7 @@ _END = "\n-->\n"
 _HEADER_START = re.compile(r"<!-- lixity-dossier-edit/1\r?\n")
 _HEADER_END = re.compile(r"\r?\n-->\r?\n")
 # The model's maximum is a codepoint limit; UTF-8 requires at most four bytes each.
-_BODY_MAX_CHARS = next(item.max_length for item in Dossier.model_fields["body"].metadata
-                       if hasattr(item, "max_length"))
-_BODY_MAX_BYTES = 4 * _BODY_MAX_CHARS
+_BODY_MAX_BYTES = 4 * MAX_DOSSIER_BODY_CHARS
 _EDITABLE = frozenset({"title", "language", "tags", "geography", "evidence_ids"})
 
 
@@ -52,7 +50,7 @@ def _utf8(value: str, context: str) -> bytes:
 
 
 def _body_bytes(body: str) -> bytes:
-    if not 1 <= len(body) <= _BODY_MAX_CHARS:
+    if not 1 <= len(body) <= MAX_DOSSIER_BODY_CHARS:
         raise ResearchError("Dossier edit body exceeds its supported text size or is empty")
     content = _utf8(body, "body")
     if len(content) > _BODY_MAX_BYTES:

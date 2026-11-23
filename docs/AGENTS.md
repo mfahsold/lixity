@@ -1525,6 +1525,12 @@ an archive write; omission alone receives a default.
   as `offset` together with `analysis_sha256`. Changed manuscript content or
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
+  To prepare a saved addition for that exact current generated dossier, send
+  `format=markdown` without chapter or pagination parameters. The response
+  includes the complete Markdown `body`, aggregate counts, `analysis_sha256`,
+  `max_body_chars` and the exact `existing_dossier` revision and snapshot for
+  review. No matches or an oversized body return a specific error. Saving the
+  combined text uses the normal optimistic dossier revision request.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft. For native confirmation send `draft_id`,
   `preview_sha256` and the normal research context fields. Changed inputs or

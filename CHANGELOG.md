@@ -24,6 +24,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   A focused review shows the added text and offers explicit save and discard
   actions. The manuscript proposals panel shows creation and addition as
   separate choices up front.
+- Include the full measured character overview, chapter table and matching
+  passages with neighboring context in saved manuscript additions.
 - Share chapter-delta response fields between editor comparisons, revision
   history and standalone text comparisons. Read the paragraph comparison
   marker position from the prepared dashboard data.

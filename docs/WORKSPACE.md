@@ -589,10 +589,11 @@ on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
 
 Open a generated character dossier and choose **Add from manuscript**.
-Review the addition, which goes after your existing notes. Choose **Edit dossier
-text** if you want to change it, then **Save dossier version** or **Discard
-draft**. The **Add to a character dossier**
-option under **From manuscript** opens the same review for the dossier you select.
+The preview contains the character overview, every chapter's mention count,
+and all matching passages with context from the current manuscript. Choose
+**Edit dossier text** to change the addition or **Save dossier version** to
+store it after your existing notes. **Add to a character dossier** under
+**From manuscript** opens the same review for the dossier you select.
 
 Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the

@@ -8,11 +8,12 @@ from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
-from itertools import pairwise
+from itertools import groupby, pairwise
 from typing import Any
 
 from ..characters import _mention_spans, _name_pattern, resolve_character_settings
 from ..dialogue import character_voice_profiles
+from ..format import num, pct
 from ..markdown_parser import (
     CountedChapterPassage,
     counted_chapter_passages,
@@ -22,6 +23,7 @@ from ..markdown_parser import (
 from ..pipeline import resolve_document_config
 from ..scenes import _chapter_recurring_names
 from ..sentences import split_prose_sentence_spans, split_sentence_spans
+from ..workspace_labels import workspace_labels_for
 
 CHARACTER_EVIDENCE_SCHEMA = "dossier-character-local/1"
 _MAX_AUTO_CHARACTERS = 12
@@ -116,7 +118,7 @@ def _chapter_passages(
     return len(matches), passages
 
 
-def character_evidence(
+def _character_evidence(
     text: str,
     source_sha256: str,
     *,
@@ -124,10 +126,9 @@ def character_evidence(
     language: str,
     settings: Mapping[str, Any],
     chapter: int | None = None,
-    offset: int = 0,
     expected_analysis_sha256: str | None = None,
-) -> dict[str, Any]:
-    """Return chapter counts and a page of full matching prose for one character."""
+) -> tuple[str, dict[str, Any]]:
+    """Measure name matches, their context and available dialogue evidence once."""
     config, resolved_language = resolve_document_config(text, language, project_config=settings)
     resolved = resolve_character_settings(None, settings)
     chapters = split_chapters(text, config)
@@ -168,18 +169,6 @@ def character_evidence(
         if chapter in (None, number):
             selected_passages.extend({"chapter": number, "chapter_title": title, **row} for row in passages)
 
-    # The page limit bounds ordinary responses. A paragraph larger than that
-    # budget still gets its own page so it can be read in full.
-    page: list[dict[str, Any]] = []
-    text_bytes = 0
-    for row in selected_passages[offset:offset + _PASSAGES_PER_PAGE]:
-        size = sum(len(row[key].encode("utf-8")) for key in ("text", "context_before", "context_after"))
-        if page and text_bytes + size > _PASSAGE_TEXT_BYTES_PER_PAGE:
-            break
-        page.append(row)
-        text_bytes += size
-    end = offset + len(page)
-
     voices = character_voice_profiles(text, patterns, config)
     profile = next((entry for entry in voices["characters"] if entry["name"] == character), None)
     dialogue = None if profile is None else {
@@ -187,13 +176,130 @@ def character_evidence(
         "min_turns": profile["min_turns"], "words": profile["words"],
         "mean_sentence_words": profile["dialogue_asl"], "question_excl_pct": profile["question_excl_rate"],
     }
-    return {
+    return resolved_language.key, {
         "schema_version": CHARACTER_EVIDENCE_SCHEMA, "character": character, "aliases": aliases,
         "mentions": sum(row["mentions"] for row in chapter_rows),
         "chapters_with_mentions": len(ordered_chapters),
         "longest_gap": max((b - a - 1 for a, b in pairwise(ordered_chapters)), default=0),
         "declared_pov_chapters": declared, "dialogue": dialogue,
-        "chapters": chapter_rows, "passages": page, "passage_count": len(selected_passages),
-        "offset": offset, "next_offset": end if end < len(selected_passages) else None,
+        "chapters": chapter_rows, "passages": selected_passages, "passage_count": len(selected_passages),
         "analysis_sha256": analysis_sha256, "source_sha256": source_sha256, "line_scope": "chapter_body",
+    }
+
+
+def character_evidence(
+    text: str,
+    source_sha256: str,
+    *,
+    character: str,
+    language: str,
+    settings: Mapping[str, Any],
+    chapter: int | None = None,
+    offset: int = 0,
+    expected_analysis_sha256: str | None = None,
+) -> dict[str, Any]:
+    """Return chapter counts and a page of full matching prose for one character."""
+    _, report = _character_evidence(
+        text, source_sha256, character=character, language=language, settings=settings,
+        chapter=chapter, expected_analysis_sha256=expected_analysis_sha256,
+    )
+    # A paragraph larger than the ordinary page budget gets a page of its own.
+    page: list[dict[str, Any]] = []
+    text_bytes = 0
+    for row in report["passages"][offset:offset + _PASSAGES_PER_PAGE]:
+        size = sum(len(row[key].encode("utf-8")) for key in ("text", "context_before", "context_after"))
+        if page and text_bytes + size > _PASSAGE_TEXT_BYTES_PER_PAGE:
+            break
+        page.append(row)
+        text_bytes += size
+    end = offset + len(page)
+    report.update(passages=page, offset=offset, next_offset=end if end < report["passage_count"] else None)
+    return report
+
+
+def _dossier_quote(label: str, text: str) -> str:
+    """Quote every source line so that prose cannot become dossier structure."""
+    lines = [f"> **{label}**", ">"]
+    lines.extend(f"> {line}" if line else ">" for line in text.split("\n"))
+    return "\n".join(lines)
+
+
+def character_dossier_text(
+    text: str,
+    source_sha256: str,
+    *,
+    character: str,
+    language: str,
+    settings: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Prepare a complete, readable character analysis for a dossier revision."""
+    language_key, report = _character_evidence(
+        text, source_sha256, character=character, language=language, settings=settings,
+    )
+    labels = workspace_labels_for(language_key)
+
+    def label(suffix: str) -> str:
+        return labels["research_dossier_character_" + suffix]
+
+    def number(value: int | float, decimals: int = 0) -> str:
+        return num(value, language_key, decimals)
+
+    def fact(suffix: str, value: str) -> str:
+        return f"- **{label(suffix)}:** {value}"
+
+    chapters = report["chapters"]
+    summary = label("summary_one" if report["mentions"] == 1 else "summary").format(
+        name=character, mentions=number(report["mentions"]), covered=number(report["chapters_with_mentions"]),
+        chapters=number(len(chapters)),
+    )
+    blocks = [f"## {label('heading')}", summary, label("scope")]
+    facts = []
+    if report["aliases"]:
+        facts.append(fact("aliases", ", ".join(report["aliases"])))
+    if report["longest_gap"]:
+        facts.append(fact("gap", number(report["longest_gap"])))
+    if report["declared_pov_chapters"]:
+        facts.append(fact("pov", ", ".join(number(chapter) for chapter in report["declared_pov_chapters"])))
+    if facts:
+        blocks.append("\n".join(facts))
+
+    voice = report["dialogue"]
+    if voice:
+        voice_facts = [fact("turns", number(voice["turns"]))]
+        if voice["mean_sentence_words"] is not None:
+            voice_facts.append(fact("sentence_words", number(voice["mean_sentence_words"], 1)))
+        if voice["question_excl_pct"] is not None:
+            voice_facts.append(fact("questions", pct(voice["question_excl_pct"], language_key, 1)))
+        blocks.extend((f"### {label('dialogue')}", "\n".join(voice_facts)))
+        if voice["status"] == "insufficient_turns":
+            blocks.append(label("dialogue_sample").format(minimum=number(voice["min_turns"])))
+
+    distribution = [f"| {labels['research_chapter']} | {label('mentions')} |", "| --- | ---: |"]
+    distribution.extend(f"| {number(row['chapter'])} | {number(row['mentions'])} |" for row in chapters)
+    blocks.extend((f"## {label('distribution')}", "\n".join(distribution), f"## {label('passages')}"))
+    if report["passages"]:
+        blocks.append(label("context_hint"))
+    else:
+        blocks.append(label("empty"))
+    passage_groups = groupby(report["passages"], key=lambda row: (row["chapter"], row["chapter_title"]))
+    for (chapter, source_title), passages in passage_groups:
+        chapter_label = labels["publication_chapter"].format(number=number(chapter))
+        title = " ".join(source_title.split())
+        if title and title.casefold() != chapter_label.casefold():
+            chapter_label += f" · {title}"
+        blocks.append(f"### {chapter_label}")
+        for row in passages:
+            start, end = row["start_line"], row["end_line"]
+            lines = label("lines_one" if start == end else "lines").format(start=number(start), end=number(end))
+            blocks.append(f"**{lines}**")
+            if row["context_before"]:
+                blocks.append(_dossier_quote(label("context_before"), row["context_before"]))
+            blocks.append(_dossier_quote(labels["research_read_passage"], row["text"]))
+            if row["context_after"]:
+                blocks.append(_dossier_quote(label("context_after"), row["context_after"]))
+
+    return {
+        "body": "\n\n".join(blocks), "analysis_sha256": report["analysis_sha256"],
+        "mentions": report["mentions"], "passage_count": report["passage_count"],
+        "chapters_with_mentions": report["chapters_with_mentions"], "chapter_count": len(chapters),
     }

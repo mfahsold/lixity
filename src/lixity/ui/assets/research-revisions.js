@@ -69,6 +69,7 @@ if (researchRevisionDialog) {
       if (!data.ok || !data.record) return "unavailable";
       var draft = prepare(data);
       if (!draft) return "stale";
+      if (draft.blocked) return draft.blocked;
       if (draft.body === data.record.body) return "same";
       return await revisionOpen("dossier", id, "edit", null, null, null, {data: data, body: draft.body, preview: draft.preview})
         ? "staged" : "unavailable";
@@ -1319,6 +1320,8 @@ if (researchRevisionDialog) {
         revisionReload.hidden = revisionState.staged;
         await revisionPrepareMerge(changes, {}, false);
         if (session === revisionState.session && revisionState.staged && revisionState.merge) revisionRevealStageEditor(false);
+      } else if (response.status === 413 && revisionState.staged) {
+        revisionStatus(uiLabel("research_dossier_draft_too_large"), true);
       } else if (!response.ok || !data.ok) {
         revisionStatus(uiFormat("research_revision_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
       } else {

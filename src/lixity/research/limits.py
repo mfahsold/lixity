@@ -1,4 +1,4 @@
-"""Shared byte limits for input blobs and structured research objects."""
+"""Shared size limits for input blobs and structured research objects."""
 
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
 MAX_IMAGE_BYTES = 16 * 1024 * 1024
@@ -8,3 +8,4 @@ MAX_IMAGE_CAPTION_CHARS = 10000
 MAX_SOURCE_CONTEXT_CHARS = 2000
 MAX_PDF_BYTES = 50 * 1024 * 1024
 MAX_RESEARCH_OBJECT_BYTES = 32 * 1024 * 1024
+MAX_DOSSIER_BODY_CHARS = 2 * 1024 * 1024

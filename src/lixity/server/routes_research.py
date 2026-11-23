@@ -22,9 +22,18 @@ from ..config import read_explicit_project_config
 from ..io import FileUtils
 from ..project_structure import MAX_CONFIG_BYTES
 from ..research import api as research_api
-from ..research.character_evidence import CharacterEvidenceChanged, character_evidence
+from ..research.character_evidence import (
+    CharacterEvidenceChanged,
+    character_dossier_text,
+    character_evidence,
+)
 from ..research.dossiers import generated_character_binding
-from ..research.limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES, MAX_SOURCE_BYTES
+from ..research.limits import (
+    MAX_DOSSIER_BODY_CHARS,
+    MAX_IMAGE_BYTES,
+    MAX_PDF_BYTES,
+    MAX_SOURCE_BYTES,
+)
 from ..research.media import MEDIA_TYPES
 from ..research.models import Reference, Source, SourceVersion
 from ..research.repository import Repository, ResearchConflictError, ResearchError
@@ -93,9 +102,9 @@ class ResearchRoutesMixin(ResponseMixin):
 
     def _handle_research_dossier_character(self) -> None:
         query = self._parse_query(
-            required=("id", "research_token"), optional=("chapter", "offset", "analysis_sha256"),
-            non_empty=("id", "research_token", "chapter", "offset", "analysis_sha256"),
-            error_message="Choose one dossier and optionally a chapter and page",
+            required=("id", "research_token"), optional=("chapter", "offset", "analysis_sha256", "format"),
+            non_empty=("id", "research_token", "chapter", "offset", "analysis_sha256", "format"),
+            error_message="Choose one dossier and optionally a chapter and page or the Markdown format",
         )
         if query is None:
             return
@@ -108,6 +117,9 @@ class ResearchRoutesMixin(ResponseMixin):
             self._error("No manuscript is selected for the dossier", 404)
             return
         try:
+            markdown = "format" in query
+            if markdown and (query["format"] != "markdown" or {"chapter", "offset", "analysis_sha256"} & query.keys()):
+                raise ValueError("Choose the Markdown format without chapter and page filters")
             for key in ("chapter", "offset"):
                 if key in query and (not re.fullmatch(r"[0-9]{1,9}", query[key])):
                     raise ValueError("Choose a valid chapter and page")
@@ -120,9 +132,22 @@ class ResearchRoutesMixin(ResponseMixin):
             if binding is None:
                 self._error("No generated character binding is available for this dossier", 404)
                 return
-            project_id, name = binding
+            dossier, name = binding
+            project_id = dossier["project_id"]
             text, source_sha = FileUtils.read_source_snapshot(source)
             settings = read_explicit_project_config(manuscript_root, maximum_bytes=MAX_CONFIG_BYTES)
+            if markdown:
+                proposal = character_dossier_text(text, source_sha, character=name, language=self.language, settings=settings)
+                if not proposal["passage_count"]:
+                    self._json({"ok": False, "code": "character-dossier-empty",
+                                "message": "No matching passages in the selected manuscript"}, 404)
+                elif len(proposal["body"]) > MAX_DOSSIER_BODY_CHARS:
+                    self._json({"ok": False, "code": "character-dossier-too-large",
+                                "message": "The complete character analysis exceeds the dossier text limit"}, 413)
+                else:
+                    self._json({"ok": True, "project_id": project_id, "existing_dossier": dossier,
+                                "max_body_chars": MAX_DOSSIER_BODY_CHARS, **proposal})
+                return
             data = character_evidence(text, source_sha, character=name, language=self.language, settings=settings,
                                       chapter=chapter, offset=offset, expected_analysis_sha256=expected)
             self._json({"ok": True, "project_id": project_id, **data})

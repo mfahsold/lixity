@@ -697,11 +697,19 @@ def _generated_character_name(snapshot: Snapshot, dossier_id: str) -> str | None
     return None
 
 
-def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[str, str] | None:
-    """Read the archive ID and captured label from the same snapshot."""
+def _existing_dossier_reference(snapshot: Snapshot, record: Dossier) -> dict[str, Any]:
+    return {"id": record.id, "title": record.title, "revision": record.revision,
+            "project_id": snapshot.project.id, "snapshot": snapshot.digest}
+
+
+def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[dict[str, Any], str] | None:
+    """Read the current record reference and original character label from one snapshot."""
     snapshot = Repository(project).snapshot(kinds=frozenset({"dossier", "tombstone"}))
+    dossier = snapshot.records.get(dossier_id)
+    if not isinstance(dossier, Dossier):
+        return None
     name = _generated_character_name(snapshot, dossier_id)
-    return (snapshot.project.id, name) if name is not None else None
+    return (_existing_dossier_reference(snapshot, dossier), name) if name is not None else None
 
 
 DraftKind = Literal["all", "character", "scene", "location"]
@@ -833,8 +841,7 @@ def manuscript_dossier_drafts(
                     record = records[0]
                     original_name = _generated_character_name(snapshot, record.id)
                     if original_name is not None and _draft_label(original_name) == _draft_legacy_key(item)[1]:
-                        item["existing_dossier"] = {"id": record.id, "title": record.title, "revision": record.revision,
-                                                   "project_id": snapshot.project.id, "snapshot": snapshot.digest}
+                        item["existing_dossier"] = _existing_dossier_reference(snapshot, record)
     payload["skipped_existing"] = len(drafts) - len(payload["drafts"])
     payload["manuscript"] = str(manuscript)
     return payload

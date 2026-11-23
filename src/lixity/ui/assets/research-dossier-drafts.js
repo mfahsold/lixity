@@ -40,19 +40,21 @@ function firstManuscriptDraftKind(drafts) {
   return manuscriptDraftKinds.find(function(kind) { return drafts.some(function(draft) { return draft.kind === kind; }); }) || "character";
 }
 
-function prepareManuscriptDossierAppend(existing, draft, envelope) {
+function prepareManuscriptDossierAppend(draft, envelope) {
+  var existing = draft.existing_dossier;
   var record = envelope && envelope.record;
   if (!record || envelope.project_id !== existing.project_id || envelope.snapshot !== existing.snapshot ||
       record.id !== existing.id || record.revision !== existing.revision || envelope.latest_revision !== existing.revision ||
       envelope.availability || typeof record.body !== "string") return null;
   var current = record.body, proposed = draft.body.trim();
-  var nested = proposed.replace(/^## /gm, "### ");
+  var nested = proposed.replace(/^(#{2,5}) /gm, "#$1 ");
   if (current.trim() === proposed || current.includes("\n\n" + nested)) {
     return {body: current};
   }
   var boundary = current.endsWith("\n\n") || !current ? "" : current.endsWith("\n") ? "\n" : "\n\n";
-  return {body: current + boundary + "## " + uiLabel("research_dossier_draft_refresh_heading") + "\n\n" + nested,
-    preview: proposed};
+  var body = current + boundary + "## " + uiLabel("research_dossier_draft_refresh_heading") + "\n\n" + nested;
+  if (body.length > draft.max_body_chars && Array.from(body).length > draft.max_body_chars) return {blocked: "too-large"};
+  return {body: body, preview: proposed};
 }
 
 function renderManuscriptDraftsView(host, state) {
@@ -122,9 +124,10 @@ function renderManuscriptDraftsView(host, state) {
       '<button type="button" class="ctl primary" ' + action + '="' + escapeHtml(draft.id) + '"' +
       (canSave ? "" : " disabled") + '>' + label(actionLabel) + '</button></div>' +
       (basis ? '<p class="ctl-note" data-draft-basis>' + label(basis) + '</p>' : '') +
+      (existing ? '' :
       '<h6>' + label("research_dossier_draft_preview") + '</h6>' +
       '<div data-draft-preview-body><div class="research-prose markdown-body research-dossier-body-rendered">' +
-      renderSafeMarkdown(draft.body) + '</div></div></section>';
+      renderSafeMarkdown(draft.body) + '</div></div>') + '</section>';
   }
 
   var html = "";
@@ -204,9 +207,18 @@ async function readManuscriptDrafts(includeExisting) {
   return data;
 }
 
-function stageCharacterDraft(draft, existing) {
-  return window.LixityResearchDrafts.stageDossierBody(existing.id, function(envelope) {
-    return prepareManuscriptDossierAppend(existing, draft, envelope);
+async function stageCharacterDraft(id, context, expected, canOpen) {
+  var draft = await researchApiGet("research/dossier-character?format=markdown&id=" + encodeURIComponent(id));
+  if (!canOpen() || !acceptResearchContext(context, draft || {})) return "stale";
+  if (draft && draft.code === "character-dossier-too-large") return "too-large";
+  if (draft && draft.code === "character-dossier-empty") return "unavailable";
+  var existing = draft && draft.existing_dossier;
+  if (!draft || !draft.ok || !existing || existing.id !== id || existing.project_id !== context.projectId ||
+      typeof draft.body !== "string" || !draft.body.trim() || !Number.isInteger(draft.max_body_chars) ||
+      draft.max_body_chars <= 0) return "unavailable";
+  if (expected && (existing.revision !== expected.revision || existing.project_id !== expected.project_id)) return "stale";
+  return window.LixityResearchDrafts.stageDossierBody(id, function(envelope) {
+    return prepareManuscriptDossierAppend(draft, envelope);
   });
 }
 
@@ -222,15 +234,13 @@ document.addEventListener("click", async function(event) {
     status.textContent = uiLabel("research_loading");
   }
   try {
-    var data = await readManuscriptDrafts(true);
-    if (!button.isConnected || !acceptResearchContext(context, data)) return;
-    var draft = data.drafts.find(function(item) {
-      return existingCharacterDossier(item)?.id === button.dataset.recordId;
+    var result = await stageCharacterDraft(button.dataset.recordId, context, null, function() {
+      return button.isConnected;
     });
-    var result = draft ? await stageCharacterDraft(draft, existingCharacterDossier(draft)) : "unavailable";
     if (result === "same") message = uiLabel("research_dossier_draft_staged_same");
     else if (result === "stale") message = uiLabel("research_dossier_draft_revision_retry");
     else if (result === "unavailable") message = uiLabel("research_dossier_draft_unavailable");
+    else if (result === "too-large") message = uiLabel("research_dossier_draft_too_large");
     else if (result !== "staged") message = uiLabel("research_status_unavailable");
   } catch (_) {
     message = uiLabel("research_status_unavailable");
@@ -342,9 +352,13 @@ manuscriptDraftsBox?.addEventListener("click", async function (event) {
         state.stale = true;
         return;
       }
-      var result = await stageCharacterDraft(draft, verified);
+      var result = await stageCharacterDraft(verified.id, state.context, verified, function() {
+        return manuscriptDraftsState === state && state.selectedByKind.character === id;
+      });
       if (result === "stale") state.stale = true;
       else if (result === "same") message = uiLabel("research_dossier_draft_staged_same");
+      else if (result === "too-large") state.error = uiLabel("research_dossier_draft_too_large");
+      else if (result === "unavailable") state.error = uiLabel("research_dossier_draft_unavailable");
       else if (result !== "staged") state.error = uiLabel("research_status_unavailable");
     } catch (_) {
       state.error = uiLabel("research_status_unavailable");

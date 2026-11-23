@@ -468,8 +468,8 @@ async function checkExistingCharacterDraft(browser, fixture) {
     const details = legacySummary.locator('..');
     const direct = details.locator(directSelector);
     await expect(direct).toHaveText(labels.research_dossier_draft_stage_existing);
-    const proposals = url => url.pathname === '/api/research/manuscript-dossier-drafts' && url.searchParams.get('include_existing') === '1';
-    await page.route(proposals, route => route.fulfill({json: {ok: true, drafts: []}}));
+    const proposals = url => url.pathname === '/api/research/dossier-character' && url.searchParams.get('format') === 'markdown';
+    await page.route(proposals, route => route.fulfill({status: 404, json: {ok: false, code: 'character-dossier-empty'}}));
     await direct.press('Enter');
     await expect(details.locator('[data-character-update-status]')).toHaveText(labels.research_dossier_draft_unavailable);
     await expect(direct).toBeEnabled();
@@ -478,6 +478,16 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await direct.press('Enter');
     await expect(dialog.locator('#research-revision-title')).toHaveText(labels.research_dossier_draft_revision_title);
     await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
+    await expect(stagePreview).toContainText(labels.research_dossier_character_distribution);
+    await expect(stagePreview).toContainText(labels.research_dossier_character_passages);
+    await expect(stagePreview.locator('table tbody tr')).toHaveCount(3);
+    await expect(stagePreview.locator('table tbody tr').nth(1).locator('td').first()).toHaveText('2');
+    await expect(stagePreview.locator('table tbody tr').nth(1).locator('td').last()).toHaveText('0');
+    await expect(stagePreview).toContainText('The mast creaked. A cart stopped nearby.');
+    await expect(stagePreview).toContainText('The bell fell quiet. The tide moved back.');
+    await expect(stagePreview).toContainText(`Rowan recorded the tally ${legacyMiddlePassages} in the notebook.`);
+    await expect(stagePreview).toContainText('The red paper lantern finally disappeared.');
+    await expect(stagePreview).not.toContainText('The far scene opened beneath a hill.');
     await expect(stageEdit).toBeFocused();
     await expect(body).toBeHidden();
     await expect(discard).toHaveText(labels.research_dossier_draft_revision_discard);
@@ -497,6 +507,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
     const editableText = await body.inputValue();
     assert.ok(editableText.startsWith(original.record.body));
     assert.ok(editableText.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.ok(editableText.includes('The red paper lantern finally disappeared.'));
     assert.equal(await body.evaluate(field => field.selectionStart), original.record.body.length);
     await discard.press('Enter');
     await expect(dialog).toBeHidden();
@@ -530,15 +541,15 @@ async function checkExistingCharacterDraft(browser, fixture) {
     }
     await selectCharacter(rowan);
     await expect(preview.locator('[data-create-manuscript-draft]')).toHaveCount(0);
+    await expect(preview.locator('[data-draft-preview-body]')).toHaveCount(0);
     await expect(catalogue.locator('[data-draft-select^="scene:"]')).toHaveCount(0);
     await page.setViewportSize({width: 320, height: 640});
     await preview.locator('h5').evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
     await expect.poll(() => stage.evaluate(node => {
       const rect = node.getBoundingClientRect();
-      const prose = node.closest('section').querySelector('[data-draft-preview-body]').getBoundingClientRect();
-      return rect.bottom <= prose.top && rect.top >= 0 && rect.bottom <= innerHeight &&
+      return rect.top >= 0 && rect.bottom <= innerHeight &&
         node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
-    }), {message: 'The primary action is reachable immediately above the preview at 320px'}).toBe(true);
+    }), {message: 'The primary action is reachable in the short catalogue entry at 320px'}).toBe(true);
     await page.screenshot({path: path.join(artifacts, 'existing-figure-preview-mobile.png')});
     await page.setViewportSize({width: 1440, height: 900});
     await preview.locator('h5').scrollIntoViewIfNeeded();
@@ -628,6 +639,9 @@ async function checkExistingCharacterDraft(browser, fixture) {
     assert.equal(saved.record.title, authoredTitle);
     assert.ok(saved.record.body.startsWith(authoredBody));
     assert.ok(saved.record.body.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.ok(saved.record.body.includes(labels.research_dossier_character_distribution));
+    assert.ok(saved.record.body.includes('The mast creaked. A cart stopped nearby.'));
+    assert.ok(saved.record.body.includes('The red paper lantern finally disappeared.'));
     assert.equal(saved.record.body, writeAttempts.at(-1).body.changes.body);
     assert.deepEqual(saved.record.tags, second.record.tags);
     assert.deepEqual(saved.record.citations, second.record.citations);
@@ -1059,7 +1073,11 @@ server.serve_forever()
         await expect(saveSupplement).toHaveText(labels.research_dossier_draft_revision_save);
         await expect(discardSupplement).toHaveText(labels.research_dossier_draft_revision_discard);
         await expect(editSupplement).toHaveText(labels.research_dossier_draft_revision_edit);
-        await expect(dialog.locator('#research-revision-stage-proposal')).toBeVisible();
+        const localizedProposal = dialog.locator('#research-revision-stage-proposal');
+        await expect(localizedProposal).toBeVisible();
+        await expect(localizedProposal).toContainText(labels.research_dossier_character_distribution);
+        await expect(localizedProposal).toContainText(labels.research_dossier_character_passages);
+        await expect(localizedProposal).toContainText('Rowan checked the spare lantern.');
         for (const element of [dialog, saveSupplement, discardSupplement, editSupplement]) {
           assert.ok(await element.evaluate(node => node.scrollWidth <= node.clientWidth),
             `${language} staged dossier controls fit at 320px`);

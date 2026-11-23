@@ -14,7 +14,7 @@ from lixity.characters import _name_pattern, character_presence
 from lixity.cli import main as lixity_cli_main
 from lixity.mcp import _TOOLS, handle_message
 from lixity.research import api as research_api
-from lixity.research.character_evidence import _chapter_passages
+from lixity.research.character_evidence import _chapter_passages, character_dossier_text
 from lixity.research.manuscript_drafts import DRAFT_SCHEMA, extract_manuscript_dossier_drafts
 from lixity.server.pdf_context import research_context_token
 from lixity.ui.research_panel import render_research_panel
@@ -193,22 +193,33 @@ def test_figure_reading_context_stays_in_one_quotation_block() -> None:
     assert passage["context_after"] == "The door opens."
 
 
-def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: Path) -> None:
+def test_saved_character_evidence_is_complete_paged_and_context_bound(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     project = tmp_path
     manuscript = project / "novel.md"
     long_passage = "😀 **Anna** rief Nanni. " + "Die übrige Beschreibung bleibt lesbar. " * 20 + "Letzter Satz."
     middle = [f"Anna nannte die Nummer {num}." for num in range(23)]
     prose = "\n\n".join(["## Ankunft", "Die Wache schlief. Die Glocke läutete.", long_passage, *middle,
                           "## Pause", "Nur die anderen gingen weiter.",
-                          "## Rückkehr", "> Nanni blieb noch.", "`Anna` [Weiter](https://example.test/Anna)."])
+                          "## Rückkehr", "> Das Ufer war leer.\n>\n> Nanni blieb noch.\n>\n> Später sank die Sonne.",
+                          "`Anna` [Weiter](https://example.test/Anna).", "```text\nAnna steht nur im Codeblock.\n```"])
     manuscript.write_text(prose, encoding="utf-8")
     config = project / "lixity.toml"
     config.write_text('[characters.Anna]\naliases = ["Nanni"]\npov_in_chapters = [2]\n', encoding="utf-8")
     init = research_api.init(project, title="Figurendossier", language="de")
     record = research_api.create_dossier(project, "Figur: Anna", "## Überblick\n\nEigene Notizen.",
                                         tags=["manuscript-draft", "character"])
+    original_title = "Annas handgeschriebene Notizen"
+    research_api.revise_record(project, "dossier", record["dossier_id"], expected_snapshot=record["snapshot"],
+                               expected_revision=1, changes={"title": original_title}, change_kind="correction",
+                               reason="A revised title preserves the original character binding.")
     manual = research_api.create_dossier(project, "Figur: Andere", "Eigene Notizen.", tags=["character"])
+    missing = research_api.create_dossier(project, "Figur: Unbekannt", "Eigene Notizen.",
+                                         tags=["manuscript-draft", "character"])
     token = research_context_token(project)
+    head = project / "research" / "HEAD.json"
+    accepted_archive = head.read_bytes()
 
     def path(**params: str | int) -> str:
         return "/api/research/dossier-character?" + urlencode({"research_token": token, **params})
@@ -224,6 +235,12 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: 
         assert server.request(path(id=manual["dossier_id"])).status == 404
         assert server.request(path(id=record["dossier_id"], research_token="0" * 64)).status == 409
         assert server.request(path(id=record["dossier_id"], offset=20)).status == 400
+        assert server.request(path(id=manual["dossier_id"], format="markdown")).status == 404
+        assert server.request(path(id=record["dossier_id"], format="unknown")).status == 400
+        assert server.request(path(id=record["dossier_id"], format="markdown", chapter=2)).status == 400
+        assert server.request(path(id=record["dossier_id"], format="markdown", offset=0)).status == 400
+        status, no_matches = server.request_json(path(id=missing["dossier_id"], format="markdown"))
+        assert status == 404 and no_matches["code"] == "character-dossier-empty"
 
         status, first = server.request_json(path(id=record["dossier_id"]))
         assert status == 200, first
@@ -237,6 +254,7 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: 
         assert [row["mentions"] for row in first["chapters"]] == [25, 0, 1]
         assert first["dialogue"]["status"] == "insufficient_turns"
         assert first["passage_count"] == 25
+        assert "body" not in first and "existing_dossier" not in first
         passage = first["passages"][0]
         assert passage["text"].endswith("Letzter Satz.")
         assert passage["context_before"] == "Die Wache schlief. Die Glocke läutete."
@@ -248,14 +266,58 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(tmp_path: 
         assert status == 200, rest
         assert len(rest["passages"]) + len(first["passages"]) == 25
         assert rest["passages"][-1]["text"] == "Nanni blieb noch."
+        assert rest["passages"][-1]["context_before"] == "Das Ufer war leer."
+        assert rest["passages"][-1]["context_after"] == "Später sank die Sonne."
         assert rest["next_offset"] is None
+        proposal_path = path(id=record["dossier_id"], format="markdown")
+        status, proposal = server.request_json(proposal_path)
+        assert status == 200, proposal
+        assert proposal["existing_dossier"] == {
+            "id": record["dossier_id"], "title": original_title, "revision": 2,
+            "project_id": init["project_id"], "snapshot": json.loads(accepted_archive)["sha256"],
+        }
+        for key in ("analysis_sha256", "mentions", "chapters_with_mentions", "passage_count"):
+            assert proposal[key] == first[key]
+        assert proposal["chapter_count"] == len(first["chapters"])
+        body = proposal["body"]
+        assert "## Figur im Manuskript" in body
+        assert "Namensnennungen pro Kapitel" in body
+        assert "| 2 | 0 |" in body
+        assert "Fundstellen lesen" in body
+        assert body.count("Anna nannte die Nummer") == 23
+        assert "Anna steht nur im Codeblock." not in body
+        assert "https://example.test/Anna" not in body
+        assert body.index("Die Wache schlief. Die Glocke läutete.") < body.index("Letzter Satz.")
+        assert body.index("Das Ufer war leer.") < body.index("Nanni blieb noch.") < body.index("Später sank die Sonne.")
+        assert WORKSPACE_LABELS["de"]["research_dossier_character_sentence_words"] not in body
+        with monkeypatch.context() as patch:
+            patch.setattr("lixity.server.routes_research.MAX_DOSSIER_BODY_CHARS", 1)
+            status, too_large = server.request_json(proposal_path)
+            assert status == 413 and too_large["code"] == "character-dossier-too-large"
+            assert "body" not in too_large
         status, empty = server.request_json(path(id=record["dossier_id"], chapter=2, analysis_sha256=accepted))
         assert status == 200, empty
         assert empty["passages"] == [] and empty["passage_count"] == 0
         config.write_text('[characters.Anna]\naliases = []\n', encoding="utf-8")
         assert server.request(next_page).status == 409
     assert manuscript.read_text(encoding="utf-8") == prose
+    assert head.read_bytes() == accepted_archive
     assert research_api.get_dossier(project, record["dossier_id"])["body"] == "## Überblick\n\nEigene Notizen."
+    with LoopbackServer(make_handler(project, language="de")) as server:
+        assert server.request(proposal_path).status == 404
+
+
+@pytest.mark.parametrize("language", sorted(WORKSPACE_LABELS))
+def test_character_dossier_text_has_localized_saved_sections(language: str) -> None:
+    text = "## Morning\n\nA light flickered.\n\nAnna waited.\n\nThe door closed."
+    report = character_dossier_text(text, sha256(text.encode()).hexdigest(), character="Anna", language=language,
+                                    settings={"characters": {"Anna": {}}})
+    body = report["body"]
+    labels = WORKSPACE_LABELS[language]
+    for part in ("heading", "distribution", "mentions", "passages", "scope", "context_before", "context_after"):
+        assert labels[f"research_dossier_character_{part}"] in body
+    assert report["mentions"] == report["passage_count"] == report["chapters_with_mentions"] == report["chapter_count"] == 1
+    assert body.index("A light flickered.") < body.index("Anna waited.") < body.index("The door closed.")
 
 
 def test_extract_drafts_accepts_full_project_config() -> None:

@@ -17,7 +17,12 @@ from pydantic import (
     model_validator,
 )
 
-from .limits import MAX_PDF_BYTES, MAX_SOURCE_BYTES, MAX_SOURCE_CONTEXT_CHARS
+from .limits import (
+    MAX_DOSSIER_BODY_CHARS,
+    MAX_PDF_BYTES,
+    MAX_SOURCE_BYTES,
+    MAX_SOURCE_CONTEXT_CHARS,
+)
 
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -358,7 +363,7 @@ class Dossier(AuthoredRecord):
     title: Annotated[str, Field(min_length=1, max_length=500)]
     language: Language = "en"
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
-    body: Annotated[str, Field(min_length=1, max_length=2 * 1024 * 1024)]
+    body: Annotated[str, Field(min_length=1, max_length=MAX_DOSSIER_BODY_CHARS)]
     evidence_refs: list[Reference] = Field(default_factory=list)
     geography: GeographicFeatureCollection | None = None
 

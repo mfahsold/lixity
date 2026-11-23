@@ -2945,10 +2945,11 @@ on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
 
 Open a generated character dossier and choose **Add from manuscript**.
-Review the addition, which goes after your existing notes. Choose **Edit dossier
-text** if you want to change it, then **Save dossier version** or **Discard
-draft**. The **Add to a character dossier**
-option under **From manuscript** opens the same review for the dossier you select.
+The preview contains the character overview, every chapter's mention count,
+and all matching passages with context from the current manuscript. Choose
+**Edit dossier text** to change the addition or **Save dossier version** to
+store it after your existing notes. **Add to a character dossier** under
+**From manuscript** opens the same review for the dossier you select.
 
 Open **Character in the manuscript** in a generated character dossier to see
 recognized name mentions, their distribution across all chapters and the
@@ -5802,11 +5803,13 @@ manually** opens the same form and fills the template if the form is empty.
 In a generated character dossier, choose **Add from manuscript**. You can also
 choose **Add to a character dossier** under **From manuscript** and select one.
 Lixity checks the proposal and the current dossier revision. The review shows
-what will be added after your existing notes. Use **Edit dossier text** to
-change it. Choose **Save dossier version** to record a new version of the same
-dossier, or choose **Discard draft**. Lixity records that the addition came from
-the manuscript.
-An update requires an unambiguous match to one generated character dossier.
+the character overview, all chapter counts and every matching passage in order,
+with up to two neighboring sentences on each side where available. Use **Edit
+dossier text** to change the addition. Choose **Save dossier version** to store
+it after your existing notes or **Discard draft** to leave the draft. Lixity
+records that the addition came from the manuscript. If the addition exceeds the
+dossier size limit, **Character in the manuscript** provides the complete
+paginated reading.
 
 The scene register and individual scenes can be saved independently. Scenes
 follow the manuscript order and show opening and closing text. A chapter
@@ -11506,6 +11509,12 @@ an archive write; omission alone receives a default.
   as `offset` together with `analysis_sha256`. Changed manuscript content or
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
+  To prepare a saved addition for that exact current generated dossier, send
+  `format=markdown` without chapter or pagination parameters. The response
+  includes the complete Markdown `body`, aggregate counts, `analysis_sha256`,
+  `max_body_chars` and the exact `existing_dossier` revision and snapshot for
+  review. No matches or an oversized body return a specific error. Saving the
+  combined text uses the normal optimistic dossier revision request.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft. For native confirmation send `draft_id`,
   `preview_sha256` and the normal research context fields. Changed inputs or
