@@ -226,3 +226,45 @@ def test_desktop_bridge_is_native_only_and_excluded_from_read_only_exports(tmp_p
     assert marker not in readonly_report_html
     assert marker not in readonly_site_html
     assert marker not in (ROOT / "docs" / "demo" / "report.html").read_text(encoding="utf-8")
+
+
+def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "build_runtime_bundle",
+        DESKTOP / "scripts" / "build_runtime_bundle.py",
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    # Synthetic Windows layout: ensure case-insensitive Lib/threading.py survives
+    # while pip, distlib .exe stubs and Tcl/Tk assets are removed.
+    win_py = tmp_path / "win-python"
+    (win_py / "Lib" / "site-packages" / "pip" / "_vendor" / "distlib").mkdir(parents=True)
+    (win_py / "Lib" / "site-packages" / "pip-25.0.dist-info").mkdir(parents=True)
+    (win_py / "Lib" / "site-packages" / "lixity").mkdir(parents=True)
+    (win_py / "Scripts").mkdir(parents=True)
+    (win_py / "DLLs").mkdir(parents=True)
+    (win_py / "tcl").mkdir(parents=True)
+
+    (win_py / "python.exe").write_bytes(b"MZ")
+    (win_py / "Lib" / "threading.py").write_text("# stdlib threading\n", encoding="utf-8")
+    (win_py / "Lib" / "site-packages" / "lixity" / "__init__.py").write_text("", encoding="utf-8")
+    (win_py / "Lib" / "site-packages" / "pip" / "_vendor" / "distlib" / "t64.exe").write_bytes(b"MZ")
+    (win_py / "Scripts" / "pip.exe").write_bytes(b"MZ")
+    (win_py / "DLLs" / "tcl86t.dll").write_bytes(b"MZ")
+    (win_py / "DLLs" / "python3.dll").write_bytes(b"MZ")
+
+    mod.strip_runtime_bloat(win_py, keep_exe_name="python.exe")
+
+    assert (win_py / "python.exe").is_file()
+    assert (win_py / "Lib" / "threading.py").is_file()
+    assert (win_py / "Lib" / "site-packages" / "lixity" / "__init__.py").is_file()
+    assert (win_py / "DLLs" / "python3.dll").is_file()
+    assert not (win_py / "Lib" / "site-packages" / "pip").exists()
+    assert not (win_py / "Lib" / "site-packages" / "pip-25.0.dist-info").exists()
+    assert not (win_py / "Scripts" / "pip.exe").exists()
+    assert not (win_py / "DLLs" / "tcl86t.dll").exists()
+    assert not (win_py / "tcl").exists()

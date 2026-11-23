@@ -122,7 +122,10 @@ def _remove_path(path: Path) -> None:
 
 
 def strip_runtime_bloat(python_root: Path, *, keep_exe_name: str = "python3.12") -> None:
-    lib_candidates = [*python_root.glob("lib/python3.*"), python_root / "Lib"]
+    is_posix_layout = (python_root / "bin").is_dir() and not (python_root / "python.exe").is_file()
+    lib_candidates = (
+        list(python_root.glob("lib/python3.*")) if is_posix_layout else [python_root / "Lib"]
+    )
     for lib_dir in lib_candidates:
         if not lib_dir.is_dir():
             continue
@@ -147,29 +150,35 @@ def strip_runtime_bloat(python_root: Path, *, keep_exe_name: str = "python3.12")
             if cache_dir.is_dir() and not cache_dir.is_symlink():
                 shutil.rmtree(cache_dir)
 
-    # Remove unused Tcl/Tk libraries and pkgconfig metadata.
-    lib_root = python_root / "lib"
-    if lib_root.is_dir():
-        for pattern in STRIP_LIB_GLOBS:
-            for match in list(lib_root.glob(pattern)):
-                _remove_path(match)
+    # Remove unused POSIX Tcl/Tk libraries and pkgconfig metadata.
+    # Guard strictly on POSIX layout so case-insensitive Windows NTFS never treats
+    # python/Lib (the stdlib, including threading.py!) as python/lib.
+    if is_posix_layout:
+        lib_root = python_root / "lib"
+        if lib_root.is_dir():
+            for pattern in STRIP_LIB_GLOBS:
+                for match in list(lib_root.glob(pattern)):
+                    _remove_path(match)
 
-    # Prune redundant POSIX bin symlinks (python, python3) and build-host scripts so
-    # native bundlers (e.g. Tauri) do not dereference symlinks into duplicate copies.
-    posix_bin = python_root / "bin"
-    if posix_bin.is_dir():
+        # Prune redundant POSIX bin symlinks (python, python3) and build-host scripts so
+        # native bundlers (e.g. Tauri) do not dereference symlinks into duplicate copies.
+        posix_bin = python_root / "bin"
         keep_names = {keep_exe_name, *KEEP_POSIX_BIN_NAMES}
         for entry in list(posix_bin.iterdir()):
             if entry.name not in keep_names:
                 _remove_path(entry)
-
-    # Remove pip/wheel script launchers on Windows runtimes.
-    win_scripts = python_root / "Scripts"
-    if win_scripts.is_dir():
-        for entry in list(win_scripts.iterdir()):
-            lower = entry.name.lower()
-            if lower.startswith(("pip", "wheel")):
-                _remove_path(entry)
+    else:
+        # Remove pip/wheel script launchers and Tcl/Tk DLLs on Windows runtimes.
+        win_scripts = python_root / "Scripts"
+        if win_scripts.is_dir():
+            for entry in list(win_scripts.iterdir()):
+                if entry.name.lower().startswith(("pip", "wheel")):
+                    _remove_path(entry)
+        win_dlls = python_root / "DLLs"
+        if win_dlls.is_dir():
+            for pattern in ("_tkinter*", "tcl*.dll", "tk*.dll"):
+                for match in list(win_dlls.glob(pattern)):
+                    _remove_path(match)
 
     # Remove unused static libraries, Tcl assets and C headers not needed at runtime.
     for extra in ("include", "share", "tcl"):
@@ -312,7 +321,12 @@ def main(argv: list[str] | None = None) -> int:
             "print(json.dumps({'python': platform.python_version(), 'packages': dict(pkgs)}))"
         ),
     ]
-    meta_proc = subprocess.run(inspect_cmd, capture_output=True, text=True, check=True)  # noqa: S603
+    meta_proc = subprocess.run(inspect_cmd, capture_output=True, text=True, check=False)  # noqa: S603
+    if meta_proc.returncode != 0:
+        raise RuntimeError(
+            f"Bundled Python metadata inspection failed (exit {meta_proc.returncode}):\n"
+            f"stdout: {meta_proc.stdout}\nstderr: {meta_proc.stderr}"
+        )
     runtime_meta = json.loads(meta_proc.stdout)
     size_bytes = directory_size_bytes(output)
     bundle_manifest = {
