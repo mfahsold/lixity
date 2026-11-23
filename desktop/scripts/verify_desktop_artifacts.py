@@ -145,7 +145,11 @@ def main(argv: list[str] | None = None) -> int:
                 shutil.copy2(src, dst)
 
     checksum_lines = [f"{item['sha256']}  {item['filename']}\n" for item in artifacts]
-    (out_dir / f"SHA256SUMS-{args.target}.txt").write_text("".join(checksum_lines), encoding="utf-8")
+    (out_dir / f"SHA256SUMS-{args.target}.txt").write_text(
+        "".join(checksum_lines),
+        encoding="utf-8",
+        newline="\n",
+    )
 
     manifest = {
         "schema_version": ARTIFACT_SCHEMA,
@@ -155,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
     (out_dir / f"desktop-artifacts-{args.target}.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(json.dumps(manifest, indent=2, ensure_ascii=False))
     return 0

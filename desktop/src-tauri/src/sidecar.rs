@@ -127,22 +127,32 @@ impl PythonSidecar {
             ));
         }
 
-        let mut candidates: Vec<PathBuf> = Vec::new();
+        let mut runtime_roots: Vec<PathBuf> = Vec::new();
         if let Some(res) = resource_dir {
-            candidates.push(res.join("runtime").join("python").join("bin").join("python3.12"));
-            candidates.push(res.join("runtime").join("python").join("bin").join("python3"));
-            candidates.push(res.join("runtime").join("python").join("python.exe"));
+            runtime_roots.push(res.join("runtime"));
         }
         if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
-                candidates.push(dir.join("runtime").join("python").join("bin").join("python3.12"));
-                candidates.push(dir.join("runtime").join("python").join("bin").join("python3"));
-                candidates.push(dir.join("runtime").join("python").join("python.exe"));
+                runtime_roots.push(dir.join("runtime"));
+                if let Some(parent) = dir.parent() {
+                    // macOS .app bundle: Contents/MacOS/lixity-desktop -> Contents/Resources/runtime
+                    runtime_roots.push(parent.join("Resources").join("runtime"));
+                    // Linux .deb/.rpm/.AppImage: usr/bin/lixity-desktop -> usr/lib/Lixity/runtime
+                    runtime_roots.push(parent.join("lib").join("Lixity").join("runtime"));
+                    runtime_roots.push(parent.join("lib").join("lixity-desktop").join("runtime"));
+                }
             }
         }
-        for path in candidates {
-            if path.is_file() {
-                return Ok(path);
+        for root in runtime_roots {
+            for rel in [
+                Path::new("python").join("bin").join("python3.12"),
+                Path::new("python").join("bin").join("python3"),
+                Path::new("python").join("python.exe"),
+            ] {
+                let path = root.join(rel);
+                if path.is_file() {
+                    return Ok(path);
+                }
             }
         }
         Err(
