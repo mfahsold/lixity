@@ -53,39 +53,36 @@ function firstManuscriptDraftKind(drafts) {
   return manuscriptDraftKinds.find(function(kind) { return drafts.some(function(draft) { return draft.kind === kind; }); }) || "character";
 }
 
-function prepareManuscriptDossierAppend(draft, envelope) {
+function prepareManuscriptDossierRefresh(draft, envelope) {
   var existing = draft.existing_dossier;
   var record = envelope && envelope.record;
   if (!record || envelope.project_id !== existing.project_id || envelope.snapshot !== existing.snapshot ||
       record.id !== existing.id || record.revision !== existing.revision || envelope.latest_revision !== existing.revision ||
       envelope.availability || typeof record.body !== "string") return null;
-  var current = record.body, proposed = draft.body.trim();
-  var nested = proposed.replace(/^(#{2,5}) /gm, "#$1 ");
-  if (current.trim() === proposed || current.includes("\n\n" + nested)) {
-    return {body: current};
-  }
-  var block = "## " + uiLabel("research_dossier_draft_refresh_heading") + "\n\n" + nested;
-  var body = window.LixityComponents.appendMarkdownBlock(current, block);
-  if (body.length > draft.max_body_chars && Array.from(body).length > draft.max_body_chars) return {blocked: "too-large"};
-  return {body: body, preview: proposed};
+  return {body: draft.staged_body, preview: draft.body};
 }
 
-function renderManuscriptDraftsView(host, state) {
+function manuscriptDraftSettingsHtml(kind) {
+  var actions = [
+    {kind: "location", target: "set-location-mode", action: "location_settings"},
+    {kind: "character", target: "settings-dossier-drafts", action: "report_settings"}
+  ].filter(function(item) { return (!kind || kind === item.kind) && document.getElementById(item.target); });
+  if (!actions.length) return "";
+  return '<div class="row">' + actions.map(function(item) {
+    return '<button type="button" class="ctl ctl-sm" data-draft-' + item.action.replace("_", "-") +
+      ' data-draft-settings-target="' + item.target + '">' +
+      escapeHtml(uiLabel("research_dossier_draft_" + item.action)) + '</button>';
+  }).join("") + '</div>';
+}
+
+function renderManuscriptDraftsView(host, state, selectedButton) {
   function label(key) { return escapeHtml(uiLabel(key)); }
   var number = new Intl.NumberFormat(document.documentElement.lang || undefined);
-  var drafts = state.drafts;
-  var groups = Object.fromEntries(manuscriptDraftKinds.map(function(kind) {
-    return [kind, drafts.filter(function(draft) { return draft.kind === kind; })];
-  }));
-  var kindLabels = {
-    character: uiLabel("research_tpl_character"),
-    location: uiLabel("research_tpl_place"),
-    scene: uiLabel("research_tpl_scene")
-  };
-  var active = groups[state.activeKind];
-  var selected = active.find(function(draft) { return draft.id === state.selectedByKind[state.activeKind]; }) || active[0];
-  if (selected) state.selectedByKind[state.activeKind] = selected.id;
-  else delete state.selectedByKind[state.activeKind];
+
+  function chapterLabel(chapter, title) {
+    var text = uiFormat("publication_chapter", {number: number.format(chapter)});
+    return title && title.toLocaleLowerCase() !== text.toLocaleLowerCase() ? text + " · " + title : text;
+  }
 
   function choice(draft) {
     var hints = draft.evidence_hints || {};
@@ -94,9 +91,7 @@ function renderManuscriptDraftsView(host, state) {
     if (hints.scene_scope === "register") {
       text = draft.summary || draft.title;
     } else if (draft.kind === "scene" && Number.isInteger(hints.chapter)) {
-      var chapter = uiFormat("publication_chapter", {number: number.format(hints.chapter)});
-      if (hints.chapter_title && hints.chapter_title.toLocaleLowerCase() !== chapter.toLocaleLowerCase()) chapter += " · " + hints.chapter_title;
-      text = chapter;
+      text = chapterLabel(hints.chapter, hints.chapter_title);
       if (hints.scene_scope !== "chapter") {
         text += " · " + uiLabel("research_dossier_draft_scene_unit") + " " + number.format(hints.scene_index);
         if (hints.scene && hints.scene !== hints.chapter_title + " · " + hints.scene_index) text += " · " + hints.scene;
@@ -113,11 +108,49 @@ function renderManuscriptDraftsView(host, state) {
     if (!items.length) return "";
     return '<div data-draft-group="' + group + '">' +
       (labelKey ? '<h5>' + label(labelKey) + '</h5>' : '') +
-      (group === "scene-individual" && items.length > 1 ? '<p class="ctl-note">' +
-        escapeHtml(uiFormat("research_dossier_draft_scene_units", {count: number.format(items.length)})) + '</p>' : '') +
       '<div class="chip-row" role="group" aria-label="' +
         (labelKey ? label(labelKey) : escapeHtml(kindLabels[state.activeKind])) + '">' +
         items.map(choice).join("") + '</div></div>';
+  }
+
+  function reasonEvidenceMarkup(hit, labelKey, showQuote) {
+    if (!hit?.quote || !Number.isInteger(hit.chapter) || !Number.isInteger(hit.line)) return "";
+    var end = Number.isInteger(hit.end_line) && hit.end_line >= hit.line ? hit.end_line : hit.line;
+    var line = uiCountFormat("research_dossier_character_lines", end - hit.line + 1, {
+      start: number.format(hit.line), end: number.format(end)
+    });
+    var caption = label(labelKey) + '<br>' + escapeHtml(chapterLabel(hit.chapter, hit.chapter_title) + " · " + line);
+    return showQuote ? '<figure data-draft-reason-passage class="research-prose markdown-body">' +
+      '<figcaption class="ctl-note">' + caption + '</figcaption><blockquote>' +
+      escapeHtml(hit.quote) + '</blockquote></figure>' :
+      '<p class="ctl-note" data-draft-reason-passage>' + caption + '</p>';
+  }
+
+  function reasonMarkup(draft) {
+    var hints = draft.evidence_hints || {};
+    var method = "", passage = "";
+    if (draft.kind === "character" && ["configured", "inferred"].includes(hints.basis)) {
+      method = uiLabel("research_dossier_draft_reason_character_" + hints.basis);
+      if (hints.includes_passages === false) {
+        passage = reasonEvidenceMarkup(hints.first_hit, "research_dossier_draft_reason_preview_excerpt", true);
+      }
+    } else if (draft.kind === "location") {
+      if (hints.basis === "configured") method = uiLabel("research_dossier_draft_reason_location_configured");
+      else if (hints.basis === "inferred") {
+        method = Number.isInteger(hints.qualifying_mentions) ? uiFormat("research_dossier_draft_reason_location_inferred", {
+          cues: number.format(hints.qualifying_mentions)
+        }) : uiLabel("research_dossier_draft_location_inferred");
+        var hit = hints.reason_hit;
+        var inPreview = hit && [hints.first_hit, hints.last_hit].some(function(excerpt) {
+          return excerpt?.chapter === hit.chapter && excerpt.line === hit.line && excerpt.quote === hit.quote;
+        });
+        passage = reasonEvidenceMarkup(hit, "research_dossier_draft_reason_location_passage", !inPreview);
+      }
+    } else if (draft.kind === "scene" && ["chapter", "scene", "register"].includes(hints.scene_scope)) {
+      method = uiLabel("research_dossier_draft_reason_scene_" + hints.scene_scope);
+    }
+    return method ? '<div class="research-draft-reason" data-draft-reason><h6>' + label("research_dossier_draft_reason") +
+      '</h6><p data-draft-reason-method>' + escapeHtml(method) + '</p>' + passage + '</div>' : "";
   }
 
   function preview(draft) {
@@ -131,11 +164,40 @@ function renderManuscriptDraftsView(host, state) {
       (existing ? '<p class="ctl-note">' + label("research_dossier_draft_stage_help") + '</p>' : '') + '</div>' +
       '<button type="button" class="ctl primary" ' + action + '="' + escapeHtml(draft.id) + '"' +
       (canSave ? "" : " disabled") + '>' + label(actionLabel) + '</button></div>' +
+      reasonMarkup(draft) + manuscriptDraftSettingsHtml(draft.kind) +
       (existing ? '' :
       '<h6>' + label("research_dossier_draft_preview") + '</h6>' +
       '<div data-draft-preview-body><div class="research-prose markdown-body research-dossier-body-rendered">' +
       renderSafeMarkdown(draft.body) + '</div></div>') + '</section>';
   }
+
+  if (selectedButton) {
+    var selectedDraft = selectedManuscriptDraft(state);
+    var previousButton = host.querySelector('[data-draft-select][aria-pressed="true"]');
+    var currentPreview = host.querySelector("#r-manuscript-draft-preview");
+    if (selectedDraft && previousButton && currentPreview) {
+      currentPreview.outerHTML = preview(selectedDraft);
+      previousButton.setAttribute("aria-pressed", "false");
+      previousButton.classList.remove("active");
+      selectedButton.setAttribute("aria-pressed", "true");
+      selectedButton.classList.add("active");
+      return;
+    }
+  }
+
+  var drafts = state.drafts;
+  var groups = Object.fromEntries(manuscriptDraftKinds.map(function(kind) {
+    return [kind, drafts.filter(function(draft) { return draft.kind === kind; })];
+  }));
+  var kindLabels = {
+    character: uiLabel("research_tpl_character"),
+    location: uiLabel("research_tpl_place"),
+    scene: uiLabel("research_tpl_scene")
+  };
+  var active = groups[state.activeKind];
+  var selected = selectedManuscriptDraft(state) || active[0];
+  if (selected) state.selectedByKind[state.activeKind] = selected.id;
+  else delete state.selectedByKind[state.activeKind];
 
   var html = "";
   if (state.saved) {
@@ -166,7 +228,7 @@ function renderManuscriptDraftsView(host, state) {
       label("research_dossier_draft_manual_character") + '</button></div>';
   }
   if (!drafts.length) {
-    host.innerHTML = html;
+    host.innerHTML = html + manuscriptDraftSettingsHtml();
     return;
   }
   html += '<div class="chip-row" role="group" aria-label="' + label("research_dossier_draft_cloud") + '">' +
@@ -178,7 +240,8 @@ function renderManuscriptDraftsView(host, state) {
     }).join("") + '</div>';
   if (!selected) {
     host.innerHTML = html + (state.activeKind === "character" || unavailable.includes(state.activeKind) ? '' :
-      '<p class="ctl-note">' + escapeHtml(uiFormat("research_dossier_draft_no_kind", {kind: kindLabels[state.activeKind]})) + '</p>');
+      '<p class="ctl-note">' + escapeHtml(uiFormat("research_dossier_draft_no_kind", {kind: kindLabels[state.activeKind]})) + '</p>') +
+      manuscriptDraftSettingsHtml(state.activeKind);
     return;
   }
   if (state.activeKind === "scene") {
@@ -220,17 +283,17 @@ async function readManuscriptDrafts(includeExisting) {
 }
 
 async function stageCharacterDraft(id, context, expected, canOpen) {
-  var draft = await researchApiGet("research/dossier-character?format=markdown&id=" + encodeURIComponent(id));
+  var draft = await researchApiGet("research/dossier-character?format=markdown&prepare=1&id=" + encodeURIComponent(id));
   if (!canOpen() || !acceptResearchContext(context, draft || {})) return "stale";
   if (draft?.code === "character-dossier-too-large") return "too-large";
   if (draft?.code === "character-dossier-empty") return "unavailable";
   var existing = manuscriptDossierReference(draft);
   if (!draft || !draft.ok || !existing || existing.id !== id || existing.project_id !== context.projectId ||
-      typeof draft.body !== "string" || !draft.body.trim() || !Number.isInteger(draft.max_body_chars) ||
-      draft.max_body_chars <= 0) return "unavailable";
+      typeof draft.body !== "string" || !draft.body.trim() ||
+      typeof draft.staged_body !== "string" || !draft.staged_body.trim()) return "unavailable";
   if (expected && (existing.revision !== expected.revision || existing.project_id !== expected.project_id)) return "stale";
   return window.LixityResearchDrafts.stageDossierBody(id, function(envelope) {
-    return prepareManuscriptDossierAppend(draft, envelope);
+    return prepareManuscriptDossierRefresh(draft, envelope);
   });
 }
 
@@ -396,6 +459,16 @@ manuscriptDraftsBox?.addEventListener("click", async function (event) {
   var load = event.target.closest("#r-manuscript-dossier-btn, [data-draft-reload], [data-draft-load-existing]");
   if (load) return loadManuscriptDraftCatalogue(host, load);
   if (event.target.closest("[data-draft-manual-character]")) return openManualCharacterDossier();
+  var settingsAction = event.target.closest("[data-draft-settings-target]");
+  if (settingsAction && host.contains(settingsAction)) {
+    var target = document.getElementById(settingsAction.dataset.draftSettingsTarget);
+    if (target) {
+      if (target.matches("details")) target.open = true;
+      scrollAndFlash(target);
+      (target.querySelector("summary") || target).focus({preventScroll: true});
+    }
+    return;
+  }
   if (!host.contains(event.target)) return;
 
   var state = manuscriptDraftsState;
@@ -403,9 +476,15 @@ manuscriptDraftsBox?.addEventListener("click", async function (event) {
   var selection = event.target.closest("[data-draft-kind], [data-draft-select]");
   if (selection) {
     var kind = selection.dataset.draftKind;
-    if (manuscriptDraftKinds.includes(kind)) state.activeKind = kind;
-    else state.selectedByKind[state.activeKind] = selection.dataset.draftSelect;
-    renderManuscriptDraftsView(host, state);
+    if (kind) {
+      if (!manuscriptDraftKinds.includes(kind) || kind === state.activeKind) return;
+      state.activeKind = kind;
+    } else {
+      var id = selection.dataset.draftSelect;
+      if (id === state.selectedByKind[state.activeKind]) return;
+      state.selectedByKind[state.activeKind] = id;
+    }
+    renderManuscriptDraftsView(host, state, kind ? null : selection);
     setManuscriptDraftStatus();
     host.querySelector((kind ? "[data-draft-kind]" : "[data-draft-select]") + '[aria-pressed="true"]')?.focus();
     return;

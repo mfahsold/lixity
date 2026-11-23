@@ -15,6 +15,11 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+PENDING_RELEASE = "Pending release"
+RELEASE_HEADING = re.compile(
+    rf"(?m)^## \[(\d+\.\d+\.\d+)\] [-–] ({PENDING_RELEASE}|\d{{4}}-\d{{2}}-\d{{2}})$"
+)
+
 
 def source_version(root: Path, tag: str | None = None) -> str:
     module = ast.parse((root / "src/lixity/_version.py").read_text(encoding="utf-8"))

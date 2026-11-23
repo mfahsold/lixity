@@ -108,6 +108,11 @@
     document.getElementById("r-search-scope").value = "all";
     paint();
   }
+  function acceptTermSettings(previous) {
+    if (acceptedContext !== previous || active !== "review") return;
+    acceptedContext = context();
+    if (origin && origin.context === previous) origin.context = acceptedContext;
+  }
   function sourceAction(detail) {
     if (window.LixitySite.readOnly || document.body.dataset.researchCompareCapable !== "true") return "";
     return '<p><button type="button" class="ctl" data-research-source-compare="' + attr(detail.id) + '">' +
@@ -446,7 +451,7 @@
   });
   contextObserver.observe(document.body, {subtree: true, childList: true, attributes: true,
     attributeFilter: ["open", "data-research-token", "data-project-token", "data-manuscript-project-token", "data-manuscript-source-sha256"]});
-  window.LixityResearchTools = {open: open, close: close, reset: reset, context: context, sourceAction: sourceAction,
+  window.LixityResearchTools = {open: open, close: close, reset: reset, context: context, acceptTermSettings: acceptTermSettings, sourceAction: sourceAction,
     showResults: function() { searchReader.hidden = true; document.getElementById("research-search-results").hidden = false; },
     active: function() { return active; }, restore: paint,
     sourceChanged: function(id, version) { if (comparison && (comparison.detail.id !== id || comparison.detail.version_id !== version)) close(false); }

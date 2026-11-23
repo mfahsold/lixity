@@ -107,6 +107,7 @@ describes disclosure and hosting limits.
 | `research/HEAD.json` | Selects one accepted manifest | Atomic publication point; never select objects by modification time |
 | `research/project.json` | Immutable initial project configuration, checked against its accepted record | Restore with the archive |
 | `.lixity/research/catalogue.sqlite3` | Disposable lexical search projection | Rebuild from the accepted snapshot; SQLite alone is not a backup |
+| Project-root `lixity.toml` or `[tool.lixity]` | Working preferences, including place names, dossier settings and term definitions | Preserve the project configuration when backing up the workspace |
 
 Each entity has a UUID URI, kind, project ID, revision, UTC creation timestamp,
 creator and schema version. A `Reference` pins both ID and revision. SHA-256
@@ -159,6 +160,23 @@ Confidence and causal relations are author assertions, not certification. A
 dossier's current claim list is derived from claim associations; it is not a
 stored `claim_refs` field. Historical views resolve explicit pins; current reverse
 links do not reconstruct the whole archive at an earlier date.
+
+### Dossier text and live evidence
+
+A manuscript suggestion is a read-only result. It contains the proposed text,
+the selection rule and the relevant chapter or passage. A preview digest binds
+the selected source and settings to the proposal the author can confirm.
+Saving creates an ordinary dossier revision. A generated character section
+contains a digest of its Markdown so a later refresh can identify unchanged
+generated text. Exact edits and history use the saved `body`. The optional
+`display_body` removes redundant generated material for reading and export.
+
+A configured term's `dossier_id` associates a string to look up in the current
+manuscript with the selected dossier. The setting belongs to the project
+configuration and resolves by dossier ID. A save in the term editor changes
+that configuration. Retained quotations and claim references continue to pin
+their accepted revisions. These reading and configuration paths use the
+existing entity and manifest formats.
 
 ## Validation and publication
 

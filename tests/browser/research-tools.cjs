@@ -25,12 +25,22 @@ for name, text in [('Alpha', 'The archive garden contains amber lanterns.'), ('B
     source = base / (name + '.txt'); source.write_text(text, encoding='utf-8')
     sources.append(api.ingest(project, source, title=name + ' source', allow_retention=True)['source_id'])
 claim = api.create_claim(project, title='Synthetic claim', statement='The garden contains lanterns.')['claim_id']
-manuscript = project / 'manuscript.md'; manuscript.write_text('## Synthetic chapter\\n\\nThe archive keeper walks beside the garden and the quiet river.\\n', encoding='utf-8')
+manuscript = project / 'manuscript' / 'draft.md'; manuscript.parent.mkdir()
+paragraph = 'The archive keeper walks beside the garden and the quiet river.\\n'
+manuscript.write_text('## Synthetic chapter\\n\\n' + paragraph + '\\n## The bridge\\n\\nRain fell on the planks.\\n'
+    '\\n## The landing\\n\\nThe boat waited.\\n\\n' + paragraph, encoding='utf-8')
+dossier = api.create_dossier(project, title='Synthetic term dossier', body='## Notes\\n\\nA note about the river.')['dossier_id']
+(project / 'lixity.toml').write_text(
+    '[terms."quiet river"]\\naliases = ["archive keeper"]\\ndossier_id = ' + json.dumps(dossier)
+    + '\\nclaim_id = ' + json.dumps(claim)
+    + '\\nscoped_alternatives = [{term = "Signal 7", chapters = [1], note = "Keep the archival name"}, '
+      '{term = "estuary: marker", chapters = [3, 9], note = "Retain the historical name"}]\\n'
+    + '[terms.garden]\\n', encoding='utf-8')
 LixityServerHandler.workspace_root = str(project); LixityServerHandler.research_dir = str(project)
 LixityServerHandler.source_input = str(manuscript); LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'; LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'sources': sources, 'claim': claim, 'project': str(project)}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'sources': sources, 'claim': claim, 'dossier': dossier, 'project': str(project)}), flush=True)
 server.serve_forever()
 `, artifacts);
   let browser;
@@ -209,6 +219,8 @@ print(json.dumps(api.ingest(project, source, source_id=sys.argv[2], allow_retent
       await expect(page.locator('#research-tool-host')).toBeVisible();
       await expect(page.locator('#research-manuscript-terms-section')).toHaveAttribute('open', '');
       await expect(page.locator('#r-terms-refresh')).toBeVisible();
+      const occurrences = ['archive keeper', 'garden', 'quiet river'];
+      await expect(page.locator('#research-manuscript-terms blockquote')).toHaveText([...occurrences, ...occurrences]);
       await page.locator('#research-tool-close').click();
       await expect(page.locator('[data-view=analysis]')).toHaveAttribute('aria-selected', 'true');
       await expect(page.locator('#research-reader-terms')).toBeFocused();
@@ -240,10 +252,161 @@ print(json.dumps(api.ingest(project, source, source_id=sys.argv[2], allow_retent
         // Settle any restored utility before exercising the next independent entry.
         if (await page.locator('#research-tool-host').isVisible()) await page.locator('#research-tool-close').click();
       }
+      await page.locator('[data-rtab=dossiers]').click();
+      const dossier = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${server.fixture.dossier}"]`);
+      await dossier.click();
+      const terms = dossier.locator('..').locator('details[data-dossier-terms]');
+      await expect(terms).toBeVisible();
+      await expect(terms).not.toHaveAttribute('open', '');
+      const scopedRead = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.pathname === '/api/research/manuscript-terms' && url.searchParams.get('dossier_id') === server.fixture.dossier;
+      });
+      await terms.locator(':scope > summary').press('Enter');
+      const scopedTerms = await (await scopedRead).json();
+      assert.equal(scopedTerms.dossier_id, server.fixture.dossier);
+      assert.deepEqual(scopedTerms.terms.map(term => term.term), ['quiet river']);
+      const linkedOccurrences = ['archive keeper', 'quiet river'];
+      await expect(terms.locator('blockquote')).toHaveText([...linkedOccurrences, ...linkedOccurrences]);
+      const firstMatch = scopedTerms.occurrences[0].anchor;
+      const lastMatch = scopedTerms.occurrences.at(-1).anchor;
+      assert.equal(firstMatch.paragraph_sha256, lastMatch.paragraph_sha256);
+      assert.notEqual(firstMatch.start_line, lastMatch.start_line);
+      await page.evaluate(() => {
+        const bridge = window.LixityManuscriptLinks;
+        const navigate = bridge.navigate;
+        bridge.navigate = panel => {
+          document.body.dataset.termJumpLine = panel.dataset.start;
+          navigate(panel);
+        };
+      });
+      await terms.getByRole('button', {name:'Go to manuscript passage'}).last().click();
+      await expect(page.locator('body')).toHaveAttribute('data-term-jump-line', String(lastMatch.start_line));
+      await expect(page.locator('[data-view=analysis]')).toHaveAttribute('aria-selected', 'true');
       assert.deepEqual(writes, [], 'Reading, searching, comparison and return never save records or settings');
       assert.deepEqual(errors, []);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({path:path.join(artifacts, `tools-${width}.png`)});
+      if (width === 320) {
+        await page.locator('#research-reader-terms').click();
+        const catalogueRead = page.waitForRequest(request => {
+          const url = new URL(request.url());
+          return url.pathname === '/api/research/dossiers' && url.searchParams.has('project_token') && !url.searchParams.has('id');
+        });
+        await page.locator('#r-term-manage > summary').click();
+        const catalogue = new URL((await catalogueRead).url());
+        assert.equal(catalogue.searchParams.get('project_token'), await page.locator('body').getAttribute('data-manuscript-project-token'));
+        const saveTerm = page.locator('#r-term-save-btn');
+        const termStatus = page.locator('#r-term-status');
+        const termDossier = page.getByRole('combobox', {name:'Linked dossier (optional)'});
+        await expect(termDossier).toBeEnabled();
+        await expect(termDossier).toHaveAccessibleDescription('The selected dossier will show where this term appears in the manuscript.');
+        await expect(termDossier.locator('option').last()).toHaveText('Synthetic term dossier');
+        const dossierField = termDossier.locator('..').locator('..');
+        for (const viewport of [320, 1440, 2560]) {
+          await page.setViewportSize({width:viewport, height:950});
+          assert.ok(await dossierField.evaluate(node => node.scrollWidth <= node.clientWidth),
+            `Linked dossier controls fit at ${viewport}px`);
+        }
+        await page.setViewportSize({width, height:950});
+        await dossierField.screenshot({path:path.join(artifacts, 'term-dossier-320.png')});
+        await expect(page.locator('#r-term-chips').getByRole('button', {name:'quiet river', exact:true})).toBeVisible();
+        async function writeTerm() {
+          const token = await page.locator('#settings-form').getAttribute('data-project-token');
+          const manuscriptToken = await page.locator('body').getAttribute('data-manuscript-project-token');
+          assert.notEqual(token, manuscriptToken);
+          const written = page.waitForResponse(response => new URL(response.url()).pathname === '/api/settings');
+          await saveTerm.click();
+          const accepted = await written;
+          assert.equal(accepted.status(), 200);
+          const payload = accepted.request().postDataJSON();
+          assert.equal(payload.project_token, token);
+          await expect(termStatus).toContainText('Settings applied.');
+          await expect(page.locator('#research-tool-host')).toBeVisible();
+          await expect(saveTerm).toBeEnabled();
+          return payload.terms;
+        }
+        await page.locator('#r-term-name').fill('walks beside');
+        await termDossier.selectOption(server.fixture.dossier);
+        const created = await writeTerm();
+        assert.equal(created['walks beside'].dossier_id, server.fixture.dossier);
+        const expandedOccurrences = ['archive keeper', 'walks beside', 'garden', 'quiet river'];
+        await expect(page.locator('#research-manuscript-terms blockquote')).toHaveText([...expandedOccurrences, ...expandedOccurrences]);
+        if (await dossier.locator('..').evaluate(node => node.open)) await dossier.click();
+        await dossier.click();
+        await terms.locator(':scope > summary').press('Enter');
+        const expandedLinks = ['archive keeper', 'walks beside', 'quiet river'];
+        await expect(terms.locator('blockquote')).toHaveText([...expandedLinks, ...expandedLinks]);
+
+        await page.route(url => url.pathname === '/api/research/dossiers' && url.searchParams.has('project_token') && !url.searchParams.has('id'),
+          route => route.fulfill({status:503, json:{ok:false}}), {times:1});
+        await page.locator('#r-terms-refresh').press('Enter');
+        await expect(page.locator('#r-term-dossier-status')).toContainText('Failed to load dossiers');
+        await expect(termDossier).toBeDisabled();
+        await page.locator('#r-term-chips').getByRole('button', {name:'quiet river', exact:true}).click();
+        await expect(termDossier).toHaveValue(server.fixture.dossier);
+        await page.locator('#r-term-aliases').fill('archive keeper, riverbank');
+        const variants = page.locator('#r-term-variants');
+        const wording = row => row.getByRole('textbox', {name:'Variant wording'});
+        const chapterField = row => row.getByRole('textbox', {name:'Chapter numbers'});
+        const first = variants.getByRole('group', {name:'Variant 1'});
+        const second = variants.getByRole('group', {name:'Variant 2'});
+        await expect(wording(first)).toHaveValue('Signal 7');
+        await expect(wording(second)).toHaveValue('estuary: marker');
+        await expect(second.getByRole('textbox', {name:'Note (optional)'})).toHaveValue('Retain the historical name');
+        await expect(chapterField(second)).toHaveValue('3, 9');
+        await second.getByText('Choose from manuscript chapters', {exact:true}).press('Enter');
+        const chapterTwo = second.getByRole('button', {name:'Chapter 2', exact:true});
+        await chapterTwo.press('Enter');
+        await expect(chapterTwo).toHaveAttribute('aria-pressed', 'true');
+        await expect(chapterField(first)).toHaveValue('1');
+        await expect(chapterField(second)).toHaveValue('2, 3, 9');
+        await page.locator('#r-term-add-variant').press('Enter');
+        const temporary = variants.getByRole('group', {name:'Variant 3'});
+        await expect(wording(temporary)).toBeFocused();
+        await wording(temporary).fill('Planning variant');
+        await chapterField(temporary).fill('2, 2');
+        const beforeInvalid = writes.length;
+        await saveTerm.press('Enter');
+        await expect(chapterField(temporary)).toHaveJSProperty('validationMessage', 'Enter distinct positive chapter numbers separated by commas.');
+        assert.equal(writes.length, beforeInvalid);
+        await temporary.getByRole('button', {name:'Remove variant'}).press('Enter');
+        await expect(wording(second)).toBeFocused();
+        await expect(temporary).toHaveCount(0);
+        for (const viewport of [320, 1440, 2560]) {
+          await page.setViewportSize({width:viewport, height:950});
+          assert.ok(await second.evaluate(row => row.scrollWidth <= row.clientWidth &&
+            Number.parseFloat(getComputedStyle(row).paddingInlineStart) > 0), `Variant rows fit with interior spacing at ${viewport}px`);
+        }
+        await page.setViewportSize({width, height:950});
+        await variants.screenshot({path:path.join(artifacts, 'term-variants-320.png')});
+        const edited = await writeTerm();
+        assert.equal(edited['quiet river'].dossier_id, server.fixture.dossier);
+        assert.equal(edited['quiet river'].claim_id, server.fixture.claim);
+        assert.equal(edited['quiet river'].strict_boundaries, null);
+        const expectedVariants = [
+          {term:'Signal 7', chapters:[1], note:'Keep the archival name'},
+          {term:'estuary: marker', chapters:[2, 3, 9], note:'Retain the historical name'},
+        ];
+        assert.deepEqual(edited['quiet river'].scoped_alternatives, expectedVariants);
+        await page.locator('#r-term-chips').getByRole('button', {name:'quiet river', exact:true}).click();
+        await expect(chapterField(second)).toHaveValue('2, 3, 9');
+        const removeVariants = variants.getByRole('button', {name:'Remove variant'});
+        await removeVariants.first().press('Enter');
+        await removeVariants.first().press('Enter');
+        await expect(page.locator('#r-term-add-variant')).toBeFocused();
+        const cleared = await writeTerm();
+        assert.deepEqual(cleared['quiet river'].scoped_alternatives, []);
+        assert.equal(cleared['quiet river'].dossier_id, server.fixture.dossier);
+        await page.locator('#r-term-chips').getByRole('button', {name:'walks beside', exact:true}).click();
+        await expect(termDossier).toBeEnabled();
+        await expect(termDossier).toHaveValue(server.fixture.dossier);
+        await termDossier.selectOption('');
+        const unlinked = await writeTerm();
+        assert.equal(unlinked['walks beside'].dossier_id, null);
+        assert.equal(unlinked['quiet river'].dossier_id, server.fixture.dossier);
+        assert.deepEqual(writes, ['/api/settings', '/api/settings', '/api/settings', '/api/settings']);
+      }
       // A surface teardown can replace the document while its observer is queued.
       await page.evaluate(() => {
         document.body.innerHTML = '<main><p id="replacement-surface">Synthetic replacement surface</p></main>';

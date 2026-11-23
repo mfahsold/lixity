@@ -24,6 +24,10 @@ dossier = api.create_dossier(project, 'Setting <img src=x onerror=alert(1)>',
 api.revise_record(project, 'dossier', dossier['dossier_id'], expected_revision=1,
     changes={'body': '## Background\\n\\nRevised public setting note.\\n\\n## Later\\n\\nLater note.'},
     change_kind='correction', reason='Synthetic version')
+alternate = api.create_dossier(project, 'Separate setting', '## Background\\n\\nIndependent setting note.')
+api.revise_record(project, 'dossier', alternate['dossier_id'], expected_revision=1,
+    changes={'body': '## Background\\n\\nCurrent independent note.\\n\\n## Map\\n\\nA separate map note.'},
+    change_kind='correction', reason='Synthetic version')
 unknown = 'urn:uuid:11111111-1111-4111-8111-111111111111'
 prepare_project_settings(project, {'site_publications': {'existing': {'title': 'Preserved profile',
     'entries': [{'dossier_id': unknown, 'revision': 7, 'section': 'Former section',
@@ -35,6 +39,7 @@ server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 labels = {locale: {key: value for key, value in terms.items() if key.startswith('publication_editor_')}
           for locale, terms in WORKSPACE_LABELS.items()}
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['dossier_id'],
+                  'alternate': alternate['dossier_id'],
                   'unknown': unknown, 'labels': labels}), flush=True)
 server.serve_forever()
 `, artifacts);
@@ -94,7 +99,22 @@ server.serve_forever()
         await editor.locator('[data-site-publication-add-profile]').click();
         const profile = editor.locator('[data-site-publication-profile]').last();
         await field(profile, 'id').fill('readers');
-        await field(profile, 'title').fill('Reader <img src=x onerror=alert(1)>');
+        const title = field(profile, 'title');
+        const {title: maximumTitle} = JSON.parse(await editor.getAttribute('data-limits'));
+        const unicodeTitle = '🧭'.repeat(maximumTitle);
+        await title.fill(unicodeTitle);
+        await expect(title).toHaveValue(unicodeTitle);
+        assert.ok(await title.evaluate(input => {
+          window.LixityPublicationSettings.readChanges();
+          return input.validity.valid;
+        }), 'The native editor accepts the backend’s maximum count of Unicode characters');
+        await title.fill(unicodeTitle + '🧭');
+        await page.locator('[data-action=settings]').click();
+        await expect(title).toBeFocused();
+        assert.equal(await title.evaluate(input => input.validationMessage),
+          fixture.labels.en.publication_editor_length_limit.replace('{limit}', maximumTitle));
+        assert.equal(payload, undefined, 'Text beyond the backend bound fails before submitting');
+        await title.fill('Reader <img src=x onerror=alert(1)>');
         await field(profile, 'introduction').fill('Authored public introduction.');
         await profile.locator('[data-site-publication-add-entry]').click();
         const entry = profile.locator('[data-site-publication-entry]').first();
@@ -104,6 +124,50 @@ server.serve_forever()
         await field(entry, 'revision').selectOption('1');
         await expect(field(entry, 'section').locator('option[value=Background]')).toHaveCount(1);
         await expect(field(entry, 'section').locator('option[value=Repeated]')).toHaveCount(0);
+        await field(entry, 'section').selectOption('Background');
+        await field(entry, 'include_citations').check();
+        await field(entry, 'include_geography').check();
+        const alternateCurrent = value => {
+          const url = new URL(value);
+          return url.pathname === '/api/research/dossiers' && url.searchParams.get('id') === fixture.alternate &&
+            !url.searchParams.has('revision');
+        };
+        let finishSection, sectionRequested;
+        const pendingSection = new Promise(resolve => { finishSection = resolve; });
+        const startedSection = new Promise(resolve => { sectionRequested = resolve; });
+        await page.route(alternateCurrent, async route => {
+          sectionRequested();
+          await pendingSection;
+          await route.continue();
+        });
+        try {
+          await field(entry, 'dossier_id').selectOption(fixture.alternate);
+          await startedSection;
+          await expect(field(entry, 'revision')).toHaveValue('');
+          await expect(field(entry, 'section').locator('option[value=Background]')).toHaveCount(0);
+          await expect(field(entry, 'section').locator('option:checked')).toHaveText(fixture.labels.en.publication_editor_choose_scope);
+          await expect(field(entry, 'include_citations')).not.toBeChecked();
+          await expect(field(entry, 'include_geography')).not.toBeChecked();
+          await page.locator('[data-action=settings]').click();
+          await expect(field(entry, 'section')).toBeFocused();
+          assert.equal(payload, undefined, 'Apply cannot broaden a previously selected section to the whole dossier');
+        } finally {
+          finishSection();
+        }
+        await expect(field(entry, 'section').locator('option[value=Map]')).toHaveCount(1);
+        await page.unroute(alternateCurrent);
+        await expect(field(entry, 'section').locator('option:checked')).toHaveText(fixture.labels.en.publication_editor_choose_scope);
+        await field(entry, 'section').selectOption('Background');
+        await field(entry, 'revision').selectOption('1');
+        await expect(field(entry, 'section').locator('option:checked')).toHaveText(fixture.labels.en.publication_editor_choose_scope);
+        await field(entry, 'section').selectOption('');
+        const selected = await page.evaluate(() => window.LixityPublicationSettings.readChanges().site_publications.readers.entries[0]);
+        assert.equal(selected.dossier_id, fixture.alternate);
+        assert.equal(selected.revision, 1);
+        assert.equal(Object.hasOwn(selected, 'section'), false, 'Whole dossier is available as an explicit choice');
+        await field(entry, 'dossier_id').selectOption(fixture.dossier);
+        await field(entry, 'revision').selectOption('1');
+        await expect(field(entry, 'section').locator('option[value=Background]')).toHaveCount(1);
         await field(entry, 'section').selectOption('Background');
         await field(entry, 'reveal_after_chapter').fill('1.5');
         let requests = 0;
@@ -213,7 +277,7 @@ server.serve_forever()
     const rejectedResponse = page.waitForResponse(result => result.url() === endpoint);
     await page.locator('[data-action=settings]').click(); await rejectedResponse;
     await page.waitForFunction(() => !document.querySelector('[data-action=settings]').disabled);
-    await expect(page.locator('#ctl-status')).toContainText('Synthetic rejected settings save');
+    await expect(page.locator('#settings-save-status')).toContainText('Synthetic rejected settings save');
     await expect(field(rejectedProfile, 'introduction')).toHaveValue('Rejected draft stays visible');
     assert.deepEqual(await page.evaluate(() => window.LixityPublicationSettings.savedProfiles()), acceptedBefore);
     await page.unroute(endpoint);

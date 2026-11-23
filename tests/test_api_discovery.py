@@ -143,6 +143,17 @@ def test_about_reports_research_formats_from_the_command_parser():
     assert commands["sources"]["default_output"] == "json"
 
 
+def test_about_reports_research_manuscript_paths_and_schema_output():
+    installed = {command["name"]: command for command in api.about(section="commands")["commands"]}
+    assert installed["schema"]["output"] == "json"
+    commands = {command["name"]: command for command in installed["research"]["subcommands"]}
+    shared = {"positional": "PATH", "flag": "--manuscript", "configuration_key": "manuscript"}
+    for name in ("dossier-drafts", "dossier-from-manuscript", "compare"):
+        assert commands[name]["manuscript_input"] == {**shared, "allows_external_path": True}
+    assert commands["find-anchor"]["manuscript_input"] == {**shared, "allows_external_path": False}
+    assert "manuscript_input" not in commands["gaps"]
+
+
 def test_about_format_metadata_tracks_parser_configuration(monkeypatch):
     monkeypatch.setitem(research_cli.OUTPUT_FORMATS, "review", (("text", "md", "json"), "md"))
     research_command = next(command for command in api.about()["commands"] if command["name"] == "research")
@@ -217,7 +228,11 @@ def test_configuration_discovery_describes_installed_models_and_threshold_domain
     assert "author_name" in settings["project_only_keys"]
     assert "title" not in settings["project_only_keys"]
     assert settings["native_settings"]["persisted_keys"] == [
-        "title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "audio",
+        "title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "locations",
+        "dossier_drafts", "register_profiles", "chapter_registers", "audio",
+        "short_sentence_max", "medium_sentence_max", "long_sentence_max", "monotony_min_run",
+        "hook_short_sentence", "short_turn_max_words", "long_turn_min_words", "dialogue_paragraph_share",
+        "sticky_min_words", "sticky_glue_pct",
     ]
     assert set(settings["native_settings"]["session_keys"]) == {
         "language", "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",

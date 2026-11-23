@@ -8,6 +8,7 @@ from ..format import num, precise_num
 from ..manuscript_document import BlockKind, ManuscriptBlock, TextRun
 from ..pdf_layouts import dossier_pdf
 from ..workspace_labels import workspace_labels_for
+from .dossier_analysis import dossier_display_body
 from .geography import summarize_geography
 from .models import Dossier, GeographicPoint, Reference
 from .repository import Repository
@@ -98,5 +99,5 @@ def compose_dossier_pdf(project: Path, ref: Reference) -> tuple[str, bytes] | No
 
     return dossier.title, dossier_pdf(
         title=dossier.title, revision_label=revision, language=dossier.language,
-        body=dossier.body, appendix=appendix,
+        body=dossier_display_body(snapshot, dossier), appendix=appendix,
     )

@@ -146,10 +146,11 @@ server.serve_forever()
       url.pathname === '/api/research/dossiers' && url.searchParams.has('id');
     browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
-    const errors = [], external = [], writes = [];
+    const errors = [], external = [], writes = [], diagramRequests = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => {
       if (!request.url().startsWith(fixture.url) && !request.url().startsWith('blob:')) external.push(request.url());
+      if (new URL(request.url()).pathname.includes('/vendor/mermaid-')) diagramRequests.push(request.url());
       if (request.method() === 'POST' && request.url().endsWith('/research-dossier-image')) writes.push(request.postDataJSON());
     });
     await page.addInitScript(() => {
@@ -161,6 +162,8 @@ server.serve_forever()
     await page.goto(fixture.url);
     assert.equal(new URL(page.url()).origin, fixture.url);
     assert.ok((await page.title()).includes('No Project Loaded'));
+    await expect(page.locator('#research-diagram-library')).toHaveText('');
+    assert.deepEqual(diagramRequests, [], 'Opening the native app does not download the diagram renderer');
     assert.ok((await page.locator('body').textContent()).includes('Research'));
     const plainHTTP = await page.evaluate(() => {
       const randomUUID = crypto.randomUUID;
@@ -174,7 +177,10 @@ server.serve_forever()
     await page.locator('[data-rtab=dossiers]').click();
     await page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`).click();
     await expect(page.locator('[data-dossier-add-image]')).toBeVisible();
+    const libraryResponse = page.waitForResponse(response => new URL(response.url()).pathname.startsWith('/api/vendor/mermaid-'));
     await checkDiagramReadability(page);
+    assert.equal((await libraryResponse).headers()['cache-control'], 'private, max-age=86400');
+    assert.equal(diagramRequests.length, 1, 'Multiple diagrams share one local library download');
     await page.locator('[data-dossier-add-image]').click();
     const dialog = page.locator('#modal-dossier-image');
     const file = {name: 'synthetic.png', mimeType: 'image/png', buffer: fs.readFileSync(path.join(artifacts, 'synthetic.png'))};

@@ -33,6 +33,7 @@ from .markdown_parser import counting_inline_text
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .research.repository import Repository, ResearchConflictError
 from .speech_controls import (
+    ExplicitPauseSeconds,
     SpeechProsody,
     apply_pronunciation,
     combine_delivery,
@@ -150,8 +151,8 @@ class Direction(_Strict):
     end: Annotated[int, Field(ge=1)] | None = None
     profile_id: Annotated[str, Field(min_length=1, max_length=64)] | None = None
     instructions: Annotated[str, Field(max_length=2000)] = ''
-    pause_before: Annotated[float, Field(ge=0, le=10)] = 0.0
-    pause_after: Annotated[float, Field(ge=0, le=10)] | None = None
+    pause_before: ExplicitPauseSeconds = 0.0
+    pause_after: ExplicitPauseSeconds | None = None
     prosody: SpeechProsody = Field(default_factory=SpeechProsody)
 
     @model_serializer(mode='wrap')

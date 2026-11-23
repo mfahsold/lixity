@@ -17,6 +17,7 @@ from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..speech_status import native_worker_inventory
 from ..status import LANGUAGE_CODES
+from ..ui.dashboard import DIAGRAM_LIBRARY_FILE, DIAGRAM_LIBRARY_ROUTE, _bundle
 from ..ui.metric_reference import METRIC_REFERENCE_PATH, metric_reference_document
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome
@@ -65,6 +66,7 @@ class LixityServerHandler(
         "/api/manuscript-view": "_handle_editor_view",
         "/api/editor-bootstrap.js": "_handle_editor_asset",
         "/api/editor-bundle.js": "_handle_editor_asset",
+        DIAGRAM_LIBRARY_ROUTE: "_handle_diagram_library",
         "/api": "_handle_api_index",
         "/api/": "_handle_api_index",
         "/api/runtime": "_handle_runtime",
@@ -182,7 +184,9 @@ class LixityServerHandler(
         if path.startswith(METRIC_REFERENCE_PATH) and path.endswith(".html"):
             language = path[len(METRIC_REFERENCE_PATH):-5]
             if language in LANGUAGE_CODES and language != "generic":
-                self._send(200, metric_reference_document(language).encode("utf-8"), "text/html; charset=utf-8",
+                info = self.dashboard_info
+                config = info.get("corpus_config") if info.get("manuscript_source_sha256") else None
+                self._send(200, metric_reference_document(language, config).encode("utf-8"), "text/html; charset=utf-8",
                            headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"})
                 return
         if path in ("/", "/index.html"):
@@ -228,6 +232,10 @@ class LixityServerHandler(
             return
 
         self._json({"ok": False, "message": "Not found"}, 404)
+
+    def _handle_diagram_library(self) -> None:
+        self._send(200, _bundle((DIAGRAM_LIBRARY_FILE,)).encode("utf-8"),
+                   "application/javascript; charset=utf-8", headers={"Cache-Control": "private, max-age=86400"})
 
     def _handle_workspace_close(self, payload: dict[str, Any]) -> None:
         registry = getattr(self.server, "workspaces", None)

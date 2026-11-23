@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from lixity.site_publications import site_publications_schema
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui.settings import settings_form
 from tests.locales import LOCALES
@@ -27,9 +28,17 @@ def test_profile_editor_keeps_inert_initial_entries_and_localized_scope(language
     assert json.loads(editor["data-initial"]) == PROFILES
     assert editor["data-context-token"] == "b" * 64
     assert "disabled" not in editor
+    schema = site_publications_schema()
+    fields = schema["$defs"]["SitePublicationProfile"]["properties"]
+    assert json.loads(editor["data-limits"]) == {
+        "profiles": schema["maxProperties"], "entries": fields["entries"]["maxItems"],
+        "title": fields["title"]["maxLength"], "introduction": fields["introduction"]["maxLength"],
+    }
     terms = json.loads(editor["data-labels"])
     for key in ("publication_editor_title", "publication_editor_dossier", "publication_editor_current",
-                "publication_editor_whole_body", "publication_editor_scope", "publication_editor_after"):
+                "publication_editor_whole_body", "publication_editor_choose_scope", "publication_editor_scope",
+                "publication_editor_length_limit",
+                "publication_editor_after"):
         assert terms[key] == labels[key]
         assert key not in terms[key]
     assert 'id="settings-site-publications-summary"' in markup

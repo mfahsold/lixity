@@ -3,6 +3,7 @@
 import json
 import os
 import plistlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -79,6 +80,41 @@ def test_macos_template_is_valid_and_has_explicit_neutral_startup():
     template = plistlib.loads((SCRIPT.parent / "lixity.plist").read_bytes())
     assert "--no-project" in template["ProgramArguments"]
     assert template["Label"] == "com.lixity.serve"
+
+
+def test_linux_desktop_launcher_delegates_browser_opening_for_selected_port(tmp_path):
+    bash = shutil.which("bash")
+    if not bash or os.name == "nt":
+        pytest.skip("Requires a native POSIX Bash")
+    installed = tmp_path / "installed tools"
+    installed.mkdir()
+    executable = installed / "lixity"
+    executable.write_text(
+        '#!/bin/sh\nprintf "%s\\n" "$LIXITY_PORT" "$@"\n',
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    for name in ("update-desktop-database", "xdg-open"):
+        stub = installed / name
+        stub.write_text("#!/bin/sh\nexit 97\n", encoding="utf-8")
+        stub.chmod(0o755)
+    data = tmp_path / "data"
+    env = {**os.environ, "PATH": str(installed) + os.pathsep + os.environ.get("PATH", ""),
+           "XDG_DATA_HOME": str(data), "LIXITY_PORT": "9000"}
+    result = subprocess.run(  # noqa: S603 - local installer and synthetic executable
+        [bash, str(SCRIPT.parent / "install-desktop-linux.sh")],
+        env=env, capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    launcher = data / "applications" / "lixity.desktop"
+    command = next(line.removeprefix("Exec=") for line in launcher.read_text().splitlines()
+                   if line.startswith("Exec="))
+    argv = shlex.split(command)
+    assert argv == [str(executable), "service", "start", "--open"]
+    result = subprocess.run(  # noqa: S603 - asserted synthetic executable and arguments
+        argv, env=env, capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 0 and result.stdout.splitlines() == ["9000", "service", "start", "--open"]
 
 
 @pytest.mark.parametrize("target,arguments", [

@@ -15,6 +15,7 @@ from enum import Enum, IntEnum
 from types import MappingProxyType
 
 __all__ = [
+    "ABOUT_SECTIONS",
     "DEFAULT_FDR_METHOD",
     "DEFAULT_FDR_Q",
     "DEFAULT_HOST",
@@ -52,6 +53,8 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Schema versions (public JSON contracts)
 # ---------------------------------------------------------------------------
+
+ABOUT_SECTIONS = ("languages", "features", "heuristics", "commands", "configuration")
 
 SCHEMA_VERSION_ANALYZE = 2
 """analyze / profile contracts (language-neutral tense values)."""

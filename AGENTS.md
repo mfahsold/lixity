@@ -39,7 +39,7 @@ and investigate reported bugs before changing behavior.
 | --- | --- |
 | Set up the checkout and verify source | `make install-dev`, then run the affected tests and `make check`. Keep global Python untouched. [Development checks](CONTRIBUTING.md#development-setup) |
 | Verify UI behavior | `make browser` or `make browser-changed`. Inspect rendered desktop and mobile states using the [agent geometry checks](AGENT_PROFILE.md#prevent-ui-clipping-and-layout-collisions) and [browser instructions](tests/browser/README.md). |
-| Update documentation and shared UI | `make docs-check`. Regenerate examples and screenshots when UI assets or published guides change. Use the [generation and preview procedure](CONTRIBUTING.md#updating-documentation-and-pages) for order and scope. |
+| Update documentation and shared UI | `make docs-check`. For UI assets or published guides, regenerate screenshots before examples. Use the [generation and preview procedure](CONTRIBUTING.md#updating-documentation-and-pages). |
 | Change GitHub workflows | `make workflow-check` with `actionlint`. See [CI and release gates](CONTRIBUTING.md#preparing-a-release). |
 | Inspect or roll out the local app | Use one managed port for project views. Follow the [checkout or packaged rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service). |
 | Publish documentation or a release | Follow the [Pages and Wiki procedures](CONTRIBUTING.md#updating-documentation-and-pages) or [release procedure](CONTRIBUTING.md#preparing-a-release). These are separately authorized operations. |

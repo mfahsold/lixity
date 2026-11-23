@@ -18,8 +18,10 @@ from ..config import (
     resolve_thresholds,
     validate_author_name,
 )
+from ..dossier_draft_settings import AUTOMATIC_LOCATION_NAMES, DOSSIER_DRAFT_SETTINGS_KEY
 from ..io import FileUtils
 from ..markers import list_markers
+from ..models import CORPUS_DETAIL_KEYS
 from ..pipeline import analyze_document, resolve_document_config, supplementary_reports
 from ..project_identity import manuscript_identity_check, project_title
 from ..publication import load_publication
@@ -130,7 +132,7 @@ def build_server_dashboard(
             settings["characters"] = identity_settings["characters"]
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
-        override_keys = {"register_profiles", "chapter_registers", "characters"} | ANALYSIS_OVERRIDE_KEYS
+        override_keys = {"register_profiles", "chapter_registers", "characters", *CORPUS_DETAIL_KEYS} | ANALYSIS_OVERRIDE_KEYS
         settings = {**settings, **{key: value for key, value in identity_settings_override.items()
                                   if key in override_keys}}
     config, resolved = resolve_document_config(text, language, project_config=settings)
@@ -241,6 +243,9 @@ def build_server_dashboard(
             publication=publication_values,
             publication_error=publication_error,
             site_publications=identity_settings.get("site_publications", {}),
+            location_names=identity_settings.get("locations", AUTOMATIC_LOCATION_NAMES),
+            dossier_drafts=identity_settings.get(DOSSIER_DRAFT_SETTINGS_KEY),
+            corpus_config=config,
             site_publication_context_token=research_context_token(
                 project_root or (Path(source_input).parent if source_input else None)
             ),
@@ -258,6 +263,7 @@ def build_server_dashboard(
             if manuscript_readable and not is_empty
             else "",
             research_context_token=research_context_token(research_root or project_root),
+            external_diagram_library=True,
         ),
     )
 
@@ -277,5 +283,6 @@ def build_server_dashboard(
         "is_missing": is_missing,
         "manuscript_source_sha256": manuscript_source_sha256,
         "project_settings_token": settings_token,
+        "corpus_config": config,
     }
     return html_doc, info

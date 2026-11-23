@@ -12,9 +12,13 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from types import MappingProxyType
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
+
+MIN_EXPLICIT_PAUSE_SECONDS = 0
+MAX_EXPLICIT_PAUSE_SECONDS = 10
+ExplicitPauseSeconds = Annotated[float, Field(ge=MIN_EXPLICIT_PAUSE_SECONDS, le=MAX_EXPLICIT_PAUSE_SECONDS)]
 
 
 class SpeechProsody(BaseModel):
@@ -61,6 +65,7 @@ class SpeechControlSupport:
 
     def as_dict(self) -> dict[str, object]:
         result: dict[str, object] = asdict(self)
+        result["pause_seconds"] = {"minimum": MIN_EXPLICIT_PAUSE_SECONDS, "maximum": MAX_EXPLICIT_PAUSE_SECONDS}
         if self.phonemes:
             result["prosody"] = prosody_capabilities()
         return result

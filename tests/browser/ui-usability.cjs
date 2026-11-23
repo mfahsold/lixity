@@ -89,7 +89,7 @@ server.serve_forever()
         excerpt:'# Heading\n\nA **readable** [source](https://example.org).\n\n```mermaid\nflowchart LR\nA-->B'}]});
       return {text:host.querySelector('.research-excerpt').textContent, markup:host.querySelector('.research-excerpt').innerHTML};
     });
-    assert.equal(preview.text, 'Heading A readable source.');
+    assert.equal(preview.text, 'A readable source.');
     assert.ok(!preview.markup.includes('<'), 'Catalogue previews contain inert text only');
     const multiline = await page.evaluate(() => {
       const host = document.createElement('div');
@@ -97,7 +97,7 @@ server.serve_forever()
         excerpt:'First line\nSecond line\n\n| Year | Event |\n| --- | --- |\n| 1900 | Arrival |'}]});
       return host.querySelector('.research-excerpt').textContent;
     });
-    assert.equal(multiline, 'First line Second line Year Event 1900 Arrival');
+    assert.equal(multiline, 'First line Second line');
     await page.locator('[data-view=research]').click();
     await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
     await expect(page.locator('#rtab-dossiers')).toBeVisible();

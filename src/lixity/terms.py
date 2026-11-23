@@ -235,10 +235,10 @@ def _find_variant_spans(
             seen_spans.add((c_start, c_end))
             results.append((c_start, c_end, ["compound_match"]))
 
-    # Check if decomposed/compatibility Unicode sequences in `text` would match under NFC/casefold
-    # when raw regex missed them or shifted codepoint lengths.
+    # Substrings of NFC text are still NFC. A casefolded target absent from
+    # the casefolded paragraph cannot have an additional source span there.
     if not unicodedata.is_normalized("NFC", text) or (
-        not case_sensitive and "ß" in (text + form).lower()
+        not case_sensitive and "ß" in (text + form).lower() and form.casefold() in text.casefold()
     ):
         target = form if case_sensitive else form.casefold()
         n = len(text)
@@ -279,78 +279,45 @@ def derive_manuscript_term_occurrences(
     source_sha256: str | None,
     source_state: str = "available",
     selected_term: str | None = None,
+    selected_dossier: str | None = None,
 ) -> dict[str, Any]:
     """Derive source-bound candidate occurrences of configured terms across displayed paragraphs."""
+    if selected_term is not None and selected_dossier is not None:
+        raise ValueError("Choose a term or a dossier to scope the report")
     if selected_term is not None and selected_term not in terms_config:
         raise ValueError(f"Unknown configured term: {selected_term!r}")
 
-    active_terms = (
-        {selected_term: terms_config[selected_term]}
-        if selected_term is not None
-        else dict(terms_config)
-    )
-    if source_state != "available":
-        return {
-            "source_path": source_path,
-            "source_sha256": source_sha256,
-            "source_state": source_state,
-            "scope": TERMS_SCOPE,
-            "term_count": len(active_terms),
-            "occurrence_count": 0,
-            "out_of_scope_count": 0,
-            "ambiguous_count": 0,
-            "terms": [
-                {
-                    "term": term_name,
-                    "aliases": list(profile.aliases),
-                    "scoped_alternatives": [
-                        alt.model_dump(mode="json") for alt in profile.scoped_alternatives
-                    ],
-                    "case_sensitive": profile.case_sensitive,
-                    "strict_boundaries": profile.strict_boundaries,
-                    "match_compounds": profile.match_compounds,
-                    "dossier_id": profile.dossier_id,
-                    "claim_id": profile.claim_id,
-                    "occurrence_count": 0,
-                    "out_of_scope_count": 0,
-                    "ambiguous_count": 0,
-                    "chapters_present": [],
-                }
-                for term_name, profile in active_terms.items()
-            ],
-            "occurrences": [],
-            "chapters": [],
-            "summary": {
-                "term_count": len(active_terms),
-                "occurrence_count": 0,
-                "out_of_scope_count": 0,
-                "ambiguous_count": 0,
-            },
-        }
+    active_terms: Mapping[str, TermProfile]
+    if selected_term is not None:
+        active_terms = {selected_term: terms_config[selected_term]}
+    elif selected_dossier is not None:
+        active_terms = {name: profile for name, profile in terms_config.items() if profile.dossier_id == selected_dossier}
+    else:
+        active_terms = terms_config
+    if source_state != "available" or not active_terms:
+        paragraphs = ()
+    variants_by_term = {}
+    for term_name, profile in terms_config.items() if paragraphs else ():
+        variants: list[tuple[str, str, list[int] | None, str | None]] = [
+            (term_name, "preferred", None, None),
+            *((alias, "alias", None, None) for alias in profile.aliases),
+            *((alt.term, "scoped_alternative", alt.chapters, alt.note) for alt in profile.scoped_alternatives),
+        ]
+        # The longest form wins over an enclosed match for the same term.
+        variants_by_term[term_name] = sorted(variants, key=lambda item: (-len(item[0]), item[0]))
 
-    identities = [(p, paragraph_identity(p)) for p in paragraphs]
-
-    # Collect raw hits across ALL configured terms first so cross-term overlaps are detected
-    # even when filtering output to one `selected_term`.
-    raw_by_paragraph: dict[int, list[dict[str, Any]]] = {}
-    for p_idx, (paragraph, identity) in enumerate(identities):
+    # Cross-term overlap detection uses every configured profile even for a scoped response.
+    occurrences: list[dict[str, Any]] = []
+    for p_idx, paragraph in enumerate(paragraphs):
         text = paragraph.text
         if not text:
             continue
+        paragraph_hash: str | None = None
+        chapter = paragraph.chapter_num if paragraph.chapter_num > 0 else None
         p_hits: list[dict[str, Any]] = []
         for term_name, profile in terms_config.items():
-            variants: list[tuple[str, str, list[int] | None, str | None]] = [
-                (term_name, "preferred", None, None),
-                *((alias, "alias", None, None) for alias in profile.aliases),
-                *(
-                    (alt.term, "scoped_alternative", alt.chapters, alt.note)
-                    for alt in profile.scoped_alternatives
-                ),
-            ]
-            # Sort longest variant first so within a single term profile, longer phrases win over sub-spans.
-            variants.sort(key=lambda item: (-len(item[0]), item[0]))
             term_spans: list[tuple[int, int, str]] = []
-            for form, kind, scoped_chapters, scoped_note in variants:
+            for form, kind, scoped_chapters, scoped_note in variants_by_term[term_name]:
                 for start, end, unicode_reasons in _find_variant_spans(
                     text,
                     form,
@@ -369,7 +336,6 @@ def derive_manuscript_term_occurrences(
                         # If enclosed in an already-matched longer variant of the same term, skip.
                         continue
                     term_spans.append((start, end, form))
-                    chapter = paragraph.chapter_num if paragraph.chapter_num > 0 else None
                     in_scope = True
                     effective_kind = kind
                     if scoped_chapters is not None and (
@@ -390,6 +356,8 @@ def derive_manuscript_term_occurrences(
                     if overlapping_same:
                         flags.append("overlapping_term")
                     quote_text = text[start:end]
+                    if paragraph_hash is None:
+                        paragraph_hash = paragraph_identity(paragraph)["paragraph_sha256"]
                     p_hits.append(
                         {
                             "term": term_name,
@@ -409,7 +377,7 @@ def derive_manuscript_term_occurrences(
                             "chapter_num": paragraph.chapter_num,
                             "chapter_title": paragraph.chapter_title,
                             "paragraph_index": p_idx,
-                            "paragraph_sha256": identity["paragraph_sha256"],
+                            "paragraph_sha256": paragraph_hash,
                             "start_line": paragraph.start_line,
                             "end_line": paragraph.end_line,
                             "start": start,
@@ -417,7 +385,7 @@ def derive_manuscript_term_occurrences(
                             "anchor": {
                                 "start_line": paragraph.start_line,
                                 "end_line": paragraph.end_line,
-                                "paragraph_sha256": identity["paragraph_sha256"],
+                                "paragraph_sha256": paragraph_hash,
                                 "start": start,
                                 "end": end,
                                 "quote": quote_text,
@@ -426,11 +394,12 @@ def derive_manuscript_term_occurrences(
                             "claim_id": profile.claim_id,
                         }
                     )
-        if p_hits:
+        shown_hits = [hit for hit in p_hits if hit["term"] in active_terms]
+        if shown_hits:
             # Check cross-term overlaps within the same paragraph
-            for i, first in enumerate(p_hits):
-                for j, second in enumerate(p_hits):
-                    if i == j or first["term"] == second["term"]:
+            for first in shown_hits:
+                for second in p_hits:
+                    if first["term"] == second["term"]:
                         continue
                     if first["start"] < second["end"] and first["end"] > second["start"]:
                         if second["term"] not in first["overlapping_terms"]:
@@ -441,7 +410,7 @@ def derive_manuscript_term_occurrences(
                         if "overlapping_term" not in first["flags"]:
                             first["flags"].append("overlapping_term")
                         first["ambiguous"] = True
-            p_hits.sort(
+            shown_hits.sort(
                 key=lambda item: (
                     item["start"],
                     item["end"],
@@ -449,18 +418,14 @@ def derive_manuscript_term_occurrences(
                     item["matched_form"],
                 )
             )
-            raw_by_paragraph[p_idx] = p_hits
+            occurrences.extend(shown_hits)
 
-    occurrences: list[dict[str, Any]] = [
-        hit
-        for p_idx in sorted(raw_by_paragraph)
-        for hit in raw_by_paragraph[p_idx]
-        if selected_term is None or hit["term"] == selected_term
-    ]
-
+    hits_by_term: dict[str, list[dict[str, Any]]] = {name: [] for name in active_terms}
+    for hit in occurrences:
+        hits_by_term[hit["term"]].append(hit)
     term_summaries: list[dict[str, Any]] = []
     for term_name, profile in active_terms.items():
-        term_hits = [h for h in occurrences if h["term"] == term_name]
+        term_hits = hits_by_term[term_name]
         chapters_present = sorted(
             {int(h["chapter"]) for h in term_hits if isinstance(h["chapter"], int)}
         )
@@ -496,24 +461,20 @@ def derive_manuscript_term_occurrences(
             chapter_groups[ch] = group
         group["occurrences"].append(hit)
 
-    out_of_scope_total = sum(1 for h in occurrences if not h["expected_in_chapter"])
-    ambiguous_total = sum(1 for h in occurrences if h["ambiguous"])
+    summary = {
+        "term_count": len(active_terms),
+        "occurrence_count": len(occurrences),
+        "out_of_scope_count": sum(1 for h in occurrences if not h["expected_in_chapter"]),
+        "ambiguous_count": sum(1 for h in occurrences if h["ambiguous"]),
+    }
     return {
         "source_path": source_path,
         "source_sha256": source_sha256,
         "source_state": source_state,
         "scope": TERMS_SCOPE,
-        "term_count": len(active_terms),
-        "occurrence_count": len(occurrences),
-        "out_of_scope_count": out_of_scope_total,
-        "ambiguous_count": ambiguous_total,
+        **summary,
         "terms": term_summaries,
         "occurrences": occurrences,
         "chapters": list(chapter_groups.values()),
-        "summary": {
-            "term_count": len(active_terms),
-            "occurrence_count": len(occurrences),
-            "out_of_scope_count": out_of_scope_total,
-            "ambiguous_count": ambiguous_total,
-        },
+        "summary": summary,
     }

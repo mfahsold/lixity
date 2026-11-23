@@ -172,21 +172,20 @@ if (filter) {
   var restored = null;
   var query = "";
 
-  var structuralText = new WeakMap();
-  function unmark(paragraph) {
-    if (paragraph.matches(".reader-structural")) {
-      if (!structuralText.has(paragraph)) structuralText.set(paragraph, paragraph.textContent);
-      else if (paragraph.querySelector("mark")) paragraph.textContent = structuralText.get(paragraph);
-    } else renderParagraphText(paragraph, "");
-  }
+  var structuralSearch = new WeakMap();
   function literalPattern(text) {
     return window.LixityComponents.literalWhitespaceRegex(text, "i");
   }
-  function mark(paragraph, query, pattern) {
-    if (!paragraph.matches(".reader-structural")) { renderParagraphText(paragraph, query); return; }
-    var text = structuralText.get(paragraph);
-    var regex = pattern || literalPattern(query), match = regex ? regex.exec(text) : null;
-    if (!match) return;
+  function paintMatch(paragraph, query, structural, pattern) {
+    if (!structural) {
+      if ((paragraph.dataset.searchQuery || "") !== query) renderParagraphText(paragraph, query);
+      return;
+    }
+    if (structural.query === query) return;
+    structural.query = query;
+    var text = structural.text;
+    var regex = query && (pattern || literalPattern(query)), match = regex ? regex.exec(text) : null;
+    if (!match) { paragraph.textContent = text; return; }
     var index = match.index;
     var hit = document.createElement("mark"); hit.className = "text-hit"; hit.textContent = match[0];
     paragraph.replaceChildren(document.createTextNode(text.slice(0, index)), hit, document.createTextNode(text.slice(index + match[0].length)));
@@ -202,25 +201,30 @@ if (filter) {
       document.querySelectorAll("#chapters .ptext, #chapters .reader-structural")
     );
     if (query && restored === null) {
-      restored = blocks.filter(function(block) { return block.classList.contains("open"); });
+      restored = new Set(blocks.filter(function(block) { return block.classList.contains("open"); }));
     }
     blocks.forEach(function (block) {
-      var structural = block.matches(".reader-structural");
-      var paragraph = structural ? block : block.querySelector("p");
-      if (paragraph) unmark(paragraph);
-      var content = structural ? [structuralText.get(block)] : paragraphContent[block.id];
-      var match = Boolean(content) && Boolean(pattern) && pattern.test(content[0]);
+      var structural = structuralSearch.get(block);
+      if (!structural && block.matches(".reader-structural")) {
+        structural = {text: block.textContent, query: ""};
+        structuralSearch.set(block, structural);
+      }
+      var text = structural ? structural.text : paragraphContent[block.id]?.[0];
+      var match = Boolean(pattern) && text !== undefined && pattern.test(text);
       block.classList.toggle("text-miss", Boolean(query) && !match);
       var chip = paragraphChips[block.id];
       if (restored !== null && chip) {
-        toggleParagraph(chip, !query && restored.indexOf(block) >= 0);
+        var open = !query && restored.has(block);
+        if (block.classList.contains("open") !== open) toggleParagraph(chip, open);
       }
-      if (match) { hits.push(block); if (paragraph) mark(paragraph, query, pattern); }
+      var paragraph = structural ? block : block.querySelector("p");
+      if (paragraph) paintMatch(paragraph, match ? query : "", structural, pattern);
+      if (match) hits.push(block);
     });
     if (!query) restored = null;
     document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
-      var any = chapter.querySelectorAll(".ptext:not(.text-miss), .reader-structural:not(.text-miss)").length > 0;
-      chapter.classList.toggle("text-miss", Boolean(query) && !any);
+      var miss = Boolean(query) && !chapter.querySelector(".ptext:not(.text-miss), .reader-structural:not(.text-miss)");
+      chapter.classList.toggle("text-miss", miss);
     });
     document.body.classList.toggle("text-search-active", Boolean(query));
     if (prev) prev.hidden = !query;
@@ -254,9 +258,13 @@ if (filter) {
     var block = hits[cursor];
     rememberPassageLocation(block);
     var chip = paragraphChips[block.id];
-    if (chip) toggleParagraph(chip, true, true);
-    var paragraph = block.matches(".reader-structural") ? block : block.querySelector("p");
-    if (paragraph) { unmark(paragraph); mark(paragraph, query); }
+    if (chip) {
+      if (block.classList.contains("open")) revealChapter(block);
+      else toggleParagraph(chip, true, true);
+    }
+    var structural = structuralSearch.get(block);
+    var paragraph = structural ? block : block.querySelector("p");
+    if (paragraph) paintMatch(paragraph, query, structural);
     scrollAndFlash(paragraph && paragraph.querySelector("mark.text-hit") || block, {block: "center", behavior: "instant"});
   }
 
@@ -1235,6 +1243,16 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
   pending(false);
 })();
 var settingsForm = document.getElementById("settings-form");
+var locationMode = document.getElementById("set-location-mode");
+var locationNames = document.getElementById("set-location-names");
+if (locationMode && locationNames) {
+  locationMode.addEventListener("change", function() {
+    locationNames.disabled = locationMode.value !== "names";
+    document.getElementById("location-names-field").hidden = locationNames.disabled;
+    locationNames.setCustomValidity("");
+  });
+  locationNames.addEventListener("input", function() { locationNames.setCustomValidity(""); });
+}
 function thresholdValue(field) {
   if (field.type === "number") return field.valueAsNumber;
   return field.dataset.thresholdKey === "flag_min_severity" ? Number(field.value) : field.value;
@@ -1353,8 +1371,43 @@ async function submitSettings() {
   });
   strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
     ? document.getElementById("settings-order-error").textContent : "");
+  settings.querySelectorAll("[data-order-error]").forEach(function(group) {
+    var ordered = Array.from(group.querySelectorAll("[data-ascending]"));
+    ordered.slice(1).forEach(function(field, index) {
+      if (field.validity.valid && ordered[index].valueAsNumber >= field.valueAsNumber) {
+        field.setCustomValidity(group.dataset.orderError);
+      }
+    });
+  });
   if (window.LixityRegisterSettings) Object.assign(payload, window.LixityRegisterSettings.readChanges());
   if (window.LixityPublicationSettings) Object.assign(payload, window.LixityPublicationSettings.readChanges());
+  var submittedCorpusFields = new Map();
+  settings.querySelectorAll("[data-corpus-field]").forEach(function(field) {
+    if (field.valueAsNumber !== Number(field.dataset.initial)) {
+      payload[field.dataset.corpusField] = field.valueAsNumber / Number(field.dataset.scale);
+      submittedCorpusFields.set(field, field.value);
+    }
+  });
+  var dossierDrafts = settings.querySelector("[data-dossier-drafts-key]");
+  if (dossierDrafts) {
+    var draftSettings = Object.fromEntries(Array.from(dossierDrafts.querySelectorAll("[data-dossier-drafts-field]"), function(field) {
+      return [field.dataset.dossierDraftsField, field.type === "checkbox" ? field.checked : field.valueAsNumber];
+    }));
+    var initialDraftSettings = JSON.parse(dossierDrafts.dataset.initial);
+    if (Object.keys(draftSettings).some(function(key) { return draftSettings[key] !== initialDraftSettings[key]; })) {
+      payload[dossierDrafts.dataset.dossierDraftsKey] = draftSettings;
+    }
+  }
+  if (locationMode && locationMode.value) {
+    var configured = locationNames.value.split("\n").map(function(name) { return name.trim(); }).filter(Boolean);
+    var searchNames = locationMode.value === "names";
+    var limit = Number(locationNames.dataset.nameLimit);
+    var lengthInvalid = configured.some(function(name) { return Array.from(name).length > limit; });
+    locationNames.setCustomValidity(!searchNames ? "" : !configured.length ? uiLabel("settings_location_names_empty") :
+      lengthInvalid ? uiFormat("settings_location_names_limit", {limit: limit}) : "");
+    var places = searchNames ? configured : locationMode.value === "off" ? [] : locationMode.value;
+    if (JSON.stringify(places) !== locationMode.dataset.initial) payload.locations = places;
+  }
   if (!settings.checkValidity()) {
     if (Object.prototype.hasOwnProperty.call(payload, "site_publications")) {
       reportSiteExport("profiles_invalid", {error_name:"Error"});
@@ -1407,6 +1460,11 @@ async function submitSettings() {
       }
       if (Object.prototype.hasOwnProperty.call(payload, "title")) settings.dataset.titleInitial = payload.title;
       if (Object.prototype.hasOwnProperty.call(payload, "author_name")) settings.dataset.authorInitial = payload.author_name;
+      if (Object.prototype.hasOwnProperty.call(payload, "locations")) locationMode.dataset.initial = JSON.stringify(payload.locations);
+      submittedCorpusFields.forEach(function(value, field) { field.dataset.initial = value; });
+      if (dossierDrafts && Object.hasOwn(payload, dossierDrafts.dataset.dossierDraftsKey)) {
+        dossierDrafts.dataset.initial = JSON.stringify(payload[dossierDrafts.dataset.dossierDraftsKey]);
+      }
       if (payload.publication) settings.dataset.publicationInitial = JSON.stringify(payload.publication);
       if (payload.register_profiles && window.LixityRegisterSettings) window.LixityRegisterSettings.accepted({
         register_profiles: payload.register_profiles, chapter_registers: payload.chapter_registers

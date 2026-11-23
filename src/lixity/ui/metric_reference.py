@@ -298,26 +298,25 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 """
 
 
-def _placeholders(language: str) -> dict[str, dict[str, str | int]]:
-    defaults = CorpusConfig()
+def _placeholders(language: str, config: CorpusConfig) -> dict[str, dict[str, str | int]]:
     return {
         "sentence_bins": {
-            "short": defaults.short_sentence_max,
-            "medium_start": defaults.short_sentence_max + 1,
-            "medium": defaults.medium_sentence_max,
-            "long_start": defaults.medium_sentence_max + 1,
-            "long": defaults.long_sentence_max,
+            "short": config.short_sentence_max,
+            "medium_start": config.short_sentence_max + 1,
+            "medium": config.medium_sentence_max,
+            "long_start": config.medium_sentence_max + 1,
+            "long": config.long_sentence_max,
         },
         "pac_sticky_rule": {
-            "min_words": defaults.sticky_min_words,
-            "min_pct": pct(defaults.sticky_glue_pct, language, 0),
+            "min_words": config.sticky_min_words,
+            "min_pct": pct(config.sticky_glue_pct, language, 0, precise=config.sticky_glue_pct % 1 != 0),
         },
-        "dlg_short_turns": {"max_words": defaults.short_turn_max_words},
-        "help_dlg_short_turns": {"max_words": defaults.short_turn_max_words},
-        "dlg_long_turns": {"min_words": defaults.long_turn_min_words},
-        "help_dlg_long_turns": {"min_words": defaults.long_turn_min_words},
-        "help_pacing_hook": {"max_words": defaults.hook_short_sentence},
-        "help_pacing_monotony": {"min_run": defaults.monotony_min_run},
+        "dlg_short_turns": {"max_words": config.short_turn_max_words},
+        "help_dlg_short_turns": {"max_words": config.short_turn_max_words},
+        "dlg_long_turns": {"min_words": config.long_turn_min_words},
+        "help_dlg_long_turns": {"min_words": config.long_turn_min_words},
+        "help_pacing_hook": {"max_words": config.hook_short_sentence},
+        "help_pacing_monotony": {"min_run": config.monotony_min_run},
         "style_support": {"min_chapters": DEFAULT_MIN_CHAPTERS},
         "help_heatmap": {"min_words": MIN_COMPARABLE_WORDS, "min_sentences": MIN_COMPARABLE_SENTENCES},
         "scene_support": {"min_tokens": MIN_TOKENS_LD},
@@ -345,10 +344,9 @@ def _metric_section(section: Section, labels: Mapping[str, str]) -> str:
     )
 
 
-@lru_cache(maxsize=len(_NOTES))
-def _render(language: str) -> str:
+def _render(language: str, config: CorpusConfig | None = None) -> str:
     raw_labels = {**LANGUAGE_PROFILES[language].labels, **_NOTES[language]}
-    for key, fields in _placeholders(language).items():
+    for key, fields in _placeholders(language, config or CorpusConfig()).items():
         raw_labels[key] = raw_labels[key].format(**fields)
     labels = {key: escape(text) for key, text in raw_labels.items()}
     title = labels["title"]
@@ -374,7 +372,7 @@ def _render(language: str) -> str:
 <main>
 <header>
 <h1>{title}</h1>
-<p>{labels["defaults"]}</p>
+<p>{labels["metric_reference_project_limits" if config is not None else "defaults"]}</p>
 <nav aria-label="{labels['sections']}">
 <ul>
 {navigation}
@@ -389,7 +387,13 @@ def _render(language: str) -> str:
 """
 
 
-def metric_reference_document(language: str) -> str:
+@lru_cache(maxsize=len(_NOTES))
+def _render_defaults(language: str) -> str:
+    return _render(language)
+
+
+def metric_reference_document(language: str, config: CorpusConfig | None = None) -> str:
     """Render the metric reference in a supported UI locale, defaulting to English."""
     locale = language.strip().lower()
-    return _render(locale if locale in _NOTES else "en")
+    locale = locale if locale in _NOTES else "en"
+    return _render_defaults(locale) if config is None else _render(locale, config)

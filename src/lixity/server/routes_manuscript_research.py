@@ -9,7 +9,6 @@ from typing import Any
 from ..research import api as research_api
 from ..research.manuscript import ManuscriptLinkExistsError
 from ..research.repository import ResearchConflictError, ResearchError
-from .middleware import load_selected_project_config
 from .pdf_context import manuscript_pdf_token
 from .routes_research import ResearchRoutesMixin
 
@@ -29,11 +28,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                                        language=self.language, title=self.title, thresholds=self.thresholds)
         if token != current:
             raise ResearchConflictError("Selected manuscript or settings changed; refresh before continuing")
-        settings = load_selected_project_config(
-            source,
-            strict_warnings=True,
-        )
-        return root, source, settings
+        return root, source, self._research_manuscript_settings(root)
 
     def _handle_manuscript_claim_link(self, payload: dict[str, Any]) -> None:
         allowed = {"project_id", "research_token", "project_token", "expected_snapshot",
@@ -100,7 +95,8 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
     def _handle_manuscript_terms_review(self) -> None:
         query = self._parse_query(
             required=("research_token", "project_token"),
-            optional=("term",),
+            optional=("term", "dossier_id"),
+            non_empty=("term", "dossier_id"),
             error_message="Choose one selected manuscript and research context",
         )
         if query is None:
@@ -111,7 +107,8 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
             try:
                 root, source, settings = self._manuscript_context(query["project_token"])
                 result = research_api.review_manuscript_terms(
-                    root, source, term=query.get("term"), language=self.language, project_config=settings,
+                    root, source, term=query.get("term"), dossier_id=query.get("dossier_id"),
+                    language=self.language, project_config=settings,
                 )
                 self._ok(result)
             except ResearchConflictError as exc:

@@ -14,6 +14,7 @@ from ..config import read_explicit_project_config
 from ..io import FileUtils
 from ..project_structure import MAX_CONFIG_BYTES
 from . import editorial
+from .dossier_analysis import dossier_display_body
 from .geography import summarize_geography
 from .images import image_descriptions, resolve_dossier_images, resolve_dossier_media
 from .manuscript import dossier_manuscript_evidence
@@ -151,14 +152,15 @@ def _list_dossiers(
             ),
             "created_at": record.created_at,
             "created_by": record.created_by,
-            "excerpt": image_descriptions(record.body)[:300].strip(),
-            "sections": list(extract_sections(record.body).keys()),
+            "excerpt": image_descriptions(display_body)[:300].strip(),
+            "sections": list(extract_sections(display_body).keys()),
             "review_needed": any(
                 review["status"] == "review_needed" for review in dossier_reviews.get(record.id, [])
             ),
         }
         for record in snapshot.records.values()
         if isinstance(record, Dossier) and record.id not in withdrawn_or_purged
+        for display_body in (dossier_display_body(snapshot, record),)
     ]
 
     dossiers_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
@@ -569,6 +571,7 @@ def _get_dossier(
             )
         return res
     if summary:
+        display_body = dossier_display_body(snapshot, dossier)
         reader = EvidenceCitationReader(repository, snapshot)
         resolved_citations = (
             [reader.read(ref) for ref in dossier.evidence_refs] if include_citations else []
@@ -592,7 +595,7 @@ def _get_dossier(
             "citation_count": len(dossier.evidence_refs),
             "geography_feature_count": len(dossier.geography.features) if dossier.geography else 0,
             "geography_summary": summarize_geography(dossier.geography),
-            "excerpt": dossier.body[:500] + ("..." if len(dossier.body) > 500 else ""),
+            "excerpt": display_body[:500] + ("..." if len(display_body) > 500 else ""),
             "decision_reviews": decision_reviews,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
             "source_updates": source_updates(resolved_citations) if include_citations else [],
@@ -680,6 +683,9 @@ def _get_dossier(
         )
     if include_character_binding and revision is None and _generated_character_name(snapshot, dossier.id):
         res["character_analysis_available"] = True
+    display_body = dossier_display_body(snapshot, dossier)
+    if display_body != dossier.body:
+        res["display_body"] = display_body
     return res
 
 
@@ -704,14 +710,14 @@ def _existing_dossier_reference(snapshot: Snapshot, record: Dossier) -> dict[str
             "project_id": snapshot.project.id, "snapshot": snapshot.digest}
 
 
-def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[dict[str, Any], str] | None:
-    """Read the current record reference and original character label from one snapshot."""
+def generated_character_binding(project: str | Path, dossier_id: str) -> tuple[dict[str, Any], str, Dossier] | None:
+    """Read the current dossier, reference and original character label from one snapshot."""
     snapshot = Repository(project).snapshot(kinds=frozenset({"dossier", "tombstone"}))
     dossier = snapshot.records.get(dossier_id)
     if not isinstance(dossier, Dossier):
         return None
     name = _generated_character_name(snapshot, dossier_id)
-    return (_existing_dossier_reference(snapshot, dossier), name) if name is not None else None
+    return (_existing_dossier_reference(snapshot, dossier), name, dossier) if name is not None else None
 
 
 DRAFT_CONFIRMATION_ERROR = "A draft ID and valid preview digest are required to confirm a manuscript draft"

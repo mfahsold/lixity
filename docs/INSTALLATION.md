@@ -790,6 +790,11 @@ Lixity. From a source checkout, `scripts/lixity-start.sh`,
 `scripts/lixity-start.ps1` and `make serve` / `make stop` delegate to this shared
 controller; they are compatibility entrypoints, not separate lifecycle engines.
 
+On Linux, `scripts/install-desktop-linux.sh` adds a per-user application menu
+entry from the checkout. The launcher calls `lixity service start --open` to
+open the managed instance on its selected port. Run the script with
+`--uninstall` to remove the menu entry and icon.
+
 ### Optional startup at login
 
 <details>

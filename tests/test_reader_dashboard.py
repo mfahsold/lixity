@@ -59,7 +59,7 @@ def test_implicit_chapter_keeps_public_chapter_target():
            )
     assert '<section class="chapter reader-preface" id="ch-1"' in page
     assert 'id="reader-preface"' in page
-    assert '<option value="ch-1">' in page
+    assert '<option value="ch-1" data-chapter-number="1">' in page
     assert page.count('id="p-0"') == 1
 
 
@@ -80,7 +80,8 @@ def test_opening_prose_has_its_own_reader_chapter_and_picker_target():
     main = page.split('<main id="chapters"', 1)[1].split('</main>', 1)[0]
     assert main.index('id="ch-1"') < main.index('id="p-0"') < main.index('id="ch-2"') < main.index('id="p-1"')
     picker = page.split('id="reader-chapter"', 1)[1].split('</select>', 1)[0]
-    assert '<option value="ch-1">Manuscript</option>' in picker
+    assert '<option value="ch-1" data-chapter-number="1">Manuscript</option>' in picker
+    assert '<option value="ch-2" data-chapter-number="2">2. Departure</option>' in picker
 
 
 def test_chapter_picker_keeps_empty_chapters_in_source_order():
@@ -119,9 +120,9 @@ def test_quote_only_measured_chapter_has_a_canonical_structural_anchor():
     assert main.count('id="p-0"') == 1 and 'id="p-1"' not in main
     assert 'href="#ch-1"' in page
     picker = page.split('id="reader-chapter"', 1)[1].split('</select>', 1)[0]
-    assert '<option value="ch-1">1. Same</option>' in picker
+    assert '<option value="ch-1" data-chapter-number="1">1. Same</option>' in picker
     assert '<option value="source-5">Empty</option>' in picker
-    assert '<option value="ch-2">2. Same</option>' in picker
+    assert '<option value="ch-2" data-chapter-number="2">2. Same</option>' in picker
 
 
 def test_reader_dashboard_unifies_inline_evidence_in_measure_dropdown():

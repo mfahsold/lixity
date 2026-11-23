@@ -55,7 +55,7 @@ async function startNativeServer(source, artifactDir, {
 
   try {
     const fixture = await deadline(ready, startupTimeoutMs, () => `Synthetic server startup timed out: ${stderr}`);
-    return {fixture, close};
+    return {fixture, close, stderr: () => stderr};
   } catch (error) {
     await close();
     throw error;

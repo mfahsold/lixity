@@ -1366,3 +1366,26 @@ Literature context for dramaturgical & computational narratology heuristics:
 - Gurung & Lapata — Chiron scene segmentation and implicit narrative shifts.
 - GermAnProse (LaTeCH-CLfL 2026) & CHR (2024/2025) — computational narratology,
   speech representation, and indirect speech / *Konjunktiv I* cues.
+
+## Manuscript evidence in dossier suggestions
+
+The preview keeps the source and the reason for selection separately.
+Character candidates come from configured names or capitalized names that
+recur in separate paragraphs of a chapter. Place candidates come from a
+configured list or a repeated capitalized expression near a spatial cue, with
+at least one directional cue. The inferred place preview gives that
+directional passage separately from the first counted name match. Scene
+suggestions use explicit separators or the whole chapter and present the
+measured opening and closing sentence. Implicit shift cues stay in scene
+analysis.
+
+Counts describe the matching rule. A name can refer to different people or
+places, while a pronoun or description can refer to the same one. Literary
+entity annotation and coreference are separate tasks. The current dossier
+generator records the name evidence so authors can resolve such cases in
+context. The cited datasets cover English literary text.
+[Literary entities](https://aclanthology.org/N19-1220/) ·
+[Coreference in English literature](https://aclanthology.org/2020.lrec-1.6/)
+
+For examples and adjustable inference and report settings, see the
+[manuscript dossier workflow](research/USAGE.md#manuscript-driven-dossier-drafts).

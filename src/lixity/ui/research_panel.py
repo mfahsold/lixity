@@ -272,6 +272,7 @@ def render_research_panel(
             [
                 (label(labels, "research_tpl_character"), label(labels, "research_tpl_character_tag"), label(labels, "research_tpl_character_body")),
                 (label(labels, "research_tpl_place"), label(labels, "research_tpl_place_tag"), label(labels, "research_tpl_place_body")),
+                (label(labels, "research_tpl_object"), label(labels, "research_tpl_object_tag"), label(labels, "research_tpl_object_body")),
                 (label(labels, "research_tpl_scene"), label(labels, "research_tpl_scene_tag"), label(labels, "research_tpl_scene_body")),
                 (label(labels, "research_tpl_fact"), label(labels, "research_tpl_fact_tag"), label(labels, "research_tpl_fact_body")),
             ],
@@ -339,7 +340,12 @@ def render_research_panel(
     parts.append(
         f'<summary>{L("research_dossier_draft_heading")}</summary><div class="ctl-group research-composer-body">'
     )
-    parts.append(f'<p class="ctl-note">{L("research_dossier_draft_help")}</p>')
+    draft_guide = docs_url("guides/research-pdf.html#dossiers-and-decisions")
+    parts.append(
+        f'<p class="ctl-note">{L("research_dossier_draft_help")} '
+        f'<a href="{draft_guide}" target="_blank" rel="noopener">'
+        f'{L("research_dossier_draft_guide")}</a></p>'
+    )
     parts.append(f'<div class="chip-row" role="group" aria-label="{L("research_dossier_draft_heading")}">')
     parts.append(
         f'<button type="button" class="ctl" aria-pressed="false" id="r-manuscript-dossier-btn">{L("research_dossier_draft_load")}</button>'
@@ -774,11 +780,18 @@ def render_research_panel(
     parts.append('<div class="row mb-2">')
     parts.append(
         form_field(
-            "r-term-scoped",
-            "manuscript_terms_scoped",
-            f'<input class="ctl" id="r-term-scoped" placeholder="{L("manuscript_terms_scoped")}"/>',
+            "r-term-dossier",
+            "manuscript_terms_dossier",
+            select_control(
+                "r-term-dossier", f'<option value="">{L("research_reference_none")}</option>',
+                attributes={"disabled": "", "aria-describedby": "r-term-dossier-help"},
+            )
+            + f'<p class="ctl-note m-0" id="r-term-dossier-help">{L("manuscript_terms_dossier_help")}</p>'
+            + status_banner("r-term-dossier-status"),
         )
     )
+    parts.append("</div>")
+    parts.append('<div class="row mb-2">')
     parts.append(
         checkbox_field(
             '<input type="checkbox" id="r-term-case"/>', L("manuscript_terms_case_sensitive")
@@ -796,7 +809,12 @@ def render_research_panel(
     )
     parts.append("</div>")
     parts.append(
-        f'<div id="r-term-chapter-chips" class="row mb-2 r-term-chapter-chips"><span class="ctl-note">{L("manuscript_terms_chapters_hint")}</span></div>'
+        '<section class="ctl-group" aria-labelledby="r-term-variants-heading">'
+        f'<h4 id="r-term-variants-heading" class="form-label m-0">{L("manuscript_terms_scoped")}</h4>'
+        f'<p class="ctl-note">{L("manuscript_terms_scoped_help")}</p>'
+        '<div class="ctl-group" id="r-term-variants"></div><div class="row">'
+        f'<button type="button" class="ctl ctl-sm" id="r-term-add-variant">{L("manuscript_terms_variant_add")}</button>'
+        '</div></section>'
     )
     parts.append('<div class="row">')
     parts.append(
@@ -806,6 +824,7 @@ def render_research_panel(
         f'<button type="button" class="ctl" id="r-term-delete-btn">{L("manuscript_terms_delete")}</button>'
     )
     parts.append("</div>")
+    parts.append(status_banner("r-term-status"))
     parts.append("</div></details>")
     parts.append(
         f'<button type="button" class="ctl ctl-sm mb-2" id="r-terms-refresh" '

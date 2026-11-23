@@ -110,6 +110,8 @@ from .settings import settings_form
 from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
+DIAGRAM_LIBRARY_FILE = "vendor/mermaid-tiny-12.3.0.min.js"
+DIAGRAM_LIBRARY_ROUTE = "/api/" + DIAGRAM_LIBRARY_FILE
 _PASSAGE_NAVIGATION_SCRIPT = "analysis-passage-navigation.js"
 _DOSSIER_CHARACTER_SCRIPT = "research-dossier-character.js"
 _DOSSIER_CHARACTER_STYLE = "research-dossier-character.css"
@@ -450,9 +452,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     engine_name = options.engine_name
     controls = options.controls
     read_only = options.read_only
-    guide_base = metric_reference_base(language_key, local=controls and not read_only)
-    labels = {**(options.labels or {}), "_metric_reference_base": guide_base}
     api_base = options.api_base
+    local_reference = controls and not read_only
+    guide_base = metric_reference_base(language_key, local=local_reference)
+    if local_reference:
+        guide_base = api_base.removesuffix("/api") + guide_base
+    labels = {**(options.labels or {}), "_metric_reference_base": guide_base}
     manuscript_name = options.manuscript_name
     current_language = options.current_language
     language_options = options.language_options
@@ -892,6 +897,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 register_settings=register_settings,
                 site_publications=site_publications,
                 site_publication_context_token=site_publication_context_token,
+                location_names=options.location_names,
+                dossier_drafts=options.dossier_drafts,
+                corpus_config=options.corpus_config,
                 language_key=language_key,
             )
         )
@@ -2048,13 +2056,20 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         scripts += ("revision-measurements.js",)
     if not controls and (motifs_panel or (paragraph_evidence and (has_pacing or showing))):
         scripts += (_PASSAGE_NAVIGATION_SCRIPT,)
+    diagram_library = ""
+    if controls:
+        if options.external_diagram_library:
+            diagram_library = ('<script type="application/json" id="research-diagram-library" '
+                               f'data-src="{DIAGRAM_LIBRARY_ROUTE}"></script>')
+        else:
+            diagram_library = ('<script type="application/json" id="research-diagram-library">'
+                               + _script_json(_bundle((DIAGRAM_LIBRARY_FILE,))) + "</script>")
     parts.extend(
         [
             "</div>",
             ("<footer></footer>" if controls else
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
-            ('<script type="application/json" id="research-diagram-library">'
-             + _script_json(_bundle(("vendor/mermaid-tiny-12.3.0.min.js",))) + "</script>" if controls else ""),
+            diagram_library,
             f"<script>{_bundle(scripts + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",

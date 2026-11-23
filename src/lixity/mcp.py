@@ -1,4 +1,4 @@
-"""Minimal MCP server for Lixity (read-only, stdlib only).
+"""Read-only MCP server for Lixity.
 
 Exposes analysis and service status over JSON-RPC 2.0 on stdio following the
 Model Context Protocol (``tools/list`` / ``tools/call``, ``prompts/list`` / ``prompts/get``).
@@ -15,15 +15,22 @@ from typing import Any
 
 from . import __version__
 from . import api as _api
+from .dossier_draft_settings import DOSSIER_DRAFT_SETTINGS_KEY, DossierInferenceSettings
 from .research.manuscript_drafts import DRAFT_KIND_CHOICES, DRAFT_KINDS
-from .status import DEFAULT_Z_MILD, DEFAULT_Z_STRONG, FLAG_MIN_SEVERITY
+from .status import (
+    ABOUT_SECTIONS,
+    DEFAULT_Z_MILD,
+    DEFAULT_Z_STRONG,
+    FLAG_MIN_SEVERITY,
+    LANGUAGE_CHOICES,
+)
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "lixity"
 
 _ABOUT_DESCRIPTION = (
     "Installed Lixity metadata: commands, configuration, languages, "
-    "features and heuristic thresholds. No manuscript input needed."
+    "features and heuristic thresholds. Select a section to return it with version metadata."
 )
 _ANALYZE_DESCRIPTION = (
     "Corpus metrics for Markdown prose: words, sentences, readability, "
@@ -68,12 +75,30 @@ _MARKERS_DESCRIPTION = (
 _FINGERPRINT_DESCRIPTION = (
     "Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference."
 )
+_DOSSIER_DRAFT_PROPERTIES = {
+    "text": {"type": "string", "description": "Markdown manuscript text."},
+    "language": {
+        "type": "string", "enum": list(LANGUAGE_CHOICES),
+        "description": "Analysis language code (default en). Use auto to detect it from the supplied text.",
+        "default": "en",
+    },
+    "kind": {
+        "type": "string", "enum": list(DRAFT_KINDS),
+        "description": f"Draft kind filter ({DRAFT_KIND_CHOICES}).",
+        "default": "all",
+    },
+    DOSSIER_DRAFT_SETTINGS_KEY: DossierInferenceSettings.model_json_schema(),
+}
 
 _TOOLS = (
     {
         "name": "lixity_about",
         "description": _ABOUT_DESCRIPTION,
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {"section": {"type": "string", "enum": list(ABOUT_SECTIONS)}},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "lixity_service_status",
@@ -311,24 +336,12 @@ _TOOLS = (
     {
         "name": "lixity_manuscript_dossier_drafts",
         "description": (
-            "Read-only extraction of character, scene and place dossier drafts from manuscript text."
+            "Read-only extraction of character, scene and place dossier drafts from supplied text. "
+            "Uses only explicit arguments. For project-aware previews, use lixity research dossier-drafts."
         ),
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "text": {"type": "string", "description": "Markdown manuscript text."},
-                "language": {
-                    "type": "string",
-                    "description": "Analysis language code (default en).",
-                    "default": "en",
-                },
-                "kind": {
-                    "type": "string",
-                    "enum": list(DRAFT_KINDS),
-                    "description": f"Draft kind filter ({DRAFT_KIND_CHOICES}).",
-                    "default": "all",
-                },
-            },
+            "properties": _DOSSIER_DRAFT_PROPERTIES,
             "required": ["text"],
             "additionalProperties": False,
         },
@@ -500,7 +513,10 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
     payload: Any
     try:
         if name == "lixity_about":
-            payload = _api.about()
+            if (not isinstance(arguments, dict) or arguments.keys() - {"section"}
+                    or ("section" in arguments and not isinstance(arguments["section"], str))):
+                raise ValueError("lixity_about accepts one optional section string")
+            payload = _api.about(section=arguments.get("section"))
         elif name == "lixity_service_status":
             from .service import service_status
 
@@ -632,32 +648,24 @@ def _call_tool(name: str, arguments: Any) -> dict[str, Any]:
             )
         elif name == "lixity_manuscript_dossier_drafts":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "lixity_manuscript_dossier_drafts requires a text string.",
-                        }
-                    ],
-                    "isError": True,
-                }
+                raise ValueError("lixity_manuscript_dossier_drafts requires a text string")
+            if arguments.keys() - _DOSSIER_DRAFT_PROPERTIES.keys():
+                raise ValueError("Use only the listed text tool arguments. Use the local CLI for project configuration.")
             from .research.manuscript_drafts import extract_manuscript_dossier_drafts
 
-            kind_arg = str(arguments.get("kind") or "all")
+            kind_arg = arguments.get("kind", "all")
             if kind_arg not in DRAFT_KINDS:
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": f"lixity_manuscript_dossier_drafts kind must be {DRAFT_KIND_CHOICES}.",
-                        }
-                    ],
-                    "isError": True,
-                }
+                raise ValueError(f"lixity_manuscript_dossier_drafts kind must be {DRAFT_KIND_CHOICES}")
+            language = arguments.get("language", "en")
+            if not isinstance(language, str) or (language := language.strip().lower()) not in LANGUAGE_CHOICES:
+                raise ValueError("Choose a supported language: " + ", ".join(LANGUAGE_CHOICES))
             payload = extract_manuscript_dossier_drafts(
                 arguments["text"],
-                language=str(arguments.get("language") or "en"),
+                language=language,
                 kind=kind_arg,
+                settings={DOSSIER_DRAFT_SETTINGS_KEY: DossierInferenceSettings.model_validate(
+                    arguments.get(DOSSIER_DRAFT_SETTINGS_KEY, {})
+                ).model_dump(exclude_unset=True)},
             )
         elif name == "lixity_outlier_matrix":
             if not isinstance(arguments, dict) or not isinstance(arguments.get("text"), str):

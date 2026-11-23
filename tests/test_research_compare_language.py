@@ -32,6 +32,16 @@ def compare(comparison, *options):
     return result
 
 
+def test_compare_accepts_a_positional_external_manuscript(comparison, tmp_path):
+    project, source_id, _ = comparison
+    external = tmp_path / "external.md"
+    external.write_text(TEXT, encoding="utf-8")
+    base = ("compare", "--project", str(project), "--source-id", source_id)
+    flag = capture_research(*base, "--manuscript", str(external))
+    positional = capture_research(*base, str(external))
+    assert flag == positional and positional[0] == 0
+
+
 def test_compare_cli_inherits_selected_root_language_without_changing_python_default(comparison):
     project, source_id, manuscript = comparison
     (project / "lixity.toml").write_text('language = "de"\n', encoding="utf-8")

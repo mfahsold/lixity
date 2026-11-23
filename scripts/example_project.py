@@ -423,6 +423,7 @@ def save_example_character_dossier(project: Path, evidence_id: str) -> tuple[str
     """Prepare the same reviewed Warehouse 4 dossier for the video and PDF."""
     from lixity.research import api
     from lixity.research.character_evidence import character_dossier_text
+    from lixity.research.dossier_analysis import prepare_character_analysis
     from lixity.research.dossiers import read_dossier_manuscript
 
     manuscript = project / "harbour-manuscript.md"
@@ -433,12 +434,13 @@ def save_example_character_dossier(project: Path, evidence_id: str) -> tuple[str
         expected_project_id=drafts["project_id"],
     )
     text, source_sha256, settings = read_dossier_manuscript(manuscript, project)
-    supplement = character_dossier_text(text, source_sha256, character="Mara", language="en", settings=settings)
+    analysis = character_dossier_text(text, source_sha256, character="Mara", language="en", settings=settings)
+    body = prepare_character_analysis(mara["body"], analysis["body"], "en")
     identifier = dossier["dossier_id"]
     revision = api.revise_record(
         project, "dossier", identifier, expected_revision=1, change_kind="correction",
         reason="Review the character passages and retain the related witness statement.",
-        changes={"body": supplement["body"], "evidence_ids": [evidence_id]},
+        changes={"body": body, "evidence_ids": [evidence_id]},
     )
     return identifier, int(revision["record"]["revision"])
 

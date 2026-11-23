@@ -93,23 +93,30 @@ def _non_negative(value: str) -> int:
     return number
 
 
-def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
+def _add_manuscript_argument(command: argparse.ArgumentParser, *, allow_external: bool = False) -> None:
     """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
     command.epilog = "Omit PATH only when the selected project's config sets manuscript."
     selector = command.add_mutually_exclusive_group()
-    selector.add_argument(
+    path = selector.add_argument(
         "manuscript",
         nargs="?",
         metavar="PATH",
         default=argparse.SUPPRESS,
-        help="Manuscript inside the project; defaults to its configured manuscript",
+        help=("Manuscript path (defaults to the project's configured manuscript)" if allow_external else
+              "Manuscript inside the project (defaults to its configured manuscript)"),
     )
-    selector.add_argument(
+    flag = selector.add_argument(
         "--manuscript",
         dest="manuscript",
         metavar="PATH",
         help="Same manuscript path as positional PATH",
     )
+    command.set_defaults(cli_manuscript_input={
+        "positional": path.metavar,
+        "flag": flag.option_strings[0],
+        "configuration_key": path.dest,
+        "allows_external_path": allow_external,
+    })
     orig_error = command.error
 
     def _manuscript_error(message: str) -> NoReturn:
@@ -491,12 +498,16 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
     "dossier-drafts": (
         "Preview character, scene and place proposals using the selected manuscript\n"
-        "and project settings. This command reads without creating dossier revisions.",
+        "and project settings. This command reads without creating dossier revisions.\n"
+        "Set [dossier_drafts] in the selected project's lixity.toml to tune inferred\n"
+        "character and place limits. A limit of zero disables inference for that kind.\n"
+        "See configuration.dossier_drafts_schema in lixity about --json for options.",
         ("dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all",),
     ),
     "dossier-from-manuscript": (
         "Create a saved dossier from a manuscript draft. When using --draft-id,\n"
-        "pass the preview_sha256 from the proposal you reviewed.",
+        "pass the preview_sha256 from the proposal you reviewed. Use the same\n"
+        "manuscript, --project, language and project settings as for the preview.",
         (
             "dossier-from-manuscript --project ./novel --manuscript ./manuscript.md "
             "--draft-id DRAFT_ID --preview-sha256 PREVIEW_SHA256",
@@ -769,6 +780,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         "Use --project PATH to select an initialized archive. It may be omitted only when the\n"
         "current directory itself is a valid initialized research project. init/migrate-storage\n"
         "require --project; restore commands use --to; schema needs no project.\n"
+        "With an explicit project, dossier-drafts can preview before archive initialization.\n"
         "Capture requires --allow-retention, including dry runs. It grants local retention only.\n"
         "Help and research terminal output are English; --language selects the content language.\n\n"
         "Use lixity research COMMAND --help for write guards, examples and exact output formats.\n"
@@ -1385,10 +1397,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
         elif name == "compare":
             command.add_argument("--source-id", required=True, help="Source UUID")
-            command.add_argument(
-                "--manuscript",
-                help="Path to manuscript file (default: selected project config manuscript)",
-            )
+            _add_manuscript_argument(command, allow_external=True)
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument(
                 "--language",
@@ -1578,7 +1587,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             )
         elif name in ("dossier-drafts", "dossier-from-manuscript"):
             creating = name == "dossier-from-manuscript"
-            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            _add_manuscript_argument(command, allow_external=True)
             if creating:
                 command.add_argument("--draft-id", help="Specific draft ID from dossier-drafts")
                 command.add_argument("--preview-sha256", help="Confirm the preview digest returned for the selected draft")
@@ -1589,7 +1598,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 help=("Fallback draft kind if --draft-id is omitted (default: character)"
                       if creating else "Draft kind filter (default: all)"),
             )
-            command.add_argument("--language", help="Analysis language override")
+            command.add_argument(
+                "--language", help="Override the selected project's analysis language (en if unset, or auto to detect)"
+            )
             if creating:
                 command.add_argument(
                     "--actor",
@@ -1946,6 +1957,7 @@ def command_metadata() -> list[dict[str, Any]]:
             "json_flag": "--json" if "--json" in command._option_string_actions else None,
             "aliases": list(command.get_default("cli_aliases")),
             "group": command.get_default("cli_group"),
+            **({"manuscript_input": selector} if (selector := command.get_default("cli_manuscript_input")) else {}),
         }
         for name, command in commands.choices.items()
         if name == command.get_default("research_command")
@@ -2585,7 +2597,7 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
 
 
 def _resolve_manuscript_input(args: argparse.Namespace) -> None:
-    """Default manuscript input only after validating the selected archive."""
+    """Read an omitted manuscript selection only from the explicit project root."""
     if args.research_command == "terms" and (
         getattr(args, "set_term", None) is not None
         or getattr(args, "delete_term", None) is not None
@@ -2601,6 +2613,8 @@ def _resolve_manuscript_input(args: argparse.Namespace) -> None:
             "reconcile-manuscript",
             "compare",
             "terms",
+            "dossier-drafts",
+            "dossier-from-manuscript",
         )
         or getattr(args, "manuscript", None) is not None
     ):
@@ -2609,7 +2623,8 @@ def _resolve_manuscript_input(args: argparse.Namespace) -> None:
     from .repository import Repository, ResearchError
 
     repository = Repository(args.project)
-    repository.snapshot()
+    if args.research_command != "dossier-drafts" or repository.data.is_dir():
+        repository.snapshot()
     args.manuscript = configured_manuscript(repository.root)
     if args.manuscript is None:
         raise ResearchError(

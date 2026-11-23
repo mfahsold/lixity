@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from ..config import _load_toml
 from ..io import FileUtils
@@ -17,6 +17,7 @@ from ..style_profile import ParagraphProfile, ParagraphText
 from .models import (
     Claim,
     Dossier,
+    Identifier,
     ManuscriptAnchor,
     ManuscriptClaimLink,
     Reference,
@@ -398,12 +399,15 @@ def manuscript_terms_data(
     terms: object = None,
     source_state: str = "available",
     selected_term: str | None = None,
+    selected_dossier: str | None = None,
 ) -> dict[str, Any]:
     """Derive source-bound term and prop occurrences from displayed paragraphs (read-only)."""
     from ..terms import derive_manuscript_term_occurrences, parse_terms
 
     try:
         parsed_terms = parse_terms(terms)
+        if selected_dossier is not None:
+            TypeAdapter(Identifier).validate_python(selected_dossier)
         derived = derive_manuscript_term_occurrences(
             paragraphs,
             parsed_terms,
@@ -411,6 +415,7 @@ def manuscript_terms_data(
             source_sha256=source_sha256,
             source_state=source_state,
             selected_term=selected_term,
+            selected_dossier=selected_dossier,
         )
     except (ValidationError, ValueError) as exc:
         raise ResearchError(f"Invalid term configuration: {exc}") from exc
@@ -419,6 +424,7 @@ def manuscript_terms_data(
         "project_id": snapshot.project.id,
         "snapshot": snapshot.digest,
         "archive_schema_version": snapshot.manifest.schema_version,
+        **({"dossier_id": selected_dossier} if selected_dossier is not None else {}),
         **derived,
     }
 
@@ -428,6 +434,7 @@ def review_manuscript_terms(
     manuscript: str | Path,
     *,
     term: str | None = None,
+    dossier_id: str | None = None,
     expected_project_id: str | None = None,
     language: str | None = None,
     project_config: Mapping[str, Any] | None = None,
@@ -464,6 +471,7 @@ def review_manuscript_terms(
         terms=effective_config.get("terms"),
         source_state=state,
         selected_term=term,
+        selected_dossier=dossier_id,
     )
 
 

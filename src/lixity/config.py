@@ -27,8 +27,14 @@ if sys.version_info >= (3, 11):
 else:  # pragma: no cover - exercised on Python 3.10 in CI
     import tomli as tomllib
 
+from .dossier_draft_settings import (
+    AUTOMATIC_LOCATION_NAMES,
+    DOSSIER_DRAFT_SETTINGS_KEY,
+    parse_location_names,
+    resolve_dossier_draft_settings,
+)
 from .io import FileUtils
-from .models import CorpusConfig
+from .models import CORPUS_DETAIL_KEYS, CorpusConfig
 from .publication import (
     PublicationSettings,
     publication_configuration_schema,
@@ -41,8 +47,16 @@ if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "characters", "locations", "manuscript", "audio")
-PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "register_profiles", "chapter_registers", "audio")
+PROJECT_ONLY_KEYS = (
+    "author_name", "draft_notice", "publication", "site_publications", "dossier_collections",
+    "terms", "register_profiles", "chapter_registers", "characters", "locations",
+    DOSSIER_DRAFT_SETTINGS_KEY, "manuscript", "audio",
+)
+PERSISTED_SETTINGS_KEYS = (
+    "title", "author_name", "publication", "site_publications", "dossier_collections",
+    "terms", "locations", DOSSIER_DRAFT_SETTINGS_KEY, "register_profiles", "chapter_registers", "audio",
+    *CORPUS_DETAIL_KEYS,
+)
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -53,6 +67,7 @@ TOOL_KEYS = frozenset(
         "publication",
         "site_publications",
         "dossier_collections",
+        DOSSIER_DRAFT_SETTINGS_KEY,
         "terms",
         "audio",
         "z_mild",
@@ -218,14 +233,23 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
         else:
             candidate(f"{key} = {encoded}" + newline + content)
     else:
-        scalar = (r'(?:"(?:[^"\\\r\n]|\\.)*"|\'[^\'\r\n]*\'|true|false|'
+        quoted = r'(?:"(?:[^"\\\r\n]|\\.)*"|\'[^\'\r\n]*\')'
+        scalar = (rf'(?:{quoted}|true|false|'
                   r'[+-]?(?:[\d_]+(?:\.[\d_]+)?(?:[eE][+-]?[\d_]+)?|inf|nan))')
         value_pattern = r"\{[^\r\n]*\}" if isinstance(value, dict) else scalar
+        is_list = isinstance(settings[key], list)
+        if is_list:
+            value_pattern = rf"\[(?:{scalar}|#[^\r\n]*|[ \t\r\n,])*\]"
         assignments = re.compile(
-            rf"^([ \t]*(?:{key}|\"{key}\"|'{key}')[ \t]*=[ \t]*){value_pattern}"
+            rf"^([ \t]*(?:{key}|\"{key}\"|'{key}')[ \t]*=[ \t]*)(?P<value>{value_pattern})"
             r"([ \t]*(?:#[^\r\n]*)?)(\r?\n|$)", re.MULTILINE)
         for match in assignments.finditer(content):
-            candidate(content[:match.start()] + match[1] + encoded + match[2] + match[3] + content[match.end():])
+            comments = ""
+            if is_list:
+                comments = "".join(comment + newline for comment in re.findall(rf"{quoted}|(#[^\r\n]*)", match["value"])
+                                   if comment)
+            candidate(content[:match.start()] + comments + match[1] + encoded + match[3] + match[4]
+                      + content[match.end():])
         if isinstance(value, dict):
             headers = list(re.finditer(r"^[ \t]*\[[^\r\n]+\][ \t]*(?:#[^\r\n]*)?(?:\r?\n|$)", content, re.MULTILINE))
             for header in headers:
@@ -302,6 +326,14 @@ def prepare_project_settings(
             raise ValueError(f"Unknown language: {analysis_changes['language']}")
     candidate_thresholds = (resolve_thresholds(project_config={**load_project_config(root), **analysis_changes})
                             if any(key in analysis_changes for key in THRESHOLD_KEYS) else None)
+    corpus_changes = {key: changes[key] for key in CORPUS_DETAIL_KEYS if key in changes}
+    corpus_values: dict[str, Any] = {}
+    if corpus_changes:
+        if any(type(value) not in (int, float) for value in corpus_changes.values()):
+            raise ValueError("Corpus detail settings must be numbers")
+        current_corpus = {key: value for key, value in read_explicit_project_config(root).items()
+                          if key in CORPUS_DETAIL_KEYS}
+        corpus_values = CorpusConfig.model_validate(current_corpus | corpus_changes).model_dump(include=set(corpus_changes))
     for key, raw in changes.items():
         if key == "author_name":
             value: Any = validate_author_name(raw)
@@ -326,6 +358,13 @@ def prepare_project_settings(
 
             value = {name: profile.model_dump(exclude_none=True)
                      for name, profile in parse_terms(raw).items()}
+        elif key == "locations":
+            names = parse_location_names(raw)
+            value = AUTOMATIC_LOCATION_NAMES if names is None else names
+        elif key == DOSSIER_DRAFT_SETTINGS_KEY:
+            value = resolve_dossier_draft_settings({key: raw}).model_dump(exclude_defaults=True)
+        elif key in corpus_values:
+            value = corpus_values[key]
         elif key == "audio":
             from .speech_profiles import AudioSettings
 
@@ -519,6 +558,7 @@ def configuration_metadata() -> dict[str, Any]:
     """
     from .characters import character_configuration_schema
     from .dossier_collections import dossier_collections_schema
+    from .dossier_draft_settings import DossierDraftSettings
     from .registers import REGISTER_PROFILE_TEMPLATES
     from .site_publications import site_publications_schema
     from .speech_profiles import AudioSettings
@@ -560,6 +600,7 @@ def configuration_metadata() -> dict[str, Any]:
         "publication_schema": publication_configuration_schema(),
         "site_publications_schema": site_publications_schema(),
         "dossier_collections_schema": dossier_collections_schema(),
+        "dossier_drafts_schema": DossierDraftSettings.model_json_schema(),
         "terms_schema": terms_configuration_schema(),
         "characters_schema": character_configuration_schema(),
         "audio_schema": AudioSettings.model_json_schema(by_alias=True),

@@ -4,6 +4,7 @@
   var editor = document.getElementById("site-publication-editor");
   if (!editor) return;
   var labels = JSON.parse(editor.dataset.labels);
+  var limits = JSON.parse(editor.dataset.limits);
   var initial;
   try { initial = JSON.parse(editor.dataset.initial); } catch (_) { initial = null; }
   var profiles = editor.querySelector("[data-site-publication-profiles]");
@@ -12,6 +13,9 @@
   var retry = editor.querySelector("[data-site-publication-retry]");
   var catalogue = [], catalogueLoaded = false, cataloguePending = false, serial = 0, recovery;
   var contextToken = editor.dataset.contextToken;
+  // A blank section name cannot be a saved selection. Keep it distinct from
+  // the empty option, which deliberately chooses the entire dossier body.
+  var chooseScope = " ";
   function text(key) { return labels["publication_editor_" + key]; }
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function object(value) { return value && typeof value === "object" && !Array.isArray(value); }
@@ -78,6 +82,18 @@
     if (value != null && value !== "" && !values.some(function(pair) { return String(pair[0]) === String(value); })) option(select, String(value), text("missing"));
     select.value = value == null ? "" : String(value);
   }
+  function sectionOptions(select, names, value) {
+    var choices = names.map(function(name) { return [name, name]; });
+    if (value === chooseScope) choices.unshift([chooseScope, text("choose_scope")]);
+    options(select, choices, value, text("whole_body"));
+    if (value === chooseScope) select.selectedOptions[0].disabled = true;
+  }
+  function resetPublicationScope(entry, resetRevision) {
+    if (resetRevision) field(entry, "revision").value = "";
+    var section = field(entry, "section");
+    sectionOptions(section, [], section.value ? chooseScope : "");
+    ["include_citations", "include_geography"].forEach(function(key) { field(entry, key).checked = false; });
+  }
   function summary(card) {
     if (card.hasAttribute("data-site-publication-profile")) {
       card.querySelector(":scope > summary").textContent = field(card, "title").value || field(card, "id").value || text("profile");
@@ -93,11 +109,19 @@
     });
   }
   function clearValidity() { editor.querySelectorAll("input, select, textarea").forEach(function(input) { input.setCustomValidity(""); }); }
+  function boundedText(input, maximum, validate) {
+    var value = input.value.trim();
+    if (validate && value.length > maximum && Array.from(value).length > maximum) {
+      var limit = new Intl.NumberFormat(document.documentElement.lang || undefined).format(maximum);
+      input.setCustomValidity(text("length_limit").replace("{limit}", limit));
+    }
+    return value;
+  }
   function updateLimits() {
-    addProfile.disabled = profiles.children.length >= 50;
+    addProfile.disabled = profiles.children.length >= limits.profiles;
     profiles.querySelectorAll("[data-site-publication-profile]").forEach(function(profile) {
       var entries = profile.querySelector("[data-site-publication-entries]");
-      profile.querySelector("[data-site-publication-add-entry]").disabled = entries.children.length >= 500;
+      profile.querySelector("[data-site-publication-add-entry]").disabled = entries.children.length >= limits.entries;
       Array.from(entries.children).forEach(function(entry, index) {
         entry.querySelector("[data-site-publication-up]").disabled = index === 0;
         entry.querySelector("[data-site-publication-down]").disabled = index === entries.children.length - 1;
@@ -133,7 +157,7 @@
     var select = field(entry, "section"), value = select.value;
     // Native editable_sections contains only unique real headings, including
     // nested subtrees; merged duplicate labels are not publication choices.
-    options(select, (result.editable_sections || []).map(function(name) { return [name, name]; }), value, text("whole_body"));
+    sectionOptions(select, result.editable_sections || [], value);
   }
   async function loadCatalogue() {
     if (editor.disabled || !contextToken || cataloguePending || catalogueLoaded) return;
@@ -161,12 +185,12 @@
     var revision = control(grid, "revision", "revision", "", "select");
     options(revision, [], value.revision, text("current"));
     var section = control(grid, "section", "section", "", "select");
-    options(section, [], value.section, text("whole_body"));
+    sectionOptions(section, [], value.section);
     var chapter = control(grid, "reveal_after_chapter", "after", value.reveal_after_chapter == null ? 0 : value.reveal_after_chapter, "number");
     chapter.min = "0"; chapter.step = "1"; chapter.required = true;
     var hint = document.createElement("p"); hint.className = "ctl-note"; hint.id = chapter.id + "-help";
     hint.textContent = text("after_hint"); chapter.parentElement.appendChild(hint); chapter.setAttribute("aria-describedby", hint.id);
-    control(grid, "title", "override", value.title).maxLength = 500;
+    control(grid, "title", "override", value.title);
     var scope = document.createElement("p"); scope.className = "ctl-note"; scope.textContent = text("scope");
     scope.id = "site-publication-scope-" + (++serial); entry.appendChild(scope);
     var scopeChoices = document.createElement("div"); scopeChoices.className = "row"; entry.appendChild(scopeChoices);
@@ -181,8 +205,8 @@
       updateLimits(); (this.disabled ? heading : this).focus();
     });
     remove(entry, actions, profile.querySelector("[data-site-publication-add-entry]"));
-    dossier.addEventListener("change", function() { updateDossier(entry); });
-    revision.addEventListener("change", function() { loadSections(entry); });
+    dossier.addEventListener("change", function() { resetPublicationScope(entry, true); updateDossier(entry); });
+    revision.addEventListener("change", function() { resetPublicationScope(entry, false); loadSections(entry); });
     entry.addEventListener("input", function() { summary(entry); });
     entries.appendChild(entry); updateDossier(entry); updateLimits(); return entry;
   }
@@ -198,8 +222,8 @@
     identifierHint.id = identifier.id + "-help"; identifierHint.textContent = text("id_hint");
     identifier.parentElement.appendChild(identifierHint); identifier.setAttribute("aria-describedby", identifierHint.id);
     identifier.title = text("id_hint");
-    var title = control(grid, "title", "name", value.title); title.required = true; title.maxLength = 500;
-    control(profile, "introduction", "introduction", value.introduction, "textarea").maxLength = 10000;
+    control(grid, "title", "name", value.title).required = true;
+    control(profile, "introduction", "introduction", value.introduction, "textarea");
     var entriesTitle = document.createElement("h4"); entriesTitle.textContent = text("entries"); profile.appendChild(entriesTitle);
     var entries = document.createElement("div"); entries.setAttribute("data-site-publication-entries", ""); profile.appendChild(entries);
     var actions = document.createElement("div"); actions.className = "settings-actions"; profile.appendChild(actions);
@@ -244,8 +268,9 @@
     profiles.querySelectorAll("[data-site-publication-profile]").forEach(function(profile) {
       var identifier = field(profile, "id"), name = identifier.value;
       if (validate && (!/^[a-z][a-z0-9_-]{0,63}$/.test(name) || Object.hasOwn(result, name))) identifier.setCustomValidity(text("invalid"));
-      var title = field(profile, "title"); if (validate && !title.value.trim()) title.setCustomValidity(text("invalid"));
-      result[name] = {title: title.value.trim(), introduction: field(profile, "introduction").value.trim(), entries: []};
+      var titleField = field(profile, "title"), title = boundedText(titleField, limits.title, validate);
+      if (validate && !title) titleField.setCustomValidity(text("invalid"));
+      result[name] = {title: title, introduction: boundedText(field(profile, "introduction"), limits.introduction, validate), entries: []};
       profile.querySelectorAll("[data-site-publication-entry]").forEach(function(entry) {
         var dossier = field(entry, "dossier_id"), chapter = field(entry, "reveal_after_chapter");
         if (validate && !/^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dossier.value)) dossier.setCustomValidity(text("invalid"));
@@ -257,7 +282,11 @@
           item.revision = Number(revision.value);
           if (validate && (!Number.isSafeInteger(item.revision) || item.revision < 1)) revision.setCustomValidity(text("invalid"));
         }
-        ["section", "title"].forEach(function(key) { var value = field(entry, key).value.trim(); if (value) item[key] = value; });
+        var section = field(entry, "section");
+        if (validate && section.value === chooseScope) section.setCustomValidity(text("choose_scope"));
+        else if (section.value.trim()) item.section = boundedText(section, limits.title, validate);
+        var override = boundedText(field(entry, "title"), limits.title, validate);
+        if (override) item.title = override;
         result[name].entries.push(item);
       });
     });

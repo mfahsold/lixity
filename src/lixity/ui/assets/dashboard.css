@@ -92,13 +92,17 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
 }
 .research-dossier-folder { display: grid; gap: var(--space-4); min-width: 0; }
 .research-dossier-document {
-& > :is(section, .research-dossier-character) {
+& > :is(section, [data-dossier-evidence]) {
   min-width: 0; padding-block-start: var(--space-3); border-block-start: 1px solid var(--line);
 }
 & > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 & > section > :is(h4, p) { margin: 0; }
-& > section > h4, & > .research-dossier-character > summary > h4 { font-size: var(--text-body); line-height: var(--line-tight); }
+& > section > h4, & > [data-dossier-evidence] > summary > h4 { font-size: var(--text-body); line-height: var(--line-tight); }
 & > section > .ctl { justify-self: start; }
+& > [data-dossier-evidence] > summary { cursor: pointer; min-block-size: 2.75rem; align-content: center; overflow-wrap: anywhere; }
+& > [data-dossier-evidence] > summary > h4 { display: inline; margin: 0; }
+& > [data-dossier-evidence][open] > summary { margin-block-end: var(--space-2); }
+& > [data-dossier-evidence] > .ctl { max-inline-size: 100%; white-space: normal; }
 }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }

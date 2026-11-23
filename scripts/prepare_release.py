@@ -14,7 +14,15 @@ import re
 import sys
 from pathlib import Path
 
+try:
+    from check_release import PENDING_RELEASE, RELEASE_HEADING
+except ModuleNotFoundError:
+    from scripts.check_release import PENDING_RELEASE, RELEASE_HEADING
+
 ROOT = Path(__file__).resolve().parents[1]
+UNRELEASED_COMPARE = re.compile(
+    r"(?m)^\[Unreleased\]: (https://github\.com/[^/]+/[^/]+/compare/)v\d+\.\d+\.\d+\.\.\.HEAD$"
+)
 
 
 def validate_version(version: str) -> tuple[int, int, int]:
@@ -23,6 +31,16 @@ def validate_version(version: str) -> tuple[int, int, int]:
     if not match:
         raise ValueError(f"Version must be in semantic format X.Y.Z, got: {version!r}")
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+
+def validate_release_date(value: str) -> str:
+    try:
+        date = datetime.date.fromisoformat(value)
+    except ValueError:
+        date = None
+    if date is None or date.isoformat() != value:
+        raise ValueError("release date must use YYYY-MM-DD")
+    return value
 
 
 def update_version_file(version: str) -> None:
@@ -68,25 +86,45 @@ Record the publication date and GitHub, PyPI and website checks after publicatio
 
 
 def update_changelog(version: str, *, release_date: str | None = None) -> None:
-    """Promote [Unreleased] heading and compare links in CHANGELOG.md when present."""
+    """Prepare a pending changelog section or record an explicit release date."""
     path = ROOT / "CHANGELOG.md"
     if not path.is_file():
         return
     text = path.read_text(encoding="utf-8")
-    updated = text
-    date_str = release_date or datetime.datetime.now(datetime.timezone.utc).date().isoformat()
-    if f"## [{version}]" not in updated and "## [Unreleased]" in updated:
-        updated = updated.replace("## [Unreleased]", f"## [Unreleased]\n\n## [{version}] - {date_str}", 1)
-    unreleased_re = re.compile(
-        r"^\[Unreleased\]: (https://github\.com/[^/]+/[^/]+/compare/)v([^.\s]+\.[^.\s]+\.[^.\s]+)\.\.\.HEAD$",
-        re.MULTILINE,
-    )
-    if f"[{version}]: " not in updated:
-        updated = unreleased_re.sub(
-            rf"[Unreleased]: \1v{version}...HEAD\n[{version}]: \1v\2...v{version}",
-            updated,
-            count=1,
-        )
+    date = validate_release_date(release_date) if release_date is not None else None
+    current = next((heading for heading in RELEASE_HEADING.finditer(text)
+                    if heading[1] == version), None)
+    if current is None:
+        if "## [Unreleased]" not in text:
+            return
+        status = date or PENDING_RELEASE
+        updated = text.replace("## [Unreleased]", f"## [Unreleased]\n\n## [{version}] - {status}", 1)
+    else:
+        status = current[2]
+        if date is not None and status not in {PENDING_RELEASE, date}:
+            raise ValueError(f"changelog already records {status} for v{version}")
+        status = date or status
+        updated = text[:current.start(2)] + status + text[current.end(2):]
+
+    all_headings = list(RELEASE_HEADING.finditer(updated))
+    latest_dated = next((heading[1] for heading in all_headings if heading[2] != PENDING_RELEASE), None)
+    headings = iter(all_headings)
+    current = next(heading for heading in headings if heading[1] == version)
+    # Changelog order records the release line, including version-number resets.
+    previous = next((heading[1] for heading in headings if heading[2] != PENDING_RELEASE), None)
+    compare = UNRELEASED_COMPARE.search(updated)
+    if compare is not None and latest_dated is not None:
+        base = compare[1]
+        unreleased_link = f"[Unreleased]: {base}v{latest_dated}...HEAD"
+        if previous is not None:
+            candidate_to = "HEAD" if current[2] == PENDING_RELEASE else f"v{version}"
+            release_link = f"[{version}]: {base}v{previous}...{candidate_to}"
+            version_link = re.compile(rf"(?m)^\[{re.escape(version)}\]: [^\n]*$")
+            if version_link.search(updated) is None:
+                unreleased_link += f"\n{release_link}"
+            else:
+                updated = version_link.sub(lambda _: release_link, updated, count=1)
+        updated = UNRELEASED_COMPARE.sub(lambda _: unreleased_link, updated, count=1)
     if updated != text:
         path.write_text(updated, encoding="utf-8")
         print(f"[OK] Updated {path.relative_to(ROOT)} for {version}")
@@ -110,7 +148,7 @@ def run_sync() -> None:
 
 def preparation_snapshot(version: str) -> dict[Path, bytes | None]:
     """Capture files preparation can change, including pins written before a sync failure."""
-    paths = {ROOT / "src/lixity/_version.py", ROOT / "README.md", ROOT / "CITATION.cff",
+    paths = {ROOT / "src/lixity/_version.py", ROOT / "README.md", ROOT / "CITATION.cff", ROOT / "CHANGELOG.md",
              ROOT / "docs/releases" / f"v{version}.md"}
     for pattern in ("*.md", "*.html", "*.txt"):
         paths.update((ROOT / "docs").rglob(pattern))
@@ -141,16 +179,18 @@ def report_partial_changes(before: dict[Path, bytes | None]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version", help="New version in X.Y.Z format")
+    parser.add_argument("--release-date", help="Reviewed release date in YYYY-MM-DD")
     args = parser.parse_args()
 
     before: dict[Path, bytes | None] = {}
     try:
         parts = validate_version(args.version)
         version_str = f"{parts[0]}.{parts[1]}.{parts[2]}"
+        release_date = validate_release_date(args.release_date) if args.release_date is not None else None
         before = preparation_snapshot(version_str)
         print(f"--- Preparing Lixity release v{version_str} ---")
         update_version_file(version_str)
-        update_changelog(version_str)
+        update_changelog(version_str, release_date=release_date)
         scaffold_release_notes(version_str)
         # Import sync_docs from scripts dir
         sys.path.insert(0, str(ROOT / "scripts"))
@@ -159,7 +199,7 @@ def main() -> int:
         print(f"  1. Review and refine docs/releases/v{version_str}.md")
         print("  2. If UI or examples changed: make examples && make docs-sync")
         print(f"  3. Validate release: make release-check RELEASE_TAG=v{version_str}")
-        print(f"  4. Commit and tag: git tag -a v{version_str} -m 'Release v{version_str}'")
+        print("  4. Follow the release qualification and publication procedure in CONTRIBUTING.md")
         return 0
     except Exception as exc:  # noqa: BLE001 - CLI boundary must report retained partial edits
         print(f"[ERROR] Release preparation failed: {exc}", file=sys.stderr)

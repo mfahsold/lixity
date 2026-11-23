@@ -7,10 +7,11 @@ import pytest
 
 from lixity.config import prepare_project_settings
 from lixity.research import api
+from lixity.research.dossier_analysis import mark_character_analysis
 from lixity.research.repository import ResearchError
 from lixity.site_export import prepare_site
 from tests.media_fixtures import png
-from tests.test_site_export import file_bytes, site_data
+from tests.test_site_export import file_bytes, response, site_data
 
 pytestmark = pytest.mark.portability
 
@@ -136,6 +137,32 @@ def test_cap_zero_has_only_prechapter_entries_and_no_novel(publication_project):
     assert site_data(bundle)['publication']['chapters'] == []
     assert b'EARLY_NOVEL_PROSE' not in bundle.files['index.html']
     assert 'APPROVED_PUBLIC_BODY' in site_data(bundle)['publication']['entries'][0]['body']
+
+
+def test_full_dossier_reading_projection_in_all_website_modes(publication_project):
+    root, profiles, *_ = publication_project
+    quote = "Mira closed the garden gate."
+    analysis = mark_character_analysis(f"## Manuscript evidence\n\n> {quote}")
+    raw = f"## Author notes\n\nCheck the gate motif.\n\n{analysis}\n\n{analysis}"
+    dossier = api.create_dossier(root, "Character: Mira", raw, tags=["manuscript-draft", "character"])["dossier_id"]
+    profiles['readers']['entries'] = [
+        {"dossier_id": dossier, "revision": 1},
+        {"dossier_id": dossier, "revision": 1, "section": "Author notes"},
+    ]
+    prepare_project_settings(root, {'site_publications': profiles}).commit()
+
+    review = site_data(prepare_site(root, mode="review", include_research=True))
+    current = response(review, "dossiers", id=dossier)
+    pinned = response(review, "record", kind="dossier", id=dossier, revision=1)
+    assert current["body"] == pinned["record"]["body"] == raw
+    assert current["display_body"] == pinned["display_body"]
+    assert current["display_body"].count(quote) == 1
+
+    for mode in ("reader", "companion"):
+        publication = site_data(prepare_site(root, mode=mode, publication_profile="readers"))["publication"]
+        full, section = publication["entries"]
+        assert full["body"] == current["display_body"]
+        assert section["body"].strip() == "Check the gate motif."
 
 
 def test_current_selection_resolves_once_and_reveals_only_selected_version(publication_project):

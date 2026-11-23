@@ -82,8 +82,10 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .site-publication-editor .ctl { max-width: 100%; }
 .site-publication-editor textarea { width: 100%; resize: vertical; }
 .r-term-chips, .r-term-chapter-chips { flex-wrap: wrap; gap: var(--space-1); align-items: center; }
+.r-term-chapter-chips { margin-block-start: var(--space-2); }
 .r-chapter-chip { padding: .15rem .45rem; font-size: var(--text-micro); border-radius: var(--radius-xs); min-width: 1.8rem; text-align: center; }
 .r-chapter-chip.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+@media (pointer: coarse) { .r-chapter-chip { min-inline-size: 2.75rem; min-block-size: 2.75rem; } }
 /* --- Tables ----------------------------------------------------------- */
 .table-wrap {
   width: 100%;
@@ -199,6 +201,9 @@ color: var(--fg);
 .ctl-group > * { min-width: 0; }
 input[type="file"].ctl { max-width: 100%; }
 .ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.ctl-group.research-term-variant { margin: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); }
+.research-term-variant > legend { padding-inline: var(--space-2); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.research-term-variant > .row { align-items: start; }
 /* Sentence-case labels preserve localized spelling across workspace surfaces. */
 .ctl-label, .project-label, .kpi-caption, th { font-size: var(--text-micro); font-weight: var(--weight-semibold); text-transform: none; letter-spacing: normal; color: var(--muted); }
 /* One note/help recipe: inline notes and field help share size and colour. */

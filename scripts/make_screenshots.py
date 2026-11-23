@@ -52,7 +52,6 @@ from lixity.ui import render_dashboard  # noqa: E402
 from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
 from lixity.ui.render_contracts import DashboardContent, DashboardOptions  # noqa: E402
-from scripts.build_examples import build_demo  # noqa: E402
 from scripts.example_project import DEMO_MANUSCRIPT, manuscript_title  # noqa: E402
 from scripts.stage_pages import screenshot_manifest  # noqa: E402
 
@@ -369,6 +368,9 @@ def sync_embedded_image_sizes() -> int:
 
     corrected = 0
     for document in sorted(docs.glob("**/*.html")):
+        if document.is_relative_to(docs / "demo"):
+            # build_examples writes publication members with their checksums.
+            continue
         markup = document.read_text(encoding="utf-8")
         changed = False
         for match in list(pattern.finditer(markup)):
@@ -750,9 +752,6 @@ def main() -> int:
             for future in futures:
                 future.result()
 
-    # Social previews use the final capture dimensions. Build the publication
-    # and its checksums together, rather than mutating a checksummed HTML member.
-    build_demo(BASE_DIR)
     sync_screenshot_catalog()
     corrected = sync_embedded_image_sizes()
     print(

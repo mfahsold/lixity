@@ -27,6 +27,8 @@ JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
 SHA = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"[0-9a-f]{64}")
+RELEASE_TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
 PAGES_VERIFY_FILES = (
     *(page_path(language) for language in LANGUAGES),
@@ -135,8 +137,9 @@ class HttpClient:
             raise ValueError("channel response exceeds the allowed byte limit")
         return raw
 
-    def json(self, url, *, missing=False, array=False):
-        raw = self.bytes(url, limit=JSON_LIMIT, missing=missing, accept="application/json")
+    def json(self, url, *, missing=False, array=False, headers=None):
+        raw = self.bytes(url, limit=JSON_LIMIT, missing=missing, accept="application/json",
+                         headers=headers)
         if raw is None:
             return None
         try:
@@ -168,15 +171,9 @@ class HttpClient:
             raise ValueError("release asset download failed: transport state is unknown") from None
 
 
-def identities(root, tag, expected_commit, repo, client):
-    """Bind checked-out source, peeled remote tag and expected commit together."""
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
-        raise ValueError("repository must be owner/name")
-    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag):
-        raise ValueError("release tag must have the form vX.Y.Z")
+def _check_checkout_commit(root, expected_commit):
     if not SHA.fullmatch(expected_commit):
         raise ValueError("expected commit must be a full lowercase Git SHA")
-    version = check_release.source_version(root, tag)
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],  # noqa: S607 - git is a required runner tool
@@ -187,6 +184,16 @@ def identities(root, tag, expected_commit, repo, client):
         raise ValueError("could not determine the checked-out source commit") from None
     if result.returncode or result.stdout.strip() != expected_commit:
         raise ValueError("checked-out source commit differs from expected commit")
+
+
+def identities(root, tag, expected_commit, repo, client):
+    """Bind checked-out source, peeled remote tag and expected commit together."""
+    if not REPOSITORY.fullmatch(repo):
+        raise ValueError("repository must be owner/name")
+    if not RELEASE_TAG.fullmatch(tag):
+        raise ValueError("release tag must have the form vX.Y.Z")
+    version = check_release.source_version(root, tag)
+    _check_checkout_commit(root, expected_commit)
     base = f"https://api.github.com/repos/{repo}"
     ref = client.json(f"{base}/git/ref/tags/{tag}")
     for _ in range(10):
@@ -312,9 +319,11 @@ def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False
             raise ValueError(f"GitHub release digest differs for {name}")
     verify_attestations([dist / name for name in sorted(expected)], repo, tag, expected_commit)
     check_release.validate(root, dist, tag)
+    return {name: asset["digest"].removeprefix("sha256:") for name, asset in expected.items()}
 
 
-def verify_github(root, tag, expected_commit, repo, dist, client, *, draft=False):
+def verify_github(root, tag, expected_commit, repo, dist, client, *,
+                  draft=False, include_digests=False):
     identities(root, tag, expected_commit, repo, client)
     release = release_metadata(repo, tag, client, include_drafts=draft)
     if draft:
@@ -322,8 +331,9 @@ def verify_github(root, tag, expected_commit, repo, dist, client, *, draft=False
             raise ValueError("GitHub release must be an unpublished draft")
     else:
         published(release)
-    verify_files(root, dist, tag, repo, expected_commit, release, draft=draft)
-    return {"state": "draft" if draft else "published", "source_sha": expected_commit, "tag": tag}
+    digests = verify_files(root, dist, tag, repo, expected_commit, release, draft=draft)
+    return {"state": "draft" if draft else "published", "source_sha": expected_commit, "tag": tag,
+            **({"digests": digests} if include_digests else {})}
 
 
 def empty_destination(path):
@@ -332,7 +342,7 @@ def empty_destination(path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def recover(root, tag, expected_commit, repo, dist, client):
+def recover(root, tag, expected_commit, repo, dist, client, *, include_digests=False):
     identities(root, tag, expected_commit, repo, client)
     release = release_metadata(repo, tag, client)
     published(release)
@@ -343,28 +353,33 @@ def recover(root, tag, expected_commit, repo, dist, client):
         fresh.mkdir()
         for name, asset in sorted(expected.items()):
             client.download(asset["browser_download_url"], fresh / name, asset["size"])
-        verify_files(root, fresh, tag, repo, expected_commit, release)
+        digests = verify_files(root, fresh, tag, repo, expected_commit, release)
         if dist.exists():
             dist.rmdir()
         os.replace(fresh, dist)
-    return {"state": "published", "source_sha": expected_commit, "tag": tag}
+    return {"state": "published", "source_sha": expected_commit, "tag": tag,
+            **({"digests": digests} if include_digests else {})}
 
 
-def pypi_missing(dist, tag, client):
-    names = {f"lixity-{tag[1:]}-py3-none-any.whl", f"lixity-{tag[1:]}.tar.gz"}
+def _pypi_filenames(tag):
+    return {f"lixity-{tag[1:]}-py3-none-any.whl", f"lixity-{tag[1:]}.tar.gz"}
+
+
+def _pypi_release_files(dist, tag, client):
+    names = _pypi_filenames(tag)
     value = client.json(f"https://pypi.org/pypi/lixity/{tag[1:]}/json", missing=True)
     if value is None:
-        return sorted(names)
+        return {}
     if not isinstance(value.get("info"), dict) or value["info"].get("version") != tag[1:]:
         raise ValueError("PyPI release version is unknown or differs from the requested version")
     files = value.get("urls")
     if not isinstance(files, list):
         raise ValueError("PyPI file state is unknown")
-    found = set()
+    found = {}
     for file in files:
-        if not isinstance(file, dict) or file.get("filename") not in names:
+        name = file.get("filename") if isinstance(file, dict) else None
+        if not isinstance(name, str) or name not in names:
             raise ValueError("PyPI has an unexpected distribution filename")
-        name = file["filename"]
         if name in found or file.get("yanked") is not False:
             raise ValueError("PyPI has a duplicate or yanked distribution")
         digests = file.get("digests")
@@ -372,13 +387,14 @@ def pypi_missing(dist, tag, client):
         expected = hashlib.sha256((dist / name).read_bytes()).hexdigest()
         if actual != expected:
             raise ValueError(f"PyPI SHA256 digest differs or is unknown for {name}")
-        found.add(name)
-    return sorted(names - found)
+        found[name] = file
+    return found
 
 
 def stage_pypi(root, tag, expected_commit, repo, dist, upload, client):
     verify_github(root, tag, expected_commit, repo, dist, client)
-    missing = pypi_missing(dist, tag, client)
+    published_files = _pypi_release_files(dist, tag, client)
+    missing = sorted(_pypi_filenames(tag) - published_files.keys())
     empty_destination(upload)
     upload.mkdir(exist_ok=True)
     for name in missing:
@@ -386,17 +402,24 @@ def stage_pypi(root, tag, expected_commit, repo, dist, upload, client):
     return {"upload_count": len(missing), "state": "pending" if missing else "complete"}
 
 
-def verify_pypi(root, tag, expected_commit, repo, dist, client):
-    result = verify_github(root, tag, expected_commit, repo, dist, client)
+def _wait_for_pypi(dist, tag, client):
     # Newly uploaded files can take up to ~60s to appear on PyPI CDN. Retry only
     # missing visibility, never digest/auth/transport failures and never the upload.
+    expected = _pypi_filenames(tag)
     for attempt in range(12):
-        missing = pypi_missing(dist, tag, client)
+        files = _pypi_release_files(dist, tag, client)
+        missing = sorted(expected - files.keys())
         if not missing:
-            return {**result, "state": "complete"}
+            return files
         if attempt < 11:
             time.sleep(5)
     raise ValueError("PyPI publication is incomplete: " + ", ".join(missing))
+
+
+def verify_pypi(root, tag, expected_commit, repo, dist, client):
+    result = verify_github(root, tag, expected_commit, repo, dist, client)
+    _wait_for_pypi(dist, tag, client)
+    return {**result, "state": "complete"}
 
 
 def _parse_worktrees(porcelain):
@@ -425,7 +448,7 @@ def _parse_worktrees(porcelain):
 
 def doctor(root, repo, client, *, tag=None, unset_env_tokens=False):
     """Inspect local Git/worktree state, gh CLI readiness and optional release channels."""
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+    if not REPOSITORY.fullmatch(repo):
         raise ValueError("repository must be owner/name")
     gh_bin = resolve_gh_binary()
     sub_env = github_subprocess_env(unset_env_tokens=unset_env_tokens)
@@ -527,22 +550,23 @@ def _normalize_pages_base(base_url):
 
 def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_URL):
     """Verify live Pages deployment metadata and staged public resources."""
-    check_release.source_version(root, tag)
-    if not SHA.fullmatch(expected_commit):
-        raise ValueError("expected commit must be a full lowercase Git SHA")
+    _check_checkout_commit(root, expected_commit)
+    if tag is not None:
+        check_release.source_version(root, tag)
     normalized_base, host = _normalize_pages_base(base_url)
     if host not in client.allowed_hosts:
         raise ValueError("Pages host is not allowed by the verification client")
+
+    headers = {"Cache-Control": "no-cache", "Accept-Encoding": "identity"}
+    deployment_url = urllib.parse.urljoin(normalized_base, "deployment.json")
+    deployment = client.json(deployment_url, headers=headers)
+    if deployment.get("schema_version") != 1 or deployment.get("source_sha") != expected_commit:
+        raise ValueError("Pages deployment.json source_sha differs from expected commit")
 
     stage_pages = _stage_pages_module()
     with tempfile.TemporaryDirectory(prefix="lixity-pages-verify-") as temp_dir:
         staged = Path(temp_dir) / "public"
         stage_pages.stage(root / "docs", staged)
-        deployment = client.json(urllib.parse.urljoin(normalized_base, "deployment.json"))
-        if deployment.get("schema_version") != 1 or deployment.get("source_sha") != expected_commit:
-            raise ValueError("Pages deployment.json source_sha differs from expected commit")
-
-        headers = {"Cache-Control": "no-cache", "Accept-Encoding": "identity"}
         root_bytes = client.bytes(normalized_base, headers=headers)
         if root_bytes != (staged / "index.html").read_bytes():
             raise ValueError("public Pages canonical root differs from staged index.html")
@@ -551,9 +575,11 @@ def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_U
             actual_bytes = client.bytes(urllib.parse.urljoin(normalized_base, rel_path), headers=headers)
             if actual_bytes != expected_bytes:
                 raise ValueError(f"public Pages resource differs from staged build: {rel_path}")
+    if client.json(deployment_url, headers=headers) != deployment:
+        raise ValueError("Pages deployment changed during verification")
     return {
         "state": "verified",
-        "tag": tag,
+        **({"tag": tag} if tag is not None else {}),
         "source_sha": expected_commit,
         "base_url": normalized_base,
         "verified_paths": len(PAGES_VERIFY_FILES) + 2,
@@ -562,6 +588,10 @@ def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_U
 
 def zenodo_status(repo, tag, client):
     """Query Zenodo asynchronously without blocking release publication on archival lag."""
+    if not REPOSITORY.fullmatch(repo):
+        raise ValueError("repository must be owner/name")
+    if not RELEASE_TAG.fullmatch(tag):
+        raise ValueError("release tag must have the form vX.Y.Z")
     query = urllib.parse.urlencode({
         "q": f'metadata.related_identifiers.identifier:"https://github.com/{repo}/tree/{tag}"',
         "size": 1,
@@ -584,41 +614,33 @@ def zenodo_status(repo, tag, client):
 
 def verify_release(
     root, tag, expected_commit, repo, dist, client, *,
-    base_url=DEFAULT_PAGES_URL, check_zenodo=False,
+    base_url=DEFAULT_PAGES_URL, check_zenodo=False, skip_pypi=False, skip_pages=False,
 ):
-    """Run end-to-end verification across GitHub Releases, PyPI distributions and Pages."""
+    """Verify a GitHub release and its selected publication channels."""
     if not dist.exists() or not any(dist.iterdir()):
-        recover(root, tag, expected_commit, repo, dist, client)
+        github = recover(root, tag, expected_commit, repo, dist, client, include_digests=True)
     else:
-        verify_github(root, tag, expected_commit, repo, dist, client)
-    verify_pypi(root, tag, expected_commit, repo, dist, client)
-    version = tag[1:]
-    pypi_meta = client.json(f"https://pypi.org/pypi/lixity/{version}/json")
-    expected_dists = {f"lixity-{version}-py3-none-any.whl", f"lixity-{version}.tar.gz"}
-    verified_pypi = set()
-    for entry in pypi_meta.get("urls", []):
-        name = entry.get("filename")
-        if name not in expected_dists:
-            raise ValueError("PyPI has an unexpected distribution filename")
-        url = entry.get("url")
-        if not isinstance(url, str):
-            raise ValueError(f"PyPI distribution URL missing for {name}")
-        data = client.bytes(url)
-        expected_bytes = (dist / name).read_bytes()
-        if hashlib.sha256(data).hexdigest() != entry["digests"]["sha256"] or data != expected_bytes:
-            raise ValueError(f"downloaded PyPI distribution differs from GitHub asset for {name}")
-        verified_pypi.add(name)
-    if verified_pypi != expected_dists:
-        raise ValueError("PyPI distribution set is incomplete")
-    pages = verify_pages(root, tag, expected_commit, client, base_url=base_url)
+        github = verify_github(root, tag, expected_commit, repo, dist, client, include_digests=True)
     result = {
         "state": "verified",
         "tag": tag,
         "source_sha": expected_commit,
-        "channels": ["github", "pypi", "pages"],
-        "github_pypi_bytes_identical": True,
-        "pages_verified_paths": pages["verified_paths"],
+        "channels": ["github"],
     }
+    if not skip_pypi:
+        for name, entry in _wait_for_pypi(dist, tag, client).items():
+            url = entry.get("url")
+            if not isinstance(url, str):
+                raise ValueError(f"PyPI distribution URL missing for {name}")
+            data = client.bytes(url)
+            if hashlib.sha256(data).hexdigest() != github["digests"][name] or data != (dist / name).read_bytes():
+                raise ValueError(f"downloaded PyPI distribution differs from GitHub asset for {name}")
+        result["channels"].append("pypi")
+        result["github_pypi_bytes_identical"] = True
+    if not skip_pages:
+        pages = verify_pages(root, tag, expected_commit, client, base_url=base_url)
+        result["channels"].append("pages")
+        result["pages_verified_paths"] = pages["verified_paths"]
     if check_zenodo:
         result.update(zenodo_status(repo, tag, client))
     return result
@@ -629,43 +651,55 @@ def main():
     parser.add_argument(
         "command",
         choices=("inspect", "recover", "verify-github", "verify-draft", "stage-pypi",
-                 "verify-pypi", "doctor", "verify-pages", "verify-release"),
+                 "verify-pypi", "doctor", "verify-pages", "verify-zenodo", "verify-release"),
     )
-    parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--root", type=Path, help="Source checkout for local verification")
     parser.add_argument("--tag")
     parser.add_argument("--expected-commit")
-    parser.add_argument("--repo", required=True)
+    parser.add_argument("--repo", help="GitHub repository as owner/name")
     parser.add_argument("--dist", type=Path, default=Path("dist"))
     parser.add_argument("--upload", type=Path, default=Path("upload"))
     parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
     parser.add_argument("--use-keyring", action="store_true",
                         help="Unset GH_TOKEN/GITHUB_TOKEN for gh subprocesses so OS keyring is used")
     parser.add_argument("--check-zenodo", action="store_true",
-                        help="Query Zenodo public records non-fatally for a minted release DOI")
+                        help="Include the asynchronous Zenodo status in verify-release")
+    parser.add_argument("--skip-pypi", action="store_true",
+                        help="Omit PyPI from verify-release when it was intentionally skipped")
+    parser.add_argument("--skip-pages", action="store_true",
+                        help="Omit live Pages from verify-release for a historical tag")
     parser.add_argument("--github-output", type=Path)
     args = parser.parse_args()
-    if args.command != "doctor":
-        if not args.tag:
-            parser.error(f"--tag is required for {args.command}")
-        if args.command != "verify-pages" and not args.expected_commit:
-            parser.error(f"--expected-commit is required for {args.command}")
-        if args.command == "verify-pages" and not args.expected_commit:
-            parser.error("--expected-commit is required for verify-pages")
-    _normalized_base, pages_host = _normalize_pages_base(args.base_url)
+    if args.command != "verify-zenodo" and args.root is None:
+        parser.error(f"--root is required for {args.command}")
+    if args.command != "verify-pages" and not args.repo:
+        parser.error(f"--repo is required for {args.command}")
+    if args.command not in {"doctor", "verify-pages"} and not args.tag:
+        parser.error(f"--tag is required for {args.command}")
+    if args.command not in {"doctor", "verify-zenodo"} and not args.expected_commit:
+        parser.error(f"--expected-commit is required for {args.command}")
+    if args.command != "verify-release" and (args.skip_pypi or args.skip_pages):
+        parser.error("--skip-pypi and --skip-pages apply only to verify-release")
     if args.use_keyring:
         os.environ.pop("GH_TOKEN", None)
         os.environ.pop("GITHUB_TOKEN", None)
     token = None if args.use_keyring else (os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"))
-    client = HttpClient(token=token, extra_hosts=(pages_host,))
     try:
+        pages_hosts = ()
+        if args.command == "verify-pages" or (args.command == "verify-release" and not args.skip_pages):
+            pages_hosts = (_normalize_pages_base(args.base_url)[1],)
+        client = HttpClient(token=token, extra_hosts=pages_hosts)
         if args.command == "doctor":
             result = doctor(args.root, args.repo, client, tag=args.tag, unset_env_tokens=args.use_keyring)
         elif args.command == "verify-pages":
             result = verify_pages(args.root, args.tag, args.expected_commit, client, base_url=args.base_url)
+        elif args.command == "verify-zenodo":
+            result = {"tag": args.tag, **zenodo_status(args.repo, args.tag, client)}
         elif args.command == "verify-release":
             result = verify_release(
                 args.root, args.tag, args.expected_commit, args.repo, args.dist, client,
                 base_url=args.base_url, check_zenodo=args.check_zenodo,
+                skip_pypi=args.skip_pypi, skip_pages=args.skip_pages,
             )
         else:
             common = (args.root, args.tag, args.expected_commit, args.repo)

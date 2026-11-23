@@ -14,10 +14,11 @@ def test_two_projects_keep_their_tabs_and_routes_independent(tmp_path, monkeypat
     from lixity.server.workspaces import WorkspaceRegistry
 
     files = []
-    for name in ('First', 'Second'):
+    for name, cutoff, minimum_share in (('First', 7, 47.25), ('Second', 10, 52.5)):
         project = tmp_path / name
         project.mkdir()
-        (project / 'lixity.toml').write_text(f'title = "{name}"\nlanguage = "en"\n')
+        (project / 'lixity.toml').write_text(f'title = "{name}"\nlanguage = "en"\n'
+                                            f'short_sentence_max = {cutoff}\nsticky_glue_pct = {minimum_share}\n')
         source = project / 'manuscript.md'
         source.write_text(f'## {name}\n\nA bird watches the {name.lower()} courtyard.\n')
         files.append(source)
@@ -68,10 +69,15 @@ def test_two_projects_keep_their_tabs_and_routes_independent(tmp_path, monkeypat
         assert [item['state'] for item in observation['audio']['targets']] == ['ready', 'unavailable', 'ready', 'ready']
         assert str(tmp_path) not in raw and 'courtyard' not in raw
 
-        for index, url in enumerate(urls):
+        for index, (url, expected) in enumerate(zip(urls, ("47.25%", "52.5%"), strict=True)):
             status, html = request('GET', url)
             assert status == 200
             assert f'data-api="{url}api"' in html
+            guide_path = "guides/metrics/en.html"
+            assert f'href="{url}{guide_path}#' in html
+            status, guide = request('GET', url + guide_path)
+            assert status == 200 and expected in guide
+            assert "The limits for sentence rhythm" in guide
             status, raw = request('GET', url + 'api')
             assert status == 200
             assert json.loads(raw)['project']['manuscript_loaded']

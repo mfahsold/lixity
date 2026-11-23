@@ -3,9 +3,7 @@ const {launchChromium, modShortcut, playwrightModule} = require('../../scripts/b
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawn} = require('node:child_process');
-const {once} = require('node:events');
-const {createInterface} = require('node:readline');
+const {startNativeServer} = require('./support/native-server.cjs');
 const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
@@ -128,6 +126,9 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
     await page.goto(fixture.url);
     await page.locator('#tab-view-research').click();
     const summary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossierId}"]`);
+    if (legacy) {
+      await expect(summary.locator('..').locator('..').locator('.research-excerpt')).toHaveText('„Rowan hielt Wache.“');
+    }
     await summary.click();
     const dossier = summary.locator('..');
     const analysis = dossier.locator('details[data-dossier-character]');
@@ -139,6 +140,7 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
     const table = analysis.locator('[data-character-distribution]');
     await expect(overview).toBeVisible();
     await expect(table.locator('tbody tr')).toHaveCount(3);
+    await expect(table).toBeHidden();
     const count = legacy ? legacyMiddlePassages + 4 : 3;
     await expect(overview).toContainText(new RegExp(`\\b${count}\\b`));
     const chapterCounts = await table.locator('tbody tr').evaluateAll(rows =>
@@ -149,9 +151,15 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
     }
 
     const passages = analysis.locator('[data-character-passages] [data-character-passage]');
+    const passageChapters = analysis.locator('details[data-character-passage-chapter]');
     const more = analysis.locator('[data-character-more]');
     await expect(passages.first()).toBeVisible();
     await expect(passages.first().locator('mark')).toHaveCount(2);
+    await expect(passageChapters.first()).toHaveAttribute('open', '');
+    if (!legacy) {
+      await expect(passageChapters).toHaveCount(2);
+      await expect(passages.last()).toBeHidden();
+    }
     let pages = 1;
     while (await more.isVisible()) {
       const previousCount = await passages.count();
@@ -196,8 +204,11 @@ async function checkCharacterDossier(browser, fixture, dossierId, legacy) {
     const viewport = legacy ? 'mobile' : 'desktop';
     await overview.scrollIntoViewIfNeeded();
     await page.screenshot({path: path.join(artifacts, `character-analysis-${viewport}.png`)});
+    await table.locator('..').locator(':scope > summary').press('Enter');
+    await expect(table).toBeVisible();
     await table.scrollIntoViewIfNeeded();
     await page.screenshot({path: path.join(artifacts, `character-distribution-${viewport}.png`)});
+    if (!(await passages.last().isVisible())) await passageChapters.last().locator(':scope > summary').press('Enter');
     await passages.last().scrollIntoViewIfNeeded();
     await page.screenshot({path: path.join(artifacts, `character-reading-${viewport}.png`)});
     const filter = analysis.locator('[data-character-chapter]');
@@ -284,6 +295,7 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   const catalogue = page.locator('#r-manuscript-drafts');
   const preview = catalogue.locator('#r-manuscript-draft-preview');
   const body = preview.locator('[data-draft-preview-body] .research-dossier-body-rendered');
+  const reason = preview.locator('[data-draft-reason]');
   const choose = id => catalogue.locator(`[data-draft-select="${id}"]`);
   const create = id => preview.locator(`[data-create-manuscript-draft="${id}"]`);
   const kind = name => catalogue.locator(`[data-draft-kind="${name}"]`);
@@ -330,6 +342,7 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   const initialRecords = await listRecords();
   await reload();
   await select('scene', register);
+  await expect(reason.locator('p')).toHaveText(labels.research_dossier_draft_reason_scene_register);
   const registerGroup = catalogue.locator('[data-draft-group="scene-register"]');
   const individualGroup = catalogue.locator('[data-draft-group="scene-individual"]');
   await expect(registerGroup.locator(`[data-draft-select="${register}"]`)).toBeVisible();
@@ -346,8 +359,36 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   ]);
   await preview.scrollIntoViewIfNeeded();
   await page.screenshot({path: path.join(artifacts, 'scene-register-desktop.png')});
+  await catalogue.evaluate(host => {
+    const records = [];
+    const observer = new MutationObserver(changes => records.push(...changes));
+    host._choiceObservation = {records, observer, buttons:[...host.querySelectorAll('[data-draft-select]')],
+      preview:host.querySelector('#r-manuscript-draft-preview')};
+    observer.observe(host, {childList:true, subtree:true, attributes:true, attributeFilter:['aria-pressed']});
+  });
+  function choiceChanges(finished = false) {
+    return catalogue.evaluate((host, finished) => {
+      const {records, observer, buttons, preview} = host._choiceObservation;
+      const changes = records.splice(0).concat(observer.takeRecords());
+      const current = [...host.querySelectorAll('[data-draft-select]')];
+      if (finished) { observer.disconnect(); delete host._choiceObservation; }
+      return {sameButtons:current.length === buttons.length && current.every((button, index) => button === buttons[index]),
+        samePreview:preview === host.querySelector('#r-manuscript-draft-preview'),
+        replacements:changes.filter(change => change.type === 'childList').map(change => ({
+          removed:[...change.removedNodes].map(node => node.id), added:[...change.addedNodes].map(node => node.id),
+        })), pressed:changes.filter(change => change.type === 'attributes').map(change => change.target.dataset.draftSelect)};
+    }, finished);
+  }
+  await select('scene', register);
+  assert.deepEqual(await choiceChanges(), {sameButtons:true, samePreview:true, replacements:[], pressed:[]});
   await select('scene', firstScene);
-  await expect(body).toContainText('The quiet morning under the lantern and past the old tide gate');
+  assert.deepEqual(await choiceChanges(true), {sameButtons:true, samePreview:false, replacements:[{
+    removed:['r-manuscript-draft-preview'], added:['r-manuscript-draft-preview'],
+  }], pressed:[register, firstScene]});
+  await expect(choose(register)).toHaveAttribute('aria-pressed', 'false');
+  await expect(reason.locator('p')).toHaveText(labels.research_dossier_draft_reason_scene_chapter);
+  await expect(preview.getByRole('heading', {name: /The quiet morning under the lantern and past the old tide gate/})).toHaveCount(1);
+  await expect(body).not.toContainText('The quiet morning under the lantern and past the old tide gate');
   await expect(body).toContainText('Mara waited for Ivo.');
   await expect(body).toContainText('The tide moved back.');
   await expect(body).not.toContainText('The hill beyond the river');
@@ -373,12 +414,19 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   await reload();
   await select('scene', otherScene);
   await expect(choose(register)).toHaveCount(0);
-  await expect(body).toContainText('The ledger under the lantern');
+  await expect(preview.getByRole('heading', {name: /The ledger under the lantern/})).toHaveCount(1);
 
   const greyhaven = 'location:greyhaven';
   await select('location', greyhaven);
   const location = drafts.find(draft => draft.id === greyhaven);
   assert.equal(location.evidence_hints.basis, 'inferred');
+  await expect(reason.getByRole('heading')).toHaveText(labels.research_dossier_draft_reason);
+  await expect(reason.locator('[data-draft-reason-method]')).toHaveText(labels.research_dossier_draft_reason_location_inferred
+    .replace('{cues}', String(location.evidence_hints.qualifying_mentions)));
+  const qualifyingPassage = reason.locator('[data-draft-reason-passage]');
+  await expect(qualifyingPassage).toContainText(labels.research_dossier_draft_reason_location_passage);
+  await expect(qualifyingPassage.locator('blockquote')).toHaveText(location.evidence_hints.reason_hit.quote);
+  assert.ok(location.evidence_hints.reason_hit.quote.includes('went to Greyhaven'));
   assert.equal(location.evidence_hints.mentions, 3);
   assert.deepEqual(location.evidence_hints.chapters, [2, 3]);
   assert.equal(location.evidence_hints.first_hit.chapter, 2);
@@ -394,6 +442,21 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   const project = path.join(artifacts, 'synthetic-project');
   const manuscript = path.join(project, 'manuscript.md');
   const original = fs.readFileSync(manuscript, 'utf8');
+  const directionalQuote = 'We set out toward Northbank before dawn.';
+  const lastQuote = 'We went to Southbank before dusk.';
+  try {
+    fs.writeFileSync(manuscript, `${original}\n\nA lantern glowed in Northbank.\n\n${directionalQuote}\n\n` +
+      `A depot stood near Northbank.\n\nThey waited in Southbank.\n\n${lastQuote}\n`);
+    await reload();
+    await select('location', 'location:northbank');
+    await expect(reason.locator('[data-draft-reason-passage] blockquote')).toHaveText(directionalQuote);
+    await expect(body).not.toContainText(directionalQuote);
+    await select('location', 'location:southbank');
+    await expect(reason.locator('[data-draft-reason-passage] blockquote')).toHaveCount(0);
+    await expect(preview.locator('blockquote').filter({hasText: lastQuote})).toHaveCount(1);
+  } finally {
+    fs.writeFileSync(manuscript, original);
+  }
   await reload();
   await select('scene', otherScene);
   const acceptedDigest = drafts.find(draft => draft.id === otherScene).preview_sha256;
@@ -426,7 +489,22 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   }
 
   const settings = path.join(project, 'lixity.toml');
-  fs.writeFileSync(settings, 'locations = ["Greyhaven", "Silverbank"]\n' + fs.readFileSync(settings, 'utf8'));
+  await kind('location').press('Enter');
+  await catalogue.locator('[data-draft-location-settings]').press('Enter');
+  const mode = page.locator('#set-location-mode');
+  await expect(mode).toBeFocused();
+  await expect(mode).toHaveValue('auto');
+  await mode.selectOption('names');
+  await page.locator('#set-location-names').fill('Greyhaven\nSilverbank');
+  const applied = page.waitForResponse(response => response.url().endsWith('/api/settings'));
+  const settingsReload = page.waitForEvent('domcontentloaded');
+  await page.locator('#settings-form [type=submit]').click();
+  assert.equal((await applied).status(), 200);
+  await settingsReload;
+  assert.match(fs.readFileSync(settings, 'utf8'), /locations = \["Greyhaven", "Silverbank"\]/);
+  await page.locator('#tab-view-research').click();
+  const draftsBox = page.locator('#r-dos-drafts-box');
+  if (await draftsBox.getAttribute('open') === null) await draftsBox.locator(':scope > summary').click();
   await reload();
   const silverbank = 'location:silverbank';
   await select('location', silverbank);
@@ -445,6 +523,41 @@ async function checkSceneAndLocationDrafts(page, fixture, draftWrites) {
   await page.screenshot({path: path.join(artifacts, 'location-draft-mobile.png')});
 
   const validSettings = fs.readFileSync(settings, 'utf8');
+  const newCharacter = 'character:linette';
+  const preferences = page.locator('#settings-dossier-drafts');
+  try {
+    await kind('character').press('Enter');
+    await catalogue.locator('[data-draft-report-settings]').press('Enter');
+    await expect(preferences.locator(':scope > summary')).toBeFocused();
+    await preferences.locator('[data-dossier-drafts-field="character_context_sentences"]').fill('0');
+    await preferences.locator('[data-dossier-drafts-field="inferred_location_limit"]').fill('1');
+    await preferences.locator('[data-dossier-drafts-field="character_report_passages"]').uncheck();
+    assert.ok(await preferences.evaluate(node => node.scrollWidth <= node.clientWidth));
+    const savedPreferences = page.waitForResponse(response => response.url().endsWith('/api/settings'));
+    const reloadedPreferences = page.waitForEvent('domcontentloaded');
+    await page.locator('#settings-form [type=submit]').click();
+    assert.equal((await savedPreferences).status(), 200);
+    await reloadedPreferences;
+    const editedSettings = fs.readFileSync(settings, 'utf8');
+    assert.match(editedSettings, /\[dossier_drafts\]/);
+    assert.match(editedSettings, /"character_context_sentences" = 0/);
+    assert.match(editedSettings, /"inferred_location_limit" = 1/);
+    assert.match(editedSettings, /"character_report_passages" = false/);
+    fs.writeFileSync(settings, editedSettings + '\n[characters.Linette]\n');
+    fs.writeFileSync(manuscript, original + '\n\nLinette waited at the depot.\n');
+    await page.locator('#tab-view-research').click();
+    if (await draftsBox.getAttribute('open') === null) await draftsBox.locator(':scope > summary').click();
+    await reload();
+    await select('character', newCharacter);
+    const compact = drafts.find(draft => draft.id === newCharacter);
+    assert.equal(compact.evidence_hints.includes_passages, false);
+    await expect(reason.locator('blockquote')).toHaveText(compact.evidence_hints.first_hit.quote);
+    await expect(body.locator('blockquote')).toHaveCount(0);
+  } finally {
+    fs.writeFileSync(settings, validSettings);
+    fs.writeFileSync(manuscript, original);
+  }
+
   const beforeInvalidSettings = await listRecords();
   try {
     for (const [unavailableKind, validKind, availableId, invalidSettings] of [
@@ -550,9 +663,11 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await expect(stagePreview).toContainText('Rowan kept watch. Rowan counted the lamps.');
     await expect(stagePreview).toContainText(labels.research_dossier_character_distribution);
     await expect(stagePreview).toContainText(labels.research_dossier_character_passages);
-    await expect(stagePreview.locator('table tbody tr')).toHaveCount(3);
-    await expect(stagePreview.locator('table tbody tr').nth(1).locator('td').first()).toHaveText('2');
-    await expect(stagePreview.locator('table tbody tr').nth(1).locator('td').last()).toHaveText('0');
+    await expect(stagePreview.locator('table tbody tr')).toHaveCount(2);
+    await expect(stagePreview.locator('table tbody tr td:first-child')).toHaveText(['1', '3']);
+    await expect(stagePreview.locator('blockquote').first().locator('strong')).not.toContainText('Rowan');
+    await expect(stagePreview.locator('blockquote').filter({hasText: 'Rowan kept watch.'}).locator('strong'))
+      .toHaveText(['Rowan', 'Rowan']);
     await expect(stagePreview).toContainText('The mast creaked. A cart stopped nearby.');
     await expect(stagePreview).toContainText('The bell fell quiet. The tide moved back.');
     await expect(stagePreview).toContainText(`Rowan recorded the tally ${legacyMiddlePassages} in the notebook.`);
@@ -576,7 +691,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await expect(body).toBeFocused();
     const editableText = await body.inputValue();
     assert.ok(editableText.startsWith(original.record.body));
-    assert.ok(editableText.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.ok(editableText.includes('**Rowan** kept watch. **Rowan** counted the lamps.'));
     assert.ok(editableText.includes('The red paper lantern finally disappeared.'));
     assert.equal(await body.evaluate(field => field.selectionStart), original.record.body.length);
     await discard.press('Enter');
@@ -713,7 +828,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
     assert.equal(saved.record.id, fixture.legacy);
     assert.equal(saved.record.title, authoredTitle);
     assert.ok(saved.record.body.startsWith(authoredBody));
-    assert.ok(saved.record.body.includes('Rowan kept watch. Rowan counted the lamps.'));
+    assert.ok(saved.record.body.includes('**Rowan** kept watch. **Rowan** counted the lamps.'));
     assert.ok(saved.record.body.includes(labels.research_dossier_character_distribution));
     assert.ok(saved.record.body.includes('The mast creaked. A cart stopped nearby.'));
     assert.ok(saved.record.body.includes('The red paper lantern finally disappeared.'));
@@ -745,6 +860,24 @@ async function checkExistingCharacterDraft(browser, fixture) {
     await catalogue.locator('[data-draft-kind="scene"]').press('Enter');
     await catalogue.locator('[data-draft-select="scene:1:1"]').press('Enter');
     await expect(preview.locator('[data-create-manuscript-draft="scene:1:1"]')).toBeEnabled();
+    try {
+      fs.writeFileSync(manuscript, source + '\n\n' + latestParagraph + '\n');
+      await readSuggestions(existing, true);
+      await selectCharacter(rowan);
+      await stage.press('Enter');
+      await expect(stagePreview).toContainText(latestParagraph);
+      await save.press('Enter');
+      await expect(dialog).toBeHidden();
+      const refreshed = await record();
+      assert.equal(refreshed.record.revision, 4);
+      assert.ok(refreshed.record.body.startsWith(authoredBody));
+      assert.equal(refreshed.record.body.match(/\*\*Rowan\*\* kept watch\./g)?.length, 1);
+      assert.ok(refreshed.record.body.includes('**Rowan** returned quietly to the landing.'));
+      const previous = await (await page.request.get(recordUrl + '&revision=3')).json();
+      assert.deepEqual(previous.record, saved.record, 'Refreshing the saved analysis preserves the earlier pin');
+    } finally {
+      fs.writeFileSync(manuscript, source);
+    }
     assert.deepEqual(errors, []);
   } finally {
     await page.close();
@@ -752,7 +885,7 @@ async function checkExistingCharacterDraft(browser, fixture) {
 }
 
 (async () => {
-  const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
+  const server = await startNativeServer(`
 import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -801,18 +934,10 @@ server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['dossier_id'],
     'legacy': legacy['dossier_id']}), flush=True)
 server.serve_forever()
-`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
-  let stderr = '';
-  server.stderr.on('data', data => { stderr += data; });
-  const lines = createInterface({input: server.stdout});
+`, artifacts);
+  const {fixture} = server;
   let browser;
   try {
-    const fixture = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Fixture startup timed out: ' + stderr)), 15000);
-      lines.once('line', line => { clearTimeout(timeout); resolve(JSON.parse(line)); });
-      server.once('error', reject);
-      server.once('exit', code => reject(new Error(`Fixture exited ${code}: ${stderr}`)));
-    });
     const dossierListURL = url => url.origin === fixture.url &&
       url.pathname === '/api/research/dossiers' && !url.searchParams.has('id');
     browser = await launchChromium();
@@ -1025,6 +1150,7 @@ server.serve_forever()
     await expect(loadDrafts).toBeFocused();
     await ivoDraft.press('Space');
     await expect(preview).toContainText('Ivo');
+    await expect(preview.locator('[data-draft-reason] p')).toHaveText('The manuscript contains the configured character name or one of its variants.');
     await expect(ivoDraft).toBeFocused();
     await sceneKind.press('Enter');
     await expect(sceneKind).toBeFocused();
@@ -1120,12 +1246,16 @@ server.serve_forever()
       await placeKind.press('Enter');
       await expect(placeKind).toBeFocused();
       await draftList.locator('[data-draft-select="location:silverbank"]').press('Enter');
+      await expect(preview.locator('[data-draft-reason] h6')).toHaveText(labels.research_dossier_draft_reason);
+      await expect(preview.locator('[data-draft-reason] p')).toHaveText(labels.research_dossier_draft_reason_location_configured);
       await expect(preview.getByText(labels.research_dossier_draft_location_configured, {exact: true})).toHaveCount(1);
       await expect(preview.locator('[data-draft-preview-body] .research-dossier-body-rendered')).toContainText('Lanterns glowed in Silverbank after dusk.');
       await sceneKind.press('Enter');
       await expect(sceneKind).toBeFocused();
       await expect(draftList.getByRole('heading', {name: labels.research_dossier_draft_scene_individual, exact: true})).toBeVisible();
       await expect(draftList.locator('[data-draft-select="scene:3:2"]')).toContainText(`${labels.research_dossier_draft_scene_unit} 2`);
+      await draftList.locator('[data-draft-select="scene:3:2"]').press('Enter');
+      await expect(preview.locator('[data-draft-reason] p')).toHaveText(labels.research_dossier_draft_reason_scene_scene);
       assert.ok(await draftList.evaluate(node => node.scrollWidth <= node.clientWidth),
         `${language} draft list and preview fit at 320px`);
       if (language === 'de') await draftList.screenshot({path: path.join(artifacts, 'scene-draft-de-320.png')});
@@ -1164,9 +1294,10 @@ server.serve_forever()
       }
       const character = dossierDetails.locator('details[data-dossier-character]');
       const characterSummary = character.locator(':scope > summary');
-      await expect(characterSummary).toHaveText(labels.research_dossier_character_heading);
+      await expect(characterSummary).toHaveText(labels.research_dossier_character_live_heading);
+      await expect(dossierDetails.locator('.research-folder-notes > h4')).toHaveText(labels.research_dossier_saved_body);
       await characterSummary.press('Enter');
-      await expect(character.getByText(labels.research_dossier_character_distribution, {exact: true}).first()).toBeVisible();
+      await expect(character.getByText(labels.research_dossier_character_live_distribution, {exact: true})).toBeVisible();
       await expect(character.getByText(labels.research_dossier_character_passages, {exact: true}).first()).toBeVisible();
       await expect(character.getByText(labels.research_dossier_character_context_hint, {exact: true})).toBeVisible();
       const firstMatch = character.locator('[data-character-passage]').first();
@@ -1189,13 +1320,31 @@ server.serve_forever()
       });
       assert.ok(dimensions.scroll <= dimensions.client,
         `${language} character analysis fits at 320px: ${JSON.stringify(dimensions)}`);
+
+      await page.locator('#research-tab-review').press('Enter');
+      const termReports = page.locator('#research-manuscript-terms-section');
+      if (!(await termReports.evaluate(node => node.open))) await termReports.locator(':scope > summary').press('Enter');
+      const termEditor = termReports.locator('#r-term-manage');
+      await termEditor.locator(':scope > summary').press('Enter');
+      const addVariant = termEditor.getByRole('button', {name:labels.manuscript_terms_variant_add});
+      await addVariant.press('Enter');
+      const variant = termEditor.getByRole('group', {name:labels.manuscript_terms_variant_title.replace('{number}', '1')});
+      await expect(variant.getByRole('textbox', {name:labels.manuscript_terms_variant_form})).toBeFocused();
+      await expect(variant.getByRole('textbox', {name:labels.manuscript_terms_variant_chapters})).toBeVisible();
+      await expect(variant.getByRole('textbox', {name:labels.manuscript_terms_variant_note})).toBeVisible();
+      assert.ok(await termEditor.evaluate(node => node.scrollWidth <= node.clientWidth), `${language} variant editor fits at 320px`);
+      await variant.getByRole('button', {name:labels.manuscript_terms_variant_remove}).press('Enter');
+      await expect(addVariant).toBeFocused();
     }
     assert.deepEqual(errors, []);
     console.log(`Dossier workflows: full draft previews, independent scene saves, auditable locations, exact character regeneration and paged character readings passed. Seven locales at 1440/390/320. Screenshots: ${artifacts}`);
   } finally {
-    if (stderr.includes('Traceback')) console.error(stderr);
-    if (browser) await browser.close();
-    lines.close();
-    if (server.exitCode === null) { const exited = once(server, 'exit'); server.kill(); await exited; }
+    try {
+      if (browser) await browser.close();
+    } finally {
+      await server.close();
+      const stderr = server.stderr();
+      if (stderr.includes('Traceback')) console.error(stderr);
+    }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

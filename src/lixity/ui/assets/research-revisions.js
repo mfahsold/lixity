@@ -312,16 +312,7 @@ if (researchRevisionDialog) {
     revisionSetReferenceSelection(field, value);
     // Missing metadata or identical authored names remain distinguishable in
     // this list without treating a display ordinal as persistent identity.
-    var counts = Object.create(null);
-    Array.from(field.options).forEach(function(option) { counts[option.text] = (counts[option.text] || 0) + 1; });
-    var positions = Object.create(null);
-    Array.from(field.options).forEach(function(option) {
-      var text = option.text;
-      if (counts[text] > 1) {
-        positions[text] = (positions[text] || 0) + 1;
-        option.text += " · " + uiFormat("research_choice_number", {number:positions[text]});
-      }
-    });
+    disambiguateResearchOptions(field);
   }
 
   function revisionBuildFields(record) {

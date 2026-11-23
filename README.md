@@ -145,12 +145,11 @@ language-specific verb-group rules; parser errors remain possible.
 
 A dossier gathers authored notes, retained source passages, claims, decisions,
 images and maps. Passage associations return to their manuscript context. A linked
-earlier version remains distinct from the current entry. Configured terms and
-props locate declared wording and connect it to dossiers. Use the current
-manuscript's chapter counts and surrounding sentences to review a generated
-character dossier in the development checkout. Open a matching passage in the
-manuscript when the source and paragraph identities match. Save a reviewed
-manuscript addition as a new version to keep those passages with your notes.
+earlier version remains distinct from the current entry. In the development
+checkout, manuscript suggestions show why a character, place or scene was
+proposed. Follow a highlighted match back to the manuscript, or save a
+reviewed report alongside your notes. Configure place names and link exact
+terms or props to a dossier. Use the saved version for a PDF.
 
 Research is scoped to an explicit project. Retaining a source and redistributing
 it are separate choices. Original PDFs, images and videos have their own import
@@ -221,6 +220,8 @@ workflows aligned. [Choose a command](https://github.com/mfahsold/lixity/blob/ma
 or start with the [API contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md).
 For a connected AI client, the [read-only MCP setup](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server)
 describes tool discovery and how to evaluate the client's handling of text.
+The [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md)
+guides manuscript review, local research and service diagnosis.
 
 ## Documentation map
 

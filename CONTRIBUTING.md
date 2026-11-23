@@ -86,6 +86,24 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 `node --check path/to/file.js` catches syntax errors before a browser run.
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
+#### Reproduce a performance finding
+
+Use the included public-domain texts and synthetic chapters for analysis
+profiling. Run this command on both source revisions with the same inputs
+and iteration count.
+
+```sh
+PYTHONPATH=src .venv/bin/python scripts/benchmark_pipeline.py --iterations 3 --json
+```
+
+Compare the stage medians and result digests. This process reports a single
+peak resident memory figure for the run in MiB on macOS and Linux. Other
+platforms still report timings and digests. The JSON uses `null` when memory
+usage is unavailable. For a research workflow, profile the actual request
+with a synthetic archive and report the record count, page or result limit,
+and median. Prefer operation counts or output equivalence for regression
+assertions where timing varies by host.
+
 #### CI and test environments
 
 Pull requests targeting `main` run the `tests` workflow on Linux with Python
@@ -224,8 +242,12 @@ make release-prepare VERSION=X.Y.Z
 
 Review and complete the draft in `docs/releases/vX.Y.Z.md` and follow the
 [generation procedure](#updating-documentation-and-pages) for changed UI or
-public guides. The preparation target updates local files. Commit, push, tag
-and publication each use their own operation.
+public guides. The preparation target keeps the changelog date pending and
+compares against the last published version. When the release date is known,
+run `make release-prepare VERSION=X.Y.Z RELEASE_DATE=YYYY-MM-DD` to record it in
+the changelog and citation. Both invocations update local files and preserve
+reviewed release notes. Commit, push, tag and publication each use their own
+operation.
 
 1. **Verify the local candidate.** Run `make release-check RELEASE_TAG=vX.Y.Z`,
    `make workflow-check` and, for changes affecting rendered output,
@@ -268,12 +290,20 @@ and publication each use their own operation.
    After GitHub publication and a successful or intentionally skipped PyPI
    step, the release pipeline deploys Pages from that exact tag.
 4. **Verify each channel and perform any authorized local rollout.**
-   Check out that exact tag and run `make release-verify RELEASE_TAG=vX.Y.Z` to
-   check the GitHub Release and attestations, PyPI archive bytes, live Pages and
-   the version-specific Zenodo status. The Pages check expects the tag's commit
-   to be live. Follow the
+   Run `make release-verify RELEASE_TAG=vX.Y.Z` from the exact tagged checkout
+   to check the GitHub Release and attestations, PyPI archive bytes, live Pages
+   and the version-specific Zenodo status. Use
+   `RELEASE_VERIFY_ARGS=--skip-pypi` if PyPI publication was intentionally disabled.
+   Follow the
    [local rollout procedure](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
    for the checkout or installed environment that owns the selected port.
+
+To verify a historical release after a newer Pages deployment, pass
+`RELEASE_VERIFY_ARGS=--skip-pages`. Add `--skip-pypi` to the same quoted value
+when neither channel applies. From the current maintainer checkout, set
+`RELEASE_VERIFY_ROOT=/path/to/tagged-checkout` to use these checks for an older
+checkout. Set `RELEASE_VERIFY_DIR` to a separate download directory for each
+tag when verifying multiple releases.
 
 Verify a downloaded artifact with:
 
@@ -307,17 +337,18 @@ Every tagged release is distributed and archived automatically:
 - Zenodo archives each new release once the repository is enabled there, so
   released versions receive a DOI without a local step.
 
-Zenodo processing is asynchronous and outside the Actions result. Verify the
-specific version's public record and DOI before reporting archival complete;
-a successful GitHub/PyPI/Pages run alone does not establish it. Investigate a
+Zenodo processing is asynchronous and outside the Actions result. Check the
+specific release independently with
+`.venv/bin/python scripts/release_channels.py verify-zenodo --repo mfahsold/lixity --tag vX.Y.Z`.
+Confirm the DOI before reporting archival complete. Investigate a
 missing record in Zenodo's GitHub integration release/error view rather than
 republishing an immutable tag. When both metadata files exist,
 `.zenodo.json` takes precedence over `CITATION.cff`; maintain their product
 description and conceptual citation consistently. See
 [Zenodo's metadata guidance](https://help.zenodo.org/docs/github/describe-software/).
 
-The GitHub Pages environment must permit release tags (`v*`). A PyPI catch-up
-dispatch also pins Pages to its selected existing tag. See the
+The GitHub Pages environment must permit release tags (`v*`). Manual release
+dispatches promote an already published release to PyPI only. See the
 [Pages channels](#publish-and-verify-pages) for exact-source verification.
 
 A new release with
@@ -412,12 +443,12 @@ Google Search Console credentials do not grant Bing access.
 
 #### Generate and preview
 
-1. Run `make docs-sync` to sync version pins and regenerate the public home
+1. Run `make screenshots` and then `make examples` when UI assets or published
+   guides change. The examples use the captured image dimensions. Regenerate
+   videos with `make videos` when the reviewed walkthrough changes. Review the
+   captures. The docs tests compare the bundled UI assets with source bytes.
+2. Run `make docs-sync` to sync version pins and regenerate the public home
    pages, Markdown alternates, `llms-full.txt` and localized metric references.
-2. Run `make examples` and `make screenshots` when UI assets or published
-   guides change. Regenerate videos with `make videos` when the reviewed
-   walkthrough changes. The docs tests compare the bundled UI assets with
-   source bytes. Review screenshots and set their actual image dimensions.
 3. Run the [documentation and browser checks](#select-the-checks-for-your-change).
    Inspect desktop and mobile layouts, titles, links and reviewed media.
 4. Stage a local preview with
@@ -452,7 +483,9 @@ documentation rollout. The production workflow also accepts a verified release
 ref from the tag pipeline. It verifies generated documentation before staging.
 Wait for the run on the intended commit, then check `source_sha` and
 `workflow_run_url` in the live [deployment record](https://mfahsold.github.io/lixity/deployment.json)
-and open the affected public routes.
+and open the affected public routes. Run `make pages-verify` from that deployed
+checkout to compare its exact SHA and representative public files with live
+Pages. The check works for deployments from `main` and from release tags.
 
 #### Maintain the Wiki and historical references
 

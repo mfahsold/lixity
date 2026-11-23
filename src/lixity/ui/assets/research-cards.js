@@ -17,26 +17,21 @@
 
   function excerptText(value, title) {
     // API excerpts may end inside a fenced block. Keep the saved text untouched
-    // and derive only a plain reading preview; never mount diagram markup here.
+    // and take the first prose block rather than flattening the table of contents.
     var prose = value.replace(/```[\s\S]*?(?:```|$)/g, "");
     var preview = document.createElement("div");
     preview.innerHTML = renderSafeMarkdown(prose);
-    preview.querySelectorAll("br, hr").forEach(function(breakNode) {
+    preview.querySelectorAll("br").forEach(function(breakNode) {
       breakNode.replaceWith(document.createTextNode(" "));
     });
-    preview.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li, blockquote, th, td").forEach(function(block) {
-      block.appendChild(document.createTextNode(" "));
-    });
-    var text = preview.textContent.replace(/\s+/g, " ").trim();
-    if (title) {
-      var cleanTitle = title.replace(/^Dossier:\s*/i, "").trim();
-      if (text.toLowerCase().startsWith(title.toLowerCase())) {
-        text = text.slice(title.length).replace(/^[:\s–—-]+/, "").trim();
-      } else if (cleanTitle && text.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
-        text = text.slice(cleanTitle.length).replace(/^[:\s–—-]+/, "").trim();
-      }
+    function plain(node) { return node.textContent.replace(/\s+/g, " ").trim(); }
+    var name = (title || "").trim().toLocaleLowerCase();
+    for (var block of preview.querySelectorAll(":scope > :is(p, ul, ol, blockquote)")) {
+      var lines = block.matches("ul, ol") ? Array.from(block.children, plain) : [plain(block)];
+      var text = lines.filter(function(line) { return line && line.toLocaleLowerCase() !== name; }).join(" ");
+      if (text) return text;
     }
-    return text;
+    return "";
   }
 
   function CatalogueLink(props) {
@@ -89,6 +84,7 @@
   function Card(props) {
     var item = props.item;
     var filterAttr = item.filterText ? {"data-filter-text": item.filterText} : {};
+    var excerpt = item.excerpt && excerptText(item.excerpt, item.title);
     return html`<div class=${item.compact ? "research-card research-card-compact" : "research-card"} ...${filterAttr}>
       <div class="research-card-header">
         <span class="research-card-title">${item.title}</span>
@@ -106,7 +102,7 @@
         </div>` : null}
       </div>
       ${item.zotero ? html`<${CatalogueLink} library=${item.zotero.library} itemKey=${item.zotero.key} />` : null}
-      ${item.excerpt ? html`<p class="ctl-note research-excerpt">${excerptText(item.excerpt, item.title)}</p>` : null}
+      ${excerpt ? html`<p class="ctl-note research-excerpt">${excerpt}</p>` : null}
       ${item.statementHtml
         ? html`<div class="research-claim-statement research-prose markdown-body my-2"
             dangerouslySetInnerHTML=${{__html: item.statementHtml}} />` : null}

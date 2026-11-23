@@ -197,16 +197,16 @@ jobs:
 
   pages:
     needs: [publish, pypi]
+    # A PyPI catch-up can select an older release. Only tag-triggered runs
+    # deploy that release's documentation.
     if: >-
-      !cancelled() &&
-      ((github.event_name == 'push' && needs.publish.result == 'success' &&
-        (needs.pypi.result == 'success' ||
-         (vars.PUBLISH_PYPI != 'true' && needs.pypi.result == 'skipped'))) ||
-       (github.event_name == 'workflow_dispatch' && needs.pypi.result == 'success'))
+      !cancelled() && github.event_name == 'push' && needs.publish.result == 'success' &&
+      (needs.pypi.result == 'success' ||
+       (vars.PUBLISH_PYPI != 'true' && needs.pypi.result == 'skipped'))
     permissions:
       contents: read
       pages: write
       id-token: write
     uses: ./.github/workflows/pages.yml
     with:
-      source_ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.sha }}
+      source_ref: ${{ github.sha }}

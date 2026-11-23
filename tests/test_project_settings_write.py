@@ -6,7 +6,12 @@ from unittest.mock import patch
 
 import pytest
 
-from lixity.config import load_project_config, prepare_project_settings
+from lixity.config import (
+    load_project_config,
+    prepare_project_settings,
+    read_explicit_project_config,
+)
+from lixity.dossier_draft_settings import resolve_dossier_draft_settings
 
 
 def test_combined_metadata_write_preserves_other_tables_and_comments(tmp_path: Path):
@@ -59,6 +64,61 @@ def test_partial_analysis_defaults_validate_the_resulting_project(tmp_path: Path
     with pytest.raises(ValueError, match=r"z_mild.*z_strong"):
         prepare_project_settings(tmp_path, {"z_strong": 4.0})
     assert path.read_text() == original
+
+
+def test_corpus_limits_validate_against_project_values(tmp_path: Path) -> None:
+    path = tmp_path / "lixity.toml"
+    original = 'short_sentence_max = 10\nmedium_sentence_max = 14 # Keep\n[custom]\nkeep = true\n'
+    path.write_text(original)
+    with pytest.raises(ValueError, match="short_sentence_max"):
+        prepare_project_settings(tmp_path, {"short_sentence_max": 15})
+    with pytest.raises(ValueError, match="numbers"):
+        prepare_project_settings(tmp_path, {"short_sentence_max": True})
+    with pytest.raises(ValueError, match="dialogue_paragraph_share"):
+        prepare_project_settings(tmp_path, {"dialogue_paragraph_share": 1.1})
+    assert path.read_text() == original
+
+    prepare_project_settings(tmp_path, {"short_sentence_max": 9, "dialogue_paragraph_share": 0.65, "language": "auto"}).commit()
+    saved = read_explicit_project_config(tmp_path)
+    assert saved["short_sentence_max"] == 9
+    assert saved["dialogue_paragraph_share"] == 0.65
+    assert saved["language"] == "auto"
+    assert 'medium_sentence_max = 14 # Keep\n[custom]\nkeep = true\n' in path.read_text()
+
+
+def test_place_name_settings_replace_multiline_list_and_override_inherited_mode(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    inherited = '[tool.lixity]\nlocations = ["Harbor"]\n'
+    pyproject.write_text(inherited)
+    path = tmp_path / "lixity.toml"
+    original = 'locations = [\n  "Bay # 1", # Author note\n  "West [Fort]",\n] # Place mode\n\n[custom]\nkeep = true\n'
+    path.write_text(original)
+    for mode, expected in ((["Northport", "northport"], ["Northport"]), ([], []), ("auto", "auto")):
+        prepare_project_settings(tmp_path, {"locations": mode}).commit()
+        assert pyproject.read_text() == inherited
+        saved = path.read_text()
+        assert "# Author note" in saved and "# Place mode" in saved and "Bay # 1" not in saved
+        assert "[custom]\nkeep = true" in saved
+        assert load_project_config(tmp_path)["locations"] == expected
+
+
+def test_dossier_preferences_reuse_the_project_writer_and_schema(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    inherited = "[tool.lixity.dossier_drafts]\ninferred_location_limit = 4\n"
+    pyproject.write_text(inherited, encoding="utf-8")
+    path = tmp_path / "lixity.toml"
+    original = 'title = "Story"\n\n[terms.key]\naliases = ["spare key"]\n'
+    path.write_text(original, encoding="utf-8")
+
+    requested = {"inferred_location_limit": 4, "character_context_sentences": 0, "character_report_passages": False}
+    prepare_project_settings(tmp_path, {"dossier_drafts": requested}).commit()
+    assert pyproject.read_text() == inherited
+    assert path.read_text().startswith(original)
+    accepted = resolve_dossier_draft_settings(read_explicit_project_config(tmp_path))
+    assert accepted.model_dump(exclude_defaults=True) == requested
+    with pytest.raises(ValueError, match="character_context_sentences"):
+        prepare_project_settings(tmp_path, {"dossier_drafts": {**requested, "character_context_sentences": "2"}})
+    assert resolve_dossier_draft_settings(read_explicit_project_config(tmp_path)) == accepted
 
 
 @pytest.mark.parametrize("existing", [

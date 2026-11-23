@@ -134,9 +134,9 @@ back up the archive. Retention-confirmed manuscript links require record/manifes
 
 ## Edit dossiers and review decisions
 
-Under **Research → Dossiers → From manuscript**, select **New suggestions** to find a character, scene or place. Review the proposed text before creating the dossier. A character suggestion starts with mention counts and a first passage.
+Under **Research → Dossiers → From manuscript**, select **New suggestions** to find a character, scene or place. The preview explains why it appeared and shows the text that will be saved. Inferred places show the directional passage that qualified the name. Open the place settings to choose automatic suggestions or search for your own list.
 
-In a generated character dossier, open **Character in the manuscript** to see the chapter table and matching passages with neighboring sentences where available. Choose **Preview addition** to review the material before saving a new dossier version alongside your notes. **From manuscript → Add to a character dossier** opens the same review for the dossier you choose. Read the passages in context to check who a name refers to.
+In a generated character dossier, open **Current passages in the manuscript** to see the chapter table and read the highlighted name in context. Choose **Preview manuscript analysis** to review the material before saving it alongside your notes in a new dossier version. Set the number of suggestions and the excerpt policy under **Project → Analysis → Dossier suggestions and character reports**. For objects or recurring expressions, choose **Linked dossier** in **Manage terms & props** to see exact matches in that dossier.
 
 Open a dossier to read its notes, linked claims and source quotations. Use **Edit section** beside a unique heading for a bounded change, or **Edit** for the full record. Select correction or supersession, give a reason and save explicitly. An unchanged save keeps the existing revision; a changed save appends history. For an external editor, use the [export → edit → preview → apply procedure](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#edit-an-exported-markdown-dossier). Ordinary source import does not create an authored dossier.
 
@@ -148,7 +148,7 @@ In **Review**, open **Read decision with dossier** to compare the named versions
 
 In the current development workspace, open a saved dossier and select **Download PDF**. Check the version shown beside the button. You can download that version from the dossier, beside the manuscript, or after opening it from the dossier’s history.
 
-The A4 copy includes saved notes, chapter tables, place and route descriptions, and source quotations pinned to that version. Use the PDF reader’s bookmarks to jump between sections. Save a new manuscript excerpt as a dossier addition to include it in your next download. Use the attachment controls for original files and the research view to inspect current claim links.
+The A4 copy includes saved notes, chapter tables, place and route descriptions, and source quotations pinned to that version. Repeated copies of the same generated report appear once. Use the PDF reader’s bookmarks to jump between sections. Review and save the manuscript analysis to include current passages in your next download.
 
 Open [Mara’s saved dossier in PDF](../demo/warehouse-4-dossier.pdf) to see the chapter distribution, manuscript passages and a pinned source quote from the fictional Warehouse 4 project.
 

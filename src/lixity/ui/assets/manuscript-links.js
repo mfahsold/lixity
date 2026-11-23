@@ -160,7 +160,7 @@
   }
   function staleReport(report, sourceSha) {
     return Boolean(report && report.ok === true &&
-      (report.current_source_sha256 !== sourceSha || report.source_state !== "available"));
+      ((report.current_source_sha256 ?? report.source_sha256) !== sourceSha || report.source_state !== "available"));
   }
   async function open(value) {
     createDialog(); var request = ++serial;
@@ -244,7 +244,13 @@
   var reviewTabHost = document.getElementById("research-manuscript-review");
   var termsSection = document.getElementById("research-manuscript-terms-section");
   var termsTabHost = document.getElementById("research-manuscript-terms");
-  var termsSerial = 0, termsReport = null, termsContext = null;
+  var termsManager = document.getElementById("r-term-manage");
+  var termDossier = document.getElementById("r-term-dossier");
+  var termVariants = document.getElementById("r-term-variants");
+  var addTermVariant = document.getElementById("r-term-add-variant");
+  var removedTermVariants = false;
+  var termsSerial = 0, termsReport = null, termsContext = null, termsWritePending = false;
+  var termDossierSerial = 0, termDossierContext = null;
   if (reviewSection && reviewTabHost) {
     reviewSection.hidden = false;
     reviewTabHost.replaceChildren(element("p", label("research_loading"), "ctl-status loading"));
@@ -256,23 +262,16 @@
   function invalidatePanelIndex() { panelIndex = null; }
   function getPanelIndex() {
     if (panelIndex) return panelIndex;
-    var byHash = new Map();
     var byLineRange = new Map();
     var panels = chapters.querySelectorAll(".ptext");
     for (var i = 0; i < panels.length; i++) {
       var panel = panels[i];
-      var hash = panel.dataset.paragraphSha256;
-      if (hash) {
-        var byHashList = byHash.get(hash);
-        if (byHashList) byHashList.push(panel);
-        else byHash.set(hash, [panel]);
-      }
       var rangeKey = Number(panel.dataset.start) + ":" + Number(panel.dataset.end);
       var byRangeList = byLineRange.get(rangeKey);
       if (byRangeList) byRangeList.push(panel);
       else byLineRange.set(rangeKey, [panel]);
     }
-    panelIndex = {byHash: byHash, byLineRange: byLineRange};
+    panelIndex = byLineRange;
     return panelIndex;
   }
   if (typeof MutationObserver === "function") {
@@ -293,22 +292,29 @@
     });
   }
   document.addEventListener("lixity:reader-ready", invalidatePanelIndex);
-  function matchesPanel(row, panel) {
-    var a = row.anchor;
-    if (row.anchor_state !== "resolved" || !a || row.resolved_start_line !== Number(panel.dataset.start) ||
-        row.resolved_end_line !== Number(panel.dataset.end) || a.paragraph_sha256 !== panel.dataset.paragraphSha256) return false;
+  function matchesQuote(panel, start, end, quote) {
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) return false;
     var points = Array.from(bridge.text(panel) || "");
-    return Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start && a.end <= points.length &&
-      points.slice(a.start, a.end).join("") === a.quote;
+    return end <= points.length && points.slice(start, end).join("") === quote;
+  }
+  function matchesExactPanel(panel, anchor, startLine, endLine) {
+    return !!(anchor && anchor.paragraph_sha256 && anchor.paragraph_sha256 === panel.dataset.paragraphSha256 &&
+      startLine === Number(panel.dataset.start) && endLine === Number(panel.dataset.end) &&
+      matchesQuote(panel, anchor.start, anchor.end, anchor.quote));
+  }
+  function uniquePanel(startLine, endLine, matches) {
+    var candidates = (getPanelIndex().get(startLine + ":" + endLine) || []).filter(matches);
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+  function matchesPanel(row, panel) {
+    return row.anchor_state === "resolved" && matchesExactPanel(panel, row.anchor, row.resolved_start_line, row.resolved_end_line);
   }
   function passageResearchRows(report, panel) {
     return (report.links || []).filter(function(row) { return matchesPanel(row, panel); });
   }
   function linkedPanel(row) {
     if (!row || row.anchor_state !== "resolved" || !row.anchor || !row.anchor.paragraph_sha256) return null;
-    var list = getPanelIndex().byHash.get(row.anchor.paragraph_sha256);
-    if (!list) return null;
-    return list.find(function(panel) { return matchesPanel(row, panel); }) || null;
+    return uniquePanel(row.resolved_start_line, row.resolved_end_line, function(panel) { return matchesPanel(row, panel); });
   }
   function candidatePanel(row) {
     if (!["moved", "adjusted"].includes(row.anchor_state) || !row.anchor ||
@@ -316,17 +322,9 @@
         !Number.isInteger(row.resolved_start) || !Number.isInteger(row.resolved_end)) return null;
     // Adjusted paragraphs retain the recorded quotation at new codepoint
     // offsets; their former paragraph hash and offsets intentionally differ.
-    var list = getPanelIndex().byLineRange.get(row.resolved_start_line + ":" + row.resolved_end_line);
-    if (!list) return null;
-    var candidates = list.filter(function(panel) {
-      if (Number(panel.dataset.start) !== row.resolved_start_line ||
-          Number(panel.dataset.end) !== row.resolved_end_line) return false;
-      var points = Array.from(bridge.text(panel) || "");
-      return row.resolved_start >= 0 && row.resolved_end > row.resolved_start &&
-        row.resolved_end <= points.length &&
-        points.slice(row.resolved_start, row.resolved_end).join("") === row.anchor.quote;
+    return uniquePanel(row.resolved_start_line, row.resolved_end_line, function(panel) {
+      return matchesQuote(panel, row.resolved_start, row.resolved_end, row.anchor.quote);
     });
-    return candidates.length === 1 ? candidates[0] : null;
   }
   function renderReviewItems(report, filtered) {
     var rows = report.links || [];
@@ -945,21 +943,27 @@
       var value = selection(); if (value) { event.preventDefault(); open(value); }
     }
   });
-  function matchesTermAnchor(occ, panel) {
-    var a = occ && occ.anchor;
-    if (!a || a.start_line !== Number(panel.dataset.start) || a.end_line !== Number(panel.dataset.end) ||
-        a.paragraph_sha256 !== panel.dataset.paragraphSha256) return false;
-    var points = Array.from(bridge.text(panel) || "");
-    return Number.isInteger(a.start) && Number.isInteger(a.end) && a.start >= 0 && a.end > a.start &&
-      a.end <= points.length && points.slice(a.start, a.end).join("") === a.quote;
-  }
   function termPanel(occ) {
-    if (!occ || !occ.anchor || !occ.anchor.paragraph_sha256) return null;
-    var list = getPanelIndex().byHash.get(occ.anchor.paragraph_sha256);
-    if (!list) return null;
-    return list.find(function(panel) { return matchesTermAnchor(occ, panel); }) || null;
+    var anchor = occ && occ.anchor;
+    return anchor ? uniquePanel(anchor.start_line, anchor.end_line, function(panel) {
+      return matchesExactPanel(panel, anchor, anchor.start_line, anchor.end_line);
+    }) : null;
   }
-  function renderTermsReport(report) {
+  function fetchTerms(value, dossierId) {
+    var query = new URLSearchParams({project_token: value.project});
+    if (dossierId) query.set("dossier_id", dossierId);
+    return bridge.read("research/manuscript-terms?" + query);
+  }
+  function validTerms(report, value) {
+    return report && report.ok && report.schema_version === "research-manuscript-terms-local/1" &&
+      report.source_sha256 === value.source && report.source_state === "available" &&
+      Array.isArray(report.terms) && Array.isArray(report.occurrences);
+  }
+  function termsFailure(report, value) {
+    var stale = staleReport(report, value.source) || (report && report.code === "stale-context");
+    return reviewNote(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale);
+  }
+  function renderTermsReport(report, current, headingTag) {
     var fragment = document.createDocumentFragment();
     var terms = Array.isArray(report.terms) ? report.terms : [];
     var occurrences = Array.isArray(report.occurrences) ? report.occurrences : [];
@@ -973,10 +977,10 @@
       return fragment;
     }
     var chapterControl = document.getElementById("reader-chapter");
-    var currentChapterEl = chapterControl && chapterControl.dataset.currentChapter
-      ? document.getElementById(chapterControl.dataset.currentChapter) : null;
-    var currentChapterNum = currentChapterEl && currentChapterEl.dataset.chapterNumber
-      ? Number(currentChapterEl.dataset.chapterNumber) : null;
+    var currentChapter = chapterControl && Array.from(chapterControl.options).find(function(option) {
+      return option.value === chapterControl.dataset.currentChapter;
+    });
+    var currentChapterNum = Number(currentChapter?.dataset.chapterNumber);
     var groups = [];
     var groupByNum = new Map();
     occurrences.forEach(function(occ, idx) {
@@ -984,7 +988,8 @@
       var group = groupByNum.get(number);
       if (!group) {
         var title = number === Infinity ? label("manuscript_link_no_current_chapter") :
-          label("manuscript_link_current_chapter").replace("{number}", number).replace("{title}", function() { return occ.chapter_title || ""; });
+          label("publication_chapter").replace("{number}", number);
+        if (number !== Infinity && occ.chapter_title && title !== occ.chapter_title) title += " · " + occ.chapter_title;
         group = {
           number: number,
           title: title,
@@ -1003,7 +1008,7 @@
       details.dataset.manuscriptTermChapterGroup = "";
       details.open = autoExpand || group.isCurrent;
       var summary = document.createElement("summary");
-      var heading = element("h3", group.title);
+      var heading = element(headingTag, group.title);
       heading.dataset.manuscriptTermsChapter = "";
       heading.style.display = "inline";
       summary.appendChild(heading);
@@ -1016,7 +1021,9 @@
         item.appendChild(element("p", summaryText));
         var flags = [label("manuscript_terms_variant_" + (occ.variant_kind || "preferred"))];
         (occ.flags || []).forEach(function(flag) {
-          if (flag === "overlapping_term" || flag === "unicode_ambiguity") flags.push(label("manuscript_terms_flag_" + flag));
+          if (["overlapping_term", "unicode_ambiguity", "compound_match"].includes(flag)) {
+            flags.push(label("manuscript_terms_flag_" + flag));
+          }
         });
         item.appendChild(element("p", flags.join(" · "), "ctl-note"));
         if (occ.anchor && typeof occ.anchor.quote === "string") item.appendChild(element("blockquote", occ.anchor.quote));
@@ -1024,6 +1031,11 @@
           var jump = element("button", label("manuscript_link_open_passage"), "ctl");
           jump.type = "button";
           jump.dataset.manuscriptTermJump = String(entry.idx);
+          jump.addEventListener("click", function() {
+            if (!current()) return;
+            var panel = termPanel(occ);
+            if (panel) bridge.navigate(panel);
+          });
           item.appendChild(jump);
         }
         details.appendChild(item);
@@ -1032,43 +1044,202 @@
     });
     return fragment;
   }
+  window.LixityDossierTerms = {
+    html: function() {
+      var details = document.createElement("details");
+      details.dataset.dossierEvidence = "";
+      details.dataset.dossierTerms = "";
+      var summary = document.createElement("summary");
+      summary.appendChild(element("h4", label("research_dossier_linked_terms")));
+      var slot = document.createElement("div");
+      slot.dataset.dossierTermsReport = "";
+      details.append(summary, element("p", label("research_dossier_linked_terms_scope"), "ctl-note"), slot);
+      return details.outerHTML;
+    },
+    mount: function(host, detail, reading) {
+      var panel = host.querySelector("[data-dossier-terms]");
+      if (!panel) return;
+      var slot = panel.querySelector("[data-dossier-terms-report]");
+      var serial = 0;
+      async function render() {
+        if (!panel.open || !reading.current()) return;
+        var value = context(), request = ++serial;
+        function current() {
+          return request === serial && panel.open && reading.current() && host.contains(slot) && live(value);
+        }
+        slot.replaceChildren(element("p", label("research_loading"), "ctl-status loading"));
+        var report = await fetchTerms(value, detail.id);
+        if (!current()) return;
+        if (!validTerms(report, value) || report.project_id !== detail.project_id || report.dossier_id !== detail.id) {
+          slot.replaceChildren(termsFailure(report, value));
+          return;
+        }
+        slot.replaceChildren(renderTermsReport(report, current, "h5"));
+      }
+      panel.ontoggle = render;
+      if (panel.open) render();
+    }
+  };
+  function selectTermDossier(id) {
+    if (!termDossier) return;
+    termDossier.querySelector("[data-term-dossier-unavailable]")?.remove();
+    termDossier.value = id || "";
+    if (id && termDossier.value !== id) {
+      var unavailable = new Option(label("research_dossier_collection_missing"), id);
+      unavailable.disabled = true;
+      unavailable.dataset.termDossierUnavailable = "";
+      termDossier.add(unavailable);
+      termDossier.value = id;
+    }
+  }
+  async function loadTermDossiers() {
+    if (!canWrite || !termDossier?.isConnected || !termsManager?.open) return;
+    var value = context(), request = ++termDossierSerial;
+    var status = document.getElementById("r-term-dossier-status");
+    var setStatus = window.LixityComponents.setStatus;
+    if (termDossierContext && (termDossierContext.research !== value.research || termDossierContext.source !== value.source)) {
+      termDossier.replaceChildren(new Option(label("research_reference_none"), ""));
+    }
+    termDossier.disabled = true;
+    setStatus(status, label("research_loading"), "loading");
+    var report = await bridge.read("research/dossiers?" + new URLSearchParams({project_token: value.project}));
+    if (request !== termDossierSerial || !live(value) || !termDossier.isConnected || !termsManager.open) return;
+    if (!report?.ok || report.schema_version !== "research-dossiers-local/1" || !Array.isArray(report.dossiers)) {
+      setStatus(status, label("research_load_dossiers_failed"), false);
+      return;
+    }
+    var preferred = termDossier.value;
+    termDossier.replaceChildren(new Option(label("research_reference_none"), ""));
+    report.dossiers.forEach(function(dossier) {
+      termDossier.add(new Option(researchRecordLabel(dossier, "dossier"), dossier.id));
+    });
+    disambiguateResearchOptions(termDossier);
+    selectTermDossier(preferred);
+    termDossierContext = value;
+    termDossier.disabled = false;
+    setStatus(status, report.dossiers.length ? "" : label("research_no_dossiers"), "");
+  }
+  function termChapterNumbers(text) {
+    if (!text.trim()) return [];
+    var numbers = text.split(",").map(function(piece) {
+      var digits = piece.trim();
+      return /^\d+$/.test(digits) ? Number(digits) : NaN;
+    });
+    return numbers.every(function(num) { return Number.isSafeInteger(num) && num > 0; }) &&
+      new Set(numbers).size === numbers.length ? numbers : null;
+  }
+  function labelTermVariants() {
+    Array.from(termVariants.children).forEach(function(row, index) {
+      row.querySelector("legend").textContent = uiFormat("manuscript_terms_variant_title", {number: index + 1});
+    });
+  }
+  function appendTermVariant(variant) {
+    var row = element("fieldset", "", "ctl-group research-term-variant");
+    row.dataset.termVariant = "";
+    row.appendChild(element("legend"));
+    var inputs = element("div", "", "row"), components = window.LixityComponents;
+    function field(key, value) {
+      var input = components.createField(inputs, {label: label("manuscript_terms_variant_" + key), value: value});
+      input.closest(".setting-field").classList.add("research-form-field");
+      input.dataset.termVariantField = key;
+      return input;
+    }
+    var form = field("form", variant?.term), scope = field("chapters", (variant?.chapters || []).join(", "));
+    field("note", variant?.note);
+    form.required = scope.required = true;
+    form.addEventListener("input", function() { form.setCustomValidity(""); });
+    scope.placeholder = "1, 3";
+    scope.dataset.help = label("manuscript_terms_variant_chapters_help");
+    row.appendChild(inputs);
+    var available = new Set(Array.from(document.querySelectorAll("#reader-chapter [data-chapter-number]"), function(node) {
+      return Number(node.dataset.chapterNumber);
+    }).filter(function(num) { return Number.isSafeInteger(num) && num > 0; }));
+    var chips = element("div", "", "row r-term-chapter-chips");
+    function syncChapters() {
+      var numbers = termChapterNumbers(scope.value);
+      scope.setCustomValidity(numbers ? "" : label("manuscript_terms_variant_chapters_help"));
+      chips.querySelectorAll("[data-chapter]").forEach(function(button) {
+        var active = Boolean(numbers && numbers.includes(Number(button.dataset.chapter)));
+        button.setAttribute("aria-pressed", String(active));
+        button.classList.toggle("active", active);
+      });
+    }
+    available.forEach(function(number) {
+      var button = element("button", String(number), "ctl r-chapter-chip");
+      button.type = "button";
+      button.dataset.chapter = String(number);
+      button.setAttribute("aria-label", uiFormat("publication_chapter", {number: number}));
+      button.addEventListener("click", function() {
+        var selected = termChapterNumbers(scope.value);
+        if (!selected) { scope.reportValidity(); return; }
+        selected = selected.includes(number) ? selected.filter(function(value) { return value !== number; }) : selected.concat(number);
+        scope.value = selected.sort(function(a, b) { return a - b; }).join(", ");
+        syncChapters();
+      });
+      chips.appendChild(button);
+    });
+    scope.addEventListener("input", syncChapters);
+    syncChapters();
+    if (available.size) {
+      var choose = element("details", "", "research-details");
+      choose.append(element("summary", label("manuscript_terms_variant_choose_chapters")), chips);
+      row.appendChild(choose);
+    }
+    var actions = element("div", "", "row"), remove = element("button", label("manuscript_terms_variant_remove"), "ctl ctl-sm");
+    remove.type = "button";
+    remove.addEventListener("click", function() {
+      var neighbor = row.nextElementSibling || row.previousElementSibling;
+      row.remove();
+      removedTermVariants = true;
+      labelTermVariants();
+      (neighbor?.querySelector('[data-term-variant-field="form"]') || addTermVariant).focus();
+    });
+    actions.appendChild(remove);
+    row.appendChild(actions);
+    termVariants.appendChild(row);
+    return form;
+  }
+  function setTermVariants(variants) {
+    if (!termVariants) return;
+    removedTermVariants = false;
+    termVariants.replaceChildren();
+    (variants || []).forEach(appendTermVariant);
+    labelTermVariants();
+  }
+  function readTermVariants() {
+    var variants = [];
+    for (var row of termVariants?.children || []) {
+      var termField = row.querySelector('[data-term-variant-field="form"]');
+      var scope = row.querySelector('[data-term-variant-field="chapters"]');
+      var term = termField.value.trim(), numbers = termChapterNumbers(scope.value);
+      termField.setCustomValidity(term ? "" : label("manuscript_terms_variant_form_required"));
+      scope.setCustomValidity(numbers?.length ? "" : label("manuscript_terms_variant_chapters_help"));
+      if (!termField.reportValidity() || !scope.reportValidity()) return null;
+      variants.push({term: term, chapters: numbers, note: row.querySelector('[data-term-variant-field="note"]').value || null});
+    }
+    return variants.length || removedTermVariants ? variants : undefined;
+  }
+  if (canWrite && addTermVariant) addTermVariant.addEventListener("click", function() {
+    var form = appendTermVariant();
+    labelTermVariants();
+    form.focus();
+  });
   async function loadTerms() {
     if (!termsSection || !termsTabHost) return;
+    if (termsManager?.open) loadTermDossiers();
     var value = context(), request = ++termsSerial;
     termsTabHost.replaceChildren(element("p", label("research_loading"), "ctl-status loading"));
-    var report = await bridge.read("research/manuscript-terms?project_token=" + encodeURIComponent(value.project));
+    var report = await fetchTerms(value);
     if (request !== termsSerial || !live(value)) return;
-    if (!report || !report.ok || report.schema_version !== "research-manuscript-terms-local/1" ||
-        report.current_source_sha256 !== value.source || report.source_state !== "available") {
-      var stale = staleReport(report, value.source) || (report && report.code === "stale-context");
+    if (!validTerms(report, value)) {
       termsReport = null; termsContext = null;
-      termsTabHost.replaceChildren(reviewNote(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale));
+      termsTabHost.replaceChildren(termsFailure(report, value));
       return;
     }
     termsReport = report; termsContext = value;
-    termsTabHost.replaceChildren(renderTermsReport(report));
-    function activeChaptersFromScoped(value) {
-      var active = new Set();
-      (value || "").split(/[;,]/).forEach(function(segment) {
-        var match = segment.match(/(\d+)/g);
-        if (match) {
-          match.forEach(function(n) { active.add(Number(n)); });
-        }
-      });
-      return active;
-    }
-    function updateChapterChipStates() {
-      var s = document.getElementById("r-term-scoped");
-      var active = activeChaptersFromScoped(s ? s.value : "");
-      var cc = document.getElementById("r-term-chapter-chips");
-      if (!cc) return;
-      cc.querySelectorAll(".r-chapter-chip").forEach(function(btn) {
-        var num = Number(btn.dataset.chapter);
-        var isAct = active.has(num);
-        btn.classList.toggle("active", isAct);
-        btn.setAttribute("aria-pressed", isAct ? "true" : "false");
-      });
-    }
+    termsTabHost.replaceChildren(renderTermsReport(report, function() {
+      return request === termsSerial && live(value);
+    }, "h3"));
     var chipsContainer = document.getElementById("r-term-chips");
     if (chipsContainer) {
       chipsContainer.replaceChildren();
@@ -1077,11 +1248,11 @@
       newBtn.addEventListener("click", function() {
         var n = document.getElementById("r-term-name"); if (n) n.value = "";
         var a = document.getElementById("r-term-aliases"); if (a) a.value = "";
-        var s = document.getElementById("r-term-scoped"); if (s) s.value = "";
         var c = document.getElementById("r-term-case"); if (c) c.checked = false;
         var st = document.getElementById("r-term-strict"); if (st) st.checked = false;
         var cp = document.getElementById("r-term-compounds"); if (cp) cp.checked = false;
-        updateChapterChipStates();
+        selectTermDossier("");
+        setTermVariants();
       });
       chipsContainer.appendChild(newBtn);
       ((termsReport && termsReport.terms) || []).forEach(function(item) {
@@ -1091,67 +1262,16 @@
         chip.addEventListener("click", function() {
           var n = document.getElementById("r-term-name"); if (n) n.value = item.term;
           var a = document.getElementById("r-term-aliases"); if (a) a.value = (item.aliases || []).join(", ");
-          var s = document.getElementById("r-term-scoped");
-          if (s) {
-            s.value = (item.scoped_alternatives || []).map(function(alt) {
-              return alt.term + ":" + (alt.chapters || []).join(",");
-            }).join("; ");
-          }
           var c = document.getElementById("r-term-case"); if (c) c.checked = Boolean(item.case_sensitive);
           var st = document.getElementById("r-term-strict");
           if (st) st.checked = item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries);
           var cp = document.getElementById("r-term-compounds");
           if (cp) cp.checked = Boolean(item.match_compounds);
-          updateChapterChipStates();
+          selectTermDossier(item.dossier_id);
+          setTermVariants(item.scoped_alternatives);
         });
         chipsContainer.appendChild(chip);
       });
-    }
-    var chapterChips = document.getElementById("r-term-chapter-chips");
-    if (chapterChips && chapters) {
-      var existingHint = chapterChips.querySelector(".ctl-note");
-      chapterChips.replaceChildren();
-      if (existingHint) chapterChips.appendChild(existingHint);
-      var chapterNodes = Array.from(chapters.querySelectorAll("[data-chapter-number]"));
-      var seenChapters = new Set();
-      chapterNodes.forEach(function(node) {
-        var num = Number(node.dataset.chapterNumber);
-        if (Number.isInteger(num) && num > 0 && !seenChapters.has(num)) {
-          seenChapters.add(num);
-          var chBtn = element("button", String(num), "ctl r-chapter-chip");
-          chBtn.type = "button";
-          chBtn.dataset.chapter = String(num);
-          chBtn.setAttribute("aria-pressed", "false");
-          chBtn.addEventListener("click", function() {
-            var s = document.getElementById("r-term-scoped");
-            if (!s) return;
-            var current = s.value.trim();
-            if (!current) {
-              s.value = "Alternative:" + num;
-            } else {
-              var active = activeChaptersFromScoped(current);
-              var lastColon = current.lastIndexOf(":");
-              var prefix = lastColon !== -1 ? current.substring(0, lastColon + 1) : "Alternative:";
-              if (active.has(num)) {
-                active.delete(num);
-              } else {
-                active.add(num);
-              }
-              var sorted = Array.from(active).sort(function(a, b) { return a - b; });
-              s.value = sorted.length ? prefix + sorted.join(",") : "";
-            }
-            updateChapterChipStates();
-            s.focus();
-          });
-          chapterChips.appendChild(chBtn);
-        }
-      });
-      var scopedInput = document.getElementById("r-term-scoped");
-      if (scopedInput && !scopedInput._matrixBound) {
-        scopedInput._matrixBound = true;
-        scopedInput.addEventListener("input", updateChapterChipStates);
-      }
-      updateChapterChipStates();
     }
   }
   if (termsSection) {
@@ -1159,70 +1279,101 @@
       if (termsSection.open) loadTerms();
     });
   }
-  document.addEventListener("click", async function(event) {
-    var termJump = event.target.closest("[data-manuscript-term-jump]");
-    if (termJump) {
-      if (!termsReport || !termsContext || !live(termsContext) || !Array.isArray(termsReport.occurrences)) return;
-      var occ = termsReport.occurrences[Number(termJump.dataset.manuscriptTermJump)];
-      var targetPanel = occ && termPanel(occ);
-      if (targetPanel) bridge.navigate(targetPanel);
+  if (termsManager) termsManager.addEventListener("toggle", function() {
+    if (termsManager.open) loadTermDossiers();
+  });
+  function updatedTerm(previous, change) {
+    var aliases = previous.aliases || [];
+    return Object.assign({}, previous, {
+      aliases: change.aliases === aliases.join(", ") ? aliases : change.aliases.split(",").map(function(alias) { return alias.trim(); }).filter(Boolean),
+      scoped_alternatives: change.scopedAlternatives ?? previous.scoped_alternatives ?? [],
+      case_sensitive: change.caseSensitive,
+      strict_boundaries: previous.strict_boundaries != null || change.strict !== change.caseSensitive ? change.strict : null,
+      match_compounds: change.matchCompounds,
+      ...(change.dossierId === undefined ? {} : {dossier_id: change.dossierId})
+    });
+  }
+  async function writeTermSettings(action) {
+    var settings = document.getElementById("settings-form");
+    var settingsToken = settings && settings.dataset.projectToken;
+    var termName = document.getElementById("r-term-name").value.trim();
+    if (!termName || termsWritePending) return;
+    var value = context();
+    var deleting = action.id === "r-term-delete-btn";
+    var scopedAlternatives = deleting ? [] : readTermVariants();
+    if (scopedAlternatives === null) return;
+    // A failed catalogue read still permits other term edits and preserves the saved dossier link.
+    var change = deleting ? null : {
+      aliases: document.getElementById("r-term-aliases").value,
+      scopedAlternatives: scopedAlternatives,
+      caseSensitive: document.getElementById("r-term-case").checked,
+      strict: document.getElementById("r-term-strict").checked,
+      matchCompounds: document.getElementById("r-term-compounds").checked,
+      dossierId: termDossierContext && same(termDossierContext, value) && !termDossier.disabled ? termDossier.value || null : undefined
+    };
+    var status = document.getElementById("r-term-status");
+    var setStatus = window.LixityComponents.setStatus;
+    function current() { return settings && settings.isConnected && settings.dataset.projectToken === settingsToken && live(value); }
+    if (!settingsToken) {
+      setStatus(status, label("settings_stale_context"), false);
       return;
     }
+    termsWritePending = true;
+    action.disabled = true;
+    setStatus(status, label("settings_applying"), "loading");
+    try {
+      if (!termsReport || !termsContext || !same(termsContext, value)) await loadTerms();
+      if (!current()) return;
+      if (!termsReport || !termsContext || !same(termsContext, value)) {
+        setStatus(status, label("settings_stale_context"), false);
+        return;
+      }
+      var nextTerms = Object.create(null);
+      termsReport.terms.forEach(function(item) {
+        nextTerms[item.term] = {
+          aliases: item.aliases || [],
+          scoped_alternatives: item.scoped_alternatives || [],
+          case_sensitive: item.case_sensitive,
+          strict_boundaries: item.strict_boundaries,
+          match_compounds: item.match_compounds,
+          dossier_id: item.dossier_id,
+          claim_id: item.claim_id
+        };
+      });
+      if (change) nextTerms[termName] = updatedTerm(nextTerms[termName] || {}, change);
+      else delete nextTerms[termName];
+      var response = await bridge.post("settings", {terms: nextTerms, project_token: settingsToken});
+      if (!current()) return;
+      if (!response?.ok || !/^[a-f0-9]{64}$/.test(response.project_token) ||
+          !/^[a-f0-9]{64}$/.test(response.manuscript_project_token)) {
+        setStatus(status, response?.code === "stale-context" ? label("settings_stale_context") : bridge.errorText(response), false);
+        return;
+      }
+      var tool = window.LixityResearchTools;
+      var previous = tool && tool.context();
+      settings.dataset.projectToken = response.project_token;
+      document.body.dataset.manuscriptProjectToken = response.manuscript_project_token;
+      document.querySelectorAll("#manuscript-pdf-form, #workspace-reader").forEach(function(host) {
+        if (host.dataset.projectToken === value.project) host.dataset.projectToken = response.manuscript_project_token;
+      });
+      tool?.acceptTermSettings?.(previous);
+      setStatus(status, label("settings_applied"), true);
+      await loadTerms();
+    } catch (_) {
+      if (current()) setStatus(status, label("settings_connection_failed"), false);
+    } finally {
+      termsWritePending = false;
+      action.disabled = false;
+    }
+  }
+  document.addEventListener("click", async function(event) {
     if (event.target.closest("#r-terms-refresh")) {
       loadTerms();
       return;
     }
     if (!canWrite) return;
     var termAction = event.target.closest("#r-term-save-btn, #r-term-delete-btn");
-    if (termAction) {
-      var termInput = document.getElementById("r-term-name");
-      var termName = termInput ? termInput.value.trim() : "";
-      if (!termName) return;
-      var value = context();
-      if (!termsReport || !termsContext || !live(value)) await loadTerms();
-      var nextTerms = {};
-      ((termsReport && termsReport.terms) || []).forEach(function(item) {
-        nextTerms[item.term] = {
-          aliases: item.aliases || [],
-          scoped_alternatives: item.scoped_alternatives || [],
-          case_sensitive: Boolean(item.case_sensitive),
-          strict_boundaries: item.strict_boundaries === null ? Boolean(item.case_sensitive) : Boolean(item.strict_boundaries),
-          match_compounds: Boolean(item.match_compounds),
-          dossier_id: item.dossier_id || null,
-          claim_id: item.claim_id || null
-        };
-      });
-      if (termAction.id === "r-term-delete-btn") {
-        delete nextTerms[termName];
-      } else {
-        var aliasesRaw = (document.getElementById("r-term-aliases") || {}).value || "";
-        var scopedRaw = (document.getElementById("r-term-scoped") || {}).value || "";
-        var caseBox = document.getElementById("r-term-case");
-        var strictBox = document.getElementById("r-term-strict");
-        var compoundsBox = document.getElementById("r-term-compounds");
-        var scopedList = scopedRaw.split(";").map(function(s) { return s.trim(); }).filter(Boolean).map(function(spec) {
-          var parts = spec.split(":");
-          var form = (parts[0] || "").trim();
-          var chaptersList = (parts[1] || "").split(",").map(function(c) { return Number(c.trim()); }).filter(function(n) { return Number.isInteger(n) && n > 0; });
-          return {term: form, chapters: chaptersList};
-        });
-        nextTerms[termName] = {
-          aliases: aliasesRaw.split(",").map(function(s) { return s.trim(); }).filter(Boolean),
-          scoped_alternatives: scopedList,
-          case_sensitive: Boolean(caseBox && caseBox.checked),
-          strict_boundaries: Boolean(strictBox && strictBox.checked),
-          match_compounds: Boolean(compoundsBox && compoundsBox.checked)
-        };
-      }
-      var res = await bridge.post("settings", {terms: nextTerms, project_token: value.project});
-      if (res && res.ok) {
-        if (res.project_token && tokenHost) {
-          if (tokenHost === document.body) tokenHost.dataset.manuscriptProjectToken = res.project_token;
-          else tokenHost.dataset.projectToken = res.project_token;
-        }
-        await loadTerms();
-      }
-    }
+    if (termAction) await writeTermSettings(termAction);
   });
   document.addEventListener("lixity:research-review", function(event) {
     reviewFilter = event.detail.filter;

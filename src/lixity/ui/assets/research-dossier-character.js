@@ -13,11 +13,11 @@
 
   function researchDossierCharacterHtml() {
     function label(key) { return escapeHtml(uiLabel("research_dossier_character_" + key)); }
-    return '<details class="research-dossier-character" data-dossier-character><summary><h4>' + label("heading") + '</h4></summary>' +
+    return '<details data-dossier-character data-dossier-evidence><summary><h4>' + label("live_heading") + '</h4></summary>' +
       '<div class="research-character-body" data-character-content hidden>' +
         '<div data-character-overview></div>' +
-        '<h5>' + label("distribution") + '</h5>' +
-        '<div class="table-wrap" data-character-distribution role="region" tabindex="0" aria-label="' + label("distribution") + '"></div>' +
+        '<details class="research-character-coverage"><summary>' + label("live_distribution") + '</summary>' +
+        '<div class="table-wrap" data-character-distribution role="region" tabindex="0" aria-label="' + label("live_distribution") + '"></div></details>' +
         '<h5>' + label("passages") + '</h5>' +
         '<p class="ctl-note">' + label("context_hint") + '</p>' +
         '<label class="research-character-filter"><span>' + escapeHtml(uiLabel("research_chapter")) + '</span>' +
@@ -55,14 +55,22 @@
       return title && title.toLocaleLowerCase(locale) !== number.toLocaleLowerCase(locale) ? number + " · " + title : number;
     }
     function renderOverview(data) {
-      var summary = uiCountFormat(key("summary"), data.mentions, {
-        name: data.character, mentions: format.format(data.mentions),
+      var summary = uiCountFormat(key("coverage"), data.mentions, {
+        mentions: format.format(data.mentions),
         covered: format.format(data.chapters_with_mentions), chapters: format.format(data.chapters.length)
       });
       function fact(suffix, value) { return '<div><dt>' + textLabel(suffix) + '</dt><dd>' + escapeHtml(value) + '</dd></div>'; }
       var facts = [];
       if (Array.isArray(data.aliases) && data.aliases.length) facts.push(fact("aliases", data.aliases.join(", ")));
-      if (data.longest_gap > 0) facts.push(fact("gap", format.format(data.longest_gap)));
+      var gap = "";
+      if (data.longest_gap_chapters?.length === 2) {
+        var [first, last] = data.longest_gap_chapters;
+        gap = '<p>' + escapeHtml(uiFormat(key(first === last ? "gap_chapter" : "gap_chapters"), {
+          first: format.format(first), last: format.format(last)
+        })) + '</p>';
+      } else if (data.longest_gap > 0) {
+        facts.push(fact("gap", format.format(data.longest_gap)));
+      }
       if (Array.isArray(data.declared_pov_chapters) && data.declared_pov_chapters.length) {
         facts.push(fact("pov", data.declared_pov_chapters.map(function(chapter) { return format.format(chapter); }).join(", ")));
       }
@@ -76,7 +84,7 @@
             escapeHtml(uiFormat(key("dialogue_sample"), {minimum: format.format(voice.min_turns)})) + '</p>' : "");
       }
       overview.innerHTML = '<p><strong>' + escapeHtml(summary) + '</strong></p><p class="ctl-note">' + textLabel("scope") + '</p>' +
-        (facts.length ? '<dl>' + facts.join("") + '</dl>' : "") + dialogue;
+        (facts.length ? '<dl>' + facts.join("") + '</dl>' : "") + gap + dialogue;
     }
     function renderDistribution(chapters) {
       distribution.innerHTML = '<table><thead><tr><th scope="col">' + escapeHtml(uiLabel("research_chapter")) +
@@ -98,7 +106,7 @@
             match.start < cursor || match.end < match.start || match.end > points.length) return escapeHtml(passage.text);
         if (match.end === match.start) continue;
         html += escapeHtml(points.slice(cursor, match.start).join("")) +
-          '<mark>' + escapeHtml(points.slice(match.start, match.end).join("")) + '</mark>';
+          '<mark class="search-hit">' + escapeHtml(points.slice(match.start, match.end).join("")) + '</mark>';
         cursor = match.end;
       }
       return html + escapeHtml(points.slice(cursor).join(""));
@@ -120,11 +128,14 @@
       var canNavigate = reader && source.projectToken && /^[a-f0-9]{64}$/.test(source.digest) && !readerSourceChanged(source);
       items.forEach(function(passage) {
         if (!group || group.dataset.characterPassageChapter !== String(passage.chapter)) {
-          group = document.createElement("section");
+          group = document.createElement("details");
           group.dataset.characterPassageChapter = String(passage.chapter);
+          group.open = !passages.firstElementChild;
+          var summary = document.createElement("summary");
           var heading = document.createElement("h6");
           heading.textContent = chapterLabel(passage);
-          group.appendChild(heading);
+          summary.appendChild(heading);
+          group.appendChild(summary);
           passages.appendChild(group);
         }
         var figure = document.createElement("figure");
@@ -211,6 +222,7 @@
         status.textContent += " " + uiLabel(key("jump_source_changed"));
       }
       if (trigger === more && (document.activeElement === trigger || document.activeElement === document.body) && first) {
+        first.closest("[data-character-passage-chapter]").open = true;
         first.tabIndex = -1;
         first.focus({preventScroll: true});
         setPassageScrollMargin(first);

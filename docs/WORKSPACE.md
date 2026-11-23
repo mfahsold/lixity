@@ -582,30 +582,46 @@ variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
 manuscript** and choose **New suggestions**. Browse the available characters,
-places and scenes, then select a suggestion to read its preview.
+places and scenes, then select a suggestion to see why it appeared, the
+relevant excerpt and the text that will be saved.
 **Create dossier** confirms that preview. If the manuscript or settings change,
 reload the suggestions and review the new draft. After saving, **Open saved
 dossier** opens that record. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
-Place previews include a chapter table and the first matching passage.
+Place previews show chapters with matches and the first and last matching
+passages. Automatic suggestions include the directional cue that qualified
+the name. Use the place settings action to enter a list or turn suggestions
+off.
 Scene previews use the measured opening and closing sentences. A problem in
 scene settings or the place list leaves the other suggestions available.
 
-Open a generated character dossier and choose **Preview addition**.
-The preview contains the character overview, every chapter's mention count,
-and all matching passages with context from the current manuscript. Choose
-**Edit dossier text** to change the addition or **Save dossier version** to
-store it after your existing notes. **Add to a character dossier** under
-**From manuscript** opens the same review for the dossier you select.
+In a generated character dossier, choose **Preview manuscript analysis** to
+review the count, chapters with matches and any excerpts included by your
+report settings.
+Choose **Save dossier version** to update the saved report alongside your
+notes, or use **Edit dossier text** to review and change the combined text.
+**Update a character dossier** under **From manuscript** opens the same review
+for the dossier you select.
 
-Open **Character in the manuscript** in a generated character dossier to see
-recognized name mentions, their distribution across all chapters and the
-matching paragraphs. Read the passages in manuscript order or select a chapter
-to focus the reading. Where available, neighboring sentences give each passage
-context. To keep those passages with an exported dossier revision, review and
-save the addition first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
+Set the inference limits and the contents of saved character reports under
+**Project → Analysis → Dossier suggestions and character reports**.
+The character preview also opens those settings. Choose **Apply** to
+save the project preferences. A compact draft shows the first passage for
+review separately from the text it will save.
+
+Open **Current passages in the manuscript** for the live counts and matching
+paragraphs. Expand the chapter table for the full distribution, including
+zero counts, or select a chapter to focus the reading. Read the highlighted
+name in context to check who is meant. To include these passages in a PDF,
+review and save the analysis first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
 [Dossier PDF](#download-a-dossier-pdf)
+
+For an object or recurring expression, start with the **Object or term**
+template. After saving the dossier, choose it in **Linked dossier** in
+**Manage terms & props** and save the term.
+**Configured term occurrences** then opens exact matches and their passages
+from the current manuscript. [Configure terms and variants](research/USAGE.md#configured-terms-and-boundary-policies)
 
 ## Editing research text
 
@@ -638,13 +654,13 @@ written.
 
 ## Searching the manuscript
 
-Type a phrase in the manuscript search control to show matching text blocks and mark
-hits without automatically jumping or leaving the analysis overview. The search
-controls stay below the reading toolbar while scrolling. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
-**Clear search** restores the manuscript. Search includes readable structural
-blocks as well as analyzed paragraphs; the count is matching blocks out of
-blocks searched. Search takes priority over **Flagged only**; clearing
-it restores that filter.
+In the analysis overview, choose **Back to passage** to return to the manuscript.
+Type a phrase in the manuscript search field to show matches before jumping to
+one. `Ctrl+F` (`Cmd+F` on macOS) focuses the field when it is visible. Use the
+arrows or `Enter` and `Shift+Enter` to move between matches. `Escape` or **Clear
+search** restores the manuscript and reapplies **Flagged only** if it was active.
+The count shows matching blocks out of the blocks searched, including readable
+structural blocks and analyzed paragraphs.
 
 Matching is a case-insensitive substring test: it does not stem, ignore
 diacritics or cross paragraph boundaries. Text resembling markup remains text.
@@ -775,6 +791,14 @@ field. The result of applying settings appears beside the button. If the project
 or its settings changed elsewhere, copy any edits you want to keep before
 reloading. [Configuration](USAGE.md#configuration-corpusconfig) explains
 persistent project metadata and session settings.
+
+In a writable project, expand **Sentence rhythm, dialogue and word-pattern
+thresholds** to see how Lixity groups sentences and speech or selects the
+function-word cue. Each field describes what changes and shows its default.
+**Apply** saves edited values for the current project. The separate option to
+save analysis defaults applies to the language and highlight settings above.
+The local **How it’s measured** links show the limits used by the current
+analysis. The public reference explains the defaults in a fresh installation.
 
 **Manuscript language (analysis)** selects the language profile for counting and
 also sets the generated interface language. English is the default.
@@ -1050,10 +1074,11 @@ version. Check the version beside the button. The A4 document includes saved
 notes and tables, place and route descriptions, and pinned source quotations.
 Use your PDF reader's bookmarks to move between sections of a long dossier.
 
-To include a new manuscript excerpt, review and save the addition first, then
-download the new version. Use the attachment's own controls to open original
-media. See the [research manual](research/USAGE.md#download-a-dossier-as-pdf)
-for what each copy contains.
+To include current manuscript passages, review and save the analysis, then
+download the new version. Repeated copies of the same generated report appear
+once in the PDF. Use the attachment controls to open original media. See the
+[research manual](research/USAGE.md#download-a-dossier-as-pdf) for what each
+copy contains.
 
 ## Export a reading website
 

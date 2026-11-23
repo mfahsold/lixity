@@ -1069,6 +1069,8 @@ Configure your client to launch the chosen `lixity` executable with the single
 argument `mcp`. The subprocess reads and writes JSON-RPC messages over stdio.
 Put manuscript text, language, thresholds and any required port in the tool
 arguments. The client can request `tools/list` to see the supported fields.
+Use `lixity_about` with `section` to retrieve the corresponding discovery
+subsection and build metadata when advertised.
 The browser app uses a separate local HTTP service.
 [Client configuration and tool contracts](AGENTS.md#model-context-protocol-mcp-server)
 
@@ -1467,6 +1469,17 @@ regex syntax, and never use a pronoun such as `I` as an alias for a viewpoint.
 Verify the resulting mentions and declared POV separately. This does not edit
 the manuscript or infer character presence.
 
+### Manuscript dossier suggestions
+
+`lixity research dossier-drafts` previews character, place and scene entries
+using the selected project's settings. It reports the basis for each name
+suggestion and where it appears. Use `lixity research dossier-from-manuscript`
+with the reviewed draft ID and preview digest when you want to save one.
+`lixity about --json` describes the accepted `dossier_drafts` settings.
+The [research reference](research/USAGE.md#manuscript-driven-dossier-drafts)
+covers the preview, exact place lists, inference limits and saved character
+report sections.
+
 ### Chapter register settings
 
 In the native workspace, **Project → Settings → Chapter registers** edits named
@@ -1494,15 +1507,28 @@ In the CLI, select presets via `--preset {balanced,developmental,line_editing,co
 
 #### Configurable structural thresholds (`[tool.lixity]` / `lixity.toml`)
 
-To eliminate hardcoded assumptions during genre-specific fine-tuning, the following thresholds can be configured in root `lixity.toml` or `pyproject.toml`:
+Edit these values in **Project → Settings → Analysis → Sentence rhythm, dialogue
+and word-pattern thresholds** or in root `lixity.toml` or `[tool.lixity]` in
+`pyproject.toml`. Apply in the workspace saves changed values to `lixity.toml`.
+Use `lixity about --section configuration --json` for the current defaults and bounds.
+
 - `short_sentence_max` (default `6`): upper word limit for staccato sentences.
 - `medium_sentence_max` (default `15`): upper word limit for medium sentences.
-- `long_sentence_max` (default `25`): threshold above which sentences count as long/complex.
+- `long_sentence_max` (default `25`): upper word limit for long sentences. Longer sentences form a separate group.
 - `short_turn_max_words` (default `12`): upper word limit for rapid dialogue turns.
 - `long_turn_min_words` (default `80`): lower word limit for extended monologue turns.
-- `dialogue_paragraph_share` (default `0.5`): share of quoted words to classify a paragraph as dialogue.
-- `hook_short_sentence` (default `8`): word limit for punchy chapter-closing sentences.
+- `dialogue_paragraph_share` (default `0.5`): quoted-word share for grouping a paragraph as dialogue. The workspace shows percentages. Enter `0.65` in TOML for 65%.
+- `hook_short_sentence` (default `8`): highest word count shown as a short chapter-closing sentence.
 - `monotony_min_run` (default `3`): minimum consecutive sentences with identical start token.
+- `sticky_min_words` and `sticky_glue_pct`: minimum sentence length and function-word percentage for a review cue. Open a matching sentence to see the counted words in context.
+
+The three sentence limits must increase in order and the short turn limit must
+stay below the long turn limit. These settings determine categories and review
+cues. Consider the passage and its intended effect when reviewing a match.
+
+#### Set chapter registers
+
+The workspace **Apply** action
 rebuilds and saves both tables together in the selected project's `lixity.toml`.
 It requires the current project token and preserves newer browser drafts during
 pending saves. Resetting detection thresholds does not reset registers.

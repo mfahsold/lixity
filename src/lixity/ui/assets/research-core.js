@@ -51,6 +51,19 @@ function researchReferenceLabel(kind, ref, envelope) {
     (ref.revision ? " · " + uiFormat("research_revision_number", {revision: ref.revision}) : "");
 }
 
+function disambiguateResearchOptions(field) {
+  var counts = Object.create(null);
+  Array.from(field.options).forEach(function(option) { counts[option.text] = (counts[option.text] || 0) + 1; });
+  var positions = Object.create(null);
+  Array.from(field.options).forEach(function(option) {
+    var text = option.text;
+    if (counts[text] > 1) {
+      positions[text] = (positions[text] || 0) + 1;
+      option.text += " · " + uiFormat("research_choice_number", {number:positions[text]});
+    }
+  });
+}
+
 function researchStatus(message, ok) {
   var text = ok === "loading" ? (message || uiLabel("research_loading")) : message;
   window.LixityComponents.setStatus("research-status-bar", text, ok, {prefix: true});

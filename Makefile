@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy run start serve stop restart status doctor
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -74,7 +74,7 @@ release-check: ## Validate the tag first, then test once, check generated docs, 
 
 release-prepare: ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
 	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
-	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)"
+	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)" $(if $(RELEASE_DATE),--release-date "$(RELEASE_DATE)")
 
 github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
 	$(SCRIPT_PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
@@ -82,9 +82,12 @@ github-check: ## Inspect gh CLI, attestation support, worktrees and optional REL
 rc-gate: ## Trigger pre-tag release-candidate qualification on main (source, sharded browser, Windows/macOS)
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml --ref main
 
-release-verify: ## Verify published GitHub Release, attestations, PyPI byte identity, live Pages and Zenodo status (RELEASE_TAG=vX.Y.Z)
+RELEASE_VERIFY_ROOT ?= .
+
+release-verify: ## Verify a published release (RELEASE_TAG=vX.Y.Z, optionally RELEASE_VERIFY_ARGS)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
-	$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root . --tag "$(RELEASE_TAG)" --expected-commit "$$(git rev-parse '$(RELEASE_TAG)^{commit}')" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo
+	@commit=$$(git -C "$(RELEASE_VERIFY_ROOT)" rev-parse --verify "$(RELEASE_TAG)^{commit}") && \
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root "$(RELEASE_VERIFY_ROOT)" --tag "$(RELEASE_TAG)" --expected-commit "$$commit" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo $(RELEASE_VERIFY_ARGS)
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
@@ -99,7 +102,11 @@ examples: ## Regenerate the published example reports and their PDFs
 brand-assets: ## Regenerate multi-size/multi-format brand icons and favicon from docs/assets/mark.svg
 	$(SCRIPT_PYTHON) scripts/build_brand_assets.py
 
-media: brand-assets screenshots videos examples ## Regenerate all brand assets, screenshots, videos and published examples
+media: ## Regenerate all brand assets, screenshots, videos and published examples
+	$(MAKE) brand-assets
+	$(MAKE) screenshots
+	$(MAKE) videos
+	$(MAKE) examples
 
 docs-generated-check: ## Check generated version pins, documentation bundle and guide alternatives
 	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all --check
@@ -113,30 +120,34 @@ docs-sync: ## Synchronize documentation version references to match __version__
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
 	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main
 
+pages-verify: ## Verify that live Pages matches the checked-out commit and staged content
+	@commit=$$(git rev-parse --verify HEAD) && \
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit"
+
 clean-caches: ## Remove tool and test caches without deleting dist/
 	rm -rf $(PYTEST_CACHE) $(MYPY_CACHE) $(RUFF_CACHE) htmlcov .coverage
 
 clean: clean-caches ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info
 
-LIXITY_PORT ?= 8765
+PORT_OPTION = $(if $(strip $(LIXITY_PORT)),--port "$(LIXITY_PORT)")
 
 run: ## Run the empty dashboard in the foreground (Ctrl+C stops it).
-	"$(VPY)" -m lixity serve --no-project --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity serve --no-project $(PORT_OPTION)
 
-start: ## Start the packaged managed dashboard (default port 8765).
-	"$(VPY)" -m lixity service start --port $(LIXITY_PORT)
+start: ## Start the packaged managed dashboard.
+	"$(VPY)" -m lixity service start $(PORT_OPTION)
 
 serve: start ## Compatibility alias for managed start; use run for foreground.
 
 stop: ## Stop the managed Lixity dashboard instance.
-	"$(VPY)" -m lixity service stop --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity service stop $(PORT_OPTION)
 
 restart: ## Restart the managed instance with its saved startup settings.
-	"$(VPY)" -m lixity service restart --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity service restart $(PORT_OPTION)
 
 status: ## Inspect the managed instance without modifying manuscript data.
-	"$(VPY)" -m lixity service status --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity service status $(PORT_OPTION)
 
 doctor: ## Check the checkout CLI and the managed instance on LIXITY_PORT.
-	"$(VPY)" -m lixity doctor --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity doctor $(PORT_OPTION)

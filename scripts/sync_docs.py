@@ -14,9 +14,9 @@ import sys
 from pathlib import Path
 
 try:
-    from check_release import source_version
+    from check_release import PENDING_RELEASE, RELEASE_HEADING, source_version
 except ModuleNotFoundError:
-    from scripts.check_release import source_version
+    from scripts.check_release import PENDING_RELEASE, RELEASE_HEADING, source_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -119,17 +119,23 @@ def check_or_sync_files(
         ),
     ]
 
-    citation_pins = [(r'(?m)^version: "[^"\n]+"$', f'version: "{version}"')]
+    citation = base / "CITATION.cff"
+    citation_version = r'(?m)^version: "[^"\n]+"$'
+    citation_date = r"(?m)^date-released:[^\n]*(?:\n|$)"
+    citation_pins = [(citation_version, f'version: "{version}"')]
     changelog = base / "CHANGELOG.md"
-    if changelog.is_file():
-        released = re.search(
-            rf"(?m)^## \[{re.escape(version)}\] - (\d{{4}}-\d{{2}}-\d{{2}})$",
-            changelog.read_text(encoding="utf-8"),
-        )
-        if released:
-            citation_pins.append((r'(?m)^date-released: "[^"\n]+"$',
-                                  f'date-released: "{released[1]}"'))
-    rules.append((base / "CITATION.cff", citation_pins))
+    if changelog.is_file() and citation.is_file():
+        status = next((heading[2] for heading in RELEASE_HEADING.finditer(
+            changelog.read_text(encoding="utf-8")) if heading[1] == version), None)
+        if status == PENDING_RELEASE:
+            citation_pins.append((citation_date, ""))
+        elif status is not None:
+            entry = f'date-released: "{status}"'
+            if re.search(citation_date, citation.read_text(encoding="utf-8")):
+                citation_pins.append((r"(?m)^date-released:[^\n]*$", entry))
+            else:
+                citation_pins.append((citation_version, rf"\g<0>\n{entry}"))
+    rules.append((citation, citation_pins))
 
     # Static guides share the release-install convention with the main docs.
     for guide in sorted((base / "docs" / "guides").glob("*.html")):

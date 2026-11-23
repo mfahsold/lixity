@@ -35,6 +35,7 @@ from .models import CorpusConfig
 from .pipeline import analyze_document, resolve_document_config, supplementary_reports
 from .project_identity import manuscript_identity_check, project_title
 from .research import api, editorial
+from .research.dossier_analysis import dossier_display_body
 from .research.images import IMAGE_TYPES, read_image, resolve_dossier_images, resolve_dossier_media
 from .research.manuscript import (
     manuscript_links_data,
@@ -355,7 +356,10 @@ def _publication(repository: Repository, snapshot: Snapshot, text: str, config: 
         dossier = _record(snapshot, "dossier", selected.dossier_id, selected.revision)
         if not isinstance(dossier, Dossier):
             raise ResearchError("Publication selections must reference dossiers")
-        body = _section_text(dossier.body, selected.section) if selected.section is not None else dossier.body
+        if selected.section is not None:
+            body = _section_text(dossier.body, selected.section)
+        else:
+            body = dossier_display_body(snapshot, dossier)
         images = [*resolve_dossier_images(snapshot, body), *resolve_dossier_media(snapshot, body)]
         public_images = []
         for image in images:

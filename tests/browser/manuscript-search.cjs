@@ -1,5 +1,5 @@
 // The author can search the manuscript itself, not only the research archive.
-const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
@@ -115,17 +115,20 @@ print(json.dumps(fixtures))
       assert.equal(await workflows.count(), 3);
       await workflows.first().focus(); await page.keyboard.press('Tab');
       assert.equal(await workflows.nth(1).evaluate(button => button === document.activeElement), true);
-      await field.fill('Suchwort');
+      assert.equal(await field.isVisible(), false, 'The overview keeps the manuscript toolbar out of its tab order');
+      await page.locator('#workbench-overview-back').press('Enter');
+      assert.equal(await page.locator('#workbench-overview-open').evaluate(button => button === document.activeElement), true,
+        'Returning from the overview restores focus to its opener');
+      await page.keyboard.press(modShortcut('f'));
+      assert.equal(await field.evaluate(el => el === document.activeElement), true,
+        'The manuscript search shortcut focuses the visible field');
+      await page.keyboard.type('Suchwort');
       await page.waitForFunction(() => document.querySelector('#text-search-status').textContent.length > 0);
-      assert.equal(await page.locator('#analysis-review').isVisible(), true,
-        'Typing never leaves the overview or navigates away from the search field');
       assert.equal(await field.evaluate(el => el === document.activeElement), true);
       await field.press('Enter');
       assert.equal(await page.locator('#chapters .ptext:not(.text-miss)').isVisible(), true,
-        'Searching from an overview reveals its manuscript result');
+        'The manuscript search reveals its result after returning from the overview');
       await field.press('Escape');
-      await page.locator('#workbench-overview-open').click();
-      await page.locator('#workbench-overview-back').click();
       await first.locator('[data-reader-paragraph]').click();
       await page.locator('[data-reader-action=values]').click();
       const values = page.locator('#reader-inspector .paragraph-values');

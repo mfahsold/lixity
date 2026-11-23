@@ -5,15 +5,18 @@ from __future__ import annotations
 import io
 import json
 import tempfile
+import unicodedata
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from lixity.cli import main as cli_main
 from lixity.config import read_explicit_project_config
 from lixity.research import api
 from lixity.research.repository import Repository
 from lixity.site_export import prepare_site
+from lixity.terms import _find_variant_spans
 
 
 class ManuscriptTermsTests(unittest.TestCase):
@@ -107,6 +110,29 @@ class ManuscriptTermsTests(unittest.TestCase):
         self.assertEqual(unicode_flagged[0]["term"], "STRASSE")
         self.assertEqual(unicode_flagged[0]["anchor"]["quote"], "Straße")
         self.assertIn("unicode_casefold_length", unicode_flagged[0]["ambiguity_reasons"])
+
+    def test_nfc_paragraph_skips_unicode_probe_only_for_absent_targets(self) -> None:
+        with patch("lixity.terms.unicodedata.normalize", wraps=unicodedata.normalize) as normalize:
+            self.assertEqual(_find_variant_spans("Die Straße war leer.", "Kompass", case_sensitive=False), [])
+            normalize.assert_not_called()
+        street, = _find_variant_spans("Die Straße war leer.", "Strasse", case_sensitive=False)
+        self.assertEqual(street, (4, 10, ["unicode_normalization", "unicode_casefold_length"]))
+        decomposed, = _find_variant_spans("Eine Mu\u0308hle stand dort.", "Mühle", case_sensitive=True)
+        self.assertEqual(decomposed, (5, 11, ["unicode_normalization"]))
+
+    def test_scoped_dossier_keeps_overlap_evidence_without_other_rows(self) -> None:
+        dossier = api.create_dossier(self.root, title="Object", body="A synthetic prop.")
+        dossier_id = dossier["dossier_id"]
+        api.set_term_profiles(self.root, {
+            "brass compass": {"dossier_id": dossier_id},
+            "compass": {},
+        })
+        full = api.review_manuscript_terms(self.root, self.manuscript)
+        scoped = api.review_manuscript_terms(self.root, self.manuscript, dossier_id=dossier_id)
+        self.assertEqual(scoped["dossier_id"], dossier_id)
+        self.assertEqual(scoped["occurrences"], [hit for hit in full["occurrences"] if hit["dossier_id"] == dossier_id])
+        self.assertEqual([profile["term"] for profile in scoped["terms"]], ["brass compass"])
+        self.assertEqual(scoped["occurrences"][0]["overlapping_terms"], ["compass"])
 
     def test_cli_terms_and_site_export_include_manuscript_terms(self) -> None:
         set_buf = io.StringIO()

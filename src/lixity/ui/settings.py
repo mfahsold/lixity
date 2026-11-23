@@ -5,10 +5,19 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
+from ..dossier_draft_settings import (
+    AUTOMATIC_LOCATION_NAMES,
+    DOSSIER_DRAFT_SETTINGS_KEY,
+    MAX_LOCATION_NAME_CHARS,
+    DossierDraftSettings,
+    parse_location_names,
+)
 from ..format import precise_num
+from ..models import CORPUS_DETAIL_GROUPS, CORPUS_LIMIT_ORDERS, CorpusConfig
 from ..publication import PUBLICATION_FIELDS
 from ..registers import REGISTER_PROFILE_TEMPLATES
 from ..site import docs_url
+from ..site_publications import site_publication_control_limits
 from ..style_fingerprint import FEATURE_UNITS, FEATURES, THRESHOLD_PRESETS, FingerprintThresholds
 from .components import (
     attr_json,
@@ -53,6 +62,129 @@ def _threshold_select(
     )
 
 
+def _location_names_settings(labels: Mapping[str, str] | None, value: object) -> str:
+    translated = panel_label(labels)
+    invalid = ""
+    try:
+        names = parse_location_names(value)
+    except ValueError:
+        names = None
+        mode = ""
+        invalid = f'<option value="" selected disabled>{translated("settings_location_names_invalid")}</option>'
+    else:
+        mode = AUTOMATIC_LOCATION_NAMES if names is None else "names" if names else "off"
+    options = invalid + "".join(
+        f'<option value="{key}"{" selected" if key == mode else ""}>{translated("settings_location_mode_" + key)}</option>'
+        for key in (AUTOMATIC_LOCATION_NAMES, "names", "off")
+    )
+    initial = AUTOMATIC_LOCATION_NAMES if mode == AUTOMATIC_LOCATION_NAMES else names
+    hidden = '' if mode == "names" else ' hidden'
+    disabled = '' if mode == "names" else ' disabled'
+    values = esc("\n".join(names or ()))
+    return "".join((
+        '<details class="settings-advanced" id="settings-location-names">',
+        f'<summary>{translated("settings_location_names_heading")}</summary>',
+        '<div class="settings-grid">',
+        form_field(
+            "set-location-mode",
+            translated("settings_location_mode"),
+            select_control("set-location-mode", options, attributes={"data-initial": json.dumps(initial, ensure_ascii=False, separators=(",", ":"))}),
+            label_class="",
+        ),
+        f'<div id="location-names-field"{hidden}>',
+        form_field(
+            "set-location-names",
+            translated("settings_location_names"),
+            f'<textarea class="ctl" id="set-location-names" rows="4" data-name-limit="{MAX_LOCATION_NAME_CHARS}" '
+            f'aria-describedby="location-names-help"{disabled}>{values}</textarea>',
+            label_class="",
+            note_html=f'<p id="location-names-help">{translated("settings_location_names_hint")}</p>',
+        ),
+        '</div></div></details>',
+    ))
+
+
+def _dossier_draft_settings(labels: Mapping[str, str] | None, value: object) -> str:
+    translated = panel_label(labels)
+    parts = [
+        '<details class="settings-advanced" id="settings-dossier-drafts">',
+        f'<summary>{translated("settings_dossier_drafts")}</summary>',
+    ]
+    try:
+        settings = DossierDraftSettings.model_validate({} if value is None else value)
+    except ValueError:
+        parts.append(f'<p class="ctl-note err">{translated("settings_dossier_drafts_invalid")}</p>')
+    else:
+        fields = DossierDraftSettings.model_json_schema()["properties"]
+        initial = settings.model_dump()
+        parts.append(
+            f'<div class="settings-grid" data-dossier-drafts-key="{DOSSIER_DRAFT_SETTINGS_KEY}" '
+            f'data-initial="{attr_json(initial)}">'
+        )
+        for key, field in fields.items():
+            control_id = "set-dossier-" + key.replace("_", "-")
+            control_label = translated("settings_dossier_" + key)
+            attrs = f'id="{control_id}" data-dossier-drafts-field="{key}" aria-describedby="{control_id}-help"'
+            note = f'<p class="ctl-note" id="{control_id}-help">{translated("settings_dossier_" + key + "_hint")}</p>'
+            if field["type"] == "boolean":
+                control = f'<input type="checkbox" {attrs}{" checked" if initial[key] else ""}/>'
+                parts.append(f'<div>{checkbox_field(control, control_label)}{note}</div>')
+            else:
+                control = (f'<input class="ctl" type="number" {attrs} value="{initial[key]}" '
+                           f'min="{field["minimum"]}" max="{field["maximum"]}" step="1" required/>')
+                parts.append(form_field(control_id, control_label, control, label_class="", note_html=note))
+        parts.append("</div>")
+    parts.append("</details>")
+    return "".join(parts)
+
+
+def _corpus_detail_settings(
+    labels: Mapping[str, str] | None, config: CorpusConfig, language: str,
+) -> str:
+    translated = panel_label(labels)
+    fields = CorpusConfig.model_json_schema()["properties"]
+    parts = [
+        '<details class="settings-advanced" id="settings-corpus-details">',
+        f'<summary>{translated("settings_corpus_details")}</summary>',
+        f'<p class="ctl-note">{translated("settings_corpus_details_hint")}</p>',
+    ]
+    for group, keys in CORPUS_DETAIL_GROUPS.items():
+        ordered = CORPUS_LIMIT_ORDERS.get(group, ())
+        order_hint = f' data-order-error="{translated("settings_corpus_details_hint")}"' if ordered else ""
+        parts.extend((
+            f'<fieldset class="settings-section"{order_hint}>',
+            f'<legend>{translated("settings_corpus_group_" + group)}</legend>',
+            '<div class="settings-grid">',
+        ))
+        for key in keys:
+            field = fields[key]
+            control_id = "set-corpus-" + key.replace("_", "-")
+            scale = 100 if key == "dialogue_paragraph_share" else 1
+            value = getattr(config, key) * scale
+            step = "1" if field["type"] == "integer" else "any"
+            bounds = [f'{attribute}="{field[bound] * scale}"' for bound, attribute in (
+                ("minimum", "min"), ("maximum", "max"), ("exclusiveMinimum", "min"),
+            ) if bound in field]
+            exclusive = ' data-min-exclusive="true"' if "exclusiveMinimum" in field else ""
+            order = ' data-ascending="true"' if key in ordered else ""
+            title = translated("settings_corpus_" + key)
+            hint = translated("settings_corpus_" + key + "_hint")
+            default = precise_num(field["default"] * scale, language, minimum_decimals=0)
+            default_note = translated("settings_default").replace("{value}", default)
+            parts.append(form_field(
+                control_id,
+                title,
+                f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" step="{step}" '
+                f'{" ".join(bounds)}{exclusive}{order} required data-corpus-field="{key}" data-scale="{scale}" '
+                f'data-initial="{value!r}" aria-describedby="{control_id}-help"/>',
+                label_class="",
+                note_html=f'<p class="ctl-note" id="{control_id}-help">{hint} {default_note}</p>',
+            ))
+        parts.append("</div></fieldset>")
+    parts.append("</details>")
+    return "".join(parts)
+
+
 def settings_form(
     labels: Mapping[str, str] | None,
     title: str,
@@ -69,6 +201,9 @@ def settings_form(
     register_settings: Mapping[str, Any] | None = None,
     site_publications: Mapping[str, Any] | None = None,
     site_publication_context_token: str = "",
+    location_names: object = AUTOMATIC_LOCATION_NAMES,
+    dossier_drafts: object = None,
+    corpus_config: CorpusConfig | None = None,
     language_key: str | None = None,
 ) -> str:
     translated = panel_label(labels)
@@ -342,6 +477,10 @@ def settings_form(
         ),
         '<p class="ctl-note" id="save-analysis-defaults-help">'
         f'{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}</p>',
+        _location_names_settings(labels, location_names) if author_setting_enabled and project_token else "",
+        _dossier_draft_settings(labels, dossier_drafts) if author_setting_enabled and project_token else "",
+        _corpus_detail_settings(labels, corpus_config or CorpusConfig(), number_language)
+        if author_setting_enabled and project_token else "",
         '</fieldset>',
         register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token),
                         language_key=language_key or current_language),
@@ -366,8 +505,8 @@ def site_publication_editor(
     """Keep curated publication drafts in the existing project settings save."""
     keys = ("title", "hint", "unavailable", "id", "id_hint", "name", "introduction", "add_profile", "profile",
             "entries", "entry", "add_entry", "dossier", "choose_dossier", "revision", "current",
-            "version", "section", "whole_body", "after", "after_hint", "override", "citations", "geography",
-            "scope", "missing", "loading", "load_error", "invalid", "raw_error", "raw", "recover",
+            "version", "section", "whole_body", "choose_scope", "after", "after_hint", "override", "citations", "geography",
+            "scope", "missing", "loading", "load_error", "invalid", "length_limit", "raw_error", "raw", "recover",
             "move_up", "move_down", "retry", "no_dossiers")
     terms = {"publication_editor_" + key: label(labels, "publication_editor_" + key) for key in keys}
     terms["remove_recent_project"] = label(labels, "remove_recent_project")
@@ -378,7 +517,8 @@ def site_publication_editor(
         + ("" if editable else f'<p class="ctl-note">{esc(terms["publication_editor_unavailable"])}</p>')
         + '<fieldset class="site-publication-editor" id="site-publication-editor" '
         f'data-initial="{attr_json(profiles)}" '
-        f'data-labels="{attr_json(terms)}" data-context-token="{esc(context_token)}"'
+        f'data-labels="{attr_json(terms)}" data-limits="{attr_json(site_publication_control_limits())}" '
+        f'data-context-token="{esc(context_token)}"'
         f'{"" if editable else " disabled"}>'
         f'<legend>{esc(terms["publication_editor_title"])}</legend>'
         + status_banner(extra_attrs="data-site-publication-status")

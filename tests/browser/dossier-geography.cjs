@@ -3,16 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawn} = require('node:child_process');
-const {once} = require('node:events');
-const {createInterface} = require('node:readline');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {startNativeServer} = require('./support/native-server.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
-const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-geography-'));
 
 (async () => {
-  const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
+  const server = await startNativeServer(`
 import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -30,17 +27,10 @@ LixityServerHandler.language = 'en'; LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}'}), flush=True)
 server.serve_forever()
-`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
-  const lines = createInterface({input: server.stdout});
-  let stderr = '', browser;
-  server.stderr.on('data', data => { stderr = (stderr + data).slice(-5000); });
+`, artifacts);
+  const {fixture} = server;
+  let browser;
   try {
-    const fixture = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Synthetic server startup timed out: ' + stderr)), 15000);
-      lines.once('line', line => { clearTimeout(timer); resolve(JSON.parse(line)); });
-      server.once('error', reject);
-      server.once('exit', code => reject(new Error(`Synthetic server exited ${code}: ${stderr}`)));
-    });
     browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
     page.setDefaultTimeout(10000);
@@ -289,7 +279,7 @@ server.serve_forever()
     await page.locator('#r-dos-create-btn').click();
     await expect(page.locator('#r-dos-create-btn-status')).not.toBeEmpty();
     assert.equal(writes.filter(write => write.title === 'Synthetic harbour journey').length, 0, 'Invalid coordinates are rejected before a write');
-    await feature.locator('[data-geo-field=coordinates]').fill('13.4, 52.5');
+    await feature.locator('[data-geo-field=coordinates]').fill('13,4 52,5');
     assert.ok(!(await create.locator('.geography-sketch').innerHTML()).match(/NaN|Infinity/), 'Single-point sketch has finite degenerate bounds');
     await create.locator('[data-geo-add]').click();
     feature = create.locator('[data-geo-feature]').nth(1);
@@ -772,9 +762,12 @@ server.serve_forever()
     assert.deepEqual(external, [], 'Geography only requests the standard intercepted tile endpoint');
     console.log(`Dossier geography: native create/edit/import/CAS/history/companion, local pointer/keyboard selection, independent hosts, static fallback and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
-    if (stderr.includes('Traceback')) console.error(stderr);
-    if (browser) await browser.close();
-    lines.close();
-    if (server.exitCode === null) { const exited = once(server, 'exit'); server.kill(); await exited; }
+    try {
+      if (browser) await browser.close();
+    } finally {
+      await server.close();
+      const stderr = server.stderr();
+      if (stderr.includes('Traceback')) console.error(stderr);
+    }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -4,6 +4,7 @@ Defines strict, validated models for corpus configuration, sentence distribution
 chapter metrics, tense profiles, and synchronization reports.
 """
 
+from itertools import pairwise
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
@@ -26,6 +27,18 @@ DEFAULT_HOOK_SHORT_SENTENCE = 8
 DEFAULT_MONOTONY_MIN_RUN = 3
 DEFAULT_STICKY_GLUE_PCT = 45.0
 DEFAULT_STICKY_MIN_WORDS = 8
+
+# The author-facing groups use the same field bounds and values as analysis.
+CORPUS_LIMIT_ORDERS = {
+    "rhythm": ("short_sentence_max", "medium_sentence_max", "long_sentence_max"),
+    "dialogue": ("short_turn_max_words", "long_turn_min_words"),
+}
+CORPUS_DETAIL_GROUPS = {
+    "rhythm": (*CORPUS_LIMIT_ORDERS["rhythm"], "monotony_min_run", "hook_short_sentence"),
+    "dialogue": (*CORPUS_LIMIT_ORDERS["dialogue"], "dialogue_paragraph_share"),
+    "word_patterns": ("sticky_min_words", "sticky_glue_pct"),
+}
+CORPUS_DETAIL_KEYS = tuple(key for keys in CORPUS_DETAIL_GROUPS.values() for key in keys)
 
 
 class CorpusConfig(BaseModel):
@@ -59,43 +72,43 @@ class CorpusConfig(BaseModel):
         description="Word threshold below which a paragraph is classified as a potential one-liner.",
     )
     short_sentence_max: int = Field(
-        default=DEFAULT_SHORT_SENTENCE_MAX,
+        default=DEFAULT_SHORT_SENTENCE_MAX, ge=1,
         description="Word threshold up to which a sentence is classified as short/staccato.",
     )
     medium_sentence_max: int = Field(
-        default=DEFAULT_MEDIUM_SENTENCE_MAX,
+        default=DEFAULT_MEDIUM_SENTENCE_MAX, ge=1,
         description="Word threshold up to which a sentence is classified as medium length.",
     )
     long_sentence_max: int = Field(
-        default=DEFAULT_LONG_SENTENCE_MAX,
+        default=DEFAULT_LONG_SENTENCE_MAX, ge=1,
         description="Word threshold up to which a sentence is classified as long (above this is complex/kaskade).",
     )
     short_turn_max_words: int = Field(
-        default=DEFAULT_SHORT_TURN_MAX_WORDS,
+        default=DEFAULT_SHORT_TURN_MAX_WORDS, ge=1,
         description="Word threshold up to which a dialogue turn is classified as a short/rapid turn.",
     )
     long_turn_min_words: int = Field(
-        default=DEFAULT_LONG_TURN_MIN_WORDS,
+        default=DEFAULT_LONG_TURN_MIN_WORDS, ge=1,
         description="Word threshold from which a dialogue turn is classified as an extended monologue/turn.",
     )
     dialogue_paragraph_share: float = Field(
-        default=DEFAULT_DIALOGUE_PARAGRAPH_SHARE,
+        default=DEFAULT_DIALOGUE_PARAGRAPH_SHARE, gt=0, le=1,
         description="Minimum share of quoted words for a paragraph to count as a dialogue paragraph.",
     )
     hook_short_sentence: int = Field(
-        default=DEFAULT_HOOK_SHORT_SENTENCE,
+        default=DEFAULT_HOOK_SHORT_SENTENCE, ge=1,
         description="Word threshold up to which a chapter closing sentence counts as punchy hook.",
     )
     monotony_min_run: int = Field(
-        default=DEFAULT_MONOTONY_MIN_RUN,
+        default=DEFAULT_MONOTONY_MIN_RUN, ge=2,
         description="Minimum consecutive sentences starting with the same word to count as a rhythm monotony run.",
     )
     sticky_glue_pct: float = Field(
-        default=DEFAULT_STICKY_GLUE_PCT,
+        default=DEFAULT_STICKY_GLUE_PCT, gt=0, le=100,
         description="Function-word percentage threshold at or above which a sentence counts as sticky.",
     )
     sticky_min_words: int = Field(
-        default=DEFAULT_STICKY_MIN_WORDS,
+        default=DEFAULT_STICKY_MIN_WORDS, ge=1,
         description="Minimum word count for a sentence to be evaluated for stickiness.",
     )
     genre_corridor: str | None = Field(
@@ -146,24 +159,9 @@ class CorpusConfig(BaseModel):
         """Validate structural thresholds and sentence bins."""
         if self.min_paragraph_length_for_oneliner < 1:
             raise ValueError("min_paragraph_length_for_oneliner must be at least 1")
-        if not (0 < self.short_sentence_max < self.medium_sentence_max < self.long_sentence_max):
-            raise ValueError(
-                "Sentence bins must satisfy 0 < short_sentence_max < medium_sentence_max < long_sentence_max"
-            )
-        if not (0 < self.short_turn_max_words < self.long_turn_min_words):
-            raise ValueError(
-                "Dialogue turn thresholds must satisfy 0 < short_turn_max_words < long_turn_min_words"
-            )
-        if not (0.0 < self.dialogue_paragraph_share <= 1.0):
-            raise ValueError("dialogue_paragraph_share must be in the interval (0, 1]")
-        if self.hook_short_sentence < 1:
-            raise ValueError("hook_short_sentence must be at least 1")
-        if self.monotony_min_run < 2:
-            raise ValueError("monotony_min_run must be at least 2")
-        if not (0.0 < self.sticky_glue_pct <= 100.0):
-            raise ValueError("sticky_glue_pct must be in the interval (0, 100]")
-        if self.sticky_min_words < 1:
-            raise ValueError("sticky_min_words must be at least 1")
+        for keys in CORPUS_LIMIT_ORDERS.values():
+            if any(first >= second for first, second in pairwise(getattr(self, key) for key in keys)):
+                raise ValueError("Analysis limits must satisfy 0 < " + " < ".join(keys))
         if self.genre_corridor is not None:
             from .corridors import resolve_genre_corridor
 

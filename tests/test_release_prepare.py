@@ -40,12 +40,65 @@ def test_existing_reviewed_notes_are_preserved(prepare_script):
     assert target.read_bytes() == b"# Reviewed release\n\nActual reviewed changes.\n"
 
 
+def test_preparation_keeps_release_pending_until_an_explicit_date(
+        prepare_script, monkeypatch):
+    root = prepare_script.ROOT
+    base = "https://github.com/example/lixity/compare/"
+    changelog = root / "CHANGELOG.md"
+    changelog.write_text(
+        "# Changelog\n\n## [Unreleased]\n\n- Candidate change.\n\n"
+        "## [0.8.2] - 2026-11-16\n\n- Previous release.\n\n"
+        "## [3.0.1] - 2026-10-11\n\n- Historical release before reset.\n\n"
+        f"[Unreleased]: {base}v0.8.2...HEAD\n"
+        f"[0.8.2]: {base}v0.8.1...v0.8.2\n"
+    )
+    citation = root / "CITATION.cff"
+    citation.write_text('version: "0.8.2"\ndate-released: "2026-11-16"\nauthors: []\n')
+    monkeypatch.syspath_prepend(str(SCRIPT.parent))
+    from sync_docs import check_or_sync_files
+
+    def sync_citation():
+        check_or_sync_files("0.9.0", root=root)
+
+    monkeypatch.setattr(prepare_script, "run_sync", sync_citation)
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "0.9.0"])
+    assert prepare_script.main() == 0
+    pending = changelog.read_text()
+    assert "## [Unreleased]\n\n## [0.9.0] - Pending release\n\n- Candidate change." in pending
+    assert f"[Unreleased]: {base}v0.8.2...HEAD" in pending
+    assert f"[0.9.0]: {base}v0.8.2...HEAD" in pending
+    assert citation.read_text() == 'version: "0.9.0"\nauthors: []\n'
+    assert prepare_script.main() == 0 and changelog.read_text() == pending
+
+    notes = root / "docs/releases/v0.9.0.md"
+    notes.write_text("# Reviewed release notes\n")
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "0.9.0", "--release-date", "2026-11-30"])
+    assert prepare_script.main() == 0
+    finalized = changelog.read_text()
+    assert "## [0.9.0] - 2026-11-30\n\n- Candidate change." in finalized
+    assert f"[Unreleased]: {base}v0.9.0...HEAD" in finalized
+    assert f"[0.9.0]: {base}v0.8.2...v0.9.0" in finalized
+    assert citation.read_text() == 'version: "0.9.0"\ndate-released: "2026-11-30"\nauthors: []\n'
+    assert notes.read_text() == "# Reviewed release notes\n"
+    assert prepare_script.main() == 0 and changelog.read_text() == finalized
+
+
+def test_invalid_release_date_leaves_source_and_notes_alone(prepare_script, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT), "0.9.0", "--release-date", "2026-02-30"])
+    assert prepare_script.main() == 1
+    assert "release date must use YYYY-MM-DD" in capsys.readouterr().err
+    root = prepare_script.ROOT
+    assert (root / "src/lixity/_version.py").read_text() == '__version__ = "0.3.0"\n'
+    assert not (root / "docs/releases/v0.9.0.md").exists()
+
+
 @pytest.mark.parametrize("error_type", [OSError, RuntimeError])
 def test_sync_failure_lists_edits_already_made(
         prepare_script, monkeypatch, capsys, error_type):
     root = prepare_script.ROOT
     readme = root / "README.md"
     readme.write_text("previous version pin\n")
+    (root / "CHANGELOG.md").write_text("## [Unreleased]\n\n- Candidate change.\n")
 
     def partial_sync():
         readme.write_text("partially synchronized pin\n")
@@ -60,6 +113,7 @@ def test_sync_failure_lists_edits_already_made(
     assert "src/lixity/_version.py" in error
     assert "docs/releases/v0.3.1.md" in error
     assert "README.md" in error
+    assert "CHANGELOG.md" in error
     assert "not rolled back" in error
     assert readme.read_text() == "partially synchronized pin\n"
 

@@ -222,8 +222,10 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .site-publication-editor .ctl { max-width: 100%; }
 .site-publication-editor textarea { width: 100%; resize: vertical; }
 .r-term-chips, .r-term-chapter-chips { flex-wrap: wrap; gap: var(--space-1); align-items: center; }
+.r-term-chapter-chips { margin-block-start: var(--space-2); }
 .r-chapter-chip { padding: .15rem .45rem; font-size: var(--text-micro); border-radius: var(--radius-xs); min-width: 1.8rem; text-align: center; }
 .r-chapter-chip.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+@media (pointer: coarse) { .r-chapter-chip { min-inline-size: 2.75rem; min-block-size: 2.75rem; } }
 /* --- Tables ----------------------------------------------------------- */
 .table-wrap {
   width: 100%;
@@ -339,6 +341,9 @@ color: var(--fg);
 .ctl-group > * { min-width: 0; }
 input[type="file"].ctl { max-width: 100%; }
 .ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.ctl-group.research-term-variant { margin: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); }
+.research-term-variant > legend { padding-inline: var(--space-2); font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.research-term-variant > .row { align-items: start; }
 /* Sentence-case labels preserve localized spelling across workspace surfaces. */
 .ctl-label, .project-label, .kpi-caption, th { font-size: var(--text-micro); font-weight: var(--weight-semibold); text-transform: none; letter-spacing: normal; color: var(--muted); }
 /* One note/help recipe: inline notes and field help share size and colour. */
@@ -1036,13 +1041,17 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
 }
 .research-dossier-folder { display: grid; gap: var(--space-4); min-width: 0; }
 .research-dossier-document {
-& > :is(section, .research-dossier-character) {
+& > :is(section, [data-dossier-evidence]) {
   min-width: 0; padding-block-start: var(--space-3); border-block-start: 1px solid var(--line);
 }
 & > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 & > section > :is(h4, p) { margin: 0; }
-& > section > h4, & > .research-dossier-character > summary > h4 { font-size: var(--text-body); line-height: var(--line-tight); }
+& > section > h4, & > [data-dossier-evidence] > summary > h4 { font-size: var(--text-body); line-height: var(--line-tight); }
 & > section > .ctl { justify-self: start; }
+& > [data-dossier-evidence] > summary { cursor: pointer; min-block-size: 2.75rem; align-content: center; overflow-wrap: anywhere; }
+& > [data-dossier-evidence] > summary > h4 { display: inline; margin: 0; }
+& > [data-dossier-evidence][open] > summary { margin-block-end: var(--space-2); }
+& > [data-dossier-evidence] > .ctl { max-inline-size: 100%; white-space: normal; }
 }
 .matrix-tools { justify-content: space-between; margin-bottom: .9rem; font-size: var(--text-small); }
 .matrix-tools label { display: inline-flex; align-items: center; gap: .45rem; }
@@ -3010,6 +3019,10 @@ div.pswp__img--placeholder,
 }
 .research-draft-preview-actions { align-items: start; }
 .research-draft-preview-actions > div { min-inline-size: 0; }
+.research-draft-reason { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-raised); overflow-wrap: anywhere; }
+#r-manuscript-draft-preview > h6, .research-draft-reason > h6 { font-size: var(--text-control); }
+.research-draft-reason :is(p, figure, blockquote) { margin: 0; }
+.research-draft-reason figcaption { margin-block: var(--space-2) var(--space-1); }
 .pane-ribbon .ctl-icon,
 .research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; padding-inline: 0; }
 .pane-ribbon > .ctl[aria-current="location"],

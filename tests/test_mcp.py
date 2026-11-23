@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from lixity import mcp
+from lixity import cli, mcp
+from lixity.status import ABOUT_SECTIONS
 
 SAMPLE = "# Chapter One\n\nShe walked home. He had already left the grey house.\n"
 
@@ -60,6 +61,37 @@ def test_call_about_returns_metadata():
     payload = json.loads(response["result"]["content"][0]["text"])
     assert payload["meta"]["tool"] == "lixity"
     assert "languages" in payload
+
+
+@pytest.mark.parametrize("section", ABOUT_SECTIONS)
+def test_mcp_about_sections_match_cli(section, capsys):
+    tools = _request("tools/list")["result"]["tools"]
+    tool = next(tool for tool in tools if tool["name"] == "lixity_about")
+    assert tool["inputSchema"]["properties"]["section"]["enum"] == list(ABOUT_SECTIONS)
+    response = _request("tools/call", {"name": "lixity_about", "arguments": {"section": section}})
+    payload = json.loads(response["result"]["content"][0]["text"])
+    assert set(payload) == {"meta", section}
+    assert cli.main(["about", "--section", section]) == 0
+    assert payload == json.loads(capsys.readouterr().out)
+
+
+@pytest.mark.parametrize("argument", [{"section": "license"}, {"section": None}, {"project": "./synthetic-project"}])
+def test_mcp_about_rejects_unsupported_arguments(argument):
+    result = _request("tools/call", {"name": "lixity_about", "arguments": argument})["result"]
+    assert result["isError"] is True and "section" in result["content"][0]["text"]
+
+
+@pytest.mark.parametrize(("argument", "hint"), [
+    ({"project": "./synthetic-project"}, "local CLI"),
+    ({"kind": None}, "kind must be"),
+    ({"language": 42}, "supported language"),
+    ({"language": "zz"}, "supported language"),
+])
+def test_mcp_dossier_drafts_rejects_options_outside_text_contract(argument, hint):
+    result = _request("tools/call", {
+        "name": "lixity_manuscript_dossier_drafts", "arguments": {"text": SAMPLE, **argument},
+    })["result"]
+    assert result["isError"] is True and hint in result["content"][0]["text"]
 
 
 @pytest.mark.parametrize(("state", "ready"), [
@@ -337,10 +369,12 @@ def test_mcp_cli_stdout_contains_only_protocol_responses():
     assert json.loads(completed.stdout) == {"jsonrpc": "2.0", "id": 1, "result": {}}
 
 
-def test_skill_markdown_documents_all_registered_mcp_tools():
-    skill_path = Path(__file__).resolve().parent.parent / "skills" / "lixity" / "SKILL.md"
-    skill_text = skill_path.read_text(encoding="utf-8")
+def test_mcp_contract_documents_registered_tools_and_skill_points_to_discovery():
+    root = Path(__file__).resolve().parent.parent
+    contract = (root / "docs" / "AGENTS.md").read_text(encoding="utf-8")
+    skill = (root / "skills" / "lixity" / "SKILL.md").read_text(encoding="utf-8")
     response = _request("tools/list")
     registered = [tool["name"] for tool in response["result"]["tools"]]
-    missing = [name for name in registered if f"`{name}`" not in skill_text]
-    assert not missing, f"MCP tools missing from skills/lixity/SKILL.md: {missing}"
+    assert all(f"`{name}`" in contract for name in registered)
+    assert "docs/AGENTS.md#model-context-protocol-mcp-server" in skill
+    assert "`tools/list`" in skill

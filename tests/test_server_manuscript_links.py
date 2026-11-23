@@ -3,6 +3,7 @@
 import hashlib
 import os
 import shutil
+from urllib.parse import urlencode
 
 import pytest
 
@@ -56,6 +57,41 @@ def workspace(tmp_path):
 
 def review_route(body):
     return "/api/research/manuscript-review?research_token=" + body["research_token"] + "&project_token=" + body["project_token"]
+
+
+def test_native_link_review_uses_selected_root_for_nested_manuscript(tmp_path):
+    project = tmp_path / "project"
+    api.init(project, title="Synthetic archive", language="en")
+    (project / "lixity.toml").write_text("chapter_regex = '^## (.+)$'\n")
+    manuscript = project / "draft" / "story.md"
+    manuscript.parent.mkdir()
+    text = "## First\n\nA quiet bell rang.\n\n## Second\n\nMira crossed the bridge.\n"
+    manuscript.write_text(text)
+    claim = api.create_claim(project, title="Bridge", statement="Synthetic support.")
+    handler = make_handler(project, source_input=manuscript, research_dir=project)
+    handler.refresh()
+
+    snapshot = Repository(project).snapshot()
+    config, _ = resolve_document_config(text, "en", project_config={"chapter_regex": "^## (.+)$"})
+    target = profile_document(text, config, FingerprintThresholds())[0][-1]
+    quote = "Mira crossed"
+    token = manuscript_pdf_token(str(manuscript), project_root=project, language="en", title=None,
+                                 thresholds=handler.thresholds)
+    context = {"project_token": token, "research_token": research_context_token(project)}
+    # An unrelated nested config must not re-interpret the selected view.
+    (manuscript.parent / "lixity.toml").write_text("chapter_regex = '^### (.+)$'\n")
+    with LoopbackServer(handler) as server:
+        status, saved = server.request_json("/api/research-manuscript-link", payload={
+            **context, "project_id": snapshot.project.id, "expected_snapshot": snapshot.digest,
+            "expected_source_sha256": hashlib.sha256(manuscript.read_bytes()).hexdigest(),
+            "claim_id": claim["claim_id"], "claim_revision": 1, "allow_retention": True,
+            "selection": {**paragraph_identity(target), "start": 0, "end": len(quote), "quote": quote},
+        })
+        assert status == 200, saved
+        status, report = server.request_json("/api/research/manuscript-review?" + urlencode(context))
+        assert status == 200, report
+        link, = report["links"]
+        assert (link["resolved_chapter_num"], link["resolved_chapter_title"]) == (2, "Second")
 
 
 def test_explicit_save_and_review_use_selected_manuscript(workspace):

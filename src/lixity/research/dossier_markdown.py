@@ -5,10 +5,26 @@ from collections.abc import Iterable, Mapping
 from ..format import num
 
 
-def dossier_quote(text: str, *, label: str | None = None) -> str:
+def dossier_quote(
+    text: str, *, label: str | None = None, matches: Iterable[tuple[int, int]] = (),
+) -> str:
     """Quote every source line so that prose cannot become dossier structure."""
+    segments: list[str] = []
+    previous = 0
+    for start, end in matches:
+        if not previous <= start < end <= len(text):
+            continue
+        matched = text[start:end]
+        # Keep unusual configured patterns literal when they cannot be marked
+        # as one inline span. The complete source passage remains readable.
+        if (matched != matched.strip() or "\n" in matched or "*" in matched
+                or text[start - 1:start] == "*" or text[end:end + 1] == "*"):
+            continue
+        segments.extend((text[previous:start], f"**{matched}**"))
+        previous = end
+    segments.append(text[previous:])
     lines = [f"> **{label}**", ">"] if label else []
-    lines.extend(f"> {line}" if line else ">" for line in text.split("\n"))
+    lines.extend(f"> {line}" if line else ">" for line in "".join(segments).split("\n"))
     return "\n".join(lines)
 
 

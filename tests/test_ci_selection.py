@@ -1,4 +1,4 @@
-"""CI compatibility selection must exclude only tests needing real Poppler tools."""
+"""CI test scopes retain their intended platform and browser coverage."""
 
 import ast
 import subprocess
@@ -46,6 +46,36 @@ class TestNativePdfSelection(unittest.TestCase):
         collected = {line.partition("[")[0] for line in result.stdout.splitlines()
                      if line.startswith("tests/")}
         self.assertEqual(collected, expected)
+
+
+class TestNativeSuiteSelection(unittest.TestCase):
+    def test_full_scope_covers_packaged_lifecycle_research_dossiers_and_settings(self):
+        from scripts.run_native_tests import full_native_tests, native_pytest_args
+
+        selected = full_native_tests()
+        self.assertEqual(selected, sorted(set(selected)))
+        self.assertTrue({
+            "test_dossier_analysis_refresh.py",
+            "test_dossier_draft_settings.py",
+            "test_manuscript_dossier_confirmation.py",
+            "test_manuscript_dossier_drafts.py",
+            "test_manuscript_terms.py",
+            "test_project_settings_write.py",
+            "test_research_manuscript_links.py",
+            "test_server_project_author.py",
+            "test_server_startup.py",
+            "test_service_native.py",
+        } <= {path.name for path in selected})
+        self.assertEqual(native_pytest_args("portability"), ["tests", "-m", "portability"])
+
+    def test_incomplete_full_scope_fails_without_falling_back(self):
+        from scripts.run_native_tests import native_pytest_args
+
+        with tempfile.TemporaryDirectory() as directory, self.assertRaisesRegex(
+            ValueError, r"Missing native test scope entries: .*test_project_settings_write\.py",
+        ):
+            native_pytest_args("full", Path(directory))
+
 
 class TestBrowserSuiteSelection(unittest.TestCase):
     """Every browser suite belongs to an area, and --changed falls back safely."""
@@ -117,6 +147,22 @@ class TestBrowserSuiteSelection(unittest.TestCase):
                 self.assertEqual(suites_for_paths([path]), expected)
         self.assertEqual(suites_for_paths(["tests/browser/project-structure.cjs"]), ["project-structure.cjs"])
 
+    def test_shared_dossier_backends_and_demo_build_inputs_select_their_workflows(self):
+        from scripts.run_browser_suites import AREAS, suite_names, suites_for_paths
+
+        for path, areas, related in (
+            ("src/lixity/terms.py", ("research", "sharing"), {"research-tools.cjs", "read-only-site.cjs"}),
+            ("src/lixity/dossier_draft_settings.py", ("research", "project"), {"dossier-workflows.cjs", "settings.cjs"}),
+            ("scripts/build_examples.py", ("docs", "sharing"), {"docs.cjs", "read-only-site.cjs"}),
+            ("scripts/example_project.py", ("docs", "sharing"), {"docs.cjs", "reader-publication.cjs"}),
+            ("scripts/example_publications.py", ("docs", "sharing"), {"docs.cjs", "reader-publication.cjs"}),
+        ):
+            with self.subTest(path=path):
+                expected = {suite for area in areas for suite in AREAS[area]}
+                selected = suites_for_paths([path])
+                self.assertTrue(related <= expected, "The listed areas must cover the affected workflows")
+                self.assertEqual(selected, [name for name in suite_names() if name in expected])
+
     def test_shared_browser_support_and_runner_changes_select_every_suite(self):
         from scripts.run_browser_suites import suite_names, suites_for_paths
 
@@ -128,7 +174,9 @@ class TestBrowserSuiteSelection(unittest.TestCase):
             "tests/browser/support/docs.cjs",
             "tests/browser/deleted-suite.cjs",
             "scripts/browser_tools.cjs",
+            "scripts/browser-vendor.json",
             "scripts/run_browser_suites.py",
+            "src/lixity/markdown_parser.py",
         ):
             with self.subTest(path=path):
                 self.assertEqual(suites_for_paths([path]), expected)

@@ -343,6 +343,14 @@ Chronology conflicts require explicit time/place assertions, not inferred dates
 presented as facts. Dossier composition and semantic conflict detection are not
 implemented by this chapter view.
 
+Current character dossier evidence measures coverage and match positions
+before materializing paragraphs. A native read expands the requested page
+within its paragraph and byte limits. The full saved report expands all
+matching passages when the project requests excerpts. Its compact form uses
+the same measurements with no passage rendering. Pagination still binds the
+source and analysis digest and keeps absolute chapter-body ranges and verified
+reader targets.
+
 **Since v0.7.6:** creation rejects an active association for the same claim and
 exact source-path/paragraph/line/offset occurrence. The current source and claim
 guards still apply; a different occurrence is not deduplicated merely because
@@ -480,11 +488,23 @@ document-role bindings and generation provenance remain future model work.
 
 Explicit root settings own author identity, publication, reading-site profiles,
 chapter registers and project-local character profiles; user/ancestor defaults cannot supply them.
+The same boundary covers place names, term profiles and dossier preferences.
+The native dossier and analysis detail settings use model schema bounds and
+defaults for controls and submit through the prepared project writer. The
+analysis limits that must increase in order share field groups between the
+renderer and model validation.
 The optional root `manuscript` setting follows the same project-only boundary.
 `config.read_explicit_project_config` reuses the existing TOML parser but reads
 only root pyproject/lixity files and promotes failed reads to errors.
 The server middleware owns this lookup for dashboard analysis, PDF preparation,
-manuscript search and revision requests.
+manuscript search, linked research passages and revision requests. The native
+term review can return a dossier's own occurrence rows while retaining overlaps
+with other configured terms. Paragraph jumps check line range, hash and exact
+quote offsets against the displayed manuscript.
+
+The local workspace fetches the packaged diagram renderer when a diagram comes
+into view. Concurrent diagrams share the request. The exported reader embeds
+the renderer when a prepared publication contains diagrams so it can open offline.
 The native view, PDF composer and website exporter all use this selected root,
 including when the manuscript is in a subdirectory with another configuration.
 `workspace.configured_manuscript` owns contained relative-path resolution without

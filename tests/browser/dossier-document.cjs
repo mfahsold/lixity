@@ -191,6 +191,15 @@ server.serve_forever()
       assert.deepEqual(await edits.evaluateAll(nodes => nodes.map(node => node.dataset.dossierSection)), ['Middle','Nested','Evidence']);
       await expect(page.locator('#embedded-document [data-dossier-section]')).toHaveCount(0);
       await expect(page.locator('#synthetic-dossier-documents [data-dossier-pdf-export]')).toHaveCount(0);
+      const projected = await page.evaluate(detail => {
+        const host = document.createElement('div');
+        host.innerHTML = researchDossierDetailHtml({...detail, display_body: '## Reading projection\n\nOne copy.'}, true, {recordView:true});
+        return {reading: host.querySelector('.research-dossier-body-rendered').textContent,
+          source: host.querySelector('.research-dossier-body-source').textContent};
+      }, detail);
+      assert.match(projected.reading, /Reading projection[\s\S]*One copy\./);
+      assert.ok(!projected.reading.includes('First fragment.'));
+      assert.equal(projected.source, body, 'The reading projection preserves access to the pinned source');
       // CommonMark ATX headings need no blank line before following prose.
       const adjacent = await page.evaluate(() => {
         const host = document.createElement('div');

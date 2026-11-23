@@ -11,8 +11,8 @@ import argparse
 import dataclasses
 import hashlib
 import platform
-import resource
 import statistics
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -175,6 +175,16 @@ def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str
     return benchmark_text(str(path), path.read_text(encoding="utf-8"), language, iterations)
 
 
+def _peak_rss_mib() -> float | None:
+    """Normalize the process peak on platforms with known getrusage units."""
+    if sys.platform not in ("darwin", "linux"):
+        return None
+    import resource
+
+    divisor = 1024 ** 2 if sys.platform == "darwin" else 1024
+    return round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / divisor, 2)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Benchmark Lixity pipeline stages.")
     parser.add_argument("--iterations", type=int, default=3, help="Runs per manuscript")
@@ -203,19 +213,20 @@ def main() -> int:
                 iters,
             )
         )
-    rss_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    peak_rss = _peak_rss_mib()
     payload = {
         "python": platform.python_version(),
         "machine": platform.machine(),
-        "peak_rss_mb": round(rss_kb / 1024.0, 2),
-        "iterations": max(1, args.iterations),
+        "peak_rss_mb": peak_rss,
+        "iterations": iters,
         "results": results,
     }
     if args.json:
         print(orjson.dumps(payload, option=orjson.OPT_INDENT_2).decode("utf-8"))
         return 0
 
-    print(f"Python {payload['python']} ({payload['machine']}), peak RSS {payload['peak_rss_mb']} MB")
+    rss_label = f"{peak_rss:.2f} MiB" if peak_rss is not None else "unavailable"
+    print(f"Python {payload['python']} ({payload['machine']}), peak RSS {rss_label}")
     for item in results:
         print(f"\n=== {item['file']} ({item['chars']} chars, {item['words']} words) ===")
         for stage, ms in item["median_ms"].items():

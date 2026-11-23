@@ -107,8 +107,12 @@ def reading_controls(
     """Render progressive-enhancement controls; no second manuscript copy."""
     text = panel_label(labels)
 
+    def chapter_option(target: str, title: str, number: int | None) -> str:
+        metadata = f' data-chapter-number="{number}"' if number is not None else ""
+        return f'<option value="{escape(target)}"{metadata}>{escape(title)}</option>'
+
     options = "".join(
-        f'<option value="ch-{chapter.num}">{chapter.num}. {escape(chapter.title)}</option>'
+        chapter_option(f"ch-{chapter.num}", f"{chapter.num}. {chapter.title}", chapter.num)
         for chapter in chapters
     )
     if reader_document:
@@ -122,12 +126,12 @@ def reading_controls(
                 target = f"ch-{number}" if number is not None else f"source-{block.start_line}"
                 title = chapter.title if chapter else block.text
                 numbered_title = f"{number}. {title}" if number is not None else title
-                choices.append(f'<option value="{target}">{escape(numbered_title)}</option>')
+                choices.append(chapter_option(target, numbered_title, number))
             options = "".join(choices)
         if not reader_document[0].is_chapter and source_chapters:
-            target = (f"ch-{chapters[0].num}" if chapters and chapters[0].start_line < source_chapters[0].start_line
-                      else "reader-preface")
-            options = f'<option value="{target}">{text("reading_view")}</option>' + options
+            number = chapters[0].num if chapters and chapters[0].start_line < source_chapters[0].start_line else None
+            target = f"ch-{number}" if number is not None else "reader-preface"
+            options = chapter_option(target, label(labels, "reading_view"), number) + options
     chapter_picker = select_control(
         "reader-chapter", f'<option value="">{text("reading_chapter")}…</option>{options}',
         accessible_name=label(labels, "reading_chapter"), css_class="reader-chapter",

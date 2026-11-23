@@ -37,7 +37,7 @@ from ..workspace import (
 from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
-from .pdf_context import project_settings_token
+from .pdf_context import manuscript_pdf_token, project_settings_token
 from .views import build_server_dashboard, sanitize_filename
 
 _MANUSCRIPT_SUFFIXES = frozenset({".md", ".markdown", ".txt"})
@@ -193,8 +193,8 @@ class ProjectRoutesMixin(ResponseMixin):
         try:
             root = self.get_author_project_root()
             current_token = project_settings_token(root, self.source_input)
-            if (save_defaults or any(key in payload for key in (
-                    "publication", "register_profiles", "chapter_registers", "site_publications", "dossier_collections", "terms", "audio", "project_token"))) and (
+            changes: dict[str, Any] = {key: payload[key] for key in PERSISTED_SETTINGS_KEYS if key in payload}
+            if (save_defaults or changes.keys() - {"title", "author_name"} or "project_token" in payload) and (
                     not current_token or payload.get("project_token") != current_token):
                 if publication_save:
                     self._log.warning("Publication profiles stage=save_rejected reason=context_changed")
@@ -204,7 +204,6 @@ class ProjectRoutesMixin(ResponseMixin):
             title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
             title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
-            changes: dict[str, Any] = {key: payload[key] for key in PERSISTED_SETTINGS_KEYS if key in payload}
             audio_profile_removal = False
             if "audio" in changes and root is not None:
                 existing_audio = read_explicit_project_config(root).get("audio")
@@ -266,12 +265,17 @@ class ProjectRoutesMixin(ResponseMixin):
         self.publish_dashboard(html, info)
         if publication_save:
             self._log.info("Publication profiles stage=saved profiles=%d", len(payload["site_publications"]))
-        self._json({
+        response = {
             "ok": True,
             "message": f"Settings applied · Language: {lang} · z* ≥ {thresholds.z_mild:.1f} / {thresholds.z_strong:.1f}",
             "reload": True,
             "project_token": project_settings_token(root, self.source_input),
-        })
+        }
+        if "terms" in changes:
+            response["manuscript_project_token"] = manuscript_pdf_token(
+                self.source_input, project_root=self.workspace_root, language=lang, title=title, thresholds=thresholds,
+            )
+        self._json(response)
 
     def _handle_load(self, payload: dict[str, Any]) -> None:
         name = sanitize_filename(payload.get("name"))

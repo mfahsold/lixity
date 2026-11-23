@@ -4,8 +4,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from ..dossier_draft_settings import AUTOMATIC_LOCATION_NAMES
 from ..markers import Marker
-from ..models import CorpusMetrics
+from ..models import CorpusConfig, CorpusMetrics
 from ..style_fingerprint import ParagraphLayerData, StyleFingerprint
 from ..style_profile import ChapterProfile, ParagraphProfile
 from .manuscript_document import ReaderBlock
@@ -82,6 +83,7 @@ class DashboardOptions:
     author_setting_enabled: bool = False
     manuscript_pdf_token: str = ""
     research_context_token: str = ""
+    external_diagram_library: bool = False
     publication: Mapping[str, Any] | None = None
     publication_error: str = ""
     project_token: str = ""
@@ -89,6 +91,9 @@ class DashboardOptions:
     register_settings: Mapping[str, Any] | None = None
     site_publications: Mapping[str, Any] | None = None
     site_publication_context_token: str = ""
+    location_names: object = AUTOMATIC_LOCATION_NAMES
+    dossier_drafts: object = None
+    corpus_config: CorpusConfig | None = None
     project_overview_enabled: bool = False
 
 

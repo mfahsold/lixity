@@ -46,3 +46,16 @@ def test_qwen_control_support_distinguishes_exact_text_and_model_interpretation(
         assert audio_capabilities()[variant]["control_support"] == support.as_dict()
     with pytest.raises(ValueError, match="Unknown"):
         speech_control_support("invented")
+
+
+def test_explicit_pause_metadata_matches_profile_and_direction_limits():
+    from lixity.speech_direction import Direction
+    from lixity.speech_profiles import AudioProfile
+
+    advertised = speech_control_support("qwen3").as_dict()["pause_seconds"]
+    profile = AudioProfile.model_json_schema()["properties"]
+    direction = Direction.model_json_schema()["properties"]
+    optional_pause = next(value for value in direction["pause_after"]["anyOf"] if value["type"] == "number")
+    for schema in (profile["paragraph_pause"], profile["scene_pause"], direction["pause_before"], optional_pause):
+        assert {key: schema[key] for key in ("minimum", "maximum")} == advertised
+    assert direction["pause_after"]["default"] is None

@@ -135,25 +135,44 @@ server.serve_forever()
         const reloaded=page.waitForEvent('load');
         await page.locator('[data-action=settings]').click();
         const result=await response;
+        const submitted=result.request().postDataJSON();
         assert.equal(result.status(),200,await result.text());
         assert.equal((await result.json()).ok,true);
         await page.waitForFunction(label=>document.querySelector('#settings-save-status').textContent===label,
           data.fixtures.en.labels.settings_applied);
         await reloaded;
         await page.locator('#tab-view-project').click();
+        return submitted;
       }
       await apply();
       assert.deepEqual(fs.readFileSync(project.config),originals.config,'Unchecked native Apply must not write defaults');
       await page.locator('#settings-thresholds > summary').click();
       assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.02');
       await page.locator('#set-save-analysis-defaults').check();
-      await page.locator('#set-language').selectOption('auto');
       await page.locator('#set-fdr-q').fill('0.013000000000003');
-      await apply();
+      const limits=page.locator('#settings-corpus-details');
+      await limits.locator('summary').focus();
+      await page.keyboard.press('Enter');
+      const dialogueShare=limits.locator('#set-corpus-dialogue-paragraph-share');
+      assert.equal(Number(await dialogueShare.inputValue()),50);
+      const labels=await limits.locator('input').evaluateAll(inputs=>inputs.map(input=>({
+        name:input.labels[0]?.textContent, help:document.getElementById(input.getAttribute('aria-describedby'))?.textContent,
+      })));
+      assert.equal(labels.length,10);
+      assert.ok(labels.every(field=>field.name&&field.help));
+      await dialogueShare.fill('65');
+      await limits.locator('#set-corpus-short-sentence-max').fill('7');
+      await page.locator('#set-language').selectOption('auto');
+      assert.equal(await page.locator('#set-language').inputValue(),'auto');
+      const submitted=await apply();
+      assert.equal(submitted.language,'auto');
       const saved=fs.readFileSync(project.config,'utf8');
       assert.ok(saved.includes('language = "auto"'));
       assert.ok(saved.includes('fdr_q = 0.013000000000003'));
       assert.ok(saved.includes('min_chapters = 7'));
+      assert.ok(saved.includes('dialogue_paragraph_share = 0.65'));
+      assert.ok(saved.includes('short_sentence_max = 7'));
+      assert.ok(!saved.includes('long_sentence_max'));
       assert.deepEqual(fs.readFileSync(project.source),originals.source,'Saving defaults cannot modify manuscript bytes');
       assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),false);
       const reopened=await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}});
@@ -164,8 +183,34 @@ server.serve_forever()
       assert.equal(await page.locator('#set-language').inputValue(),'auto');
       assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.013000000000003');
       assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),false);
+      await limits.locator('summary').click();
+      assert.equal(Number(await dialogueShare.inputValue()),65);
+      assert.equal(await limits.locator('#set-corpus-short-sentence-max').inputValue(),'7');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await page.locator('#settings-form').screenshot({path:path.join(artifacts,`${width}.png`)});
+      const dossierLimits=page.locator('#settings-dossier-drafts');
+      await dossierLimits.locator('summary').click();
+      const contextSentences=dossierLimits.locator('#set-dossier-character-context-sentences');
+      await dialogueShare.fill('66');
+      await contextSentences.fill('3');
+      let releaseSave, receivedSave;
+      const heldSave=new Promise(resolve=>{releaseSave=resolve;});
+      const pendingSave=new Promise(resolve=>{receivedSave=resolve;});
+      await page.route('**/api/settings',async route=>{
+        const result=await route.fetch();
+        receivedSave();
+        await heldSave;
+        await route.fulfill({response:result});
+      },{times:1});
+      await page.locator('[data-action=settings]').click();
+      await pendingSave;
+      await dialogueShare.fill('65');
+      await contextSentences.fill('2');
+      releaseSave();
+      await page.waitForFunction(()=>!document.querySelector('[data-action=settings]').disabled);
+      const reverted=await apply();
+      assert.equal(reverted.dialogue_paragraph_share,0.65);
+      assert.equal(reverted.dossier_drafts.character_context_sentences,2);
       assert.deepEqual(errors,[]);
       await page.close();
     }
@@ -972,6 +1017,20 @@ server.serve_forever()
         assert.equal(await field.isVisible(),true);
         assert.ok((await field.getAttribute('aria-describedby')).split(/\s+/).includes('settings-scope-help'));
       }
+      const corpus=page.locator('#settings-corpus-details');
+      assert.equal(await corpus.locator('summary').textContent(),data.fixtures[language].labels.settings_corpus_details);
+      await corpus.locator('summary').press('Enter');
+      const fields=await corpus.locator('input').evaluateAll(inputs=>inputs.map(input=>({
+        key:input.dataset.corpusField, name:input.labels[0]?.textContent,
+        help:document.getElementById(input.getAttribute('aria-describedby'))?.textContent,
+      })));
+      assert.equal(fields.length,10);
+      for(const field of fields) {
+        assert.equal(field.name,data.fixtures[language].labels[`settings_corpus_${field.key}`]);
+        assert.ok(field.help.includes(data.fixtures[language].labels[`settings_corpus_${field.key}_hint`]));
+      }
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await corpus.locator('summary').click();
       const registersToggle = page.locator('#settings-registers > summary');
       await registersToggle.click();
       for (const id of ['set-language', 'set-threshold-preset', 'set-fdr-method', 'set-flag-min-sev', 'register-template-select']) {

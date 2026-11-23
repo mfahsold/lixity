@@ -25,6 +25,7 @@ from ..research.character_evidence import (
     character_dossier_text,
     character_evidence,
 )
+from ..research.dossier_analysis import prepare_character_analysis
 from ..research.dossiers import (
     DRAFT_CONFIRMATION_ERROR,
     generated_character_binding,
@@ -40,7 +41,9 @@ from ..research.manuscript_drafts import DRAFT_KIND_CHOICES, DRAFT_KINDS, DraftK
 from ..research.media import MEDIA_TYPES
 from ..research.models import Reference, Source, SourceVersion
 from ..research.repository import Repository, ResearchConflictError, ResearchError
+from ..terms import parse_terms
 from ._base import ResponseMixin
+from .middleware import load_selected_project_config
 from .pdf_context import manuscript_pdf_token
 
 RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision", "claim_relation", "manuscript_claim_link"))
@@ -48,6 +51,13 @@ RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decisio
 
 class ResearchRoutesMixin(ResponseMixin):
     """Handlers for the explicit-project research workspace."""
+
+    def _research_manuscript_settings(self, root: Path) -> dict[str, Any]:
+        """Use the selected author root for manuscript-backed research."""
+        return load_selected_project_config(
+            self.source_input, project_root=self.get_author_project_root() or root,
+            strict_warnings=True, overrides=self.project_open_overrides,
+        )
 
     def _handle_research_timeline(self) -> None:
         root = self._require_research_root()
@@ -91,8 +101,8 @@ class ResearchRoutesMixin(ResponseMixin):
 
     def _handle_research_dossier_character(self) -> None:
         query = self._parse_query(
-            required=("id", "research_token"), optional=("chapter", "offset", "analysis_sha256", "format"),
-            non_empty=("id", "research_token", "chapter", "offset", "analysis_sha256", "format"),
+            required=("id", "research_token"), optional=("chapter", "offset", "analysis_sha256", "format", "prepare"),
+            non_empty=("id", "research_token", "chapter", "offset", "analysis_sha256", "format", "prepare"),
             error_message="Choose one dossier and optionally a chapter and page or the Markdown format",
         )
         if query is None:
@@ -109,6 +119,9 @@ class ResearchRoutesMixin(ResponseMixin):
             markdown = "format" in query
             if markdown and (query["format"] != "markdown" or {"chapter", "offset", "analysis_sha256"} & query.keys()):
                 raise ValueError("Choose the Markdown format without chapter and page filters")
+            prepare = "prepare" in query
+            if prepare and (not markdown or query["prepare"] != "1"):
+                raise ValueError("Choose the Markdown format to prepare a revision")
             for key in ("chapter", "offset"):
                 if key in query and (not re.fullmatch(r"[0-9]{1,9}", query[key])):
                     raise ValueError("Choose a valid chapter and page")
@@ -121,7 +134,7 @@ class ResearchRoutesMixin(ResponseMixin):
             if binding is None:
                 self._error("No generated character binding is available for this dossier", 404)
                 return
-            dossier, name = binding
+            dossier, name, record = binding
             project_id = dossier["project_id"]
             text, source_sha, settings = read_dossier_manuscript(source, manuscript_root)
             if markdown:
@@ -129,12 +142,16 @@ class ResearchRoutesMixin(ResponseMixin):
                 if not proposal["passage_count"]:
                     self._json({"ok": False, "code": "character-dossier-empty",
                                 "message": "No matching passages in the selected manuscript"}, 404)
-                elif len(proposal["body"]) > MAX_DOSSIER_BODY_CHARS:
+                    return
+                staged_body = prepare_character_analysis(record.body, proposal["body"], record.language) if prepare else None
+                if len(staged_body if staged_body is not None else proposal["body"]) > MAX_DOSSIER_BODY_CHARS:
                     self._json({"ok": False, "code": "character-dossier-too-large",
                                 "message": "The complete character analysis exceeds the dossier text limit"}, 413)
-                else:
-                    self._json({"ok": True, "project_id": project_id, "existing_dossier": dossier,
-                                "max_body_chars": MAX_DOSSIER_BODY_CHARS, **proposal})
+                    return
+                if staged_body is not None:
+                    proposal["staged_body"] = staged_body
+                self._json({"ok": True, "project_id": project_id, "existing_dossier": dossier,
+                            "max_body_chars": MAX_DOSSIER_BODY_CHARS, **proposal})
                 return
             data = character_evidence(text, source_sha, character=name, language=self.language, settings=settings,
                                       chapter=chapter, offset=offset, expected_analysis_sha256=expected)
@@ -528,6 +545,17 @@ class ResearchRoutesMixin(ResponseMixin):
                 data = research_api.get_dossier(root, dossier_id,
                     section=query.get("section", [None])[0], revision=revision,
                     manuscript=manuscript, include_character_binding=bool(self.source_input))
+                if (self.source_input and revision is None and not data.get("section")
+                        and not data.get("availability")):
+                    try:
+                        if Path(self.source_input).resolve().is_relative_to(root.resolve()):
+                            terms = parse_terms(self._research_manuscript_settings(root).get("terms"))
+                            available = any(profile.dossier_id == dossier_id for profile in terms.values())
+                            data["linked_terms_state"] = "available" if available else "none"
+                            if available:
+                                data["linked_terms_available"] = True
+                    except (OSError, ValueError, UserWarning):
+                        data["linked_terms_state"] = "unavailable"
             else:
                 collection = query.get("collection", [None])[0]
                 data = research_api.list_dossiers(root, collection=collection)

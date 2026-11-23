@@ -96,7 +96,7 @@ server.serve_forever()
     const stale=page.waitForResponse(response=>response.url()===url);
     await page.locator('[data-action=settings]').click();assert.equal((await stale).status(),409);
     await expect(page.locator('#set-publication-publisher_name')).toHaveValue('Synthetic rejected draft');
-    await expect(page.locator('#ctl-status')).toHaveClass(/err/);
+    await expect(page.locator('#settings-save-status')).toHaveClass(/err/);
     }
     // The old form must not write publication into another selected root.
     await page.reload();await page.locator('[data-view=project]').click();
@@ -120,10 +120,10 @@ server.serve_forever()
     await page.locator('[data-action=settings]').click();await bounded(supersededAccepted,'superseded settings response');
     const replacementToken='1'.repeat(64);
     await page.locator('#settings-form').evaluate((form,token)=>{form.dataset.projectToken=token;},replacementToken);
-    await page.locator('#ctl-status').evaluate(status=>{status.textContent='New context status';});
+    await page.locator('#settings-save-status').evaluate(status=>{status.textContent='New context status';});
     const supersededResponse=page.waitForResponse(response=>response.url()===url);supersededRelease();await supersededResponse;
     await expect(page.locator('[data-action=settings]')).toBeEnabled();
-    await expect(page.locator('#ctl-status')).toHaveText('New context status');
+    await expect(page.locator('#settings-save-status')).toHaveText('New context status');
     await expect(page.locator('#settings-form')).toHaveAttribute('data-project-token',replacementToken);
     assert.equal(await page.evaluate(()=>Boolean(window.finishSettingsReload)),false);
     await page.unroute(url);

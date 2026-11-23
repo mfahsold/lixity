@@ -13,6 +13,7 @@ window.LixitySpeechDirection = function(parent, h) {
     hint.textContent = h.label(support.direction === "model_interpreted" ? "direction_hint" : "instructions_export_only");
     style.closest("label").hidden = support.direction !== "model_interpreted";
     style.disabled = support.direction !== "model_interpreted";
+    h.applyPauseBounds([before, after], support);
     prosody.update(support.prosody);
   }
   function setCapabilities(available, activeEngine, support) {
@@ -38,7 +39,6 @@ window.LixitySpeechDirection = function(parent, h) {
   var prosody = h.createProsody(section, "direction-prosody-", changed, true);
   var grid = h.node("div", section, "settings-grid");
   var before = h.field(grid, "direction_before", "number"), after = h.field(grid, "direction_after", "number");
-  [before, after].forEach(function(input) { input.min = "0"; input.max = "10"; input.step = "any"; });
   var actions = h.node("div", section, "row");
   var save = h.button(actions, "direction_save", function() { mutate(false); });
   var remove = h.button(actions, "direction_remove", function() { mutate(true); });

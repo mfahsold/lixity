@@ -17,7 +17,12 @@ from pydantic import (
     model_validator,
 )
 
-from .speech_controls import SpeechProsody, speech_control_support, validate_pronunciation_keys
+from .speech_controls import (
+    ExplicitPauseSeconds,
+    SpeechProsody,
+    speech_control_support,
+    validate_pronunciation_keys,
+)
 from .speech_engines import (
     COQUI_MODEL as COQUI_MODEL,
 )
@@ -137,8 +142,8 @@ class AudioProfile(BaseModel):
     # profile uses DEFAULT_PLAYBACK_SPEED in parse_audio_settings below.
     speed: float = Field(default=1.0, ge=MIN_PLAYBACK_SPEED, le=MAX_PLAYBACK_SPEED)
     instructions: str = Field(default="", max_length=2000)
-    paragraph_pause: float = Field(default=0.45, ge=0, le=10)
-    scene_pause: float = Field(default=1.2, ge=0, le=10)
+    paragraph_pause: ExplicitPauseSeconds = 0.45
+    scene_pause: ExplicitPauseSeconds = 1.2
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
     phonemes: PronunciationMap = Field(default_factory=dict, max_length=200)
     prosody: SpeechProsody = Field(default_factory=SpeechProsody)

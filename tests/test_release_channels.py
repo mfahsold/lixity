@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import subprocess
+import sys
 import tarfile
 import urllib.error
 import zipfile
@@ -569,6 +570,7 @@ def _setup_pages_stub(channels, monkeypatch, source):
 
 def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candidate, monkeypatch):
     source, _dist = candidate
+    fake_git(monkeypatch, channels)
     pages = _setup_pages_stub(channels, monkeypatch, source)
     base = "https://mfahsold.github.io/lixity/"
     values = {
@@ -576,11 +578,16 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
         base: pages["index.html"],
         **{base + rel: body for rel, body in pages.items()},
     }
-    client = channels.HttpClient(opener=Responses(values))
+    opener = Responses(values)
+    client = channels.HttpClient(opener=opener)
     result = channels.verify_pages(source, TAG, SHA, client, base_url=base)
     assert result["state"] == "verified"
     assert result["source_sha"] == SHA
     assert result["verified_paths"] == len(channels.PAGES_VERIFY_FILES) + 2
+    deployment_requests = [request for request in opener.requests
+                           if request.full_url == base + "deployment.json"]
+    assert len(deployment_requests) == 2
+    assert all(request.get_header("Cache-control") == "no-cache" for request in deployment_requests)
 
     values[base + "deployment.json"] = {"schema_version": 1, "source_sha": "b" * 40}
     with pytest.raises(ValueError, match="source_sha"):
@@ -596,11 +603,41 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
     with pytest.raises(ValueError, match=r"guides/metrics/de\.html"):
         channels.verify_pages(source, TAG, SHA, client, base_url=base)
 
+    values[base + "guides/metrics/de.html"] = pages["guides/metrics/de.html"]
+    deployments = iter([{"schema_version": 1, "source_sha": SHA},
+                        {"schema_version": 1, "source_sha": "b" * 40}])
+    values[base + "deployment.json"] = lambda: next(deployments)
+    with pytest.raises(ValueError, match="deployment changed"):
+        channels.verify_pages(source, TAG, SHA, client, base_url=base)
+
+
+def test_verify_pages_command_accepts_deployed_commit_without_release_tag(channels, candidate,
+                                                                    monkeypatch, capsys):
+    source, _dist = candidate
+    fake_git(monkeypatch, channels)
+    pages = _setup_pages_stub(channels, monkeypatch, source)
+    base = channels.DEFAULT_PAGES_URL
+    opener = Responses({
+        base + "deployment.json": {"schema_version": 1, "source_sha": SHA},
+        base: pages["index.html"],
+        **{base + rel: body for rel, body in pages.items()},
+    })
+    client = channels.HttpClient(opener=opener)
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    monkeypatch.setattr(sys, "argv", [
+        "release_channels.py", "verify-pages", "--root", str(source), "--expected-commit", SHA,
+    ])
+    channels.main()
+    result = json.loads(capsys.readouterr().out)
+    assert result["state"] == "verified" and result["source_sha"] == SHA
+    assert "tag" not in result
+
 
 def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, candidate, monkeypatch):
     source, dist = candidate
     fake_git(monkeypatch, channels)
-    monkeypatch.setattr(channels, "verify_attestations", lambda *args: None)
+    attestation_checks = []
+    monkeypatch.setattr(channels, "verify_attestations", lambda *args: attestation_checks.append(args))
     pages = _setup_pages_stub(channels, monkeypatch, source)
     base = "https://mfahsold.github.io/lixity/"
     pypi_urls = []
@@ -626,11 +663,62 @@ def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, 
     assert result["state"] == "verified"
     assert result["channels"] == ["github", "pypi", "pages"]
     assert result["github_pypi_bytes_identical"] is True
+    assert len(attestation_checks) == 1
+    assert sum(request.full_url == f"https://pypi.org/pypi/lixity/{TAG[1:]}/json"
+               for request in opener.requests) == 1
 
     corrupted_url = pypi_urls[0]["url"]
     opener.values[corrupted_url] = b"corrupted pypi bytes"
     with pytest.raises(ValueError, match=r"differ|PyPI"):
         channels.verify_release(source, TAG, SHA, REPO, recovered, client, base_url=base)
+
+    def change_files_after_github_verification():
+        replacement = b"different local and PyPI distribution"
+        (recovered / pypi_urls[0]["filename"]).write_bytes(replacement)
+        opener.values[corrupted_url] = replacement
+        pypi_urls[0]["digests"]["sha256"] = hashlib.sha256(replacement).hexdigest()
+        return {"info": {"version": TAG[1:]}, "urls": pypi_urls}
+
+    opener.values[f"https://pypi.org/pypi/lixity/{TAG[1:]}/json"] = change_files_after_github_verification
+    with pytest.raises(ValueError, match="differs from GitHub asset"):
+        channels.verify_release(source, TAG, SHA, REPO, recovered, client, base_url=base)
+
+
+def test_verify_release_can_omit_pypi_and_live_pages(channels, candidate, monkeypatch, capsys):
+    source, dist = candidate
+    fake_git(monkeypatch, channels)
+    monkeypatch.setattr(channels, "verify_attestations", lambda *args: None)
+    client, opener = client_for(channels, dist)
+    pypi_url = f"https://pypi.org/pypi/lixity/{TAG[1:]}/json"
+    del opener.values[pypi_url]
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    monkeypatch.setattr(sys, "argv", [
+        "release_channels.py", "verify-release", "--root", str(source), "--tag", TAG,
+        "--expected-commit", SHA, "--repo", REPO, "--dist", str(dist), "--skip-pypi", "--skip-pages",
+    ])
+    channels.main()
+    report = json.loads(capsys.readouterr().out)
+    assert report == {"state": "verified", "tag": TAG, "source_sha": SHA, "channels": ["github"]}
+    assert {request.host for request in opener.requests} == {"api.github.com"}
+
+
+def test_verify_zenodo_command_needs_no_checkout_or_other_channel(channels, monkeypatch, capsys):
+    query = channels.urllib.parse.urlencode({
+        "q": f'metadata.related_identifiers.identifier:"https://github.com/{REPO}/tree/{TAG}"',
+        "size": 1,
+    })
+    url = f"https://zenodo.org/api/records?{query}"
+    opener = Responses({url: {"hits": {"hits": []}}})
+    client = channels.HttpClient(opener=opener)
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    monkeypatch.setattr(sys, "argv", [
+        "release_channels.py", "verify-zenodo", "--repo", REPO, "--tag", TAG,
+    ])
+    channels.main()
+    assert [request.full_url for request in opener.requests] == [url]
+    assert json.loads(capsys.readouterr().out) == {
+        "tag": TAG, "zenodo_status": "pending", "zenodo_doi": None, "zenodo_url": None,
+    }
 
 
 def test_zenodo_status_classifies_minted_pending_and_unknown(channels):

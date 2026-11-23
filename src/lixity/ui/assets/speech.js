@@ -138,6 +138,14 @@
     if (cap.configurable_instructions) support.direction = fields.supports_instructions.checked ? "model_interpreted" : "unsupported";
     return support;
   }
+  function applyPauseBounds(inputs, support) {
+    var bounds = support.pause_seconds;
+    inputs.forEach(function(input) {
+      input.min = bounds ? String(bounds.minimum) : "";
+      input.max = bounds ? String(bounds.maximum) : "";
+      input.step = "any";
+    });
+  }
   function createProsody(parent, prefix, changed, inherited) {
     var section = node("fieldset", parent, "settings-section"), inputs = {}, support = {};
     node("legend", section, "", label("prosody"));
@@ -194,7 +202,7 @@
   function addHelp(el, key) {
     var aliases = {engine:"service_help", voice:"voice_hint", voice_description:"design_hint", reference_id:"reference_hint",
       record_author_title:"reference_hint", profiles_title:"profile_help", output_title:"export_hint", microphone_title:"microphone_help",
-      speed:"speed_hint", pronunciations:"pronunciation_hint", pronunciation_term:"pronunciation_hint", pronunciation_spoken:"pronunciation_hint",
+      pronunciations:"pronunciation_hint", pronunciation_term:"pronunciation_hint", pronunciation_spoken:"pronunciation_hint",
       direction_instructions:"direction_hint", instructions:"direction_hint", audit_audio:"audit_hint", audit_transcript:"audit_hint",
       export_scope:"export_hint", direction_plan:"export_hint", worker_refresh:"service_help", profile:"profile_help",
       name:"profile_help", language:"language_help", paragraph_pause:"pause_help", scene_pause:"pause_help",
@@ -445,9 +453,17 @@
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
-    fields.speed_hint.textContent = label(cap.speed.implementation === "model-condition" ? "speed_hint_model" : "speed_hint");
+    var modelTempo = cap.speed.implementation === "model-condition";
+    var tempoHelp = uiFormat(modelTempo ? "speech_speed_hint_model" : "speech_speed_hint", {
+      default: new Intl.NumberFormat(document.documentElement.lang || undefined).format(cap.speed.default)
+    });
+    fields.speed_label.textContent = label(modelTempo ? "speed_model" : "speed");
+    fields.speed_hint.textContent = tempoHelp;
+    fields.speed.dataset.help = tempoHelp;
     fields.model.textContent = cap.name;
-    direction.setCapabilities(capabilities, fields.engine.value, profileSupport());
+    var support = profileSupport();
+    applyPauseBounds([fields.paragraph_pause, fields.scene_pause], support);
+    direction.setCapabilities(capabilities, fields.engine.value, support);
     options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
       cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
     fields.target.disabled = cap.targets.length < 2;
@@ -1466,9 +1482,14 @@
     fields.profile_voice_card = node("div", fields.editor, "voice-active-card");
     fields.profile_voice_card.hidden = true;
     var speed = field(grid, "speed", "number"); speed.step = "any"; speed.required = true;
-    fields.speed_hint = node("span", speed.closest("label"), "ctl-note", label("speed_hint"));
-    fields.speed_hint.id = "speech-speed-hint"; speed.setAttribute("aria-describedby", fields.speed_hint.id);
-    ["paragraph_pause", "scene_pause"].forEach(function(key) { var el = field(grid, key, "number"); el.min = "0"; el.max = "10"; el.step = "any"; el.required = true; });
+    var speedField = speed.closest("label");
+    fields.speed_label = speedField.querySelector(".form-label");
+    fields.speed_label.id = "speech-speed-label";
+    fields.speed_hint = node("span", speedField, "ctl-note");
+    fields.speed_hint.id = "speech-speed-hint";
+    speed.setAttribute("aria-labelledby", fields.speed_label.id);
+    speed.setAttribute("aria-describedby", fields.speed_hint.id);
+    ["paragraph_pause", "scene_pause"].forEach(function(key) { field(grid, key, "number").required = true; });
     field(fields.editor, "instructions", "textarea").maxLength = 2000;
     fields.instructions_note = node("p", fields.editor, "ctl-note", label("instructions_export_only"));
     fields.instructions_note.id = "speech-instructions-note";
@@ -1508,7 +1529,7 @@
     field(content, "chapter", "select");
     direction = window.LixitySpeechDirection(content, {
       node:node, field:field, button:button, options:options, label:label, request:request,
-      status:status, invalidate:invalidate, tokens:tokens, createProsody:createProsody,
+      status:status, invalidate:invalidate, tokens:tokens, createProsody:createProsody, applyPauseBounds:applyPauseBounds,
       current:function() { return dialog.open && openedContext === context(); },
       selected:function(p) { paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter); }
     });

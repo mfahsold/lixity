@@ -949,18 +949,22 @@ def character_voice_profiles(
     *,
     min_turns: int = MIN_CHARACTER_VOICE_TURNS,
     case_sensitive: bool = False,
+    _include_narrator_and_interactions: bool = True,
 ) -> dict[str, Any]:
     """Per-character dialogue voice profiles compared against the narrator baseline.
 
     Inspired by Michel et al. (EMNLP 2024) and Chiron: deterministic adjacent-window
     speaker attribution with an explicit ambiguity guard and honest ``insufficient_turns``
     reporting below ``min_turns``.
+
+    The internal dossier projection keeps attribution against the complete cast
+    and skips narrator statistics and interaction pairs.
     """
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     patterns = _compile_character_patterns(names, case_sensitive=case_sensitive)
-    func_words = resolved.function_words
+    func_words = resolved.function_words if _include_narrator_and_interactions else ()
 
     accum: dict[str, dict[str, int]] = {
         label: {"turns": 0, "words": 0, "sentences": 0, "q_excl": 0, "func_words": 0}
@@ -978,22 +982,20 @@ def character_voice_profiles(
         clean = projection.text
         if not clean:
             continue
-        present_in_chapter = {
-            label for label, pats in patterns.items() if any(pat.search(clean) for pat in pats)
-        }
         speakers_in_chapter: set[str] = set()
         quoted_spans = projection.analysis.quote_ranges
         turn_tokens, narration_token_list = partition_quoted_words(clean, word_re, quoted_spans)
-        nar_text, nar_tokens = _narration_context(clean, word_re, projection.analysis, narration_token_list)
-        if nar_tokens:
-            narrator_words += len(nar_tokens)
-            if func_words:
-                narrator_func_words += sum(1 for tok in nar_tokens if tok in func_words)
-            nar_sents = [
-                s for s in split_prose_sentences(nar_text, resolved.key) if word_re.search(s)
-            ]
-            narrator_sentences += max(1, len(nar_sents))
-            narrator_q_excl += sum(1 for s in nar_sents if _is_question_or_excl(s))
+        if _include_narrator_and_interactions:
+            nar_text, nar_tokens = _narration_context(clean, word_re, projection.analysis, narration_token_list)
+            if nar_tokens:
+                narrator_words += len(nar_tokens)
+                if func_words:
+                    narrator_func_words += sum(1 for tok in nar_tokens if tok in func_words)
+                nar_sents = [
+                    s for s in split_prose_sentences(nar_text, resolved.key) if word_re.search(s)
+                ]
+                narrator_sentences += max(1, len(nar_sents))
+                narrator_q_excl += sum(1 for s in nar_sents if _is_question_or_excl(s))
 
         prev_speaker: str | None = None
         for idx, (span, raw_tokens) in enumerate(zip(quoted_spans, turn_tokens, strict=True)):
@@ -1008,11 +1010,12 @@ def character_voice_profiles(
             if not tokens:
                 prev_speaker = None
                 continue
-            speakers_in_chapter.add(speaker)
-            if prev_speaker is not None and prev_speaker != speaker:
-                pair = (prev_speaker, speaker) if prev_speaker < speaker else (speaker, prev_speaker)
-                pair_exchanges[pair] += 1
-            prev_speaker = speaker
+            if _include_narrator_and_interactions:
+                speakers_in_chapter.add(speaker)
+                if prev_speaker is not None and prev_speaker != speaker:
+                    pair = (prev_speaker, speaker) if prev_speaker < speaker else (speaker, prev_speaker)
+                    pair_exchanges[pair] += 1
+                prev_speaker = speaker
             sents = [
                 s for s in split_prose_sentences(turn_text, resolved.key) if word_re.search(s)
             ]
@@ -1030,8 +1033,12 @@ def character_voice_profiles(
             if func_words:
                 bucket["func_words"] += sum(1 for tok in tokens if tok in func_words)
 
-        for a, b in itertools.combinations(sorted(present_in_chapter | speakers_in_chapter), 2):
-            pair_co_chapters[(a, b)] += 1
+        if _include_narrator_and_interactions:
+            present_in_chapter = {
+                label for label, pats in patterns.items() if any(pat.search(clean) for pat in pats)
+            }
+            for a, b in itertools.combinations(sorted(present_in_chapter | speakers_in_chapter), 2):
+                pair_co_chapters[(a, b)] += 1
 
     nar_asl = (narrator_words / narrator_sentences) if narrator_sentences else None
     nar_q_rate = (
@@ -1090,6 +1097,8 @@ def character_voice_profiles(
             ),
         })
     characters.sort(key=lambda item: (-item["turns"], item["name"]))
+    if not _include_narrator_and_interactions:
+        return {"characters": characters}
     interaction_pairs: list[dict[str, Any]] = [
         {
             "a": a,

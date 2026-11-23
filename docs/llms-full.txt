@@ -1274,6 +1274,8 @@ Configure your client to launch the chosen `lixity` executable with the single
 argument `mcp`. The subprocess reads and writes JSON-RPC messages over stdio.
 Put manuscript text, language, thresholds and any required port in the tool
 arguments. The client can request `tools/list` to see the supported fields.
+Use `lixity_about` with `section` to retrieve the corresponding discovery
+subsection and build metadata when advertised.
 The browser app uses a separate local HTTP service.
 [Client configuration and tool contracts](AGENTS.md#model-context-protocol-mcp-server)
 
@@ -1672,6 +1674,17 @@ regex syntax, and never use a pronoun such as `I` as an alias for a viewpoint.
 Verify the resulting mentions and declared POV separately. This does not edit
 the manuscript or infer character presence.
 
+### Manuscript dossier suggestions
+
+`lixity research dossier-drafts` previews character, place and scene entries
+using the selected project's settings. It reports the basis for each name
+suggestion and where it appears. Use `lixity research dossier-from-manuscript`
+with the reviewed draft ID and preview digest when you want to save one.
+`lixity about --json` describes the accepted `dossier_drafts` settings.
+The [research reference](research/USAGE.md#manuscript-driven-dossier-drafts)
+covers the preview, exact place lists, inference limits and saved character
+report sections.
+
 ### Chapter register settings
 
 In the native workspace, **Project → Settings → Chapter registers** edits named
@@ -1699,15 +1712,28 @@ In the CLI, select presets via `--preset {balanced,developmental,line_editing,co
 
 #### Configurable structural thresholds (`[tool.lixity]` / `lixity.toml`)
 
-To eliminate hardcoded assumptions during genre-specific fine-tuning, the following thresholds can be configured in root `lixity.toml` or `pyproject.toml`:
+Edit these values in **Project → Settings → Analysis → Sentence rhythm, dialogue
+and word-pattern thresholds** or in root `lixity.toml` or `[tool.lixity]` in
+`pyproject.toml`. Apply in the workspace saves changed values to `lixity.toml`.
+Use `lixity about --section configuration --json` for the current defaults and bounds.
+
 - `short_sentence_max` (default `6`): upper word limit for staccato sentences.
 - `medium_sentence_max` (default `15`): upper word limit for medium sentences.
-- `long_sentence_max` (default `25`): threshold above which sentences count as long/complex.
+- `long_sentence_max` (default `25`): upper word limit for long sentences. Longer sentences form a separate group.
 - `short_turn_max_words` (default `12`): upper word limit for rapid dialogue turns.
 - `long_turn_min_words` (default `80`): lower word limit for extended monologue turns.
-- `dialogue_paragraph_share` (default `0.5`): share of quoted words to classify a paragraph as dialogue.
-- `hook_short_sentence` (default `8`): word limit for punchy chapter-closing sentences.
+- `dialogue_paragraph_share` (default `0.5`): quoted-word share for grouping a paragraph as dialogue. The workspace shows percentages. Enter `0.65` in TOML for 65%.
+- `hook_short_sentence` (default `8`): highest word count shown as a short chapter-closing sentence.
 - `monotony_min_run` (default `3`): minimum consecutive sentences with identical start token.
+- `sticky_min_words` and `sticky_glue_pct`: minimum sentence length and function-word percentage for a review cue. Open a matching sentence to see the counted words in context.
+
+The three sentence limits must increase in order and the short turn limit must
+stay below the long turn limit. These settings determine categories and review
+cues. Consider the passage and its intended effect when reviewing a match.
+
+#### Set chapter registers
+
+The workspace **Apply** action
 rebuilds and saves both tables together in the selected project's `lixity.toml`.
 It requires the current project token and preserves newer browser drafts during
 pending saves. Resetting detection thresholds does not reset registers.
@@ -2693,30 +2719,46 @@ variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
 manuscript** and choose **New suggestions**. Browse the available characters,
-places and scenes, then select a suggestion to read its preview.
+places and scenes, then select a suggestion to see why it appeared, the
+relevant excerpt and the text that will be saved.
 **Create dossier** confirms that preview. If the manuscript or settings change,
 reload the suggestions and review the new draft. After saving, **Open saved
 dossier** opens that record. **New dossier** in the Dossiers toolbar opens the form
 on the same page and places the cursor in its title field. Choose the
 **Character** template, then fill in the title and details before saving.
-Place previews include a chapter table and the first matching passage.
+Place previews show chapters with matches and the first and last matching
+passages. Automatic suggestions include the directional cue that qualified
+the name. Use the place settings action to enter a list or turn suggestions
+off.
 Scene previews use the measured opening and closing sentences. A problem in
 scene settings or the place list leaves the other suggestions available.
 
-Open a generated character dossier and choose **Preview addition**.
-The preview contains the character overview, every chapter's mention count,
-and all matching passages with context from the current manuscript. Choose
-**Edit dossier text** to change the addition or **Save dossier version** to
-store it after your existing notes. **Add to a character dossier** under
-**From manuscript** opens the same review for the dossier you select.
+In a generated character dossier, choose **Preview manuscript analysis** to
+review the count, chapters with matches and any excerpts included by your
+report settings.
+Choose **Save dossier version** to update the saved report alongside your
+notes, or use **Edit dossier text** to review and change the combined text.
+**Update a character dossier** under **From manuscript** opens the same review
+for the dossier you select.
 
-Open **Character in the manuscript** in a generated character dossier to see
-recognized name mentions, their distribution across all chapters and the
-matching paragraphs. Read the passages in manuscript order or select a chapter
-to focus the reading. Where available, neighboring sentences give each passage
-context. To keep those passages with an exported dossier revision, review and
-save the addition first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
+Set the inference limits and the contents of saved character reports under
+**Project → Analysis → Dossier suggestions and character reports**.
+The character preview also opens those settings. Choose **Apply** to
+save the project preferences. A compact draft shows the first passage for
+review separately from the text it will save.
+
+Open **Current passages in the manuscript** for the live counts and matching
+paragraphs. Expand the chapter table for the full distribution, including
+zero counts, or select a chapter to focus the reading. Read the highlighted
+name in context to check who is meant. To include these passages in a PDF,
+review and save the analysis first. [Counting rules and scope](research/USAGE.md#manuscript-driven-dossier-drafts) ·
 [Dossier PDF](#download-a-dossier-pdf)
+
+For an object or recurring expression, start with the **Object or term**
+template. After saving the dossier, choose it in **Linked dossier** in
+**Manage terms & props** and save the term.
+**Configured term occurrences** then opens exact matches and their passages
+from the current manuscript. [Configure terms and variants](research/USAGE.md#configured-terms-and-boundary-policies)
 
 ## Editing research text
 
@@ -2749,13 +2791,13 @@ written.
 
 ## Searching the manuscript
 
-Type a phrase in the manuscript search control to show matching text blocks and mark
-hits without automatically jumping or leaving the analysis overview. The search
-controls stay below the reading toolbar while scrolling. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
-**Clear search** restores the manuscript. Search includes readable structural
-blocks as well as analyzed paragraphs; the count is matching blocks out of
-blocks searched. Search takes priority over **Flagged only**; clearing
-it restores that filter.
+In the analysis overview, choose **Back to passage** to return to the manuscript.
+Type a phrase in the manuscript search field to show matches before jumping to
+one. `Ctrl+F` (`Cmd+F` on macOS) focuses the field when it is visible. Use the
+arrows or `Enter` and `Shift+Enter` to move between matches. `Escape` or **Clear
+search** restores the manuscript and reapplies **Flagged only** if it was active.
+The count shows matching blocks out of the blocks searched, including readable
+structural blocks and analyzed paragraphs.
 
 Matching is a case-insensitive substring test: it does not stem, ignore
 diacritics or cross paragraph boundaries. Text resembling markup remains text.
@@ -2886,6 +2928,14 @@ field. The result of applying settings appears beside the button. If the project
 or its settings changed elsewhere, copy any edits you want to keep before
 reloading. [Configuration](USAGE.md#configuration-corpusconfig) explains
 persistent project metadata and session settings.
+
+In a writable project, expand **Sentence rhythm, dialogue and word-pattern
+thresholds** to see how Lixity groups sentences and speech or selects the
+function-word cue. Each field describes what changes and shows its default.
+**Apply** saves edited values for the current project. The separate option to
+save analysis defaults applies to the language and highlight settings above.
+The local **How it’s measured** links show the limits used by the current
+analysis. The public reference explains the defaults in a fresh installation.
 
 **Manuscript language (analysis)** selects the language profile for counting and
 also sets the generated interface language. English is the default.
@@ -3161,10 +3211,11 @@ version. Check the version beside the button. The A4 document includes saved
 notes and tables, place and route descriptions, and pinned source quotations.
 Use your PDF reader's bookmarks to move between sections of a long dossier.
 
-To include a new manuscript excerpt, review and save the addition first, then
-download the new version. Use the attachment's own controls to open original
-media. See the [research manual](research/USAGE.md#download-a-dossier-as-pdf)
-for what each copy contains.
+To include current manuscript passages, review and save the analysis, then
+download the new version. Repeated copies of the same generated report appear
+once in the PDF. Use the attachment controls to open original media. See the
+[research manual](research/USAGE.md#download-a-dossier-as-pdf) for what each
+copy contains.
 
 ## Export a reading website
 
@@ -5555,8 +5606,8 @@ and place proposals
 omitted).
 
 ```sh
-lixity research dossier-drafts --project ./novel --manuscript ./manuscript.md --kind all
-lixity research dossier-from-manuscript --project ./novel --manuscript ./manuscript.md \
+lixity research dossier-drafts --project ./novel ./novel/manuscript.md --kind location
+lixity research dossier-from-manuscript --project ./novel ./novel/manuscript.md \
   --draft-id DRAFT_ID --preview-sha256 PREVIEW_SHA256 --actor local-author
 ```
 
@@ -5565,28 +5616,47 @@ language. `--kind` accepts `all`, `character`, `scene` or `location`. Previewing
 defaults to `all`. A creation without `--draft-id` selects the first new
 character by default. With `--draft-id`, pass that suggestion's `preview_sha256`
 to confirm the manuscript, settings and saved text you reviewed.
-The CLI reads settings from `--project`. The browser reads settings from the
-selected manuscript workspace, including when its research archive is elsewhere.
+Pass the manuscript path positionally or with `--manuscript`. Omit it to use
+the explicit `manuscript` setting from the selected project. The CLI reads
+settings from `--project`. The browser reads settings from the selected
+manuscript workspace, including when its research archive is elsewhere.
+Previewing is also available before the research archive is initialized.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**New suggestions**. The preview shows the full text that will become the
-dossier. If the manuscript or settings change before saving, reload and review
-the revised proposal. **Open saved dossier** opens the created record.
+**New suggestions**. Review why the entry was proposed and the text that
+will be saved. The evidence area identifies project settings, measured text
+and heuristic suggestions. Character and place references use lines in the
+chapter body. Scene references use their position in the chapter.
+If the manuscript or settings change before saving, reload and review the
+revised proposal. **Open saved dossier** opens the created record.
 **New dossier** opens the manual form, where you can choose the **Character** template.
 When there are no new character suggestions, **Create a character dossier
 manually** opens the same form and fills the template if the form is empty.
 
-In a generated character dossier, choose **Preview addition**. You can also
-choose **Add to a character dossier** under **From manuscript** and select one.
-Lixity reads the selected character from the current manuscript and checks the
-current dossier revision. The review shows
-the character overview, all chapter counts and every matching passage in order,
-with up to two neighboring sentences on each side where available. Use **Edit
-dossier text** to change the addition. Choose **Save dossier version** to store
-it after your existing notes or **Discard draft** to leave the draft. Lixity
-records that the addition came from the manuscript. If the addition exceeds the
-dossier size limit, **Character in the manuscript** provides the complete
-paginated reading.
+Each dossier can contain three kinds of material. The manuscript supplies
+passages and counts. Project settings supply names, variants and declared
+viewpoints. The author adds interpretations and links to claims and
+retained research sources. For example, read the passages around a name
+before recording a relationship or deciding that a location changed.
+
+| Proposal | Why it appears | What you can review |
+| --- | --- | --- |
+| Character | A configured name matches the prose, or an unconfigured capitalized name recurs in separate paragraphs in a chapter. | Name matches by chapter and a first passage. The longer report can also show declared viewpoints, estimated dialogue and complete matching paragraphs. |
+| Place | A configured name matches the prose, or a repeated capitalized phrase occurs near place cues, at least once with a directional cue. | The first and last matching paragraphs and, for inferred places, a separate excerpt with the qualifying directional cue. |
+| Scene or scene register | A recognized divider splits the chapter. A chapter without a divider counts as one unit. | Units in manuscript order, word and sentence counts, and the opening and closing of each individual unit. Sentence classifications are heuristic. |
+| Linked object or term | The author links a configured term profile to an existing dossier. | Literal names and variants in the current manuscript. See [configured terms](#configured-terms-and-boundary-policies). |
+
+In a generated character dossier, choose **Preview manuscript analysis**. You
+can also choose **Update a character dossier** under **From manuscript**.
+The preview groups name counts, chapters with matches and the selected report
+sections. Choose **Save dossier version** to save the
+analysis alongside your notes, or **Edit dossier text** to review and change
+the combined text. An unchanged analysis keeps the existing version.
+Refreshing can replace an earlier generated report that you have left unedited.
+Older and edited reports with distinct content remain available. The dossier
+reader and PDF combine copies of the same older report. **Current passages in
+the manuscript** provides complete paginated reading if the analysis exceeds
+the dossier size limit.
 When a matching passage has a verified target in the current reader, choose
 **Go to manuscript passage** to open the paragraph. If the reader shows an
 earlier manuscript version, reload the page to follow the link from the dossier.
@@ -5599,25 +5669,60 @@ and labeled accordingly. In the combined list, a scene settings error or an
 invalid place list appears alongside the available proposals. An explicit
 `--kind scene` or `--kind location` request reports its settings error.
 
-Set `locations = ["Bern", "Hafen Nord"]` in the project-root `lixity.toml` to
-track named places. A configured empty list disables place suggestions. With
-no list, repeated capitalized names near spatial cues, including a directional
-cue, can yield up to twelve candidates. Read the cited prose to decide whether
-the name refers to a place. The count follows whole-name matches in prose.
-The preview shows the count per chapter, including zeros, and the first
-matching passage. Headings and code blocks are outside this count.
+#### Configure suggestions and report length
 
-In a generated character dossier, **Character in the manuscript** reads the
-currently selected manuscript. It shows the name-mention count, every chapter's
-count including zeros, and any available viewpoint declarations and dialogue
-attribution. Viewpoint chapters come from project settings. Dialogue measures
-require enough attributed turns to be calculated.
+For places, choose **Configure place suggestions** in the place suggestions or
+open **Project → Analysis → Place suggestions for dossiers**. Choose automatic
+suggestions, enter the
+names you want to track, or turn place suggestions off. Apply the settings
+and reload proposals. These names guide a text search. The dossier's
+[Places and routes editor](#keep-places-and-journeys-in-a-dossier) describes
+geographic points and paths you add.
+
+The browser and CLI use the same settings in the project root.
+Open **Project → Analysis → Dossier suggestions and character reports** or
+choose **Configure dossier suggestions and reports** in the character
+preview. Change the limits, context or excerpt selection and choose **Apply**.
+In a compact proposal, the first passage remains available for checking in
+the preview. The saved-text area shows the body that will be stored.
+
+```toml
+locations = ["Bern", "Hafen Nord"]
+
+[dossier_drafts]
+inferred_character_limit = 12
+inferred_location_limit = 12
+character_context_sentences = 2
+character_report_passages = true
+```
+
+Use `locations = "auto"` for automatic place suggestions or `locations = []`
+to turn them off. Leaving `locations` unset also enables automatic suggestions.
+Changing the list affects future previews.
+Named profiles and explicit lists take precedence over inference. The two
+inference limits accept 0–50. Zero turns off that inference. Set
+`character_context_sentences` to 0–5 to choose how many nearby sentences
+can supplement each side of a matching paragraph. Set
+`character_report_passages = false` for a compact saved report and PDF with
+summary, chapter table and any available dialogue measures. The live reading
+still includes the complete passages.
+In a `pyproject.toml`, put the settings under `[tool.lixity]` and
+`[tool.lixity.dossier_drafts]`.
+
+The place count follows whole-name matches in prose. Read the cited matches
+to check whether the same place is meant and how it is introduced and
+revisited. Headings and code blocks are outside this count.
+
+In a generated character dossier, **Current passages in the manuscript** reads
+the selected source. Expand the chapter table for all counts, including zero
+matches, or choose one of the matching chapters to focus the passages. The
+overview locates the longest gap between name matches. Viewpoint chapters come
+from project settings. Dialogue measures require enough attributed turns.
 
 **Read the matching passages** shows each matching prose paragraph in full,
-with the counted name forms highlighted. Where the paragraph has fewer than
-two sentences before or after the matching sentences, Lixity fills in nearby
-sentences up to that limit where available. Read each matching paragraph in
-its own entry. A paragraph can contain several mentions. Read in manuscript
+with the counted name forms highlighted. The context setting applies to
+neighboring sentences that would otherwise be missing from each side.
+A paragraph can contain several mentions. Read in manuscript
 order or choose a chapter. Load more paragraphs to
 continue through the selection. Line labels refer to the chapter body.
 Configured name variants are included. Pronouns and indirect references are
@@ -5639,11 +5744,25 @@ props, characters and their chapter-scoped alternatives across a manuscript. Ter
 definitions are project configuration settings; declaring or reviewing terms never
 revises the research archive or alters manuscript files.
 
+The **Object or term** template in the new dossier form has sections for
+variants, manuscript use and continuity notes. Save the dossier, then open
+**Manuscript → Configured terms & props → Manage terms & props**.
+Set **Linked dossier** and save the term. Clear the field and save to remove
+the association. **Configured term occurrences** in that dossier shows
+matches from the current manuscript and links to verified paragraphs.
+The CLI uses `--dossier-id DOSSIER_ID` for the same project setting.
+
+In the workspace, add chapter-specific variants one at a time. Each variant
+has its own wording, chapter list and note. Open the chapter picker to select
+existing chapters. You can also enter planned chapter numbers in the field.
+Linked occurrences use the settings of the open project when the manuscript
+is stored in a subfolder.
+
 ```sh
 # Declare a term with aliases and chapter-scoped alternatives
 lixity research terms --project ./novel --set-term "brass compass" \
   --aliases "mariner's dial" \
-  --scoped-alternative "old pocket-watch:1,2"
+  --scoped-alternative "old pocket-watch:1,2" --dossier-id DOSSIER_ID
 
 # Review occurrences against a manuscript
 lixity research terms --project ./novel --manuscript novel.md --format table
@@ -6230,9 +6349,10 @@ it will download. If the project changes, reopen it and choose the version again
 The A4 document includes section bookmarks, saved notes, tables and pinned
 source quotations, with a text summary of any saved places and routes.
 For character dossiers this includes the chapter distribution and passages
-already saved in that version. To include current manuscript matches, review
-and save a manuscript addition first. Use the dossier's attachment controls
-for original media, and the research view for current claim links.
+saved in that version. Repeated copies of the same generated report are shown
+once, including in PDFs from earlier versions. To include current manuscript
+matches, review and save the analysis first. Use the dossier's attachment
+controls for original media and the research view for current claim links.
 
 ### Edit an exported Markdown dossier
 
@@ -6600,9 +6720,9 @@ To enter a route in the native UI:
 
 1. Open the dossier's edit dialog, expand **Places and routes**, and choose
    **Add place or route**. Name the journey and select **Route (line)**.
-2. Enter one longitude/latitude pair per line, in travel order. Use decimal
-   points, for example `11.10, 46.70` followed on the next line by
-   `11.12, 46.71`. These are illustrative coordinates, not a verified route.
+2. Enter one longitude/latitude pair per line, in travel order. Enter
+   `11.10, 46.70` followed on the next line by `11.12, 46.71`. For decimal
+   commas, separate the numbers with a space as in `11,10 46,70`.
 3. In the optional details, enter waypoint names in the same order, one per
    coordinate, and optionally add transport, people and period. Save the dossier.
 4. Select the route on the dossier map or in its numbered list. Frame the
@@ -6901,7 +7021,9 @@ workspace, open **Research → Sources**, select a retained text source, then ch
 Opening a source does not run the comparison. The browser action compares the
 current source capture with the loaded manuscript; it does not select an older
 version from a pinned quotation. Read that exact quotation separately when needed.
-The CLI retains its explicit source/manuscript contract.
+The CLI accepts the manuscript as a positional path or via `--manuscript`.
+Omit it when `--project` points to a project with an explicit manuscript
+setting.
 
 It returns a separate report without modifying
 either text or recalibrating fingerprints. It measures lexical Jaccard/overlap,
@@ -6911,8 +7033,8 @@ occurrence, not entailment, validated chronology or factual support. Term-list
 limits affect reported rows, not the comparison's meaning.
 
 ```sh
-lixity research compare --project ./novel --source-id SOURCE_ID \
-  --manuscript ./novel.md --format md --output ./grounding-report.md
+lixity research compare --project ./novel ./novel/manuscript.md --source-id SOURCE_ID \
+  --format md --output ./grounding-report.md
 ```
 
 Counts share core prose scope: body paragraphs, lists and blockquotes, excluding
@@ -8730,6 +8852,29 @@ Literature context for dramaturgical & computational narratology heuristics:
 - GermAnProse (LaTeCH-CLfL 2026) & CHR (2024/2025) — computational narratology,
   speech representation, and indirect speech / *Konjunktiv I* cues.
 
+## Manuscript evidence in dossier suggestions
+
+The preview keeps the source and the reason for selection separately.
+Character candidates come from configured names or capitalized names that
+recur in separate paragraphs of a chapter. Place candidates come from a
+configured list or a repeated capitalized expression near a spatial cue, with
+at least one directional cue. The inferred place preview gives that
+directional passage separately from the first counted name match. Scene
+suggestions use explicit separators or the whole chapter and present the
+measured opening and closing sentence. Implicit shift cues stay in scene
+analysis.
+
+Counts describe the matching rule. A name can refer to different people or
+places, while a pronoun or description can refer to the same one. Literary
+entity annotation and coreference are separate tasks. The current dossier
+generator records the name evidence so authors can resolve such cases in
+context. The cited datasets cover English literary text.
+[Literary entities](https://aclanthology.org/N19-1220/) ·
+[Coreference in English literature](https://aclanthology.org/2020.lrec-1.6/)
+
+For examples and adjustable inference and report settings, see the
+[manuscript dossier workflow](research/USAGE.md#manuscript-driven-dossier-drafts).
+
 ===============================================================================
 ## docs/STABILITY.md
 
@@ -9770,6 +9915,12 @@ the executable you invoked. The running version describes the observed listener.
 For a checkout-specific fix, verify the installed artifact and exercise the fixed
 behavior in the running view. MCP runs over stdio in the configured process.
 
+`lixity about --section commands --json` describes the installed command
+parsers. Research subcommands with manuscript input may carry
+`manuscript_input` with `positional`, `flag`, `configuration_key` and
+`allows_external_path`. Omission is supported when the selected project's
+explicit manuscript setting resolves. The flag form remains accepted.
+
 <a id="native-manuscript-editing-unreleased"></a>
 
 ## Native manuscript editing
@@ -9906,6 +10057,8 @@ The archive audit reads the project explicitly named in its request.
 `python -m lixity.mcp` launches the same server from the chosen Python environment.
 
 - `lixity_about`: Engine version, languages, supported features and thresholds.
+  Optional `section` selects `languages`, `features`, `heuristics`, `commands`
+  or `configuration`. Both the CLI and this tool retain `meta` for section reads.
 - `lixity_service_status` (unreleased): Observe the managed dashboard on an
   explicit integer `port` from 1 through 65535. Returns the same
   `lixity-service-status/1` result as `lixity service status --port PORT --json`,
@@ -9923,7 +10076,12 @@ The archive audit reads the project explicitly named in its request.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
-- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene and place dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene|location"`).
+- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene
+  and place dossier drafts (`manuscript-dossier-drafts/1`) from `text`.
+  Optional `language="en"`, `kind="all|character|scene|location"` and a
+  `dossier_drafts` object with inference limits control this text-only tool.
+  Project paths and other undeclared inputs are rejected. Project files are
+  used by the explicit-project CLI and native browser.
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells with
   `abs(z_star) >= z_threshold` before rounding, with per-chapter counts
   (`lixity-outlier-matrix/1`). Supply a finite, nonnegative JSON number
@@ -11196,14 +11354,18 @@ selection metadata; file edits alone do not create a content-version lock.
   language and thresholds. Launch overrides apply to the startup view.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
-  Title, author, publication and `site_publications` save to the selected root's `lixity.toml`;
-  language/thresholds are session-only by default. Optional `author_name` needs
+  Project metadata and analysis detail limits use the `native_settings.persisted_keys`
+  list from configuration discovery and save to the selected root's `lixity.toml`.
+  Language and editorial highlight thresholds are session-only by default.
+  Optional `author_name` needs
   an active project and single-line text up to 500 characters (empty clears).
   Publication uses the [shared field contract](USAGE.md#publication-settings).
   Numeric fields use JSON numbers; integer fields reject fractions and booleans.
   The shared threshold policy owns bounds/cross-field validation; see installed
   configuration discovery above. Unposted threshold fields retain active values.
-  Publication requires the opaque `project_token` from `#settings-form`.
+  The workspace supplies the opaque `project_token` from `#settings-form` for
+  project writes. `dialogue_paragraph_share` uses a ratio from 0 (exclusive)
+  to 1 (inclusive), which the browser presents as a percentage.
   Any supplied token must match the selected root, source and both root configs;
   missing/stale required tokens return HTTP 409 with `code: "stale-context"`.
   An unsupported language returns HTTP 400 with `code: "invalid-language"`.
@@ -11214,6 +11376,9 @@ selection metadata; file edits alone do not create a content-version lock.
   active contexts. The server validates and renders before committing settings
   and publishing session/cache state. Failures return HTTP 400 without that
   publication. Success returns `{ok, message, reload, project_token}`.
+  The metric reference at `/w/<id>/guides/metrics/<language>.html` explains the
+  corpus limits shown in that workspace's dashboard. The unscoped public
+  reference uses defaults.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
 
@@ -11249,6 +11414,12 @@ manuscript and does not run a successful dashboard refresh.
 - `POST /api/research-decision-add`: `{"title": "...", "rationale": "...", "claim_id": "...", "dossier_ids": ["..."], "deviation_from_fact": false}`. Dossier IDs are optional strings in a list; new links pin their current revisions.
 - `GET /api/research/status`: initialization state, selected project root and record counts.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
+- `GET /api/research/manuscript-terms`: configured occurrences in the open
+  project. Supply at most one of `?term=...` and `?dossier_id=...`. The dossier
+  response echoes `dossier_id` and returns that dossier's linked term profiles,
+  including overlap evidence on their occurrences. Current dossier details
+  expose `linked_terms_state` as `available`, `none` or `unavailable` where the
+  active manuscript is in scope. `unavailable` means configuration failed to load.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 - `GET /api/research/matrix?format=json|md|csv`: decision-matrix export.
@@ -11268,9 +11439,10 @@ an archive write; omission alone receives a default.
   downloads an A4 PDF for one exact saved dossier version from the selected
   local research workspace. The response is an `application/pdf` attachment
   with `Cache-Control: no-store`. It contains saved body text, tables and
-  geography descriptions, section bookmarks and pinned quotations. The download
-  is composed in memory and creates no archive revisions or output files. An
-  unavailable revision returns HTTP 404. A changed project returns HTTP 409
+  geography descriptions, section bookmarks and pinned quotations. Repeated
+  copies of the same generated character report are presented once. The
+  download is composed in memory and creates no archive revisions or output
+  files. An unavailable revision returns HTTP 404. A changed project returns HTTP 409
   with `code: stale-context`. A closed workspace can return HTTP 410.
 - `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene|location&language=...`:
   read-only deterministic character, scene and location dossier drafts
@@ -11284,8 +11456,14 @@ an archive write; omission alone receives a default.
   settings errors alongside the available drafts. An explicit request for the
   affected kind fails with its settings error.
   Scene evidence uses `scene_scope: register|scene|chapter` and marks
-  size-limited extracts with `excerpt_limited: true`. Place evidence
-  includes `basis: configured|inferred` and a counted prose match.
+  size-limited extracts with `excerpt_limited: true`. Character and place
+  evidence includes `basis: configured|inferred`. Their `first_hit` and
+  optional place `last_hit` carry chapter number, title, inclusive chapter-body
+  `line` and `end_line`, and a literal or shortened `quote`. Inferred places
+  include `reason_hit` for the directional cue and `qualifying_mentions` for
+  the matches near place cues. This count is distinct from the total name
+  count. Character hints include `includes_passages` for the proposed saved
+  text. The `first_hit` may still carry the evidence shown only in preview.
   With `include_existing=1`, covered proposals carry `already_covered: true`.
   A covered character proposal carries `existing_dossier` when it can be linked
   to exactly one current generated dossier. Its `id`, `title`, `revision`,
@@ -11293,11 +11471,16 @@ an archive write; omission alone receives a default.
   reads the selected character's full current analysis for a separate revision.
 - `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
   for a current dossier whose first revision was generated from a character
-  suggestion. Native current dossier details advertise
+  suggestion. Native dossier and revision reads may include `display_body`
+  for presentation. `body` and `record.body` retain the exact saved Markdown
+  for editing and reconciliation. Native current dossier details advertise
   `character_analysis_available` when this reading is available. The read
   returns `dossier-character-local/1` with count, chapter distribution,
   available dialogue and declared viewpoint information, and a page of full
   matching prose paragraphs. A chapter with no matches has a count of zero.
+  `context_sentences` gives the configured context target per side.
+  `longest_gap_chapters` gives the inclusive first and last chapter numbers
+  of the longest internal run without name matches, or null.
   Each passage carries its chapter-body line range and name match offsets in
   Unicode code points in `text`. The plain-text `context_before` and
   `context_after` fields contain nearby sentences outside the matching
@@ -11311,12 +11494,14 @@ an archive write; omission alone receives a default.
   as `offset` together with `analysis_sha256`. Changed manuscript content or
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
-  To prepare a saved addition for that exact current generated dossier, send
+  To review a report for that exact current generated dossier, send
   `format=markdown` without chapter or pagination parameters. The response
   includes the complete Markdown `body`, aggregate counts, `analysis_sha256`,
-  `max_body_chars` and the exact `existing_dossier` revision and snapshot for
-  review. No matches or an oversized body return a specific error. Saving the
-  combined text uses the normal optimistic dossier revision request.
+  `max_body_chars`, `includes_passages` and the exact `existing_dossier`
+  revision and snapshot for review. Add `prepare=1` to receive the proposed full `staged_body` that can
+  replace verified, unedited generated text. No matches or an oversized body
+  return a specific error. Saving the combined text uses the normal optimistic
+  dossier revision request with the returned revision and snapshot.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft. For native confirmation send `draft_id`,
   `preview_sha256` and the normal research context fields. Changed inputs or

@@ -16,25 +16,46 @@ function renderMermaidSvg(escapedCode) {
 (function () {
   var sequence = 0;
   var nonce = document.currentScript && document.currentScript.nonce;
-  function renderer() {
+  var libraryPromise = null;
+  async function loadRenderer() {
     if (window.mermaid) return window.mermaid;
     var bundled = document.getElementById("research-diagram-library");
     if (!bundled) throw new Error("Diagram library unavailable");
     var script = document.createElement("script");
     if (nonce) script.nonce = nonce;
-    script.textContent = JSON.parse(bundled.textContent);
-    document.head.appendChild(script);
-    script.remove(); bundled.remove();
-    mermaid.initialize({
-    startOnLoad: false, securityLevel: "strict", suppressErrorRendering: true,
-    theme: "base", themeVariables: {primaryColor: "#eef4f8", primaryBorderColor: "#35516b",
-      primaryTextColor: "#1f2d3a", lineColor: "#53697b", secondaryColor: "#f8fafc",
-      tertiaryColor: "#f1f5f9", clusterBkg: "#f4f7fa", clusterBorder: "#bac9d6"},
-    maxTextSize: 50000, maxEdges: 500, htmlLabels: false,
-    flowchart: {htmlLabels: false, useMaxWidth: true},
-    secure: ["secure", "securityLevel", "startOnLoad", "maxTextSize", "maxEdges", "suppressErrorRendering", "htmlLabels", "flowchart", "theme", "themeVariables"],
+    try {
+      if (bundled.dataset.src) {
+        script.src = bundled.dataset.src;
+        await new Promise(function(resolve, reject) {
+          script.onload = resolve;
+          script.onerror = function() { reject(new Error("Diagram library unavailable")); };
+          document.head.appendChild(script);
+        });
+      } else {
+        script.textContent = JSON.parse(bundled.textContent);
+        document.head.appendChild(script);
+      }
+    } finally { script.remove(); }
+    var library = window.mermaid;
+    if (!library) throw new Error("Diagram library unavailable");
+    library.initialize({
+      startOnLoad: false, securityLevel: "strict", suppressErrorRendering: true,
+      theme: "base", themeVariables: {primaryColor: "#eef4f8", primaryBorderColor: "#35516b",
+        primaryTextColor: "#1f2d3a", lineColor: "#53697b", secondaryColor: "#f8fafc",
+        tertiaryColor: "#f1f5f9", clusterBkg: "#f4f7fa", clusterBorder: "#bac9d6"},
+      maxTextSize: 50000, maxEdges: 500, htmlLabels: false,
+      flowchart: {htmlLabels: false, useMaxWidth: true},
+      secure: ["secure", "securityLevel", "startOnLoad", "maxTextSize", "maxEdges", "suppressErrorRendering", "htmlLabels", "flowchart", "theme", "themeVariables"],
     });
-    return window.mermaid;
+    bundled.remove();
+    return library;
+  }
+  function renderer() {
+    if (!libraryPromise) libraryPromise = loadRenderer().catch(function(error) {
+      libraryPromise = null;
+      throw error;
+    });
+    return libraryPromise;
   }
   async function render(host) {
     if (host.dataset.diagramState || !host.isConnected) return;
@@ -52,7 +73,8 @@ function renderMermaidSvg(escapedCode) {
         /(?:^|[;\r\n])\s*(?:classDef|style|linkStyle|click|links?)\b/i.test(code);
       if (restricted) throw new Error("Disabled diagram features");
       if (code.length > 50000) throw new Error("Diagram size limit");
-      var result = await renderer().render("lixity-diagram-" + (++sequence), code);
+      var library = await renderer();
+      var result = await library.render("lixity-diagram-" + (++sequence), code);
       if (!host.isConnected) { delete host.dataset.diagramState; return; }
       var parsed = new DOMParser().parseFromString(result.svg, "image/svg+xml");
       var svg = parsed.documentElement;
@@ -402,7 +424,9 @@ function renderSafeMarkdown(rawText, dossierContext) {
       } else {
         protectedLines.push(protectCode(indented.join("\n").replace(/\n+$/, ""), ""));
       }
-    } else protectedLines.push(line);
+    } else if (!/^&lt;!-- (?:lixity:character-analysis [a-f0-9]{64}|\/lixity:character-analysis) --&gt;$/.test(line)) {
+      protectedLines.push(line);
+    }
   }
   text = protectedLines.join("\n");
 
@@ -633,7 +657,7 @@ function renderSafeMarkdown(rawText, dossierContext) {
 
 function researchDossierBodyHtml(bodyText, dossierContext, actions) {
   var escapedRaw = escapeHtml(bodyText || "");
-  var rendered = renderSafeMarkdown(bodyText || "", dossierContext);
+  var rendered = renderSafeMarkdown(dossierContext?.display_body ?? bodyText ?? "", dossierContext);
   if (dossierContext && dossierContext.image_editable && (dossierContext.editable_sections || []).length) {
     var template = document.createElement("template"); template.innerHTML = rendered;
     template.content.querySelectorAll("[data-dossier-heading]").forEach(function(heading) {
@@ -724,21 +748,28 @@ function researchDossierDetailHtml(detail, readOnly, options) {
         (document.getElementById("research-manager") ? '<button type="button" class="ctl" data-research-review-dossier="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_tools_review")) + '</button>' : '') + '</div>';
     }
   }
-  // The section map groups repeated titles for lookup. Reading always follows
-  // the original body, including repeated headings and their original levels.
+  // A server-supplied reading projection preserves the saved source for editing.
   var attachmentActions = imageContext.image_editable && window.LixityDossierImages ?
     window.LixityDossierImages.actionsHtml(imageContext) : "";
   var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
   var pdf = researchDossierPdfContent(detail);
   var dossierActions = (pdf?.action || "") +
     (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "");
+  var currentManuscript = !options.recordView && !window.LixitySite.readOnly && !detail.availability && researchContextToken();
+  var termEvidence = "";
+  if (currentManuscript) {
+    if (detail.linked_terms_available === true) termEvidence = window.LixityDossierTerms?.html() || "";
+    else if (detail.linked_terms_state === "unavailable") {
+      termEvidence = '<p class="ctl-note err" role="status">' +
+        escapeHtml(uiLabel("research_dossier_linked_terms_unavailable")) + '</p>';
+    }
+  }
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
     (dossierActions ? '<div class="ctl-group research-dossier-toolbar"><div class="row">' +
       dossierActions + '</div>' + (pdf?.scope || "") + '</div>' : "") +
-    (!options.recordView && !window.LixitySite.readOnly && !detail.availability &&
-      detail.character_analysis_available === true && researchContextToken() && window.LixityDossierCharacter ?
-      window.LixityDossierCharacter.html() : "") +
-    '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_folder_notes")) + '</h4>' +
+    (currentManuscript && detail.character_analysis_available === true ? window.LixityDossierCharacter?.html() || "" : "") +
+    termEvidence +
+    '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_dossier_saved_body")) + '</h4>' +
     bodyHtml +
     (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography, detail.geography_summary) : "") + '</section>' +
     (!options.recordView && researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
@@ -780,13 +811,13 @@ function researchDossierContentsHtml(markup) {
   nav.dataset.sectionNav = "dossier"; nav.setAttribute("aria-label", uiLabel("research_sections"));
   var list = document.createElement("ul"); nav.appendChild(list); contents.append(summary, nav);
   var levels = [], parents = [list], previous = null, ordinal = 0;
-  var targets = folder.querySelectorAll("[data-dossier-character], .research-folder-notes, " +
+  var targets = folder.querySelectorAll("[data-dossier-evidence], .research-folder-notes, " +
     ".research-dossier-body-rendered h1, .research-dossier-body-rendered h2, .research-dossier-body-rendered h3, " +
     ".research-dossier-body-rendered h4, .research-dossier-body-rendered h5, .research-dossier-body-rendered h6, " +
     ".dossier-geography, .research-dossier-claims, .research-folder-citations");
   targets.forEach(function(target) {
     var depth = 0, text;
-    if (target.matches("section, [data-dossier-character]")) { levels = []; text = target.querySelector("h4").textContent; }
+    if (target.matches("section, [data-dossier-evidence]")) { levels = []; text = target.querySelector("h4").textContent; }
     else {
       var level = Number(target.tagName.slice(1));
       while (levels.length && levels[levels.length - 1] >= level) levels.pop();
@@ -828,7 +859,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAs
       var link = event.target.closest("[data-section-link]");
       var target = link && document.getElementById(link.dataset.sectionLink);
       var rendered = target && host.contains(target) && target.closest(".research-dossier-body-rendered");
-      if (target && host.contains(target) && target.matches("[data-dossier-character]")) target.open = true;
+      if (target && host.contains(target) && target.matches("[data-dossier-evidence]")) target.open = true;
       // Reuse the existing preview toggle before the delegated jump reveals
       // disclosures and scrolls. The decoration owns neither activation nor source state.
       if (rendered && rendered.hidden) {
@@ -857,6 +888,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent, onTextAs
       detail.project_id === researchSelectionProjectId && (!stillCurrent || stillCurrent());
   };
   if (window.LixityDossierCharacter) window.LixityDossierCharacter.mount(host, detail, reading);
+  if (window.LixityDossierTerms) window.LixityDossierTerms.mount(host, detail, reading);
   var slot = host.querySelector(".research-dossier-claims");
   if (!slot || !researchContextToken() || !detail.id || !detail.project_id) return;
   var serial = slot._claimsRead = (slot._claimsRead || 0) + 1;

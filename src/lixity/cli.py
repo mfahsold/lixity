@@ -21,6 +21,7 @@ from .io import FileUtils
 from .site import docs_url
 from .speech_engines import EXTERNAL_ENGINES, NATIVE_ENGINES, native_engine
 from .status import (
+    ABOUT_SECTIONS,
     DEFAULT_HOST,
     DEFAULT_PORT,
     LAYER_FEATURES,
@@ -126,7 +127,7 @@ def _completion_scripts() -> tuple[str, str]:
     """Bash and Zsh scripts with live command and research-action lists."""
     from .cli_completions import build_completion_scripts
 
-    return build_completion_scripts(_COMMANDS, _ABOUT_SECTIONS)
+    return build_completion_scripts(_COMMANDS, ABOUT_SECTIONS)
 
 
 #: Top-level commands: name and help text drive the parser and both emitted
@@ -174,7 +175,6 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("completion", "Shell completion script (bash or zsh)"),
 )
 
-_ABOUT_SECTIONS = ("languages", "features", "heuristics", "commands", "configuration")
 
 def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
     payload = {"meta": {**_META, "language": language_key}}
@@ -267,10 +267,7 @@ def _print_paragraph_layer(
 def _print_about_json(section: str | None = None) -> None:
     from .api import about
 
-    data = about()
-    if section is not None:
-        data = {"meta": data["meta"], section: data[section]}
-    print(_json(data, indent=True))
+    print(_json(about(section=section), indent=True))
 
 
 def _print_about_text() -> None:
@@ -1648,7 +1645,7 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
                 help="JSON output" if name == "about" else "Tool metadata as JSON (default; same as about --json)",
             )
             p.add_argument(
-                "--section", choices=_ABOUT_SECTIONS,
+                "--section", choices=ABOUT_SECTIONS,
                 help="Return one metadata section as JSON, retaining version metadata",
             )
             continue

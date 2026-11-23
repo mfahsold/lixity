@@ -244,6 +244,7 @@ def presence_report(
     config: CorpusConfig | None = None, *,
     declared_pov: Mapping[str, Sequence[int]] | None = None,
     case_sensitive: bool = False,
+    _include_narrator_and_interactions: bool = True,
 ) -> dict[str, Any]:
     """Name-mention report preserving legacy presence keys and separate POV metadata.
 
@@ -274,12 +275,16 @@ def presence_report(
             covered_pov_chapters.update(sorted_pov)
             declared_figures += 1
         result.append(item)
-    voices = character_voice_profiles(text, names, config, case_sensitive=case_sensitive)
+    voices = character_voice_profiles(
+        text, names, config, case_sensitive=case_sensitive,
+        _include_narrator_and_interactions=_include_narrator_and_interactions,
+    )
     return {
         "chapters": total_chapters,
         "figures": result,
         "character_voices": voices,
-        "character_interactions": voices["character_interactions"],
+        **({"character_interactions": voices["character_interactions"]}
+           if _include_narrator_and_interactions else {}),
         "pov_summary": {
             "declared_figures": declared_figures,
             "pov_coverage_chapters": sorted(covered_pov_chapters),

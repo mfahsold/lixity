@@ -23,15 +23,25 @@ class TestDocumentation(unittest.TestCase):
             _CSS_FILES,
             _JS_FILES,
             _PASSAGE_NAVIGATION_SCRIPT,
+            _PUBLICATION_JS_FILES,
             _REPORT_CSS_FILES,
             _REPORT_JS_FILES,
         )
 
         assets = ROOT / "src/lixity/ui/assets"
-        for relative in ("demo/report.html", "examples/effi-briest.html", "examples/pride-and-prejudice.html"):
+        reports = {
+            "demo/report.html": (_CSS_FILES, _JS_FILES),
+            "demo/reader/index.html": (
+                (*_REPORT_CSS_FILES, "speech-player.css"),
+                (*_PUBLICATION_JS_FILES, "speech-player.js", "reader-audio.js"),
+            ),
+            "demo/reader/analysis.html": (_REPORT_CSS_FILES, ()),
+            "demo/companion/index.html": (_REPORT_CSS_FILES, _PUBLICATION_JS_FILES),
+            "examples/effi-briest.html": (_REPORT_CSS_FILES, _REPORT_JS_FILES),
+            "examples/pride-and-prejudice.html": (_REPORT_CSS_FILES, _REPORT_JS_FILES),
+        }
+        for relative, (styles, scripts) in reports.items():
             report = (ROOT / "docs" / relative).read_text(encoding="utf-8")
-            scripts = _JS_FILES if relative == "demo/report.html" else _REPORT_JS_FILES
-            styles = _CSS_FILES if relative == "demo/report.html" else _REPORT_CSS_FILES
             for name in (*styles, *scripts):
                 with self.subTest(report=relative, asset=name):
                     self.assertEqual(report.count((assets / name).read_text(encoding="utf-8").strip()), 1,

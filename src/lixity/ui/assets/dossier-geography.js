@@ -509,9 +509,18 @@
           if (raw.type !== "unknown") {
             var rings = raw.coordinates.trim().split(/\n\s*\n/).map(function(ring) {
               return ring.split(/\r?\n/).map(function(line) {
-                var pair = line.trim().split(/\s*,\s*|\s+/);
-                if (pair.length !== 2 || pair.some(function(item) { return !item || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(item); })) throw invalid();
-                return pair.map(Number);
+                var text = line.trim();
+                function validPair(pair) {
+                  return pair.length === 2 && pair.every(function(item) {
+                    return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(item);
+                  });
+                }
+                // Decimal commas are unambiguous when a space separates the coordinates.
+                var localized = text.split(/\s+/).map(function(item) { return item.replace(/(\d),(?=\d)/, "$1."); });
+                if (validPair(localized)) return localized.map(Number);
+                var canonical = text.split(/\s*,\s*|\s+/);
+                if (!validPair(canonical)) throw invalid();
+                return canonical.map(Number);
               });
             });
             if (raw.type === "Point" && (rings.length !== 1 || rings[0].length !== 1)) throw invalid();

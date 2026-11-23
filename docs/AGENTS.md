@@ -20,6 +20,12 @@ the executable you invoked. The running version describes the observed listener.
 For a checkout-specific fix, verify the installed artifact and exercise the fixed
 behavior in the running view. MCP runs over stdio in the configured process.
 
+`lixity about --section commands --json` describes the installed command
+parsers. Research subcommands with manuscript input may carry
+`manuscript_input` with `positional`, `flag`, `configuration_key` and
+`allows_external_path`. Omission is supported when the selected project's
+explicit manuscript setting resolves. The flag form remains accepted.
+
 <a id="native-manuscript-editing-unreleased"></a>
 
 ## Native manuscript editing
@@ -156,6 +162,8 @@ The archive audit reads the project explicitly named in its request.
 `python -m lixity.mcp` launches the same server from the chosen Python environment.
 
 - `lixity_about`: Engine version, languages, supported features and thresholds.
+  Optional `section` selects `languages`, `features`, `heuristics`, `commands`
+  or `configuration`. Both the CLI and this tool retain `meta` for section reads.
 - `lixity_service_status` (unreleased): Observe the managed dashboard on an
   explicit integer `port` from 1 through 65535. Returns the same
   `lixity-service-status/1` result as `lixity service status --port PORT --json`,
@@ -173,7 +181,12 @@ The archive audit reads the project explicitly named in its request.
 - `lixity_markers`: In-line editorial markers (`!PRUEFEN`, `!TODO`, `!ACHTUNG`, `!SACHCHECK`).
 - `lixity_fingerprint`: Stylistic fingerprint: lexical richness, clause complexity, and reading ease reference.
 - `revision_diff`: Compare two manuscript texts (`base_text`, `target_text`, optional `language="en"`) returning `lixity-diff/1` deltas including `length_entropy`, `sticky_pct`, and `indirect_speech_per_1000`.
-- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene and place dossier drafts (`manuscript-dossier-drafts/1`) from `text` (optional `language="en"`, `kind="all|character|scene|location"`).
+- `lixity_manuscript_dossier_drafts`: Read-only extraction of character, scene
+  and place dossier drafts (`manuscript-dossier-drafts/1`) from `text`.
+  Optional `language="en"`, `kind="all|character|scene|location"` and a
+  `dossier_drafts` object with inference limits control this text-only tool.
+  Project paths and other undeclared inputs are rejected. Project files are
+  used by the explicit-project CLI and native browser.
 - `lixity_outlier_matrix`: Chapter-by-feature style-reference cells with
   `abs(z_star) >= z_threshold` before rounding, with per-chapter counts
   (`lixity-outlier-matrix/1`). Supply a finite, nonnegative JSON number
@@ -1446,14 +1459,18 @@ selection metadata; file edits alone do not create a content-version lock.
   language and thresholds. Launch overrides apply to the startup view.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
-  Title, author, publication and `site_publications` save to the selected root's `lixity.toml`;
-  language/thresholds are session-only by default. Optional `author_name` needs
+  Project metadata and analysis detail limits use the `native_settings.persisted_keys`
+  list from configuration discovery and save to the selected root's `lixity.toml`.
+  Language and editorial highlight thresholds are session-only by default.
+  Optional `author_name` needs
   an active project and single-line text up to 500 characters (empty clears).
   Publication uses the [shared field contract](USAGE.md#publication-settings).
   Numeric fields use JSON numbers; integer fields reject fractions and booleans.
   The shared threshold policy owns bounds/cross-field validation; see installed
   configuration discovery above. Unposted threshold fields retain active values.
-  Publication requires the opaque `project_token` from `#settings-form`.
+  The workspace supplies the opaque `project_token` from `#settings-form` for
+  project writes. `dialogue_paragraph_share` uses a ratio from 0 (exclusive)
+  to 1 (inclusive), which the browser presents as a percentage.
   Any supplied token must match the selected root, source and both root configs;
   missing/stale required tokens return HTTP 409 with `code: "stale-context"`.
   An unsupported language returns HTTP 400 with `code: "invalid-language"`.
@@ -1464,6 +1481,9 @@ selection metadata; file edits alone do not create a content-version lock.
   active contexts. The server validates and renders before committing settings
   and publishing session/cache state. Failures return HTTP 400 without that
   publication. Success returns `{ok, message, reload, project_token}`.
+  The metric reference at `/w/<id>/guides/metrics/<language>.html` explains the
+  corpus limits shown in that workspace's dashboard. The unscoped public
+  reference uses defaults.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
 
@@ -1499,6 +1519,12 @@ manuscript and does not run a successful dashboard refresh.
 - `POST /api/research-decision-add`: `{"title": "...", "rationale": "...", "claim_id": "...", "dossier_ids": ["..."], "deviation_from_fact": false}`. Dossier IDs are optional strings in a list; new links pin their current revisions.
 - `GET /api/research/status`: initialization state, selected project root and record counts.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
+- `GET /api/research/manuscript-terms`: configured occurrences in the open
+  project. Supply at most one of `?term=...` and `?dossier_id=...`. The dossier
+  response echoes `dossier_id` and returns that dossier's linked term profiles,
+  including overlap evidence on their occurrences. Current dossier details
+  expose `linked_terms_state` as `available`, `none` or `unavailable` where the
+  active manuscript is in scope. `unavailable` means configuration failed to load.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 - `GET /api/research/matrix?format=json|md|csv`: decision-matrix export.
@@ -1518,9 +1544,10 @@ an archive write; omission alone receives a default.
   downloads an A4 PDF for one exact saved dossier version from the selected
   local research workspace. The response is an `application/pdf` attachment
   with `Cache-Control: no-store`. It contains saved body text, tables and
-  geography descriptions, section bookmarks and pinned quotations. The download
-  is composed in memory and creates no archive revisions or output files. An
-  unavailable revision returns HTTP 404. A changed project returns HTTP 409
+  geography descriptions, section bookmarks and pinned quotations. Repeated
+  copies of the same generated character report are presented once. The
+  download is composed in memory and creates no archive revisions or output
+  files. An unavailable revision returns HTTP 404. A changed project returns HTTP 409
   with `code: stale-context`. A closed workspace can return HTTP 410.
 - `GET /api/research/manuscript-dossier-drafts?kind=all|character|scene|location&language=...`:
   read-only deterministic character, scene and location dossier drafts
@@ -1534,8 +1561,14 @@ an archive write; omission alone receives a default.
   settings errors alongside the available drafts. An explicit request for the
   affected kind fails with its settings error.
   Scene evidence uses `scene_scope: register|scene|chapter` and marks
-  size-limited extracts with `excerpt_limited: true`. Place evidence
-  includes `basis: configured|inferred` and a counted prose match.
+  size-limited extracts with `excerpt_limited: true`. Character and place
+  evidence includes `basis: configured|inferred`. Their `first_hit` and
+  optional place `last_hit` carry chapter number, title, inclusive chapter-body
+  `line` and `end_line`, and a literal or shortened `quote`. Inferred places
+  include `reason_hit` for the directional cue and `qualifying_mentions` for
+  the matches near place cues. This count is distinct from the total name
+  count. Character hints include `includes_passages` for the proposed saved
+  text. The `first_hit` may still carry the evidence shown only in preview.
   With `include_existing=1`, covered proposals carry `already_covered: true`.
   A covered character proposal carries `existing_dossier` when it can be linked
   to exactly one current generated dossier. Its `id`, `title`, `revision`,
@@ -1543,11 +1576,16 @@ an archive write; omission alone receives a default.
   reads the selected character's full current analysis for a separate revision.
 - `GET /api/research/dossier-character?id=...&research_token=...` reads the selected manuscript
   for a current dossier whose first revision was generated from a character
-  suggestion. Native current dossier details advertise
+  suggestion. Native dossier and revision reads may include `display_body`
+  for presentation. `body` and `record.body` retain the exact saved Markdown
+  for editing and reconciliation. Native current dossier details advertise
   `character_analysis_available` when this reading is available. The read
   returns `dossier-character-local/1` with count, chapter distribution,
   available dialogue and declared viewpoint information, and a page of full
   matching prose paragraphs. A chapter with no matches has a count of zero.
+  `context_sentences` gives the configured context target per side.
+  `longest_gap_chapters` gives the inclusive first and last chapter numbers
+  of the longest internal run without name matches, or null.
   Each passage carries its chapter-body line range and name match offsets in
   Unicode code points in `text`. The plain-text `context_before` and
   `context_after` fields contain nearby sentences outside the matching
@@ -1561,12 +1599,14 @@ an archive write; omission alone receives a default.
   as `offset` together with `analysis_sha256`. Changed manuscript content or
   analysis settings invalidate continuation. This read writes no archive
   records and is outside the read-only site export.
-  To prepare a saved addition for that exact current generated dossier, send
+  To review a report for that exact current generated dossier, send
   `format=markdown` without chapter or pagination parameters. The response
   includes the complete Markdown `body`, aggregate counts, `analysis_sha256`,
-  `max_body_chars` and the exact `existing_dossier` revision and snapshot for
-  review. No matches or an oversized body return a specific error. Saving the
-  combined text uses the normal optimistic dossier revision request.
+  `max_body_chars`, `includes_passages` and the exact `existing_dossier`
+  revision and snapshot for review. Add `prepare=1` to receive the proposed full `staged_body` that can
+  replace verified, unedited generated text. No matches or an oversized body
+  return a specific error. Saving the combined text uses the normal optimistic
+  dossier revision request with the returned revision and snapshot.
 - `POST /api/research-dossier-from-manuscript`: explicitly create one saved
   dossier from a manuscript draft. For native confirmation send `draft_id`,
   `preview_sha256` and the normal research context fields. Changed inputs or

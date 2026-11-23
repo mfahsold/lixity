@@ -9,6 +9,7 @@ from typing import Any, cast
 from pydantic import ValidationError
 
 from .acknowledgements import latest_acknowledgements
+from .dossier_analysis import dossier_display_body
 from .geography import summarize_geography
 from .models import (
     Claim,
@@ -237,7 +238,7 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
                                           "latest_revision": endpoint["current_revision"], "role": role})
     latest = snapshot.latest(record.id, KINDS[record.kind])
     from .images import resolve_dossier_images, resolve_dossier_media
-    return {
+    result = {
         "schema_version": "research-record-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "kind": record.kind, "record_id": record.id,
         "record": record.model_dump(mode="json"),
@@ -250,6 +251,11 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         **(dossier_withdrawal(snapshot, record.id) if isinstance(record, Dossier) else {}),
         **({key: relation_view[key] for key in ("from_claim", "to_claim", "review_needed")} if relation_view else {}),
     }
+    if isinstance(record, Dossier):
+        display_body = dossier_display_body(snapshot, record)
+        if display_body != record.body:
+            result["display_body"] = display_body
+    return result
 
 
 def get_record(

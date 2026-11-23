@@ -1,6 +1,6 @@
 """Author-curated reader publication profiles, separate from research records.
 
-Profiles choose literal dossier versions or sections for a reading website.
+Profiles choose dossier revisions or exact sections for a reading website.
 They do not store source redistribution consent or recipient permissions.
 """
 
@@ -14,6 +14,10 @@ from .publication import validate_metadata_text
 from .research.models import Identifier
 
 ProfileKey = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_-]{0,63}$")]
+_MAX_PROFILES = 50
+_MAX_ENTRIES = 500
+_MAX_TITLE_CHARS = 500
+_MAX_INTRODUCTION_CHARS = 10_000
 
 
 class SitePublicationEntry(BaseModel):
@@ -23,9 +27,9 @@ class SitePublicationEntry(BaseModel):
 
     dossier_id: Identifier
     revision: Annotated[int, Field(ge=1)] | None = None
-    section: str | None = None
+    section: str | None = Field(default=None, json_schema_extra={"maxLength": _MAX_TITLE_CHARS})
     reveal_after_chapter: Annotated[int, Field(ge=0)] = 0
-    title: str | None = None
+    title: str | None = Field(default=None, json_schema_extra={"maxLength": _MAX_TITLE_CHARS})
     include_citations: bool = False
     include_geography: bool = False
 
@@ -34,7 +38,7 @@ class SitePublicationEntry(BaseModel):
     def optional_text(cls, value: str | None) -> str | None:
         if value is None:
             return None
-        text = validate_metadata_text(value, "Publication entry text", 500)
+        text = validate_metadata_text(value, "Publication entry text", _MAX_TITLE_CHARS)
         if not text:
             raise ValueError("Publication section and title must be nonblank when supplied")
         return text
@@ -45,14 +49,14 @@ class SitePublicationProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
-    title: str
-    introduction: str = ""
-    entries: Annotated[list[SitePublicationEntry], Field(max_length=500)] = Field(default_factory=list)
+    title: str = Field(json_schema_extra={"maxLength": _MAX_TITLE_CHARS})
+    introduction: str = Field(default="", json_schema_extra={"maxLength": _MAX_INTRODUCTION_CHARS})
+    entries: Annotated[list[SitePublicationEntry], Field(max_length=_MAX_ENTRIES)] = Field(default_factory=list)
 
     @field_validator("title")
     @classmethod
     def profile_title(cls, value: str) -> str:
-        text = validate_metadata_text(value, "Publication title", 500)
+        text = validate_metadata_text(value, "Publication title", _MAX_TITLE_CHARS)
         if not text:
             raise ValueError("Publication title must be nonblank")
         return text
@@ -60,10 +64,10 @@ class SitePublicationProfile(BaseModel):
     @field_validator("introduction")
     @classmethod
     def profile_introduction(cls, value: str) -> str:
-        return validate_metadata_text(value, "Publication introduction", 10000, multiline=True)
+        return validate_metadata_text(value, "Publication introduction", _MAX_INTRODUCTION_CHARS, multiline=True)
 
 
-_PROFILES = TypeAdapter(Annotated[dict[ProfileKey, SitePublicationProfile], Field(max_length=50)],
+_PROFILES = TypeAdapter(Annotated[dict[ProfileKey, SitePublicationProfile], Field(max_length=_MAX_PROFILES)],
                         config=ConfigDict(strict=True))
 
 
@@ -80,6 +84,12 @@ def validate_site_publications(value: object) -> dict[str, Any]:
 def site_publications_schema() -> dict[str, Any]:
     """Describe curation syntax; dossier/chapter existence is checked at export."""
     return _PROFILES.json_schema()
+
+
+def site_publication_control_limits() -> dict[str, int]:
+    """Expose the validated profile and text limits to native controls."""
+    return {"profiles": _MAX_PROFILES, "entries": _MAX_ENTRIES, "title": _MAX_TITLE_CHARS,
+            "introduction": _MAX_INTRODUCTION_CHARS}
 
 
 def resolve_site_publication(value: object, name: str, *, chapter_count: int,

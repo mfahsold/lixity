@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const labels = require('../../src/lixity/locales/de.json');
 
 (async () => {
   const artifacts = fs.mkdtempSync('/tmp/lixity-audio-studio-');
@@ -70,6 +71,16 @@ server.serve_forever()
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       try {
+        const customDefault = width === 320 && !useFirefox;
+        const modelDefault = customDefault ? 1.27 : 1.1;
+        const pauseMaximum = customDefault ? 8.75 : 10;
+        if (customDefault) await page.route('**/api/speech?*', async route => {
+          const response = await route.fetch();
+          const data = await response.json();
+          data.capabilities['mlx-audio'].speed.default = modelDefault;
+          for (const cap of Object.values(data.capabilities)) cap.control_support.pause_seconds.maximum = pauseMaximum;
+          await route.fulfill({response, json: data});
+        }, {times:1});
         await page.goto(server.fixture.url);
         // Match the existing native-dialog audit harness; keep the application's CSP intact.
         if (axe) await page.evaluate(fs.readFileSync(axe, 'utf8'));
@@ -114,6 +125,27 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
         assert.ok((await page.locator('#speech-engine').getAttribute('data-help'))?.length > 20,
           'Model selection explains its effect in contextual help');
+        const speed = page.locator('#speech-speed');
+        const speedHint = page.locator('#speech-speed-hint');
+        async function assertTempo(labelKey, helpKey, defaultValue) {
+          const help = labels[helpKey].replace('{default}', new Intl.NumberFormat('de').format(defaultValue));
+          assert.equal(await page.getByRole('spinbutton', {name:labels[labelKey], exact:true}).isVisible(), true);
+          assert.equal(await speedHint.textContent(), help);
+          assert.equal(await speed.getAttribute('data-help'), help);
+          assert.equal(await speed.getAttribute('aria-describedby'), 'speech-speed-hint');
+          assert.ok(await speed.evaluate(input => input.closest('label').scrollWidth <= input.closest('label').clientWidth));
+        }
+        await assertTempo('speech_speed', 'speech_speed_hint', 1.1);
+        async function assertPauseBounds(keys, required) {
+          for (const key of keys) {
+            const input = page.locator('#speech-' + key);
+            assert.equal(await input.getAttribute('min'), '0');
+            assert.equal(await input.getAttribute('max'), String(pauseMaximum));
+            assert.equal(await input.getAttribute('step'), 'any');
+            assert.equal(await input.getAttribute('required'), required ? '' : null);
+          }
+        }
+        await assertPauseBounds(['paragraph_pause', 'scene_pause'], true);
         await page.locator('#speech-engine').selectOption('mlx-audio');
         await page.locator('#speech-language').selectOption('de');
         assert.equal(await page.locator('#speech-voice').isVisible(), true,
@@ -122,8 +154,9 @@ server.serve_forever()
           'The fixed local worker does not masquerade as an arbitrary HTTP provider');
         assert.equal(await page.locator('#speech-base_url').isVisible(), false);
         assert.equal(await page.locator('#speech-language').isVisible(), true);
-        assert.equal(await page.locator('#speech-speed').inputValue(), '1.1',
+        assert.equal(await speed.inputValue(), String(modelDefault),
           'Switching to ZONOS3 adopts its model speed default');
+        await assertTempo('speech_speed_model', 'speech_speed_hint_model', modelDefault);
         assert.deepEqual(await page.locator('#speech-voice option').evaluateAll(options => options.map(option => option.value)),
           ['liesel', 'wolfgang', 'reference']);
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `zonos-${width}.png`)});
@@ -140,6 +173,7 @@ server.serve_forever()
         assert.match(await page.locator('#speech-speed-hint').textContent(), /Modell|model|modèle/i,
           'ZONOS3 speed is explained as a model condition');
         await page.locator('[data-speech-action=profiles_discard]').click();
+        await assertTempo('speech_speed', 'speech_speed_hint', 1.1);
         await auditDialog('profiles');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `profiles-${width}.png`)});
         await tabs.nth(2).click();
@@ -147,6 +181,9 @@ server.serve_forever()
         assert.equal(await page.locator('.speech-export-section').isVisible(), true);
         assert.equal(await page.locator('#speech-engine').isVisible(), false);
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
+        await assertPauseBounds(['direction_before', 'direction_after'], false);
+        assert.equal(await page.locator('#speech-direction_after').inputValue(), '',
+          'A blank direction override inherits the profile pause');
         await auditDialog('direction');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `direction-${width}.png`)});
         const scrollPanel = page.locator('#speech-panel');

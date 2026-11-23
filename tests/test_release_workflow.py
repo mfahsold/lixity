@@ -3,7 +3,6 @@
 import ast
 import os
 import re
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -84,8 +83,11 @@ def test_catchup_uses_workflow_helpers_and_immutable_assets_without_rebuilding()
     assert "id-token: write" in pypi
     pages = job(source, "pages")
     assert "needs: [publish, pypi]" in pages
+    assert "github.event_name == 'push'" in pages
+    assert "workflow_dispatch" not in pages and "inputs.tag" not in pages
     assert "needs.pypi.result == 'success'" in pages
-    assert "source_ref: ${{ github.event_name == 'workflow_dispatch'" in pages
+    assert "vars.PUBLISH_PYPI != 'true' && needs.pypi.result == 'skipped'" in pages
+    assert "source_ref: ${{ github.sha }}" in pages
 
 
 def test_native_gate_requests_full_scope_and_blocks_publication_on_failure():
@@ -178,17 +180,27 @@ def test_release_checks_install_synthetic_audio_prerequisites():
     assert re.search(r"npm install --no-save [^\n]*\baxe-core@", browser)
 
 
-def test_native_scope_validation_executes_before_an_unknown_scope_can_select_portability():
+def test_native_scope_validation_rejects_unknown_scopes_before_pytest():
     source = workflow("research-platforms.yml")
-    validation = re.search(r"Validate native check scope.*?run: >-\n\s+(python -c [^\n]+)", source, re.S)
-    assert validation, "Native workflow must validate its open-ended workflow_call input"
-    argv = shlex.split(validation.group(1))
-    argv[0] = sys.executable
-    for scope, expected in (("full", 0), ("portability", 0), ("invalid", 1)):
-        result = subprocess.run(  # noqa: S603 - checked-in workflow command, fixed interpreter
-            argv, env={**os.environ, "NATIVE_SCOPE": scope},
-                                text=True, capture_output=True, check=False)
-        assert result.returncode == expected
+    assert "NATIVE_SCOPE: ${{ inputs.scope }}" in source
+    assert "run: python scripts/run_native_tests.py" in source
+    result = subprocess.run(  # noqa: S603 - checked-in workflow command, fixed interpreter
+        [sys.executable, str(ROOT / "scripts/run_native_tests.py"), "--collect-only"],
+        env={**os.environ, "NATIVE_SCOPE": "invalid"}, cwd=ROOT,
+        text=True, capture_output=True, check=False, timeout=10,
+    )
+    assert result.returncode == 2
+    assert "Unsupported native check scope: invalid" in result.stderr
+    assert not result.stdout
     callable_inputs = source.split("  workflow_call:", 1)[1].split("permissions:", 1)[0]
     assert "type: string" in callable_inputs and "default: full" in callable_inputs
     assert "group: research-platforms-" in source
+
+
+def test_ruff_hook_uses_the_dev_dependency_version():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    dependency = next(item for item in project["project"]["optional-dependencies"]["dev"]
+                      if item.startswith("ruff=="))
+    config = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
+    hook = re.search(r"(?m)^  - repo: https://github\.com/astral-sh/ruff-pre-commit\n    rev: v(\S+)$", config)
+    assert hook and f"ruff=={hook.group(1)}" == dependency

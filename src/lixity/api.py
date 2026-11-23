@@ -25,7 +25,7 @@ from .pipeline import (
 )
 from .project_structure import PROJECT_STRUCTURE_SCHEMA
 from .project_structure import inspect_project as inspect_project
-from .status import SCHEMA_VERSION_STYLE
+from .status import ABOUT_SECTIONS, SCHEMA_VERSION_STYLE
 from .style_fingerprint import FingerprintThresholds as FingerprintThresholds
 from .ui import render_analysis
 from .ui.manuscript_document import reader_blocks
@@ -387,7 +387,7 @@ def dashboard(
     )
 
 
-def about() -> dict[str, Any]:
+def about(*, section: str | None = None) -> dict[str, Any]:
     """Installed metadata and configuration schemas, without project values."""
     from .diagnostics import DOCTOR_SCHEMA
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
@@ -409,6 +409,8 @@ def about() -> dict[str, Any]:
         REDUNDANCY_RHO,
     )
 
+    if section is not None and section not in ABOUT_SECTIONS:
+        raise ValueError("Choose an installed metadata section: " + ", ".join(ABOUT_SECTIONS))
     defaults = FingerprintThresholds()
     record_versions: set[str] = set()
     for definition in ENTITY.json_schema().get("$defs", {}).values():
@@ -416,7 +418,7 @@ def about() -> dict[str, Any]:
         record_versions.update(version.get("enum", []))
         if "const" in version:
             record_versions.add(version["const"])
-    return {
+    data = {
         "meta": _meta("generic"),
         "languages": PROFILE_KEYS,
         "configuration": configuration_metadata(),
@@ -627,7 +629,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "schema", "purpose": "installed metadata (languages, features, thresholds, commands, configuration)",
-                "output": "text|json",
+                "output": "json",
             },
             {
                 "name": "mcp", "purpose": "read-only JSON-RPC tools on stdio for analysis, research and managed service status",
@@ -672,6 +674,7 @@ def about() -> dict[str, Any]:
         ],
         "license": "AGPL-3.0-or-later",
     }
+    return {"meta": data["meta"], section: data[section]} if section is not None else data
 
 
 def markers(text: str) -> list[dict[str, Any]]:
