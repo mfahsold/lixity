@@ -254,7 +254,8 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
                           "## Pause", "Nur die anderen gingen weiter.",
                           "## Rückkehr", "> Das Ufer war leer.\n>\n> Nanni blieb noch.\n>\n> Später sank die Sonne.",
                           "`Anna` [Weiter](https://example.test/Anna).", "```text\nAnna steht nur im Codeblock.\n```"])
-    manuscript.write_text(prose, encoding="utf-8")
+    source_bytes = prose.replace("\n", "\r\n").encode("utf-8")
+    manuscript.write_bytes(source_bytes)
     config = project / "lixity.toml"
     config.write_text('[characters.Anna]\naliases = ["Nanni"]\npov_in_chapters = [2]\n', encoding="utf-8")
     init = research_api.init(project, title="Figurendossier", language="de")
@@ -295,7 +296,7 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
         status, first = server.request_json(path(id=record["dossier_id"]))
         assert status == 200, first
         assert first["project_id"] == init["project_id"]
-        assert first["source_sha256"] == sha256(prose.encode()).hexdigest()
+        assert first["source_sha256"] == sha256(source_bytes).hexdigest()
         assert first["aliases"] == ["Nanni"]
         assert first["declared_pov_chapters"] == [2]
         assert first["mentions"] == 26
@@ -362,7 +363,7 @@ def test_saved_character_evidence_is_complete_paged_and_context_bound(
         assert empty["passages"] == [] and empty["passage_count"] == 0
         config.write_text('[characters.Anna]\naliases = []\n', encoding="utf-8")
         assert server.request(next_page).status == 409
-    assert manuscript.read_text(encoding="utf-8") == prose
+    assert manuscript.read_bytes() == source_bytes
     assert head.read_bytes() == accepted_archive
     assert research_api.get_dossier(project, record["dossier_id"])["body"] == "## Überblick\n\nEigene Notizen."
     with LoopbackServer(make_handler(project, language="de")) as server:

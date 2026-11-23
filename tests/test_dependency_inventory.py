@@ -6,6 +6,7 @@ import sys
 import tarfile
 import zipfile
 from pathlib import Path
+from uuid import UUID
 
 import pytest
 
@@ -62,7 +63,8 @@ def test_vendor_catalog_must_cover_every_shipped_vendor_file(tmp_path):
         inventory.vendor_packages(tmp_path)
 
 
-def test_release_inventory_rejects_pip_report_for_different_wheel(tmp_path):
+@pytest.fixture
+def release_installation_report(tmp_path):
     version = inventory.source_version(ROOT)
     wheel = tmp_path / f"lixity-{version}-py3-none-any.whl"
     sdist = tmp_path / f"lixity-{version}.tar.gz"
@@ -74,7 +76,7 @@ def test_release_inventory_rejects_pip_report_for_different_wheel(tmp_path):
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
         for path in (wheel, sdist)
     ), encoding="utf-8")
-    report = {
+    return {
         "version": "1",
         "environment": {
             "python_full_version": "3.12.10", "implementation_name": "cpython",
@@ -83,10 +85,21 @@ def test_release_inventory_rejects_pip_report_for_different_wheel(tmp_path):
         "install": [
             {
                 "metadata": {"name": "lixity", "version": version}, "requested": True,
-                "download_info": {"archive_info": {"hashes": {"sha256": "a" * 64}}},
+                "download_info": {"archive_info": {"hashes": {"sha256": hashlib.sha256(wheel.read_bytes()).hexdigest()}}},
             },
             {"metadata": {"name": "rich", "version": "15.0.0"}, "requested": False},
         ],
     }
+
+
+def test_release_inventory_has_cyclonedx_serial_for_attestation(tmp_path, release_installation_report):
+    bom, _ = inventory.create_sbom(ROOT, release_installation_report, None, tmp_path)
+    serial = UUID(bom["serialNumber"])
+    assert (bom["bomFormat"], bom["specVersion"], bom["serialNumber"]) == ("CycloneDX", "1.6", serial.urn)
+    assert serial.version == 4
+
+
+def test_release_inventory_rejects_pip_report_for_different_wheel(tmp_path, release_installation_report):
+    release_installation_report["install"][0]["download_info"]["archive_info"]["hashes"]["sha256"] = "a" * 64
     with pytest.raises(ValueError, match="not resolved from the exact release wheel"):
-        inventory.create_sbom(ROOT, report, None, tmp_path)
+        inventory.create_sbom(ROOT, release_installation_report, None, tmp_path)

@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from uuid import uuid4
 
 from check_release import source_version, verify_checksums
 
@@ -196,6 +197,7 @@ def create_sbom(root, report, source_sha, dist=None):
     return {
         "$schema": "https://cyclonedx.org/schema/bom-1.6.schema.json",
         "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+        "serialNumber": uuid4().urn,
         "metadata": {"component": product, "properties": properties},
         "components": [*resolved, *browser_components(root)],
     }, resolved

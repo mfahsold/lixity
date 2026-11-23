@@ -33,6 +33,9 @@ existing archived record and a missing source. Check that saved revisions and
 evidence still point to their original records and that an unavailable
 comparison stays visible.
 
+For release artifacts, verify the real build output against the input contract
+of the pinned publication tool before pushing the tag.
+
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not
 render those responses wholesale, even during read-only checks.
