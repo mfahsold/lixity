@@ -30,11 +30,45 @@ const path = require('node:path');
   assert.equal(await page.locator('.teleprompter-select').inputValue(),'ch-2');
   await pane.evaluate(el=>{el.style.removeProperty('scroll-behavior');el.scrollTop=200;});
   const start=await pane.evaluate(el=>el.scrollTop);
-  await page.locator('.teleprompter-btn-primary').click();
-  await page.waitForTimeout(700);
-  await page.locator('.teleprompter-btn-primary').click();
-  const distance=await pane.evaluate(el=>el.scrollTop)-start;
-  assert(distance > 15, `Playback advances continuously instead of restarting smooth scroll: ${distance}px`);
+  const clock = await page.evaluateHandle(() => {
+   let nextFrame = null;
+   let timestamp = 1000;
+   window.requestAnimationFrame = callback => {
+    nextFrame = callback;
+    return 1;
+   };
+   window.cancelAnimationFrame = () => { nextFrame = null; };
+   return {
+    advance(count) {
+     for (let index = 0; index < count; index++) {
+      const callback = nextFrame;
+      nextFrame = null;
+      timestamp += 8;
+      callback?.(timestamp);
+     }
+    },
+   };
+  });
+  const playback = page.locator('.teleprompter-btn-primary');
+  await playback.click();
+  // At 130 words/minute and 28px, 8ms frames each contribute about 0.46px.
+  await clock.evaluate(frames => frames.advance(46)); // The first frame establishes the timestamp.
+  assert.equal(await pane.evaluate(el => el.scrollTop), start + 20, 'Playback advances between short frames');
+  await pane.evaluate(el => { el.scrollTop += 100; });
+  await clock.evaluate(frames => frames.advance(45));
+  const pausedAt = start + 100 + 41;
+  assert.equal(await pane.evaluate(el => el.scrollTop), pausedAt, 'Playback continues from the manually scrolled position');
+  await playback.click();
+  await clock.evaluate(frames => frames.advance(45));
+  assert.equal(await pane.evaluate(el => el.scrollTop), pausedAt, 'Pause stops the automatic scroll');
+  const speed = page.locator('.teleprompter-speed-control input');
+  await speed.press('Home');
+  assert.equal(await speed.inputValue(), '60');
+  await playback.click();
+  await clock.evaluate(frames => frames.advance(91));
+  assert.equal(await pane.evaluate(el => el.scrollTop), pausedAt + 19, 'Slow playback covers 19 pixels in 720ms');
+  await playback.click();
+  await clock.dispose();
   await page.screenshot({path:'/tmp/lixity-teleprompter-scroll.png'});
   console.log('Long-paragraph reading position and chapter synchronization passed.');
  } finally {await browser.close();}

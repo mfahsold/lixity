@@ -327,6 +327,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep teleprompter playback moving smoothly at slow reading speeds and high
+  screen refresh rates by retaining fractional scroll distance between frames.
 - Keep the next and previous examples reachable by keyboard, and restore focus
   to the control that opened the passage navigation. Localize invalid search
   pattern errors.

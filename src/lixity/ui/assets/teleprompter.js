@@ -30,6 +30,7 @@
   var fontSize = 28;
   var animFrameId = null;
   var lastTimestamp = 0;
+  var pendingScrollPixels = 0;
   var activeParagraphSha = null;
   var previousActiveElement = null;
 
@@ -628,7 +629,13 @@
     if (scrollPane) {
       var wordsPerSecond = wordsPerMinute / 60.0;
       var pixelsPerSecond = wordsPerSecond * (fontSize * 0.95);
-      scrollPane.scrollTop += pixelsPerSecond * delta;
+      // Carry subpixel movement across frames because scrollTop can round writes.
+      pendingScrollPixels += pixelsPerSecond * delta;
+      var wholePixels = Math.floor(pendingScrollPixels);
+      if (wholePixels > 0) {
+        scrollPane.scrollTop += wholePixels;
+        pendingScrollPixels -= wholePixels;
+      }
       handleScrollSync();
     }
 
@@ -646,6 +653,7 @@
       playBtn.setAttribute("aria-label", label("teleprompter_pause"));
       playBtn.title = label("teleprompter_pause");
       lastTimestamp = 0;
+      pendingScrollPixels = 0;
       animFrameId = requestAnimationFrame(scrollLoop);
     } else {
       playBtn.classList.remove("is-active");

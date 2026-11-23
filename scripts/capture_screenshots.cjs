@@ -433,6 +433,9 @@ async function main() {
         await card.locator('.research-details-body .research-prose').first().waitFor();
         for (const image of await card.locator('.dossier-image img').all()) {
           await image.scrollIntoViewIfNeeded();
+          // A lazy image can change its active request when it enters the viewport.
+          await page.waitForFunction(element => element.complete && element.naturalWidth > 0,
+            await image.elementHandle());
           await image.evaluate(element => element.decode());
         }
         if (name.startsWith('dashboard-dossier-geography')) {
