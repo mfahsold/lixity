@@ -46,6 +46,7 @@ from .status import DEFAULT_PORT as DEFAULT_PORT
 if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
 
+PROJECT_CONFIG_FILENAME = "lixity.toml"
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
 PROJECT_ONLY_KEYS = (
     "author_name", "draft_notice", "publication", "site_publications", "dossier_collections",
@@ -310,7 +311,7 @@ def prepare_project_settings(
     root = Path(project_root).expanduser()
     if root.is_symlink() or not root.is_dir():
         raise ValueError("An existing nonsymlink project directory is required")
-    path = root / "lixity.toml"
+    path = root / PROJECT_CONFIG_FILENAME
     original = project_config_snapshot(path)
     pyproject_original = project_config_snapshot(root / "pyproject.toml")
     try:
@@ -466,7 +467,7 @@ def read_project_config(directory: str | Path) -> dict[str, Any]:
     configuration; ancestor or user settings must not leak into that answer.
     Oversized files are ignored instead of parsed.
     """
-    path = Path(directory) / "lixity.toml"
+    path = Path(directory) / PROJECT_CONFIG_FILENAME
     info = _config_file_stat(path)
     if info is not None and info.st_size <= 65536:
         return _load_toml(path)
@@ -486,7 +487,7 @@ def read_explicit_project_config(
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", UserWarning)
-            for name in ("pyproject.toml", "lixity.toml"):
+            for name in ("pyproject.toml", PROJECT_CONFIG_FILENAME):
                 path = Path(directory) / name
                 identity, content = project_config_snapshot(path, maximum_bytes=maximum_bytes)
                 if identity is not None:
@@ -510,7 +511,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
         here = here.parent
 
     merged: dict[str, Any] = {}
-    user = Path(os.path.expanduser("~/.config/lixity.toml"))
+    user = Path(os.path.expanduser(f"~/.config/{PROJECT_CONFIG_FILENAME}"))
     if _config_file_stat(user) is not None:
         merged.update(_load_toml(user))
         for key in PROJECT_ONLY_KEYS:
@@ -524,7 +525,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
                 settings.pop(key, None)
         merged.update(settings)
 
-    local = _walk_up(here, "lixity.toml")
+    local = _walk_up(here, PROJECT_CONFIG_FILENAME)
     if local is not None and local != project:
         settings = _load_toml(local)
         if start is None or local.parent != here:

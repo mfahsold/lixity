@@ -145,9 +145,11 @@ def test_project_open_resolves_analysis_defaults_in_the_explicit_root(tmp_path: 
     assert handler.language == "en"
     assert handler.thresholds.z_mild == 2.5
 
-    (project / "lixity.toml").write_text('language = "de"\nz_mild = 3.0\n', encoding="utf-8")
-    handler._handle_project_open({"path": str(source)})
+    config = project / "lixity.toml"
+    config.write_text('language = "de"\nz_mild = 3.0\n', encoding="utf-8")
+    handler._handle_project_open({"path": str(config)})
     assert handler.response[0] == 200
+    assert Path(handler.source_input) == source
     assert handler.language == "de"
     assert handler.thresholds.z_mild == 3.0
 

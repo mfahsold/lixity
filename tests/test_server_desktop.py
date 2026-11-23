@@ -211,12 +211,19 @@ def test_parent_watchdog_triggers_shutdown_when_parent_gone(monkeypatch):
 def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
     secret, nonce = _fresh_tokens()
     bootstrap = json.dumps({"secret": secret, "handshake_nonce": nonce}) + "\n"
-    with subprocess.Popen(
+    (tmp_path / "drafts").mkdir()
+    (tmp_path / "drafts/draft.md").write_text("## A synthetic chapter\n\nA heron waits at the gate.\n", encoding="utf-8")
+    (tmp_path / "manuscript.md").write_text("An earlier draft stays closed.\n", encoding="utf-8")
+    config = tmp_path / "lixity.toml"
+    config_body = 'manuscript = "drafts/draft.md"\n'
+    config.write_text(config_body, encoding="utf-8")
+    with subprocess.Popen(  # noqa: S603 - explicit interpreter and synthetic project path
         [
             sys.executable,
             "-m",
             "lixity",
             "serve",
+            str(config),
             "--_desktop-mode",
             "--host",
             "127.0.0.1",
@@ -258,6 +265,15 @@ def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
             )
             assert allowed.status == 200
             assert allowed.json["app"]["desktop_mode"] is True
+            headers = {DESKTOP_SECRET_HEADER: secret}
+            landing = send(port, "/", headers=headers, timeout=5.0)
+            assert landing.status == 303
+            page = send(port, landing.headers["location"], headers=headers, timeout=5.0)
+            assert page.status == 200
+            assert b"A heron waits at the gate." in page.body
+            assert b"An earlier draft stays closed." not in page.body
+            assert b'id="analysis-outline-document"' in page.body
+            assert config.read_text(encoding="utf-8") == config_body
         finally:
             proc.terminate()
             try:

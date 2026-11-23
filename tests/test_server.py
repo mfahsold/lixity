@@ -1827,6 +1827,8 @@ class TestLixityServer(unittest.TestCase):
             with tempfile.TemporaryDirectory() as td:
                 project = Path(td).resolve() / "research-only"
                 project.mkdir()
+                config = project / "lixity.toml"
+                config.write_text('language = "en"\n', encoding="utf-8")
                 source_path = Path(td) / "public-note.txt"
                 source_bytes = b"The reading room opened in 1924.\n"
                 source_path.write_bytes(source_bytes)
@@ -1852,17 +1854,18 @@ class TestLixityServer(unittest.TestCase):
                     if path.is_file()
                 }
 
-                status, body, _ = self.make_request(
-                    "/api/project-open",
-                    method="POST",
-                    body=json.dumps({"path": str(project)}),
-                    headers={"Content-Type": "application/json"},
-                )
-                self.assertEqual(status, 200)
-                opened = json.loads(body)
-                self.assertTrue(opened["ok"])
-                self.assertEqual(opened["workspace_root"], str(project))
-                self.assertIsNone(opened["manuscript"])
+                for selector in (project, config):
+                    status, body, _ = self.make_request(
+                        "/api/project-open",
+                        method="POST",
+                        body=json.dumps({"path": str(selector)}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status, 200, body)
+                    opened = json.loads(body)
+                    self.assertTrue(opened["ok"])
+                    self.assertEqual(opened["workspace_root"], str(project))
+                    self.assertIsNone(opened["manuscript"])
                 self.assertIsNone(LixityServerHandler.source_input)
                 self.assertEqual(LixityServerHandler.research_dir, str(project))
                 self.assertTrue(LixityServerHandler.dashboard_info["is_empty"])

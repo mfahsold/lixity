@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .config import read_explicit_project_config
+from .config import PROJECT_CONFIG_FILENAME, read_explicit_project_config
 from .io import FileUtils
 from .publishing import TIMESTAMP_PATTERN, archive_timestamped, prune_archive, update_stable_link
 
@@ -273,6 +273,7 @@ def resolve_project_target(selector: str | Path, *, empty: str = "error") -> Pro
     """Resolve one explicit file or folder selector without reading manuscript text.
 
     - A manuscript file selects its parent directory.
+    - A project configuration file selects its folder and uses discovery.
     - A folder uses the shared discovery rules (``<folder>.md``,
       ``manuscript.md`` and exactly one remaining Markdown file).
     - ``empty`` decides a folder without a manuscript: ``"error"`` re-raises
@@ -282,7 +283,10 @@ def resolve_project_target(selector: str | Path, *, empty: str = "error") -> Pro
     """
     if empty not in ("error", "research", "allow"):
         raise ValueError("Unknown empty-folder policy: " + empty)
-    path = Path(selector).expanduser().resolve()
+    path = Path(selector).expanduser()
+    if path.name == PROJECT_CONFIG_FILENAME and path.is_file():
+        path = path.parent
+    path = path.resolve()
     if path.is_file():
         return ProjectTarget(root=str(path.parent), manuscript=str(path))
     if not path.is_dir():

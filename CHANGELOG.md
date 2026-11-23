@@ -35,6 +35,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   across local desktop sessions.
 - Keep signed desktop runtime resources intact after startup and use the same
   locked Rust dependencies for the host checks and installer builds.
+- Open the configured manuscript when selecting a project's `lixity.toml`.
 - Keep the dossier section list reachable when the reading pane resizes during
   a smooth return from the end of a document.
 - Keep ordinary buffered-response cancellations in debug logging and preserve

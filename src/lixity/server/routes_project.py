@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlparse
 from ..config import (
     ANALYSIS_SETTINGS_KEYS,
     PERSISTED_SETTINGS_KEYS,
+    PROJECT_CONFIG_FILENAME,
     apply_config_to_thresholds,
     prepare_project_settings,
     read_explicit_project_config,
@@ -436,7 +437,8 @@ class ProjectRoutesMixin(ResponseMixin):
             if not target_path.exists():
                 self._error(f"Path does not exist: {target_path}", 404, error_code="path-missing")
                 return
-            if target_path.is_file() and target_path.suffix.lower() not in _MANUSCRIPT_SUFFIXES:
+            if (target_path.is_file() and target_path.name != PROJECT_CONFIG_FILENAME
+                    and target_path.suffix.lower() not in _MANUSCRIPT_SUFFIXES):
                 self._error("Unsupported manuscript file type (use .md, .markdown, or .txt)",
                             error_code="unsupported-manuscript-type")
                 return
@@ -468,7 +470,7 @@ class ProjectRoutesMixin(ResponseMixin):
         try:
             ws_root, manuscript = target.root, target.manuscript
             if target.research_only:
-                research_api.list_sources(target_path)
+                research_api.list_sources(ws_root)
 
             settings = read_explicit_project_config(ws_root)
             overrides = self.project_open_overrides

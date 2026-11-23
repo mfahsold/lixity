@@ -66,6 +66,7 @@ engine and UI. The release build matrix targets macOS disk images for Apple
 Silicon and Intel, Windows x64 NSIS and WiX installers, and Linux x64 Debian
 packages and AppImages. The host adds native OS menus, folder and save dialogs,
 atomic streaming exports and cross-platform `cpal`+`hound` microphone capture.
+Opening a project's `lixity.toml` loads the manuscript selected for its folder.
 
 The desktop host runs its own loopback engine. Manuscript folders and retained
 research archives live outside the installed app. Python 3.12 is the bundled
