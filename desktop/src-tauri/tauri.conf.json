@@ -27,7 +27,7 @@
     "longDescription": "Lixity keeps your manuscript, deterministic linguistic measurements and traceable research dossiers in one offline workspace.",
     "targets": "all",
     "resources": {
-      "../build/runtime/current/*": "runtime/"
+      "../build/runtime/current/": "runtime/"
     },
     "fileAssociations": [
       {

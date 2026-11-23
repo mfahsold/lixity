@@ -81,8 +81,7 @@ jobs:
         run: |
           cargo test --manifest-path Cargo.toml --all-targets
           cargo clippy --manifest-path Cargo.toml --all-targets -- -D warnings
-          cargo install tauri-cli --version "^2.2" --locked
-          cargo tauri build --bundles "${{ matrix.bundles }}"
+          npx --yes @tauri-apps/cli@2 build --bundles "${{ matrix.bundles }}"
           mkdir -p build/installers
           python scripts/verify_desktop_artifacts.py \
             target/release/bundle \

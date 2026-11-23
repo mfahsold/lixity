@@ -71,6 +71,8 @@ pub struct RecordingLiveStatus {
     pub auto_stopped: bool,
 }
 
+type CaptureResult = Result<(Vec<f32>, u32), String>;
+
 struct ActiveCapture {
     stop_flag: Arc<AtomicBool>,
     auto_stopped: Arc<AtomicBool>,
@@ -78,7 +80,7 @@ struct ActiveCapture {
     live_rms_bits: Arc<AtomicU32>,
     started_at: Instant,
     filename: String,
-    join_handle: Option<JoinHandle<Result<(Vec<f32>, u32), String>>>,
+    join_handle: Option<JoinHandle<CaptureResult>>,
 }
 
 /// Thread-safe handle for interactive Start / Stop voice recording across OSes.
