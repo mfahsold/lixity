@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Lixity
+GenericName=Manuscript Analysis Workbench
+GenericName[de]=Manuskript-Analysewerkbank
+Comment=Local offline manuscript workspace for close reading, traceable research and linguistic analysis
+Comment[de]=Lokale Offline-Werkbank für Manuskriptanalyse, Schreiben, Recherche und Überarbeitung
+Exec=lixity-desktop %F
+Icon=io.github.mfahsold.Lixity
+Terminal=false
+Categories=Office;Publishing;TextEditor;
+MimeType=text/markdown;text/plain;application/toml;
+StartupNotify=true
+StartupWMClass=lixity-desktop

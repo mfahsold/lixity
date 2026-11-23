@@ -28,6 +28,7 @@ modules:
       - install -Dm755 lixity-desktop /app/bin/lixity-desktop
       - cp -a runtime /app/bin/runtime
       - install -Dm644 io.github.mfahsold.Lixity.desktop /app/share/applications/io.github.mfahsold.Lixity.desktop
+      - install -Dm644 io.github.mfahsold.Lixity.metainfo.xml /app/share/metainfo/io.github.mfahsold.Lixity.metainfo.xml
       - install -Dm644 io.github.mfahsold.Lixity.svg /app/share/icons/hicolor/scalable/apps/io.github.mfahsold.Lixity.svg
     sources:
       - type: dir

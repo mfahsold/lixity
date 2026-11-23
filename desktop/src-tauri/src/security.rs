@@ -155,6 +155,21 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
           durationSeconds: typeof durationSeconds === "number" ? durationSeconds : 10.0,
           filename: filename ? String(filename) : "recording.wav"
         }});
+      }},
+      startRecording: function (deviceName, filename) {{
+        return invoke("audio_capture_start_recording", {{
+          deviceName: deviceName || null,
+          filename: filename ? String(filename) : "author-voice.wav"
+        }});
+      }},
+      recordingStatus: function () {{
+        return invoke("audio_capture_status");
+      }},
+      stopRecording: function () {{
+        return invoke("audio_capture_stop_recording");
+      }},
+      cancelRecording: function () {{
+        return invoke("audio_capture_cancel_recording");
       }}
     }})
   }});

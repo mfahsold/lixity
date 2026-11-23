@@ -16,9 +16,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `window.lixityDesktop` hooks in the browser UI.
 - Add the cross-platform Rust/Tauri v2 desktop host workspace (`desktop/`) with
   isolated `python-build-standalone` 3.12 runtime bundling, stripped-environment
-  smoke verification, 7-language native OS menu generation, `cpal`+`hound`
-  cross-platform audio capture/calibration, packaging templates and a three-OS
-  desktop CI workflow.
+  smoke verification, 7-language native OS menus with dynamic recent projects,
+  drag-and-drop opening, window geometry persistence, interactive and timed
+  `cpal`+`hound` cross-platform audio capture/calibration, native installer
+  packaging (macOS `.app`/`.dmg`/Homebrew, Windows NSIS/WiX/WinGet, Linux
+  `.deb`/`.rpm`/`.AppImage`/Flatpak/AppStream), artifact container verification,
+  and three-OS CI and release workflows.
 
 ### Fixed
 

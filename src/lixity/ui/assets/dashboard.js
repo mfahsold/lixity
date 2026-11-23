@@ -1083,6 +1083,21 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
     var failureKey = "site_export_network_error";
     var exportId = "", stage = "response_read";
     try {
+      if (!checking && window.lixityDesktop && typeof window.lixityDesktop.saveExport === "function") {
+        stage = "download_start";
+        failureKey = "site_export_download_error";
+        var outcome = await window.lixityDesktop.saveExport(
+          { path: API + "/site-export", method: "POST", payload: payload },
+          "lixity-reading-website.zip"
+        );
+        if (!sameExportContext()) return;
+        if (outcome && outcome.saved) {
+          message("site_export_success");
+        } else {
+          status.textContent = "";
+        }
+        return;
+      }
       var response = await fetch(API + (checking ? "/site-preflight" : "/site-export"), {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),

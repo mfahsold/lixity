@@ -15,7 +15,7 @@
   var microphoneState = null, microphoneBusy = false;
   var chapterAudio = null, chapterAudioBusy = false, chapterAudioSequence = 0;
   var audioStream = null, audioCtx = null, audioSource = null, audioProcessor = null, recordedChunks = [], totalRecordedSamples = 0;
-  var recTimerInterval = null, recStartTime = 0, isRecordingVoice = false, lastRecordedWavBlob = null, sampleVariant = "short";
+  var recTimerInterval = null, recStartTime = 0, isRecordingVoice = false, desktopAudioRecording = false, lastRecordedWavBlob = null, sampleVariant = "short";
 
   var importedTake = null, takeTokens = null, takeImportSequence = 0;
   var recordingPending = false, recordingSequence = 0, takeUrl = null, takeTranscript = "", voiceSaving = false, takeValid = false;
@@ -232,7 +232,12 @@
     if (mode !== "profiles") fields.schema_review.hidden = fields.schema_apply.hidden = true;
   }
   function downloadText(text, filename, type) {
-    var address = URL.createObjectURL(new Blob([text], {type: type + ";charset=utf-8"}));
+    var blob = new Blob([text], {type: type + ";charset=utf-8"});
+    if (window.LixityComponents && typeof window.LixityComponents.downloadBlob === "function") {
+      window.LixityComponents.downloadBlob(blob, filename, 2000);
+      return;
+    }
+    var address = URL.createObjectURL(blob);
     var link = document.createElement("a"); link.href = address; link.download = filename;
     document.body.appendChild(link); link.click(); link.remove();
     setTimeout(function() { URL.revokeObjectURL(address); }, 2000);
@@ -280,6 +285,24 @@
         if (d.alsa_id === (selectedDevice || mic.default_device)) opt.selected = true;
         fields.microphone_device.add(opt);
       });
+      showMicrophoneGain();
+      return;
+    }
+    if (window.lixityDesktop && window.lixityDesktop.audioCapture &&
+        typeof window.lixityDesktop.audioCapture.listDevices === "function") {
+      var seq = openSequence;
+      window.lixityDesktop.audioCapture.listDevices().then(function(list) {
+        if (seq !== openSequence || !dialog || !dialog.open || !Array.isArray(list) || !list.length) return;
+        var mapped = list.map(function(d) {
+          return { alsa_id: d.id, label: d.label, is_default: Boolean(d.is_default) };
+        });
+        var def = mapped.find(function(d) { return d.is_default; }) || mapped[0];
+        populateMicrophone({
+          _desktopNative: true,
+          devices: mapped,
+          default_device: def ? def.alsa_id : ""
+        }, selectedDevice);
+      }).catch(function() {});
     }
     showMicrophoneGain();
   }
@@ -762,12 +785,7 @@
         if (data.timeline) button(ssmlHeader, "export_json", function() { downloadText(JSON.stringify(data.timeline, null, 2), "speech-timeline.json", "application/json"); });
         if (data.ssml) {
           var ssmlBtn = button(ssmlHeader, "export_ssml", function() {
-            var blob = new Blob([data.ssml], {type: "application/ssml+xml;charset=utf-8"});
-            var u = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = u; a.download = "speech-timeline.ssml";
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            setTimeout(function() { URL.revokeObjectURL(u); }, 2000);
+            downloadText(data.ssml, "speech-timeline.ssml", "application/ssml+xml");
           });
           ssmlBtn.type = "button";
         }
@@ -957,6 +975,11 @@
     });
   }
   function releaseRecording() {
+    if (desktopAudioRecording && window.lixityDesktop && window.lixityDesktop.audioCapture &&
+        typeof window.lixityDesktop.audioCapture.cancelRecording === "function") {
+      window.lixityDesktop.audioCapture.cancelRecording().catch(function() {});
+    }
+    desktopAudioRecording = false;
     isRecordingVoice = false; recordingPending = false;
     clearInterval(recTimerInterval); recTimerInterval = null;
     if (audioProcessor) { audioProcessor.close(); audioProcessor = null; }
@@ -978,7 +1001,9 @@
       recordingDiagnostic("preflight", "InvalidStateError");
       status(label("transcript_help")); recordingFeedback("failed", label("transcript_help")); return;
     }
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    var desktopCapture = window.lixityDesktop && window.lixityDesktop.audioCapture &&
+      typeof window.lixityDesktop.audioCapture.startRecording === "function" ? window.lixityDesktop.audioCapture : null;
+    if (!desktopCapture && (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function")) {
       recordingDiagnostic("preflight", "NotSupportedError");
       status(label("mic_unavailable")); recordingFeedback("failed", label("mic_unavailable")); return;
     }
@@ -988,6 +1013,48 @@
     }
     recordingPending = true; fields.recBtn.disabled = true; status(label("mic_pending"));
     recordingFeedback("busy");
+    if (desktopCapture) {
+      try {
+        var preferredDevice = fields.microphone_device && fields.microphone_device.value ? fields.microphone_device.value : null;
+        await desktopCapture.startRecording(preferredDevice, "author-voice.wav");
+        if (!current()) {
+          desktopCapture.cancelRecording().catch(function() {});
+          return;
+        }
+        desktopAudioRecording = true; isRecordingVoice = true; recordingPending = false;
+        importedTake = null; takeTokens = tokens();
+        fields.takeExports.hidden = true;
+        fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
+        lastRecordedWavBlob = null; takeValid = false;
+        if (takeUrl) { URL.revokeObjectURL(takeUrl); takeUrl = null; }
+        takeTranscript = sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim();
+        fields.promptControls.forEach(function(el) { el.disabled = true; });
+        fields.audio.pause(); fields.takePlayer.pause(); fields.takePlayer.removeAttribute("src"); fields.takePlayer.load();
+        fields.takeCard.hidden = false; fields.takeStats.textContent = ""; fields.saveVoiceBtn.disabled = true;
+        fields.recBtn.disabled = false; fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
+        fields.recTimer.hidden = false; fields.recTimer.textContent = "00:00"; recStartTime = Date.now();
+        recTimerInterval = setInterval(function() {
+          var elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+          fields.recTimer.textContent = String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0");
+          if (typeof desktopCapture.recordingStatus === "function") {
+            desktopCapture.recordingStatus().then(function(st) {
+              if (st && st.auto_stopped && isRecordingVoice && desktopAudioRecording) stopVoiceRecording();
+            }).catch(function() {});
+          }
+          if (elapsed >= 30) stopVoiceRecording();
+        }, 250);
+        status(label("record_running"));
+        recordingFeedback("recording");
+        return;
+      } catch (err) {
+        if (sequence !== recordingSequence) return;
+        recordingDiagnostic("microphone_request", err && err.name);
+        releaseRecording();
+        status(label("mic_failed"));
+        recordingFeedback("failed", label("mic_failed"));
+        return;
+      }
+    }
     var stage = "audio_context_create";
     try {
       var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -1061,6 +1128,32 @@
   }
   async function stopVoiceRecording() {
     if (!isRecordingVoice) return;
+    if (desktopAudioRecording) {
+      desktopAudioRecording = false;
+      var desktopSequence = openSequence, desktopSerial = recordingSequence, desktopBound = Object.assign({}, takeTokens);
+      releaseRecording();
+      voiceSaving = true; fields.recBtn.disabled = fields.saveVoiceBtn.disabled = true;
+      try {
+        var raw = await window.lixityDesktop.audioCapture.stopRecording();
+        var blob = window.LixityDesktopBridge && typeof window.LixityDesktopBridge.decodeBase64Wav === "function"
+          ? window.LixityDesktopBridge.decodeBase64Wav(raw)
+          : new Blob([Uint8Array.from(atob(raw.wav_base64), function(c) { return c.charCodeAt(0); })], {type: "audio/wav"});
+        var desktopTake = await window.LixityAudioTake.create(blob,
+          {filename: (raw && raw.filename) || "author-voice.wav", transcript: takeTranscript, transcript_status: takeTranscript ? "draft" : "missing"});
+        if (desktopSequence !== openSequence || desktopSerial !== recordingSequence || !dialog.open || !matchingTakeContext(desktopBound)) return;
+        voiceSaving = false; presentImportedTake(desktopTake, desktopBound);
+        recordingFeedback("recorded");
+      } catch (error) {
+        if (desktopSequence === openSequence && desktopSerial === recordingSequence && dialog.open) {
+          recordingDiagnostic("capture_complete", error && error.name);
+          status(label("take_invalid")); recordingFeedback("failed", label("take_invalid"), "record_state_recorded");
+        }
+      } finally {
+        voiceSaving = false;
+        if (desktopSequence === openSequence && dialog.open) { fields.recBtn.disabled = !speechReady; fields.saveVoiceBtn.disabled = !takeValid; }
+      }
+      return;
+    }
     var sampleRate = audioCtx && audioCtx.sampleRate;
     var sequence = openSequence, serial = recordingSequence, bound = Object.assign({}, takeTokens);
     releaseRecording();
@@ -1614,9 +1707,16 @@
       var prepNote = node("p", fields.microphone_calib_result, "ctl-note", label("microphone_calib_prep"));
       status(label("microphone_calib_running"));
       try {
-        // Measure the selected device at its current level. The calibration API's
-        // optional gain targets its default mixer, which may be another card.
-        var res = await request("audio-microphone", {action: "calibrate", device: dev});
+        var res;
+        if (microphoneState && microphoneState._desktopNative && window.lixityDesktop &&
+            window.lixityDesktop.audioCapture && typeof window.lixityDesktop.audioCapture.calibrate === "function") {
+          var nativeCal = await window.lixityDesktop.audioCapture.calibrate(dev, 4.0);
+          res = { calibration: nativeCal };
+        } else {
+          // Measure the selected device at its current level. The calibration API's
+          // optional gain targets its default mixer, which may be another card.
+          res = await request("audio-microphone", {action: "calibrate", device: dev});
+        }
         if (sequence !== openSequence || !dialog.open || context() !== openedContext) return;
         prepNote.remove();
         if (res && res.calibration) {

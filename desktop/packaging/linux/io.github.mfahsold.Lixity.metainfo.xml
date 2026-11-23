@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mfahsold.Lixity</id>
+  <name>Lixity</name>
+  <summary>Offline manuscript analysis, close reading and traceable research workspace</summary>
+  <summary xml:lang="de">Lokale Offline-Workbench für Manuskriptanalyse, Lektorat und nachvollziehbare Recherche</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <developer id="io.github.mfahsold">
+    <name>Matthias Fahsold</name>
+  </developer>
+  <description>
+    <p>
+      Lixity is a local, deterministic manuscript-analysis and research workbench for authors and editors.
+      Inspect sentence rhythm, vocabulary diversity, dialogue ratios, tense signals and source-backed
+      research dossiers completely offline without cloud accounts or subscriptions.
+    </p>
+    <p xml:lang="de">
+      Lixity ist eine lokale, deterministische Manuskriptanalyse- und Recherche-Workbench für Autorinnen,
+      Autoren und Lektorate. Prüfen Sie Satzrhythmus, Wortschatz, Dialoganteile, Tempus-Signale und
+      quellenbasierte Recherche-Dossiers vollständig offline ohne Cloud-Konto oder Abo.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.mfahsold.Lixity.desktop</launchable>
+  <url type="homepage">https://mfahsold.github.io/lixity/</url>
+  <url type="bugtracker">https://github.com/mfahsold/lixity/issues</url>
+  <url type="vcs-browser">https://github.com/mfahsold/lixity</url>
+  <categories>
+    <category>Office</category>
+    <category>TextEditor</category>
+    <category>Literature</category>
+  </categories>
+  <keywords>
+    <keyword>writing</keyword>
+    <keyword>manuscript</keyword>
+    <keyword>editing</keyword>
+    <keyword>stylometry</keyword>
+    <keyword>research</keyword>
+    <keyword xml:lang="de">Schreiben</keyword>
+    <keyword xml:lang="de">Manuskript</keyword>
+    <keyword xml:lang="de">Lektorat</keyword>
+  </keywords>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.9.1" date="2026-11-23">
+      <url type="details">https://github.com/mfahsold/lixity/releases/tag/v0.9.1</url>
+    </release>
+  </releases>
+</component>

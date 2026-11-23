@@ -536,9 +536,17 @@ async function submitProjectForm(form, action, payload, button) {
   var result = await runAction(action, payload, button);
   if (result && result.ok) {
     if (action === "project-open" && payload && payload.path) {
-      addRecentProject(typeof result.manuscript === "string" && result.manuscript ? result.manuscript :
-        typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : payload.path);
+      var openedPath = typeof result.manuscript === "string" && result.manuscript ? result.manuscript :
+        typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : payload.path;
+      addRecentProject(openedPath);
       renderRecentProjects();
+      if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
+        window.lixityDesktop.recordRecentProject(
+          typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : openedPath,
+          typeof result.title === "string" ? result.title : null,
+          typeof result.language === "string" ? result.language : null
+        ).catch(function () {});
+      }
     }
     var modal = form.closest("dialog");
     if (modal && typeof modal.close === "function") modal.close();

@@ -189,16 +189,17 @@
 
   async function openPath(targetPath) {
     if (!targetPath || typeof targetPath !== "string") return;
+    var normalized = targetPath.replace(/[\\/]+lixity\.toml$/i, "") || targetPath;
     var response = await fetch(apiBase() + "/project-open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: targetPath })
+      body: JSON.stringify({ path: normalized })
     });
     var data = await response.json();
     if (!response.ok || !data || !data.ok) return;
     if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
       window.lixityDesktop.recordRecentProject(
-        data.workspace_root || targetPath,
+        data.workspace_root || normalized,
         data.title || null,
         data.language || null
       ).catch(function () {});
@@ -212,6 +213,10 @@
       } else {
         window.location.assign(data.workspace_url);
       }
+      return;
+    }
+    if (data.reload) {
+      window.location.reload();
     }
   }
 
@@ -261,16 +266,20 @@
     }
   }
 
+  function decodeBase64Wav(raw) {
+    var binary = atob(raw.wav_base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: "audio/wav" });
+  }
+
   async function recordWavTake(deviceName, durationSeconds, filename) {
     if (!window.lixityDesktop || !window.lixityDesktop.audioCapture ||
         typeof window.lixityDesktop.audioCapture.recordTake !== "function") {
       throw new Error("Desktop native audio capture unavailable");
     }
     var raw = await window.lixityDesktop.audioCapture.recordTake(deviceName || null, durationSeconds || 10.0, filename || "recording.wav");
-    var binary = atob(raw.wav_base64);
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    var blob = new Blob([bytes], { type: "audio/wav" });
+    var blob = decodeBase64Wav(raw);
     if (window.LixityAudioTake && typeof window.LixityAudioTake.create === "function") {
       return window.LixityAudioTake.create(blob, { filename: raw.filename || "recording.wav" });
     }
@@ -292,6 +301,7 @@
     checkForUpdates: checkForUpdates,
     openPath: openPath,
     handleMenuAction: handleMenuAction,
+    decodeBase64Wav: decodeBase64Wav,
     recordWavTake: recordWavTake
   });
 })();

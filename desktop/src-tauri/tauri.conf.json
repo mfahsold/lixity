@@ -25,7 +25,7 @@
     "copyright": "Copyright (c) Matthias Fahsold — AGPL-3.0-or-later",
     "shortDescription": "Local offline manuscript workspace for close reading, traceable research and linguistic analysis.",
     "longDescription": "Lixity keeps your manuscript, deterministic linguistic measurements and traceable research dossiers in one offline workspace.",
-    "targets": ["app", "dmg", "nsis", "msi", "deb", "appimage"],
+    "targets": "all",
     "resources": {
       "../build/runtime/current/*": "runtime/"
     },
@@ -47,18 +47,52 @@
     ],
     "macOS": {
       "entitlements": "../packaging/macos/Entitlements.plist",
-      "minimumSystemVersion": "12.0"
+      "minimumSystemVersion": "12.0",
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
     },
     "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["German", "English", "French", "Spanish", "Italian", "Portuguese", "Dutch"]
+        "displayLanguageSelector": true,
+        "languages": ["German", "English", "French", "Spanish", "Italian", "Portuguese", "Dutch"],
+        "installerHooks": "../packaging/windows/nsis-hooks.nsh"
+      },
+      "wix": {
+        "language": ["de-DE", "en-US"],
+        "upgradeCode": "8A4C72D1-6E93-4F2B-9A0C-3D1E5B7C9F42"
       }
     },
     "linux": {
       "deb": {
         "section": "editors",
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "desktopTemplate": "../packaging/linux/lixity.desktop.in",
+        "files": {
+          "/usr/share/metainfo/io.github.mfahsold.Lixity.metainfo.xml": "../packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"
+        }
+      },
+      "rpm": {
+        "release": "1",
+        "desktopTemplate": "../packaging/linux/lixity.desktop.in",
+        "files": {
+          "/usr/share/metainfo/io.github.mfahsold.Lixity.metainfo.xml": "../packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"
+        }
       },
       "appimage": {
         "bundleMediaFramework": true

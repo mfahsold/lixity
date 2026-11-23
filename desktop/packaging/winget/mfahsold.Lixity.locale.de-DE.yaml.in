@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.6.0.schema.json
+PackageIdentifier: mfahsold.Lixity
+PackageVersion: @VERSION@
+PackageLocale: de-DE
+Publisher: Matthias Fahsold
+PublisherUrl: https://mfahsold.github.io/lixity/
+PublisherSupportUrl: https://github.com/mfahsold/lixity/issues
+PackageName: Lixity
+PackageUrl: https://mfahsold.github.io/lixity/
+License: AGPL-3.0-or-later
+LicenseUrl: https://github.com/mfahsold/lixity/blob/main/LICENSE
+ShortDescription: Lokale Offline-Workbench für Manuskriptanalyse, Lektorat und nachvollziehbare Recherche.
+Description: >-
+  Lixity vereint Manuskript-Lektorat, deterministische Sprachmessungen und
+  quellenbasierte Recherche-Dossiers vollständig lokal und offline ohne
+  Cloud-Konto oder Abo.
+Tags:
+  - schreiben
+  - manuskript
+  - lektorat
+  - stilometrie
+  - recherche
+  - offline
+ReleaseNotesUrl: https://github.com/mfahsold/lixity/releases/tag/v@VERSION@
+ManifestType: locale
+ManifestVersion: 1.6.0

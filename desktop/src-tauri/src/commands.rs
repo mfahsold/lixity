@@ -2,20 +2,22 @@
 
 use crate::audio_capture::{
     calibrate_microphone, list_input_devices, record_wav_take, CalibrationReport,
-    CaptureDeviceInfo, RecordedTakeResult,
+    CaptureDeviceInfo, InteractiveRecorder, RecordedTakeResult, RecordingLiveStatus,
 };
 use crate::dirty_state::DirtyRegistry;
 use crate::downloads::{
     sanitize_suggested_filename, stream_loopback_export, write_base64_blob, ExportRequestSpec,
     RevealAllowlist, SaveOutcome,
 };
+use crate::menu::build_app_menu;
 use crate::recent::{list_recent, record_recent, RecentProject};
 use crate::security::{
     bridge_init_script, handshake_url, is_allowed_app_url, is_allowed_external_url,
     is_valid_workspace_path,
 };
-use crate::sidecar::PythonSidecar;
+use crate::sidecar::{sidecar_log_dir, PythonSidecar};
 use crate::updater::{check_latest_release, UpdateCheckResult};
+use crate::window_state::{load_window_geometry, DEFAULT_HEIGHT, DEFAULT_WIDTH, MIN_HEIGHT, MIN_WIDTH};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -30,6 +32,7 @@ pub struct DesktopState {
     pub sidecar: Arc<PythonSidecar>,
     pub dirty: Arc<DirtyRegistry>,
     pub reveal: Arc<RevealAllowlist>,
+    pub recorder: Arc<InteractiveRecorder>,
     pub app_version: String,
     pub locale: String,
 }
@@ -37,6 +40,15 @@ pub struct DesktopState {
 #[derive(Debug, Serialize)]
 pub struct PickedPath {
     pub path: String,
+}
+
+pub struct WindowLaunchSpec<'a> {
+    pub port: u16,
+    pub nonce: &'a str,
+    pub workspace_url: &'a str,
+    pub title: &'a str,
+    pub app_version: &'a str,
+    pub explicit_label: Option<&'a str>,
 }
 
 fn file_path_to_pathbuf(fp: FilePath) -> Result<PathBuf, String> {
@@ -145,31 +157,27 @@ pub async fn save_export_stream(
 
 pub fn spawn_desktop_window(
     app: &AppHandle,
-    port: u16,
-    nonce: &str,
-    workspace_url: &str,
-    title: &str,
-    app_version: &str,
-    explicit_label: Option<&str>,
+    spec: WindowLaunchSpec<'_>,
 ) -> Result<WebviewWindow, String> {
-    let target = handshake_url(port, nonce, workspace_url)?;
-    let label = match explicit_label {
+    let target = handshake_url(spec.port, spec.nonce, spec.workspace_url)?;
+    let is_main = spec.explicit_label == Some("main");
+    let label = match spec.explicit_label {
         Some(fixed) => fixed.to_string(),
         None => format!("project-{}", WINDOW_COUNTER.fetch_add(1, Ordering::Relaxed)),
     };
-    let safe_title: String = title.trim().chars().take(120).collect();
+    let safe_title: String = spec.title.trim().chars().take(120).collect();
     let window_title = if safe_title.is_empty() || safe_title == "Lixity" {
         "Lixity".to_string()
     } else {
         format!("{safe_title} — Lixity")
     };
     let opener_app = app.clone();
-    let init_script = bridge_init_script(std::env::consts::OS, app_version);
+    let init_script = bridge_init_script(std::env::consts::OS, spec.app_version);
+    let port = spec.port;
 
-    WebviewWindowBuilder::new(app, label, WebviewUrl::External(target))
+    let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::External(target))
         .title(window_title)
-        .inner_size(1340.0, 880.0)
-        .min_inner_size(760.0, 560.0)
+        .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
         .initialization_script(&init_script)
         .on_navigation(move |nav_url| {
             if is_allowed_app_url(nav_url, port) {
@@ -180,7 +188,22 @@ pub fn spawn_desktop_window(
                 }
                 false
             }
-        })
+        });
+
+    if is_main {
+        let geom = load_window_geometry();
+        builder = builder.inner_size(geom.width, geom.height);
+        if let (Some(x), Some(y)) = (geom.x, geom.y) {
+            builder = builder.position(x, y);
+        }
+        if geom.maximized {
+            builder = builder.maximized(true);
+        }
+    } else {
+        builder = builder.inner_size(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    }
+
+    builder
         .build()
         .map_err(|e| format!("Failed opening desktop window: {e}"))
 }
@@ -201,24 +224,22 @@ pub async fn open_project_window(
         .map_err(|e| format!("Failed minting desktop nonce: {e}"))??;
     spawn_desktop_window(
         &app,
-        state.sidecar.port,
-        &nonce,
-        &workspace_url,
-        &title,
-        &state.app_version,
-        None,
+        WindowLaunchSpec {
+            port: state.sidecar.port,
+            nonce: &nonce,
+            workspace_url: &workspace_url,
+            title: &title,
+            app_version: &state.app_version,
+            explicit_label: None,
+        },
     )?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
-    let base = dirs::state_dir()
-        .or_else(dirs::data_local_dir)
+    let logs_dir = sidecar_log_dir()
         .ok_or_else(|| "Unable to locate local Lixity state directory".to_string())?;
-    let logs_dir = base.join("lixity").join("service");
-    std::fs::create_dir_all(&logs_dir)
-        .map_err(|e| format!("Unable to prepare Lixity logs folder: {e}"))?;
     app.opener()
         .open_path(logs_dir.to_string_lossy().as_ref(), None::<&str>)
         .map_err(|e| format!("Failed opening logs folder: {e}"))
@@ -260,13 +281,18 @@ pub fn list_recent_projects() -> Vec<RecentProject> {
 
 #[tauri::command]
 pub fn record_recent_project(
+    app: AppHandle,
     state: State<'_, DesktopState>,
     path: String,
     title: Option<String>,
     language: Option<String>,
 ) -> Result<Vec<RecentProject>, String> {
     state.reveal.allow(std::path::Path::new(&path));
-    record_recent(&path, title, language)
+    let updated = record_recent(&path, title, language)?;
+    if let Ok(app_menu) = build_app_menu(&app, &state.locale) {
+        let _ = app.set_menu(app_menu);
+    }
+    Ok(updated)
 }
 
 #[tauri::command]
@@ -305,4 +331,41 @@ pub async fn audio_capture_record_take(
     })
     .await
     .map_err(|e| format!("Recording task failed: {e}"))?
+}
+
+#[tauri::command]
+pub async fn audio_capture_start_recording(
+    state: State<'_, DesktopState>,
+    device_name: Option<String>,
+    filename: String,
+) -> Result<(), String> {
+    let recorder = Arc::clone(&state.recorder);
+    tauri::async_runtime::spawn_blocking(move || recorder.start(device_name, filename))
+        .await
+        .map_err(|e| format!("Failed starting recording task: {e}"))?
+}
+
+#[tauri::command]
+pub fn audio_capture_status(state: State<'_, DesktopState>) -> RecordingLiveStatus {
+    state.recorder.status()
+}
+
+#[tauri::command]
+pub async fn audio_capture_stop_recording(
+    state: State<'_, DesktopState>,
+) -> Result<RecordedTakeResult, String> {
+    let recorder = Arc::clone(&state.recorder);
+    tauri::async_runtime::spawn_blocking(move || recorder.stop())
+        .await
+        .map_err(|e| format!("Failed finishing recording task: {e}"))?
+}
+
+#[tauri::command]
+pub async fn audio_capture_cancel_recording(state: State<'_, DesktopState>) -> Result<(), String> {
+    let recorder = Arc::clone(&state.recorder);
+    tauri::async_runtime::spawn_blocking(move || {
+        recorder.cancel();
+    })
+    .await
+    .map_err(|e| format!("Failed cancelling recording task: {e}"))
 }

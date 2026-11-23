@@ -1,0 +1,138 @@
+name: desktop-release
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: Version label for artifact archive naming (defaults to source version)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-installers:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+            expect_args: "--expect-kind linux-deb --expect-kind linux-appimage"
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundles: app,dmg
+            expect_args: "--expect-kind macos-dmg"
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
+            expect_args: "--expect-kind windows-nsis --expect-kind windows-msi"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux desktop build and packaging dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev libasound2-dev patchelf file desktop-file-utils \
+            appstream libfuse2
+
+      - name: Install uv and managed Python 3.12 standalone runtime
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip uv build
+          uv python install 3.12
+
+      - name: Verify desktop metadata and build isolated runtime bundle
+        shell: bash
+        run: |
+          python desktop/scripts/generate_menu_locales.py --check
+          python desktop/scripts/generate_desktop_icons.py --check
+          python -m build --wheel --outdir dist
+          python desktop/scripts/build_runtime_bundle.py \
+            --target "${{ matrix.target }}" \
+            --auto-uv \
+            --output desktop/build/runtime/current
+          python desktop/scripts/smoke_desktop_runtime.py desktop/build/runtime/current
+
+      - name: Test, lint and bundle native installers
+        working-directory: desktop
+        shell: bash
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          NO_STRIP: "true"
+        run: |
+          cargo test --manifest-path Cargo.toml --all-targets
+          cargo clippy --manifest-path Cargo.toml --all-targets -- -D warnings
+          cargo install tauri-cli --version "^2.2" --locked
+          cargo tauri build --bundles "${{ matrix.bundles }}"
+          mkdir -p build/installers
+          python scripts/verify_desktop_artifacts.py \
+            target/release/bundle \
+            --target "${{ matrix.target }}" \
+            ${{ matrix.expect_args }} \
+            --out-dir build/installers
+          find target/release/bundle -type f \
+            \( -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp -v {} build/installers/ \;
+
+      - name: Upload per-platform verified installers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: desktop-installers-${{ matrix.target }}
+          path: desktop/build/installers/*
+          if-no-files-found: error
+          retention-days: 30
+
+  combine-checksums:
+    needs: build-installers
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: desktop-installers-*
+          path: dist-desktop
+          merge-multiple: true
+
+      - name: Combine SHA256SUMS-desktop.txt
+        shell: bash
+        run: |
+          cat dist-desktop/SHA256SUMS-*.txt | sort -k2 > dist-desktop/SHA256SUMS-desktop.txt
+          cat dist-desktop/SHA256SUMS-desktop.txt
+
+      - name: Generate build provenance attestation for desktop installers
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist-desktop/*.dmg
+            dist-desktop/*.exe
+            dist-desktop/*.msi
+            dist-desktop/*.deb
+            dist-desktop/*.AppImage
+            dist-desktop/SHA256SUMS-desktop.txt
+
+      - name: Upload combined release-ready desktop installer bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: lixity-desktop-release-bundle
+          path: dist-desktop/*
+          if-no-files-found: error
+          retention-days: 30

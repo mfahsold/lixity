@@ -8,12 +8,15 @@
 
 use crate::security::{random_token_hex, DESKTOP_SECRET_HEADER};
 use serde::{Deserialize, Serialize};
+use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
 use zeroize::Zeroizing;
+
+const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 
 #[derive(Debug, Deserialize)]
 pub struct ReadyEnvelope {
@@ -52,22 +55,50 @@ struct AudioJob {
     state: String,
 }
 
+/// Owns a Windows Job Object handle stored as `usize` so `PythonSidecar` stays
+/// naturally `Send + Sync` across Tauri commands without manual `unsafe impl`.
 #[cfg(target_os = "windows")]
 struct WindowsJobGuard {
-    handle: windows_sys::Win32::Foundation::HANDLE,
+    raw_handle: usize,
 }
-
-#[cfg(target_os = "windows")]
-unsafe impl Send for WindowsJobGuard {}
 
 #[cfg(target_os = "windows")]
 impl Drop for WindowsJobGuard {
     fn drop(&mut self) {
-        if !self.handle.is_null() {
+        if self.raw_handle != 0 {
             unsafe {
-                windows_sys::Win32::Foundation::CloseHandle(self.handle);
+                windows_sys::Win32::Foundation::CloseHandle(
+                    self.raw_handle as windows_sys::Win32::Foundation::HANDLE,
+                );
             }
         }
+    }
+}
+
+pub fn sidecar_log_dir() -> Option<PathBuf> {
+    let base = dirs::state_dir().or_else(dirs::data_local_dir)?;
+    let dir = base.join("lixity").join("service");
+    fs::create_dir_all(&dir).ok()?;
+    Some(dir)
+}
+
+fn open_sidecar_stderr() -> Stdio {
+    if std::env::var("LIXITY_DESKTOP_STDERR_INHERIT").ok().as_deref() == Some("1") {
+        return Stdio::inherit();
+    }
+    let Some(dir) = sidecar_log_dir() else {
+        return Stdio::inherit();
+    };
+    let log_path = dir.join("desktop-sidecar.log");
+    if let Ok(meta) = fs::metadata(&log_path) {
+        if meta.len() > MAX_LOG_BYTES {
+            let rotated = dir.join("desktop-sidecar.log.1");
+            let _ = fs::rename(&log_path, rotated);
+        }
+    }
+    match OpenOptions::new().create(true).append(true).open(&log_path) {
+        Ok(file) => Stdio::from(file),
+        Err(_) => Stdio::inherit(),
     }
 }
 
@@ -148,7 +179,7 @@ impl PythonSidecar {
             .env("PYTHONDONTWRITEBYTECODE", "1")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
+            .stderr(open_sidecar_stderr());
 
         #[cfg(target_os = "windows")]
         {
@@ -334,6 +365,22 @@ fn attach_kill_on_close_job(child: &Child) -> Option<WindowsJobGuard> {
             windows_sys::Win32::Foundation::CloseHandle(job);
             return None;
         }
-        Some(WindowsJobGuard { handle: job })
+        Some(WindowsJobGuard {
+            raw_handle: job as usize,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_python_errors_cleanly_when_missing() {
+        if std::env::var_os("LIXITY_DESKTOP_PYTHON").is_some() {
+            return;
+        }
+        let err = PythonSidecar::resolve_python(Some(Path::new("/nonexistent/lixity-res"))).unwrap_err();
+        assert!(err.contains("Bundled Lixity Python runtime not found"));
     }
 }

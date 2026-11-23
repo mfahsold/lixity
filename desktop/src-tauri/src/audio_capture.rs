@@ -10,8 +10,11 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 pub const TARGET_SAMPLE_RATE: u32 = 24_000;
 const MIN_DURATION_SEC: f32 = 1.0;
@@ -57,6 +60,153 @@ pub struct RecordedTakeResult {
     pub sample_width_bits: u16,
     pub frames: usize,
     pub duration_seconds: f64,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct RecordingLiveStatus {
+    pub recording: bool,
+    pub elapsed_seconds: f64,
+    pub peak_dbfs: f64,
+    pub rms_dbfs: f64,
+    pub auto_stopped: bool,
+}
+
+struct ActiveCapture {
+    stop_flag: Arc<AtomicBool>,
+    auto_stopped: Arc<AtomicBool>,
+    live_peak_bits: Arc<AtomicU32>,
+    live_rms_bits: Arc<AtomicU32>,
+    started_at: Instant,
+    filename: String,
+    join_handle: Option<JoinHandle<Result<(Vec<f32>, u32), String>>>,
+}
+
+/// Thread-safe handle for interactive Start / Stop voice recording across OSes.
+///
+/// Owns the non-`Send` `cpal::Stream` strictly inside a dedicated capture thread so
+/// Tauri commands stay `Send + Sync` on CoreAudio, WASAPI and ALSA/PipeWire.
+#[derive(Default)]
+pub struct InteractiveRecorder {
+    active: Mutex<Option<ActiveCapture>>,
+}
+
+impl InteractiveRecorder {
+    pub fn start(&self, device_name: Option<String>, filename: String) -> Result<(), String> {
+        let mut guard = self
+            .active
+            .lock()
+            .map_err(|_| "Recorder state lock poisoned".to_string())?;
+        if guard.is_some() {
+            return Err("A recording session is already running".to_string());
+        }
+
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let auto_stopped = Arc::new(AtomicBool::new(false));
+        let live_peak_bits = Arc::new(AtomicU32::new(0.0_f32.to_bits()));
+        let live_rms_bits = Arc::new(AtomicU32::new(0.0_f32.to_bits()));
+        let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
+
+        let thread_stop = Arc::clone(&stop_flag);
+        let thread_auto = Arc::clone(&auto_stopped);
+        let thread_peak = Arc::clone(&live_peak_bits);
+        let thread_rms = Arc::clone(&live_rms_bits);
+
+        let join_handle = thread::spawn(move || {
+            run_capture_loop(
+                device_name.as_deref(),
+                thread_stop,
+                thread_auto,
+                thread_peak,
+                thread_rms,
+                ready_tx,
+            )
+        });
+
+        match ready_rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(Ok(())) => {
+                *guard = Some(ActiveCapture {
+                    stop_flag,
+                    auto_stopped,
+                    live_peak_bits,
+                    live_rms_bits,
+                    started_at: Instant::now(),
+                    filename,
+                    join_handle: Some(join_handle),
+                });
+                Ok(())
+            }
+            Ok(Err(err)) => {
+                let _ = join_handle.join();
+                Err(err)
+            }
+            Err(_) => {
+                stop_flag.store(true, Ordering::SeqCst);
+                let _ = join_handle.join();
+                Err("Timed out initializing microphone stream".to_string())
+            }
+        }
+    }
+
+    pub fn status(&self) -> RecordingLiveStatus {
+        let Ok(guard) = self.active.lock() else {
+            return RecordingLiveStatus {
+                recording: false,
+                elapsed_seconds: 0.0,
+                peak_dbfs: -120.0,
+                rms_dbfs: -120.0,
+                auto_stopped: false,
+            };
+        };
+        let Some(active) = guard.as_ref() else {
+            return RecordingLiveStatus {
+                recording: false,
+                elapsed_seconds: 0.0,
+                peak_dbfs: -120.0,
+                rms_dbfs: -120.0,
+                auto_stopped: false,
+            };
+        };
+        let auto = active.auto_stopped.load(Ordering::Relaxed);
+        let peak_amp = f32::from_bits(active.live_peak_bits.load(Ordering::Relaxed)) as f64;
+        let rms_amp = f32::from_bits(active.live_rms_bits.load(Ordering::Relaxed)) as f64;
+        RecordingLiveStatus {
+            recording: !auto && !active.stop_flag.load(Ordering::Relaxed),
+            elapsed_seconds: round2(active.started_at.elapsed().as_secs_f64()),
+            peak_dbfs: round1(dbfs(peak_amp * 32_768.0)),
+            rms_dbfs: round1(dbfs(rms_amp * 32_768.0)),
+            auto_stopped: auto,
+        }
+    }
+
+    pub fn stop(&self) -> Result<RecordedTakeResult, String> {
+        let mut session = {
+            let mut guard = self
+                .active
+                .lock()
+                .map_err(|_| "Recorder state lock poisoned".to_string())?;
+            guard
+                .take()
+                .ok_or_else(|| "No active recording session".to_string())?
+        };
+        session.stop_flag.store(true, Ordering::SeqCst);
+        let (raw, rate) = session
+            .join_handle
+            .take()
+            .ok_or_else(|| "Capture thread handle missing".to_string())?
+            .join()
+            .map_err(|_| "Audio capture thread panicked".to_string())??;
+        finalize_wav_take(&raw, rate, &session.filename)
+    }
+
+    pub fn cancel(&self) {
+        let session = self.active.lock().ok().and_then(|mut g| g.take());
+        if let Some(mut active) = session {
+            active.stop_flag.store(true, Ordering::SeqCst);
+            if let Some(handle) = active.join_handle.take() {
+                let _ = handle.join();
+            }
+        }
+    }
 }
 
 pub fn list_input_devices() -> Result<Vec<CaptureDeviceInfo>, String> {
@@ -244,6 +394,206 @@ pub fn analyze_pcm16_signal(samples: &[i16], sample_rate: u32) -> CalibrationRep
     }
 }
 
+fn update_live_levels(samples: &[f32], peak_bits: &AtomicU32, rms_bits: &AtomicU32) {
+    if samples.is_empty() {
+        return;
+    }
+    let mut peak = 0.0_f32;
+    let mut sum_sq = 0.0_f64;
+    for &s in samples {
+        let a = s.abs();
+        if a > peak {
+            peak = a;
+        }
+        sum_sq += (s as f64) * (s as f64);
+    }
+    let rms = (sum_sq / samples.len() as f64).sqrt() as f32;
+    peak_bits.store(peak.to_bits(), Ordering::Relaxed);
+    rms_bits.store(rms.to_bits(), Ordering::Relaxed);
+}
+
+struct CaptureStreamParams {
+    channels: usize,
+    sample_format: cpal::SampleFormat,
+    config: cpal::StreamConfig,
+    max_samples: usize,
+    captured: Arc<Mutex<Vec<f32>>>,
+    auto_stopped: Arc<AtomicBool>,
+    peak_bits: Arc<AtomicU32>,
+    rms_bits: Arc<AtomicU32>,
+    stream_err: Arc<Mutex<Option<String>>>,
+}
+
+fn build_capture_stream(
+    device: &cpal::Device,
+    params: CaptureStreamParams,
+) -> Result<cpal::Stream, String> {
+    let CaptureStreamParams {
+        channels,
+        sample_format,
+        config,
+        max_samples,
+        captured,
+        auto_stopped,
+        peak_bits,
+        rms_bits,
+        stream_err,
+    } = params;
+    let err_fn = move |err: cpal::StreamError| {
+        if let Ok(mut guard) = stream_err.lock() {
+            *guard = Some(err.to_string());
+        }
+    };
+    let stream = match sample_format {
+        cpal::SampleFormat::F32 => device.build_input_stream(
+            &config,
+            move |data: &[f32], _| {
+                if let Ok(mut out) = captured.lock() {
+                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
+                    for frame in data.chunks(channels) {
+                        if out.len() >= max_samples {
+                            auto_stopped.store(true, Ordering::Relaxed);
+                            break;
+                        }
+                        let s = frame[0];
+                        out.push(s);
+                        mono.push(s);
+                    }
+                    update_live_levels(&mono, &peak_bits, &rms_bits);
+                }
+            },
+            err_fn,
+            None,
+        ),
+        cpal::SampleFormat::I16 => device.build_input_stream(
+            &config,
+            move |data: &[i16], _| {
+                if let Ok(mut out) = captured.lock() {
+                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
+                    for frame in data.chunks(channels) {
+                        if out.len() >= max_samples {
+                            auto_stopped.store(true, Ordering::Relaxed);
+                            break;
+                        }
+                        let s = frame[0] as f32 / 32768.0;
+                        out.push(s);
+                        mono.push(s);
+                    }
+                    update_live_levels(&mono, &peak_bits, &rms_bits);
+                }
+            },
+            err_fn,
+            None,
+        ),
+        cpal::SampleFormat::U16 => device.build_input_stream(
+            &config,
+            move |data: &[u16], _| {
+                if let Ok(mut out) = captured.lock() {
+                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
+                    for frame in data.chunks(channels) {
+                        if out.len() >= max_samples {
+                            auto_stopped.store(true, Ordering::Relaxed);
+                            break;
+                        }
+                        let s = (frame[0] as f32 - 32768.0) / 32768.0;
+                        out.push(s);
+                        mono.push(s);
+                    }
+                    update_live_levels(&mono, &peak_bits, &rms_bits);
+                }
+            },
+            err_fn,
+            None,
+        ),
+        other => return Err(format!("Unsupported microphone sample format: {other:?}")),
+    }
+    .map_err(|e| format!("Unable to open microphone stream: {e}"))?;
+    Ok(stream)
+}
+
+fn run_capture_loop(
+    device_name: Option<&str>,
+    stop_flag: Arc<AtomicBool>,
+    auto_stopped: Arc<AtomicBool>,
+    live_peak_bits: Arc<AtomicU32>,
+    live_rms_bits: Arc<AtomicU32>,
+    ready_tx: mpsc::SyncSender<Result<(), String>>,
+) -> Result<(Vec<f32>, u32), String> {
+    let device = match select_input_device(device_name) {
+        Ok(d) => d,
+        Err(e) => {
+            let _ = ready_tx.send(Err(e.clone()));
+            return Err(e);
+        }
+    };
+    let supported = match device.default_input_config() {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            let msg = format!("Failed reading microphone configuration: {e}");
+            let _ = ready_tx.send(Err(msg.clone()));
+            return Err(msg);
+        }
+    };
+    let sample_rate = supported.sample_rate().0;
+    let channels = supported.channels() as usize;
+    let sample_format = supported.sample_format();
+    let config: cpal::StreamConfig = supported.into();
+    let max_samples = (sample_rate as f64 * MAX_DURATION_SEC as f64) as usize;
+
+    let captured: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(
+        (sample_rate as usize).saturating_mul(10),
+    )));
+    let stream_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
+    let stream = match build_capture_stream(
+        &device,
+        CaptureStreamParams {
+            channels,
+            sample_format,
+            config,
+            max_samples,
+            captured: Arc::clone(&captured),
+            auto_stopped: Arc::clone(&auto_stopped),
+            peak_bits: live_peak_bits,
+            rms_bits: live_rms_bits,
+            stream_err: Arc::clone(&stream_err),
+        },
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            let _ = ready_tx.send(Err(e.clone()));
+            return Err(e);
+        }
+    };
+
+    if let Err(e) = stream.play() {
+        let msg = format!("Failed starting microphone stream: {e}");
+        let _ = ready_tx.send(Err(msg.clone()));
+        return Err(msg);
+    }
+    let _ = ready_tx.send(Ok(()));
+
+    let started = Instant::now();
+    let max_dur = Duration::from_secs_f32(MAX_DURATION_SEC);
+    while !stop_flag.load(Ordering::Relaxed) && !auto_stopped.load(Ordering::Relaxed) {
+        if started.elapsed() >= max_dur {
+            auto_stopped.store(true, Ordering::Relaxed);
+            break;
+        }
+        thread::sleep(Duration::from_millis(25));
+    }
+    drop(stream);
+
+    if let Some(err) = stream_err.lock().ok().and_then(|g| g.clone()) {
+        return Err(format!("Microphone capture error: {err}"));
+    }
+    let samples = captured
+        .lock()
+        .map(|g| g.clone())
+        .map_err(|_| "Audio capture buffer poisoned".to_string())?;
+    Ok((samples, sample_rate))
+}
+
 fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(Vec<f32>, u32), String> {
     if !(MIN_DURATION_SEC..=MAX_DURATION_SEC).contains(&duration_seconds) {
         return Err(format!(
@@ -258,64 +608,33 @@ fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(
     let channels = supported.channels() as usize;
     let sample_format = supported.sample_format();
     let config: cpal::StreamConfig = supported.into();
+    let max_samples = (sample_rate as f32 * (duration_seconds + 0.5)) as usize;
 
-    let captured: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(
-        (sample_rate as f32 * duration_seconds) as usize,
-    )));
-    let capture_clone = Arc::clone(&captured);
+    let captured: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(max_samples)));
     let stream_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
-    let err_clone = Arc::clone(&stream_err);
-    let err_fn = move |err: cpal::StreamError| {
-        if let Ok(mut guard) = err_clone.lock() {
-            *guard = Some(err.to_string());
-        }
-    };
+    let auto_stopped = Arc::new(AtomicBool::new(false));
+    let peak_bits = Arc::new(AtomicU32::new(0));
+    let rms_bits = Arc::new(AtomicU32::new(0));
 
-    let stream = match sample_format {
-        cpal::SampleFormat::F32 => device.build_input_stream(
-            &config,
-            move |data: &[f32], _| {
-                if let Ok(mut out) = capture_clone.lock() {
-                    for frame in data.chunks(channels) {
-                        out.push(frame[0]);
-                    }
-                }
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_input_stream(
-            &config,
-            move |data: &[i16], _| {
-                if let Ok(mut out) = capture_clone.lock() {
-                    for frame in data.chunks(channels) {
-                        out.push(frame[0] as f32 / 32768.0);
-                    }
-                }
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U16 => device.build_input_stream(
-            &config,
-            move |data: &[u16], _| {
-                if let Ok(mut out) = capture_clone.lock() {
-                    for frame in data.chunks(channels) {
-                        out.push((frame[0] as f32 - 32768.0) / 32768.0);
-                    }
-                }
-            },
-            err_fn,
-            None,
-        ),
-        other => return Err(format!("Unsupported microphone sample format: {other:?}")),
-    }
-    .map_err(|e| format!("Unable to open microphone stream: {e}"))?;
+    let stream = build_capture_stream(
+        &device,
+        CaptureStreamParams {
+            channels,
+            sample_format,
+            config,
+            max_samples,
+            captured: Arc::clone(&captured),
+            auto_stopped,
+            peak_bits,
+            rms_bits,
+            stream_err: Arc::clone(&stream_err),
+        },
+    )?;
 
     stream
         .play()
         .map_err(|e| format!("Failed starting microphone stream: {e}"))?;
-    std::thread::sleep(Duration::from_secs_f32(duration_seconds));
+    thread::sleep(Duration::from_secs_f32(duration_seconds));
     drop(stream);
 
     if let Some(err) = stream_err.lock().ok().and_then(|g| g.clone()) {
@@ -326,6 +645,34 @@ fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(
         .map(|g| g.clone())
         .map_err(|_| "Audio capture buffer poisoned".to_string())?;
     Ok((samples, sample_rate))
+}
+
+fn finalize_wav_take(raw: &[f32], rate: u32, filename: &str) -> Result<RecordedTakeResult, String> {
+    let safe_name = crate::downloads::sanitize_suggested_filename(filename);
+    let safe_wav = if safe_name.to_ascii_lowercase().ends_with(".wav") {
+        safe_name
+    } else {
+        format!("{safe_name}.wav")
+    };
+    let resampled = resample_mono(raw, rate, TARGET_SAMPLE_RATE);
+    if resampled.is_empty() {
+        return Err("No audio samples were captured".to_string());
+    }
+    let pcm = f32_to_pcm16(&resampled);
+    let wav_bytes = encode_mono_pcm16_wav(&pcm, TARGET_SAMPLE_RATE)?;
+    let sha256 = hex::encode(Sha256::digest(&wav_bytes));
+    let wav_base64 = base64::engine::general_purpose::STANDARD.encode(&wav_bytes);
+    Ok(RecordedTakeResult {
+        schema_version: "lixity-audio-take/1",
+        filename: safe_wav,
+        wav_base64,
+        sha256,
+        channels: 1,
+        sample_rate_hz: TARGET_SAMPLE_RATE,
+        sample_width_bits: 16,
+        frames: pcm.len(),
+        duration_seconds: pcm.len() as f64 / TARGET_SAMPLE_RATE as f64,
+    })
 }
 
 pub fn calibrate_microphone(
@@ -342,29 +689,8 @@ pub fn record_wav_take(
     duration_seconds: f32,
     filename: &str,
 ) -> Result<RecordedTakeResult, String> {
-    let safe_name = crate::downloads::sanitize_suggested_filename(filename);
-    let safe_wav = if safe_name.to_ascii_lowercase().ends_with(".wav") {
-        safe_name
-    } else {
-        format!("{safe_name}.wav")
-    };
     let (raw, rate) = record_mono_f32(device_name, duration_seconds)?;
-    let resampled = resample_mono(&raw, rate, TARGET_SAMPLE_RATE);
-    let pcm = f32_to_pcm16(&resampled);
-    let wav_bytes = encode_mono_pcm16_wav(&pcm, TARGET_SAMPLE_RATE)?;
-    let sha256 = hex::encode(Sha256::digest(&wav_bytes));
-    let wav_base64 = base64::engine::general_purpose::STANDARD.encode(&wav_bytes);
-    Ok(RecordedTakeResult {
-        schema_version: "lixity-audio-take/1",
-        filename: safe_wav,
-        wav_base64,
-        sha256,
-        channels: 1,
-        sample_rate_hz: TARGET_SAMPLE_RATE,
-        sample_width_bits: 16,
-        frames: pcm.len(),
-        duration_seconds: pcm.len() as f64 / TARGET_SAMPLE_RATE as f64,
-    })
+    finalize_wav_take(&raw, rate, filename)
 }
 
 #[cfg(test)]
@@ -397,5 +723,25 @@ mod tests {
         let wav = encode_mono_pcm16_wav(&pcm, 24_000).unwrap();
         assert_eq!(&wav[0..4], b"RIFF");
         assert_eq!(&wav[8..12], b"WAVE");
+    }
+
+    #[test]
+    fn finalize_wav_take_appends_extension_and_hashes_output() {
+        let input = vec![0.15_f32; 48_000];
+        let take = finalize_wav_take(&input, 48_000, "author-voice").unwrap();
+        assert_eq!(take.filename, "author-voice.wav");
+        assert_eq!(take.sample_rate_hz, TARGET_SAMPLE_RATE);
+        assert_eq!(take.channels, 1);
+        assert_eq!(take.frames, 24_000);
+        assert_eq!(take.sha256.len(), 64);
+    }
+
+    #[test]
+    fn interactive_recorder_idle_status_and_stop_guard() {
+        let recorder = InteractiveRecorder::default();
+        let st = recorder.status();
+        assert!(!st.recording);
+        assert!(!st.auto_stopped);
+        assert!(recorder.stop().is_err());
     }
 }

@@ -6,6 +6,7 @@ import json
 import struct
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from lixity import __version__
@@ -31,6 +32,7 @@ def test_desktop_menu_locales_are_synchronized_across_all_seven_languages():
     )
     assert set(generated.keys()) == {"de", "en", "fr", "es", "it", "pt", "nl"}
     expected_keys = set(generated["en"].keys())
+    assert {"item_recent_projects", "item_recent_empty"}.issubset(expected_keys)
     for lang, catalog in generated.items():
         assert set(catalog.keys()) == expected_keys, f"Key mismatch in {lang}"
         assert all(isinstance(v, str) and v.strip() for v in catalog.values())
@@ -65,6 +67,43 @@ def test_desktop_metadata_versions_and_targets_align_with_package():
     for rel_icon in tauri_conf["bundle"]["icon"]:
         assert (DESKTOP / "src-tauri" / rel_icon).is_file(), f"Missing icon: {rel_icon}"
 
+    # Referenced relative packaging paths in tauri.conf.json must exist on disk.
+    src_tauri = DESKTOP / "src-tauri"
+    assert (src_tauri / tauri_conf["bundle"]["macOS"]["entitlements"]).is_file()
+    assert (src_tauri / tauri_conf["bundle"]["windows"]["nsis"]["installerHooks"]).is_file()
+    assert (src_tauri / tauri_conf["bundle"]["linux"]["deb"]["desktopTemplate"]).is_file()
+    assert (src_tauri / tauri_conf["bundle"]["linux"]["rpm"]["desktopTemplate"]).is_file()
+    for rel_src in tauri_conf["bundle"]["linux"]["deb"]["files"].values():
+        assert (src_tauri / rel_src).is_file()
+
+    # macOS Info.plist stays synchronized between src-tauri/ and packaging/macos/.
+    plist_src = (src_tauri / "Info.plist").read_text(encoding="utf-8")
+    plist_pkg = (DESKTOP / "packaging" / "macos" / "Info.plist").read_text(encoding="utf-8")
+    assert plist_src == plist_pkg
+    assert "NSMicrophoneUsageDescription" in plist_src
+
+    # Linux AppStream MetaInfo is valid XML with matching ID, license and release version.
+    metainfo_path = DESKTOP / "packaging" / "linux" / "io.github.mfahsold.Lixity.metainfo.xml"
+    tree = ET.parse(metainfo_path)  # noqa: S314 - repository-owned static XML file
+    root = tree.getroot()
+    assert root.findtext("id") == "io.github.mfahsold.Lixity"
+    assert root.findtext("project_license") == "AGPL-3.0-or-later"
+    release_versions = [el.attrib.get("version") for el in root.findall("./releases/release")]
+    assert __version__ in release_versions
+
+    # Homebrew Cask and WinGet manifest templates exist and use clean version placeholders.
+    cask = (DESKTOP / "packaging" / "homebrew" / "lixity.rb.in").read_text(encoding="utf-8")
+    assert '@VERSION@' in cask and 'cask "lixity"' in cask
+    for winget_name in (
+        "mfahsold.Lixity.yaml.in",
+        "mfahsold.Lixity.installer.yaml.in",
+        "mfahsold.Lixity.locale.en-US.yaml.in",
+        "mfahsold.Lixity.locale.de-DE.yaml.in",
+    ):
+        content = (DESKTOP / "packaging" / "winget" / winget_name).read_text(encoding="utf-8")
+        assert "PackageIdentifier: mfahsold.Lixity" in content
+        assert "@VERSION@" in content
+
     cargo_toml = (DESKTOP / "Cargo.toml").read_text(encoding="utf-8")
     assert f'version = "{__version__}"' in cargo_toml
 
@@ -79,6 +118,64 @@ def test_desktop_metadata_versions_and_targets_align_with_package():
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
     }
+
+
+def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files(tmp_path):
+    script = DESKTOP / "scripts" / "verify_desktop_artifacts.py"
+    bundle = tmp_path / "bundle"
+    out = tmp_path / "out"
+    (bundle / "dmg").mkdir(parents=True)
+    (bundle / "nsis").mkdir(parents=True)
+    (bundle / "msi").mkdir(parents=True)
+    (bundle / "deb").mkdir(parents=True)
+    (bundle / "appimage").mkdir(parents=True)
+
+    (bundle / "dmg" / "Lixity_0.9.1_aarch64.dmg").write_bytes(b"\x00" * 1024 + b"koly" + b"\x00" * 508)
+    (bundle / "nsis" / "Lixity_0.9.1_x64-setup.exe").write_bytes(b"MZ" + b"\x00" * 1024)
+    (bundle / "msi" / "Lixity_0.9.1_x64_en-US.msi").write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 1024)
+    (bundle / "deb" / "Lixity_0.9.1_amd64.deb").write_bytes(b"!<arch>\n" + b"\x00" * 1024)
+    (bundle / "appimage" / "Lixity_0.9.1_amd64.AppImage").write_bytes(b"\x7fELF" + b"\x00" * 1024)
+
+    ok = subprocess.run(  # noqa: S603 - fixed repository verification script
+        [
+            sys.executable,
+            str(script),
+            str(bundle),
+            "--target",
+            "x86_64-test",
+            "--expect-kind",
+            "macos-dmg",
+            "--expect-kind",
+            "windows-nsis",
+            "--expect-kind",
+            "windows-msi",
+            "--expect-kind",
+            "linux-deb",
+            "--expect-kind",
+            "linux-appimage",
+            "--out-dir",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert ok.returncode == 0, ok.stdout + ok.stderr
+    manifest = json.loads((out / "desktop-artifacts-x86_64-test.json").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "lixity-desktop-artifacts/1"
+    assert len(manifest["artifacts"]) == 5
+    checksums = (out / "SHA256SUMS-x86_64-test.txt").read_text(encoding="utf-8").splitlines()
+    assert len(checksums) == 5
+
+    # Corrupt PE header must fail verification cleanly.
+    (bundle / "nsis" / "Lixity_0.9.1_x64-setup.exe").write_bytes(b"NOPE" + b"\x00" * 1024)
+    bad = subprocess.run(  # noqa: S603 - fixed repository verification script
+        [sys.executable, str(script), str(bundle), "--target", "x86_64-test"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert bad.returncode != 0
 
 
 def test_desktop_bridge_is_native_only_and_excluded_from_read_only_exports(tmp_path):

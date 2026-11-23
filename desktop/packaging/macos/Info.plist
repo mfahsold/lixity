@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Lixity accesses the microphone only when you explicitly start a local teleprompter recording or level calibration. Audio stays on your computer.</string>
 </dict>

@@ -1,11 +1,14 @@
 //! Localized 7-language native OS menu bar built from `generated/menu-locales.json`.
 
+use crate::recent::list_recent;
 use serde::Deserialize;
 use std::collections::HashMap;
+use std::path::Path;
 use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Runtime};
 
 const MENU_LOCALES_JSON: &str = include_str!("../generated/menu-locales.json");
+const MAX_MENU_RECENT: usize = 8;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct MenuLabels {
@@ -16,6 +19,8 @@ pub struct MenuLabels {
     pub menu_help: String,
     pub item_new_window: String,
     pub item_open_project: String,
+    pub item_recent_projects: String,
+    pub item_recent_empty: String,
     pub item_import_manuscript: String,
     pub item_quit: String,
     pub item_undo: String,
@@ -52,8 +57,40 @@ pub fn labels_for_locale(locale: &str) -> MenuLabels {
         .expect("en fallback locale must exist")
 }
 
+fn recent_item_label(title: Option<&str>, path: &str) -> String {
+    if let Some(t) = title.map(str::trim).filter(|t| !t.is_empty()) {
+        return t.chars().take(64).collect();
+    }
+    Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or(path)
+        .chars()
+        .take(64)
+        .collect()
+}
+
 pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Result<Menu<R>> {
     let l = labels_for_locale(locale);
+
+    let recent_entries = list_recent();
+    let mut recent_builder = SubmenuBuilder::new(app, &l.item_recent_projects);
+    if recent_entries.is_empty() {
+        let empty_item = MenuItemBuilder::with_id("recent-empty", &l.item_recent_empty)
+            .enabled(false)
+            .build(app)?;
+        recent_builder = recent_builder.item(&empty_item);
+    } else {
+        for (idx, entry) in recent_entries.iter().take(MAX_MENU_RECENT).enumerate() {
+            let label = recent_item_label(entry.title.as_deref(), &entry.path);
+            let item = MenuItemBuilder::with_id(format!("recent-open-{idx}"), label)
+                .enabled(entry.exists)
+                .build(app)?;
+            recent_builder = recent_builder.item(&item);
+        }
+    }
+    let recent_submenu = recent_builder.build()?;
 
     let file_menu = SubmenuBuilder::new(app, &l.menu_file)
         .item(
@@ -66,6 +103,7 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
                 .accelerator("CmdOrCtrl+O")
                 .build(app)?,
         )
+        .item(&recent_submenu)
         .item(
             &MenuItemBuilder::with_id("file-import-manuscript", &l.item_import_manuscript)
                 .accelerator("CmdOrCtrl+I")
@@ -129,4 +167,26 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
     MenuBuilder::new(app)
         .items(&[&file_menu, &edit_menu, &view_menu, &tools_menu, &help_menu])
         .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolves_all_seven_locales_and_falls_back_to_english() {
+        assert_eq!(labels_for_locale("de_DE.UTF-8").menu_file, "Datei");
+        assert_eq!(labels_for_locale("fr-CA").menu_file, "Fichier");
+        assert_eq!(labels_for_locale("es_ES").menu_file, "Archivo");
+        assert_eq!(labels_for_locale("it_IT").menu_file, "File");
+        assert_eq!(labels_for_locale("pt_BR").menu_file, "Arquivo");
+        assert_eq!(labels_for_locale("nl_NL").menu_file, "Bestand");
+        assert_eq!(labels_for_locale("ja_JP").menu_file, "File");
+    }
+
+    #[test]
+    fn formats_recent_item_label_with_title_or_basename() {
+        assert_eq!(recent_item_label(Some("My Novel"), "/tmp/book"), "My Novel");
+        assert_eq!(recent_item_label(None, "/tmp/manuscripts/draft.md"), "draft.md");
+    }
 }

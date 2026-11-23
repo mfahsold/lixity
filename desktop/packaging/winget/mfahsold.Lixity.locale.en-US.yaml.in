@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: mfahsold.Lixity
+PackageVersion: @VERSION@
+PackageLocale: en-US
+Publisher: Matthias Fahsold
+PublisherUrl: https://mfahsold.github.io/lixity/
+PublisherSupportUrl: https://github.com/mfahsold/lixity/issues
+PackageName: Lixity
+PackageUrl: https://mfahsold.github.io/lixity/
+License: AGPL-3.0-or-later
+LicenseUrl: https://github.com/mfahsold/lixity/blob/main/LICENSE
+ShortDescription: Offline manuscript analysis, close reading and traceable research workspace.
+Description: >-
+  Lixity keeps your manuscript, deterministic linguistic measurements and
+  source-backed research dossiers in one offline workspace without cloud
+  accounts or subscriptions.
+Tags:
+  - writing
+  - manuscript
+  - editing
+  - stylometry
+  - research
+  - offline
+ReleaseNotesUrl: https://github.com/mfahsold/lixity/releases/tag/v@VERSION@
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
