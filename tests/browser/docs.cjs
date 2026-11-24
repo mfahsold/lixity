@@ -7,13 +7,9 @@ const {expect} = require(path.join(playwrightModule, 'test'));
 const os = require('node:os');
 const http = require('node:http');
 const assert = require('node:assert/strict');
-const {spawnSync} = require('node:child_process');
-const repository = path.resolve(__dirname, '../..');
+const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-public-docs-'));
-const root = path.join(artifacts, 'site');
-const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
-const staged = spawnSync(python, ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
-assert.equal(staged.status, 0, staged.stderr);
+const root = stagePages();
 function htmlRoutes(directory, prefix = '') {
   return fs.readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
     const relative = prefix + entry.name;
@@ -1549,9 +1545,6 @@ async function checkSandboxQuotationPairs(page) {
     console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only navigation, one six-chapter demo Analysis/Research state roundtrip with evidence/quote and PDF links, legacy research redirect, case-study rendering, keyboard/focus/console passed. Screenshots: ${artifacts}`);
   } finally {
     try { if (browser) await browser.close(); }
-    finally {
-      await new Promise(resolve => server.close(resolve));
-      fs.rmSync(root, {recursive: true, force: true});
-    }
+    finally { await new Promise(resolve => server.close(resolve)); }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

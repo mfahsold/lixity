@@ -355,6 +355,10 @@ locations automatically; `PLAYWRIGHT_MODULE` and
 `PYTHON_BIN` optionally overrides `.venv/bin/python`, and all browser suites honor
 `PYTHON_BIN` before falling back to `.venv/bin/python` (checked by
 `tests/browser/support/python-entrypoints.test.cjs`).
+The public Docs, homepage tour, language, typography and visual checks use the
+same staging fixture, which runs the Pages build allowlist independently for
+each suite. Staged files are temporary. The screenshot folders remain available
+for inspection after the suites finish.
 The style-space test generates a synthetic manuscript, checks canvas interaction,
 keyboard/touch rotation and zoom, semantic chapter-score links with JavaScript
 enabled and disabled, tooltip escaping, idle rendering, touch targets and mobile

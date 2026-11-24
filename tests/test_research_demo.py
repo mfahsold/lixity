@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 from contextlib import contextmanager
+from copy import deepcopy
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
@@ -33,13 +34,22 @@ def site_data(document):
     return json.loads(match[1])
 
 
-@pytest.fixture
-def research_fixture(tmp_path):
-    return make_screenshots.build_research_fixture(tmp_path)
+@pytest.fixture(scope="module")
+def research_example(tmp_path_factory):
+    """Build the reviewed project and screenshot responses once per worker."""
+    root = tmp_path_factory.mktemp("research-example")
+    return root / "research-demo", make_screenshots.build_research_fixture(root)
 
 
 @pytest.fixture
-def public_demo(tmp_path, research_fixture, monkeypatch):
+def research_fixture(tmp_path, research_example):
+    project, responses = research_example
+    shutil.copytree(project, tmp_path / "research-demo")
+    return deepcopy(responses)
+
+
+@pytest.fixture(scope="module")
+def public_demo(tmp_path_factory, research_example):
     """Exercise demo publication without requiring native PDF fonts.
 
     PDF composition is covered by the font-guarded pipeline/export suites. These
@@ -47,19 +57,21 @@ def public_demo(tmp_path, research_fixture, monkeypatch):
     """
     from lixity import pdf_export, pdf_layouts
 
-    monkeypatch.setattr(pdf_layouts, "_installed_fonts", dict)
-    for role in ("TEXT", "HEADING", "MONO", "SANS", "SANS_BOLD", "ITALIC", "BOLD_ITALIC"):
-        monkeypatch.delenv("LIXITY_PDF_FONT_" + role, raising=False)
-
     def synthetic_pdf(text, **options):
         return b"%PDF-synthetic-demo\n" + json.dumps({"text": text, **options}).encode("utf-8")
 
-    monkeypatch.setattr(pdf_export, "compose_pdf", synthetic_pdf)
-    project = tmp_path / "research-demo"
+    root = tmp_path_factory.mktemp("public-research-source")
+    project = root / "research-demo"
+    shutil.copytree(research_example[0], project)
     before = {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()}
-    target = example_publications.build_research_demo(tmp_path, project)
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(pdf_layouts, "_installed_fonts", dict)
+        for role in ("TEXT", "HEADING", "MONO", "SANS", "SANS_BOLD", "ITALIC", "BOLD_ITALIC"):
+            monkeypatch.delenv("LIXITY_PDF_FONT_" + role, raising=False)
+        monkeypatch.setattr(pdf_export, "compose_pdf", synthetic_pdf)
+        target = example_publications.build_research_demo(root, project)
     assert {path.relative_to(project): path.read_bytes() for path in project.rglob("*") if path.is_file()} == before
-    return target
+    return root, target
 
 
 def test_visual_fixture_refuses_missing_or_changed_reviewed_assets(tmp_path):
@@ -321,9 +333,9 @@ def test_demo_serializes_every_rendered_record_kind_and_exact_version(tmp_path, 
                     "ok": True, **api.get_record(project, kind, identifier)}
 
 
-def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, public_demo):
-    target = public_demo
-    assert target == tmp_path / "docs/demo/report.html"
+def test_public_demo_externalizes_image_bytes_and_preserves_source_records(public_demo):
+    root, target = public_demo
+    assert target == root / "docs/demo/report.html"
     document = target.read_text(encoding="utf-8")
     data = site_data(document)
     fixture = data["responses"]
@@ -360,7 +372,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert 'data-manuscript-links="read"' in document
     source = (ROOT / "samples/first-look.md").read_bytes()
     assert f'data-manuscript-source-sha256="{hashlib.sha256(source).hexdigest()}"' in document
-    assert (tmp_path / "docs/research/examples/harbour-manuscript.md").read_bytes() == source
+    assert (root / "docs/research/examples/harbour-manuscript.md").read_bytes() == source
     assert (ROOT / "LICENSE").read_text(encoding="utf-8").strip() in html.unescape(document)
     for layout in ("editor", "book", "sheet", "report", "document"):
         filename = f"warehouse-4-{layout}.pdf"
@@ -391,15 +403,16 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
         assert hashlib.sha256(source_bytes).hexdigest() == item["sha256"]
 
 
-def test_public_demo_manifest_covers_the_wrapped_production_site(tmp_path, public_demo):
-    directory = public_demo.parent
+def test_public_demo_manifest_covers_the_wrapped_production_site(public_demo):
+    _, target = public_demo
+    directory = target.parent
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "lixity-read-only-site/1"
     assert manifest["entrypoint"] == "report.html"
     assert manifest["capabilities"]["research"] is True
     assert manifest["capabilities"]["source_files"] is True
     assert manifest["capabilities"]["automatic_external_requests"] is False
-    document = public_demo.read_text(encoding="utf-8")
+    document = target.read_text(encoding="utf-8")
     assert document.count('http-equiv="Content-Security-Policy"') == 1
     assert 'data-site-code="null"' in document
     assert "external_reference" not in json.dumps(site_data(document))
@@ -425,7 +438,8 @@ def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the production read provider")
 def test_public_demo_uses_production_transport_without_pdf_write_exceptions(public_demo):
-    document = public_demo.read_text(encoding="utf-8")
+    _, target = public_demo
+    document = target.read_text(encoding="utf-8")
     runtime = (ROOT / "src/lixity/ui/assets/read-only-site.js").read_text(encoding="utf-8")
     payload = {"runtime": runtime, "data": site_data(document)}
     script = """
@@ -472,17 +486,29 @@ vm.runInNewContext(runtime, {window, document, URL, Request, Response, Map, Set}
     assert completed.returncode == 0, completed.stderr
 
 
+@pytest.fixture(scope="module")
+def public_publications(tmp_path_factory, research_example):
+    root = tmp_path_factory.mktemp("public-reading-source")
+    project = root / "research-demo"
+    shutil.copytree(research_example[0], project)
+    return root, example_publications.build_publication_examples(root, project)
+
+
 @pytest.fixture
-def public_publications(tmp_path, research_fixture):
-    return example_publications.build_publication_examples(tmp_path, tmp_path / 'research-demo')
+def mutable_publications(tmp_path, public_publications):
+    """Give staging and tampering checks their own generated documents."""
+    root, publications = public_publications
+    shutil.copytree(root / "docs", tmp_path / "docs")
+    return {mode: tmp_path / target.relative_to(root) for mode, target in publications.items()}
 
 
-def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_path, public_publications):
+def test_public_reader_and_companion_use_the_production_scope_and_assets(public_publications):
     from lixity.site_export import prepare_site
     from lixity.ui.dashboard import _CSS_FILES, _JS_FILES, _PUBLICATION_JS_FILES, _REPORT_CSS_FILES
 
-    project = tmp_path / 'research-demo'
-    for mode, target in public_publications.items():
+    root, publications = public_publications
+    project = root / 'research-demo'
+    for mode, target in publications.items():
         page = target.read_text(encoding='utf-8')
         cap = 3 if mode == 'companion' else None
         native = prepare_site(project, manuscript='harbour-manuscript.md', mode=mode,
@@ -526,10 +552,11 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(tmp_pat
             assert item == {'sha256': hashlib.sha256(content).hexdigest(), 'byte_length': len(content)}
 
 
-def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tmp_path, public_publications):
+def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(public_publications):
     from lixity.site_export import prepare_site
 
-    companion = public_publications['companion'].read_text(encoding='utf-8')
+    root, publications = public_publications
+    companion = publications['companion'].read_text(encoding='utf-8')
     source = (ROOT / 'samples/first-look.md').read_text(encoding='utf-8')
     data = site_data(companion)['publication']
     assert data['max_chapter'] == 3
@@ -539,7 +566,7 @@ def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tm
     assert 'The receiving signature' not in companion
     assert 'A blank signature is an absence, not a name.' not in companion
     assert 'No receiving signature had yet been identified' not in companion
-    capped = prepare_site(tmp_path / 'research-demo', manuscript='harbour-manuscript.md',
+    capped = prepare_site(root / 'research-demo', manuscript='harbour-manuscript.md',
         mode='reader', publication_profile='readers', max_chapter=3, include_source_files=True)
     public = b'\n'.join(capped.files.values())
     assert b'Someone had tried the eastern gate of Warehouse 4.' in public
@@ -548,10 +575,10 @@ def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(tm
     assert b'No receiving signature had yet been identified' not in public
 
 
-def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, public_publications):
+def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, mutable_publications):
     from scripts.stage_pages import stage
 
-    manifest_file = public_publications['reader'].with_name('manifest.json')
+    manifest_file = mutable_publications['reader'].with_name('manifest.json')
     manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
     manifest['publication']['analysis_sections'] = ['full']
     manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
@@ -559,10 +586,10 @@ def test_public_demo_staging_rejects_unreviewed_analysis_scope(tmp_path, public_
         stage(tmp_path / 'docs', tmp_path / 'unreviewed')
 
 
-def test_public_demo_staging_rejects_another_chapter_audio_scope(tmp_path, public_publications):
+def test_public_demo_staging_rejects_another_chapter_audio_scope(tmp_path, mutable_publications):
     from scripts.stage_pages import stage
 
-    manifest_file = public_publications['reader'].with_name('manifest.json')
+    manifest_file = mutable_publications['reader'].with_name('manifest.json')
     manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
     manifest['audio']['tracks'][0]['chapter'] = 2
     manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
@@ -570,7 +597,7 @@ def test_public_demo_staging_rejects_another_chapter_audio_scope(tmp_path, publi
         stage(tmp_path / 'docs', tmp_path / 'unreviewed')
 
 
-def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_path, public_publications):
+def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_path, mutable_publications):
     from scripts.stage_pages import stage
 
     docs = tmp_path / 'docs'
@@ -583,13 +610,13 @@ def test_pages_stages_only_two_approved_publication_manifest_inventories(tmp_pat
     destination = tmp_path / 'published'
     stage(docs, destination)
     expected = set()
-    for mode, target in public_publications.items():
+    for mode, target in mutable_publications.items():
         manifest = json.loads(target.with_name('manifest.json').read_text(encoding='utf-8'))
         expected.update('demo/' + mode + '/' + name for name in [*manifest['files'], 'manifest.json'])
     actual = {path.relative_to(destination).as_posix() for path in (destination / 'demo').rglob('*') if path.is_file()}
     assert actual == expected
     assert not any((destination / name).exists() for name in unapproved)
-    public_publications['reader'].write_text('Changed after review', encoding='utf-8')
+    mutable_publications['reader'].write_text('Changed after review', encoding='utf-8')
     with pytest.raises(ValueError, match=r'changed|checksum'):
         stage(docs, tmp_path / 'changed-output')
 

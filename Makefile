@@ -7,6 +7,7 @@ SCRIPT_PYTHON := $(if $(wildcard $(VPY)),$(VPY),$(PYTHON))
 RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
+PYTEST_FLAGS := -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}')
 BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
@@ -31,7 +32,7 @@ install-dev: ## Create .venv and install with dev extras
 	"$(VPY)" -m lixity.cli --version
 
 test: ## Run the full test suite (warnings as errors, slowest cases reported)
-	PYTHONPATH=src $(VPY) -m pytest -W error -q --durations=15 -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
+	PYTHONPATH=src "$(VPY)" -m pytest $(PYTEST_FLAGS) --durations=15 $(PYTEST_ARGS)
 
 browser-tools: ## Install isolated versioned Playwright, Chromium and axe-core
 	npm install --prefix "$(BROWSER_TOOLS_DIR)" playwright@$(PLAYWRIGHT_VERSION) axe-core@$(AXE_CORE_VERSION)
@@ -112,7 +113,7 @@ docs-generated-check: ## Check generated version pins, documentation bundle and 
 	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all --check
 
 docs-check: docs-generated-check ## Standalone documentation checks, including staged-site links and generated content
-	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE) $(PYTEST_ARGS)
+	PYTHONPATH=src "$(VPY)" -m pytest $(PYTEST_FLAGS) tests/test_pages.py tests/test_guide_markdown.py tests/test_documentation.py $(PYTEST_ARGS)
 
 docs-sync: ## Synchronize documentation version references to match __version__
 	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all

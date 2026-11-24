@@ -103,6 +103,7 @@ lixity = ["py.typed", "locales/*.json", "ui/assets/*", "ui/assets/vendor/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = [".*", "build", "dist", "outreach"]
+addopts = "-o verbosity_subtests=0"
 markers = [
     "native_pdf: requires real Poppler executables rather than synthetic subprocesses",
     "portability: filesystem, process and installed-package seams for focused Windows/macOS verification",

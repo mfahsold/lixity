@@ -61,8 +61,17 @@ def test_source_gate_runs_full_suite_on_minimum_supported_python():
     assert versions, "Source checks need an explicit supported-interpreter matrix"
     assert {minimum.group(1), "3.12"} <= set(ast.literal_eval(versions.group(1)))
     assert "python-version: ${{ matrix.python-version }}" in gate
-    assert 'python -m pytest -W error -q -p no:asyncio -n "$PYTEST_WORKERS"' in gate
+    assert 'time make test VPY=python PYTEST_ARGS="-n $PYTEST_WORKERS"' in gate
     assert "continue-on-error" not in gate
+
+
+def test_source_gate_runs_shared_static_checks_once():
+    gate = job(workflow("tests.yml"), "check")
+    assert (
+        "      - name: Run shared static checks\n"
+        "        if: matrix.python-version == '3.12'\n"
+        "        run: make lint typecheck VPY=python\n"
+    ) in gate
 
 
 def test_catchup_uses_workflow_helpers_and_immutable_assets_without_rebuilding():

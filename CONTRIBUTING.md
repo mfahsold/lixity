@@ -70,14 +70,16 @@ after loading a change.
 | Packaging | Run `make build` or add an isolated install smoke test with `.venv/bin/python scripts/check_release.py --build --smoke`. |
 | Public release | Follow [release preparation](#preparing-a-release) for the local and remote gates. |
 
-For focused Python checks without make, use
-`PYTHONPATH=src .venv/bin/python -m pytest tests/test_NAME.py -W error -q -p no:asyncio`.
+For a focused Python check, use
+`make test PYTEST_ARGS='-n 0 tests/test_NAME.py'`.
 Run Ruff as `.venv/bin/ruff check src tests scripts` and mypy as
 `.venv/bin/mypy --strict src`.
 
 After a failure, pytest's `--ff -x` runs previous failures first and stops at the
 next failure. Use `--lf` in a repair loop and run the selected gate again at the
-end. `make test` reports the 15 slowest cases. Default Ruff, mypy and pytest
+end. `make test` reports the 15 slowest cases. For pytest 9, the default
+output shows failed subtests. To display passing subtests, include
+`-o verbosity_subtests=1` in `PYTEST_ARGS`. Default Ruff, mypy and pytest
 caches stay inside each checkout. Override `RUFF_CACHE`, `MYPY_CACHE` or
 `PYTEST_CACHE` to use a different location.
 Use the same pinned Ruff in the editor and optional commit hook; its native
@@ -140,8 +142,10 @@ assertions where timing varies by host.
 #### CI and test environments
 
 Pull requests targeting `main` run the `tests` workflow on Linux with Python
-3.10 and 3.12, Poppler and FFmpeg. Each job runs the source checks and a wheel
-smoke test. The development extra includes NumPy for audio fixtures and
+3.10 and 3.12, Poppler and FFmpeg. Both interpreter jobs run the full suite
+through `make test` and smoke-install the wheel. The Python 3.12 job also runs
+the shared Ruff and mypy checks configured for the supported Python 3.10 target.
+The development extra includes NumPy for audio fixtures and
 independent numerical tests. The `dependencies` workflow also runs on pull
 requests touching dependency inputs and on its weekly schedule.
 

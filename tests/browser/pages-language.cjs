@@ -4,13 +4,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
-const {spawnSync} = require('node:child_process');
 const os = require('node:os');
-const repository = path.resolve(__dirname, '../..');
+const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-pages-language-'));
-const docs = path.join(artifacts, 'site');
-const staged = spawnSync(process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python'), ['scripts/stage_pages.py', '--output', docs], {cwd: repository, encoding: 'utf8'});
-assert.equal(staged.status, 0, staged.stderr);
+const docs = stagePages();
 const origin = 'https://pages.example';
 (async () => {
   const browser = await launchChromium();

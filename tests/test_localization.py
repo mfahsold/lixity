@@ -26,6 +26,10 @@ from lixity.workspace_labels import WORKSPACE_LABELS
 from tests.locales import LOCALES
 
 
+def _template_fields(value: str) -> set[str]:
+    return set(re.findall(r"\{([a-z_]+)\}", value))
+
+
 class _DashboardBodyParser(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -137,13 +141,15 @@ class TestLocalization(unittest.TestCase):
         self.assertNotIn('<img src=x onerror=alert(1)>', rendered)
 
     def test_workspace_template_placeholders_match_across_locales(self):
-        def fields(value):
-            return set(re.findall(r"\{([a-z_]+)\}", value))
-
-        for key, english in WORKSPACE_LABELS["en"].items():
-            for language in ("de", "fr", "es", "it", "pt", "nl"):
-                with self.subTest(key=key, language=language):
-                    self.assertEqual(fields(WORKSPACE_LABELS[language][key]), fields(english))
+        expected = {key: _template_fields(value) for key, value in WORKSPACE_LABELS["en"].items()}
+        for language in LOCALES:
+            if language == "en":
+                continue
+            with self.subTest(language=language):
+                actual = {key: _template_fields(value) for key, value in WORKSPACE_LABELS[language].items()}
+                differences = {key: (fields, actual.get(key)) for key, fields in expected.items()
+                               if fields != actual.get(key)}
+                self.assertFalse(differences, f"Workspace placeholders (expected, actual): {differences}")
 
     def test_hd_d_help_describes_the_42_token_estimator_in_all_locales(self):
         for language in LOCALES:
@@ -263,12 +269,9 @@ def test_cli_report_text_packs_share_keys_and_placeholders():
     """The terminal text packs stay parallel; placeholders must match keys."""
     from lixity.cli import CLI_TEXTS
 
-    def fields(value: str) -> set[str]:
-        return set(re.findall(r"\{([a-z_]+)\}", value))
-
     assert set(CLI_TEXTS["en"]) == set(CLI_TEXTS["de"])
     for key, english in CLI_TEXTS["en"].items():
-        assert fields(CLI_TEXTS["de"][key]) == fields(english), key
+        assert _template_fields(CLI_TEXTS["de"][key]) == _template_fields(english), key
 
 
 def test_manuscript_review_codes_have_workspace_labels():

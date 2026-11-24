@@ -6,8 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
-const {spawnSync} = require('node:child_process');
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {stagePages} = require('./support/staged-pages.cjs');
 const root = path.resolve(__dirname, '../..');
 const fixtures = pythonFixture(`import json
 from lixity.ui import render_dashboard
@@ -19,10 +19,7 @@ print(json.dumps({"analysis": full_dashboard(),
         identity_check={"title":{"status":"matched","value":"Synthetic project","source":"metadata:title"},
             "author_name":{"status":"mismatch","value":"Another Writer","source":"metadata:author"}})}))`, {root});
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-visual-consistency-'));
-const siteRoot = path.join(artifacts, 'site');
-const staged = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'),
-  ['scripts/stage_pages.py', '--output', siteRoot], {cwd: root, encoding: 'utf8'});
-assert.equal(staged.status, 0, staged.stderr);
+const siteRoot = stagePages();
 const contrast = (first, second) => {
   const luminance = value => value.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)
     .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
@@ -443,7 +440,6 @@ async function checkScale(page, label) {
     }
     console.log(`Shared typography, identity labels, palette, action contrast, touch targets, focus, text-spacing, reduced motion and theme interaction passed. Screenshots: ${artifacts}`);
   } finally {
-    try { if (browser) await browser.close(); }
-    finally { fs.rmSync(siteRoot, {recursive: true, force: true}); }
+    if (browser) await browser.close();
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

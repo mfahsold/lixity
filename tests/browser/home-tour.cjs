@@ -5,14 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
-const {spawnSync} = require('node:child_process');
-const repository = path.resolve(__dirname, '../..');
+const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
-const root = path.join(artifacts, 'site');
-const staged = spawnSync(process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python'),
-  ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
-if (staged.error) throw staged.error;
-assert.equal(staged.status, 0, staged.stderr);
+const root = stagePages();
 (async () => {
   const browser = await launchChromium();
   try {
@@ -166,5 +161,5 @@ assert.equal(staged.status, 0, staged.stderr);
       await context.close();
     }
     console.log('Homepage tour: 48-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);
-  } finally { await browser.close(); fs.rmSync(root, {recursive:true, force:true}); }
+  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode=1; });

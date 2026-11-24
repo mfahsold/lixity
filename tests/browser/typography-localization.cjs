@@ -4,13 +4,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
+const {stagePages} = require('./support/staged-pages.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-typography-localization-'));
-const siteRoot = path.join(artifacts, 'site');
 const fixtures = pythonFixture(`
 import json
 from lixity.language import get_language_profile
@@ -52,9 +51,7 @@ async function textRole(locator) {
     catch (error) { failures.push(`${name}: ${error.message}`); }
   }
   try {
-    const staged = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'),
-      ['scripts/stage_pages.py', '--output', siteRoot], {cwd: root, encoding: 'utf8'});
-    assert.equal(staged.status, 0, staged.stderr);
+    const siteRoot = stagePages();
     browser = await launchChromium();
     const context = await browser.newContext({reducedMotion: 'reduce', colorScheme: 'light'});
     const errors = [], writes = [];
@@ -236,7 +233,6 @@ async function textRole(locator) {
     assert.deepEqual(failures, [], 'Typography/localization regressions');
     console.log(`Typography: semantic headings, code reading sizes, separate font roles, token-based canvas text and seven localized desktop/mobile source toolbars passed. Screenshots: ${artifacts}`);
   } finally {
-    try { if (browser) await browser.close(); }
-    finally { fs.rmSync(siteRoot, {recursive: true, force: true}); }
+    if (browser) await browser.close();
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });
