@@ -46,7 +46,7 @@ Look at the **Voice contrast (ASL Δ)** row in both novels. Although Fontane wri
 
 - In *Pride and Prejudice*, unquoted narration averages **23.39 words per sentence**, while quoted spans average **13.67 words per sentence** (`ASL Δ = −9.73`), with `45.2%` short spans.
 
-When a draft manuscript feels wooden in dialogue scenes, one of the most common causes is that `ASL Δ` hovers near zero: the characters are speaking in the exact same 20-word syntactic periods as the narrator.
+When a draft manuscript feels wooden in dialogue scenes, one of the most common causes is that `ASL Δ` hovers near zero. The characters are speaking in the exact same 20-word syntactic periods as the narrator.
 
 <a id="chapter-drills"></a>
 
@@ -82,7 +82,7 @@ The same measurements trace Fontane's famous contrast between light social conve
 | Ch. 26: Discovery of Crampas's letters and duel decision | 25.7% | 66.7% | 9.29 | 29.16 | −19.87 | **46.6%** |
 | Ch. 33: Late Berlin scenes and medical advice | 62.5% | **68.4%** | 9.62 | 22.13 | −12.51 | 25.0% |
 
-In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence), while the narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
+In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence). The narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
 
 <a id="workflow"></a>
 
@@ -94,7 +94,7 @@ To make these signals practical during daily revision, Lixity organizes the **An
 
 2. **Dramaturgy, tempo & registers (*Pacing & scenes*, *Scenes & style registers*).** Inspect chapter ASL, closing hooks (0–3 heuristic), within-paragraph adjacent sentence overlap (`sentence_overlap_pct`), and runs of 3+ identical sentence openings (`repeated_start_runs`), then compare intentional registers (letters, diaries, flashbacks) against their own targets.
 
-3. **Voice, dialogue & sentence craft (*Quoted passages*, *Sentence lengths*, *Signal-group comparison*).** Check whether spoken turns have a distinct cadence from narration (`dialogue_asl`, `narration_asl`, `asl_contrast`), inspect short rapid turns (≤ 12 words) versus monologue blocks (≥ 80 words), and review perception filters, modal verbs, passive cues and noun endings.
+3. **Voice, dialogue & sentence craft (*Quoted passages*, *Sentence lengths*, *Signal-group comparison*).** Check whether spoken turns have a distinct cadence from narration (`dialogue_asl`, `narration_asl`, `asl_contrast`), inspect short rapid turns (≤ 12 words) versus monologue blocks (≥ 80 words). Then review perception filters, modal verbs, passive cues and noun endings.
 
 4. **Cast & continuity (*Character name mentions*, *Motifs & repetition*).** Track character presence gaps across chapters and catch unintentional 300-word local phrase echoes.
 

@@ -38,7 +38,7 @@ Wie sehen diese Lektorats-Signale an vollständigen Klassikern aus? Die folgende
 | Wortbrücke Folgesätze (Satz-Kohäsion) | 23,7 % der Satzpaare | 23,6 % der Satzpaare | Inhaltswort-Wiederaufnahme zwischen Nachbarsätzen im Absatz |
 | Gleiche Satzanfänge (Ketten ≥ 3) | 5 Ketten in 36 Kapiteln | 21 Ketten in 61 Kapiteln | Stellen für bewusste Anaphern oder Satzanfangs-Monotonie |
 
-Besonders aufschlussreich ist der **ASL-Abstand zwischen Zitaten und Erzähltext**: Obwohl zwischen Fontanes deutschem Gesellschaftsroman und Austens englischem Klassiker über achtzig Jahre und zwei verschiedene Sprachen liegen, trennen beide ihre Figurenrede im Schnitt um **fast exakt 10 Wörter pro Satz** (`−9,90` bzw. `−9,73`) vom Erzähltext. Wenn Dialoge in einem Rohmanuskript steif oder „papierern“ wirken, liegt dieser Differenzwert häufig nahe bei `0` – die Figuren sprechen dann in denselben Satzbögen wie die Erzählstimme.
+Besonders aufschlussreich ist der **ASL-Abstand zwischen Zitaten und Erzähltext**. Obwohl über achtzig Jahre und zwei verschiedene Sprachen zwischen Fontanes deutschem Gesellschaftsroman und Austens englischem Klassiker liegen, ist der Befund derselbe. Beide trennen ihre Figurenrede im Schnitt um **fast exakt 10 Wörter pro Satz** (`−9,90` bzw. `−9,73`) vom Erzähltext. Wenn Dialoge in einem Rohmanuskript steif oder „papierern“ wirken, liegt dieser Differenzwert häufig nahe bei `0` – die Figuren sprechen dann in denselben Satzbögen wie die Erzählstimme.
 
 <a id="kapitel-diagnose"></a>
 
@@ -61,7 +61,7 @@ Erst im Kapitelvergleich zeigt sich, wie präzise diese Kennzahlen dramatische S
 
 ### Beispiel 2: Austens *Pride and Prejudice* – Schlagabtausch vs. Darcys Brief
 
-In *Pride and Prejudice* markiert derselbe Blick sofort das berühmte Briefkapitel (Kapitel 35): Dort stehen **87,6 %** des Kapitels in Anführungszeichen, aber der Anteil kurzer Zitate fällt auf **0,0 %** und die Satzlänge innerhalb der Anführungszeichen steigt auf **27,39 Wörter** (`ASL-Abstand = +0,81`). In Lixity lässt sich ein solches Briefkapitel gezielt einem eigenen [Stilregister](intentional-registers.html) zuordnen, damit beabsichtigte Briefprosa nicht als unfreiwillige Dialog-Abweichung gewertet wird.
+In *Pride and Prejudice* markiert derselbe Blick sofort das berühmte Briefkapitel (Kapitel 35). Dort stehen **87,6 %** des Kapitels in Anführungszeichen, aber der Anteil kurzer Zitate fällt auf **0,0 %** und die Satzlänge innerhalb der Anführungszeichen steigt auf **27,39 Wörter** (`ASL-Abstand = +0,81`). In Lixity lässt sich ein solches Briefkapitel gezielt einem eigenen [Stilregister](intentional-registers.html) zuordnen, damit beabsichtigte Briefprosa nicht als unfreiwillige Dialog-Abweichung gewertet wird.
 
 <a id="workflow"></a>
 

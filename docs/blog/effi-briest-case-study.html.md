@@ -12,7 +12,7 @@ Style guides can tell you that a mean sentence length of 12 words is “brisk”
 
 ## The idea: a corridor from the manuscript's own chapters
 
-Lixity computes, for each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), a robust description of the chapters you already wrote: a **median** and a spread derived from the median absolute deviation. From that it derives a **band** (a reference corridor) and reports how far each chapter sits outside it.
+For each style feature (sentence length, staccato share, dialogue share, perception filters, modals, passive voice, nominalisations, adjectives, long words, sentence-start entropy, first-person starts, lexical diversity measures and more), Lixity computes a robust description of the chapters you already wrote. The description is a **median** and a spread derived from the median absolute deviation. From that it derives a **band** (a reference corridor) and reports how far each chapter sits outside it.
 
 Two details keep this useful instead of noisy:
 
@@ -32,7 +32,7 @@ Open the [Effi Briest case study](../examples/effi-briest.html) in the browser. 
 
 3. **The chapter matrix (drift column).** The reference summary of every chapter: words, sentence length, dialogue share, function words, tense, flags and the number of selected deviations.
 
-A useful question is “what changed in this chapter, and was it on purpose?”. Deviations are questions to the text: a chapter that sheds dialogue may be a solitary interior section; a jump in nominalisation may be a documentary letter; a drop in sentence length may be the action scene you intended. These are possible interpretations, not conclusions the measurements establish.
+A useful question is “what changed in this chapter, and was it on purpose?”. Deviations are questions to the text. A chapter that sheds dialogue may be a solitary interior section; a jump in nominalisation may be a documentary letter; a drop in sentence length may be the action scene you intended. These are possible interpretations, not conclusions the measurements establish.
 
 <a id="try"></a>
 
