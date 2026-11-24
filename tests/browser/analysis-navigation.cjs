@@ -1,3 +1,4 @@
+const {closeAnalysisSettings, openAnalysisSettings, setAnalysisOption} = require('./support/analysis-controls.cjs');
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Overview navigation reveals its destination and preserves the manuscript journey.
 const assert = require('node:assert/strict');
@@ -208,6 +209,7 @@ async function finish(page, errors, writes) {
       try {
         await page.locator('#manuscript-analysis-toggle').click();
         await page.locator('#style-layer').selectOption('asl');
+        await openAnalysisSettings(page);
         const filter = page.locator('#filter-flags');
         await filter.focus(); await page.keyboard.press('Space'); await settle(page);
         assert.equal(await page.locator('#chapters .chapter:visible').count(), 0);
@@ -225,6 +227,49 @@ async function finish(page, errors, writes) {
         await finish(page, errors, writes);
       } finally { await page.close(); }
     });
+    await check('reading marks stay secondary and search remains usable at 200% text', async () => {
+      const {page, errors, writes} = await createPage(browser, 'en-with-tense-cues', 320, 'reduce', true);
+      try {
+        await page.setViewportSize({width:320, height:480});
+        await page.locator('#manuscript-analysis-toggle').click();
+        const settings = page.locator('#reader-analysis-options'), summary = settings.locator('summary').first();
+        const inspect = page.locator('#reader-inspect-current'), metric = page.locator('#style-layer');
+        await metric.focus();
+        assert.equal(await metric.inputValue(), 'asl');
+        assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), false);
+        assert.equal(await page.locator('#layer-legend').isVisible(), false);
+        await inspect.focus(); await page.keyboard.press('Enter'); await settle(page);
+        assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+        assert.equal(await page.locator('#reader-inspector-close').evaluate(node => node === document.activeElement), true);
+        await page.keyboard.press('Escape'); await settle(page);
+        assert.equal(await inspect.evaluate(node => node === document.activeElement), true);
+        await summary.focus(); await page.keyboard.press('Enter'); await settle(page);
+        const filter = page.locator('#filter-flags');
+        assert.equal(await filter.isVisible(), true);
+        await filter.focus(); await page.keyboard.press('Space');
+        await summary.focus(); await page.keyboard.press('Escape');
+        assert.equal(await settings.evaluate(node => node.open), false);
+        assert.equal(await summary.evaluate(node => node === document.activeElement), true);
+        await page.setViewportSize({width:320, height:320});
+        await page.evaluate(() => {document.documentElement.style.fontSize = '200%'; scrollTo(0,700);});
+        const search = page.locator('#text-search'), clear = page.locator('#text-search-clear');
+        await page.keyboard.press('Control+f');
+        assert.equal(await search.evaluate(node => node === document.activeElement), true);
+        await search.fill('Missing synthetic passage'); await page.keyboard.press('Enter'); await settle(page);
+        assert.equal(await page.locator('#text-search-next').isVisible(), false);
+        assert.equal(await inspect.isDisabled(), true);
+        assert.equal(await page.evaluate(() => ['text-search-status', 'text-search-clear'].every(id => {
+          const node = document.getElementById(id), bounds = node.getBoundingClientRect();
+          return bounds.top >= 0 && bounds.bottom <= innerHeight &&
+            node.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+        })), true, 'Empty search status and Clear are visible without scrolling at 200%');
+        await clear.tap(); await settle(page);
+        assert.equal(await search.inputValue(), '');
+        assert.equal(await filter.isChecked(), true);
+        assert.equal(await metric.inputValue(), 'asl');
+        await finish(page, errors, writes);
+      } finally {await page.close();}
+    });
     for (const width of [1440, 320]) {
       await check('measurement, tense review and return share the reading position ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, 'en-with-tense-cues', width, 'reduce', width === 320);
@@ -235,7 +280,8 @@ async function finish(page, errors, writes) {
           await metric.selectOption('asl');
           const all = await page.locator('#chapters .chip.outlier').count();
           const filter = page.locator('#filter-flags');
-          await filter.check(); await settle(page);
+          await setAnalysisOption(page, 'filter-flags', true);
+          await closeAnalysisSettings(page); await settle(page);
           const scoped = await page.locator('#chapters .chapter.has-flags .chip.outlier').count();
           assert.ok(scoped > 0 && scoped < all);
           assert.match(await page.locator('#layer-position').textContent(), new RegExp(`(?:of | · )${scoped}$`));
@@ -339,8 +385,9 @@ async function finish(page, errors, writes) {
           await page.locator('#layer-next').focus(); await page.keyboard.press('Enter'); await settle(page);
           assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 1) % metric.ids.length],
             'Next continues from the current passage in manuscript order');
-          await page.locator('#analysis-comparison-enabled').uncheck();
-          await page.locator('#analysis-comparison-enabled').check();
+          await setAnalysisOption(page, 'analysis-comparison-enabled', false);
+          await setAnalysisOption(page, 'analysis-comparison-enabled', true);
+          await closeAnalysisSettings(page);
           await page.locator('#layer-prev').focus(); await page.keyboard.press('Space'); await settle(page);
           assert.equal(new URL(page.url()).hash, '#' + metric.ids[middle],
             'Reapplying the same metric does not reset abnormal navigation to the first paragraph');
@@ -797,13 +844,14 @@ async function finish(page, errors, writes) {
           await settle(page);
           assert.equal(await guide.locator('summary').evaluate(node => node === document.activeElement), true,
             'Closing measurement evidence returns to the visible help trigger');
-          await page.locator('#analysis-evidence-enabled').uncheck();
+          await setAnalysisOption(page, 'analysis-evidence-enabled', false);
           await page.locator('#reader-focus').click();
           assert.equal(await guide.isVisible(), false, 'Focus reading hides optional guidance');
           await page.locator('#reader-focus').click();
           assert.equal(await guide.isVisible(), true);
           assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
-          await page.locator('#analysis-evidence-enabled').check();
+          await setAnalysisOption(page, 'analysis-evidence-enabled', true);
+          await closeAnalysisSettings(page);
           if (width === 320) await page.setViewportSize({width, height: 480});
           await page.locator('#manuscript-reader-controls').evaluate(node => { node.scrollTop = 0; });
           await settle(page);
@@ -811,8 +859,8 @@ async function finish(page, errors, writes) {
           if (width === 320) assert.ok(controls.height <= 480 * .45 + 1,
             'Compact analysis leaves most of the short viewport available for manuscript prose');
           const documentScroll = await page.evaluate(() => scrollY);
-          for (const selector of ['#style-layer', '.reader-evidence-toggle',
-            '.reader-comparison-toggle', '#reader-settings > summary', '#reader-focus', '#workbench-overview-open',
+          for (const selector of ['#style-layer', '#reader-analysis-options > summary',
+            '#reader-inspect-current', '#reader-settings > summary', '#reader-focus', '#workbench-overview-open',
             '#workspace-reader-toggle']) {
             await page.locator(selector).evaluate(node => node.scrollIntoView({block:'nearest', inline:'nearest'}));
             await settle(page);

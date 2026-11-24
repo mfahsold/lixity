@@ -1153,15 +1153,13 @@ class TestPELT(unittest.TestCase):
                 with self.subTest(values=values, penalty=penalty):
                     self.assertAlmostEqual(objective(scaled, cuts, penalty), expected, places=9)
 
-    def test_segment_cost_is_stable_under_large_translation(self):
-        from lixity.style_fingerprint import _segment_cost
+    def test_constant_runs_keep_the_guarded_cost_under_large_translation(self):
+        from lixity.style_fingerprint import pelt_changepoints
 
-        values = [0.0, 0.125, 0.25, 0.375, 0.125]
+        values = [0.0] * 4 + [0.375] * 4
         translated = [value + 2.0**45 for value in values]
-        self.assertAlmostEqual(
-            _segment_cost(values, 0, len(values)),
-            _segment_cost(translated, 0, len(values)), places=12,
-        )
+        self.assertEqual(pelt_changepoints(values), [4])
+        self.assertEqual(pelt_changepoints(translated), [4])
     """Changepoint segmentation via PELT."""
 
     def test_too_short_returns_empty(self):

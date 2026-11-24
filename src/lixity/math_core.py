@@ -89,9 +89,11 @@ def robust_z(value: float, centre: float, spread: float) -> float:
 
 
 def significance_z(value: float, centre: float, sigma: float, se: float) -> float:
-    """Deviation tested against house-style spread AND estimation noise."""
+    """Standardize against finite reference spread and estimation noise."""
+    if not all(math.isfinite(x) for x in (value, centre, sigma, se)) or sigma < 0.0 or se < 0.0:
+        raise ValueError("Scoring requires finite values and nonnegative finite spreads")
     denominator = math.hypot(sigma, se)
-    if math.isinf(denominator) and math.isfinite(sigma) and math.isfinite(se):
+    if math.isinf(denominator):
         scale = max(abs(sigma), abs(se))
         return _standardized_difference(value, centre, scale) / math.hypot(sigma / scale, se / scale)
     return _standardized_difference(value, centre, denominator) if denominator > 0.0 else 0.0
@@ -212,7 +214,11 @@ def medcouple(values: Sequence[float]) -> float:
     for i, x_i in enumerate(lower):
         for j, x_j in enumerate(upper):
             if x_i < x_j:
-                kernels.append((x_i + x_j - 2.0 * med) / (x_j - x_i))
+                left, right = med - x_i, x_j - med
+                if math.isinf(left + right):
+                    # Halve before subtracting when the distance overflows.
+                    left, right = med * 0.5 - x_i * 0.5, x_j * 0.5 - med * 0.5
+                kernels.append((right - left) / (right + left))
             else:
                 # Tied at the median: symmetric tie-breaking kernel (Brys et al. 2004).
                 diff = i + j - (k - 1)

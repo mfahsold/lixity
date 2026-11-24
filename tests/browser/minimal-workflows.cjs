@@ -1,4 +1,4 @@
-const {selectMetric} = require('./support/analysis-controls.cjs');
+const {selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 const {openProjectActions} = require('./support/project-actions.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -118,9 +118,9 @@ with tempfile.TemporaryDirectory() as directory:
         if (await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed') !== 'true') {
           await page.locator('#manuscript-analysis-toggle').click();
         }
-        await page.locator('#filter-flags').check();
+        await setAnalysisOption(page, 'filter-flags', true);
         await selectMetric(page, 'asl');
-        await page.locator('#layer-only').check();
+        await setAnalysisOption(page, 'layer-only', true);
         await page.locator('#paragraph-filter-reset').click();
         assert.equal(await page.locator('#filter-flags').isChecked(),false);
         assert.equal(await page.locator('#layer-only').isChecked(),true);

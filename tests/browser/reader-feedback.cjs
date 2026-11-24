@@ -1,3 +1,4 @@
+const {setAnalysisOption} = require('./support/analysis-controls.cjs');
 // Reading feedback keeps text legible and persistent state independent of arrival.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -87,7 +88,7 @@ async function frames(page) {
         assert.notEqual(localCue.content, 'none', 'Local Values stays identifiable with global Analysis Off');
         assert.ok(localCue.width >= 2, 'Local Values has a persistent gutter');
         // Evidence is opt-in for the selected metric, including this fixture's warning.
-        await page.locator('#analysis-evidence-enabled').check();
+        await setAnalysisOption(page, 'analysis-evidence-enabled', true);
         await paragraph.scrollIntoViewIfNeeded();
         await page.waitForFunction(id => !document.getElementById(id).classList.contains('reader-layer-enter'), await paragraph.getAttribute('id'));
         await paragraph.evaluate(node => {

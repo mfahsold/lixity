@@ -237,6 +237,7 @@
   var settings = document.getElementById("reader-settings");
   var settingsPanels = Array.from(controls.querySelectorAll(".reader-settings"));
   var analysisGuide = document.getElementById("reader-analysis-guide");
+  var analysisOptions = document.getElementById("reader-analysis-options");
   var metric = document.getElementById("style-layer"), evidenceToggle = document.getElementById("analysis-evidence-enabled");
   var comparisonToggle = document.getElementById("analysis-comparison-enabled");
   var current = null, savedRange = null, evidencePoint = null, returnTarget = null, selecting = false;
@@ -471,6 +472,19 @@
   document.addEventListener("pointerdown", function(event) {
     if (event.target === document.documentElement && event.clientX >= document.documentElement.clientWidth) scrollIntent();
   }, {passive:true});
+  function currentMeasuredPassage(anchor) {
+    if (anchor && anchor.panel.matches(".ptext")) return anchor.panel;
+    var boundary = readingViewportTop();
+    return panels.find(function(item) {
+      var rect = item.getBoundingClientRect();
+      return rect.height > 0 && rect.bottom > boundary && rect.top < innerHeight;
+    }) || panels.find(function(item) {return item.getClientRects().length;});
+  }
+  var inspectCurrent = document.getElementById("reader-inspect-current");
+  if (inspectCurrent) inspectCurrent.addEventListener("click", function() {
+    var panel = currentMeasuredPassage(capture());
+    if (panel) inspectValues(panel, null, inspectCurrent);
+  });
   if (analysisGuide && metric) {
     var summary = analysisGuide.querySelector("summary");
     var status = document.getElementById("reader-analysis-guide-state");
@@ -518,10 +532,7 @@
         metric.focus({preventScroll:true});
         return;
       }
-      var panel = anchor && anchor.panel.matches(".ptext") ? anchor.panel : panels.find(function(item) {
-        var rect = item.getBoundingClientRect();
-        return rect.height > 0 && rect.bottom > readingViewportTop() && rect.top < innerHeight;
-      }) || panels.find(function(item) {return item.getClientRects().length;});
+      var panel = currentMeasuredPassage(anchor);
       if (!panel) return;
       if (action.dataset.analysisGuideAction === "example") {
         var rect = panel.getBoundingClientRect();
@@ -1006,6 +1017,7 @@
     if (state.view !== previous.view || state.surface !== previous.surface) {
       closeMenu(false); selectionTools.hidden = true; settingsPanels.forEach(function(panel) {panel.open = false;});
     }
+    if (analysisOptions && (!state.analysisVisible || state.focus)) analysisOptions.open = false;
     if (toolChanged && narrowContext.matches) {
       var destination = open ? null : dockOrigin;
       var returnDockFocus = dock.contains(document.activeElement);
@@ -1154,14 +1166,14 @@
   }
   window.addEventListener("resize", fitSearchScrollMargin);
   fitSearchScrollMargin();
-  function guideInFlow(panel, body) {
-    return panel === analysisGuide && getComputedStyle(body || panel.querySelector(".reader-settings-body")).position !== "fixed";
+  function settingsInFlow(panel, body) {
+    return getComputedStyle(body || panel.querySelector(".reader-settings-body")).position !== "fixed";
   }
   function placeSettings() {
     settingsPanels.forEach(function(panel) {
       if (!panel.open) return;
       var body = panel.querySelector(".reader-settings-body"), gutter = 8, gap = 6;
-      if (guideInFlow(panel, body)) {
+      if (settingsInFlow(panel, body)) {
         body.style.left = body.style.top = body.style.maxHeight = "";
         return;
       }
@@ -1344,7 +1356,9 @@
   });
   document.addEventListener("pointerdown", function(event) {
     selecting = chapters.contains(event.target);
-    settingsPanels.forEach(function(panel) {if (panel.open && !panel.contains(event.target)) panel.open = false;});
+    settingsPanels.forEach(function(panel) {
+      if (panel !== analysisOptions && panel.open && !panel.contains(event.target)) panel.open = false;
+    });
     if (!menu.hidden && !menu.contains(event.target) && !event.target.closest("[data-reader-paragraph]")) closeMenu(false);
     if (!selectionTools.contains(event.target)) selectionTools.hidden = true;
   });
@@ -1393,7 +1407,7 @@
       }
     }
     if (event.key === "Escape" && !event.defaultPrevented && !event.isComposing && !event.target.closest("dialog, [role=dialog], select")) {
-      var opened = settingsPanels.find(function(panel) {return panel.open;});
+      var opened = settingsPanels.find(function(panel) {return panel.open && panel.getClientRects().length;});
       if (opened) {event.preventDefault(); event.stopImmediatePropagation(); opened.open = false; opened.querySelector("summary").focus({preventScroll:true}); return;}
     }
     if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.target.closest("dialog, [role=dialog], select, input, textarea")) return;
@@ -1444,7 +1458,7 @@
   window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; placeSettings(); });
   document.addEventListener("scroll", function(event) {
     settingsPanels.forEach(function(panel) {
-      if (!panel.open || panel.contains(event.target) || guideInFlow(panel)) return;
+      if (!panel.open || panel.contains(event.target) || settingsInFlow(panel)) return;
       var summary = panel.querySelector("summary"), box = summary.getBoundingClientRect();
       if (!summary.getClientRects().length || box.bottom <= 0 || box.top >= innerHeight) panel.open = false;
       else placeSettings();

@@ -287,6 +287,7 @@ server.serve_forever()
 async function rehearse(page, url, directory, original) {
   const board = page.locator('#scene-rehearsal');
   const form = board.locator('form');
+  const submit = form.locator('button[type="submit"]');
   const cards = board.locator('[data-intent-id]');
   const statePath = path.join(directory, '.lixity', 'analysis-intents.json');
   async function openBoard() {
@@ -303,7 +304,7 @@ async function rehearse(page, url, directory, original) {
     await form.locator('[name="voice"]').fill('Mara');
     await form.locator('[name="hypothesis"]').fill('The disclosure may reframe the question.');
     const response = page.waitForResponse(r => r.url().endsWith('/api/analysis-intents') && r.request().method() === 'POST');
-    await form.locator('button[type="submit"]').click();
+    await submit.click();
     assert.equal((await response).status(), 200);
     await board.locator('#scene-rehearsal-status.ok').waitFor();
   }
@@ -352,7 +353,17 @@ async function rehearse(page, url, directory, original) {
   await cards.first().locator('[data-intent-action="edit"]').click();
   assert.equal(await form.locator('[name="scene_id"]').inputValue(), '');
   await form.locator('[name="scene_id"]').selectOption('1:2');
-  await form.locator('button[type="submit"]').click();
+  const preview = form.locator('#scene-intent-preview');
+  const pendingIntent = await form.locator('[name="intent"]').inputValue();
+  await preview.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-evidence-1-2');
+  const back = page.locator('#scene-evidence-1-2 #scene-intent-return button');
+  assert.ok(await back.isVisible());
+  await back.press('Enter');
+  assert.equal(await preview.evaluate(el => el === document.activeElement), true);
+  assert.equal(await form.locator('[name="intent"]').inputValue(), pendingIntent);
+  assert.equal(await form.locator('[name="scene_id"]').inputValue(), '1:2');
+  await submit.click();
   await board.locator('#scene-rehearsal-status.ok').waitFor();
   assert.deepEqual(await cards.locator('[data-intent-field="status"]').allTextContents(),
     ['Current text', 'Review after revision']);
@@ -373,4 +384,67 @@ async function rehearse(page, url, directory, original) {
     ['Review after revision', 'Review after revision']);
   assert.equal(await board.locator('#scene-intent-editor').isVisible(), false);
   assert.deepEqual(fs.readFileSync(statePath), savedState);
+
+  fs.writeFileSync(path.join(directory, 'manuscript.md'), revised);
+  assert.equal((await page.request.post(url + '/api/analyze', {data: {}})).status(), 200);
+  await openBoard();
+  await cards.last().waitFor();
+  const token = await board.locator('#scene-intents-token').inputValue();
+  async function savedCards() {
+    const response = await page.request.get(url + '/api/analysis-intents', {params: {project_token: token}});
+    assert.equal(response.status(), 200);
+    return response.json();
+  }
+  async function saveElsewhere(state, changes) {
+    const response = await page.request.post(url + '/api/analysis-intents', {data: {
+      project_token: token,
+      expected_source_sha256: state.source_sha256,
+      expected_analysis_sha256: state.analysis_sha256,
+      expected_intents_sha256: state.intents_sha256,
+      ...changes,
+    }});
+    assert.equal(response.status(), 200);
+  }
+  const reload = board.locator('[data-intent-action="load"]');
+  const orderSave = board.locator('[data-intent-action="save_order"]');
+  const state = await savedCards();
+  await cards.first().locator('[data-intent-action="down"]').click();
+  await saveElsewhere(state, {action: 'save_order', ids: state.cards.map(card => card.id).reverse()});
+  await orderSave.click();
+  await reload.waitFor();
+  assert.equal(await orderSave.isDisabled(), true);
+  await reload.click();
+  await board.locator('#scene-rehearsal-status').filter({hasText: /The saved order changed/}).waitFor();
+  assert.equal(await orderSave.isVisible(), false);
+  assert.deepEqual(await order(), state.cards.map(card => card.intent).reverse(),
+    'Another window’s saved order replaces the conflicted draft');
+
+  const edited = await savedCards();
+  const [first, second] = edited.cards;
+  await cards.first().locator('[data-intent-action="edit"]').click();
+  await form.locator('[name="scene_id"]').selectOption('1:1');
+  await form.locator('[name="intent"]').fill('Local rehearsal draft');
+  page.once('dialog', dialog => dialog.dismiss());
+  await cards.last().locator('[data-intent-action="edit"]').click();
+  assert.equal(await form.locator('[name="intent"]').inputValue(), 'Local rehearsal draft',
+    'Dismissing the change-of-card confirmation keeps the unsaved draft');
+  await saveElsewhere(edited, {action: 'save', id: first.id, scene_id: '1:1', kind: first.kind,
+    intent: 'Changed elsewhere', hypothesis: first.hypothesis, voice: first.voice});
+  await submit.click();
+  await reload.waitFor();
+  assert.equal(await submit.isDisabled(), true);
+  await reload.click();
+  const useDraft = board.locator('[data-intent-action="save_as_new"]');
+  await useDraft.waitFor();
+  assert.equal(await useDraft.evaluate(el => document.activeElement === el), true);
+  assert.equal(await submit.isDisabled(), true);
+  assert.equal(await form.locator('[name="intent"]').inputValue(), 'Local rehearsal draft');
+  await useDraft.click();
+  assert.equal(await submit.isEnabled(), true);
+  await submit.click();
+  await cards.nth(2).waitFor();
+  const recovered = await savedCards();
+  assert.deepEqual(recovered.cards.map(card => card.intent),
+    ['Changed elsewhere', second.intent, 'Local rehearsal draft'],
+    'Preserving a draft never overwrites the other window’s card without review');
 }

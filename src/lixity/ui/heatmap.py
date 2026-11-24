@@ -232,6 +232,7 @@ def render_heatmap_panel(
             },
         ),
         panel_guide(L("heatmap_author_guide")),
+        f'<p class="ctl-note">{L("selection_limits")}</p>',
     ]
     parts.append('<div class="z-legend">' + comparison_legend(labels, chapter=False) + '</div>')
     parts.append(

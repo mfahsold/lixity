@@ -419,8 +419,8 @@
     // Stop requests before a navigation handler can resize a hidden map.
     if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(function(state) { stopTiles(state, true); });
   }, true);
-  var checkingMaps = false, mapFrame = 0;
-  var geographyRoots = document.getElementsByClassName("dossier-geography");
+  var checkingMaps = false;
+  var mapHosts = document.getElementsByClassName("geography-map");
   var observedContainers = new WeakSet();
   var observerConfig = {subtree: true, childList: true, attributes: true,
     attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]};
@@ -435,7 +435,6 @@
   });
   function refreshMaps() {
     checkingMaps = false;
-    mapFrame = 0;
     maps.forEach(function(state) {
       if (!visible(state.root) || !state.host.isConnected || state.host !== state.root.querySelector(".geography-map") ||
           state.context !== mapContext()) stopMap(state);
@@ -444,6 +443,7 @@
     observed.forEach(function(root) {
       if (!root.isConnected) { if (visibilityObserver) visibilityObserver.unobserve(root); observed.delete(root); }
     });
+    if (!mapHosts.length) return;
     document.querySelectorAll(".dossier-geography[data-geo-geometries]").forEach(function(root) {
       if (!root.closest("#research-manager, #publication-entries, #modal-research-revision, #workspace-reader")) {
         observeHostContainer(root);
@@ -457,20 +457,18 @@
     });
   }
   function scheduleMaps() {
-    if (checkingMaps) return;
+    // The live collection includes maps inserted outside watched containers.
+    // Keep one cleanup pass available when the last tracked map is removed.
+    if (checkingMaps || (!mapHosts.length && !observed.size && !maps.size)) return;
     checkingMaps = true;
     var raf = typeof window.requestAnimationFrame === "function" ? window.requestAnimationFrame : function(cb) { return setTimeout(cb, 16); };
-    mapFrame = raf(refreshMaps);
+    raf(refreshMaps);
   }
   var visibilityObserver = window.IntersectionObserver ? new IntersectionObserver(scheduleMaps) : null;
   document.addEventListener("toggle", scheduleMaps, true);
   document.addEventListener("lixity:viewchange", scheduleMaps);
   document.addEventListener("lixity:workbench-change", scheduleMaps);
-  document.addEventListener("scroll", function() {
-    // The live collection includes newly attached maps outside observed hosts.
-    // Ordinary manuscript scrolling needs no map refresh on an empty page.
-    if (geographyRoots.length || observed.size || maps.size) scheduleMaps();
-  }, {capture: true, passive: true});
+  document.addEventListener("scroll", scheduleMaps, {capture: true, passive: true});
   window.addEventListener("resize", scheduleMaps);
   document.addEventListener("visibilitychange", function() {
     if (document.hidden) maps.forEach(function(state) { stopTiles(state, true); });

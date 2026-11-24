@@ -12,7 +12,7 @@ from .markdown_parser import split_chapters, split_scenes
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
 from .pacing import HOOK_TYPES, _classify_span_hook, _hook_score
-from .quotation import count_quoted_words, quoted_word_counts
+from .quotation import count_words_and_quoted_words, quoted_word_counts
 from .quotation_projection import QuotedProse, quoted_prose
 from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
 from .sentences import split_prose_sentence_spans
@@ -224,10 +224,11 @@ def _intra_scene_dynamics(
         total_w = dialogue_words = 0
         for start, end in sents:
             sentence = projection.text[start:end]
-            total_w += len(word_re.findall(sentence))
-            dialogue_words += count_quoted_words(
+            counted, quoted = count_words_and_quoted_words(
                 sentence, word_re, projection.slice_analysis(start, end).spans,
             )
+            total_w += counted
+            dialogue_words += quoted
         return {"words": total_w, "sentences": len(sents), "quote_words": dialogue_words}
 
     first = _half_stats(first_half)

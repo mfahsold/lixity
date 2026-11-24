@@ -28,41 +28,54 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     const initialPulseHeld = new Promise(resolve => {releaseInitial = resolve;});
     const initialPulseDelivered = new Promise(resolve => {initialDelivered = resolve;});
     const deltaRoute = '**/manuscript-delta';
+    let deltaReads = 0;
     await page.route(deltaRoute, async route => {
+      deltaReads++;
       if (!holdInitial) return route.continue();
       holdInitial = false;
       const response = await route.fetch();
       initialMeasured();
       await initialPulseHeld;
       try {await route.fulfill({response});}
+      catch (error) {if (!String(error).includes('aborted')) throw error;}
       finally {initialDelivered();}
     });
     await page.goto(base); await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
+    assert.equal(deltaReads, 0, 'Entering Write does not request a report');
+    const versionsMenu = page.locator('#manuscript-versions > summary');
+    const pulse = page.locator('#manuscript-session-pulse');
+    const pulseValues = page.locator('#manuscript-pulse-popover p');
+    await versionsMenu.click();
+    await pulse.click();
     await initialPulseMeasured;
+    await versionsMenu.click();
     await page.locator('#manuscript-search').click();
     await page.locator('.cm-search input[name=search]').fill('Café');
     await page.locator('.cm-search input[name=replace]').fill('Next morning');
-    const refreshedPulse = page.waitForResponse(response => response.url().endsWith('/manuscript-delta'));
     await page.locator('.cm-search button[name=replaceAll]').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
     assert.equal(fs.readFileSync(source,'utf8'),original.replaceAll('Café','Next morning'));
+    assert.equal(deltaReads, 1, 'Autosave while writing does not request a revision report');
+    await versionsMenu.click();
+    const refreshedPulse = page.waitForResponse(response => response.url().endsWith('/manuscript-delta'));
+    await pulse.click();
     const measured = await (await refreshedPulse).json();
-    const pulse = page.locator('#manuscript-session-pulse');
     const baselineDate = await page.evaluate(createdAt => (
       new Intl.DateTimeFormat(document.documentElement.lang, {dateStyle:'medium'}).format(new Date(createdAt * 1000))
     ), measured.base.created_at);
-    await pulse.filter({hasText: new RegExp('^' + measured.current.words + ' words')}).waitFor();
-    await pulse.filter({hasText:'since ' + baselineDate}).waitFor();
-    const expectedPulse = await pulse.textContent();
+    await pulseValues.filter({hasText: new RegExp('^' + measured.current.words + ' words')}).waitFor();
+    await pulseValues.filter({hasText:'since ' + baselineDate}).waitFor();
+    const expectedPulse = await pulseValues.textContent();
     releaseInitial();
     await initialPulseDelivered;
     await page.waitForLoadState('networkidle');
-    assert.equal(await pulse.textContent(), expectedPulse, 'A late response cannot replace the acknowledged revision’s pulse');
+    assert.equal(await pulseValues.textContent(), expectedPulse, 'A late response cannot replace the acknowledged revision’s pulse');
     await page.unroute(deltaRoute);
     await page.setViewportSize({width:320,height:844});
-    assert.ok(await pulse.evaluate(node => node.scrollWidth <= node.clientWidth));
+    assert.ok(await pulseValues.evaluate(node => node.scrollWidth <= node.clientWidth));
     await page.setViewportSize({width:1440,height:900});
+    await versionsMenu.click();
     await page.locator('#manuscript-undo').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
     assert.equal(fs.readFileSync(source,'utf8'),original,'One undo restores replace-all');
@@ -112,10 +125,8 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await summaries.evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth)), true);
     await page.locator('#manuscript-comparison-use').click();
     assert.equal(fs.readFileSync(source,'utf8'), external, 'Comparison adoption does not write');
-    const reviewedTimeline = page.waitForResponse(response => response.url().includes('/manuscript-timeline?limit=14'));
     await page.locator('#manuscript-save').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
-    await reviewedTimeline;
     assert.equal(fs.readFileSync(source,'utf8'),reviewed);
     await page.locator('#manuscript-versions > summary').click();
     await page.locator('#manuscript-compare').click();

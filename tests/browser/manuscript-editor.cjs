@@ -26,6 +26,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     const legend = page.locator('#layer-legend');
     await page.locator('#manuscript-analysis-toggle').click();
     await page.locator('#style-layer').selectOption('asl');
+    await page.locator('#reader-analysis-options > summary').click();
     await legend.locator('summary').click();
     assert.equal(await legend.isVisible(), true, 'An expanded reader legend reproduces the transition into writing');
     await page.locator('#manuscript-write').click({timeout: 5000});
@@ -79,6 +80,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.locator('#manuscript-close').isHidden(), true, 'Close writing hides itself');
     assert.equal(await page.locator('#manuscript-write').isVisible(), true, 'Close writing restores the Write button');
     assert.equal(await legend.isVisible(), true, 'Closing writing restores the active reading legend');
+    assert.equal(await page.locator('#reader-analysis-options').evaluate(node => node.open), true);
     assert.equal(await legend.locator('details').evaluate(node => node.open), true, 'The reading disclosure keeps its state');
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'manuscript-write', 'Close writing returns focus to #manuscript-write');
     // Closing after edits flushes pending changes and reloads the reading view.

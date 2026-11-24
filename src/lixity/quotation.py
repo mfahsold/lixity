@@ -125,6 +125,21 @@ def count_quoted_words(
     return sum(index is not None for index, _ in _memberships(text, word_pattern, ranges, group)) if ranges else 0
 
 
+def count_words_and_quoted_words(
+    text: str, word_pattern: re.Pattern[str], spans: Iterable[QuotationSpan | Range],
+) -> tuple[int, int]:
+    """Count all matches and the fully quoted subset in one token scan."""
+    ranges = merge_quotation_spans(spans)
+    if not ranges:
+        return len(word_pattern.findall(text)), 0
+    group = 1 if word_pattern.groups else 0
+    words = quoted = 0
+    for index, _ in _memberships(text, word_pattern, ranges, group):
+        words += 1
+        quoted += index is not None
+    return words, quoted
+
+
 def quoted_word_counts(
     text: str, word_pattern: re.Pattern[str], spans: Iterable[QuotationSpan | Range],
 ) -> tuple[int, ...]:

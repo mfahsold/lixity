@@ -551,7 +551,7 @@ add interpretation rather than a new calibrated test.
 
 `dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
-**Unreleased correction:** `dimension_diagnostics.mahalanobis_space` is
+**Since v0.9.0:** `dimension_diagnostics.mahalanobis_space` is
 `standardized_midranks`. Covariance and distance rows now use that same space,
 independently of populated z* fields. Recompute old mixed-space distances.
 `shrinkage_lambda` describes ridge regularization; `dimensions[].variance` and

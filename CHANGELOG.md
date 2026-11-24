@@ -51,6 +51,25 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- In the manuscript, keep the current measurement and passage review at hand.
+  Put marking and filter choices in one disclosure. Keep empty-search feedback
+  and Clear reachable at large text sizes.
+- Load the writing session's revision measurements on request from **Versions**.
+  Opening the editor or autosaving with that panel closed makes no report request.
+- Keep the draft during an author-intent conflict and display the currently saved
+  order when a second window changes it. Inspect a newly selected scene without
+  losing the card draft.
+- Skip geography discovery in map-free reading views, including during scroll
+  and unrelated DOM changes. Release map resources on removal.
+- Resolve an explicit `auto` against the direct analyzer's input when no sample
+  was provided. Reject a nonfinite comparison scale and avoid overflow in the
+  medcouple skewness kernel.
+- Explain the exploratory selection limits in the comparison report and name
+  the separate BH setting used by trend and manuscript-half summaries. Correct
+  the documented guarded segment objective and the two sentence-length bin roles.
+- Retry normal eject of the verified macOS disk image when a system process
+  briefly holds it open.
+
 - Keep analysis controls visible when scrolling or pausing in the manuscript
   and analysis overview.
 - Show quoted text directly in the reader with a word count on inspection.

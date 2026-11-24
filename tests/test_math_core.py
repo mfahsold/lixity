@@ -339,6 +339,11 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertAlmostEqual(significance_z(1e308, -1e308, 1.7e308, 1.7e308),
                                2.0 / (1.7 * math.sqrt(2.0)))
 
+    def test_significance_rejects_unrepresentable_or_invalid_measurements(self):
+        for sigma, se in ((math.inf, 1.0), (1.0, math.nan), (1.0, -1.0)):
+            with self.subTest(sigma=sigma, se=se), self.assertRaises(ValueError):
+                significance_z(5.0, 0.0, sigma, se)
+
 
 class TestSharedPrimitives(unittest.TestCase):
     """lixity.math_core is the single source for the plug-in conventions."""
@@ -565,6 +570,9 @@ class TestContinuityAndRobustExtensions(unittest.TestCase):
         self.assertAlmostEqual(mc_right, 0.75, places=12)
         self.assertLessEqual(mc_right, 1.0)
         self.assertAlmostEqual(medcouple([-x for x in right]), -mc_right, places=12)
+        symmetric = [-index * 1e307 for index in (16, 15, 14, 13, 12)]
+        self.assertAlmostEqual(medcouple(symmetric), 0.0, places=12)
+        self.assertAlmostEqual(medcouple([-1.6e308, -8e307, 0.0, 4e307, 4e307]), -1 / 3, places=12)
 
         import statistics
         with self.assertRaises(statistics.StatisticsError):

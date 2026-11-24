@@ -1,4 +1,4 @@
-const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
+const {openAnalysisSettings, selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 // Metric and comparison controls preserve canonical prose and source anchors.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -149,9 +149,9 @@ async function verifyComparisonPaint(browser) {
       });
       await page.keyboard.press('Escape');
       await page.screenshot({path: path.join(artifacts, `comparison-wash-${width}-${colorScheme}.png`)});
-      await page.locator('#analysis-comparison-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', false);
       assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
-      await page.locator('#analysis-comparison-enabled').check();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', true);
       await page.locator('#reader-focus').click();
       assert.equal(await target.evaluate(node => getComputedStyle(node).backgroundImage), 'none');
       await page.locator('#reader-focus').click();
@@ -229,8 +229,8 @@ async function verifyComparisonRegressions(browser) {
         // Each transition starts with this marked passage directly below the
         // current toolbar; Focus can expose an earlier panel after its resize.
         await target.evaluate(node => {
-          const boundary = document.querySelector('.manuscript-reader-controls').getBoundingClientRect().bottom;
-          window.scrollBy(0, node.getBoundingClientRect().top - boundary - 3);
+          setPassageScrollMargin(node);
+          node.scrollIntoView({block: 'start', behavior: 'instant'});
         });
         await frames(page);
         const before = await page.evaluate(() => {
@@ -263,7 +263,7 @@ async function verifyComparisonRegressions(browser) {
       assert.ok(Math.abs((await target.boundingBox()).y - manualTop) <= 2, 'Manual panel/top anchors retain their existing meaning');
     }, generated.reading_html)),
     comparisonRegression(browser, 1100, 'comparison-badge-inspector', async page => {
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', false);
       await page.locator('#chapters [data-reader-paragraph]').first().click();
       await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
       await page.locator('#reader-inspector').waitFor({state: 'visible'});
@@ -289,7 +289,7 @@ async function verifyComparisonRegressions(browser) {
       assert.match(await unavailableChip.getAttribute('aria-label'), /Comparison unavailable/);
       assert.equal(await unavailableChip.evaluate(node => getComputedStyle(node).borderTopStyle), 'dashed',
         'A missing comparison has its own visible pattern instead of inheriting tense color');
-      await page.locator('#analysis-comparison-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', false);
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
       assert.equal(await chip.getAttribute('aria-label'), base, 'Comparison-off chips describe their displayed tense colors');
@@ -298,7 +298,7 @@ async function verifyComparisonRegressions(browser) {
       assert.equal(await unavailableChip.getAttribute('aria-label'), await unavailableChip.getAttribute('data-tip-base'),
         'Turning comparison off restores the independent tense description');
       await page.locator('#workbench-overview-back').click();
-      await page.locator('#analysis-comparison-enabled').check();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', true);
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), true);
       assert.equal(await chip.getAttribute('aria-label'), metric, 'Re-enabling comparison restores its selected metric description');
@@ -309,7 +309,7 @@ async function verifyComparisonRegressions(browser) {
       {name: 'enlarged', target: fixtures.en.expected.asl[0], html: fixtures.en.html},
       {name: 'large-value', target: 'p-6', html: generated.large_value_html},
     ].map(value => comparisonRegression(browser, width, `comparison-badge-${value.name}-${width}`, async page => {
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', false);
       const marker = page.locator('#' + value.target + ' > .reader-comparison-value');
       if (value.name === 'large-value') assert.ok((await marker.textContent()).length > 30, 'The fixture has a long formatted value to wrap');
       for (const scale of [200, 100]) {
@@ -385,13 +385,15 @@ async function verifyComparisonRegressions(browser) {
       await page.evaluate(() => { window.originalMetricProse = document.querySelector('#chapters .ptext-inner > p'); });
       assert.equal(await page.locator('#style-layer').isVisible(), false, 'Reading starts unpainted');
       await page.locator('#manuscript-analysis-toggle').click();
-      assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true, 'Paragraph comparison has its own directly available switch');
-      assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), true, 'Counted text can be switched independently without a disclosure');
+      assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), false, 'Paragraph comparison settings start collapsed');
+      assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), false, 'Counted marks settings start collapsed');
       assert.equal(await page.locator('#style-layer').isVisible(), true, 'The active metric is a direct control');
       assert.equal(await page.locator('#style-layer option:checked').textContent(), fixture.labels.layer_asl);
       await openAnalysisSettings(page);
       assert.equal(await page.locator('#style-layer').isVisible(), true, 'the selector needs no settings disclosure');
-      await page.locator('#analysis-evidence-enabled').check();
+      assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
+      assert.equal(await page.locator('#analysis-evidence-enabled').isVisible(), true);
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
       for (const key of Object.keys(fixture.expected)) {
         await selectMetric(page, key);
         await frames(page);
@@ -432,26 +434,26 @@ async function verifyComparisonRegressions(browser) {
       const expected = fixture.expected.passive;
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'Counted text remains off for a newly selected metric');
       assert.equal(await page.locator('#layer-evidence-legend').isVisible(), false);
-      await page.locator('#analysis-evidence-enabled').check();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
       await selectMetric(page, 'asl');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Sentence length retains its earlier choice');
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', false);
       await selectMetric(page, 'passive');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Changing sentence length does not change passive');
       await selectMetric(page, 'asl');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'The new sentence-length choice is remembered');
       await selectMetric(page, 'passive');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'Passive retains its separate choice');
-      await page.locator('#analysis-comparison-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', false);
       assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0);
       assert.equal(await page.locator('#layer-comparison-legend').isVisible(), false);
       assert.equal(await page.locator('#layer-evidence-legend').isVisible(), true);
       assert.equal(await page.locator('#layer-next').isEnabled(), false);
-      await page.locator('#analysis-comparison-enabled').check();
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', true);
+      await setAnalysisOption(page, 'analysis-evidence-enabled', false);
       assert.equal(await page.locator('#layer-comparison-legend').isVisible(), true);
       assert.equal(await page.locator('#layer-evidence-legend').isVisible(), false);
-      await page.locator('#analysis-evidence-enabled').check();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
       await page.locator('#reader-focus').click();
       assert.equal(await page.locator('#layer-legend').isVisible(), false, 'Focus hides both analysis legends');
       assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0, 'Focus hides comparison markers');
@@ -490,8 +492,8 @@ async function verifyComparisonRegressions(browser) {
       assert.deepEqual(errors, []); assert.deepEqual(writes, []);
       if (locale === 'en' && width === 1440) {
         await selectMetric(page, 'passive');
-        await page.locator('#analysis-comparison-enabled').uncheck();
-        await page.locator('#analysis-evidence-enabled').uncheck();
+        await setAnalysisOption(page, 'analysis-comparison-enabled', false);
+        await setAnalysisOption(page, 'analysis-evidence-enabled', false);
         await page.reload();
         await page.locator('#manuscript-analysis-toggle').click();
         assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
@@ -500,7 +502,8 @@ async function verifyComparisonRegressions(browser) {
         assert.equal(await page.locator('#style-layer option:checked').textContent(), fixture.labels.layer_passive);
         assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), false);
         assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false);
-        await page.locator('#analysis-comparison-enabled').check();
+        await setAnalysisOption(page, 'analysis-comparison-enabled', true);
+        await openAnalysisSettings(page);
         assert.equal(await page.locator('#layer-comparison-legend').isVisible(), true);
       }
       if (locale === 'en' || locale === 'de') await page.screenshot({path: path.join(artifacts, `${locale}-${width}-${colorScheme}-${reducedMotion}.png`)});

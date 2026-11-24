@@ -87,16 +87,22 @@
   document.body.prepend(freshness);
   const host = document.createElement('div'); host.id = 'manuscript-editor-host'; host.setAttribute('spellcheck', 'false');
   const recoveryDate = new Intl.DateTimeFormat(language, {dateStyle: 'medium', timeStyle: 'short'});
-  const pulseWrap = document.createElement('div'); pulseWrap.id = 'manuscript-session-pulse-wrap'; pulseWrap.hidden = true;
-  const pulseBtn = document.createElement('button'); pulseBtn.type = 'button'; pulseBtn.id = 'manuscript-session-pulse'; pulseBtn.className = 'ctl manuscript-pulse-btn';
-  pulseBtn.setAttribute('aria-expanded', 'false');
-  const pulsePopover = document.createElement('div'); pulsePopover.id = 'manuscript-pulse-popover'; pulsePopover.hidden = true;
-  pulseBtn.addEventListener('click', () => {
-    const openState = pulsePopover.hidden;
-    pulsePopover.hidden = !openState;
-    pulseBtn.setAttribute('aria-expanded', String(openState));
+  const pulse = document.createElement('details'); pulse.className = 'panel-disclosure';
+  const pulseSummary = document.createElement('summary');
+  pulseSummary.id = 'manuscript-session-pulse'; pulseSummary.textContent = L('editor_pulse_title');
+  const pulsePopover = document.createElement('div'); pulsePopover.id = 'manuscript-pulse-popover';
+  pulsePopover.setAttribute('aria-live', 'polite');
+  pulse.append(pulseSummary, pulsePopover);
+  pulse.addEventListener('toggle', () => {
+    if (pulse.open && versions.open && snapshot) refreshPulse();
+    else cancelPulse();
   });
-  pulseWrap.append(pulseBtn, pulsePopover);
+  versions.addEventListener('toggle', () => {
+    if (!versions.open) {
+      pulse.open = false;
+      cancelPulse();
+    }
+  });
   const recovery = document.createElement('select'); recovery.className = 'ctl ctl-sm'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
   const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl ctl-sm primary'});
   const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
@@ -214,7 +220,7 @@
     finally {comparisonLoading = false;}
   }, null, {icon: 'git-compare'});
   versionActions.append(recoverBtn, discardBtn, compareBtn, downloadBtn);
-  versionsGroup.append(recovery, versionActions);
+  versionsGroup.append(recovery, versionActions, pulse);
   document.addEventListener('click', event => {
     if (versions.open && !versions.contains(event.target) && !comparison.contains(event.target)) versions.open = false;
   });
@@ -224,7 +230,7 @@
     if (intoEditor) contextGroup.prepend(companionControls);
     else openButton.after(companionControls);
   }
-  section.append(host, pulseWrap);
+  section.append(host);
   const css = document.createElement('style'); css.textContent = `
     #manuscript-comparison {width:min(1200px,95vw);max-width:min(1200px,95vw);max-height:min(92dvh,56rem);}
     #manuscript-comparison .modal-card {max-height:min(calc(92dvh - 2px),calc(56rem - 2px));}
@@ -262,11 +268,8 @@
     .manuscript-editor-toolbar .editor-group-format {padding-inline-start:6px;border-inline-start:1px solid var(--line);}
     #manuscript-save-status[data-state="saved"] {background:transparent!important;border-color:transparent!important;color:var(--muted)!important;font-weight:400!important;box-shadow:none!important;}
     #manuscript-editor-host {min-width:0;max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:0 auto;overflow:hidden;border-radius:var(--radius-lg,16px);box-shadow:0 6px 24px rgba(0,0,0,.05);}
-    #manuscript-session-pulse-wrap {max-width:min(100%,calc(var(--reader-measure,68ch) + 8rem));margin:8px auto 0;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
-    .manuscript-pulse-btn {max-width:100%;white-space:normal;text-align:right;line-height:1.35;font-size:var(--text-micro,.8125rem);color:var(--muted);background:transparent;border:1px solid transparent;border-radius:var(--radius-pill,999px);padding:3px 10px;cursor:pointer;}
-    .manuscript-pulse-btn:hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
-    #manuscript-pulse-popover {background:var(--surface);border:1px solid var(--line);border-radius:var(--radius,12px);padding:10px 14px;box-shadow:var(--shadow);font-size:var(--text-micro,.8125rem);color:var(--muted);max-width:100%;box-sizing:border-box;}
-    #manuscript-pulse-popover svg {display:block;margin-top:6px;color:var(--accent,currentColor);}
+    #manuscript-pulse-popover {padding:var(--space-2);font-size:var(--text-small);color:var(--muted);overflow-wrap:anywhere;}
+    #manuscript-pulse-popover svg {display:block;margin-block-start:var(--space-2);color:var(--accent);max-inline-size:100%;}
     .manuscript-compare-metrics {font-weight:400;color:var(--muted);margin-top:2px;}
     .manuscript-comparison-chapters {margin-top:var(--space-3,12px);padding-top:var(--space-3,12px);border-top:1px solid var(--line);font-size:var(--text-small,.875rem);}
     .manuscript-comparison-chapters h3 {margin:0 0 6px;font-size:var(--text-small,.875rem);font-weight:var(--weight-semibold,600);}
@@ -300,9 +303,6 @@
     }
     @media(max-width:600px) {
       .manuscript-editor-toolbar button.ctl, #manuscript-versions > summary {min-height:2.75rem;}
-      #manuscript-session-pulse-wrap {align-items:stretch;}
-      .manuscript-pulse-btn {text-align:center;min-height:2.75rem;}
-      #manuscript-pulse-popover {width:100%;}
       #manuscript-comparison {width:calc(100vw - 16px);max-width:calc(100vw - 16px);}
     }
     body.manuscript-writing #chapters,body.manuscript-writing #text-search,body.manuscript-writing .toolbar {display:none!important;}
@@ -327,7 +327,7 @@
     reload.hidden = !paused;
     notifyDesktopDirty();
   }
-  let pulseGeneration = 0;
+  let pulseRequest = null;
   let sessionBaselineLines = [];
   let gutterRaf = 0;
   function markEditedLines() {
@@ -524,30 +524,37 @@
       '<polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="' + pts + '"/>' +
       '</svg>';
   }
+  function cancelPulse() {
+    pulseRequest?.abort();
+    pulseRequest = null;
+  }
   async function refreshPulse() {
-    const generation = ++pulseGeneration;
+    cancelPulse();
+    const controller = new AbortController();
+    pulseRequest = controller;
     const {document: documentId, revision} = snapshot;
-    const isCurrent = () => generation === pulseGeneration &&
+    const isCurrent = () => pulseRequest === controller && pulse.open && versions.open &&
       snapshot.document === documentId && snapshot.revision === revision;
+    pulsePopover.textContent = L('editor_compare_metrics_loading');
     try {
       const [deltaRes, tlRes] = await Promise.all([
-        request('/manuscript-delta'),
-        request('/manuscript-timeline?limit=14'),
+        request('/manuscript-delta', null, {signal: controller.signal}),
+        request('/manuscript-timeline?limit=14', null, {signal: controller.signal}),
       ]);
       if (!isCurrent()) return;
       if (deltaRes.document !== documentId || tlRes.document !== documentId ||
           deltaRes.current?.revision !== revision || !Array.isArray(tlRes.revisions)) {
-        pulseWrap.hidden = true;
+        pulsePopover.textContent = L('editor_compare_metrics_stale');
         return;
       }
       const revisions = tlRes.revisions;
-      pulseBtn.textContent = formatMetricsLine(deltaRes.current, deltaRes.has_baseline ? deltaRes.deltas : null);
+      const values = document.createElement('p');
+      values.textContent = formatMetricsLine(deltaRes.current, deltaRes.has_baseline ? deltaRes.deltas : null);
       const since = deltaRes.has_baseline ? baselineLabel(deltaRes.base) : '';
-      if (since) pulseBtn.append(' · ' + since);
-      pulseWrap.hidden = false;
+      if (since) values.append(' · ' + since);
       const head = document.createElement('div');
       head.textContent = L('editor_pulse_title') + ' (' + fmtNum(revisions.length, 0) + ' ' + L('editor_pulse_revisions') + ')';
-      pulsePopover.replaceChildren(head);
+      pulsePopover.replaceChildren(values, head);
       if (revisions.length >= 2) {
         const chart = document.createElement('div');
         chart.innerHTML = renderSparklineSvg(revisions);
@@ -558,7 +565,9 @@
         pulsePopover.append(noteEl);
       }
     } catch (_) {
-      if (isCurrent()) pulseWrap.hidden = true;
+      if (isCurrent()) pulsePopover.textContent = L('editor_compare_metrics_unavailable');
+    } finally {
+      if (pulseRequest === controller) pulseRequest = null;
     }
   }
   async function request(path, payload, {signal} = {}) {
@@ -596,7 +605,7 @@
       const result = await request('/manuscript-edit', sent);
       snapshot.revision = result.revision; snapshot.text = sent.text; pending = null; dirty = editor.text() !== sent.text;
       show(dirty ? 'unsaved' : 'saved', dirty ? L('editor_pending_changes') : text(5));
-      refreshPulse().catch(() => {});
+      if (versions.open && pulse.open) refreshPulse();
     } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
     finally {
       inflight = false;
@@ -632,13 +641,17 @@
     );
     return visible ? Number(visible.dataset.start) : 1;
   }
+  function enterEditor() {
+    dockCompanionTools(true);
+    section.hidden = false;
+    document.body.classList.add('manuscript-writing');
+  }
   async function open(targetLine) {
     if (loading) return;
     const requestedLine = Number.isInteger(targetLine) && targetLine > 0 ? targetLine : null;
     if (editor) {
       openingLine = requestedLine || visibleReaderLine();
-      dockCompanionTools(true);
-      section.hidden = false; document.body.classList.add('manuscript-writing');
+      enterEditor();
       openButton.hidden = true; closeButton.hidden = false;
       if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
@@ -650,8 +663,7 @@
       openingLine = requestedLine || visibleReaderLine();
       if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
       loaded = true;
-      dockCompanionTools(true);
-      section.hidden = false; document.body.classList.add('manuscript-writing');
+      enterEditor();
       openButton.hidden = true; closeButton.hidden = false;
       if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
       editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
@@ -663,7 +675,7 @@
         cmContent.setAttribute('autocapitalize', 'off');
       }
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
-      editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); refreshPulse().catch(() => {}); editor.focus();
+      editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
     } catch (error) {section.hidden = false; show('error', error.message);}
     finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0));}
   }

@@ -19,6 +19,7 @@ from lixity.format import num, pct
 from lixity.language import LANGUAGE_PROFILES
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.models import CorpusConfig
+from lixity.quotation_projection import quoted_prose
 from lixity.style_profile import ParagraphProfiler
 from lixity.ui.components import help_term, label
 from lixity.ui.dashboard import render_dashboard
@@ -81,6 +82,43 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(CorpusAnalyzer().lang.key, "en")
         self.assertEqual(api.analyze(text)["meta"]["language"], "en")
         self.assertEqual(api.analyze(text, language="auto")["meta"]["language"], "de")
+
+    def test_direct_analyzer_resolves_automatic_language_per_input(self):
+        german = "## Kapitel\n\nIch halte die Wache und ich sehe das Haus. Die Tür ist offen."
+        english = "## Chapter\n\n'I will see you there,' she says. It is the way we always go."
+        analyzer = CorpusAnalyzer(CorpusConfig(language=" AUTO "))
+        expected_de = CorpusAnalyzer(CorpusConfig(language="de")).analyze_text(german)
+        expected_en = CorpusAnalyzer().analyze_text(english)
+        generic = CorpusConfig(language="generic")
+
+        self.assertEqual(analyzer.analyze_text(german), expected_de)
+        self.assertEqual(analyzer.analyze_text(english), expected_en)
+        self.assertEqual(analyzer.analyze_text(""), CorpusAnalyzer(generic).analyze_text(""))
+        self.assertEqual(analyzer.lang.key, "generic")
+        self.assertEqual(
+            analyzer.measure_unit(german.split("\n\n", 1)[1]).dominance,
+            expected_de.chapters[0].dominance,
+        )
+
+        # Generic quote rules do not recognize the English single quotation.
+        projection = quoted_prose(english, generic)
+        self.assertFalse(projection.analysis.quote_ranges)
+        self.assertGreater(expected_en.dialog_words, 0)
+        self.assertEqual(analyzer.analyze_text(english, projection=projection), expected_en)
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "sample.md"
+            source.write_text(german, encoding="utf-8")
+            self.assertEqual(analyzer.analyze_file(str(source)), expected_de)
+
+        fixed = CorpusAnalyzer(CorpusConfig(language="auto"), sample_text=german)
+        self.assertEqual(fixed.lang.key, "de")
+        self.assertEqual(fixed.analyze_text(english), CorpusAnalyzer(CorpusConfig(language="de")).analyze_text(english))
+
+    def test_unbound_auto_analyzer_checks_the_tense_model_after_detection(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="auto", tense_model="en_core_web_sm"))
+        with self.assertRaisesRegex(ValueError, "tense model does not match"):
+            analyzer.analyze_text("## Kapitel\n\nIch sehe das Haus und die Tür ist offen.")
 
     def test_all_supported_profiles_have_complete_resource_keys(self):
         for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS", "SCENE_LABELS", "WORKSPACE_LABELS"):

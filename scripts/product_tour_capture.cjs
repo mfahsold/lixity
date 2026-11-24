@@ -145,7 +145,10 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         await open();
         await page.locator('#manuscript-analysis-toggle').click();
         await page.locator('#style-layer').selectOption('sticky');
+        const readingMarks = page.locator('#reader-analysis-options > summary');
+        await readingMarks.click();
         await page.locator('#analysis-evidence-enabled').check();
+        await readingMarks.press('Enter');
         const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id => {
           const layer = paragraphContent[id][3]?.layers?.sticky;
           return layer && layer.mapped_count > 0 && paragraphContent[id][0].length < 500 && document.getElementById(id);

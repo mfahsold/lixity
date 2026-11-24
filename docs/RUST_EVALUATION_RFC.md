@@ -161,3 +161,11 @@ continues to exercise the authenticated host boundary.
   full-pipeline gains missed the 5% qualification target. The Apple Silicon
   prototype was about 544 KiB. Cross-platform installation was outside this
   measurement.
+- **Scene-half quotation counts.** Count all words and the wholly quoted
+  subset in one pass over sentences with recognized quotations. Four
+  alternating runs on Apple Silicon used the same Python 3.12.16 runtime and
+  the preceding installed build as the baseline. Median scene-stage time
+  changed from 398 to 386 ms for *Pride and Prejudice*, 279 to 257 ms for
+  *Effi Briest*, and 275 to 271 ms for 120 synthetic chapters. Report digests
+  matched on all three inputs. These are scene-stage timings. Profile the
+  full request again before selecting a native boundary.

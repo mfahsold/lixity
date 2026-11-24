@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "La ricerca riguarda tutto il manoscritto. Cancellala per riattivare il filtro dei tempi verbali.",
   "layer_position_pending": "Paragrafi che si discostano · {total}",
   "layer_comparison_inline_only": "Questa misura può evidenziare i brani. Qui il confronto tra paragrafi non è disponibile.",
-  "scene_intent_no_scene": "Le schede restano accessibili. Potrai ricollegarle quando sarà disponibile una scena misurata."
+  "scene_intent_no_scene": "Le schede restano accessibili. Potrai ricollegarle quando sarà disponibile una scena misurata.",
+  "reading_analysis_options": "Segni di lettura",
+  "scene_intent_reanchor": "Verifica la scena associata",
+  "scene_intent_return_to_card": "Torna alla scheda d’intento",
+  "scene_intent_order_conflict": "L’ordine è stato modificato altrove. È mostrato l’ordine attualmente salvato.",
+  "scene_intent_edit_conflict": "Questa scheda è stata modificata o rimossa altrove. La bozza resta nel modulo. Puoi salvarla come nuova scheda.",
+  "scene_intent_save_as_new": "Usa come nuova scheda",
+  "scene_intent_discard_draft": "Scartare le modifiche non salvate a questa scheda?",
+  "structural_selection_method": "Le tendenze e il confronto tra le metà del manoscritto usano selezioni nominali BH separate. I tassi di errore non sono calibrati per i manoscritti."
 }

@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "La recherche porte sur tout le manuscrit. Effacez la recherche pour réactiver le filtre des temps verbaux.",
   "layer_position_pending": "Paragraphes qui se distinguent · {total}",
   "layer_comparison_inline_only": "Cette mesure permet de marquer des passages. La comparaison des paragraphes est indisponible ici.",
-  "scene_intent_no_scene": "Vos cartes restent accessibles. Vous pourrez les rattacher dès qu’une scène pourra être mesurée."
+  "scene_intent_no_scene": "Vos cartes restent accessibles. Vous pourrez les rattacher dès qu’une scène pourra être mesurée.",
+  "reading_analysis_options": "Marques de lecture",
+  "scene_intent_reanchor": "Vérifier la scène associée",
+  "scene_intent_return_to_card": "Revenir à la fiche d’intention",
+  "scene_intent_order_conflict": "L’ordre a été modifié ailleurs. Voici l’ordre actuellement enregistré.",
+  "scene_intent_edit_conflict": "Cette fiche a été modifiée ou supprimée ailleurs. Votre brouillon reste dans le formulaire. Vous pouvez l’enregistrer comme nouvelle fiche.",
+  "scene_intent_save_as_new": "Utiliser comme nouvelle fiche",
+  "scene_intent_discard_draft": "Abandonner les modifications non enregistrées de cette fiche ?",
+  "structural_selection_method": "Les tendances et la comparaison des moitiés du manuscrit utilisent chacune une sélection nominale BH. Les taux d’erreur ne sont pas calibrés pour les manuscrits."
 }

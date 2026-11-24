@@ -1,4 +1,4 @@
-const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
+const {closeAnalysisSettings, openAnalysisSettings, selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Exact evidence highlights preserve prose nodes and expose the same explanation to pointer and keyboard users.
 const assert = require('node:assert/strict');
@@ -203,8 +203,7 @@ async function menuInspect(page, keyboard = false) {
   await page.locator('#analysis-evidence-card').waitFor({state:'visible'});
 }
 async function marksEnabled(page, enabled) {
-  await openAnalysisSettings(page);
-  await page.locator('#analysis-evidence-enabled').setChecked(enabled);
+  await setAnalysisOption(page, 'analysis-evidence-enabled', enabled);
   await page.keyboard.press('Escape');
 }
 async function localizedSentenceCards(browser) {
@@ -538,6 +537,7 @@ server.serve_forever()
         assert.equal(await metric.inputValue(), 'asl');
       }
       assert.equal(await metric.evaluate(node => node === document.activeElement), true);
+      await openAnalysisSettings(page);
       for (const id of ['analysis-evidence-enabled', 'analysis-comparison-enabled']) {
         const control = page.locator('#' + id), other = page.locator('#' + (id === 'analysis-evidence-enabled' ? 'analysis-comparison-enabled' : 'analysis-evidence-enabled'));
         const before = await control.isChecked(), otherBefore = await other.isChecked();
@@ -625,6 +625,7 @@ server.serve_forever()
       assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true, 'reload retains explicitly enabled marks');
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('layer-on')), true, 'restored metric reapplies shared paragraph layer');
+      await openAnalysisSettings(page);
       assert.equal(await page.locator('#layer-legend').isVisible(), true);
       assert.equal(await page.locator('#layer-legend-title').textContent(), 'Sentence length · words per sentence',
         'the restored metric names its raw measurement unit');
@@ -636,14 +637,14 @@ server.serve_forever()
       await selectMetric(page, 'asl');
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true,
         'Reselecting a cleared metric restores its own counted-text preference');
-      await page.locator('#analysis-evidence-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', false);
       await page.keyboard.press('Escape');
       await page.locator('#manuscript-analysis-toggle').click();
       await page.locator('#manuscript-analysis-toggle').click(); await settle(page);
       assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), false, 'On respects deliberate disabled marks');
       assert.deepEqual(await ranges(page), []);
       assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true, 'paragraph comparison survives disabling counted text');
-      await page.locator('#analysis-comparison-enabled').uncheck();
+      await setAnalysisOption(page, 'analysis-comparison-enabled', false);
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
       await selectMetric(page, '');
       await page.locator('#manuscript-analysis-toggle').click();
@@ -670,7 +671,7 @@ server.serve_forever()
         select.addEventListener('change', () => { select.dataset.resetChanges = String(Number(select.dataset.resetChanges) + 1); });
       });
       await openAnalysisSettings(page);
-      await page.locator('#filter-flags').check();
+      await setAnalysisOption(page, 'filter-flags', true);
       await page.keyboard.press('Escape');
       await page.locator('#paragraph-filter-reset').click();
       assert.equal(await page.locator('#style-layer').getAttribute('data-reset-changes'), '0',
@@ -807,12 +808,14 @@ async function metricPreferences(browser) {
         await selectMetric(page, 'nominal');
         await marksEnabled(page, true);
         assert.equal(await page.locator('#style-layer option:checked').textContent(), 'Nominalstil-Muster');
+        await openAnalysisSettings(page);
         await page.locator('.layer-comparison-note > summary').click();
         assert.match(await page.locator('#layer-comparison-hint').textContent(), /je 1\.000 Wörter/);
         assert.match(await page.locator('#layer-comparison-hint').textContent(), /etwa Endungen wie „-ung“/);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({path:path.join(artifacts, `german-nominal-guide-${width}.png`)});
         await page.locator('.layer-comparison-note > summary').click();
+        await closeAnalysisSettings(page);
         await page.locator('.ptext').first().scrollIntoViewIfNeeded();
         await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'Untersuchung'));
         assert.deepEqual(await ranges(page), ['Untersuchung'], 'German contractions are excluded from actual nominal highlights');
@@ -1341,7 +1344,7 @@ async function verifyInlineMarkPreferences(browser, url) {
     for (const key of inlineOptions) {
       await selectMetric(page, key);
       assert.equal(await marks.isChecked(), true, `${key} defaults to marking on first use`);
-      await marks.uncheck();
+      await marksEnabled(page, false);
       await selectMetric(page, '');
       await selectMetric(page, 'asl');
       await selectMetric(page, key);
@@ -1358,7 +1361,7 @@ async function verifyInlineMarkPreferences(browser, url) {
       await selectMetric(page, key);
       assert.equal(await marks.isChecked(), false, `${key} keeps its own explicit choice after reload`);
     }
-    await marks.check();
+    await marksEnabled(page, true);
     await selectMetric(page, 'sticky');
     await selectMetric(page, 'echo');
     assert.equal(await marks.isChecked(), true, 'The reader also remembers an explicit re-enable');
@@ -1478,6 +1481,7 @@ server.serve_forever()
           await page.keyboard.press('Escape');
           await selectMetric(page, 'asl');
           assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true);
+          await openAnalysisSettings(page);
           assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
           await page.locator('#reader-direct-speech').click();
           assert.equal(await page.locator('#reader-direct-speech').getAttribute('aria-pressed'), 'true');
@@ -1555,10 +1559,13 @@ server.serve_forever()
           const legend = page.locator('#layer-legend'), counted = page.locator('#layer-evidence-legend'), comparison = page.locator('#layer-comparison-legend');
           assert.equal(await legend.isVisible(), false);
           await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await legend.isVisible(), false, 'The active analysis starts without an expanded key');
+          await openAnalysisSettings(page);
           assert.equal(await counted.isVisible(), false, 'Counted text is initially off');
           assert.equal(await comparison.isVisible(), true, 'Paragraph comparison is initially on');
           assert.deepEqual(await ranges(page), [], 'No counted-text ranges are painted by default');
           await marksEnabled(page, true);
+          await openAnalysisSettings(page);
           assert.equal(await counted.isVisible(), true, 'Counted text has its own visible legend');
           assert.equal(await comparison.isVisible(), true, 'Paragraph comparison has a separate visible legend');
           assert.equal(await page.locator('.toolbar > .legend').isVisible(), false, 'An active metric hides the unrelated tense key in reading');
@@ -1570,6 +1577,7 @@ server.serve_forever()
           for (const key of ['asl', 'passive']) {
             await selectMetric(page, key);
             await marksEnabled(page, true);
+            await openAnalysisSettings(page);
             const current = await page.locator('#style-layer option:checked').evaluate(node => ({title:node.textContent,hint:node.dataset.hint}));
             assert.equal(await page.locator('#layer-comparison-hint').textContent(), current.hint);
             const guide = legend.locator('.layer-comparison-note');
@@ -1580,12 +1588,14 @@ server.serve_forever()
             assert.ok((await page.locator('#layer-evidence-hint').textContent()).includes(current.title));
             await guide.locator('summary').click();
           }
-          await page.locator('#analysis-comparison-enabled').uncheck();
+          await setAnalysisOption(page, 'analysis-comparison-enabled', false);
+          await openAnalysisSettings(page);
           assert.equal(await comparison.isVisible(), false, 'the comparison switch controls its own legend');
           assert.equal(await counted.isVisible(), true, 'disabling paragraph comparison retains counted-text explanation');
           assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true);
           assert.equal(await page.locator('.reader-comparison-value:visible').count(), 0, 'disabled comparison hides raw paragraph buttons');
-          await page.locator('#analysis-comparison-enabled').check();
+          await setAnalysisOption(page, 'analysis-comparison-enabled', true);
+          await openAnalysisSettings(page);
           assert.equal(await comparison.isVisible(), true);
           if (fault) {
             await page.locator('#chapters .ptext').first().scrollIntoViewIfNeeded();
@@ -1595,20 +1605,16 @@ server.serve_forever()
             assert.equal(await page.locator('#analysis-evidence-status').evaluate(node => Boolean(node.closest('#reader-analysis-settings'))), false, 'Unavailable marks are explained outside the direct analysis controls');
             assert.equal(await page.evaluate(() => CSS.highlights?.get('lixity-analysis-evidence')?.size || 0), 0);
           }
-          await openAnalysisSettings(page); await page.locator('#analysis-evidence-enabled').uncheck();
-          await page.keyboard.press('Escape');
+          await setAnalysisOption(page, 'analysis-evidence-enabled', false);
+          await openAnalysisSettings(page);
           assert.equal(await counted.isVisible(), false);
           assert.equal(await comparison.isVisible(), true, 'Disabling counted marks retains paragraph comparisons');
           await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
           assert.equal(await counted.isVisible(), false, 'Reload preserves the unchecked preference');
           assert.equal(await page.locator('#style-layer').inputValue(), 'passive');
-          await openAnalysisSettings(page); await page.locator('#analysis-evidence-enabled').check();
-          await page.keyboard.press('Escape');
+          await setAnalysisOption(page, 'analysis-evidence-enabled', true);
+          await openAnalysisSettings(page);
           assert.equal(await counted.isVisible(), true);
-          await legend.evaluate(node => {
-            const toolbar = document.getElementById('manuscript-reader-controls').getBoundingClientRect();
-            window.scrollBy({top:node.getBoundingClientRect().top - toolbar.bottom - 8,behavior:'instant'});
-          });
           await settle(page);
           assert.equal(await legend.evaluate(node => {const box=node.getBoundingClientRect(); return box.left >= 0 && box.right <= innerWidth;}), true);
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

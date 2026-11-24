@@ -1,4 +1,5 @@
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
+const {setAnalysisOption} = require('./support/analysis-controls.cjs');
 // Shared workbench journeys preserve document identity across optional tools.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -140,7 +141,7 @@ async function nativeReaderPreferences(browser) {
     await reading;
     assert.deepEqual(patches, [], 'The temporary default selection does not overwrite native preferences');
     await metric.selectOption('function');
-    await counted.check();
+    await setAnalysisOption(page, 'analysis-evidence-enabled', true);
     await expect.poll(() => patches.length).toBe(2);
     releaseFirst();
     await expect(page.locator('#reader-size-value')).toHaveText('22');

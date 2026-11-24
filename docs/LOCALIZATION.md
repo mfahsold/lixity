@@ -16,10 +16,12 @@ The native dashboard currently follows its analysis profile:
 | `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
 | Dashboard language | Follows the manuscript's resolved analysis profile, using all seven UI resource packs. The native language control is not an independent interface-language preference. |
 
-Detection uses the text the caller supplies: `pipeline.resolve_document_config`
-resolves `auto` before analysis. Low-level `CorpusAnalyzer`/`ParagraphProfiler`
-calls resolve `auto` without a sample and fall back to `generic`, so resolve
-`auto` first (or pass a concrete key) before calling them directly.
+Detection uses the text the caller supplies. `pipeline.resolve_document_config`
+resolves `auto` before analysis. Direct `CorpusAnalyzer` text, file and unit
+analysis resolve `auto` separately for each input unless a representative
+`sample_text` binds the analyzer to one profile. Profile helpers on an unbound
+analyzer use `generic`. For direct `ParagraphProfiler` calls, supply a sample
+or resolve `auto` to a concrete key before passing the parsed blocks.
 
 Research CLI help and errors are English; JSON keys are language-neutral.
 Sources, quotations, filenames, external metadata, claim titles and author

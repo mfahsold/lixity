@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "De zoekopdracht doorzoekt het hele manuscript. Wis de zoekopdracht om het werkwoordstijdfilter te hervatten.",
   "layer_position_pending": "Afwijkende alinea’s · {total}",
   "layer_comparison_inline_only": "Met deze meting kun je passages markeren. Alineavergelijking is hier niet beschikbaar.",
-  "scene_intent_no_scene": "Je kaarten blijven toegankelijk. Je kunt een kaart opnieuw koppelen zodra er een gemeten scène is."
+  "scene_intent_no_scene": "Je kaarten blijven toegankelijk. Je kunt een kaart opnieuw koppelen zodra er een gemeten scène is.",
+  "reading_analysis_options": "Leesmarkeringen",
+  "scene_intent_reanchor": "Controleer de gekoppelde scène",
+  "scene_intent_return_to_card": "Terug naar de intentiekaart",
+  "scene_intent_order_conflict": "De volgorde is elders gewijzigd. Dit is de huidige opgeslagen volgorde.",
+  "scene_intent_edit_conflict": "Deze kaart is elders gewijzigd of verwijderd. Je concept staat nog in het formulier. Je kunt het als nieuwe kaart opslaan.",
+  "scene_intent_save_as_new": "Gebruik als nieuwe kaart",
+  "scene_intent_discard_draft": "Niet-opgeslagen wijzigingen aan deze kaart verwerpen?",
+  "structural_selection_method": "Trends en de vergelijking tussen manuscripthelften gebruiken aparte nominale BH-selecties. De foutpercentages zijn niet gekalibreerd voor manuscripten."
 }

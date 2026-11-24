@@ -112,6 +112,10 @@ stay recorded under their original measurement rules. For a new comparison,
 Lixity remeasures retained source text where it can and leaves a gap when it
 cannot establish comparable values.
 
+Open **Versions → Session evolution** when you want to check what changed in
+saved revisions. Its measurements load when you open it. Writing and autosave
+otherwise focus on the text and the current save status.
+
 ### Use recovery copies and project backups
 
 Choose an entry in **Versions → Choose a recovery copy**. **Load as draft**
@@ -346,7 +350,8 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-Use **Inspect passages** to choose what to inspect in the text. Open **Analysis
+Use **Inspect passages** to choose what to inspect in the text. Use **Paragraph
+details** to review the current passage and decide what to check next. Open **Analysis
 overview** to compare chapters or find manuscript-wide patterns. **Back to passage**
 restores your reading position and selected measurement. Changing the measurement in
 the reader keeps your place in the text.
@@ -361,7 +366,8 @@ In the overview, read the reason beside the first suggested passage. The
 button identifies whether it opens a tense flag or the manuscript start.
 Choose a question to reach its available reports and their measurement guides.
 
-**Underline counted passages** asks what went into the selected value. Its initial
+Open **Reading marks** to choose how the text is marked and to filter chapters
+by tense findings. **Underline counted passages** asks what went into the selected value. Its initial
 state follows inline-evidence availability and your choice is remembered per measure.
 **Mark differing paragraphs** asks how a paragraph differs from a typical paragraph in
 that chapter. It starts on and is shared across measures. Measures with no paragraph
@@ -506,7 +512,11 @@ or explicitly save it. The measurement rows keep the manuscript's order.
 After a change to the source or analysis, a saved card can show that it needs
 review. Open the current scene, select it in the card and save again to confirm
 the current anchor. If the scene is missing, its earlier label remains in the
-card for orientation. You can still review the saved cards if the scene measurements
+card for orientation. Use **Review scene anchor** to inspect the chosen scene and
+**Return to intent card** to keep editing the same draft. After a conflict,
+reloading shows the current saved order. If the card you were editing changed or
+was removed elsewhere, your draft stays in the form and can be saved as a new
+card. You can still review the saved cards if the scene measurements
 are temporarily unavailable. If the manuscript has no chapters, open **Story rehearsal**
 from the reader. The saved state belongs to the project and stays local.
 [Storage and update contract](AGENTS.md#author-intent-endpoints)

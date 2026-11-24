@@ -70,6 +70,8 @@ server.serve_forever()
         return originalQuery.call(this, selector);
       };
       try {
+        // Exercise the observed manuscript attributes as well as a real scroll.
+        chapters.style.minHeight = '301vh';
         window.scrollTo(0, 500);
         await nextFrame(); await nextFrame();
         const offset = window.scrollY;
@@ -82,7 +84,7 @@ server.serve_forever()
       }
     });
     assert.ok(plainScroll.offset >= 500, 'The map-free manuscript genuinely scrolls');
-    assert.equal(plainScroll.mapScans, 0, 'Scrolling a manuscript with no maps does not run the geography scan');
+    assert.equal(plainScroll.mapScans, 0, 'Scrolling and updating manuscript controls with no maps do not scan for geography');
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();
     const collision = await page.evaluate(() => {
@@ -290,7 +292,13 @@ server.serve_forever()
       await pointerMap.screenshot({path: path.join(artifacts, `number-controls-${width}.png`)});
     }
     assert.equal(writes.length, beforePointerWrites, 'Map pointer and keyboard selection never writes research records');
-    await page.locator('#geo-pointer-regression').evaluate(node => node.remove());
+    const detachedMap = await pointerMap.elementHandle();
+    try {
+      await page.locator('#geo-pointer-regression').evaluate(node => node.remove());
+      await expect.poll(() => detachedMap.evaluate(node => !node._geographyMap && !node.childElementCount), {
+        message: 'Removing the last displayed map releases its Leaflet instance',
+      }).toBe(true);
+    } finally { await detachedMap.dispose(); }
     await page.setViewportSize({width: 1440, height: 1000});
     if (!await page.locator('#r-dos-composer').evaluate(node => node.open)) await page.locator('#r-dos-composer > summary').click();
     await page.locator('#r-dos-title').fill('Synthetic harbour journey');

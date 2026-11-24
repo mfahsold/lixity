@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "Die Textsuche durchsucht das ganze Manuskript. Danach gilt der Zeitformfilter wieder.",
   "layer_position_pending": "Abweichende Absätze · {total}",
   "layer_comparison_inline_only": "Zu dieser Messung lassen sich Textstellen markieren. Ein Absatzvergleich ist hier nicht verfügbar.",
-  "scene_intent_no_scene": "Die Karten bleiben zugänglich. Sobald eine Szene messbar ist, kannst du eine Karte wieder zuordnen."
+  "scene_intent_no_scene": "Die Karten bleiben zugänglich. Sobald eine Szene messbar ist, kannst du eine Karte wieder zuordnen.",
+  "reading_analysis_options": "Lesemarken",
+  "scene_intent_reanchor": "Zuordnung prüfen",
+  "scene_intent_return_to_card": "Zurück zur Absichtskarte",
+  "scene_intent_order_conflict": "Die Reihenfolge wurde anderswo geändert. Hier siehst du die aktuell gespeicherte Reihenfolge.",
+  "scene_intent_edit_conflict": "Diese Karte wurde anderswo geändert oder gelöscht. Dein Entwurf bleibt im Formular. Du kannst ihn als neue Karte speichern.",
+  "scene_intent_save_as_new": "Als neue Karte übernehmen",
+  "scene_intent_discard_draft": "Ungespeicherte Änderungen an dieser Karte verwerfen?",
+  "structural_selection_method": "Für Trends und den Vergleich der Manuskripthälften verwendet Lixity separat die nominale BH-Auswahl. Die Fehlerraten sind für Manuskripte nicht kalibriert."
 }

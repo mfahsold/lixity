@@ -494,10 +494,14 @@ async function settingsGeometry(page, locale, width) {
       }
       const group = page.locator('#reader-analysis-settings');
       assert.equal(await group.getAttribute('role'), 'group');
-      assert.equal(await group.locator('summary').count(), 0, 'Analysis settings are directly accessible');
+      const options = group.locator('#reader-analysis-options');
+      assert.equal(await options.evaluate(node => node.open), false, 'Optional marks start collapsed');
       for (const selector of ['#style-layer', '#analysis-evidence-enabled', '#analysis-comparison-enabled']) {
         const control = page.locator(selector);
-        assert.equal(await control.evaluate(node => node.closest('details')), null);
+        if (selector !== '#style-layer' && !await options.evaluate(node => node.open)) {
+          await options.locator(':scope > summary').press('Enter');
+        }
+        assert.equal(await control.evaluate(node => node.closest('details')?.id || ''), selector === '#style-layer' ? '' : 'reader-analysis-options');
         await expect(control).toBeVisible();
         const help = await control.getAttribute('data-help');
         assert.ok(help && help.trim(), 'Each analysis choice explains its effect before activation');

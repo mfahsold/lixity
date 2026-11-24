@@ -1169,6 +1169,53 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     outline_sections = ([("analysis-review", "review_title")] if has_chapters else []) + active_sections
     analysis_outline = analysis_outline_nav(outline_sections, labels)
 
+    reader_analysis_controls = has_reading and controls and bool(paragraphs)
+    layer_language_note = (
+        f'<p class="ctl-note" id="layer-language-unavailable" role="status" hidden>{L("layer_language_unavailable")}</p>'
+    )
+    layer_evidence_status = '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p>'
+    legend_parts: list[str] = []
+    legend_parts.append(
+        f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
+        f'data-cutoff="{PARAGRAPH_LAYER_Z_CUTOFF}" '
+        f'data-profiled="{len(paragraphs)}" '
+        f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
+        f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
+    )
+    if not reader_analysis_controls:
+        legend_parts.append(layer_language_note)
+    legend_parts.append(f'<p class="ctl-note" id="layer-comparison-unavailable" hidden>{L("layer_comparison_inline_only")}</p>')
+    legend_parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
+                 f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
+                 '<p class="ctl-note" id="analysis-evidence-instruction"></p>'
+                 + ("" if reader_analysis_controls else layer_evidence_status) + '</div>')
+    legend_parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
+                 f'<strong>{L("legend_paragraph_comparison")}</strong>')
+    legend_parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
+    legend_parts.append(comparison_legend(labels, chapter=True))
+    legend_parts.append(f'<p class="ctl-note">{L("comparison_missing_mark")}</p>')
+    legend_parts.append('<span class="layer-count" id="layer-legend-count" role="status" aria-live="polite"></span>')
+    legend_parts.append(
+        f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
+        f"{esc(label(labels, 'layer_only'))}</label>"
+    )
+    if not (has_reading and controls and paragraphs):
+        legend_parts.append(layer_navigation)
+    legend_parts.append('</div>')
+    layer_reference = (
+        metric_reference_link(labels, "measurements", element_id="layer-metric-reference") if not controls else ""
+    )
+    legend_parts.append(
+        f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
+        '<p id="layer-comparison-hint"></p><p id="layer-evidence-hint"></p>'
+        f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
+        + (f'<p class="ctl-note">{layer_reference}</p>' if layer_reference else '')
+        + f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>'
+    )
+    legend_parts.append("</div>")
+
+    layer_legend = "".join(legend_parts)
+
     if has_reading and controls:
         flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags" aria-controls="chapters"/>', L("filter_flags"),
                                        extra_class="js-analysis-control")
@@ -1181,7 +1228,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked '
             f'data-help="{L("reading_help_comparison")}"/> '
             f'<span class="analysis-comparison-key">{L("reader_comparison_action")}</span></label>'
-            f'{layer_navigation}'
             '</div>'
             f'{flag_checkbox}'
             '</div>'
@@ -1189,8 +1235,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         analysis_controls = (
             '<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_analysis")}">'
-            f'{metric_control}{analysis_switches}</div>'
-        ) if paragraphs or workflow_sections else ""
+            f'{metric_control}'
+            f'<button type="button" class="ctl" id="reader-inspect-current">{L("reading_explore_passage")}</button>'
+            f'{layer_navigation}'
+            '<details class="reader-settings reader-analysis-options" id="reader-analysis-options" name="reader-settings">'
+            f'<summary class="ctl">{L("reading_analysis_options")}</summary>'
+            f'<div class="reader-settings-body">{analysis_switches}{layer_legend}</div></details></div>'
+        ) if reader_analysis_controls else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
     else:
@@ -1394,43 +1445,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             f'{L("paragraph_filter_reset")}</button></div>'
         )
 
-    parts.append(
-        f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
-        f'data-cutoff="{PARAGRAPH_LAYER_Z_CUTOFF}" '
-        f'data-profiled="{len(paragraphs)}" '
-        f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
-        f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
-    )
-    parts.append(f'<p class="ctl-note" id="layer-language-unavailable" role="status" hidden>{L("layer_language_unavailable")}</p>')
-    parts.append(f'<p class="ctl-note" id="layer-comparison-unavailable" hidden>{L("layer_comparison_inline_only")}</p>')
-    parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
-                 f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
-                 '<p class="ctl-note" id="analysis-evidence-instruction"></p>'
-                 '<p class="ctl-note" id="analysis-evidence-status" role="status" aria-live="polite"></p></div>')
-    parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
-                 f'<strong>{L("legend_paragraph_comparison")}</strong>')
-    parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
-    parts.append(comparison_legend(labels, chapter=True))
-    parts.append(f'<p class="ctl-note">{L("comparison_missing_mark")}</p>')
-    parts.append('<span class="layer-count" id="layer-legend-count" role="status" aria-live="polite"></span>')
-    parts.append(
-        f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
-        f"{esc(label(labels, 'layer_only'))}</label>"
-    )
-    if not (has_reading and controls and paragraphs):
-        parts.append(layer_navigation)
-    parts.append('</div>')
-    layer_reference = (
-        metric_reference_link(labels, "measurements", element_id="layer-metric-reference") if not controls else ""
-    )
-    parts.append(
-        f'<details class="layer-comparison-note"><summary>{L("analysis_marks_help")}</summary>'
-        '<p id="layer-comparison-hint"></p><p id="layer-evidence-hint"></p>'
-        f'<p class="ctl-note">{L("layer_comparison_help")}</p>'
-        + (f'<p class="ctl-note">{layer_reference}</p>' if layer_reference else '')
-        + f'<button class="ctl" id="layer-clear" type="button">{L("layer_clear")}</button></details>'
-    )
-    parts.append("</div>")
+    if reader_analysis_controls:
+        parts.append(layer_language_note + layer_evidence_status)
+    else:
+        parts.append(layer_legend)
 
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')

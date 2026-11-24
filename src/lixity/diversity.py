@@ -8,7 +8,7 @@ Pure, deterministic implementations of the established indices:
   length/factor scores, with factors completed at TTR <= 0.72.
 - **MATTR** (Covington & McFall 2010): moving-average TTR over a 50-token window.
 - **Maas a²** (Maas 1972): (log10 N − log10 V) / (log10 N)².
-- **Yule's K** (Yule 1944): 10^4 · (Σ m² V_m − N) / N².
+- **Yule's K** (Yule 1944): 10^4 · (Σ m² V_m − N) / (N(N−1)).
 
 HD-D, MTLD and Maas use a local short-text policy of at least
 :data:`MIN_TOKENS_LD` tokens. MATTR requires a full window; Yule's K returns

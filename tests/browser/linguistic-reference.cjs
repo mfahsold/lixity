@@ -9,7 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
-const {selectMetric} = require('./support/analysis-controls.cjs');
+const {selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-linguistic-reference-'));
 const reference = JSON.parse(fs.readFileSync(path.join(root, 'tests/fixtures/literary_reference.json'), 'utf8'));
@@ -239,7 +239,7 @@ async function checkBrowser(browser, caseData, form, width) {
     assert.equal(await page.locator('html').getAttribute('lang'), language);
     await page.locator('#manuscript-analysis-toggle').click();
     await selectMetric(page, 'asl');
-    await page.locator('#analysis-evidence-enabled').check();
+    await setAnalysisOption(page, 'analysis-evidence-enabled', true);
     // Open each native paragraph before recording its original DOM identity.
     for (const panel of await page.locator('#chapters .ptext').all()) await panel.scrollIntoViewIfNeeded();
     const before = await identity(page);
@@ -278,7 +278,7 @@ async function checkBrowser(browser, caseData, form, width) {
       await page.keyboard.press('Escape');
       await selectMetric(page, 'nominal');
       // Evidence visibility is a separate saved choice for each metric.
-      await page.locator('#analysis-evidence-enabled').check();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
       await panel.scrollIntoViewIfNeeded();
       const nominal = nominalGold[language][index];
       await waitForRanges(page, id, nominal);
@@ -302,7 +302,7 @@ async function checkBrowser(browser, caseData, form, width) {
       await checkComparison(card, fixture);
       await page.keyboard.press('Escape');
       await selectMetric(page, 'asl');
-      await page.locator('#analysis-evidence-enabled').check();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
     }
     assert.deepEqual(await identity(page), before, 'analysis and inspection preserve prose, anchors, and identity');
     assert.equal(await page.locator('#chapters .ptext-inner > p').evaluateAll(nodes => nodes.every((node, index) =>

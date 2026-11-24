@@ -98,12 +98,19 @@ class CorpusAnalyzer:
         """Initialises the analyzer with a configuration.
 
         If no configuration is passed, the default parameters apply.
-        ``sample_text`` lets an explicit ``language="auto"`` resolve against
-        the text to analyse; without it ``auto`` falls back to ``generic``
-        (documented in docs/LOCALIZATION.md).
+        An explicit ``language="auto"`` uses a supplied ``sample_text`` for
+        all analyses on this instance. Without a sample, each analysis
+        resolves against its own input and profile-only helpers use
+        the generic profile.
         """
         self.config = config or CorpusConfig()
+        automatic = self.config.language.strip().lower() == "auto"
+        self._detect_per_input = automatic and sample_text is None
         self.lang = resolve_language(self.config, sample_text=sample_text)
+        if self._detect_per_input:
+            # Bind the effective profile and its caches to each input.
+            return
+        self._chapter_config = self.config.model_copy(update={"language": self.lang.key}) if automatic else self.config
         self._tense = TenseMatcher(self.config, self.lang)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
         self._word_re = compile_word_pattern(self.lang.word_regex)
@@ -436,7 +443,10 @@ class CorpusAnalyzer:
 
         This omits corpus-level readability, cross-chapter divergence and title
         parsing. It is useful for scenes already segmented by the shared parser.
+        A supplied projection belongs to the selected prose unit and profile.
         """
+        if self._detect_per_input:
+            return CorpusAnalyzer(self.config, sample_text=text).measure_unit(text)
         return self._chapter_metrics(1, "", text, self.long_word_min(), projection=projection)[0]
 
     def _chapter_metrics(
@@ -558,6 +568,11 @@ class CorpusAnalyzer:
         Returns:
             CorpusMetrics object with all computed metrics.
         """
+        if self._detect_per_input:
+            # A precomputed projection has no profile identity. Rebuild it
+            # from the input after detection binds the language.
+            return CorpusAnalyzer(self.config, sample_text=full_text).analyze_text(full_text)
+
         # 1. Main text vs. appendix, comments removed
         main_text = before_appendix(full_text, self.config)
         cleaned_full = strip_html_comments(full_text)
@@ -629,7 +644,7 @@ class CorpusAnalyzer:
         #    appendix + empty-body rules identical to the structure modules).
         chapters: list[ChapterMetrics] = []
         chapter_tokens: list[list[str]] = []
-        for number, title, body in split_chapters(main_text, self.config):
+        for number, title, body in split_chapters(main_text, self._chapter_config):
             chapter, c_lower = self._chapter_metrics(number, title, body, lw_min)
             if chapter is None:
                 # Preserve structural chapter identity when its old visible

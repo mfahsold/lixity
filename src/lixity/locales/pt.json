@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "A busca percorre todo o manuscrito. Limpe a busca para voltar ao filtro de tempos verbais.",
   "layer_position_pending": "Parágrafos que se destacam · {total}",
   "layer_comparison_inline_only": "Esta medição permite marcar trechos. A comparação de parágrafos não está disponível aqui.",
-  "scene_intent_no_scene": "Os cartões continuam acessíveis. Pode voltar a associá-los quando houver uma cena medida."
+  "scene_intent_no_scene": "Os cartões continuam acessíveis. Pode voltar a associá-los quando houver uma cena medida.",
+  "reading_analysis_options": "Marcas de leitura",
+  "scene_intent_reanchor": "Revisar a cena vinculada",
+  "scene_intent_return_to_card": "Voltar ao cartão de intenção",
+  "scene_intent_order_conflict": "A ordem foi alterada em outro lugar. Aqui está a ordem salva atual.",
+  "scene_intent_edit_conflict": "Este cartão foi alterado ou excluído em outro lugar. O rascunho continua no formulário. Você pode salvá-lo como um novo cartão.",
+  "scene_intent_save_as_new": "Usar como novo cartão",
+  "scene_intent_discard_draft": "Descartar as alterações não salvas neste cartão?",
+  "structural_selection_method": "As tendências e a comparação entre as metades do manuscrito usam seleções nominais BH separadas. As taxas de erro não foram calibradas para manuscritos."
 }

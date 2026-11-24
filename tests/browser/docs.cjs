@@ -1,4 +1,4 @@
-const {selectMetric} = require('./support/analysis-controls.cjs');
+const {openAnalysisSettings, selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 const {launchChromium, playwrightModule, fullMatrix} = require('../../scripts/browser_tools.cjs');
 // Validate the public static site without contacting production or loading private data.
 const fs = require('node:fs');
@@ -682,7 +682,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await passage.evaluate(element => element.classList.contains('open')), false);
   const countVisible = () => page.locator('.chip:visible').count();
   const allVisible = await countVisible();
-  await page.locator('#filter-flags').check();
+  await setAnalysisOption(page, 'filter-flags', true);
   assert.equal(await page.locator('body').evaluate(element => element.classList.contains('only-flags')), true);
   const flaggedVisible = await countVisible();
   assert.ok(flaggedVisible < allVisible, 'The flag filter changes the visible paragraph blocks');
@@ -690,11 +690,13 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('#filter-flags').isChecked(), false);
   assert.equal(await countVisible(), allVisible, 'Reset restores the paragraph map');
   await selectMetric(page, 'asl');
+  await openAnalysisSettings(page);
   assert.equal(await page.locator('#layer-legend').isVisible(), true);
   assert.ok(await page.locator('.chip.has-layer').count() > 0, 'Selecting a layer changes actual paragraph data');
-  await page.locator('#filter-flags').check();
+  await setAnalysisOption(page, 'filter-flags', true);
   await page.locator('#paragraph-filter-reset').click();
   assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+  await openAnalysisSettings(page);
   assert.equal(await page.locator('#layer-legend').isVisible(), true);
   await selectMetric(page, '');
   assert.equal(await page.locator('#layer-legend').isVisible(), false);

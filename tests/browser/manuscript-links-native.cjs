@@ -1,3 +1,4 @@
+const {setAnalysisOption} = require('./support/analysis-controls.cjs');
 // Real native HTTP/browser saves retain synthetic quotes without changing prose.
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -301,7 +302,7 @@ server.serve_forever()
         await page.locator('#manuscript-analysis-toggle').click();
       }
       await page.locator('#style-layer').selectOption('asl');
-      await page.locator('#analysis-evidence-enabled').check();
+      await setAnalysisOption(page, 'analysis-evidence-enabled', true);
       // Mobile controls can scroll all prose offscreen; evidence is viewport-scoped.
       await paragraph.scrollIntoViewIfNeeded();
       await expect.poll(() => page.evaluate(() => CSS.highlights.get('lixity-analysis-evidence')?.size || 0)).toBeGreaterThan(0);

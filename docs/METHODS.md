@@ -444,7 +444,7 @@ limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
+| `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton segment cost is zero before the penalty. Longer segments use the variance floor, including flat segments. Anchored centred moments use $O(n^2)$ time and $O(n)$ storage. Features with missing chapters or $n<3$ appear in `segmentation_unavailable`. Complete series use 0-based indices of the first chapter after a break |
 | `trends` | Mann–Kendall $S$ with tie-corrected normal $p$, continuity correction, and Hamed & Rao (1998) autocorrelation variance correction for $n \ge 8$ ($\mathrm{Var}(S)\cdot n/n^*$ over significant detrended midrank lags $|\rho_k|>1.96/\sqrt{n}$); $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
@@ -464,7 +464,11 @@ is still a modelling choice, not a nondegenerate Gaussian likelihood. Anchoring
 before centred variance updates limits cancellation from large offsets without
 recovering precision already lost in input floats. Power-of-two rescaling
 keeps the global standardization within floating-point range before squaring
-the deviations.
+the deviations. At the floor a longer constant segment has cost
+$n\ln(10^{-9})$ before the penalty. This favors flat runs relative to noisier
+segments of the same length and can affect proposed boundaries in quantized
+measurements. An entirely constant series has no boundary at a nonnegative
+penalty.
 
 Sn's low/high medians follow the
 [original definition](https://wis.kuleuven.be/stat/robust/papers/publications-1993/rousseeuwcroux-alternativestomedianad-jasa-1993.pdf).
@@ -697,6 +701,11 @@ They are an orthographic proxy, not phonetic transcription: regional hiatus,
 foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
+The generic counter uses Latin `a–z` vowel groups. A token with no retained
+letters contributes zero estimated syllables. Generic ASW and derived
+syllable-based readability are unsuitable for comparing texts in scripts
+outside that alphabet. The word tokenizer can still recognize those tokens.
+
 **Since v0.7.2:** the estimator corrects skipped closed-vowel nuclei in Spanish, for example
 `vivir` from one estimated syllable to two and `dibujo` from one to three.
 This changes Spanish ASW and its derived readability score without changing
@@ -711,7 +720,8 @@ divergence is in $[0,\ln 2]$ nats. It is zero for identical distributions,
 regardless of their token counts. This is the equal-weight form of
 [Lin's Jensen–Shannon divergence (1991, §IV)](https://www.cise.ufl.edu/~anand/sp06/jensen-shannon.pdf).
 Driver words present in the chapter are ranked by their positive additive
-contribution, excluding function words and single-character tokens.
+contribution, excluding configured function words, stopwords and
+single-character tokens. This display filter does not change the divergence.
 Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
@@ -838,7 +848,8 @@ restating formulas.
 
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
-| Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
+| Sentence-length distribution | By default ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`) | Project sentence boundaries control these four bins. Tokenless fragments are excluded. |
+| Rhythm entropy | By default ≤ 6 / 7–20 / > 20 words (`pacing.py`, `rhythm_profile`) | The three-bin entropy uses its own medium/long threshold. Its buckets and entropy are comparable between reports with the same settings. |
 | Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; the displayed mean is over chapter endings, not scenes. This is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
 | Sentence-start monotony & adjacent overlap | `repeated_start_runs`: count of runs of ≥ `MONOTONY_MIN_RUN` (3) consecutive sentences in the same paragraph starting with the identical lowercased word token; `sentence_overlap_pct`: share of within-paragraph adjacent sentence pairs sharing at least one lowercased content word (tokens of length ≥ 2 not in `function_words`, or length ≥ `COHESION_FALLBACK_MIN_LEN` = 4 when `function_words` is empty) (`pacing.py`) | Repeated starts can be deliberate anaphora or unwitting monotony; lexical overlap ignores synonyms, pronouns, morphology and cross-paragraph links |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside chapter-wide recognized dialogue spans (`dialogue.py`); a span may cover multiple paragraphs | Quotation conventions differ per language; an unrecognized or unclosed quotation is not counted |

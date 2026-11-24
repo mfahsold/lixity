@@ -242,7 +242,7 @@ if (filter) {
     syncPassageScope();
     [prev, next].forEach(function(button) {
       if (!button) return;
-      button.hidden = !query;
+      button.hidden = !hits.length;
       button.disabled = !hits.length;
     });
     if (clear) clear.hidden = !query;
@@ -340,10 +340,13 @@ if (filter) {
 var paragraphReset = document.getElementById("paragraph-filter-reset");
 var paragraphFilterEmpty = document.getElementById("paragraph-filter-empty");
 var paragraphFilterSuspended = document.getElementById("paragraph-filter-suspended");
+var currentPassageControl = document.getElementById("reader-inspect-current");
 if (paragraphReset) paragraphReset.addEventListener("click", function() {
   var clear = function() {
     setFilter(filter, "only-flags", false);
-    if (filter) filter.focus({preventScroll: true});
+    var options = filter && filter.closest("details");
+    var trigger = options && !options.open ? options.querySelector("summary") : filter;
+    if (trigger) trigger.focus({preventScroll: true});
   };
   if (window.LixityReader) window.LixityReader.retain(clear);
   else clear();
@@ -395,6 +398,11 @@ function syncPassageScope() {
   if (paragraphFilterEmpty) paragraphFilterEmpty.hidden = !tenseScopeActive() ||
     Boolean(document.querySelector("#chapters .chapter.has-flags"));
   if (paragraphFilterSuspended) paragraphFilterSuspended.hidden = !tenseEnabled || !searching;
+  if (currentPassageControl) {
+    var passage = searching ? "#chapters .ptext:not(.text-miss)" :
+      tenseEnabled ? "#chapters .chapter.has-flags .ptext" : "#chapters .ptext";
+    currentPassageControl.disabled = !document.querySelector(passage);
+  }
   var option = selectedLayerOption();
   if (layerCount) {
     var comparable = Number(option?.dataset.comparable);

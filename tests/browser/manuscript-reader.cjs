@@ -1,3 +1,4 @@
+const {setAnalysisOption} = require('./support/analysis-controls.cjs');
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Reading keeps one exact manuscript tree; tools appear only on demand.
 const assert = require('node:assert/strict');
@@ -338,7 +339,7 @@ async function settleGeometry(page) {
       await page.locator('#reader-inspector-close').click();
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true,
         'Analysis exposes restrained paragraph diagnostics alongside the same prose');
-      await page.locator('#filter-flags').check();
+      await setAnalysisOption(page, 'filter-flags', true);
       await analysis.click();
       await settleGeometry(page);
       assert.equal(await page.locator('#chapters .chapter').evaluateAll(chapters => chapters.every(chapter => {
@@ -348,7 +349,7 @@ async function settleGeometry(page) {
       await analysis.click();
       assert.equal(await page.locator('#filter-flags').isChecked(), true,
         'Showing analysis retains the explicitly chosen diagnostic filter');
-      await page.locator('#filter-flags').uncheck();
+      await setAnalysisOption(page, 'filter-flags', false);
       await analysis.click();
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('.analysis-workflow-entries').isVisible(), true,

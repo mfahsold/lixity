@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "La búsqueda abarca todo el manuscrito. Bórrela para volver al filtro de tiempos verbales.",
   "layer_position_pending": "Párrafos que se apartan · {total}",
   "layer_comparison_inline_only": "Esta medida puede marcar fragmentos. La comparación de párrafos no está disponible aquí.",
-  "scene_intent_no_scene": "Las tarjetas siguen disponibles. Podrás volver a vincularlas cuando haya una escena medida."
+  "scene_intent_no_scene": "Las tarjetas siguen disponibles. Podrás volver a vincularlas cuando haya una escena medida.",
+  "reading_analysis_options": "Marcas de lectura",
+  "scene_intent_reanchor": "Revisar la escena vinculada",
+  "scene_intent_return_to_card": "Volver a la ficha de intención",
+  "scene_intent_order_conflict": "El orden se modificó en otro lugar. Se muestra el orden guardado actual.",
+  "scene_intent_edit_conflict": "Esta ficha se cambió o eliminó en otro lugar. El borrador sigue en el formulario. Puede guardarlo como ficha nueva.",
+  "scene_intent_save_as_new": "Usar como ficha nueva",
+  "scene_intent_discard_draft": "¿Descartar los cambios sin guardar de esta ficha?",
+  "structural_selection_method": "Las tendencias y la comparación entre mitades del manuscrito usan selecciones nominales BH separadas. Las tasas de error no están calibradas para manuscritos."
 }

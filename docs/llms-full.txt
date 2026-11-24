@@ -2260,6 +2260,10 @@ stay recorded under their original measurement rules. For a new comparison,
 Lixity remeasures retained source text where it can and leaves a gap when it
 cannot establish comparable values.
 
+Open **Versions → Session evolution** when you want to check what changed in
+saved revisions. Its measurements load when you open it. Writing and autosave
+otherwise focus on the text and the current save status.
+
 ### Use recovery copies and project backups
 
 Choose an entry in **Versions → Choose a recovery copy**. **Load as draft**
@@ -2494,7 +2498,8 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-Use **Inspect passages** to choose what to inspect in the text. Open **Analysis
+Use **Inspect passages** to choose what to inspect in the text. Use **Paragraph
+details** to review the current passage and decide what to check next. Open **Analysis
 overview** to compare chapters or find manuscript-wide patterns. **Back to passage**
 restores your reading position and selected measurement. Changing the measurement in
 the reader keeps your place in the text.
@@ -2509,7 +2514,8 @@ In the overview, read the reason beside the first suggested passage. The
 button identifies whether it opens a tense flag or the manuscript start.
 Choose a question to reach its available reports and their measurement guides.
 
-**Underline counted passages** asks what went into the selected value. Its initial
+Open **Reading marks** to choose how the text is marked and to filter chapters
+by tense findings. **Underline counted passages** asks what went into the selected value. Its initial
 state follows inline-evidence availability and your choice is remembered per measure.
 **Mark differing paragraphs** asks how a paragraph differs from a typical paragraph in
 that chapter. It starts on and is shared across measures. Measures with no paragraph
@@ -2654,7 +2660,11 @@ or explicitly save it. The measurement rows keep the manuscript's order.
 After a change to the source or analysis, a saved card can show that it needs
 review. Open the current scene, select it in the card and save again to confirm
 the current anchor. If the scene is missing, its earlier label remains in the
-card for orientation. You can still review the saved cards if the scene measurements
+card for orientation. Use **Review scene anchor** to inspect the chosen scene and
+**Return to intent card** to keep editing the same draft. After a conflict,
+reloading shows the current saved order. If the card you were editing changed or
+was removed elsewhere, your draft stays in the form and can be saved as a new
+card. You can still review the saved cards if the scene measurements
 are temporarily unavailable. If the manuscript has no chapters, open **Story rehearsal**
 from the reader. The saved state belongs to the project and stays local.
 [Storage and update contract](AGENTS.md#author-intent-endpoints)
@@ -8002,7 +8012,7 @@ limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; a feature with missing chapters or $n<3$ is listed in `segmentation_unavailable`; complete series use 0-based indices of the first chapter after a break |
+| `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton segment cost is zero before the penalty. Longer segments use the variance floor, including flat segments. Anchored centred moments use $O(n^2)$ time and $O(n)$ storage. Features with missing chapters or $n<3$ appear in `segmentation_unavailable`. Complete series use 0-based indices of the first chapter after a break |
 | `trends` | Mann–Kendall $S$ with tie-corrected normal $p$, continuity correction, and Hamed & Rao (1998) autocorrelation variance correction for $n \ge 8$ ($\mathrm{Var}(S)\cdot n/n^*$ over significant detrended midrank lags $|\rho_k|>1.96/\sqrt{n}$); $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
@@ -8022,7 +8032,11 @@ is still a modelling choice, not a nondegenerate Gaussian likelihood. Anchoring
 before centred variance updates limits cancellation from large offsets without
 recovering precision already lost in input floats. Power-of-two rescaling
 keeps the global standardization within floating-point range before squaring
-the deviations.
+the deviations. At the floor a longer constant segment has cost
+$n\ln(10^{-9})$ before the penalty. This favors flat runs relative to noisier
+segments of the same length and can affect proposed boundaries in quantized
+measurements. An entirely constant series has no boundary at a nonnegative
+penalty.
 
 Sn's low/high medians follow the
 [original definition](https://wis.kuleuven.be/stat/robust/papers/publications-1993/rousseeuwcroux-alternativestomedianad-jasa-1993.pdf).
@@ -8255,6 +8269,11 @@ They are an orthographic proxy, not phonetic transcription: regional hiatus,
 foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
+The generic counter uses Latin `a–z` vowel groups. A token with no retained
+letters contributes zero estimated syllables. Generic ASW and derived
+syllable-based readability are unsuitable for comparing texts in scripts
+outside that alphabet. The word tokenizer can still recognize those tokens.
+
 **Since v0.7.2:** the estimator corrects skipped closed-vowel nuclei in Spanish, for example
 `vivir` from one estimated syllable to two and `dibujo` from one to three.
 This changes Spanish ASW and its derived readability score without changing
@@ -8269,7 +8288,8 @@ divergence is in $[0,\ln 2]$ nats. It is zero for identical distributions,
 regardless of their token counts. This is the equal-weight form of
 [Lin's Jensen–Shannon divergence (1991, §IV)](https://www.cise.ufl.edu/~anand/sp06/jensen-shannon.pdf).
 Driver words present in the chapter are ranked by their positive additive
-contribution, excluding function words and single-character tokens.
+contribution, excluding configured function words, stopwords and
+single-character tokens. This display filter does not change the divergence.
 Types absent from the chapter contribute half their rest-corpus probability
 times $\ln 2$; their total probability is calculated from the observed rest
 distribution. No square root or base-2 rescaling is applied.
@@ -8396,7 +8416,8 @@ restating formulas.
 
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
-| Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
+| Sentence-length distribution | By default ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`) | Project sentence boundaries control these four bins. Tokenless fragments are excluded. |
+| Rhythm entropy | By default ≤ 6 / 7–20 / > 20 words (`pacing.py`, `rhythm_profile`) | The three-bin entropy uses its own medium/long threshold. Its buckets and entropy are comparable between reports with the same settings. |
 | Hook | Closing sentence ≤ `HOOK_SHORT_SENTENCE` (8) words, ending in `?`, `!` or `…`, or containing detected dialogue (`pacing.py`) | Each condition adds one point; the displayed mean is over chapter endings, not scenes. This is not a validated suspense measure. Only the ellipsis character scores; `...` does not |
 | Sentence-start monotony & adjacent overlap | `repeated_start_runs`: count of runs of ≥ `MONOTONY_MIN_RUN` (3) consecutive sentences in the same paragraph starting with the identical lowercased word token; `sentence_overlap_pct`: share of within-paragraph adjacent sentence pairs sharing at least one lowercased content word (tokens of length ≥ 2 not in `function_words`, or length ≥ `COHESION_FALLBACK_MIN_LEN` = 4 when `function_words` is empty) (`pacing.py`) | Repeated starts can be deliberate anaphora or unwitting monotony; lexical overlap ignores synonyms, pronouns, morphology and cross-paragraph links |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside chapter-wide recognized dialogue spans (`dialogue.py`); a span may cover multiple paragraphs | Quotation conventions differ per language; an unrecognized or unclosed quotation is not counted |
@@ -9883,10 +9904,12 @@ The native dashboard currently follows its analysis profile:
 | `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
 | Dashboard language | Follows the manuscript's resolved analysis profile, using all seven UI resource packs. The native language control is not an independent interface-language preference. |
 
-Detection uses the text the caller supplies: `pipeline.resolve_document_config`
-resolves `auto` before analysis. Low-level `CorpusAnalyzer`/`ParagraphProfiler`
-calls resolve `auto` without a sample and fall back to `generic`, so resolve
-`auto` first (or pass a concrete key) before calling them directly.
+Detection uses the text the caller supplies. `pipeline.resolve_document_config`
+resolves `auto` before analysis. Direct `CorpusAnalyzer` text, file and unit
+analysis resolve `auto` separately for each input unless a representative
+`sample_text` binds the analyzer to one profile. Profile helpers on an unbound
+analyzer use `generic`. For direct `ParagraphProfiler` calls, supply a sample
+or resolve `auto` to a concrete key before passing the parsed blocks.
 
 Research CLI help and errors are English; JSON keys are language-neutral.
 Sources, quotations, filenames, external metadata, claim titles and author
@@ -10671,7 +10694,7 @@ add interpretation rather than a new calibrated test.
 
 `dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
-**Unreleased correction:** `dimension_diagnostics.mahalanobis_space` is
+**Since v0.9.0:** `dimension_diagnostics.mahalanobis_space` is
 `standardized_midranks`. Covariance and distance rows now use that same space,
 independently of populated z* fields. Recompute old mixed-space distances.
 `shrinkage_lambda` describes ridge regularization; `dimensions[].variance` and

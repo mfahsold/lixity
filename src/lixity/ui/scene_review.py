@@ -114,7 +114,9 @@ def render_rehearsal(
     fields = [
         field("scene", select_control("scene-intent-scene",
                                       f'<option value="">{L("scene_intent_choose")}</option>' + scene_options,
-                                      attributes={"name": "scene_id", "required": ""})),
+                                      attributes={"name": "scene_id", "required": ""})
+              + f'<button type="button" class="ctl ctl-sm" id="scene-intent-preview" hidden>'
+              f'{L("scene_intent_open_scene")}</button>'),
         field("kind", select_control("scene-intent-kind", beat_options, attributes={"name": "kind"})),
         field("text", f'<textarea id="scene-intent-text" name="intent" rows="2" maxlength="{INTENT_TEXT_LIMIT}" required></textarea>'),
         field("voice", f'<input id="scene-intent-voice" name="voice" type="text" maxlength="{INTENT_VOICE_LIMIT}">'),
@@ -129,6 +131,8 @@ def render_rehearsal(
         + f'<input type="hidden" id="scene-intents-token" value="{esc(project_token)}">'
         + panel_guide(L("scene_rehearsal_help" if items else "scene_intent_no_scene"))
         + status_banner("scene-rehearsal-status")
+        + f'<p class="scene-sample" id="scene-intent-return" hidden><button class="ctl ctl-sm" type="button">'
+        f'{L("scene_intent_return_to_card")}</button></p>'
         + f'<button class="ctl" type="button" data-intent-action="load" hidden>{L("scene_intent_reload")}</button>'
         f'<p id="scene-rehearsal-empty" hidden>{L("scene_rehearsal_empty")}</p>'
         '<ol id="scene-intent-order"></ol>'
@@ -137,6 +141,10 @@ def render_rehearsal(
         f'<button type="button" class="ctl" data-intent-action="reset_order">{L("scene_intent_reset_order")}</button></div>'
         + details_start(L("scene_intent_add"), element_id="scene-intent-editor",
                         extra_class="" if items else "scene-intent-editor-unavailable")
+        + '<div id="scene-intent-edit-conflict" hidden>'
+        + status_banner(text_html=L("scene_intent_edit_conflict"))
+        + f'<button type="button" class="ctl ctl-sm" data-intent-action="save_as_new">'
+        f'{L("scene_intent_save_as_new")}</button></div>'
         + '<form id="scene-intent-form" autocomplete="off"><fieldset disabled><div class="scene-intent-fields">'
         + "".join(fields) + '</div><div class="row">'
         f'<button type="submit" class="ctl primary">{L("scene_intent_save")}</button>'

@@ -34,7 +34,7 @@ codesign --verify --deep --strict "$APP_BUNDLE"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lixity-dmg-stage.XXXXXX")"
 VERIFY_MNT="$(mktemp -d "${TMPDIR:-/tmp}/lixity-dmg-verify.XXXXXX")"
 MOUNTED=0
-eject_image() {
+eject_once() {
     if [ "$USE_DISKUTIL" -eq 1 ]; then
         diskutil eject "$VERIFY_MNT" >/dev/null
     else
@@ -42,9 +42,23 @@ eject_image() {
     fi
 }
 
+eject_image() {
+    local attempt
+    for attempt in 1 2 3; do
+        if eject_once; then
+            return 0
+        fi
+        # macOS can still be inspecting the signed bundle after verification.
+        if [ "$attempt" -lt 3 ]; then
+            sleep 2
+        fi
+    done
+    return 1
+}
+
 cleanup() {
     if [ "$MOUNTED" -eq 1 ]; then
-        eject_image || true
+        eject_once || true
     fi
     rmdir "$VERIFY_MNT" 2>/dev/null || true
     rm -rf "$STAGE_DIR"

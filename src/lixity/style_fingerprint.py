@@ -584,35 +584,13 @@ def spearman_rho(x: list[float], y: list[float]) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _segment_cost(values: list[float], start: int, end: int) -> float:
-    """Gaussian negative-log-likelihood cost of a segment (BIC-compatible).
-
-    Cost = n·ln(variance) with variance = (1/n)·Σ(xi − x̄)². Returns 0.0 for
-    segments of length ≤ 1 (no variance to measure).
-
-    Kept as the exhaustive segment-cost oracle used by the regression tests;
-    the production changepoint search uses the equivalent incremental moments.
-    """
-    n = end - start
-    if n <= 1:
-        return 0.0
-    # Subtract an observed anchor before centring: large offsets otherwise
-    # erase the small variance that this diagnostic is intended to measure.
-    seg = [x - values[start] for x in values[start:end]]
-    mean = math.fsum(seg) / n
-    var = math.fsum((x - mean) ** 2 for x in seg) / n
-    if var <= 0.0:
-        return 0.0
-    return n * math.log(var)
-
-
 def pelt_changepoints(values: list[float], penalty: float | None = None) -> list[int]:
     """Exact dynamic-programming segmentation (legacy PELT entrypoint).
 
     Detects structural breaks (phase shifts) in a chapter-level metric series
     using standardized values (by global SD when > 0) and the guarded Gaussian
     cost ``count·ln(max(var, 1e-9))`` with mBIC-inspired default penalty
-    ``3·ln(n)``.
+    ``3·ln(n)``. A singleton has zero cost before the penalty.
     The variance floor does not meet PELT's pruning condition; therefore
     every predecessor is considered. Incremental centred moments give O(n²)
     time and O(n) memory without unstable raw-moment subtraction.
@@ -1560,6 +1538,8 @@ class StyleFingerprint:
             is_varying = any(value != centre for value in obs)
             if spread > 0.0:
                 sigma = MAD_TO_SIGMA * spread
+                if not math.isfinite(sigma):
+                    raise ValueError(f"{field_name} reference spread exceeds the finite numerical range")
                 status = "available"
             elif is_varying:
                 fallback_sigma = sn_estimator(obs)

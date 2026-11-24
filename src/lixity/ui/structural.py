@@ -63,6 +63,7 @@ def style_structural(
         parts.append("</section>")
         return "".join(parts)
 
+    parts.append(f'<p class="ctl-note">{translated("structural_selection_method")}</p>')
     parts.append('<div class="structural-grid">')
 
     # --- Card 1: Guarded-cost changepoints ---

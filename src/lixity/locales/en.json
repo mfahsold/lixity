@@ -2534,5 +2534,13 @@
   "paragraph_filter_suspended": "Search covers the whole manuscript. Clear the search to resume the tense filter.",
   "layer_position_pending": "Differing paragraphs · {total}",
   "layer_comparison_inline_only": "This measurement can mark passages. Paragraph comparison is unavailable here.",
-  "scene_intent_no_scene": "Your cards remain available. You can reconnect a card when there is a measured scene."
+  "scene_intent_no_scene": "Your cards remain available. You can reconnect a card when there is a measured scene.",
+  "reading_analysis_options": "Reading marks",
+  "scene_intent_reanchor": "Review scene anchor",
+  "scene_intent_return_to_card": "Return to intent card",
+  "scene_intent_order_conflict": "The saved order changed elsewhere. This is the current saved order.",
+  "scene_intent_edit_conflict": "This card was changed or removed elsewhere. Your draft is still in the form. You can save it as a new card.",
+  "scene_intent_save_as_new": "Use as a new card",
+  "scene_intent_discard_draft": "Discard unsaved changes to this card?",
+  "structural_selection_method": "Trends and comparisons between manuscript halves use a separate nominal BH selection. Error rates have not been calibrated for manuscripts."
 }
