@@ -6,6 +6,7 @@ if [[ ${1:-} == probe ]]; then
   stage=$2
   shift 2
   export LANG=C.UTF-8 LC_ALL=C.UTF-8 XDG_SESSION_TYPE=x11 GTK_A11Y=1 NO_AT_BRIDGE=0
+  export LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1
   openbox > "$QA_OUTPUT/$stage-window-manager.log" 2>&1 &
   window_manager=$!
   if [[ $stage == control ]]; then
@@ -21,6 +22,8 @@ if [[ ${1:-} == probe ]]; then
   timeout 65 /usr/bin/python3 "$QA_SCRIPTS/observe.py" "$QA_OUTPUT/$stage-tree.json" "$@" \
     > "$QA_OUTPUT/$stage-observer.log" 2>&1 || result=$?
   cat "$QA_OUTPUT/$stage-observer.log"
+  # The accessibility tree can populate before the first painted frame.
+  if [[ $result == 0 ]]; then sleep 3; fi
   xwd -root -silent -out "$QA_OUTPUT/$stage.xwd" || true
   xdotool search --onlyvisible --name . getwindowname %@ > "$QA_OUTPUT/$stage-windows.txt" 2>&1 || true
   exit "$result"
