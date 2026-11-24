@@ -286,13 +286,14 @@ def find_version_drift(version: str, *, root: Path | None = None) -> list[str]:
 
 def check_or_sync_generated(version: str, *, check_only: bool, root: Path) -> list[str]:
     """Run the same document generators for local work, releases and Pages."""
+    from build_blog_feed import build as build_feed
     from build_guide_markdown import build as build_guides
     from build_llms_full import build as build_llms
     from build_metric_reference import build as build_metrics
     from build_public_site import build as build_site
 
     changed = check_or_sync_files(version, check_only=check_only, root=root)
-    for build in (build_site, build_llms, build_guides, build_metrics):
+    for build in (build_feed, build_site, build_llms, build_guides, build_metrics):
         changed.extend(build(check_only=check_only, root=root))
     return changed
 

@@ -65,7 +65,7 @@ source version. Product versions, response schemas and archive schemas are separ
 
 ## Browse the published material
 
-- [Blog](https://mfahsold.github.io/lixity/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`.
+- [Blog](https://mfahsold.github.io/lixity/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://mfahsold.github.io/lixity/blog/feed.xml) carries the same articles.
 - [Example report](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [essay analysis](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html): complete public reports, each with PDF variants.
 - [Screenshots](https://mfahsold.github.io/lixity/screenshots/README.md) and [recorded tours](https://mfahsold.github.io/lixity/videos/README.md): checked stills, a 48-second product tour and two social clips with their review notes.
 - [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): released changes and the unreleased section, kept outside the published site root.

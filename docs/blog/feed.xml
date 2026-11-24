@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <id>https://mfahsold.github.io/lixity/blog/feed.xml</id>
+  <title>Lixity blog: reading, research and revision</title>
+  <subtitle>Articles on revision, measurement, research workflow and the example project.</subtitle>
+  <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/index.html"/>
+  <link rel="self" type="application/atom+xml" href="https://mfahsold.github.io/lixity/blog/feed.xml"/>
+  <updated>2026-11-20T00:00:00Z</updated>
+  <icon>https://mfahsold.github.io/lixity/favicon.ico</icon>
+  <author><name>Matthias Fahsold</name><uri>https://github.com/mfahsold</uri></author>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/revision-aware-workspace.html</id>
+    <title xml:lang="en">Adding a manuscript editor changes more than the text box: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/revision-aware-workspace.html"/>
+    <published>2026-11-11T00:00:00Z</published>
+    <updated>2026-11-20T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Why a revision-aware writing workspace needs explicit sessions, conditional saves, analysis bound to the saved text and separate recovery, backup and research records.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/romankapitel-pruefen-de.html</id>
+    <title xml:lang="de">Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln: Lixity Blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/romankapitel-pruefen-de.html"/>
+    <published>2026-11-11T00:00:00Z</published>
+    <updated>2026-11-11T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="de" type="text">Ein Kapitel liest sich anders als der Rest: Wie man eine konkrete Frage wählt, Beobachtungen mit dem Umfeld vergleicht, Recherche liest und eine begrenzte Überarbeitungsrunde abschließt.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/review-a-chapter.html</id>
+    <title xml:lang="en">Review a novel chapter without smoothing away its voice: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/review-a-chapter.html"/>
+    <published>2026-11-11T00:00:00Z</published>
+    <updated>2026-11-11T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">A chapter reads differently from the rest: choose one concrete question, compare an observation with its surroundings, read the research and finish a bounded revision round.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/whats-new-lixity.html</id>
+    <title xml:lang="en">What's new in Lixity: speech direction, clearer marks and project structure | Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
+    <published>2026-10-16T00:00:00Z</published>
+    <updated>2026-11-05T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html</id>
+    <title xml:lang="en">From chapter comparisons to spoken direction: 3D style space and speech-plan export | Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-05T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/why-this-passage.html</id>
+    <title xml:lang="en">Why is this passage marked? | Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/why-this-passage.html"/>
+    <published>2026-10-26T00:00:00Z</published>
+    <updated>2026-11-02T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">A practical review question for authors and editors: understand a tense signal, inspect the linked research and return to the passage with the decision still yours.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html</id>
+    <title xml:lang="en">Give the manuscript room to read: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html"/>
+    <published>2026-10-20T00:00:00Z</published>
+    <updated>2026-11-02T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s manuscript workbench and its coverage limits.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html</id>
+    <title xml:lang="en">What makes a novel read well? Literary research, editorial craft and manuscript data: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-02T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">What large-scale empirical studies of novels and editorial practice reveal about voice contrast, sentence cohesion, pacing and vocabulary, demonstrated with Lixity measurements on public-domain classics.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/leseguete-und-lektoratsmetriken-de.html</id>
+    <title xml:lang="de">Was macht einen Roman sprachlich stark? Literaturforschung, Lektorat und Manuskriptdaten: Lixity Blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/leseguete-und-lektoratsmetriken-de.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-02T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="de" type="text">Was empirische Studien aus Literaturwissenschaft und Lektoratspraxis über Stimmkontrast, Satzkohäsion, Pacing und Wortschatz zeigen – überprüft mit Lixity an Effi Briest und Pride and Prejudice.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/local-word-echoes.html</id>
+    <title xml:lang="en">Finding repeated phrases close together: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/local-word-echoes.html"/>
+    <published>2026-10-19T00:00:00Z</published>
+    <updated>2026-10-19T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Find local phrase repetition in a manuscript with Lixity. Worked examples explain echo counts, complete word windows and why overlapping phrases are deduplicated.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/intentional-registers.html</id>
+    <title xml:lang="en">When a chapter is meant to sound different: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/intentional-registers.html"/>
+    <published>2026-10-19T00:00:00Z</published>
+    <updated>2026-10-19T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Review deliberate changes of voice with named chapter registers in Lixity: record an intention, add optional ranges, and understand which chapter flags the assignment removes.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/tense-switches.html</id>
+    <title xml:lang="en">Finding tense switches in a novel: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/tense-switches.html"/>
+    <published>2026-10-15T00:00:00Z</published>
+    <updated>2026-10-15T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Use paragraph-level tense profiles and a flagged-passage list to review tense switches in a novel one passage at a time, with the context that decides whether a switch is intentional.</summary>
+  </entry>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html</id>
+    <title xml:lang="en">A reference corridor from Effi Briest: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html"/>
+    <published>2026-10-15T00:00:00Z</published>
+    <updated>2026-10-15T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">A walkthrough of the public Effi Briest case study: how a self-calibrating style reference describes where a manuscript moves away from its own norm without turning measurements into verdicts.</summary>
+  </entry>
+</feed>

@@ -138,6 +138,7 @@ def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatc
 
     monkeypatch.setitem(sys.modules, "check_release", type("M", (), {"source_version": staticmethod(lambda r: "0.3.0")})())
     monkeypatch.setattr(sync_docs, "check_or_sync_files", make_module("sync_docs", "check_or_sync_files").check_or_sync_files)
+    monkeypatch.setitem(sys.modules, "build_blog_feed", make_module("build_blog_feed", "build"))
     monkeypatch.setitem(sys.modules, "build_public_site", make_module("build_public_site", "build"))
     monkeypatch.setitem(sys.modules, "build_llms_full", make_module("build_llms_full", "build"))
     monkeypatch.setitem(sys.modules, "build_guide_markdown", make_module("build_guide_markdown", "build"))
@@ -147,11 +148,13 @@ def test_run_sync_invokes_all_doc_generators_for_root(prepare_script, monkeypatc
     assert "Documentation already synchronized" in capsys.readouterr().out
     assert calls == [
         ("sync_docs", False, root),
+        ("build_blog_feed", False, root),
         ("build_public_site", False, root),
         ("build_llms_full", False, root),
         ("build_guide_markdown", False, root),
         ("build_metric_reference", False, root),
         ("sync_docs", True, root),
+        ("build_blog_feed", True, root),
         ("build_public_site", True, root),
         ("build_llms_full", True, root),
         ("build_guide_markdown", True, root),

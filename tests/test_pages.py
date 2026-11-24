@@ -110,7 +110,8 @@ class TestPagesWorkflow(unittest.TestCase):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(checkout / relative, target)
-            builders = ("build_public_site", "build_llms_full", "build_guide_markdown", "build_metric_reference")
+            builders = ("build_blog_feed", "build_public_site", "build_llms_full",
+                    "build_guide_markdown", "build_metric_reference")
             for name in builders:
                 stale = ["docs/guides/metrics/de.html"] if name == "build_metric_reference" else []
                 (root / "scripts" / f"{name}.py").write_text(
