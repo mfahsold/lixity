@@ -1110,12 +1110,20 @@ async function metricPreferences(browser) {
         await selected(page, 'filter');
         if (width === 320) {
           const drag = await point(page), session = await page.context().newCDPSession(page);
-          await session.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:drag.x,y:drag.y}]});
-          await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:drag.x,y:drag.y - 60}]});
-          await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
-          await settle(page);
+          const startY = await page.evaluate(() => {
+            document.addEventListener('touchend', () => {
+              document.addEventListener('scrollend', () => { document.documentElement.dataset.testSwipeEnded = 'true'; }, {once:true});
+            }, {once:true});
+            return scrollY;
+          });
+          try {
+            await session.send('Input.dispatchTouchEvent', {type:'touchStart',touchPoints:[{x:drag.x,y:drag.y}]});
+            await session.send('Input.dispatchTouchEvent', {type:'touchMove',touchPoints:[{x:drag.x,y:drag.y - 60}]});
+            await session.send('Input.dispatchTouchEvent', {type:'touchEnd',touchPoints:[]});
+          } finally { await session.detach(); }
+          // Chromium can still fling after touchend while the next test action scrolls back to its trigger.
+          await page.waitForFunction(before => document.documentElement.dataset.testSwipeEnded === 'true' && scrollY > before, startY);
           assert.equal(await page.locator('#analysis-evidence-card').isVisible(), false, 'touch scroll is not an evidence tap');
-          await session.detach();
         }
       }
       if (locale === 'en' && width === 1440) {
