@@ -512,7 +512,7 @@
       definition.textContent = option?.dataset.hint || "";
       countedHelp.hidden = !available;
       comparisonHelp.hidden = !available || option.dataset.inlineEvidence === "1";
-      var canInspect = Boolean(available && panels.length && window.LixityAnalysisEvidence?.available());
+      var canInspect = Boolean(available && window.LixityCountedResults?.available());
       example.hidden = !canInspect;
       explore.hidden = !state.analysisVisible || !panels.length;
       choose.classList.toggle("primary", !canInspect);
@@ -521,8 +521,9 @@
     }
     analysisGuide.addEventListener("toggle", updateGuide);
     document.addEventListener("lixity:analysis-layer-change", updateGuide);
+    document.addEventListener("lixity:counted-results-change", updateGuide);
     document.addEventListener("lixity:workbench-change", updateGuide);
-    analysisGuide.addEventListener("click", async function(event) {
+    analysisGuide.addEventListener("click", function(event) {
       var action = event.target.closest("[data-analysis-guide-action]");
       if (!action || action.hidden) return;
       var anchor = capture();
@@ -532,17 +533,12 @@
         metric.focus({preventScroll:true});
         return;
       }
-      var panel = currentMeasuredPassage(anchor);
-      if (!panel) return;
       if (action.dataset.analysisGuideAction === "example") {
-        var rect = panel.getBoundingClientRect();
-        if (rect.bottom <= readingViewportTop() || rect.top >= innerHeight) {
-          scrollAndFlash(panel, {behavior:"auto"});
-          await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
-        }
-        if (panel.isConnected) LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions"), null, summary);
+        window.LixityCountedResults?.open(summary, anchor);
       }
       else {
+        var panel = currentMeasuredPassage(anchor);
+        if (!panel) return;
         current = panel; savedRange = null; evidencePoint = null; returnTarget = summary;
         run("values");
       }

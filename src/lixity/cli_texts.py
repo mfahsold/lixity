@@ -31,7 +31,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_reference_inspect_input": "audio-reference inspect needs --reference-id",
         "audio_read_help": "VoiceDesign generates segments independently; a voice description and direction can affect the perceived voice. For a consistent narrator, compare short --preview samples with fewer role-specific directions. Base reuses an explicit voice reference, but does not accept free-form direction; neither option guarantees continuity. --no-direction ignores saved passage direction only: the selected profile, pronunciation rules, tempo and default pauses remain active. Models and matching local workers are installed separately.",
         "audio_direction_help": "With VoiceDesign, role-specific instructions may change the perceived voice between independently generated segments. Use short listening previews; Base does not support free-form direction. Pauses and explicit saved profile choices remain separate.",
-        "layer_reference": 'Reference: all measurable paragraphs within each chapter; median/MAD robust z. Requires at least 3 measurable paragraphs and nonzero MAD.',
+        "layer_reference": (
+            "The robust z-score compares values within each chapter. At least {minimum} eligible paragraphs "
+            "and a usable scale are required. The comparison starts with the median and MAD "
+            "and tries Sn then Qn when varying values give zero MAD."
+        ),
         "layer_notable": 'Notable: |round(z, 2)| >= {cutoff}; descriptive heuristic for human review.',
         "layer_counts": '{total_count} total · {comparable_count} comparable · {notable_count} notable · {selected_count} shown',
         "layer_unavailable": 'comparison unavailable',
@@ -40,8 +44,9 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "layer_empty": 'No paragraphs selected. This is not a finding that the text has no issues.',
         "layer_empty_source": 'No paragraphs available.',
         "layer_empty_cutoff": 'No comparable paragraph reaches the selected cutoff.',
-        "layer_short": 'Chapters with fewer than 3 measurable paragraphs: {count}',
-        "layer_constant": 'Chapters with MAD = 0: {count}',
+        "layer_short": 'Chapters with fewer than {minimum} eligible paragraphs: {count}',
+        "layer_no_spread": 'Chapters without a usable comparison scale: {count}',
+        "layer_language_unavailable": 'This measurement is unavailable in the selected language profile.',
         "layer_unmeasured": 'Chapters without measurable values: {count}',
         "layer_full": 'Full evidence: {command}',
         "layer_evidence": 'Evidence: {status} · {mapped}/{count} {unit} mapped{reason}',
@@ -188,7 +193,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "audio_reference_inspect_input": "audio-reference inspect benötigt --reference-id",
         "audio_read_help": "VoiceDesign erzeugt Abschnitte einzeln; Stimmbeschreibung und Regie können die wahrgenommene Stimme beeinflussen. Für eine einheitliche Erzählstimme kurze --preview-Hörproben mit weniger rollenspezifischer Regie vergleichen. Base verwendet eine ausdrückliche Stimmreferenz, unterstützt aber keine freie Regie; beide Wege garantieren keine Stimmkonstanz. --no-direction ignoriert nur gespeicherte Passagenregie: Profil, Ausspracheregeln, Tempo und Standardpausen bleiben aktiv. Modelle und passende lokale Worker werden separat installiert.",
         "audio_direction_help": "Bei VoiceDesign können rollenspezifische Anweisungen die wahrgenommene Stimme zwischen einzeln erzeugten Abschnitten verändern. Kurze Hörproben vergleichen; Base unterstützt keine freie Regie. Pausen und ausdrücklich gespeicherte Profilzuweisungen bleiben getrennt.",
-        "layer_reference": 'Referenz: alle messbaren Absätze innerhalb jedes Kapitels; robuster z-Wert aus Median/MAD. Mindestens 3 messbare Absätze und MAD größer als 0 erforderlich.',
+        "layer_reference": (
+            "Der robuste z-Wert bezieht sich auf das jeweilige Kapitel. Der Vergleich braucht "
+            "mindestens {minimum} geeignete Absätze und eine berechenbare Streuung. Die Berechnung "
+            "beginnt mit Median und MAD. Bei unterschiedlichen Werten und MAD null folgen Sn und Qn."
+        ),
         "layer_notable": 'Auffällig: |round(z, 2)| >= {cutoff}; beschreibende Heuristik zur menschlichen Prüfung.',
         "layer_counts": '{total_count} gesamt · {comparable_count} vergleichbar · {notable_count} auffällig · {selected_count} angezeigt',
         "layer_unavailable": 'Vergleich nicht verfügbar',
@@ -197,8 +206,9 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "layer_empty": 'Keine Absätze ausgewählt. Das bedeutet nicht, dass der Text keine Probleme enthält.',
         "layer_empty_source": 'Keine Absätze vorhanden.',
         "layer_empty_cutoff": 'Kein vergleichbarer Absatz erreicht den gewählten Schwellenwert.',
-        "layer_short": 'Kapitel mit weniger als 3 messbaren Absätzen: {count}',
-        "layer_constant": 'Kapitel mit MAD = 0: {count}',
+        "layer_short": 'Kapitel mit weniger als {minimum} geeigneten Absätzen: {count}',
+        "layer_no_spread": 'Kapitel ohne berechenbare Streuung: {count}',
+        "layer_language_unavailable": 'Das gewählte Sprachprofil kann diesen Wert nicht messen.',
         "layer_unmeasured": 'Kapitel ohne messbare Werte: {count}',
         "layer_full": 'Vollständige Belege: {command}',
         "layer_evidence": 'Belege: {status} · {mapped}/{count} {unit} zugeordnet{reason}',

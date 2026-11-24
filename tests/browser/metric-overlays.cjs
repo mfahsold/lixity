@@ -81,10 +81,14 @@ sparse_thresholds = FingerprintThresholds()
 sparse = analyze_document(sparse_text, sparse_config, sparse_thresholds, include_evidence=True)
 assert [row.filter_density for row in sparse.paragraphs[:5]] == [0, 0, 0, 0, 100]
 assert set(layer_stats(sparse.paragraphs, 'filter')) == set(range(5, 10))
+# A tense finding in the first chapter keeps the whole chapter in scope.
+sparse.paragraphs[0].severity = sparse_thresholds.flag_min_severity
+counted_matches = [len(sparse.evidence[index]['layers']['filter']['spans'])
+                   for index in range(len(sparse.paragraphs))]
 sparse_html = render_analysis(sparse, resolve_language(sparse_config), title='Synthetic sparse chapter',
     flag_min_severity=sparse_thresholds.flag_min_severity, options=DashboardOptions(controls=True))
 print(json.dumps({'locales': fixtures, 'extra': extra, 'large_value_html': large_value_html, 'reading_html': reading_html,
-                  'paint_html': paint_html, 'sparse_html': sparse_html,
+                  'paint_html': paint_html, 'sparse_html': sparse_html, 'counted_matches': counted_matches,
                   'palette': [z_color(z) for z in (-2.5, -1.75, -1, -.5, 0, .5, 1, 1.75, 2.5)]}))
 `, {root});
 const fixtures = generated.locales;
@@ -442,6 +446,101 @@ async function verifyComparisonRegressions(browser) {
       assert.equal(await question.isVisible(), true);
       assert.equal(await question.textContent(), labels.evidence_review_asl);
       await closeAnalysisSettings(page);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    }, generated.sparse_html)),
+    ...[1440, 320].map(width => comparisonRegression(browser, width, `counted-results-${width}`, async page => {
+      if (width === 320) await page.setViewportSize({width, height: 480});
+      await selectMetric(page, 'filter');
+      const counted = page.locator('#analysis-evidence-enabled');
+      const allResults = page.locator('#reader-counted-results');
+      const chapterResults = page.locator('#ch-1 button[data-chapter-counted-results]');
+      const card = page.locator('#analysis-evidence-card');
+      const bar = page.locator('#craft-jump-bar');
+      const next = bar.getByRole('button', {name: fixtures.de.labels.evidence_next, exact: true});
+      const close = bar.getByRole('button', {name: fixtures.de.labels.evidence_close, exact: true});
+      const countMatches = counts => counts.reduce((sum, count) => sum + count, 0);
+      const total = countMatches(generated.counted_matches);
+      const chapterTotal = countMatches(generated.counted_matches.slice(0, 5));
+      async function assertCount(button, count) {
+        await button.waitFor({state: 'visible'});
+        assert.match(await button.textContent(), new RegExp(`\\b${count}\\b`));
+        assert.equal(await button.isDisabled(), count === 0);
+      }
+      async function assertJump(index, size, quote) {
+        await bar.waitFor({state: 'visible'});
+        assert.match(await bar.getByRole('status').textContent(), new RegExp(`\\b${index}\\s*/\\s*${size}\\b`));
+        await card.locator('blockquote').filter({hasText: quote}).waitFor({state: 'visible'});
+        assert.equal(await card.locator('blockquote').textContent(), quote);
+        assert.equal(await counted.isChecked(), false, 'opening a counted result keeps the underline preference');
+        assert.equal(await page.evaluate(() => Boolean(window.CSS?.highlights?.get('lixity-analysis-evidence')?.size)), false);
+      }
+
+      assert.equal(await counted.isChecked(), false);
+      await assertCount(allResults, total);
+      await assertCount(chapterResults, chapterTotal);
+      assert.equal(await page.locator('#ch-2 button[data-chapter-counted-results]').isVisible(), false);
+      await chapterResults.scrollIntoViewIfNeeded(); await frames(page);
+      await chapterResults.press('Enter');
+      await assertJump(1, chapterTotal, 'spüre');
+      await close.press('Enter');
+      await bar.waitFor({state: 'hidden'});
+      await card.waitFor({state: 'hidden'});
+      assert.equal(await chapterResults.evaluate(node => node === document.activeElement), true);
+
+      await allResults.press('Enter');
+      await assertJump(1, total, 'spüre');
+      await card.getByRole('button', {name: fixtures.de.labels.evidence_next, exact: true}).press('Enter');
+      await assertJump(2, total, 'spüre');
+      await next.press('Enter');
+      await assertJump(3, total, 'höre');
+      await close.press('Enter');
+      await bar.waitFor({state: 'hidden'});
+      await card.waitFor({state: 'hidden'});
+      assert.equal(await allResults.evaluate(node => node === document.activeElement), true);
+
+      await setAnalysisOption(page, 'filter-flags', true);
+      await assertCount(allResults, chapterTotal);
+      assert.equal(await page.locator('#ch-2').isVisible(), false);
+      const search = page.locator('#text-search');
+      await search.fill('den Frost'); await search.press('Enter');
+      await assertCount(allResults, generated.counted_matches[9]);
+      assert.equal(await page.locator('#ch-2').isVisible(), true, 'live search temporarily takes precedence over the tense filter');
+      await search.fill('Kalter Wind fegt'); await search.press('Enter');
+      await assertCount(allResults, 0);
+      assert.equal(await chapterResults.isVisible(), false);
+      await search.press('Escape');
+      await assertCount(allResults, chapterTotal);
+      assert.equal(await page.locator('#ch-2').isVisible(), false);
+      assert.equal(await counted.isChecked(), false);
+      if (width === 320) {
+        await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+        await allResults.scrollIntoViewIfNeeded();
+        const fits = await allResults.evaluate(node => {
+          const button = node.getBoundingClientRect();
+          const toolbar = node.closest('.manuscript-reader-controls').getBoundingClientRect();
+          return node.scrollWidth <= node.clientWidth && button.top >= Math.max(0, toolbar.top) &&
+            button.bottom <= Math.min(innerHeight, toolbar.bottom);
+        });
+        assert.equal(fits, true, 'The counted results button fits the toolbar viewport at 200% text');
+        await allResults.click();
+        await assertJump(1, chapterTotal, 'spüre');
+        await close.press('Enter');
+        await card.waitFor({state: 'hidden'});
+        await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+      } else {
+        for (const desktopWidth of [1024, 1100, 1280]) {
+          await page.setViewportSize({width: desktopWidth, height: 900});
+          await frames(page);
+          const layout = await page.locator('#reader-analysis-settings').evaluate(row => {
+            const controls = Array.from(row.children).filter(node => node.getClientRects().length);
+            const bounds = controls.map(node => node.getBoundingClientRect());
+            return {oneRow: Math.max(...bounds.map(box => box.top)) < Math.min(...bounds.map(box => box.bottom)),
+              fits: controls.every(node => node.scrollWidth <= node.clientWidth)};
+          });
+          assert.deepEqual(layout, {oneRow: true, fits: true}, `Analysis controls fit one row at ${desktopWidth}`);
+        }
+        await page.setViewportSize({width, height: 900});
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     }, generated.sparse_html)),
   ]);

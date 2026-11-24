@@ -349,6 +349,7 @@ body:not(.has-js-dashboard-controls) :is(.chapter-toggle, .text-search-group, .j
 .chapter.collapsed .chapter-toggle::before { transform: rotate(-90deg); }
 .chapter.collapsed > :is(.strip, .chapter-comparison-status, .ptext) { display: none; }
 .chapter-comparison-status { margin-block: var(--space-2) 0; }
+.chapter-comparison-status p { margin-block: 0 var(--space-1); }
 .strip { display: flex; gap: 2px; margin: .65rem 0 0; overflow-x: auto; padding: 5px 2px; }
 .chip {
 border: 0;

@@ -647,6 +647,18 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .manuscript-reader-controls .reader-analysis-toggle-controls > button.ctl,
   .manuscript-reader-controls .reader-controls > button.ctl { padding-inline: .35rem; }
 }
+@media (min-width: 601px) {
+  @container reader-tools (max-width: 68rem) {
+    .reader-analysis-controls { column-gap: var(--space-1); }
+    .reader-analysis-controls .metric-layer-label { display: none; }
+    .reader-analysis-controls > .ctl { padding-inline: .4rem; }
+    .reader-analysis-options > summary { padding-inline: .4rem 1.15rem; }
+    .reader-analysis-options > summary::after { inset-inline-end: .4rem; }
+  }
+  @container reader-tools (max-width: 52rem) {
+    .reader-outlier-navigation output { max-inline-size: 9rem; }
+  }
+}
 @container reader-tools (max-width: 46rem) {
   .reader-chapter { max-inline-size: 7.5rem; }
   .manuscript-reader-controls :is(#reader-focus, #reader-teleprompter, #reader-direct-speech, #reader-speech, #workbench-overview-open, #manuscript-write, #workspace-reader-toggle),

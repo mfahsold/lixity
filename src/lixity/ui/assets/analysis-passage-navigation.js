@@ -5,7 +5,8 @@
   var C = window.LixityComponents;
   var el = C.el.bind(C);
   var chapterForPanel = new Map();
-  var panelIds = Array.from(chapters.querySelectorAll(".ptext[id]")).map(function (node) {
+  var panels = Array.from(chapters.querySelectorAll(".ptext[id]"));
+  var panelIds = panels.map(function (node) {
     var chapter = node.closest(".chapter");
     if (chapter) chapterForPanel.set(node.id, chapter.id.slice(3));
     return node.id;
@@ -20,6 +21,10 @@
 
   // --- Step 2: Rhythm sentences, sticky sentences & word-pattern jumps ----
   var craftBar = C.ensureJumpBar("craft-jump-bar", "craft-jump-bar", chapters);
+  var readerResults = document.getElementById("reader-counted-results");
+  var readerChapters = Array.from(chapters.querySelectorAll("[data-chapter-counted-results]"), function(button) {
+    return {button:button, chapter:button.closest(".chapter").id.slice(3), status:button.parentElement};
+  });
   var activeJump = null;
   var craftRequest = 0;
 
@@ -31,11 +36,18 @@
   }
 
   function clearCraftJump(restore) {
-    var origin = activeJump && activeJump.origin;
+    var previous = activeJump;
     craftRequest++;
     activeJump = null;
     renderCraftBar();
-    if (restore) restoreJumpOrigin(origin);
+    if (previous?.reader) {
+      window.LixityAnalysisEvidence?.closeGuided();
+      if (restore) {
+        window.LixityReader?.restore(previous.anchor);
+        var control = previous.origin.getClientRects().length ? previous.origin : readerResults;
+        control?.focus({preventScroll:true});
+      }
+    } else if (restore) restoreJumpOrigin(previous?.origin);
   }
 
   function renderCraftBar() {
@@ -44,6 +56,8 @@
       labelClass: "craft-jump-label",
       label: activeJump.label + " · " + (activeJump.index + 1) + " / " + activeJump.items.length +
         (activeJump.unavailable ? " · " + L("evidence_unavailable") : ""),
+      previousDisabled: activeJump.items.length === 1,
+      nextDisabled: activeJump.items.length === 1,
       onPrev: function () { stepCraftJump(-1); },
       onNext: function () { stepCraftJump(1); },
       onClose: function () { clearCraftJump(true); }
@@ -54,9 +68,18 @@
     var panel = document.getElementById(item.paragraphId);
     if (!panel) return;
     var serial = ++craftRequest;
+    var jump = activeJump;
     if (window.LixityAnalysisEvidence && typeof window.LixityAnalysisEvidence.inspectSpan === "function") {
       var opened = await window.LixityAnalysisEvidence.inspectSpan(
-        panel, item.layerKey, item.spanIndex, {preserveFocus:preserveFocus}
+        panel, item.layerKey, item.spanIndex, {
+          preserveFocus:preserveFocus,
+          guided:jump?.reader ? {
+            count:jump.items.length,
+            index:jump.index,
+            step:stepCraftJump,
+            origin:jump.origin
+          } : null
+        }
       );
       if (opened) return;
     }
@@ -71,7 +94,7 @@
   }
 
   function stepCraftJump(dir) {
-    if (!activeJump || !activeJump.items.length) return;
+    if (!activeJump || activeJump.items.length < 2) return;
     activeJump.index = (activeJump.index + dir + activeJump.items.length) % activeJump.items.length;
     activeJump.unavailable = false;
     renderCraftBar();
@@ -122,18 +145,92 @@
     return collectSentenceMatches(minW, maxW, chapter);
   }
 
-  function collectLayerMatches(layerKey, chapter) {
-    var items = [];
-    panelIds.forEach(function (pid) {
-      if (!inChapter(pid, chapter)) return;
-      var content = paragraphContent[pid], ev = content && content[3];
-      var layerObj = ev && ev.layers && ev.layers[layerKey];
-      if (!layerObj || !Array.isArray(layerObj.spans)) return;
-      layerObj.spans.forEach(function (_span, idx) {
-        items.push({ paragraphId: pid, layerKey: layerKey, spanIndex: idx });
+  var layerPassageIndex = new Map();
+  function layerPassages(key) {
+    if (!layerPassageIndex.has(key)) {
+      var measured = [];
+      panels.forEach(function(panel) {
+        var spans = paragraphContent[panel.id]?.[3]?.layers?.[key]?.spans;
+        if (Array.isArray(spans) && spans.length) {
+          measured.push({panel:panel, chapter:chapterForPanel.get(panel.id), count:spans.length});
+        }
       });
+      layerPassageIndex.set(key, measured);
+    }
+    return layerPassageIndex.get(key);
+  }
+
+  function layerMatches(groups, key) {
+    var items = [];
+    groups.forEach(function(group) {
+      for (var idx = 0; idx < group.count; idx++) {
+        items.push({paragraphId:group.panel.id, layerKey:key, spanIndex:idx});
+      }
     });
     return items;
+  }
+
+  function collectLayerMatches(key, chapter) {
+    return layerMatches(layerPassages(key).filter(function(group) {return !chapter || group.chapter === chapter;}), key);
+  }
+
+  var readerGroups = [], readerLayer = "";
+  function updateReaderResults() {
+    if (!readerResults) return;
+    var select = document.getElementById("style-layer");
+    var key = select?.value && select.selectedOptions[0]?.dataset.available !== "0" ? select.value : "";
+    var state = window.LixityWorkbench?.state();
+    var active = Boolean(key && state?.view === "analysis" && state.surface === "document" && state.analysisVisible && !state.focus);
+    var groups = active ? layerPassages(key).filter(function(group) {return !passageBlocker(group.panel);}) : [];
+    if (activeJump?.reader && (!active || key !== readerLayer || groups.length !== readerGroups.length ||
+        groups.some(function(group, index) {return group !== readerGroups[index];}))) clearCraftJump(false);
+    readerGroups = groups;
+    readerLayer = key;
+    var total = 0, byChapter = new Map();
+    groups.forEach(function(group) {
+      total += group.count;
+      byChapter.set(group.chapter, (byChapter.get(group.chapter) || 0) + group.count);
+    });
+    readerResults.hidden = !active;
+    readerResults.disabled = !total;
+    readerResults.textContent = uiFormat("reader_evidence_results", {total:total});
+    readerResults.dataset.help = L(total ? "reader_evidence_results_help" : "reader_evidence_results_empty");
+    readerChapters.forEach(function(item) {
+      var count = byChapter.get(item.chapter) || 0;
+      item.button.hidden = item.status.hidden || !count;
+      if (count) item.button.textContent = uiFormat("reader_chapter_evidence_results", {total:count});
+    });
+    document.dispatchEvent(new CustomEvent("lixity:counted-results-change"));
+  }
+
+  function openReaderResults(origin, anchor, chapter) {
+    var groups = readerGroups.filter(function(group) {return !chapter || group.chapter === chapter;});
+    if (!groups.length) return;
+    if (activeMotif) clearMotifSelection();
+    window.LixityReader?.cancelRestore();
+    var items = layerMatches(groups, readerLayer), panel = anchor?.panel;
+    var first = panel ? groups.find(function(group) {
+      return panel === group.panel || Boolean(panel.compareDocumentPosition(group.panel) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }) : null;
+    var index = first ? items.findIndex(function(item) {return item.paragraphId === first.panel.id;}) : 0;
+    var select = document.getElementById("style-layer");
+    activeJump = {label:select.selectedOptions[0].textContent, items:items, index:index,
+      origin:origin, anchor:anchor, reader:true};
+    renderCraftBar();
+    openCraftItem(items[index]);
+  }
+
+  if (readerResults) {
+    readerResults.addEventListener("click", function() {openReaderResults(readerResults, window.LixityReader?.capture());});
+    readerChapters.forEach(function(item) {
+      item.button.addEventListener("click", function() {openReaderResults(item.button, window.LixityReader?.capture(), item.chapter);});
+    });
+    document.addEventListener("lixity:passage-scope-change", updateReaderResults);
+    window.LixityCountedResults = {
+      available:function() {return Boolean(readerGroups.length);},
+      open:openReaderResults
+    };
+    updateReaderResults();
   }
 
   function jumpToRhythmGroup(elTarget) {
@@ -151,7 +248,8 @@
       btn.hidden = !resolveRhythmMatches(btn).length;
     });
     root.querySelectorAll("[data-pattern-jump]").forEach(function (btn) {
-      btn.disabled = !collectLayerMatches(btn.dataset.layer, evidenceChapter(btn)).length;
+      var chapter = evidenceChapter(btn);
+      btn.disabled = !layerPassages(btn.dataset.layer).some(function(group) {return !chapter || group.chapter === chapter;});
     });
   }
   refreshEvidenceActions(document);

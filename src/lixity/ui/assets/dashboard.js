@@ -433,6 +433,7 @@ function syncPassageScope() {
     if (layerCount.textContent !== label) layerCount.textContent = label;
   }
   syncOutlierNavigation();
+  document.dispatchEvent(new CustomEvent("lixity:passage-scope-change"));
 }
 
 function currentOutlierPassage() {
@@ -459,16 +460,19 @@ function currentOutlierPassage() {
 }
 
 function syncOutlierNavigation() {
-  var chips = reachableOutliers, panel = chips.length && layerPosition ? currentOutlierPassage() : null;
+  var option = selectedLayerOption();
+  var comparing = Boolean(layer?.value) && option?.dataset.inlineEvidence !== "1" &&
+    Number(option?.dataset.comparable) > 0 && (!comparisonToggle || comparisonToggle.checked) &&
+    (!document.body.classList.contains("manuscript-reading") ||
+      (document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("reader-focus") &&
+        !document.body.classList.contains("workbench-overview")));
+  var chips = reachableOutliers, panel = comparing && chips.length && layerPosition ? currentOutlierPassage() : null;
   var position = panel ? chips.findIndex(function(chip) { return chip.dataset.target === panel.id; }) + 1 : 0;
   if (layerPosition) {
     var text = uiFormat(position ? "layer_position" : "layer_position_pending", {current: position, total: chips.length});
     if (layerPosition.textContent !== text) layerPosition.textContent = text;
     if (layerPosition.getAttribute("aria-label") !== text) layerPosition.setAttribute("aria-label", text);
   }
-  var option = selectedLayerOption();
-  var comparing = Boolean(layer?.value) && option?.dataset.inlineEvidence !== "1" &&
-    Number(option?.dataset.comparable) > 0 && (!comparisonToggle || comparisonToggle.checked);
   var layerNav = layerPosition && layerPosition.closest(".layer-nav, .reader-outlier-navigation");
   if (layerNav) layerNav.hidden = !comparing;
   var disabled = !chips.length || !comparing;
@@ -586,14 +590,15 @@ function applyLayer() {
       return chip;
     });
     comparisonStrips = Array.from(document.querySelectorAll("#chapters [data-comparison-gaps]"), function(strip) {
-      return {strip: strip, status: strip.previousElementSibling, gaps: JSON.parse(strip.dataset.comparisonGaps)};
+      var status = strip.previousElementSibling;
+      return {strip: strip, status: status, note: status.querySelector("p"), gaps: JSON.parse(strip.dataset.comparisonGaps)};
     });
   }
   comparisonStrips.forEach(function(chapter) {
     var gap = comparing && chapter.gaps[key];
     chapter.strip.classList.toggle("comparison-gap", Boolean(gap));
     chapter.status.hidden = !gap;
-    if (gap) chapter.status.textContent = uiLabel("paragraph_comparison_chapter_unavailable") + " " +
+    if (gap) chapter.note.textContent = uiLabel("paragraph_comparison_chapter_unavailable") + " " +
       uiLabel("paragraph_comparison_" + gap);
   });
   var nextOutliers = [];

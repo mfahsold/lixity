@@ -404,16 +404,18 @@ descriptor while retaining its existing default output/schema keys.
 The body contains `layer`, canonical fingerprint `feature`, canonical English
 `unit`, `comparison`, `selection` and `paragraphs`. The eight comparison layers
 are `asl|function|dialogue|filter|sensory|modal|nominal|passive`.
-`comparison` identifies `median_mad_robust_z`, all measurable paragraphs within
-each chapter, a minimum of 3, nonzero MAD, `z_decimals: 2` and `notable_abs_z: 1.5`.
-Scores and notability are prepared together in Python using `layer_stats` and the
-rounded z. The browser consumes the supplied `notable` boolean; it does not
-reclassify rounded cells.
+`comparison` identifies `median_mad_robust_z`, the within-chapter reference,
+a minimum of three eligible paragraphs, `z_decimals: 2` and `notable_abs_z: 1.5`.
+The historical `requires_nonzero_mad` field names the primary scale. The scorer
+attempts Sn and then Qn when varying values yield zero MAD. The shared Python
+preparation computes each score and its notability. The browser consumes the
+prepared result.
 
 Each row retains its full-profile zero-based `index`, chapter number/title,
 source line span, words/sentences, raw `value`, rounded `z`, `comparable` and
-`notable`. Unknown comparison means `z: null` and `notable: null`; measured zero
-remains numeric zero. No prose or exact lexical spans are supplied.
+`notable`. Unknown comparison means `z: null` and `notable: null`. Unsupported
+measurements have `value: null`. A measured zero remains numeric zero. Without
+`--evidence`, the projection contains no prose or exact lexical spans.
 `selection` separates full `total_count`, `comparable_count`, `notable_count`
 from `selected_count` and `only_notable`. `--only-notable` requires `--layer` and
 selects rows after full references/counts are computed, without renumbering.

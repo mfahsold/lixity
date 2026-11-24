@@ -32,7 +32,8 @@ from .status import (
 if TYPE_CHECKING:
     from .language import ResolvedLanguage
     from .models import CorpusConfig
-    from .style_fingerprint import FingerprintThresholds
+    from .style_fingerprint import FingerprintThresholds, ParagraphLayerCell
+    from .style_profile import ParagraphProfile
 
 SCHEMA_VERSION = SCHEMA_VERSION_ANALYZE
 EXIT_OK = 0
@@ -184,11 +185,12 @@ def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
 
 def _print_paragraph_layer(
     report: dict[str, Any], source: str, language_key: str, labels: Mapping[str, str],
-    *, paragraphs: list[Any] | None = None,
+    *, paragraphs: list[ParagraphProfile], measurements: Mapping[int, ParagraphLayerCell],
+    measurement_available: bool,
 ) -> None:
     """Print measurements and anchors, with literal snippets only when requested."""
     from .format import num, safe_text
-    from .style_fingerprint import FEATURE_UNITS, FEATURES, paragraph_layer_projection
+    from .style_fingerprint import FEATURE_UNITS, FEATURES
 
     pack = CLI_TEXTS.get(language_key, CLI_TEXTS["en"])
 
@@ -198,35 +200,39 @@ def _print_paragraph_layer(
     feature = report["feature"]
     label_key = next(label for field, label, _unit in FEATURES if field == feature)
     unit = FEATURE_UNITS.get(language_key, {}).get(feature, report["unit"])
+    minimum = report["comparison"]["minimum_paragraphs"]
     print(f"{labels.get(label_key, feature)} ({unit})")
-    print(message("layer_reference"))
+    print(message("layer_reference", minimum=minimum))
     cutoff = num(report["comparison"]["notable_abs_z"], language_key, 2)
     print(message("layer_notable", cutoff=cutoff))
     counts = report["selection"]
     print(message("layer_counts", **counts))
+    if not measurement_available:
+        print(message("layer_language_unavailable"))
     if counts["selected_count"] == 0:
         print(message("layer_empty"))
         if counts["total_count"] == 0:
             print(message("layer_empty_source"))
         if counts["comparable_count"]:
             print(message("layer_empty_cutoff"))
-        if paragraphs:
-            rows = paragraph_layer_projection(paragraphs, report["layer"])["paragraphs"]
-            chapters: dict[int, list[dict[str, Any]]] = {}
-            for row in rows:
-                chapters.setdefault(row["chapter_num"], []).append(row)
-            reasons = {"layer_short": 0, "layer_constant": 0, "layer_unmeasured": 0}
+        if paragraphs and measurement_available:
+            chapters: dict[int, set[str | None]] = {}
+            for index, paragraph in enumerate(paragraphs):
+                cell = measurements.get(index)
+                chapters.setdefault(paragraph.chapter_num, set()).add(cell.reason if cell else "unmeasured")
+            reasons = {"layer_short": 0, "layer_no_spread": 0, "layer_unmeasured": 0}
             for chapter in chapters.values():
-                measured = [row for row in chapter if row["value"] is not None]
-                if not measured:
-                    reasons["layer_unmeasured"] += 1
-                elif len(measured) < report["comparison"]["minimum_paragraphs"]:
+                if None in chapter:
+                    continue
+                if "zero_spread" in chapter:
+                    reasons["layer_no_spread"] += 1
+                elif "short_paragraph" in chapter or "too_few_paragraphs" in chapter:
                     reasons["layer_short"] += 1
-                elif not any(row["comparable"] for row in measured):
-                    reasons["layer_constant"] += 1
+                else:
+                    reasons["layer_unmeasured"] += 1
             for reason_key, count in reasons.items():
                 if count:
-                    print(message(reason_key, count=count))
+                    print(message(reason_key, count=count, minimum=minimum))
         from shlex import join
 
         command = join(["lixity", "profile", source, "--language", language_key,
@@ -245,7 +251,7 @@ def _print_paragraph_layer(
             f"{anchor} · {row['chapter_num']}: {title} · "
             f"{value} {unit} · {comparison}{notable}"
         )
-        if paragraphs is not None and "evidence" in row:
+        if "evidence" in row:
             evidence = row["evidence"]["layers"][report["layer"]]
             reason = f" · {evidence['reason']}" if evidence.get("reason") else ""
             evidence_unit = message("layer_" + evidence["kind"])
@@ -1288,9 +1294,9 @@ def _cmd_analysis_report(
     """Render the shared document analysis reports without choosing a destination."""
     from .analyzer import CorpusAnalyzer
     from .formatters import ReportFormatter
-    from .paragraph_evidence import ParagraphEvidence
+    from .paragraph_evidence import ParagraphEvidence, available_paragraph_layers
     from .pipeline import fingerprint_document, profile_document
-    from .style_fingerprint import paragraph_layer_projection
+    from .style_fingerprint import paragraph_layer_projection, prepare_paragraph_layer
     if args.command == "scenes":
         from .api import scenes
 
@@ -1430,9 +1436,12 @@ def _cmd_analysis_report(
         evidence: dict[int, ParagraphEvidence] | None = {} if args.evidence else None
         paragraphs, chapters = profile_document(text, config, fp_thresholds, evidence=evidence)
         if args.layer is not None:
+            measurement_available = args.layer in available_paragraph_layers(resolved, config=config)
+            measurements = prepare_paragraph_layer(paragraphs, args.layer) if measurement_available else {}
             payload = _meta_payload(
                 resolved.key,
-                **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable),
+                **paragraph_layer_projection(paragraphs, args.layer, only_notable=args.only_notable,
+                                             measurements=measurements),
             )
             payload["meta"]["schema_version"] = "paragraph-layer/1"
             if evidence is not None:
@@ -1443,7 +1452,8 @@ def _cmd_analysis_report(
                 print(_json(payload, indent=True))
             else:
                 _print_paragraph_layer(payload, args.file, resolved.key, resolved.labels,
-                                       paragraphs=paragraphs)
+                                       paragraphs=paragraphs, measurements=measurements,
+                                       measurement_available=measurement_available)
             return EXIT_OK
         payload = _meta_payload(
             resolved.key,

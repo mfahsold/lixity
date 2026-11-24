@@ -373,6 +373,8 @@
       parts.close.textContent = config.closeText || "✕";
       parts.previous.onclick = config.onPrev || null;
       parts.next.onclick = config.onNext || null;
+      parts.previous.disabled = Boolean(config.previousDisabled);
+      parts.next.disabled = Boolean(config.nextDisabled);
       parts.close.onclick = config.onClose || null;
       bar.setAttribute("aria-label", config.regionLabel || config.label || _uiLabel("evidence_inspect"));
       bar.hidden = false;

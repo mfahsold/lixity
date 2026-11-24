@@ -55,10 +55,10 @@
     CSS.highlights.delete("lixity-analysis-related");
     CSS.highlights.delete("lixity-analysis-contribution");
   }
-  function clearHighlight() {
+  function clearHighlight(keepCurrent) {
     if (!supported) return;
     CSS.highlights.delete("lixity-analysis-evidence");
-    clearSelectionHighlights();
+    if (!keepCurrent) clearSelectionHighlights();
   }
   function cancelTouchTap() {
     clearTimeout(touchFallback); touchFallback = 0; touchTap = null;
@@ -166,7 +166,7 @@
   }
   async function refresh() {
     var generation = ++epoch, key = select.value;
-    if (!enabled()) { clearHighlight(); setStatus(""); return; }
+    if (!enabled()) { clearHighlight(Boolean(card?.guided)); setStatus(""); return; }
     if (select.selectedOptions[0]?.dataset.available === "0") {
       clearHighlight(); setStatus(message("layer_language_unavailable")); return;
     }
@@ -266,6 +266,7 @@
     var stale = warning === "evidence_mismatch";
     var valueAllowed = !stale && warning !== "layer_language_unavailable";
     var spans = valueAllowed && layer ? layer.spans : [], span = spans[card.index];
+    var navigation = card.guided || {count:spans.length, index:card.index, step:step};
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
     var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
     var content = paragraphContent[record.panel.id];
@@ -358,10 +359,10 @@
       </section>` : null}
       ${warning ? html`<p class="analysis-evidence-warning" role="status">${message(warning)}</p>` : null}
       ${!supported ? html`<p class="analysis-evidence-warning">${message("evidence_unsupported")}</p>` : null}
-      ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
-        <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
-        <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
-        <button type="button" class="ctl primary" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
+      ${navigation.count > 1 ? html`<div class="analysis-evidence-actions">
+        <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {navigation.step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
+        <span class="analysis-evidence-progress">${navigation.index + 1} / ${navigation.count}</span>
+        <button type="button" class="ctl primary" aria-label=${message("evidence_next")} onClick=${function() {navigation.step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
       </div>` : null}
       ${canEditPassage ? html`<div class="analysis-evidence-edit-row">
         <button type="button" class="ctl" id="analysis-evidence-edit" onClick=${function() {
@@ -379,7 +380,7 @@
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);
     host.hidden = false;
     clearSelectionHighlights();
-    if (supported && span && enabled()) {
+    if (supported && span && (enabled() || card.guided)) {
       CSS.highlights.set("lixity-analysis-current", new Highlight(span.range));
       var relatedRanges = sameWordSpans.filter(function(item) { return item !== span && item.range; }).map(function(item) { return item.range; });
       if (relatedRanges.length) {
@@ -671,6 +672,8 @@
     var content = paragraphContent[panel.id], evidence = content && content[3];
     var candidateLayer = evidence && evidence.layers && evidence.layers[layerKey];
     if (!candidateLayer || !Array.isArray(candidateLayer.spans) || spanIndex >= candidateLayer.spans.length) return false;
+    var guided = options?.guided;
+    if (guided && passageBlocker(panel)) return false;
     var serial = ++spanRequest;
     if (window.LixityWorkbench) {
       var wbState = LixityWorkbench.state();
@@ -680,6 +683,7 @@
         LixityWorkbench.dispatch({type:"analysis", value:true});
       }
     }
+    if (!guided) revealPassageScope(panel);
     if (typeof revealChapter === "function") revealChapter(panel);
     var chip = paragraphChips[panel.id];
     if (chip && typeof toggleParagraph === "function") toggleParagraph(chip, true, true);
@@ -687,21 +691,22 @@
       select.value = layerKey;
       select.dispatchEvent(new Event("change", {bubbles:true}));
     }
-    if (toggle && !toggle.checked) {
+    if (!guided && toggle && !toggle.checked) {
       toggle.checked = true;
       toggle.dispatchEvent(new Event("change", {bubbles:true}));
     }
     await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
     var record = await prepare(panel), layer = record.layers[layerKey];
-    if (serial !== spanRequest || !currentRecord(record) || select.value !== layerKey || !layer || spanIndex >= layer.spans.length) return false;
+    if (serial !== spanRequest || !currentRecord(record) || select.value !== layerKey || !layer ||
+        spanIndex >= layer.spans.length || passageBlocker(panel)) return false;
     request++;
     var idx = spanIndex;
     var span = layer.spans[idx];
     var containers = revealRange(panel, span.range);
     var sourceRect = span.range.getClientRects()[0];
     var preserveFocus = options && options.preserveFocus;
-    var trigger = preserveFocus && document.activeElement || panel.querySelector(".reader-paragraph-actions") || panel;
-    card = {record:record, index:idx, pinned:true, trigger:trigger,
+    var trigger = guided?.origin || preserveFocus && document.activeElement || panel.querySelector(".reader-paragraph-actions") || panel;
+    card = {record:record, index:idx, pinned:true, trigger:trigger, guided:guided,
       rect:sourceRect || trigger.getBoundingClientRect(),
       arrival:scrollPosition(containers, trigger)};
     paint();
@@ -713,6 +718,7 @@
     var state = LixityWorkbench.state();
     return !document.hidden && state.view === "analysis" && state.surface === "document";
   }
-  window.LixityAnalysisEvidence = {inspect:inspect, inspectSpan:inspectSpan, available:available, tense:tenseEvidence, revealTense:revealTense};
+  window.LixityAnalysisEvidence = {inspect:inspect, inspectSpan:inspectSpan, available:available, tense:tenseEvidence, revealTense:revealTense,
+    closeGuided:function() {spanRequest++; if (card?.guided) close(false);}};
   schedule();
 })();

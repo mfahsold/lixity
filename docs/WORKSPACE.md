@@ -357,8 +357,8 @@ restores your reading position and selected measurement. Changing the measuremen
 the reader keeps your place in the text.
 
 **Analysis help** highlights the next step for the current state. Turn on
-analysis, choose a measurement or inspect the measurement at the current
-paragraph. **Paragraph details** remains available from the help and the
+analysis, choose a measurement or open a counted passage near your reading
+position. **Paragraph details** remains available from the help and the
 paragraph menu. Close the measurement card or paragraph details to return to
 the visible help control when you started there.
 
@@ -376,9 +376,16 @@ It starts on and is shared across measures. For measurements limited to
 counted passages, the visible legend points to the **Analysis overview** for
 chapter comparisons.
 If a chapter has too few eligible paragraphs or too many tied values to
-calculate a comparison, the chapter strip explains why once. The strip keeps
-its paragraph links, and **Paragraph details** and **Explain measurement** still
+calculate a comparison, the chapter strip explains why once. Choose **Matches
+in this chapter** to read any counted passages there. The strip keeps its
+paragraph links, and **Paragraph details** and **Explain measurement** still
 show available measurements. A measured zero remains a value.
+
+Use **Text matches** to open the next counted passage for the selected
+measurement. The count and result arrows follow the active search and filters.
+Use this to work through rare wording patterns whose distances from the typical
+paragraph cannot be calculated. The match's text card explains the counting
+rule and offers a question to consider in context.
 For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
@@ -914,7 +921,8 @@ Native text selection, search and saved research marks remain separate.
 The strip's colour and notable membership now use the same within-chapter
 comparison. The scale is fixed at z = −2.5 … +2.5; paragraph notability uses
 `abs(round(z, 2)) >= 1.5`. This is separate from chapter cutoffs and FDR.
-At least three measurable paragraphs and nonzero MAD are required. The legend
+The comparison needs at least three eligible paragraphs and a nonzero robust
+spread. It tries MAD first, then Sn and Qn if MAD is zero and values differ. The legend
 reports comparable coverage and distinguishes no comparison from zero notable
 paragraphs; raw paragraph values remain available in both cases.
 

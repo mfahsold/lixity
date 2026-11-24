@@ -1229,6 +1229,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_analysis")}">'
             f'{metric_control}'
+            f'<button type="button" class="ctl" id="reader-counted-results" hidden '
+            f'data-help="{L("reader_evidence_results_help")}" aria-controls="craft-jump-bar"></button>'
             f'<button type="button" class="ctl" id="reader-inspect-current">{L("reading_explore_passage")}</button>'
             f'{layer_navigation}'
             '<details class="reader-settings reader-analysis-options" id="reader-analysis-options" name="reader-settings">'
@@ -1489,7 +1491,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
         if chapter_paras:
             strip_start = len(parts)
-            parts.extend(('<p class="ctl-note chapter-comparison-status" hidden></p>', ""))
+            parts.extend((
+                '<div class="chapter-comparison-status" hidden><p class="ctl-note"></p>'
+                '<button type="button" class="ctl ctl-sm" data-chapter-counted-results '
+                'aria-controls="craft-jump-bar" hidden></button></div>',
+                "",
+            ))
             chapter_gaps: dict[str, str | None] = {}
             for idx, p in chapter_paras:
                 sev = f" sev-{p.severity}" if p.severity >= flag_min_severity else ""

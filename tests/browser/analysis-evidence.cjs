@@ -1313,7 +1313,13 @@ async function verifyNativeMetricReference(page, locale, chapterFeatures) {
   assert.equal(await measurementLink.evaluate(link => link.href), new URL(`${guideBase}#measure-asl`, source).href);
   await readerGuide.locator('summary').click();
 
+  const search = page.locator('#text-search');
+  const targetPassage = page.locator('#chapters .ptext').first();
+  await search.fill('lixity-proof-of-hidden-passage'); await search.press('Enter');
+  await targetPassage.waitFor({state:'hidden'});
   assert.equal(await page.evaluate(() => LixityAnalysisEvidence.inspectSpan(document.querySelector('#chapters .ptext'), 'asl', 0)), true);
+  assert.equal(await search.inputValue(), '', 'A deliberate evidence jump reveals its target through the shared search scope');
+  assert.ok(await targetPassage.isVisible());
   const reference = page.locator('#analysis-evidence-card a[href*="/guides/metrics/"]');
   assert.ok(await reference.isVisible());
   assert.equal(await reference.textContent(), label);

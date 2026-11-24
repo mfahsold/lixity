@@ -51,6 +51,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Open counted text matches directly from the reader and chapter comparison
+  gaps. Keep the result count and navigation in the current reading scope.
+- Preserve unknown paragraph values in CLI output for unsupported language
+  profiles and explain why comparable paragraphs are missing.
 - Explain why a chapter lacks paragraph comparisons while keeping measured
   values and passage navigation available. Keep the deviation arrows scoped
   to reachable paragraphs across the manuscript.

@@ -152,13 +152,13 @@ def test_human_zero_density_explains_unavailable_comparison(manuscript, capsys):
     assert status == 0, errors
     assert "0.00 per 1,000 words" in output
     assert "comparison unavailable" in output
-    assert "at least 3 measurable paragraphs" in output and "nonzero MAD" in output
+    assert "At least 3 eligible paragraphs" in output and "tries Sn then Qn" in output
 
 
 def test_german_layer_explanations_follow_analysis_language(manuscript, capsys):
     status, output, errors = run(capsys, manuscript, "--language", "de", "--layer", "asl")
     assert status == 0, errors
-    assert "Referenz:" in output and "Vergleich nicht verfügbar" in output
+    assert "jeweilige Kapitel" in output and "Vergleich nicht verfügbar" in output
     assert "vergleichbar" in output and "angezeigt" in output
     assert "Reference:" not in output and "comparison unavailable" not in output
 
@@ -170,13 +170,50 @@ def test_empty_selection_explains_actual_chapter_limits_and_quotes_command(manus
         capsys, manuscript, "--language", "de", "--layer", "modal", "--only-notable",
     )
     assert status == 0, errors
-    assert "weniger als 3 messbaren Absätzen: 1" in output
-    assert "MAD = 0: 2" in output
+    assert "weniger als 3 geeigneten Absätzen: 2" in output
+    assert "Kapitel ohne berechenbare Streuung: 1" in output
     command = output.split("Vollständige Belege: ")[1].strip()
     arguments = shlex.split(command)
     assert arguments[:3] == ["lixity", "profile", str(manuscript)]
     assert "--only-notable" not in arguments
     assert "--evidence" in arguments and "--json" in arguments
+
+
+def test_empty_selection_reports_paragraph_eligibility_before_spread(tmp_path, capsys):
+    source = tmp_path / "sparse.md"
+    source.write_text("## Sparse\n\nI saw the sky.\n\nMara waits.\n\nSome birds fly.\n", encoding="utf-8")
+
+    status, output, errors = run(capsys, source, "--layer", "filter", "--only-notable")
+    assert status == 0, errors
+    assert "Chapters with fewer than 3 eligible paragraphs: 1" in output
+    assert "Chapters without a usable comparison scale" not in output
+
+
+@pytest.mark.parametrize("arguments", [(), ("--evidence",)])
+def test_generic_measurement_is_unknown_without_a_counting_rule(manuscript, capsys, arguments):
+    status, output, errors = run(capsys, manuscript, "--language", "generic", "--layer", "filter", "--json", *arguments)
+    assert status == 0, errors
+    report = json.loads(output)
+    assert report["meta"]["schema_version"] == ("paragraph-layer-evidence/1" if arguments else "paragraph-layer/1")
+    assert report["selection"]["total_count"] == report["selection"]["selected_count"] == 9
+    assert report["selection"]["comparable_count"] == 0
+    for row in report["paragraphs"]:
+        assert row["value"] is None and row["z"] is None and row["notable"] is None
+        if arguments:
+            assert row["evidence"]["layers"]["filter"]["reason"] == "language_unavailable"
+
+
+def test_generic_measurement_obeys_explicit_empty_counting_rule(tmp_path, monkeypatch, capsys):
+    (tmp_path / "draft.md").write_text("## Sparse\n\nThe old lantern glows again.\n", encoding="utf-8")
+    (tmp_path / "lixity.toml").write_text(
+        'manuscript = "draft.md"\nlanguage = "generic"\nfilter_verbs_regex = ""\n', encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    status, output, errors = run(capsys, "--layer", "filter", "--evidence", "--json")
+    assert status == 0, errors
+    row, = json.loads(output)["paragraphs"]
+    assert row["value"] == 0 and row["z"] is None
+    assert row["evidence"]["layers"]["filter"]["count"] == 0
 
 
 @pytest.mark.parametrize("arguments,message", [
