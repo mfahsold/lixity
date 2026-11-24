@@ -57,7 +57,7 @@
   "tour_error": "No se pudo cargar el vídeo. Abre la demostración interactiva.",
   "discover": "Ver el recorrido",
   "editor_link": "Alcance y disponibilidad del editor (inglés)",
-  "workflow": "Lee, escribe y comprueba el efecto de un cambio. El análisis integrado funciona sin conexión. Los servicios opcionales de voz y mapas y los clientes de IA conectados tienen sus propios requisitos de red y tratamiento de datos.",
+  "workflow": "Lee, escribe y comprueba el efecto de un cambio. El análisis integrado funciona sin conexión. Los servicios opcionales de voz y mapas tienen requisitos propios de red. Los clientes de IA conectados definen por su cuenta el tratamiento de los datos.",
   "sandbox_cta": "Probar con un pasaje (en inglés)",
   "dossier_example": "Ver una ficha de ejemplo en PDF (inglés)",
   "reading_copy": "Copia de lectura (en inglés)",

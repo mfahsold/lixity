@@ -57,7 +57,7 @@
   "tour_error": "Não foi possível carregar o vídeo. Abra a demonstração interativa.",
   "discover": "Ver a visita guiada",
   "editor_link": "Âmbito e disponibilidade do editor (inglês)",
-  "workflow": "Leia, escreva e observe o efeito de uma alteração. A análise integrada funciona offline. Os serviços opcionais de voz e mapas e os clientes de IA ligados têm requisitos próprios de rede e de tratamento de dados.",
+  "workflow": "Leia, escreva e observe o efeito de uma alteração. A análise integrada funciona offline. Os serviços opcionais de voz e mapas têm requisitos próprios de rede. Os clientes de IA ligados tratam os dados segundo as suas próprias regras.",
   "sandbox_cta": "Experimentar um trecho (em inglês)",
   "dossier_example": "Ver um exemplo de dossiê em PDF (inglês)",
   "reading_copy": "Cópia de leitura (em inglês)",

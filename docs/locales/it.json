@@ -57,7 +57,7 @@
   "tour_error": "Impossibile caricare il video. Apri la demo interattiva.",
   "discover": "Guarda il tour",
   "editor_link": "Ambito e disponibilità dell’editor (inglese)",
-  "workflow": "Leggi, scrivi e verifica l’effetto di una modifica. L’analisi integrata funziona offline. I servizi facoltativi di voce e mappe e i client di IA connessi hanno requisiti propri per la rete e il trattamento dei dati.",
+  "workflow": "Leggi, scrivi e verifica l’effetto di una modifica. L’analisi integrata funziona offline. I servizi facoltativi di voce e mappe hanno requisiti propri per la rete. I client di IA connessi gestiscono i dati secondo le proprie regole.",
   "sandbox_cta": "Prova con un brano (in inglese)",
   "dossier_example": "Apri un dossier di esempio in PDF (inglese)",
   "reading_copy": "Copia per la lettura (in inglese)",
