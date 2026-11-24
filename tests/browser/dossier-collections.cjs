@@ -6,7 +6,7 @@ const path = require('node:path');
 const {spawn} = require('node:child_process');
 const {once} = require('node:events');
 const {createInterface} = require('node:readline');
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-collections-'));
@@ -284,10 +284,7 @@ server.serve_forever()
       cases.push([locale, 1440, 'light'], [locale, 390, 'dark']);
     }
     for (const width of [1024, 2560, 320]) cases.push(['de', width, 'light'], ['en', width, 'dark']);
-    let axePath;
-    for (const candidate of [path.join(playwrightModule, '../axe-core/axe.min.js'), path.join(root, 'node_modules/axe-core/axe.min.js')]) {
-      if (fs.existsSync(candidate)) {axePath = candidate; break;}
-    }
+    const axePath = resolveAxe();
     let axeChecks = 0;
     for (const [locale, width, theme] of cases) {
       const localized = await browser.newPage({viewport: {width, height: 1000}, colorScheme: theme});

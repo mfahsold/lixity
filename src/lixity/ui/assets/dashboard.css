@@ -19,13 +19,8 @@ code, pre { font-family: var(--font-mono); }
 #analysis-metric-context { max-width: 52rem; width: min(94vw, 52rem); }
 #analysis-metric-context h2 { font-size: var(--text-body); }
 #analysis-metric-context .modal-body { gap: var(--space-3); }
-#analysis-metric-context .modal-footer { margin: 0; padding: var(--space-3) var(--space-4); flex: none; }
 #analysis-metric-context p { margin: 0; }
-#metric-context-chapter, .metric-context-comparison dd { font-weight: var(--weight-strong); }
-.metric-context-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
-.metric-context-comparison > div { padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
-.metric-context-comparison dt { color: var(--fg-secondary); font-size: var(--text-small); }
-.metric-context-comparison dd { margin: 0; overflow-wrap: anywhere; }
+#metric-context-chapter { font-weight: var(--weight-strong); }
 #metric-context-details > .ctl-note { margin-block-end: var(--space-2); }
 #analysis-metric-context table { min-width: 40rem; }
 #analysis-metric-context thead th:nth-child(2) { min-width: 7rem; }
@@ -66,7 +61,7 @@ margin: 0;
 .settings-section .settings-advanced { background: var(--surface-raised, var(--surface)); border-color: color-mix(in srgb, var(--line) 80%, transparent); margin: 0; }
 .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .settings-form > .settings-actions { margin-top: .5rem; padding-top: 1rem; border-top: 1px solid var(--line); justify-content: flex-start; }
-.settings-form > .ctl-status { margin: 0; overflow-wrap: anywhere; }
+.settings-form > .ctl-status { margin: 0; }
 .speech-export-section, .speech-render-section {
 display: grid; gap: .75rem;
 & > p { margin: 0; }
@@ -394,15 +389,6 @@ border-radius: var(--radius);
 font-size: var(--text-small);
 color: var(--muted);
 & .layer-title { font-weight: var(--weight-semibold); color: var(--fg); }
-& .layer-scale {
-display: inline-flex;
-justify-content: space-between;
-min-width: 7rem;
-font-size: var(--text-micro);
-flex-wrap: wrap;
-gap: var(--space-2);
-& > span { display: inline-flex; align-items: center; gap: .3rem; border-inline-start: 3px solid var(--layer-direction-color); padding-inline: .45rem .25rem; }
-}
 & .layer-count { font-variant-numeric: tabular-nums; flex: 1 1 15rem; }
 & .layer-only { display: inline-flex; gap: .35rem; align-items: center; cursor: pointer; }
 & button.ctl { margin-left: 0; }
@@ -414,11 +400,10 @@ flex-basis: 100%;
 }
 body.comparison-on .chip.has-layer {
 background: var(--layer-color);
-&.tense-present { border-top: 2px solid var(--present); }
-&.tense-past { border-top: 2px solid var(--past); }
-&.tense-mixed { border-top: 2px solid var(--mixed); }
-&.tense-neutral { border-top: 2px solid var(--neutral); }
+box-shadow: none;
+&.outlier { box-shadow: 0 0 0 2px var(--fg); }
 }
+body.comparison-on .chip.layer-unavailable { background: none; border: 1px dashed var(--line-strong); box-shadow: none; }
 .chapter.flash, .ptext.flash, .panel.flash, section.flash,
 .ctl.flash, .research-timeline li.flash > .research-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 mark.text-hit.flash { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
@@ -457,7 +442,7 @@ transition: padding .24s var(--ease);
 .ptext.open .ptext-inner { padding: .8rem 1rem; }
 .paragraph-values {
 margin-top: .65rem;
-& > summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: var(--text-small); }
+& > summary { color: var(--muted); font-size: var(--text-small); }
 &[open] .anchor { margin-top: .35rem; }
 }
 body:not(.has-js-paragraphs) .ptext { grid-template-rows: 1fr; opacity: 1; margin-top: .65rem; }
@@ -548,8 +533,6 @@ transition: transform .14s var(--ease), outline-color .14s var(--ease);
 & :is(th, td).ch { text-align: left; white-space: nowrap; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; padding-left: .65rem; background: var(--surface); position: sticky; left: 0; z-index: 1; }
 & th.ch { z-index: 3; }
 }
-.z-legend { display: flex; align-items: center; gap: .4rem; font-size: var(--text-small); color: var(--muted); margin-bottom: .6rem; }
-.z-gradient { flex: 0 1 7rem; min-width: 2.5rem; height: .55rem; border-radius: var(--radius-xs); background: var(--analysis-comparison-gradient); }
 /* --- Flagged passages list -------------------------------------------- */
 .flags-wrap { container: flagged-passages / inline-size; max-height: 26rem; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 .flags-wrap thead th { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
@@ -926,8 +909,8 @@ display: flex; align-items: start; flex-wrap: wrap; gap: .5rem; overflow-wrap: a
 .grounding-mini-bar-fill { height: 100%; background: var(--action-bg, #3b82f6); border-radius: var(--radius-pill); transition: width 0.3s ease; }
 .grounding-term-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-3) var(--space-2); }
 .grounding-term-tabs { display: inline-flex; gap: 0.25rem; background: var(--neutral); padding: 2px; border-radius: var(--radius-pill); border: 1px solid var(--line); }
-.grounding-tab-btn { border: 0; background: transparent; color: var(--muted); font-size: var(--text-micro); font-weight: var(--weight-semibold); padding: 0.25rem 0.65rem; border-radius: var(--radius-pill); cursor: pointer; transition: all 0.15s ease; }
-.grounding-tab-btn.active { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.grounding-tab-btn { border: 0; background: transparent; color: var(--muted); min-block-size: var(--control-compact-size); font-size: var(--text-micro); font-weight: var(--weight-semibold); padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); cursor: pointer; }
+.grounding-tab-btn[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
 .grounding-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-block: 0.4rem 0.8rem; }
 .grounding-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface); font-size: var(--text-small); color: var(--fg); cursor: pointer; transition: all 0.15s ease; user-select: none; }
 .grounding-chip:hover { background: var(--surface-hover); border-color: var(--action-bg, #3b82f6); transform: translateY(-1px); }
@@ -1220,7 +1203,7 @@ body.lixity-workspace:not(.manuscript-reading) .toolbar { background: var(--bg);
 .workspace-actions { min-width: 0; }
 .workspace-actions > summary { color: var(--fg-secondary); font-weight: 400; }
 .workspace-actions:not([open]) > .workspace-bar { display: none; }
-.workspace-navigation-toggle { display: none; }
+.ctl.workspace-navigation-toggle { display: none; }
 .lixity-workspace .view-nav-tab:not(.active) { border-color: transparent; background: transparent; }
 /* Window and reading commands keep their targets while yielding emphasis to
 selected destinations, display state and explicit primary save actions. */
@@ -1385,7 +1368,6 @@ anchors while scrolling. */
 #research-revision-merge label { display: block; margin-top: .6rem; cursor: pointer; }
 #research-revision-merge pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; margin: .3rem 0 .8rem; }
 #research-revision-merge dd { margin: .3rem 0 .8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-#modal-research-revision .modal-footer, #modal-research-revision-batch .modal-footer { flex-wrap: wrap; }
 #modal-research-revision-batch .modal-body, #research-revision-batch-list > li, #research-revision-batch-list dd { min-width: 0; overflow-wrap: anywhere; }
 #research-revision-batch-list { padding-left: 1.2rem; }
 #research-revision-batch-list > li { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }

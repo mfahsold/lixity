@@ -21,7 +21,7 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .panel h2 { color: var(--fg); }
 .panel > * { min-width: 0; margin-block: 0; }
 .panel .hint { margin: 0; }
-.panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-compact); margin: var(--space-2) 0 var(--space-3); }
+.panel-guide { max-width: 72ch; font-size: var(--text-small); color: var(--fg-secondary); line-height: var(--line-body); margin: var(--space-2) 0 var(--space-3); }
 #style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
 #style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
 .analysis-review-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0; }
@@ -44,6 +44,8 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .lixity-workspace #analysis-review .review-route > p { flex: 1 1 14rem; }
 .review-route h3 { margin: 0; font-size: var(--text-body); }
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
+.review-route.ctl-guidance > p { color: var(--fg); line-height: var(--line-body); }
+.lixity-workspace #analysis-review .review-route.ctl-guidance { border-inline-start-color: var(--accent); }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: 0; text-decoration: none; }
 @container analysis-outline (max-width: 42rem) {
   .lixity-workspace #analysis-review { padding: var(--space-3); }
@@ -60,7 +62,6 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
 .manuscript-pdf-actions .setting-field { flex: 1 1 14rem; max-width: 24rem; min-width: 0; }
 .manuscript-pdf .ctl-note { max-width: 64ch; }
 .manuscript-pdf-actions .ctl { max-width: 100%; white-space: normal; }
-.manuscript-pdf .ctl-status { overflow-wrap: anywhere; }
 .manuscript-pdf .ctl:disabled { cursor: default; }
 .welcome-more > summary { cursor: pointer; font-size: var(--text-small); min-height: 2.75rem; align-content: center; }
 /* --- Component status strip (one glance, deterministic) --------------- */
@@ -182,6 +183,39 @@ tbody tr.clickable-row:hover, tbody tr[data-action]:hover { background: var(--su
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .val-positive, .delta-positive { color: var(--analysis-comparison-positive); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
 .val-negative, .delta-negative { color: var(--analysis-comparison-negative); font-variant-numeric: tabular-nums; font-weight: var(--weight-medium, 500); }
+.comparison-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--space-1) var(--space-2);
+  inline-size: min(100%, 32rem);
+  color: var(--fg-secondary);
+  font-size: var(--text-small);
+  line-height: var(--line-compact);
+}
+.comparison-legend-gradient {
+  grid-column: 1 / -1;
+  block-size: .5rem;
+  border-radius: var(--radius-pill);
+  background: var(--analysis-comparison-gradient);
+}
+.comparison-legend > :nth-child(3) { text-align: center; }
+.comparison-legend > :last-child { text-align: end; }
+.comparison-legend b { color: var(--fg); }
+.comparison-legend-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--fg-secondary);
+  font-size: var(--text-small);
+}
+.metric-context-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
+.metric-context-comparison > div { padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.metric-context-comparison dt { color: var(--fg-secondary); font-size: var(--text-small); }
+.metric-context-comparison dd { margin: 0; overflow-wrap: anywhere; font-weight: var(--weight-strong); }
 /* --- Badges & Dimension cards ----------------------------------------- */
 /* One badge family for every panel: compact text on a pill. Tone
 classes (.badge-success/-warning/-neutral/-warn) carry the state colours;
@@ -230,6 +264,15 @@ input[type="file"].ctl { max-width: 100%; }
 /* One note/help recipe: inline notes and field help share size and colour. */
 .ctl-note, .setting-field p { color: var(--muted); font-size: var(--text-note); line-height: var(--line-compact); }
 .ctl-note { margin-block: var(--space-2); }
+.ctl-guidance {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--fg);
+  font-size: var(--text-small);
+  line-height: var(--line-body);
+}
 /* One field label recipe for settings, modals and research forms. */
 .setting-field label, .form-label { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); line-height: var(--line-compact); color: var(--fg); margin-bottom: .35rem; letter-spacing: normal; text-transform: none; }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-4) var(--space-5); min-width: 0; align-items: start; }
@@ -283,6 +326,7 @@ select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--acc
 button.ctl.active,
 button.ctl[aria-pressed="true"],
 .view-nav-tab.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+button.ctl.ctl-choice[aria-pressed="true"]:where(:not(.primary)) { background: var(--accent-light); color: var(--fg); border-color: var(--accent); }
 /* Progress lives beside the action so the button and its label stay in place. */
 .ctl-status.loading::before,
 .loading-spinner { content: ""; display: inline-block; box-sizing: border-box; inline-size: .8rem; block-size: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; flex: none; }
@@ -308,10 +352,10 @@ button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: 
 details.nda { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .6rem 1rem; margin-top: .6rem; }
 details.nda summary { cursor: pointer; font-size: var(--text-control); }
 details.nda .row { margin-top: .5rem; }
-.ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; margin-top: .5rem; }
+.ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; min-inline-size: 0; margin-block-start: var(--space-2); overflow-wrap: anywhere; }
 .ctl-status.ok { color: var(--status-success-fg); }
 .ctl-status.err { color: var(--flag); }
-.ctl-status.loading { color: var(--muted); display: inline-flex; align-items: center; gap: .45rem; }
+.ctl-status.loading { display: inline-flex; align-items: center; gap: var(--space-2); }
 .ctl-status:empty { display: none; }
 
 .action-toast {
@@ -381,7 +425,7 @@ positions, colour maps) stay inline; layout uses these classes. */
 /* Native details content does not participate in its host's flex gap. */
 details.settings-section[open] > :not(summary) { margin-block-start: var(--space-3); }
 .site-export-analysis-choices { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
-.ctl:is(:disabled, [aria-disabled="true"]) { opacity: .6; cursor: default; }
+:is(.ctl, .modal-close, .ctl-dismiss):is(:disabled, [aria-disabled="true"]) { opacity: .6; cursor: default; }
 .ctl[aria-busy="true"] { cursor: wait; }
 :where(input, textarea, select).ctl[aria-invalid="true"] { border-color: var(--flag); }
 /* Tabs identify a view; primary buttons identify an action. Keep all local
@@ -393,7 +437,7 @@ tablists on one recipe, with an inset focus ring inside the scrollport. */
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] { border-color: var(--line); border-bottom-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible { outline-offset: -3px; }
 @media (pointer: coarse) {
-:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
 }
 /* --- Native Modals & Template Cards ----------------------------------- */
 audio.media-player { width: 100%; max-width: 100%; }
@@ -408,10 +452,29 @@ dialog.lixity-modal::backdrop { background: var(--modal-backdrop); }
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
 .modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
-.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); inline-size: var(--control-size); block-size: var(--control-size); flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
-.modal-close:hover { color: var(--fg); background: var(--neutral); }
-.modal-close:focus { outline: none; }
-.modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button:is(.modal-close, .ctl-dismiss) {
+  box-sizing: border-box;
+  inline-size: var(--control-size);
+  block-size: var(--control-size);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+button:is(.modal-close, .analysis-evidence-close) { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
+@media (pointer: coarse) {
+  button.ctl-dismiss { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
+}
+button:is(.modal-close, .ctl-dismiss):where(:not(:disabled, [aria-disabled="true"])):hover { color: var(--fg); background: var(--surface-hover); }
+button:is(.modal-close, .ctl-dismiss):focus-visible { border-radius: var(--radius-sm); outline-offset: 1px; }
 .modal-intro { margin: 0; padding: var(--space-2) var(--space-4) var(--space-3); flex: none; border-bottom: 1px solid var(--line); }
 .wizard-hint { display: block; margin-top: .25rem; font-size: var(--text-micro); }
 .modal-tab-pane { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
@@ -516,6 +579,7 @@ summary.ctl { font-family: var(--font); font-size: var(--text-control); line-hei
 }
 @media (prefers-reduced-motion: no-preference) {
   :is(button, a, select, input, textarea).ctl { transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  button:is(.modal-close, .ctl-dismiss) { transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
   .ctl-status.loading::before, .loading-spinner { animation: ctl-spin .7s linear infinite; }
   dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade var(--dur-fast) var(--ease); }
 }

@@ -120,7 +120,7 @@ Select text within one opened manuscript paragraph, choose **Link selection to c
 
 Exact resolved quotes have neutral dotted marks and a book-icon Research control, separate from analysis colors. Changed text or claim versions request review; an edit outside the quote resolves as *adjusted* and can be re-pinned explicitly in the review tab (or with `reconcile-manuscript --accept-moved`), while edited quotes and ambiguous paragraphs remain unresolved. Saved associations are listed in the research **Review** tab with their anchor state and review flags; listing them never writes or repins. These flags do not establish a contradiction or factual support. Both dossier readers show current linked claims with saved-version history and active saved quote counts. Zero saved links does not establish that a claim is unused in prose.
 
-Choose **Explore passage → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
+Choose **Paragraph details → Research for this passage**, a passage association count or a marked quotation to open its linked context beside the manuscript. Quotations of the same claim share a compact card; current dossier decisions have a separate count. Titles open current entries; **Linked version** opens the exact earlier claim or dossier version retained by the association. Current decisions do not reconstruct the quotation's historical state. **Review** opens the dedicated anchor review. Opening context writes nothing, and an empty summary means only that this passage has no saved associations.
 
 **Before the first save:**
 
@@ -134,7 +134,7 @@ back up the archive. Retention-confirmed manuscript links require record/manifes
 
 ## Edit dossiers and review decisions
 
-Under **Research → Dossiers → From manuscript**, select **New suggestions** to find a character, scene or place. The preview explains why it appeared and shows the text that will be saved. Inferred places show the directional passage that qualified the name. Open the place settings to choose automatic suggestions or search for your own list.
+Under **Research → Dossiers → From manuscript**, select **Show suggestions** to find a character, scene or place. The preview explains why it appeared and shows the text that will be saved. Inferred places show the directional passage that qualified the name. Open the place settings to choose automatic suggestions or search for your own list.
 
 In a generated character dossier, open **Current passages in the manuscript** to see the chapter table and read the highlighted name in context. Choose **Preview manuscript analysis** to review the material before saving it alongside your notes in a new dossier version. Set the number of suggestions and the excerpt policy under **Project → Analysis → Dossier suggestions and character reports**. For objects or recurring expressions, choose **Linked dossier** in **Manage terms & props** to see exact matches in that dossier.
 

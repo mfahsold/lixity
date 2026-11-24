@@ -116,7 +116,7 @@ def close_button(
     close_label: str,
     *,
     control_id: str = "",
-    css_class: str = "ctl",
+    css_class: str = "ctl-dismiss",
     help_text: str = "",
     extra_attrs: str = "",
 ) -> str:
@@ -629,6 +629,20 @@ def panel_guide(text_html: str, *, element_id: str = "") -> str:
     """Render a panel's visible reading guidance with trusted inline HTML."""
     identifier = f' id="{esc(element_id)}"' if element_id else ""
     return f'<p class="panel-guide"{identifier}>{text_html}</p>'
+
+
+def comparison_legend(labels: Mapping[str, str] | None, *, chapter: bool) -> str:
+    """Label the same statistical color scale for its two reference scopes."""
+    lower, upper = ("↓", "↑") if chapter else ("−", "+")
+    typical = "comparison_chapter_typical" if chapter else "comparison_manuscript_typical"
+    return (
+        '<span class="comparison-legend">'
+        '<span class="z-gradient comparison-legend-gradient" aria-hidden="true"></span>'
+        f'<span><b aria-hidden="true">{lower}</b> {esc(label(labels, "heatmap_lower"))}</span>'
+        f'<span>{esc(label(labels, typical))}</span>'
+        f'<span><b aria-hidden="true">{upper}</b> {esc(label(labels, "heatmap_higher"))}</span>'
+        '</span>'
+    )
 
 
 def details_start(title_html: str, *, element_id: str = "", extra_class: str = "", opened: bool = False) -> str:

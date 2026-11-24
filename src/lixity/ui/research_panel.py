@@ -342,17 +342,19 @@ def render_research_panel(
     )
     draft_guide = docs_url("guides/research-pdf.html#dossiers-and-decisions")
     parts.append(
-        f'<p class="ctl-note">{L("research_dossier_draft_help")} '
+        f'<p class="ctl-note ctl-guidance" id="r-manuscript-drafts-help">{L("research_dossier_draft_help")} '
         f'<a href="{draft_guide}" target="_blank" rel="noopener">'
         f'{L("research_dossier_draft_guide")}</a></p>'
     )
     parts.append(f'<div class="chip-row" role="group" aria-label="{L("research_dossier_draft_heading")}">')
     parts.append(
-        f'<button type="button" class="ctl" aria-pressed="false" id="r-manuscript-dossier-btn">{L("research_dossier_draft_load")}</button>'
-        f'<button type="button" class="ctl" aria-pressed="false" data-draft-load-existing>{L("research_dossier_draft_load_existing")}</button>'
+        f'<button type="button" class="ctl ctl-choice primary" aria-pressed="false" '
+        f'aria-describedby="r-manuscript-drafts-help" id="r-manuscript-dossier-btn">{L("research_dossier_draft_load")}</button>'
+        f'<button type="button" class="ctl ctl-choice" aria-pressed="false" '
+        f'aria-describedby="r-manuscript-drafts-help" data-draft-load-existing>{L("research_dossier_draft_load_existing")}</button>'
     )
     parts.append("</div>")
-    parts.append('<p class="ctl-note" id="r-manuscript-drafts-status" role="status" hidden></p>')
+    parts.append(status_banner("r-manuscript-drafts-status", hidden=True))
     parts.append('<div id="r-manuscript-drafts"></div>')
     parts.append("</div>")
     parts.append("</details>")

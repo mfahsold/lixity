@@ -130,18 +130,13 @@
       var opts = options || {};
       var baseClass = opts.baseClass || "ctl-status";
       var text = message == null ? "" : String(message);
-      if (state === "loading") {
-        el.className = baseClass + " loading";
-        el.textContent = text;
-      } else if (!text && !state) {
-        el.className = baseClass;
-        el.textContent = "";
-      } else {
-        var cls = state === true ? "ok" : state === false ? "err" : (state || "");
-        el.className = baseClass + (cls ? " " + cls : "");
-        var prefix = opts.prefix && cls === "ok" ? "✓ " : (opts.prefix && cls === "err" ? "✗ " : "");
-        el.textContent = text ? (prefix + text) : "";
-      }
+      var cls = !text && !state ? "" : state === true ? "ok" : state === false ? "err" : (state || "");
+      var className = baseClass + (cls ? " " + cls : "");
+      var prefix = opts.prefix && cls === "ok" ? "✓ " : (opts.prefix && cls === "err" ? "✗ " : "");
+      var contents = text ? prefix + text : "";
+      // Preserve the live region when a refresh repeats the same state.
+      if (el.className !== className) el.className = className;
+      if (el.firstElementChild || el.textContent !== contents) el.textContent = contents;
       return el;
     },
     setButtonPending: function (button, pending) {
@@ -292,6 +287,28 @@
       var offsets = [0], offset = 0;
       for (var ch of String(text || "")) { offset += ch.length; offsets.push(offset); }
       return offsets;
+    },
+    textRangeMap: function (prose) {
+      var nodes = [], offset = 0, walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        var node = walker.currentNode;
+        nodes.push({node:node, start:offset, end:offset + node.length});
+        offset += node.length;
+      }
+      function point(at) {
+        if (!nodes.length) return {node:prose, offset:0};
+        var low = 0, high = nodes.length - 1;
+        while (low < high) {
+          var middle = Math.floor((low + high) / 2);
+          if (nodes[middle].end < at) low = middle + 1; else high = middle;
+        }
+        return {node:nodes[low].node, offset:at - nodes[low].start};
+      }
+      return function(left, right) {
+        var range = document.createRange(), start = point(left), end = point(right);
+        range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+        return range;
+      };
     },
     utf16ToCp: function (text, utf16Pos) {
       var str = String(text || ""), cp = 0, i = 0;
@@ -624,7 +641,7 @@
       if (active && active !== document.body && active.closest && active.closest(CHROME_SELECTOR)) {
         return true;
       }
-      if (document.querySelector("#reader-settings[open], #reader-analysis-guide[open], #manuscript-versions[open]")) return true;
+      if (document.querySelector(".reader-settings[open], #manuscript-versions[open]")) return true;
       if (Array.from(document.querySelectorAll(".passage-jump-bar:not([hidden])")).some(function (bar) {
         return bar.getClientRects().length > 0;
       })) return true;

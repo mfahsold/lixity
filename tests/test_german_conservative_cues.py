@@ -51,3 +51,15 @@ def test_explicit_user_patterns_remain_author_controlled():
     config = CorpusConfig(language='de', praeteritum_regex=r'\bflatterten\b')
     matcher = TenseMatcher(config, resolve_language(config))
     assert matcher.count('Die Vögel flatterten.') == (0, 1)
+
+
+def test_capitalized_nominal_uses_do_not_count_as_present_verbs():
+    config = CorpusConfig(language='de')
+    matcher = TenseMatcher(config, resolve_language(config))
+    text = 'Trinken wir einen Kaffee? Sie denkt beim Trinken ans Lesen. Dann lief sie weiter.'
+    present, past = matcher.spans(text)
+    assert [text[start:end] for start, end in present] == ['Trinken', 'denkt']
+    assert [text[start:end] for start, end in past] == ['lief']
+
+    custom = CorpusConfig(language='de', praesens_regex=r'\bTrinken\b')
+    assert TenseMatcher(custom, resolve_language(custom)).count('Beim Trinken.') == (1, 0)

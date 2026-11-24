@@ -385,12 +385,18 @@ class TestPagesStaging(unittest.TestCase):
             self.assertFalse((root / "site/screenshots/unused.png").exists())
             self.assertTrue((root / "site/screenshots/manifest.json").exists())
 
-    def test_outreach_package_contains_only_selected_images_and_integrity_metadata(self):
+    def test_outreach_package_contains_reviewed_media_and_integrity_metadata(self):
         from scripts.make_screenshots import build_outreach_package
+        from scripts.make_videos import SOCIAL_CLIPS
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             shots = root / "docs/screenshots"
             shots.mkdir(parents=True)
+            videos = root / "docs/videos"
+            videos.mkdir()
+            for name, _, _, _ in SOCIAL_CLIPS:
+                (videos / name).write_bytes(name.encode())
+            (videos / "unreviewed.mp4").write_bytes(b"not a social clip")
             entries = []
             for name, role in (("lead.png", "lead"), ("reference.png", "reference")):
                 (shots / name).write_bytes(name.encode())
@@ -409,6 +415,14 @@ class TestPagesStaging(unittest.TestCase):
             data = json.loads((output / "manifest.json").read_text())
             self.assertEqual(data["state"], "draft-unpublished")
             self.assertEqual(data["images"][0]["sha256"], hashlib.sha256(b"lead.png").hexdigest())
+            self.assertEqual({item["file"] for item in data["clips"]}, {name for name, _, _, _ in SOCIAL_CLIPS})
+            for item in data["clips"]:
+                clip = output / "videos" / item["file"]
+                self.assertEqual(item["sha256"], hashlib.sha256(clip.read_bytes()).hexdigest())
+            self.assertFalse((output / "videos/unreviewed.mp4").exists())
+            stage(root / "docs", root / "site")
+            self.assertTrue((root / "site/videos" / SOCIAL_CLIPS[0][0]).is_file())
+            self.assertFalse((root / "site/videos/unreviewed.mp4").exists())
             self.assertIn("What was counted?", (output / "README.md").read_text())
             with self.assertRaises(FileExistsError):
                 build_outreach_package(root / "docs", output)
@@ -624,7 +638,7 @@ class TestPublicLanguages(unittest.TestCase):
         expected = {
             "dashboard-reader-focus.png": (191, 109),
             "dashboard-heatmap.png": (173, 83),
-            "dashboard-research-timeline.png": (157, 211),
+            "dashboard-research-dossiers.png": (157, 211),
             "dashboard-editorial.png": (223, 71),
         }
         with tempfile.TemporaryDirectory() as directory:
@@ -671,12 +685,41 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertIn('muted playsinline controls', text)
                 self.assertNotIn(' autoplay', text)
                 self.assertIn('id="tour-transcript"', text)
+                for media in ("videos/social-hook-9x16.mp4", "videos/social-hook-16x9.mp4",
+                              "screenshots/dashboard-measurement-focus.png"):
+                    self.assertIn(f'href="{media}" hreflang="en" download', text)
                 for scene in timing["scenes"]:
                     self.assertIn(html.escape(content['tour_' + scene['id']], quote=True), text)
                 self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)
 
+    def test_analysis_links_open_the_passage_guide_and_localized_methods(self):
+        from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
+
+        pages = render_pages()
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                guide_lang, guide_path, fragment = (
+                    ("de", "guides/first-look-de.html", "rhythmus") if language == "de"
+                    else ("en", "guides/first-look.html", "passage")
+                )
+                content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))
+                rendered = pages[page_path(language)]
+                self.assertIn(
+                    f'href="{guide_path}#{fragment}" hreflang="{guide_lang}">'
+                    f'{html.escape(content["passage_guide_link"], quote=True)}</a>', rendered,
+                )
+                self.assertIn(f'href="guides/metrics/{language}.html" hreflang="{language}"', rendered)
+                self.assertIn(f'id="{fragment}"', (ROOT / "docs" / guide_path).read_text(encoding="utf-8"))
+
     def test_generated_languages_are_complete_and_reciprocal(self):
-        from scripts.build_public_site import LANGUAGES, ROOT, page_path, page_url, render_pages
+        from scripts.build_public_site import (
+            LANGUAGES,
+            OG_LOCALES,
+            ROOT,
+            page_path,
+            page_url,
+            render_pages,
+        )
 
         pages = render_pages()
         for language in LANGUAGES:
@@ -690,6 +733,10 @@ class TestPublicLanguages(unittest.TestCase):
                               if 'hreflang' in item}
                 self.assertEqual(alternates, {**{code: page_url(code) for code in LANGUAGES},
                                               'x-default': SITE})
+                self.assertEqual(head.meta["og:locale"], [OG_LOCALES[language]])
+                self.assertCountEqual(head.meta["og:locale:alternate"],
+                                      [locale for code, locale in OG_LOCALES.items() if code != language])
+                self.assertEqual(head.meta["robots"], ["max-image-preview:large"])
                 self.assertIn(f'href="{page_url(language)}"', text)
                 self.assertIn('href="demo/report.html" hreflang="en"', text)
                 sandbox_language = "de" if language == "de" else "en"

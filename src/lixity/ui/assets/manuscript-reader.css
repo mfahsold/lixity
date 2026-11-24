@@ -22,12 +22,19 @@
 }
 .reader-secondary-controls { display: none; }
 .reader-analysis-toggle-controls { display: inline-flex; align-items: center; gap: .35rem; }
-.reader-analysis-guide > summary { width: 2.5rem; min-height: 2.5rem; justify-content: center; padding: .35rem; }
+.reader-analysis-guide > summary {
+  min-width: 2.5rem;
+  justify-content: center;
+  gap: var(--space-1);
+  border-color: var(--line);
+  background: var(--surface-alt);
+}
+.reader-analysis-guide[open] > summary { border-color: var(--accent); }
 .reader-analysis-guide > summary::after { display: none; }
 .reader-analysis-guide .reader-settings-body { font-size: var(--text-small); }
-.reader-analysis-guide p, .reader-analysis-guide li { line-height: var(--line-reading); }
-.reader-analysis-guide ol { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-inline-start: 1.5rem; }
-.reader-analysis-guide li .ctl { width: 100%; white-space: normal; text-align: start; }
+.reader-analysis-guide p { margin: 0; }
+.reader-guide-actions { display: flex; flex-direction: column; gap: var(--space-1); }
+.reader-guide-actions .ctl { justify-content: flex-start; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
 .manuscript-reading.workbench-analysis:not(.reader-focus, .manuscript-writing, .workbench-overview) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
@@ -88,17 +95,16 @@
 .reader-analysis-controls .metric-layer-control {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
-  min-width: 0;
+  gap: var(--space-2);
+  min-inline-size: 0;
   flex: 0 1 auto;
 }
+#reader-analysis-overview .reader-settings-body select { min-inline-size: 0; }
+#reader-analysis-overview > summary { border-color: var(--line); background: var(--surface-alt); }
 .reader-analysis-controls .metric-layer-label {
-  flex-shrink: 0;
-  font-size: var(--text-micro);
-  font-weight: 600;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--fg-secondary);
 }
 .reader-analysis-controls select {
   min-width: 11rem;
@@ -213,12 +219,14 @@
 .analysis-comparison-key { border-inline-start: 3px solid var(--accent); padding-inline: .5rem .25rem; margin-inline-start: .1rem; }
 #analysis-evidence-status:empty { display: none; }
 .reader-paragraph-actions { display: none; }
-.reader-review-flag { display: none; }
+.reader-review-flag.ctl { display: none; }
 .reader-passage-context { padding-block-end: var(--space-4); border-bottom: 1px solid var(--line); margin-block-end: var(--space-4); }
 .reader-passage-tools { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
 .reader-passage-tools .ctl { min-width: 0; min-height: 44px; text-align: start; white-space: normal; }
 .reader-passage-tools [data-reader-action="evidence"] { color: var(--accent); background: var(--accent-light); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
 .manuscript-reading .manuscript-reader-controls { position: sticky; }
+/* Keep the scroll anchor in the prose when sticky controls reflow or resize. */
+.manuscript-reading :is(.manuscript-reader-controls, .toolbar) { overflow-anchor: none; }
 body.manuscript-reading:not(.workbench-analysis).only-flags:not(.text-search-active) .chapter { display: block; }
 body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .chapter:not(.has-flags):not(:has(.ptext.metric-notable)) { display: none; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
@@ -251,7 +259,10 @@ body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .
 .manuscript-reading .reader-controls { flex-basis: auto; }
 .manuscript-reading .text-search-group { flex: 1 1 auto; max-width: 100%; min-width: 0; }
 @media (max-width: 900px) {
-  .manuscript-reading .text-search-group { flex-basis: 100%; max-width: 100%; }
+  /* The idle field shares its row with the terms button. Matched results
+     keep the full width for navigation and status. */
+  .manuscript-reading:not(.text-search-active) .text-search-group { flex-basis: 8rem; }
+  .manuscript-reading.text-search-active .text-search-group { flex-basis: 100%; }
 }
 .manuscript-reading:not(.workbench-overview) .toolbar > .totop { display: none; }
 .manuscript-reading :is(.chapter, .ptext) {
@@ -343,16 +354,15 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .reader-settings > summary.reader-compact-control::after { inset-inline-end: .25rem; width: .25rem; height: .25rem; }
   .reader-settings[open] .reader-settings-menu { max-width: calc(100vw - 1.5rem); max-height: 70dvh; overflow-y: auto; }
   .reader-analysis-controls { padding-top: var(--space-1); gap: .35rem; }
-  .reader-analysis-controls .metric-layer-control { width: 100%; position: relative; }
-  .reader-analysis-controls .metric-layer-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .reader-analysis-controls .metric-layer-control > .ctl-select { flex: 1; min-width: 0; }
+  .reader-analysis-controls .metric-layer-control { width: 100%; }
+  .reader-analysis-controls .metric-layer-control > .ctl-select { flex: 1; min-inline-size: 0; }
   .reader-analysis-controls select { min-width: 0; max-width: none; }
   .reader-analysis-switches { display: flex; flex-wrap: wrap; gap: .35rem; width: 100%; }
   .reader-comparison-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
   .reader-evidence-toggle, .reader-comparison-toggle { min-width: 0; gap: var(--space-1); line-height: var(--line-control); }
   .reader-evidence-toggle > span, .reader-comparison-toggle > span { min-width: 0; overflow-wrap: normal; }
   .manuscript-reading .chapter { --reader-action-gutter: 2.25rem; padding: .75rem calc(var(--reader-action-gutter) + .25rem) 1.5rem .75rem; }
-  .manuscript-reading #chapters { margin: .5rem auto 2.5rem; border-radius: var(--radius); }
+  .manuscript-reading #chapters { margin: 0 auto 2.5rem; border-radius: var(--radius); }
   .manuscript-reading .chapter-head { margin-bottom: var(--space-4); }
   .manuscript-reading .reader-paragraph-actions { padding: .15rem; opacity: .7; }
   body.lixity-workspace.reader-focus { padding-left: .75rem; padding-right: .75rem; }
@@ -589,6 +599,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 @container reader-tools (max-width: 68rem) {
   .reader-control-label { display: none; }
   .reader-compact-control { min-width: 2.5rem; }
+  .reader-analysis-guide > summary { padding-inline: var(--space-1); }
 }
 /* An open context dock narrows the reader: keep every tool on one row
    (including the dock toggle) by capping the chapter picker and gaps. */

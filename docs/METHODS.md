@@ -883,6 +883,11 @@ lexicon, including `übt`; unknown regular past forms such as `flatterten` can
 now be missed. Listed forms can still be ambiguous, as can auxiliary/participle
 matches. This intentionally changes the counts and dependent results; regenerate
 analyses before comparison and review old decisions against the new evidence.
+The default German present matcher skips capitalized cue spellings immediately
+after selected fused prepositions and articles, such as `beim Lesen`. This uses
+the spelling of a nominalized form as a bounded cue. Sentence-initial finite
+forms and explicit user patterns retain their matching behavior.
+[Official German spelling rules, §55](https://grammis.ids-mannheim.de/rechtschreibung/6193)
 In German, listed auxiliary/participle pairs additionally form one past cue;
 their contained lexical matches are consumed, so three recognized perfect
 constructions give three past cues and no present-auxiliary double count.

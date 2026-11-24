@@ -91,7 +91,7 @@ def test_export_validation_rejects_non_square_pixels(tmp_path: Path, monkeypatch
 @pytest.mark.parametrize(
     ("filename", "frames", "width", "height"),
     [("product-tour.mp4", 1200, 1440, 900), ("product-tour.webm", 1200, 1440, 900),
-     ("social-hook-16x9.mp4", 750, 1600, 900), ("social-hook-9x16.mp4", 750, 1080, 1920)],
+     ("social-hook-16x9.mp4", 300, 1600, 900), ("social-hook-9x16.mp4", 300, 1080, 1920)],
 )
 def test_published_video_has_complete_constant_frame_timing_and_geometry(
     filename: str, frames: int, width: int, height: int,

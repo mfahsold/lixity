@@ -112,7 +112,7 @@ The default browser address is `http://127.0.0.1:8765/`. A fresh start opens an 
 
 1. Choose **Open Project** to continue in an existing folder. To copy a manuscript into a new project, choose **Analyze a manuscript** and review the import preview. Confirm the analysis language.
 
-2. Read in **Manuscript**. Choose a paragraph's **… → Explore passage** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
+2. Read in **Manuscript**. Choose a paragraph's **… → Paragraph details** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
 
 3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return.
 

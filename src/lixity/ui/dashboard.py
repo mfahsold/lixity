@@ -40,7 +40,7 @@ from ..style_profile import (
 )
 from ..workspace_labels import workspace_labels_for
 from .analysis_identity import render_analysis_identity
-from .analysis_navigation import render_analysis_workflows
+from .analysis_navigation import analysis_workflow_sections, render_analysis_workflows
 from .components import (
     ANALYSIS_SECTIONS,
     FAVICON_DATA_URI,
@@ -53,6 +53,7 @@ from .components import (
     checkbox_field,
     close_button,
     compact_control,
+    comparison_legend,
     details_start,
     empty_state,
     form_field,
@@ -91,7 +92,7 @@ from .heatmap import (
     render_style_passport_panel,
 )
 from .manuscript_document import ReaderBlock, reader_block_html
-from .manuscript_reader import reading_controls, reading_metric_control
+from .manuscript_reader import reading_controls, reading_metric_control, reading_overview_control
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -586,7 +587,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     def _layer_tip(key: str, value: float, z: float) -> str:
         direction = label(labels, "layer_above" if z > 0 else "layer_below" if z < 0 else "layer_at")
-        return f"{_layer_text(key, value)} · {direction} · z = {N(z, 2, True)}"
+        return f"{_layer_text(key, value)} · {direction}"
 
     meta_bits: list[str] = []
     if chapters and total_words > 0:
@@ -1116,11 +1117,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'<button class="ctl" type="button" id="layer-next" disabled '
         f'aria-label="{L("layer_next")}" title="{L("layer_next")}">↓</button></div>'
     )
-    if paragraphs:
-        metric_control = reading_metric_control(
-            labels, language_key, layer_data, available=available_layers,
-            include_evidence=bool(paragraph_evidence), report=not controls,
-        )
     scenes_panel = render_scenes_panel(scenes, labels, language_key)
     motifs_panel = render_motifs_panel(
         motifs, labels, custom_search=controls and allowed_actions is not None and action_enabled("motif-search"),
@@ -1148,6 +1144,17 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if chapters:
         available.add("matrix")
     active_sections = [entry for entry in ANALYSIS_SECTIONS if entry[0] in available]
+    workflow_sections = analysis_workflow_sections(
+        active_sections,
+        has_markers=markers is not None,
+        has_register_targets=fingerprint is not None and bool(fingerprint.register_targets) and metrics is not None,
+    ) if has_chapters and controls else ()
+    if paragraphs:
+        metric_control = reading_metric_control(
+            labels, language_key, layer_data, available=available_layers,
+            include_evidence=bool(paragraph_evidence), report=not controls,
+            overview_sections=workflow_sections,
+        )
     overview_navigation = section_nav(active_sections, labels)
     outline_sections = ([("analysis-review", "review_title")] if has_chapters else []) + active_sections
     analysis_outline = analysis_outline_nav(outline_sections, labels)
@@ -1155,10 +1162,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if has_reading and controls:
         flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
                                        extra_class="js-analysis-control")
-        analysis_controls = (
-            f'<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
-            f'aria-label="{L("reading_text_analysis")}">'
-            f'{metric_control}'
+        analysis_switches = (
             '<div class="reader-analysis-switches">'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" '
             f'data-help="{L("reading_help_counted")}"/> '
@@ -1171,8 +1175,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '</div>'
             f'{flag_checkbox}'
             f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
-            '</div></div>'
+            '</div>'
         ) if paragraphs else ""
+        analysis_controls = (
+            '<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
+            f'aria-label="{L("reading_analysis")}">'
+            f'{metric_control}{reading_overview_control(workflow_sections, labels)}{analysis_switches}</div>'
+        ) if paragraphs or workflow_sections else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
     else:
@@ -1208,10 +1217,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
         parts.append(
             '<div id="analysis-review-body">' + panel_guide(manuscript_intro)
-            + '<p class="ctl-note">'
-            + (f'<a href="#analysis-measurements" data-jump="#analysis-measurements">{L("analysis_measurements")}</a>'
-               ' <span aria-hidden="true">·</span> ' if controls else "")
-            + f'{metric_reference_link(labels, "analysis-review")}</p><div class="review-routes">'
+            + '<div class="review-routes">'
         )
         if paragraphs:
             candidates = flagged
@@ -1237,12 +1243,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 )
             else:
                 reason_text = L("review_passage_unflagged" if tense_available else "no_tense")
+            passage_action = L("review_flagged_passage_action" if candidates else "review_open_start_action")
             parts.append(
-                f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
+                '<article class="review-route ctl-guidance">'
+                f'<p class="ctl-note" id="review-passage-reason">{reason_text}</p>'
+                f'<a class="ctl primary" href="#p-{first_index}" '
                 'aria-describedby="review-passage-reason" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
-                f"{L('review_passage_action')}</a>"
-                f'<p class="ctl-note" id="review-passage-reason">{reason_text}</p></article>'
+                f'{passage_action}</a></article>'
             )
         compare_target = (
             "heatmap"
@@ -1287,12 +1295,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         parts.append("</div>")
         if controls:
-            workflow_sections = [*active_sections, ("analysis-measurements", "analysis_measurements")]
-            if markers is not None:
-                workflow_sections.append(("markers", "markers"))
-            if fingerprint is not None and fingerprint.register_targets and metrics is not None:
-                workflow_sections.append(("register-targets", "register_title"))
             parts.append(render_analysis_workflows(workflow_sections, labels))
+        parts.append(
+            '<p class="ctl-note">'
+            + (f'<a href="#analysis-measurements" data-jump="#analysis-measurements">{L("analysis_measurements")}</a>'
+               ' <span aria-hidden="true">·</span> ' if controls else "")
+            + f'{metric_reference_link(labels, "analysis-review")}</p>'
+        )
         parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
@@ -1349,6 +1358,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
             parts.append(metric_control)
     parts.append('<span class="legend">')
+    parts.append(f'<strong>{L("reading_tense_flag")}</strong>')
     for key, color in (
         ("present", "var(--present)"),
         ("past", "var(--past)"),
@@ -1384,12 +1394,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     parts.append('<div class="layer-legend-group" id="layer-comparison-legend">'
                  f'<strong>{L("legend_paragraph_comparison")}</strong>')
     parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
-    parts.append(
-        f'<span class="layer-scale"><span id="layer-scale-low" '
-        f'style="--layer-direction-color:{z_color(-PARAGRAPH_LAYER_Z_CUTOFF)}">↓ {L("layer_below")}</span>'
-        f'<span id="layer-scale-high" style="--layer-direction-color:{z_color(PARAGRAPH_LAYER_Z_CUTOFF)}">'
-        f'↑ {L("layer_above")}</span></span>'
-    )
+    parts.append(comparison_legend(labels, chapter=True))
+    parts.append(f'<p class="ctl-note">{L("comparison_missing_mark")}</p>')
     parts.append('<span class="layer-count" id="layer-legend-count" role="status" aria-live="polite"></span>')
     parts.append(
         f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
@@ -1458,7 +1464,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
                 tooltip = (
-                    f"{line_label(labels, p)} · {dom_label} · "
+                    f"{line_label(labels, p)} · {label(labels, 'reading_tense_flag')} · {dom_label} · "
                     f"{label(labels, 'present')} {p.present_hits} / "
                     f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
                 )
@@ -1471,8 +1477,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                         # Marker position uses the same SSOT scale as the colour;
                         # shipping it avoids duplicating Z_COLOR_LIMIT in JS.
                         position = max(0.0, min(100.0, 50.0 + z / Z_COLOR_LIMIT * 50.0))
-                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {_layer_tip(key, value, z)}",
-                                              round(z, 2), N(value, 1), info.notable, round(position, 1)]
+                        description = _layer_tip(key, value, z)
+                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {description}",
+                                              round(z, 2), N(value, 1), info.notable, round(position, 1),
+                                              N(info.chapter_median, 1)]
                 layer_attr = (
                     f" data-layers='{attr_json(layer_payload)}'"
                     if layer_payload
@@ -1510,7 +1518,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '
                     f'data-markers="{int(can_edit)}"{flag_attrs}>'
                 )
-                anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
+                anchor = f"{line_label(labels, p)} · {label(labels, 'reading_tense_flag')} · {dom_label} · {sev_label}"
                 stats = " · ".join((
                     f"{label(labels, 'present')} {p.present_hits if tense_available else '–'}",
                     f"{label(labels, 'past')} {p.past_hits if tense_available else '–'}",

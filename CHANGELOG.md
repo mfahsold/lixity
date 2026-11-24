@@ -44,6 +44,29 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Describe the OSS architecture and contributor workflows in the repository
+  README. Show the author workflow, the interactive sandbox and the read-only
+  example distinctly on the localized product pages.
+- Use one close-control and status-banner treatment for shared workspace
+  panels. Announce only changed status messages.
+- Package reviewed screenshots and both short share clips together. Distinguish
+  sandbox and clip links in the public site's aggregate action counts.
+- Link each product page to a worked analysis example and its localized metric
+  reference. Verify the deployed crawl files, measurement assets, demo and
+  reviewed media against the staged site.
+- Synchronize tab selection and panel accessibility in source comparison and
+  style analysis. Share keyboard navigation across research and Audio Studio.
+- Put the next action and its reason together in analysis help, the overview,
+  passage evidence and dossier suggestions. Use shared guidance styling,
+  localized action labels and keyboard focus return.
+- Separate passage measurements and available overview reports in the manuscript
+  toolbar. Explain the comparison reference and show the paragraph value beside
+  its chapter median in the evidence card.
+- Exclude capitalized German nominal uses after selected article contractions
+  such as “beim Lesen” from default present-tense cues.
+- Use the engine's quoted-word counts, sticky-sentence selection and echo groups
+  in the reader. Forward the native project selector unchanged to the shared
+  workspace resolver.
 - Skip repeated toolbar, analysis highlight and dossier outline updates during
   steady scrolling. Fit the manuscript companion on viewport scroll and avoid
   refreshing dossier maps on pages without maps.

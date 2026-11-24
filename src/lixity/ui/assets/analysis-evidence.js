@@ -93,16 +93,14 @@
   function stickyDetails(span, rule, offsets) {
     if (!Array.isArray(rule) || !Number.isSafeInteger(rule[0]) || rule[0] < 1 ||
         !Number.isFinite(rule[1]) || rule[1] <= 0 || rule[1] > 100 ||
-        !Number.isSafeInteger(span.words) || span.words < rule[0] ||
+        !Number.isSafeInteger(span.words) || span.words < 1 ||
         !Number.isSafeInteger(span.function_words) || span.function_words < 0 || span.function_words > span.words ||
         !Array.isArray(span.function_spans) || span.function_spans.length > span.function_words) return null;
-    var pct = span.function_words / span.words * 100;
-    if (pct < rule[1]) return null;
     var ranges = span.function_spans.filter(function(hit) {
       return Array.isArray(hit) && Number.isSafeInteger(hit[0]) && Number.isSafeInteger(hit[1]) &&
         span.start <= hit[0] && hit[0] < hit[1] && hit[1] <= span.end;
     }).map(function(hit) { return [offsets[hit[0]], offsets[hit[1]]]; });
-    return {count:span.function_words, pct:pct, minWords:rule[0], minPct:rule[1], ranges:ranges};
+    return {count:span.function_words, share:span.function_words / span.words, minWords:rule[0], minPct:rule[1], ranges:ranges};
   }
   async function prepare(panel) {
     var prose = paragraph(panel), content = paragraphContent[panel.id], evidence = content && content[3];
@@ -123,37 +121,30 @@
       var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
       if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return record;
       // Build one codepoint→UTF-16 table and text-node map per actual prose generation.
-      var offsets = LixityComponents.cpOffsets(record.text), offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
-      offset = 0;
-      while (walker.nextNode()) {
-        nodes.push({node:walker.currentNode, start:offset, end:offset + walker.currentNode.length});
-        offset += walker.currentNode.length;
-      }
-      function point(at) {
-        var low = 0, high = nodes.length - 1;
-        while (low < high) {
-          var middle = Math.floor((low + high) / 2);
-          if (nodes[middle].end < at) low = middle + 1; else high = middle;
-        }
-        return {node:nodes[low].node, offset:at - nodes[low].start};
-      }
-      record.rangeAt = function(left, right) {
-        var range = document.createRange(), start = point(left), end = point(right);
-        range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
-        return range;
-      };
+      var offsets = LixityComponents.cpOffsets(record.text);
+      record.rangeAt = LixityComponents.textRangeMap(prose);
       function prepareLayers(values, target) {
         if (!values || typeof values !== "object") return;
         Object.keys(values).forEach(function(key) {
           var value = values[key];
           if (!validLayer(value, offsets.length - 1)) return;
-          var spans = value.spans.map(function(span) {
+          var echoByIndex = key === "echo" && Array.isArray(value.echo_groups) ? new Map() : null;
+          if (echoByIndex) value.echo_groups.forEach(function(group) {
+            if (!Array.isArray(group) || !Number.isSafeInteger(group[0]) || group[0] < 2 || group[0] > value.count ||
+                !Array.isArray(group[1]) || group[1].length > group[0]) return;
+            group[1].forEach(function(index) {
+              if (Number.isSafeInteger(index) && index >= 0 && index < value.spans.length) echoByIndex.set(index, group);
+            });
+          });
+          var spans = value.spans.map(function(span, index) {
             var qctx = typeof span.quotation_context === "string" &&
               ["in_quotation", "outside_quotation", "overlaps_quotation"].includes(span.quotation_context)
               ? span.quotation_context
               : null;
+            var echoGroup = echoByIndex?.get(index) || null;
             return {range:record.rangeAt(offsets[span.start], offsets[span.end]),
               count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+              echoGroup:echoGroup,
               sticky:key === "sticky" ? stickyDetails(span, value.sticky_rule, offsets) : null,
               quotation_context:qctx,
               quotation_marker:typeof span.quotation_marker === "string" ? span.quotation_marker : "",
@@ -282,10 +273,9 @@
     var metricGuide = document.body.dataset.metricGuide;
     var sticky = span && span.sticky;
     var quoteCtx = span && (span.quotation_context || "unknown");
-    var normalizedQuote = span && span.quote ? span.quote.normalize().toLowerCase() : "";
-    var sameWordSpans = normalizedQuote && key === "echo"
-      ? spans.filter(function(item) { return item.quote.normalize().toLowerCase() === normalizedQuote; })
-      : [];
+    var echo = key === "echo" && span && Number.isSafeInteger(layer.value.count);
+    var sameWordSpans = echo && span.echoGroup !== null
+      ? spans.filter(function(item) { return item.echoGroup === span.echoGroup; }) : [];
     var hasMetricSummary = Boolean(valueAllowed && summaries && typeof summaries[key] === "string");
     var summary = hasMetricSummary ? summaries[key] : "";
     var allParagraphValues = !stale && content[2] && content[2] !== summary ? content[2] : "";
@@ -303,6 +293,8 @@
       layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
     var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
     var comparison = valueAllowed && info && Number.isFinite(info[2]) ? info : null;
+    var comparisonValues = comparison && typeof comparison[6] === "string";
+    var comparisonUnit = option.dataset.unit ? " " + option.dataset.unit : "";
     var zFmt = zFormatters[lang] || (zFormatters[lang] = new Intl.NumberFormat(lang, {
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
@@ -314,16 +306,16 @@
         })
       : message("evidence_reason_" + key);
     var matchSummary = sticky
-      ? uiCountFormat("evidence_sticky_count", sticky.count, {words:span.words, percent:percentFormat.format(sticky.pct / 100)})
-      : sameWordSpans.length ? uiCountFormat("evidence_echo_summary", sameWordSpans.length, {
-          word:span.quote, total:spans.length
-        }) : "";
+      ? uiCountFormat("evidence_sticky_count", sticky.count, {words:span.words, percent:percentFormat.format(sticky.share)})
+      : !echo ? ""
+      : !span.echoGroup ? uiFormat("evidence_echo_single", {word:span.quote, total:layer.value.count})
+      : uiCountFormat("evidence_echo_summary", span.echoGroup[0], {word:span.quote, total:layer.value.count});
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
       <div class="analysis-evidence-heading-text">
         <strong id="analysis-evidence-title">${option.textContent}</strong>
         ${quoteCtx ? html`<span class="badge badge-neutral analysis-evidence-quote-context" data-quote-context=${quoteCtx}>${message("evidence_quote_" + quoteCtx)}</span>` : null}
       </div>
-      <button type="button" class="ctl analysis-evidence-close" aria-label=${message("evidence_close")} onClick=${function() {close(true);}}>✕</button>
+      <button type="button" class="ctl-dismiss analysis-evidence-close" aria-label=${message("evidence_close")} aria-keyshortcuts="Escape" onClick=${function() {close(true);}}>✕</button>
       </div>
       ${span || counted !== null ? html`<div class=${"analysis-evidence-selection" + (span && !matchSummary ? " analysis-evidence-has-quote" : "")}>
         ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${markedQuote(span)}</blockquote>` : null}
@@ -340,17 +332,23 @@
           <mark class="analysis-evidence-contribution">${message("evidence_sticky_key")}</mark>
         </p>` : null}
         ${key === "sticky" && (!sticky || sticky.ranges.length < sticky.count) ? html`<p class="analysis-evidence-warning">${message("evidence_sticky_unmapped")}</p>` : null}
-        <strong class="analysis-evidence-scope">${message("evidence_review_heading")}</strong>
-        <p>${message("evidence_review_" + key)}</p>
+        <p class="ctl-guidance analysis-evidence-review"><strong>${message("evidence_review_heading")}</strong>
+          ${message("evidence_review_" + key)}</p>
       </section>` : null}
-      ${metricGuide ? html`<p class="ctl-note"><a href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
       ${summary || share || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
-        ${summary ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
+        ${summary && !comparisonValues ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
         <p class="analysis-evidence-value">${summary}</p>` : null}
         ${share ? html`<p class="ctl-note">${share}</p>` : null}
         ${comparison ? html`<div class="analysis-evidence-comparison" style=${{"--evidence-comparison-color":comparison[0]}}>
-          <strong class="analysis-evidence-scope">${message("evidence_comparison_scope")}</strong>
-          <div class="analysis-evidence-comparison-label"><span>${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}</span><strong>${uiFormat("evidence_comparison_z", {value:z})}</strong></div>
+          <strong class="analysis-evidence-scope">${message("legend_paragraph_comparison")}</strong>
+          <div class="analysis-evidence-comparison-label">
+            <b aria-hidden="true">${comparison[2] < 0 ? "↓" : comparison[2] > 0 ? "↑" : "="}</b>
+            ${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}
+          </div>
+          ${comparisonValues ? html`<dl class="metric-context-comparison">
+            <div><dt>${message("evidence_paragraph_scope")}</dt><dd>${comparison[3] + comparisonUnit}</dd></div>
+            <div><dt>${message("comparison_chapter_typical")}</dt><dd>${comparison[6] + comparisonUnit}</dd></div>
+          </dl>` : null}
           ${marker !== null ? html`<div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}
             style=${{"--evidence-comparison-position":marker + "%"}}><span></span></div>` : null}
         </div>` : null}
@@ -362,7 +360,7 @@
       ${spans.length > 1 ? html`<div class="analysis-evidence-actions">
         <button type="button" class="ctl" aria-label=${message("evidence_previous")} onClick=${function() {step(-1);}}><span aria-hidden="true">←</span><span class="analysis-evidence-navigation-label">${message("evidence_previous")}</span></button>
         <span class="analysis-evidence-progress">${card.index + 1} / ${spans.length}</span>
-        <button type="button" class="ctl" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
+        <button type="button" class="ctl primary" aria-label=${message("evidence_next")} onClick=${function() {step(1);}}><span class="analysis-evidence-navigation-label">${message("evidence_next")}</span><span aria-hidden="true">→</span></button>
       </div>` : null}
       ${canEditPassage ? html`<div class="analysis-evidence-edit-row">
         <button type="button" class="ctl" id="analysis-evidence-edit" onClick=${function() {
@@ -371,7 +369,9 @@
           window.LixityManuscriptEditor.openAtLine(targetLine);
         }}>${message("evidence_edit_passage")}</button>
       </div>` : null}
+      ${metricGuide ? html`<p class="ctl-note"><a href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("analysis_coverage")}</summary>
+        ${comparison ? html`<p class="analysis-evidence-comparison-score">${uiFormat("evidence_comparison_z", {value:z})}</p>` : null}
         ${valueAllowed && !comparison && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
         ${countKnown ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
         ${key === "sticky" ? html`<p>${message("evidence_reason_function")}</p>` : null}
@@ -456,7 +456,7 @@
     }
     return true;
   }
-  async function inspect(panel, trigger, point) {
+  async function inspect(panel, trigger, point, focusOrigin) {
     opening = null;
     if (!available()) return;
     var settleLayout = trigger && trigger.closest("#reader-inspector") && trigger.dataset.readerEvidenceParagraph === panel.id;
@@ -494,7 +494,7 @@
     var span = index >= 0 && layer.spans[index];
     var sourceRect = span && span.range.getClientRects()[0];
     var rangeVisible = sourceRect && sourceRect.bottom > 0 && sourceRect.top < innerHeight && sourceRect.right > 0 && sourceRect.left < innerWidth;
-    card = {record:record, index:index >= 0 ? index : 0, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
+    card = {record:record, index:index >= 0 ? index : 0, pinned:true, trigger:focusOrigin || trigger || panel.querySelector(".reader-paragraph-actions"),
       rect:rangeVisible ? sourceRect : (trigger || panel).getBoundingClientRect(),
       arrival:scrollPosition(passageScrollContainers(panel), trigger)};
     paint(); host.querySelector("button").focus({preventScroll:true});

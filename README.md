@@ -1,68 +1,36 @@
 # Lixity
 
-[![Checks: local-first](https://img.shields.io/badge/checks-local--first-blue)](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
-[![Mastodon](https://img.shields.io/badge/Mastodon-@lixity-6364ff?logo=mastodon&logoColor=white)](https://mastodon.social/@lixity)
-[![Bluesky](https://img.shields.io/badge/Bluesky-@lixity.bsky.social-0285ff?logo=bluesky&logoColor=white)](https://bsky.app/profile/lixity.bsky.social)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
-![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
+[![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](https://github.com/mfahsold/lixity/blob/main/LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 
-> **A local workspace for authors, editors, and researchers.**
-> Find a passage worth revisiting, keep the research for a scene at hand, and share the revision you choose. Built-in analysis runs offline.
->
-> 🚀 **[Interactive Demo](https://mfahsold.github.io/lixity/demo/report.html)** · ✍️ **[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html)** · 📖 **[Read Demo Novel](https://mfahsold.github.io/lixity/demo/reader/index.html)** · ⚡ **[Install Guide](https://mfahsold.github.io/lixity/guides/installation.html)** · 📚 **[First-Look Tour](https://mfahsold.github.io/lixity/guides/first-look.html)**
+Lixity is an open-source manuscript workspace with a shared Python analysis
+engine, CLI and local browser interface. It links measurements to manuscript
+passages, preserves the revisions behind research citations, and exports the
+reading or review copy the author selects. Built-in analysis runs offline.
 
-**Read closely. Follow the evidence. Decide what to revise.**
-
-Lixity keeps your manuscript, its measurements and your research in one local
-workspace. Read a measured passage in context, revise it, and compare what
-changed. Keep the sources and decisions behind the scene together. When a copy
-is ready to share, choose a PDF or a self-contained reading website.
-
-- **Return from signal to prose:** open the relevant chapter and inspect
-  counted words and sentences where evidence is available. Signals support
-  the author's review and revision decisions.
-- **Keep research traceable:** sources, claims, and author decisions stay
-  distinct and retain the exact linked versions across edits.
-- **Local-first by default:** analysis, editing (native editor with undo,
-  autosave, and recovery), and exports run offline without accounts or
-  telemetry. Supports `.md`, `.txt`, and `.docx` import.
-
-**Try without installing.** Shorten a sentence or trace a repeated word in the
-[Browser Sandbox](https://mfahsold.github.io/lixity/sandbox/index.html).
-In the read-only [Demo Workspace](https://mfahsold.github.io/lixity/demo/report.html),
-look for repeated wording or a possible tense shift in the fictional Warehouse 4
-draft. Open the highlighted passage and decide whether it needs attention. The
-demo identifies the development version that generated the snapshot.
-Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
-[Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html) ·
-[Methods & limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) ·
-[Stability](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
-
-**Seven interface languages:**
-[Deutsch](https://mfahsold.github.io/lixity/index-de.html) ·
-[English](https://mfahsold.github.io/lixity/) ·
-[Français](https://mfahsold.github.io/lixity/index-fr.html) ·
-[Español](https://mfahsold.github.io/lixity/index-es.html) ·
-[Italiano](https://mfahsold.github.io/lixity/index-it.html) ·
-[Português](https://mfahsold.github.io/lixity/index-pt.html) ·
-[Nederlands](https://mfahsold.github.io/lixity/index-nl.html)
-([language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md)).
+[Product website](https://mfahsold.github.io/lixity/) ·
+[Read-only demo](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Browser sandbox](https://mfahsold.github.io/lixity/sandbox/index.html) ·
+[Manuals by task](https://github.com/mfahsold/lixity/blob/main/docs/README.md) ·
+[Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
 
 <a id="start-here"></a>
 
 ## Install and start
 
-The published build runs locally in your browser on Windows, macOS and Linux.
-Install [uv](https://docs.astral.sh/uv/) and run these commands.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first.
+The published package works on macOS, Windows and Linux. This command installs
+Lixity in an isolated tool environment and lets uv supply Python 3.12. The
+package supports Python 3.10 and later.
 
 ```bash
 uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal, check the installed package and start the local workspace.
+Open a new terminal and start the application.
 
 ```bash
 lixity --version
@@ -70,220 +38,134 @@ lixity service start --open
 ```
 
 The default address is `http://127.0.0.1:8765/`. Choose **Open Project** to
-continue in an existing folder. Choose **Analyze a manuscript** to preview
-importing a file into a new project. The preview accepts Markdown, plain text and
-one Word (.docx) file. Choose the manuscript language in the preview.
-Automatic detection is available in analysis settings or with `--language auto`.
+open an existing folder or **Analyze a manuscript** to preview importing a
+Markdown, plain-text or Word file. One managed service can open several project
+views. Use `lixity service status` to check its address and `lixity doctor` to
+diagnose the installation.
 
-To work on another project, open the service's root address in a new tab and
-choose **Project actions → Open Project**. Lixity opens a separate view for the
-chosen folder. Tabs with the same `/w/…/` URL share that view.
+For an installed tool, run `uv tool upgrade lixity` and restart the service
+using the update procedure. The Rust/Tauri desktop host is available to build
+and test from the checkout. It bundles the same engine and workspace with a
+local Python runtime, OS menus and file dialogs. Public installer availability
+and native test-build instructions are documented separately.
 
-`lixity service status` reports the running address. For updates and restarts,
-use the [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
+[Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) ·
+[First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) ·
+[Desktop build and verification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
 
-The Rust desktop app is in testing for macOS, Windows and Linux. It opens the
-same workspace with native menus and file dialogs, and includes an example you
-can try offline. Find the steps for your system in the
-[desktop installation guide](https://mfahsold.github.io/lixity/guides/installation.html#desktop).
-Use the [desktop maintainer guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
-to build and verify a test installer.
+## Use the analysis engine
 
-Update through the same channel you used to install. For the
-[PyPI package](https://pypi.org/project/lixity/), use `uv tool upgrade lixity`
-and restart the local service. In a desktop test build, use **Help → Check for
-Updates** to review published desktop availability and follow the
-[desktop update steps](https://mfahsold.github.io/lixity/guides/installation.html#desktop-updates).
-The online demo follows the development checkout.
-
-[Open your first project](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) ·
-[Start with a project path or use a custom port](https://mfahsold.github.io/lixity/guides/installation.html#existing-project) ·
-[Update or remove Lixity](https://mfahsold.github.io/lixity/guides/installation.html#updates)
-
-## What can you do with Lixity?
-
-| Your task | Start here |
-| :--- | :--- |
-| Read, revise or recover a draft | [Writing tools and recovery](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript) |
-| Understand a change in rhythm or voice | [Explore language patterns](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#explore-language-in-the-browser) |
-| Trace the sources behind a scene | [Read a dossier beside the manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#read-a-dossier-beside-the-manuscript) |
-| Record, rehearse or listen | [Audio and teleprompter](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) |
-| Share selected chapters or notes | [Reading copies and PDFs](#choose-what-leaves-the-project) |
-| Restore a saved project | [Verified backup and restore](https://github.com/mfahsold/lixity/blob/main/docs/PROJECT_BACKUP.md) |
-
-<a href="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png"><img src="https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png" width="560" alt="Sentence-length explanation: A board moved has three words; the paragraph comparison is shown separately"/></a>
-
-**Try one question: does chapter 2's shorter rhythm fit the action?** In the
-[demo workspace](https://mfahsold.github.io/lixity/demo/report.html), choose
-**Inspect chapter 2**, explain a paragraph's measurement, then return to the
-scene. **Counted text** shows the words or sentences behind a measurement;
-**Paragraph comparison** is a separate comparison with that chapter.
-[See the reading view](https://mfahsold.github.io/lixity/screenshots/dashboard-reader-focus.png).
-
-For the research route, open **Research → Dossiers → Warehouse 4 case notes**.
-A preliminary log puts the crate's opening on the quay; its correction moves it
-to the customs station. Follow the two source passages and the explicit decision
-to keep the crate closed until dawn. Lixity preserves the connection; it does not
-resolve the contradiction or establish the truth of a saved claim.
-[Follow the decision](https://mfahsold.github.io/lixity/guides/first-look.html#decision).
-
-## Share one revision experience
-
-What did you want to check? Did the explanation help? What got in the way?
-[Send a short description](mailto:mfahsold@googlemail.com?subject=Lixity%20feedback)
-or [report a reproducible issue](https://github.com/mfahsold/lixity/issues).
-You do not need to share manuscript text to give useful feedback.
-
-## One project, from draft to reading copy
-
-### Read, inspect and return to the scene
-
-Keep the manuscript in view while opening counted-text explanations or a dossier
-alongside it. Tense cues show the original forms and manuscript locations before
-heuristic interpretation. Chapter tables and the 3D style space compare measured
-patterns; neither predicts literary quality. Flat projections and exact values
-help inspect overlaps in the 3D view.
-
-English and German have the broadest analysis resources. French, Spanish,
-Italian, Portuguese and Dutch have localized interfaces with narrower heuristic
-coverage. Optional local syntax models add grammatical tense analysis with
-language-specific verb-group rules; parser errors remain possible.
-[Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html) ·
-[Metric reference](https://mfahsold.github.io/lixity/guides/metrics/en.html) ·
-[Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
-[Grammatical tense setup](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#grammatical-tense).
-
-### Keep research connected and versioned
-
-A dossier gathers authored notes, retained source passages, claims, decisions,
-images and maps. Passage associations return to their manuscript context. A linked
-earlier version remains distinct from the current entry. In the development
-checkout, manuscript suggestions show why a character, place or scene was
-proposed. Follow a highlighted match back to the manuscript, or save a
-reviewed report alongside your notes. Configure place names and link exact
-terms or props to a dossier. Use the saved version for a PDF.
-
-Research is scoped to an explicit project. Retaining a source and redistributing
-it are separate choices. Original PDFs, images and videos have their own import
-and export controls. Existing archives require a reviewed migration before
-adopting a newer storage format.
-[Research workflows](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) ·
-[Data model](https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md).
-
-### Record, direct and listen
-
-Use **Listen & direct** or the **Teleprompter** from the manuscript toolbar.
-Record a take and review its transcript, or export a JSON or SSML speech plan
-without a worker. To hear synthesized prose, choose a configured speech engine.
-An external provider receives the selected text when you request its synthesis.
-[Recording and audio workflows](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) ·
-[Worker setup](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#optional-qwen-audio-worker).
-
-### Choose what leaves the project
-
-| Copy | Contents and purpose |
-| :--- | :--- |
-| [Review workspace](https://mfahsold.github.io/lixity/demo/report.html) | Manuscript and analysis, optionally internal research and history; for author/editor review. |
-| [Novel with companion notes](https://mfahsold.github.io/lixity/demo/reader/index.html) | Manuscript with explicitly selected dossier notes, plus optional analysis of the exported chapters. |
-| [Standalone companion](https://mfahsold.github.io/lixity/demo/companion/index.html) | Selected background material for someone reading the novel elsewhere. |
-| [Manuscript PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-manuscript-pdf) | Neutral or editorial manuscript, analysis report, A5 book or submission sheet. |
-| [Dossier PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-dossier-pdf) | A saved dossier version with its notes, tables and pinned quotations in the development checkout. |
-
-Reading websites are fixed exports, not live co-editing or project backups.
-A publication profile selects dossier bodies or sections and chapter reveal
-points. Reading progress is a convenience, not access control: use an export
-chapter cap to omit later content from the files. Optional reader analysis is
-recomputed on that exported text with default settings and can differ from the
-project analysis. Work-marker notes are omitted from curated reader copies.
-
-**Available in 0.8.0:** reader exports can also include existing chapter recordings with
-`--include-audio`. Only audio matching the current manuscript and chapter cap is
-copied; missing chapters remain visibly text-only. Export does not run synthesis.
-The reader gets a player and WAV download, without your private voice references,
-speech-profile settings or service endpoints.
-[Include chapter audio](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
-Existing recordings enter through the explicit
-`audio-import --project ROOT --audio WAV --chapter N --source-sha256 HASH`
-command, with optional `--manuscript manuscript.md`. That binding records your selection;
-it does not verify the spoken text or align the recording automatically.
-
-Use **Check export** to inspect the prepared package, omitted media and missing
-attribution before downloading. Original source files need an explicit inclusion
-choice and redistribution rights. Website exports are beta; test the copy on the
-recipient's device. The local **Project overview** inspects sources and existing
-outputs without rebuilding analysis; filenames alone do not establish freshness.
-[Export workflow](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website) ·
-[PDF options](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export).
-
-### Use the same engine from scripts
+The CLI runs without a browser service. Start with an explicit text and
+language. English is the default, and `--language auto` opts into detection.
 
 ```bash
 lixity analyze manuscript.md --language en
-lixity profile manuscript.md --layer asl --evidence
+lixity profile manuscript.md --language en --layer asl --evidence
 lixity project --project ./novel
 lixity about --json
 ```
 
-Start with `lixity --help`; `lixity COMMAND --help` explains each command
-without running it. Help in 0.8.0 groups tasks and links the corresponding manual.
-The CLI works without a running browser service. Root-local project settings,
-explicit language selection and the shared pipeline keep browser and automation
-workflows aligned. [Choose a command](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#which-command-for-which-question)
-or start with the [API contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md).
-For a connected AI client, the [read-only MCP setup](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server)
-describes tool discovery and how to evaluate the client's handling of text.
-The [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md)
-guides manuscript review, local research and service diagnosis.
+Configure a project in its own `lixity.toml` or in `[tool.lixity]` in its
+`pyproject.toml`. From the browser, open the same project folder to use its
+settings. Automation clients can call the CLI or Python API, use the local
+HTTP interface, or run the read-only MCP server. Product, JSON response and
+archive schema versions evolve independently.
 
-## Documentation map
+The interface is available in German, English, French, Spanish, Italian,
+Portuguese and Dutch. Measurement coverage varies by language. Signals
+point to passages and patterns for human review. The methods and validation
+references explain what is measured and when a result is unavailable.
 
-[Find a task in the documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md) ·
-[Wiki](https://github.com/mfahsold/lixity/wiki).
+[CLI and configuration](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#which-command-for-which-question) ·
+[Python, HTTP and JSON contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) ·
+[MCP setup](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server) ·
+[Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md)
 
-[Additional screenshots and image credits](https://github.com/mfahsold/lixity/blob/main/docs/screenshots/README.md).
+[Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
+[Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) ·
+[Validation and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#core-validation-status)
 
-| Looking for | Start here |
-| :--- | :--- |
-| First session | [Install and start](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) · [Walkthrough](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) |
-| Everyday use | [Workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md) · [CLI and configuration reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) |
-| Audio and teleprompter | [Recording, direction, generation and exchange](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) |
-| Interpret results | [Reading measurements](https://mfahsold.github.io/lixity/guides/interpretation.html) |
-| Research | [Workflows and compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) · [Data model](https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md) |
-| Measurements | [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) · [Checks and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#core-validation-status) |
-| Integrations | [API contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) · [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
-| Contributing | [Contributor setup and checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
+## Project structure and data boundaries
 
-In the repository, [`src/lixity/`](https://github.com/mfahsold/lixity/tree/main/src/lixity)
-contains the shared engine, CLI and UI;
-[`tests/`](https://github.com/mfahsold/lixity/tree/main/tests) verifies behavior;
-[`docs/`](https://github.com/mfahsold/lixity/tree/main/docs) holds maintained product
-documentation; and [`samples/`](https://github.com/mfahsold/lixity/tree/main/samples)
-contains synthetic or public-domain examples. Book-specific adapters belong in
-their own projects.
+| Area | Responsibility |
+| --- | --- |
+| [Python package](https://github.com/mfahsold/lixity/tree/main/src/lixity) | Language resources, shared analysis pipeline, CLI and API, loopback server, and project-scoped research and exports. |
+| [Shared UI](https://github.com/mfahsold/lixity/tree/main/src/lixity/ui) | Python renders supplied results. Browser components handle presentation, navigation and interaction. The public demo uses the shared interface on a fixed example. |
+| [Desktop host](https://github.com/mfahsold/lixity/tree/main/desktop) | Rust/Tauri windows, OS integration, bundled runtime supervision and authenticated local transport. |
+| [Project files and research](https://github.com/mfahsold/lixity/blob/main/docs/research/DATA_MODEL.md) | The project owns its saved manuscript, configuration and retained research. Exact citations can refer to earlier research revisions. |
+| [Documentation](https://github.com/mfahsold/lixity/blob/main/docs/README.md) and [GitHub Pages](https://mfahsold.github.io/lixity/) | Maintained technical references, public product presentation and reviewed examples. The contributor guide owns the build and publishing procedures. |
+| [Tests](https://github.com/mfahsold/lixity/tree/main/tests) and [samples](https://github.com/mfahsold/lixity/tree/main/samples) | Verification across engine, contracts and workflows using synthetic or public-domain manuscripts. |
+
+Manuscript analysis, editing and standard exports run locally without an
+account. Optional integrations such as remote speech synthesis have their
+own data paths. Website visit measurement applies to the public website.
+Keep project-specific adapters, private manuscripts and retained research
+outside the shared repository.
+
+[Architecture and trust boundaries](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) ·
+[Analysis ownership across Python, Rust and JavaScript](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#analysis-ownership-across-python-rust-and-javascript) ·
+[Research workflows](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) ·
+[Website measurement notice](https://mfahsold.github.io/lixity/#website-measurement)
+
+## Choose what leaves the project
+
+Export a PDF or a fixed reading website with the selected manuscript,
+chapters and background notes. Review the export scope and retained source
+permissions before sharing. Use the project backup procedure to create a
+restorable copy of the selected project files and archive.
+
+[Manuscript PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-manuscript-pdf) ·
+[Dossier PDF](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-dossier-pdf) ·
+[Reading website](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website) ·
+[Backup and restore](https://github.com/mfahsold/lixity/blob/main/docs/PROJECT_BACKUP.md)
+
+## Contribute and verify
+
+Lixity is maintained by Matthias Fahsold. Use GitHub issues for reproducible
+bugs and proposals, and pull requests for changes. For a bug report, identify
+the installed build, the affected surface and the steps to reproduce it with
+synthetic data. Report security issues privately through the security policy.
+
+```bash
+make install-dev
+make check
+```
+
+Run these commands from a repository checkout. `make check` runs Ruff, strict
+mypy and pytest with warnings as errors. The contributor guide gives the
+additional checks for browser interactions, native desktop behavior and
+generated documentation. It also owns the release and Pages procedures.
+
+[Report an issue](https://github.com/mfahsold/lixity/issues/new/choose) ·
+[Select checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#select-the-checks-for-your-change) ·
+[Release process](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#preparing-a-release) ·
+[Documentation and Pages](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages) ·
+[Security policy](https://github.com/mfahsold/lixity/blob/main/SECURITY.md)
 
 ## Release, citation and license
 
 > **Version line:** The documentation source version is **v0.9.1**, in the pre-1.0 **0.x** line.
-> Historical **1.x** and **3.x** tags predate the numbering reset; use the current
-> release rather than the numerically largest tag. Product, JSON response and
-> archive schema versions are independent.
+> Historical 1.x and 3.x tags predate the numbering reset. Use the release
+> identified as current on GitHub.
 
-Use the [latest published release](https://github.com/mfahsold/lixity/releases/latest)
-for published packages and their upgrade notes. The source
-[release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md) describe
-the version prepared in this repository. See the
-[changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) for work
-in progress. For local updates and website availability, see the
-[installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md).
+The published package comes from the verified tag. The public demo is a
+read-only snapshot from the development checkout and identifies the version
+that generated it. Work in progress is recorded under **Unreleased**.
 
-Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata in
-[`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
+[Latest GitHub release](https://github.com/mfahsold/lixity/releases/latest) ·
+[PyPI package](https://pypi.org/project/lixity/) ·
+[v0.9.1 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md) ·
+[Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)
+
+Cite [Lixity on Zenodo](https://doi.org/10.5281/zenodo.23390297), with metadata
+in [CITATION.cff](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).
 The [software paper draft](https://github.com/mfahsold/lixity/blob/main/paper/paper.md)
-describes its research context.
+describes the research context.
 
-**AGPL-3.0-or-later.** Use Lixity for private or commercial writing, research and
-teaching, including self-publishing your book. A separate written commercial
-license is available for integrations that cannot meet the AGPL.
+Lixity is licensed under **AGPL-3.0-or-later**. Authors can use it for private
+and commercial writing, including self-publishing. A separate written
+commercial license is available for integrations that cannot meet the AGPL.
+
 [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) ·
 [Full terms](https://github.com/mfahsold/lixity/blob/main/LICENSE) ·
-[Legal notice and contact](https://mfahsold.github.io/lixity/#impressum).
+[Legal notice and contact](https://mfahsold.github.io/lixity/#impressum)

@@ -310,12 +310,15 @@ async function main() {
         await paragraph.locator('[data-reader-paragraph]').click();
         await page.locator('[data-reader-action=values]').click();
         await page.locator('#reader-inspector [data-reader-evidence-paragraph]').click();
-        await page.locator('#analysis-evidence-card').waitFor({state: 'visible'});
-        await settle();
+        const card = page.locator('#analysis-evidence-card');
+        await card.waitFor({state: 'visible'});
         await page.mouse.move(0, 0);
-        // Frame the complete native card; surrounding stacked controls obscure
-        // its quotation/count distinction when scaled for an editorial page.
-        await page.locator('#analysis-evidence-card').screenshot({path: capture.target, animations:'disabled'});
+        // Opening the card focuses Close and can show its shortcut tooltip.
+        await card.locator('.analysis-evidence-close').blur();
+        await page.locator('#lixity-tooltip.visible').waitFor({state: 'hidden'});
+        await settle();
+        await card.screenshot({path: capture.target, animations: 'disabled'});
+        assert.deepEqual(errors, [], 'Screenshots must be free of runtime and console errors');
         const bytes = fs.readFileSync(capture.target);
         results.push({file:name,width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20)});
       } else if (name === 'dashboard-mobile.png') {

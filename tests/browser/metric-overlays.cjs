@@ -136,7 +136,7 @@ async function verifyComparisonPaint(browser) {
       const scale = page.locator('#analysis-evidence-card .analysis-evidence-scale');
       await scale.waitFor();
       assert.equal(await scale.evaluate(node => getComputedStyle(node).backgroundImage),
-        await page.locator('.z-gradient').first().evaluate(node => getComputedStyle(node).backgroundImage),
+        await page.locator('#heatmap .z-gradient').first().evaluate(node => getComputedStyle(node).backgroundImage),
         'Chapter and paragraph legends share the exact statistical gradient');
       await page.locator('#analysis-evidence-card').evaluate(node => { node.scrollTop = node.scrollHeight; });
       const hideMarker = await page.addStyleTag({content: '.analysis-evidence-scale { border-radius: 0; } .analysis-evidence-scale::before, .analysis-evidence-scale span { visibility: hidden !important; }'});
@@ -281,15 +281,21 @@ async function verifyComparisonRegressions(browser) {
     }),
     comparisonRegression(browser, 1440, 'comparison-off-chip-semantics', async page => {
       const chip = page.locator('.chip[data-target="' + fixtures.en.expected.asl[0] + '"]');
+      const unavailableChip = page.locator('.chip[data-target="p-7"]');
       const metric = await chip.getAttribute('data-tip');
       const base = await chip.getAttribute('data-tip-base');
       assert.ok(metric && base && metric !== base, 'The fixture distinguishes metric and tense descriptions');
+      assert.match(await unavailableChip.getAttribute('aria-label'), /Comparison unavailable/);
+      assert.equal(await unavailableChip.evaluate(node => getComputedStyle(node).borderTopStyle), 'dashed',
+        'A missing comparison has its own visible pattern instead of inheriting tense color');
       await page.locator('#analysis-comparison-enabled').uncheck();
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
       assert.equal(await chip.getAttribute('aria-label'), base, 'Comparison-off chips describe their displayed tense colors');
       assert.equal(await chip.getAttribute('title'), base);
       assert.equal(await chip.getAttribute('data-tip'), null);
+      assert.equal(await unavailableChip.getAttribute('aria-label'), await unavailableChip.getAttribute('data-tip-base'),
+        'Turning comparison off restores the independent tense description');
       await page.locator('#workbench-overview-back').click();
       await page.locator('#analysis-comparison-enabled').check();
       await page.locator('#workbench-overview-open').click();

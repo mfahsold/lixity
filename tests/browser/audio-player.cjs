@@ -1,8 +1,7 @@
 // Synthetic audio exercises the shared player without microphone access or a project.
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 
 (async () => {
@@ -70,10 +69,7 @@ const path = require('node:path');
       assert.equal(await page.getByRole('button', {name: 'player_play', exact: true}).isEnabled(), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.screenshot({path: path.join(output, `player-${width}.png`)});
-      let axe;
-      for (const candidate of ['axe-core/axe.min.js', path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
-        try { axe = require.resolve(candidate); break; } catch {}
-      }
+      const axe = resolveAxe();
       if (axe) {
         await page.addScriptTag({path: axe});
         const violations = await page.evaluate(async () => (await window.axe.run('.speech-player')).violations);

@@ -951,21 +951,6 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
-  var groundTabBtn = event.target.closest("[data-ground-tab]");
-  if (groundTabBtn) {
-    var tabKey = groundTabBtn.dataset.groundTab;
-    var gCard = groundTabBtn.closest("#research-grounding-results");
-    if (gCard) {
-      gCard.querySelectorAll(".grounding-tab-btn").forEach(function(b) {
-        b.classList.toggle("active", b === groundTabBtn);
-      });
-      gCard.querySelectorAll(".grounding-term-panel").forEach(function(p) {
-        p.hidden = p.id !== "ground-terms-" + tabKey;
-      });
-    }
-    return;
-  }
-
   var termSearchBtn = event.target.closest("[data-term-search]");
   if (termSearchBtn) {
     var termToSearch = termSearchBtn.dataset.termSearch;

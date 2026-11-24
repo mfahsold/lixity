@@ -1,7 +1,9 @@
 """Shared orchestration and explicit project isolation contracts."""
 
+import ast
 import unittest
 from math import inf, nextafter
+from pathlib import Path
 from unittest.mock import patch
 
 from lixity.config import resolve_thresholds
@@ -9,6 +11,27 @@ from lixity.pipeline import analyze_document, resolve_document_config
 
 
 class TestDocumentPipeline(unittest.TestCase):
+    def test_analysis_modules_do_not_import_transport_or_presentation(self):
+        source = Path(__file__).resolve().parents[1] / "src" / "lixity"
+        core = ("analyzer", "math_core", "paragraph_evidence", "pipeline", "style_fingerprint", "style_profile", "tense")
+        outer = {"cli", "server", "service", "ui"}
+        for module in core:
+            with self.subTest(module=module):
+                tree = ast.parse((source / f"{module}.py").read_text(encoding="utf-8"))
+                project_imports = set()
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Import):
+                        project_imports.update(alias.name.removeprefix("lixity.") for alias in node.names
+                                               if alias.name.startswith("lixity."))
+                    elif isinstance(node, ast.ImportFrom):
+                        name = node.module or ""
+                        if node.level == 1 or name == "lixity":
+                            project_imports.update([name] if name and name != "lixity" else
+                                                   [alias.name for alias in node.names])
+                        elif name.startswith("lixity."):
+                            project_imports.add(name.removeprefix("lixity."))
+                self.assertEqual({name.split(".")[0] for name in project_imports} & outer, set())
+
     def test_document_analysis_reuses_metrics(self):
         text = "## Chapter\n\nThe door was open. I walked into the room.\n"
         config, resolved = resolve_document_config(text, "en", chapter_regex=r"(?m)^##\s+")

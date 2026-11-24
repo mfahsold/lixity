@@ -56,6 +56,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       if (blocked) Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Synthetic blocked storage', 'SecurityError'); }});
       if (desktop) {
         window.desktopRecentWrites = [];
+        window.desktopPendingPaths = [];
         window.desktopPreferenceWrites = [];
         window.desktopEnvironmentReads = 0;
         window.desktopUpdateChecks = 0;
@@ -78,6 +79,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
           }),
           openExternalUrl: async url => window.desktopOpenedUrls.push(url),
           pickProjectDirectory: async () => { throw new Error('Synthetic picker failure'); },
+          takeOpenPath: async () => window.desktopPendingPaths.shift() || null,
           recordRecentProject: async (...entry) => window.desktopRecentWrites.push(entry),
           readSampleManuscript: () => new Promise((resolve, reject) => {
             window.resolveSample = () => resolve(sample);
@@ -194,6 +196,18 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       const desktop = await open({desktop: true, saved: []});
       try {
         const page = desktop.page;
+        const workspaceRoot = '/synthetic/Manuskript über Regen';
+        const configuration = `${workspaceRoot}/lixity.toml`;
+        result = {ok: true, workspace_root: workspaceRoot, title: 'Synthetic selected project', language: 'de'};
+        const nativeOpen = page.waitForResponse('http://lixity.test/api/project-open');
+        await page.evaluate(selected => {
+          window.desktopPendingPaths.push(selected);
+          window.dispatchEvent(new Event('lixity:desktop-open-path'));
+        }, configuration);
+        await nativeOpen;
+        assert.deepEqual(opens.at(-1), {path: configuration}, 'The desktop bridge forwards the exact file selector');
+        await page.waitForFunction(() => window.desktopRecentWrites.length === 1);
+        result = {ok: true, reload: false, message: 'Synthetic project opened'};
         await page.locator('#hero-btn-open-project').click();
         await page.locator('#open-project-chooser:not([hidden])').waitFor();
         await page.keyboard.press('Escape');
@@ -207,6 +221,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         await page.locator('#modal-project-create[open]').waitFor({state: 'hidden'});
         assert.equal(creates[0].path, '', 'The backend resolves the displayed default');
         assert.deepEqual(await page.evaluate(() => desktopRecentWrites), [
+          [workspaceRoot, 'Synthetic selected project', 'de'],
           ['/synthetic/profile/Lixity/first-draft', 'First draft', 'en']
         ]);
       } finally { await desktop.context.close(); }

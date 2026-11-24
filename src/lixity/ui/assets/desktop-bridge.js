@@ -208,17 +208,16 @@
 
   async function openPath(targetPath) {
     if (!targetPath || typeof targetPath !== "string") return;
-    var normalized = targetPath.replace(/[\\/]+lixity\.toml$/i, "") || targetPath;
     var response = await fetch(apiBase() + "/project-open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: normalized })
+      body: JSON.stringify({ path: targetPath })
     });
     var data = await response.json();
     if (!response.ok || !data || !data.ok) return;
     if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
       window.lixityDesktop.recordRecentProject(
-        data.workspace_root || normalized,
+        data.workspace_root || targetPath,
         data.title || null,
         data.language || null
       ).catch(function () {});

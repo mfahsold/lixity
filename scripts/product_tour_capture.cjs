@@ -270,8 +270,12 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         marker.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#ff00ff;z-index:2147483647;pointer-events:none';
         document.body.appendChild(marker);
         marker.showPopover();
+        // Keep the screencast producing frames while the top-layer marker is
+        // visible. A static backdrop can otherwise yield a single marker frame.
+        marker.animate([{backgroundColor:'#ff00ff'}, {backgroundColor:'#fa08fa'}],
+          {duration:120, iterations:Infinity, direction:'alternate'});
       });
-      await page.waitForTimeout(280);
+      await page.waitForTimeout(500);
       await page.evaluate(() => document.getElementById('tour-frame-anchor').remove());
       const started = performance.now();
       const clicks = [];

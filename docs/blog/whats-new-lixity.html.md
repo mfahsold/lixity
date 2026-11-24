@@ -34,7 +34,7 @@ The default review workspace includes manuscript analysis and work-marker notes.
 
 ## Follow the evidence and return to the sentence
 
-Choose a paragraph’s **… → Explore passage → Research for this passage**. Its saved claims and dossiers open in the right context while the manuscript stays visible. A title opens the current entry; **Linked version** opens the exact earlier version used by the association. Expanding **Versions** shows the history without switching the displayed entry. **Back to passage** takes you back to your reading.
+Choose a paragraph’s **… → Paragraph details → Research for this passage**. Its saved claims and dossiers open in the right context while the manuscript stays visible. A title opens the current entry; **Linked version** opens the exact earlier version used by the association. Expanding **Versions** shows the history without switching the displayed entry. **Back to passage** takes you back to your reading.
 
 The [three-minute first look](../guides/first-look.html) follows this loop in the invented Warehouse 4 project. Its public demo uses the same production website export, with prepared PDF copies linked directly from the page.
 

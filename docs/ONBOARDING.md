@@ -94,7 +94,7 @@ can show older labels. [Check your installed version](INSTALLATION.md#cli-curren
    measure and can open the count for the passage in view.
 2. Use **Counted text** to display the exact words or sentences where the
    measurement can show a source span. Open a mark directly or use the
-   paragraph menu **… → Explore passage → Explain measurement**. The menu also
+   paragraph menu **… → Paragraph details → Explain measurement**. The menu also
    works with **Analysis** off and turns analysis on when you choose **Explain
    measurement**.
 3. Read **Why this is marked** and **What to check while reading**. For sentence
@@ -187,7 +187,7 @@ public demo lets you explore saved records without writing them.
 ### Review a manuscript dossier
 
 In the current development checkout, open **Research → Dossiers → From
-manuscript → New suggestions**. Choose a character, scene or place proposal and
+manuscript → Show suggestions**. Choose a character, scene or place proposal and
 read the preview before saving. For a generated character dossier, **Character
 in the manuscript** shows the chapter distribution and matching passages in the
 currently selected manuscript. A chapter can feature a character without

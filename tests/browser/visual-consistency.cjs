@@ -173,6 +173,33 @@ async function checkControlBoxes(page, label) {
     }).filter(box => box.height + .5 < box.minimum));
   assert.deepEqual(tooShort, [], `${label} actionable boxes respect their minimum height`);
 }
+async function checkStatusUpdates(page) {
+  const result = await page.evaluate(async () => {
+    const status = document.createElement('p');
+    status.setAttribute('role', 'status');
+    const options = {prefix: true, baseClass: 'ctl-status synthetic-feedback'};
+    const setStatus = LixityComponents.setStatus;
+    setStatus(status, 'Loading', 'loading', options);
+    const mutations = [];
+    const observer = new MutationObserver(records => mutations.push(...records));
+    observer.observe(status, {attributes: true, childList: true});
+    try {
+      setStatus(status, 'Loading', 'loading', options);
+      await Promise.resolve();
+      const repeats = mutations.length;
+      setStatus(status, 'Saved', true, options);
+      const child = document.createElement('span');
+      child.textContent = status.textContent;
+      status.replaceChildren(child);
+      setStatus(status, 'Saved', true, options);
+      return {repeats, contents: status.textContent, classes: status.className, elements: status.children.length};
+    } finally {
+      observer.disconnect();
+    }
+  });
+  assert.deepEqual(result, {repeats: 0, contents: '✓ Saved', classes: 'ctl-status synthetic-feedback ok', elements: 0},
+    'Repeated feedback leaves a live region untouched; banners render plain text and retain their context classes');
+}
 async function checkScale(page, label) {
   const ladder = await page.evaluate(() => {
     return Object.fromEntries(['--text-micro', '--text-note', '--text-small', '--text-control',
@@ -283,7 +310,10 @@ async function checkScale(page, label) {
             'Mobile project fields retain useful width instead of accumulating nested card padding');
         }
         await checkTypography(app, `${theme} ${width}px`);
-        if (width === 1440) await checkMarkdownSchemes(app, theme);
+        if (width === 1440) {
+          await checkMarkdownSchemes(app, theme);
+          await checkStatusUpdates(app);
+        }
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);
         await checkControlBoxes(site, `${theme} ${width}px site`);
@@ -346,8 +376,10 @@ async function checkScale(page, label) {
         }), 'Keyboard focus remains in the visible dialog');
         assert.ok(await createDialog.locator('.modal-close').evaluate(element => {
           const box = element.getBoundingClientRect();
-          return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === element;
-        }), 'The dialog close action remains reachable after scrolling the form');
+          const minimum = matchMedia('(pointer: coarse)').matches ? 44 : 40;
+          return box.width >= minimum && box.height >= minimum &&
+            document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === element;
+        }), 'Dialog Close retains its pointer target after scrolling the form');
         await app.screenshot({path: path.join(artifacts, `modal-short-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
         await app.setViewportSize({width, height: 1000});
         await app.locator('#tab-btn-scratch').click();

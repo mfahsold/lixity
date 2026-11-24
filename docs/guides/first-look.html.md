@@ -32,7 +32,7 @@ In the same list, choose **Compare chapters 1 and 2** to see the average words p
 
 1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
 
-2. Choose its **… → Explore passage → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**. Use **Counted text** to see the marks in the prose.
+2. Choose its **… → Paragraph details → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**. Use **Counted text** to see the marks in the prose.
 
 3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
 
@@ -42,7 +42,7 @@ You have completed the first check when you can explain the contrast in the text
 
 **More controls, marks and chapter comparisons**
 
-Turn on **Analysis** and choose a **Measure**. **Counted text** underlines the words or sentences Lixity counted. **Paragraph comparison** uses a separate marker to show how a paragraph compares with its chapter. Open a mark or choose **Explore passage → Explain measurement** with the keyboard. Escape closes the card. **How it’s measured** opens the full method.
+Turn on **Analysis** and choose a **Measure**. **Counted text** underlines the words or sentences Lixity counted. **Paragraph comparison** uses a separate marker to show how a paragraph compares with its chapter. Open a mark or choose **Paragraph details → Explain measurement** with the keyboard. Escape closes the card. **How it’s measured** opens the full method.
 
 For a full-manuscript view, open **Analysis overview**. In the development demo, it starts at **Manuscript measurements**. Choose **Review passages**, **Compare chapters** or **Explore patterns** to go deeper. **Back to passage** restores your reading position.
 
@@ -56,7 +56,7 @@ In **Sentence rhythm**, choose a length group to read a counted sentence. In **M
 
 **In the read-only demo:** this opening quotation has an explicitly saved association. Follow it from the manuscript:
 
-1. At the opening paragraph, choose **… → Explore passage → Research for this passage**. The right context shows its linked claim and dossier while the text stays visible.
+1. At the opening paragraph, choose **… → Paragraph details → Research for this passage**. The right context shows its linked claim and dossier while the text stays visible.
 
 2. Open a title to read the current entry and its sources, or choose **Linked version** for the exact earlier version used by the association. **Versions** expands its history without changing the entry. A retained source and an authored claim are separate records; the association does not establish factual truth.
 

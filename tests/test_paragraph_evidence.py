@@ -299,6 +299,22 @@ def test_sticky_dialogue_tag_and_echo_evidence_layers():
     assert all(len(w) >= 4 for w in echo_words)
 
 
+def test_reader_echo_groups_keep_counts_when_unicode_mapping_is_partial():
+    text = "## Example\n\nq\u0315\u0323abc q\u0323\u0315abc q\u0323\u0315abc"
+    pattern = r"q\u0323(\u0315abc)"
+    config = CorpusConfig(language="en", word_regex=pattern)
+    result = analyze_document(text, config, FingerprintThresholds(), include_evidence=True)
+    assert result.evidence is not None
+    reader = result.evidence[0]["layers"]["echo"]
+    assert (reader["status"], reader["count"], reader["mapped_count"]) == ("partial", 3, 2)
+    assert reader["echo_groups"] == [(3, [0, 1])]
+    assert all("echo_group" not in span for span in reader["spans"])
+    _, evidence = build(text, word_regex=pattern)
+    public = evidence[0]["layers"]["echo"]
+    assert (public["status"], public["count"], public["mapped_count"]) == ("partial", 3, 2)
+    assert "echo_groups" not in public
+
+
 @pytest.mark.parametrize("suffix", ["", " `inline example`"])
 def test_generic_evidence_preserves_unknown_capabilities_and_measured_counts(suffix):
     text = f'## Example\n\n"Wait here." Lantern and lantern.{suffix}\n'

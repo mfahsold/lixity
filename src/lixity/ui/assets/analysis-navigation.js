@@ -54,15 +54,18 @@
     }
     return Boolean(section);
   }
+  function openReport(target) {
+    if (!workflowByPanel.has(target)) return;
+    scrollAndFlash(target, {analysisVisible: true});
+    var heading = target.querySelector(":scope > summary, :scope > h2, :scope > header h2") || target;
+    if (!heading.matches("summary, [tabindex]")) heading.tabIndex = -1;
+    heading.focus({preventScroll: true});
+  }
   controls.addEventListener('click', function(event) {
     var entry = event.target.closest('[data-analysis-workflow]');
     if (entry) { select(entry.dataset.analysisWorkflow); return; }
     var choice = event.target.closest('[data-analysis-section-target]');
-    if (choice) {
-      var target = byId.get(choice.dataset.analysisSectionTarget);
-      select(choice.dataset.analysisSectionWorkflow, target);
-      if (target && typeof scrollAndFlash === 'function') scrollAndFlash(target, {analysisVisible:true});
-    }
+    if (choice) openReport(byId.get(choice.dataset.analysisSectionTarget));
   });
   function hashTarget() {
     var id;
@@ -78,6 +81,24 @@
   }
   var sectionsLink = document.getElementById("workbench-overview-sections");
   if (sectionsLink) sectionsLink.addEventListener("click", showSections);
+  var form = document.getElementById("reader-analysis-overview-form");
+  if (form) {
+    var picker = form.querySelector("select"), open = form.querySelector("button");
+    var metric = document.getElementById("style-layer"), suggestion = "";
+    function syncOpen() { open.disabled = !workflowByPanel.has(byId.get(picker.value)); }
+    picker.addEventListener("change", syncOpen);
+    document.addEventListener("lixity:analysis-layer-change", function() {
+      var related = metric?.selectedOptions[0]?.dataset.relatedOverview || "";
+      if (!picker.value || picker.value === suggestion) picker.value = related;
+      suggestion = related;
+      syncOpen();
+    });
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+      openReport(byId.get(picker.value));
+    });
+    syncOpen();
+  }
   document.body.classList.add("has-guided-analysis");
   window.LixityAnalysisNavigation = {
     reveal: reveal,

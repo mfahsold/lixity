@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from pathlib import Path
@@ -23,6 +24,10 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
 OUT_DIR = BASE_DIR / "docs" / "videos"
 TOUR_TIMING_PATH = OUT_DIR / "product-tour-timing.json"
+SOCIAL_CLIPS = (
+    ("social-hook-16x9.mp4", 1600, 900, 3_500_000),
+    ("social-hook-9x16.mp4", 1080, 1920, 4_000_000),
+)
 
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
@@ -30,6 +35,11 @@ WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
     ("analysis-review", "5.5", 2_000_000, 4_000_000),
     ("editorial-loop", "11.5", 2_000_000, 4_000_000),
 )
+PUBLIC_VIDEO_FILES = {
+    "README.md", "product-tour.mp4", "product-tour.webm", "product-tour.webp",
+    *(name for name, _, _, _ in SOCIAL_CLIPS),
+    *(f"{name}.{suffix}" for name, _, _, _ in WALKTHROUGHS for suffix in ("mp4", "gif", "png")),
+}
 
 
 def run(command: list[str]) -> None:
@@ -207,18 +217,22 @@ def convert_product_tour() -> None:
                    f"concat=n={len(segments)}:v=1:a=0[out]")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     frames = plan["duration"] * plan["fps"]
-    for suffix, codec in (
-        ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "25", "-movflags", "+faststart"]),
-        ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "36", "-b:v", "0", "-row-mt", "1"]),
-    ):
-        target = OUT_DIR / f"product-tour.{suffix}"
-        run([ffmpeg, "-y", "-loglevel", "error", *inputs,
-             "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
-             "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
-             *codec, "-pix_fmt", "yuv420p", str(target)])
-        _verify_export(target, fps=plan["fps"], frames=frames, width=1440, height=900)
-    run([ffmpeg, "-y", "-loglevel", "error", "-ss", "3", "-i", str(OUT_DIR / "product-tour.mp4"),
-         "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(OUT_DIR / "product-tour.webp")])
+    with tempfile.TemporaryDirectory(prefix=".tour-", dir=OUT_DIR) as pending:
+        staging = Path(pending)
+        for suffix, codec in (
+            ("mp4", ["-c:v", "libx264", "-preset", "slow", "-crf", "25", "-movflags", "+faststart"]),
+            ("webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "36", "-b:v", "0", "-row-mt", "1"]),
+        ):
+            target = staging / f"product-tour.{suffix}"
+            run([ffmpeg, "-y", "-loglevel", "error", *inputs,
+                 "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
+                 "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
+                 *codec, "-pix_fmt", "yuv420p", str(target)])
+            _verify_export(target, fps=plan["fps"], frames=frames, width=1440, height=900)
+        run([ffmpeg, "-y", "-loglevel", "error", "-ss", "3", "-i", str(staging / "product-tour.mp4"),
+             "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(staging / "product-tour.webp")])
+        for target in staging.iterdir():
+            target.replace(OUT_DIR / target.name)
 
 
 def _escape_drawtext(text: str) -> str:
@@ -226,55 +240,82 @@ def _escape_drawtext(text: str) -> str:
 
 
 def convert_social_cuts() -> None:
-    """Reframe readable excerpts of the validated final tour without cropping its UI."""
+    """Show one sticky-sentence explanation from the validated tour."""
     plan = _tour_plan()
     source = OUT_DIR / "product-tour.mp4"
-    _verify_export(source, fps=plan["fps"], frames=plan["duration"] * plan["fps"],
+    fps = plan["fps"]
+    _verify_export(source, fps=fps, frames=plan["duration"] * fps,
                    width=1440, height=900)
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish social clips.")
     font = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     font_opt = f":fontfile={font}" if Path(font).is_file() else ""
-    hooks = {
-        "read": "Go to a passage worth checking",
-        "passage": "See why words were marked",
-        "compare": "Compare your revision",
-        "dossier": "Find a character across chapters",
-        "pdf": "Download an exact dossier version",
-    }
-    selected = [scene for scene in plan["scenes"] if scene["id"] in hooks]
-    frames = len(selected) * 6 * plan["fps"]
-    for name, width, height, geometry, label_y, label_size, max_bytes in (
-        ("social-hook-16x9.mp4", 1600, 900,
-         "pad=1600:900:(ow-iw)/2:(oh-ih)/2:color=0x0d1322", "h-text_h-32", 32, 3_500_000),
-        ("social-hook-9x16.mp4", 1080, 1920,
-         "scale=1080:674:flags=lanczos,setsar=1,"
-         "pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=0x0d1322,"
-         f"drawtext=text='LIXITY · OFFLINE MANUSCRIPT STUDIO'{font_opt}:"
-         "fontsize=26:fontcolor=0x93c5fd:x=(w-text_w)/2:y=450", "1420", 44, 4_000_000),
-    ):
-        parts: list[str] = []
-        for index, scene in enumerate(selected):
-            start_frame = (scene["start"] + 1) * plan["fps"]
-            end_frame = start_frame + 6 * plan["fps"]
-            label = _escape_drawtext(hooks[scene["id"]])
-            parts.append(
-                f"[0:v]trim=start_frame={start_frame}:end_frame={end_frame},setpts=PTS-STARTPTS,"
-                f"{geometry},drawtext=text='{label}'{font_opt}:expansion=none:"
-                f"fontsize={label_size}:fontcolor=white:box=1:boxcolor=0x0d1322@0.94:"
-                f"boxborderw=16:x=(w-text_w)/2:y={label_y}[s{index}]"
+    scene = next(scene for scene in plan["scenes"] if scene["id"] == "passage")
+    duration = scene["end"] - scene["start"]
+    reading_hold = 4
+    frames = (duration + reading_hold) * fps
+    detail = plan["social_detail"]
+    x, y, detail_width, detail_height = (detail[key] for key in ("x", "y", "width", "height"))
+    if not (0 <= x < x + detail_width <= 1440 and 0 <= y < y + detail_height <= 900):
+        raise SystemExit("The picture-in-picture detail must fit inside the tour recording")
+    for name, width, height, max_bytes in SOCIAL_CLIPS:
+        portrait = height > width
+        shot = [
+            f"trim=start_frame={scene['start'] * fps}:end_frame={scene['end'] * fps}",
+            "setpts=PTS-STARTPTS",
+            f"tpad=stop_mode=clone:stop_duration={reading_hold}",
+        ]
+        layout = []
+        if portrait:
+            layout.extend(("crop=1120:ih:320:0", "scale=1080:-2:flags=lanczos", "setsar=1"))
+        frame_y = "310" if portrait else "(oh-ih)/2"
+        layout.append(f"pad={width}:{height}:(ow-iw)/2:{frame_y}:color=0x0d1322")
+        inset_width = 518 if portrait else 424
+        inset_x = "(main_w-overlay_w)/2" if portrait else "80"
+        inset_y = 1100 if portrait else 175
+        detail_filters = (
+            f"crop={detail_width}:{detail_height}:{x}:{y},"
+            f"scale={inset_width}:-2:flags=lanczos,setsar=1,"
+            "pad=iw+8:ih+8:4:4:color=0x93c5fd"
+        )
+        filters = [
+            f"[0:v]{','.join(shot)},split[context][detail]",
+            f"[context]{','.join(layout)}[base]",
+            f"[detail]{detail_filters}[inset]",
+        ]
+        composed = [
+            f"[base][inset]overlay=x={inset_x}:y={inset_y}:enable='gte(t,{duration / 2:g})'",
+        ]
+        if portrait:
+            composed.append(
+                f"drawtext=text='LIXITY'{font_opt}:fontsize=30:fontcolor=0x93c5fd:"
+                "x=(w-text_w)/2:y=126"
             )
-        parts.append("".join(f"[s{index}]" for index in range(len(selected))) +
-                     f"concat=n={len(selected)}:v=1:a=0[out]")
-        target = OUT_DIR / name
-        run([ffmpeg, "-y", "-loglevel", "error", "-i", str(source),
-             "-filter_complex", ";".join(parts), "-map", "[out]", "-an", "-map_metadata", "-1",
-             "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
-             "-c:v", "libx264", "-preset", "slow", "-crf", "25", "-pix_fmt", "yuv420p",
-             "-movflags", "+faststart", str(target)])
-        _verify_export(target, fps=plan["fps"], frames=frames, width=width, height=height,
-                       max_bytes=max_bytes)
+        caption_y = "198" if portrait else "h-text_h-36"
+        caption_size = 54 if portrait else 32
+        captions = (
+            ("Why is this sentence underlined?", f"lt(t,{duration / 2:g})"),
+            ("See the words Lixity counted.", f"between(t,{duration / 2:g},{duration - 1 / fps:g})"),
+            ("Try it on the Lixity demo.", f"gte(t,{duration})"),
+        )
+        for text, interval in captions:
+            composed.append(
+                f"drawtext=text='{_escape_drawtext(text)}'{font_opt}:expansion=none:"
+                f"fontsize={caption_size}:fontcolor=white:box=1:boxcolor=0x0d1322@0.94:"
+                f"boxborderw=14:x=(w-text_w)/2:y={caption_y}:enable='{interval}'"
+            )
+        filters.append(",".join(composed) + "[out]")
+        with tempfile.TemporaryDirectory(prefix=".clip-", dir=OUT_DIR) as pending:
+            target = Path(pending) / name
+            run([ffmpeg, "-y", "-loglevel", "error", "-i", str(source),
+                 "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
+                 "-frames:v", str(frames), "-r", str(fps), "-fps_mode", "cfr",
+                 "-c:v", "libx264", "-preset", "slow", "-crf", "25", "-pix_fmt", "yuv420p",
+                 "-movflags", "+faststart", str(target)])
+            _verify_export(target, fps=fps, frames=frames, width=width, height=height,
+                           max_bytes=max_bytes)
+            target.replace(OUT_DIR / name)
 
 
 def main() -> int:

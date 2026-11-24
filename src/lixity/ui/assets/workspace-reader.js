@@ -37,8 +37,7 @@
       researchToken === bridge.contextToken();
   }
   function message(text, state) {
-    status.textContent = text;
-    status.className = "ctl-status" + (state ? " " + state : "");
+    window.LixityComponents.setStatus(status, text, state);
   }
   function pending(value) {
     select.disabled = refresh.disabled = value;

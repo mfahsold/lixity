@@ -2396,7 +2396,7 @@ Across the application, controls use six distinct interaction patterns:
 - **View tabs** (`Manuscript` / `Research` / `Project` in the left sidebar):
   switch the whole workspace context. Scroll position and draft state are
   preserved; nothing is saved or discarded by switching views.
-- **Context dock panels** (`Explore passage`, `Research for this passage`, and
+- **Context dock panels** (`Paragraph details`, `Research for this passage`, and
   `Dossiers` in the right-hand split dock): open beside the manuscript on
   desktop (or stacked with a passage-return action on mobile) so you can inspect
   values, claims and notes without losing your place in the prose.
@@ -2432,7 +2432,7 @@ Happy path for an author or lector (no technical setup beyond the local app):
    **Explore patterns** (**Muster erkunden**). These unreleased native entrypoints
    replace the exhaustive section list. Pick a secondary view only when needed;
    the next-passage action remains available above the views.
-4. Follow research beside the text via **Dossiers** or **Explore passage →
+4. Follow research beside the text via **Dossiers** or **Paragraph details →
    Research for this passage**. Distinguish the exact retained quotation from
    the current dossier record; a changed source never silently updates a saved link.
 5. Leave a work marker (`+ Review`, `+ Fact check`, `+ To-do`, `+ Attention`) or
@@ -2448,7 +2448,7 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Sentence rhythm & dialogue | `Analysis overview` → `Explore patterns` → sentence lengths or quoted text; `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
 | Tense review | `Analysis overview` → `Review passages`, or paragraph review badge with `Analysis On` | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
 | Feature-rank projection & scenes | `Compare chapters` → `Style` → projection, or `Explore patterns` → scenes | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
-| Passage values & evidence | Paragraph `…` button → `Explore passage` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
+| Passage values & evidence | Paragraph `…` button → `Paragraph details` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
@@ -2479,8 +2479,23 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-Use the directly visible **Measure**
-selector while Analysis is on. **Counted text** and **Paragraph comparison** are
+Use **Inspect passages** to choose what to inspect in the text. **Chapter &
+manuscript** lists the reports currently available in the overview. Choose a
+report and press **Open in overview**. When a passage measurement has a related
+report, Lixity suggests it in this picker. **Back to passage** restores your
+reading position and selected measurement.
+
+**Analysis help** highlights the next step for the current state. Turn on
+analysis, choose a measurement or inspect the measurement at the current
+paragraph. **Paragraph details** remains available from the help and the
+paragraph menu. Close the measurement card or paragraph details to return to
+the visible help control when you started there.
+
+In the overview, read the reason beside the first suggested passage. The
+button identifies whether it opens a tense flag or the manuscript start.
+Choose a question to reach its available reports and their measurement guides.
+
+**Counted text** and **Paragraph comparison** are
 independent switches. **Counted text** initially follows the selected measure's
 inline-evidence availability and remembers your choice for each measure.
 **Paragraph comparison** starts on and is a shared choice across measures.
@@ -2500,7 +2515,7 @@ inspector, subject to the configured severity threshold.
 
 ### Explore a passage
 
-**Explore passage** opens chapter/source-line context and measurements in the
+**Paragraph details** opens chapter/source-line context and measurements in the
 existing passage inspector without changing global Analysis. Its **Explain
 measurement** action inspects counted text; **Research for this passage** reads
 explicitly linked claims, sources and decisions. Switch between passage values,
@@ -2512,7 +2527,9 @@ to the available width when the context panel is open.
 The visible keys distinguish violet **Counted text** underlines from
 **Paragraph comparison**. Notable paragraphs have a raw-value marker with a
 down/up arrow and a blue/orange edge for below/above the chapter median; the prose
-background receives only a subtle edge wash. Click the marker to inspect the measurement. **Read these
+background receives only a subtle edge wash. Click the marker to see the paragraph
+value and the typical measured value in that chapter in the same units. The
+chapter matrix uses the manuscript as its reference. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
 quantities.
@@ -2536,8 +2553,8 @@ These routes share existing actions rather than creating separate records:
 
 | Task | Passage route | Other access |
 | --- | --- | --- |
-| Explain counted text | **Explore passage → Explain measurement** | Hover, click or tap a marked word or sentence |
-| Read explicitly linked research | **Explore passage → Research for this passage** | The paragraph's association count |
+| Explain counted text | **Paragraph details → Explain measurement** | Hover, click or tap a marked word or sentence |
+| Read explicitly linked research | **Paragraph details → Research for this passage** | The paragraph's association count |
 | Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
 | Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
 | Keep a chosen dossier beside the text | **Dossier alongside** in the paragraph menu | The reader toolbar and the dossier context control |
@@ -2546,7 +2563,7 @@ These routes share existing actions rather than creating separate records:
 for this passage** follows associations saved for the selected paragraph. Merely opening
 a dossier beside the manuscript does not link it to that passage.
 
-**Explore passage → Explain measurement** also works by keyboard or right-click,
+**Paragraph details → Explain measurement** also works by keyboard or right-click,
 including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
@@ -2600,7 +2617,7 @@ marker counts and the criteria for a mix or a switch. Use **Show in manuscript**
 to read the passage in context. Chapter, severity and decision filters narrow
 the list, and **Review next finding** follows the visible findings.
 
-From a flagged paragraph, **Explore passage → Open review decision** returns to
+From a flagged paragraph, **Paragraph details → Open review decision** returns to
 the matching entry and clears any filters that hide it. Choose **Deliberately
 kept**, **Changed by me** or **Review later**, then click **Save decision**.
 Choosing a value alone leaves the previous decision in place. **Changed by me**
@@ -2641,7 +2658,7 @@ Each analyzed paragraph has an **…** button. It opens the same contextual tool
 right-click on the prose or `Shift+F10`/the context-menu key while the paragraph
 or its button has focus. Arrow keys move through the menu; `Home`/`End` reach its
 first/last action. Escape closes it and restores focus. Actions depend on the
-available capabilities: **Explore passage**, work markers, **Link selection to claim**
+available capabilities: **Paragraph details**, work markers, **Link selection to claim**
 for a valid selection, and the companion dossier. A selection within one paragraph
 also offers a compact toolbar. Marker notes and claim associations still require
 their existing explicit save and retention steps.
@@ -2721,7 +2738,7 @@ explicit review/save steps; they are not automatic corrections. **Terms &
 variants** is also reachable from manuscript inspection.
 
 To start a dossier from the text, open **Research → Dossiers → From
-manuscript** and choose **New suggestions**. Browse the available characters,
+manuscript** and choose **Show suggestions**. Browse the available characters,
 places and scenes, then select a suggestion to see why it appeared, the
 relevant excerpt and the text that will be saved.
 **Create dossier** confirms that preview. If the manuscript or settings change,
@@ -2741,7 +2758,7 @@ review the count, chapters with matches and any excerpts included by your
 report settings.
 Choose **Save dossier version** to update the saved report alongside your
 notes, or use **Edit dossier text** to review and change the combined text.
-**Update a character dossier** under **From manuscript** opens the same review
+**Review character analysis** under **From manuscript** opens the same review
 for the dossier you select.
 
 Set the inference limits and the contents of saved character reports under
@@ -3095,7 +3112,7 @@ Claim and dossier views can open their manuscript
 associations in Review. Only an exactly resolved current passage offers a direct
 jump; moved, changed, ambiguous and unavailable anchors retain their review state.
 
-Choose **Explore passage → Research for this
+Choose **Paragraph details → Research for this
 passage**, its association count or a marked quotation to read the linked
 context beside the manuscript. The context shows up to five associations with
 their total, grouping quotations of the same claim version. Titles open the
@@ -5262,7 +5279,7 @@ create or update an association.
 
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
-the latest dossier. The companion and paragraph **Explore passage** inspector are
+the latest dossier. The companion and paragraph **Paragraph details** inspector are
 alternative tools; the **Analysis** display is a separate choice. Reading changes
 neither document, evidence links nor the statistical baseline. See
 [reader controls](../WORKSPACE.md#reading-paragraphs) for display preferences,
@@ -5393,7 +5410,7 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
-**Since v0.7.4:** the shared **Explore passage** inspector calls
+**Since v0.7.4:** the shared **Paragraph details** inspector calls
 this **Research for this passage**. Quotations of the same pinned claim are
 grouped under **Text associations**; its assessment belongs to that exact claim
 version. The title opens the current entry, while **Linked version N** explicitly
@@ -5628,8 +5645,9 @@ manuscript workspace, including when its research archive is elsewhere.
 Previewing is also available before the research archive is initialized.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**New suggestions**. Review why the entry was proposed and the text that
-will be saved. The evidence area identifies project settings, measured text
+**Show suggestions**. Choose a suggestion and read **Why this suggestion?**
+before using **Create dossier**. The preview explains the evidence and shows
+the text that will be saved. It identifies project settings, measured text
 and heuristic suggestions. Character and place references use lines in the
 chapter body. Scene references use their position in the chapter.
 If the manuscript or settings change before saving, reload and review the
@@ -5652,7 +5670,7 @@ before recording a relationship or deciding that a location changed.
 | Linked object or term | The author links a configured term profile to an existing dossier. | Literal names and variants in the current manuscript. See [configured terms](#configured-terms-and-boundary-policies). |
 
 In a generated character dossier, choose **Preview manuscript analysis**. You
-can also choose **Update a character dossier** under **From manuscript**.
+can also choose **Review character analysis** under **From manuscript**.
 The preview groups name counts, chapters with matches and the selected report
 sections. Choose **Save dossier version** to save the
 analysis alongside your notes, or **Edit dossier text** to review and change
@@ -8373,6 +8391,11 @@ lexicon, including `übt`; unknown regular past forms such as `flatterten` can
 now be missed. Listed forms can still be ambiguous, as can auxiliary/participle
 matches. This intentionally changes the counts and dependent results; regenerate
 analyses before comparison and review old decisions against the new evidence.
+The default German present matcher skips capitalized cue spellings immediately
+after selected fused prepositions and articles, such as `beim Lesen`. This uses
+the spelling of a nominalized form as a bounded cue. Sentence-initial finite
+forms and explicit user patterns retain their matching behavior.
+[Official German spelling rules, §55](https://grammis.ids-mannheim.de/rechtschreibung/6193)
 In German, listed auxiliary/participle pairs additionally form one past cue;
 their contained lexical matches are consumed, so three recognized perfect
 constructions give three past cues and no present-auxiliary double count.
@@ -8942,7 +8965,9 @@ selected forms such as `übt`; unlisted regular past forms such as `flatterten`
 can now be missed. Listed forms and auxiliary/participle matches can still be
 ambiguous: for example, `Ich habe gelben Stoff` can still produce a spurious
 past cue from `habe gelben`. This changes counts and dependent results, so regenerate analyses and
-review previous decisions. Other languages retain their existing patterns. To use
+review previous decisions. The default matcher skips some capitalized German
+nominal forms after fused articles, such as `beim Lesen`. Other noun–verb
+ambiguities still require context. Other languages retain their existing patterns. To use
 the contextual path, explicitly select an installed model as described in
 [Usage](USAGE.md#grammatical-tense).
 
@@ -10509,7 +10534,7 @@ absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
 jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-**Explore passage** in the contextual inspector instead of an inline disclosure.
+**Paragraph details** in the contextual inspector instead of an inline disclosure.
 Opening that inspector preserves global Analysis; its explicit **Explain
 measurement** action may enable it. Analysis Off preserves an explicitly
 open inspector. Overview return restores the previous layer and tool. Section
@@ -10571,7 +10596,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `[data-dimension-loading]` | Metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Paragraph details** without changing global Analysis visibility; the internal `values` action key is unchanged |
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, playwrightModule} = require('../../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, resolveAxe} = require('../../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const {pythonFixture} = require('./python-fixture.cjs');
 
@@ -64,10 +64,8 @@ async function checkResearchSearch(browser, artifacts, mode = 'all') {
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       await page.screenshot({path: path.join(artifacts, `research-search-${width}-${theme}.png`), fullPage: true});
-      let axePath;
-      try {axePath = require.resolve('axe-core');}
-      catch (_) {axePath = path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.js');}
-      if (fs.existsSync(axePath)) {
+      const axePath = resolveAxe();
+      if (axePath) {
         await page.evaluate(fs.readFileSync(axePath, 'utf8'));
         const audit = await page.evaluate(async () => axe.run(document.getElementById('rtab-search')));
         if (audit.violations.length) console.log(JSON.stringify(audit.violations.map(item => ({id: item.id, nodes: item.nodes.map(node => ({target: node.target, failureSummary: node.failureSummary}))}))));

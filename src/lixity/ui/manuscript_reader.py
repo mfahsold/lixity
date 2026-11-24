@@ -22,6 +22,17 @@ _LAYER_GROUPS = (
     ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
     ("layer_group_grammar", ("passive", "modal", "nominal")),
 )
+_RELATED_OVERVIEWS = {
+    "asl": ("pacing", "dist"),
+    "sticky": ("pacing",),
+    "function": ("analysis-measurements",),
+    "dialogue": ("dialogue",),
+    "dialogue_tag": ("dialogue",),
+    "indirect_speech": ("dialogue",),
+    "echo": ("motifs",),
+    "filter": ("showing",),
+    "sensory": ("showing",),
+}
 _READER_WIDTHS = (("narrow", "54ch"), ("standard", "68ch"), ("wide", "78ch"))
 _READER_SPACING = (("compact", "1.5"), ("standard", "1.8"), ("relaxed", "2.1"))
 _READER_SIZE_DEFAULT = 18
@@ -60,10 +71,12 @@ def _appearance_choices(
 def reading_metric_control(
     labels: Mapping[str, str] | None, language: str, comparisons: ParagraphLayerData, *,
     available: frozenset[str] | None = None, include_evidence: bool, report: bool,
+    overview_sections: Sequence[tuple[str, str]] = (),
 ) -> str:
     """Render the shared metric selector from the prepared analysis."""
     text = panel_label(labels)
     units = FEATURE_UNITS.get(language, FEATURE_UNITS["en"])
+    sections = dict(overview_sections)
 
     def option(key: str) -> str:
         inline = key not in LAYER_FEATURES
@@ -77,9 +90,11 @@ def reading_metric_control(
         unit = "" if inline else escape(units[LAYER_FEATURES[key]])
         capability = ' data-available="0"' if unavailable else ""
         inline_attr = ' data-inline-evidence="1"' if inline else ""
+        related = next((section for section in _RELATED_OVERVIEWS.get(key, ()) if section in sections), "")
+        overview_attr = f' data-related-overview="{related}"' if related else ""
         return (f'<option value="{key}" data-hint="{hint}" data-unit="{unit}" '
                 f'data-comparable="{len(comparisons.get(key, {}))}" data-reference="measure-{key}"'
-                f'{capability}{inline_attr}>{title}</option>')
+                f'{capability}{inline_attr}{overview_attr}>{title}</option>')
 
     groups = "".join(f'<optgroup label="{text(group)}">{"".join(map(option, keys))}</optgroup>'
                      for group, keys in _LAYER_GROUPS)
@@ -93,6 +108,27 @@ def reading_metric_control(
     )
     return (
         f'<label class="metric-layer-control"><span class="metric-layer-label">{title}</span> {picker}</label>'
+    )
+
+
+def reading_overview_control(
+    sections: Sequence[tuple[str, str]], labels: Mapping[str, str] | None,
+) -> str:
+    """Offer links to existing report sections independently of paragraph metrics."""
+    if not sections:
+        return ""
+    text = panel_label(labels)
+    picker_id = "reader-analysis-overview-select"
+    options = f'<option value="">{text("reader_overview_placeholder")}</option>' + "".join(
+        f'<option value="{escape(section, quote=True)}">{text(title)}</option>' for section, title in sections
+    )
+    return (
+        '<details id="reader-analysis-overview" class="reader-settings" name="reader-settings">'
+        f'<summary class="ctl ctl-sm">{text("reader_overview_choose")}</summary>'
+        '<form id="reader-analysis-overview-form" class="reader-settings-body">'
+        f'{select_control(picker_id, options, accessible_name=label(labels, "reader_overview_choose"))}'
+        f'<button type="submit" class="ctl ctl-sm primary" disabled>{text("reader_overview_open")}</button>'
+        '</form></details>'
     )
 
 
@@ -189,16 +225,20 @@ def reading_controls(
         f'<span class="analysis-state-measure">{text("reading_off")}</span>'
         f'<span id="manuscript-analysis-state">{text("reading_off")}</span></span></button>'
         '<details class="reader-settings reader-analysis-guide" id="reader-analysis-guide" name="reader-settings" hidden>'
-        f'<summary class="ctl" aria-label="{text("analysis_guide_title")}" title="{text("analysis_guide_title")}" data-help="{text("analysis_guide_intro")}"><span class="reader-control-icon" aria-hidden="true">{help_icon}</span><span class="sr-only">?</span></summary>'
+        f'<summary class="ctl" aria-label="{text("analysis_guide_title")}" title="{text("analysis_guide_title")}" data-help="{text("analysis_guide_intro")}">'
+        f'<span class="reader-control-icon" aria-hidden="true">{help_icon}</span>'
+        f'<span class="reader-control-label" aria-hidden="true">{text("analysis_guide_title")}</span></summary>'
         '<div class="reader-settings-body">'
         f'<strong>{text("analysis_guide_title")}</strong>'
-        f'<p>{text("analysis_guide_intro")}</p>'
-        '<p class="ctl-note" id="reader-analysis-guide-state" role="status" aria-live="polite"></p>'
+        '<p class="ctl-note ctl-guidance" id="reader-analysis-guide-state" role="status"></p>'
         '<p class="ctl-note" id="reader-metric-definition" hidden></p>'
-        f'<ol><li><button type="button" class="ctl" data-analysis-guide-action="choose">{text("analysis_guide_choose")}</button></li>'
-        f'<li><button type="button" class="ctl" data-analysis-guide-action="example" disabled>{text("analysis_guide_count")}</button></li>'
-        f'<li><button type="button" class="ctl" data-analysis-guide-action="explore">{text("reading_explore_passage")}</button></li></ol>'
-        f'<p class="ctl-note">{text("analysis_guide_compare")}</p>'
+        '<div class="reader-guide-actions">'
+        f'<button type="button" class="ctl" data-analysis-guide-action="example" hidden>{text("analysis_guide_count")}</button>'
+        f'<button type="button" class="ctl primary" data-analysis-guide-action="choose">{text("analysis_guide_enable")}</button>'
+        f'<button type="button" class="ctl" data-analysis-guide-action="explore" hidden>{text("reading_explore_passage")}</button></div>'
+        f'<p class="ctl-note" id="reader-guide-counted" hidden><strong class="analysis-evidence-swatch">{text("legend_counted_text")}</strong> '
+        f'{text("reading_help_counted")}</p>'
+        f'<p class="ctl-note" id="reader-guide-comparison" hidden>{text("analysis_guide_compare")}</p>'
         f'<p class="ctl-note">{metric_reference_link(labels, "measurements", element_id="reader-metric-reference")}</p>'
         '</div></details></div>'
         f'{overview_btn}'

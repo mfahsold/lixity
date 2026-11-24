@@ -28,10 +28,18 @@ async function checkEarlyDossierSuggestions(browser, url) {
     await page.goto(url);
     await expect.poll(() => statusRequested).toBe(true);
     await page.locator('#tab-view-research').click();
-    await page.locator('#r-dos-drafts-box > summary').press('Enter');
-    const load = page.locator('#r-manuscript-dossier-btn');
+    const box = page.locator('#r-dos-drafts-box');
+    await box.locator(':scope > summary').press('Enter');
+    const load = box.locator('#r-manuscript-dossier-btn');
+    const guidance = box.locator('#r-manuscript-drafts-help');
+    const primary = box.locator('.ctl.primary:visible');
+    await expect(guidance).toBeVisible();
+    await expect(primary).toHaveCount(1);
+    await expect(load).toHaveClass(/\bprimary\b/);
     await load.press('Enter');
-    await expect(page.locator('#r-manuscript-drafts-status')).toBeVisible();
+    const status = box.locator('#r-manuscript-drafts-status');
+    await expect(status).toBeVisible();
+    await expect(status).toHaveClass(/\bloading\b/);
 
     // The first project response must arrive before any proposals can render.
     releaseStatus();
@@ -40,7 +48,13 @@ async function checkEarlyDossierSuggestions(browser, url) {
     const drafts = page.locator('#r-manuscript-drafts');
     await expect(drafts.locator('[data-draft-select="character:mara"]')).toBeVisible();
     await expect(drafts.locator('[data-draft-select="character:ivo"]')).toBeVisible();
-    await expect(page.locator('#r-manuscript-drafts-status')).toBeHidden();
+    await expect(status).toBeHidden();
+    await expect(primary).toHaveCount(1);
+    const save = drafts.locator('[data-create-manuscript-draft]');
+    await expect(save).toHaveClass(/\bprimary\b/);
+    await expect(save).toHaveAccessibleDescription(
+      await drafts.locator('[data-draft-reason-method]').textContent()
+    );
     await expect(page.locator('#research-dossiers-list')).toContainText('Current synthetic dossier');
   } finally {
     releaseStatus();
@@ -1195,6 +1209,7 @@ server.serve_forever()
     await loadDrafts.press('Enter');
     await expect(preview).toHaveCount(0);
     await expect(manualDossier).toBeVisible();
+    await expect(manualDossier).toHaveClass(/\bprimary\b/);
     await dossierTitle.fill('');
     await dossierBody.fill('');
     await dossierTags.evaluate(node => { node.value = ''; });

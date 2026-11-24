@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 from html import escape
 
-from .components import label
+from .components import label, panel_guide
 
 _WORKFLOW_SECTIONS = {
     "review": ("flags", "markers"),
@@ -21,6 +21,27 @@ _WORKFLOW_SECTIONS = {
 }
 
 
+def analysis_workflow_sections(
+    active_sections: Sequence[tuple[str, str]],
+    *,
+    has_markers: bool = False,
+    has_register_targets: bool = False,
+) -> tuple[tuple[str, str], ...]:
+    """Project the available panels into the shared order for overview routes."""
+    available = dict(active_sections)
+    available["analysis-measurements"] = "analysis_measurements"
+    if has_markers:
+        available["markers"] = "markers"
+    if has_register_targets:
+        available["register-targets"] = "register_title"
+    return tuple(
+        (section, available[section])
+        for sections in _WORKFLOW_SECTIONS.values()
+        for section in sections
+        if section in available
+    )
+
+
 def render_analysis_workflows(
     active_sections: Sequence[tuple[str, str]],
     labels: Mapping[str, str] | None,
@@ -33,6 +54,7 @@ def render_analysis_workflows(
     }
     parts = [
         '<div class="analysis-workflows" id="analysis-workflows" data-analysis-workflows>',
+        panel_guide(escape(label(labels, "workflow_choose_hint"))),
         '<div class="analysis-workflow-entries">',
     ]
     for workflow, sections in groups.items():
@@ -54,7 +76,7 @@ def render_analysis_workflows(
     )
     for workflow, sections in groups.items():
         parts.extend(
-            f'<button type="button" class="ctl" data-analysis-section-target="{section}" '
+            f'<button type="button" class="ctl ctl-choice" data-analysis-section-target="{section}" '
             f'data-analysis-section-workflow="{workflow}" aria-pressed="false" '
             f'aria-controls="{section}">{escape(label(labels, available[section]))}</button>'
             for section in sections

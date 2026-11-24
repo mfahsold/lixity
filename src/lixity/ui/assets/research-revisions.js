@@ -219,9 +219,8 @@ if (researchRevisionDialog) {
   }
 
   function revisionStatus(message, error) {
-    revisionStatusHost.textContent = message || "";
+    window.LixityComponents.setStatus(revisionStatusHost, message, error ? "err" : "");
     revisionStatusHost.hidden = !message;
-    revisionStatusHost.className = "ctl-status" + (error ? " err" : "");
   }
 
   function revisionNotices(envelope) {
@@ -905,9 +904,8 @@ if (researchRevisionDialog) {
   }
 
   function revisionBatchStatus(message, error) {
-    revisionBatchStatusHost.textContent = message || "";
+    window.LixityComponents.setStatus(revisionBatchStatusHost, message, error ? "err" : "");
     revisionBatchStatusHost.hidden = !message;
-    revisionBatchStatusHost.className = "ctl-status" + (error ? " err" : "");
   }
 
   function revisionBatchPending(pending) {
@@ -1214,18 +1212,6 @@ if (researchRevisionDialog) {
   });
   researchRevisionDialog.addEventListener("cancel", function(event) {
     if (revisionState.pending) event.preventDefault();
-  });
-  researchRevisionDialog.querySelector('[role="tablist"]').addEventListener("keydown", function(event) {
-    if (window.LixitySite.readOnly) return;
-    if (revisionState.pending || !event.target.matches("#research-revision-edit-tab, #research-revision-history-tab")) return;
-    var tabs = [revisionHistoryTab, revisionEditTab], index = tabs.indexOf(event.target);
-    if (event.key === "ArrowRight" || event.key === "ArrowLeft") index = 1 - index;
-    else if (event.key === "Home") index = 0;
-    else if (event.key === "End") index = 1;
-    else return;
-    event.preventDefault();
-    revisionSetTab(index === 0 ? "history" : "edit");
-    tabs[index].focus();
   });
   researchRevisionDialog.addEventListener("click", function(event) {
     if (revisionState.pending && (event.target === researchRevisionDialog || event.target.closest("[data-close-modal]"))) {

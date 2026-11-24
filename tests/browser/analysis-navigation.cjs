@@ -55,14 +55,21 @@ print(json.dumps(result))
 `, {root});
 
 async function settle(page) {
-  await page.evaluate(() => new Promise(resolve => {
+  const settled = await page.evaluate(() => new Promise(resolve => {
     let previous = scrollY, stable = 0;
+    const timeout = setTimeout(() => resolve({position:scrollY, previous, stable}), 3000);
     function frame() {
       stable = scrollY === previous ? stable + 1 : 0; previous = scrollY;
-      if (stable >= 4) resolve(); else requestAnimationFrame(frame);
+      if (stable >= 4) {
+        clearTimeout(timeout);
+        resolve(null);
+      } else {
+        requestAnimationFrame(frame);
+      }
     }
     requestAnimationFrame(frame);
   }));
+  assert.equal(settled, null, `Scroll position did not settle: ${JSON.stringify(settled)}`);
   await page.waitForFunction(() => !document.querySelector('.view-pane.active')?.getAnimations()
     .some(animation => animation.playState === 'running'));
 }
@@ -547,6 +554,7 @@ async function finish(page, errors, writes) {
       await check('localized navigation spacing ' + locale + ' ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, locale, width);
         try {
+          await page.emulateMedia({colorScheme: width === 320 ? 'dark' : 'light'});
           const guide = page.locator('#reader-analysis-guide');
           assert.equal(await guide.isVisible(), true);
           assert.equal(await guide.evaluate(node => node.open), false, 'Guidance is voluntary, not an opening overlay');
@@ -558,15 +566,61 @@ async function finish(page, errors, writes) {
           assert.ok(off && !off.includes('analysis_guide_'), 'The inactive explanation is localized');
           const guideBody = guide.locator('.reader-settings-body');
           assert.equal(await guideBody.isVisible(), true);
-          assert.equal(await guideBody.locator('[data-analysis-guide-action]').count(), 3,
-            'First-analysis guidance offers three direct actions through existing reader controls');
+          const nextAction = guideBody.locator('.ctl.primary:visible');
+          assert.equal(await guideBody.locator('[data-analysis-guide-action]:visible').count(), 1,
+            'Turning on analysis is the sole next action before selecting any measurement');
+          assert.equal(await nextAction.textContent(), await page.evaluate(() => uiLabel('analysis_guide_enable')));
+          assert.equal(await page.locator('#reader-guide-counted').isVisible(), false,
+            'The first step omits explanations for marks that are still off');
           assert.ok(await guideBody.evaluate(node => node.scrollWidth <= node.clientWidth),
             'Help retains readable, bounded horizontal layout');
           await guideBody.screenshot({path: path.join(artifacts, `guide-${locale}-${width}.png`)});
+          if (width === 320) {
+            await page.evaluate(() => {
+              document.documentElement.style.fontSize = '200%';
+              window.dispatchEvent(new Event('resize'));
+            });
+            assert.ok(await guideBody.evaluate(node => {
+              const box = node.getBoundingClientRect();
+              return node.scrollWidth <= node.clientWidth && box.left >= 0 && box.right <= innerWidth;
+            }), 'The next action remains within the guide at 200% text size');
+            await page.evaluate(() => {
+              document.documentElement.style.removeProperty('font-size');
+              window.dispatchEvent(new Event('resize'));
+            });
+          }
           await page.keyboard.press('Escape');
           assert.equal(await guide.evaluate(node => node.open), false);
           assert.equal(await guide.locator('summary').evaluate(node => node === document.activeElement), true);
-          await page.locator('#manuscript-analysis-toggle').click();
+          await guide.locator('summary').press('Enter');
+          await page.keyboard.press('Tab');
+          assert.equal(await nextAction.evaluate(node => node === document.activeElement), true);
+          await nextAction.press('Enter');
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
+          assert.equal(await page.locator('#style-layer').evaluate(node => node === document.activeElement), true);
+          const overviewPicker = page.locator('#reader-analysis-overview-select');
+          const overviewOpen = page.locator('#reader-analysis-overview-form button');
+          const overviewIds = await overviewPicker.locator('option').evaluateAll(options =>
+            options.map(option => option.value).filter(Boolean));
+          assert.deepEqual(overviewIds, await page.locator('[data-analysis-section-target]').evaluateAll(buttons =>
+            buttons.map(button => button.dataset.analysisSectionTarget)),
+            'Reader picker offers exactly the available overview workflows');
+          const overviewMenu = page.locator('#reader-analysis-overview > summary');
+          await overviewMenu.click();
+          await overviewPicker.selectOption('matrix');
+          assert.equal(await page.locator('#chapters').isVisible(), true,
+            'Changing the overview selection keeps the reader open until the explicit action');
+          await overviewOpen.press('Enter');
+          await settle(page);
+          assert.equal(await page.locator('#matrix').isVisible(), true);
+          assert.equal(await page.locator('#matrix > h2').evaluate(node => node === document.activeElement), true,
+            'The keyboard action focuses the destination heading');
+          await page.locator('#workbench-overview-back').click();
+          await settle(page);
+          assert.equal(await page.locator('#chapters').isVisible(), true);
+          await overviewMenu.click();
+          await overviewPicker.selectOption('');
+          await overviewMenu.click();
           await page.locator('#style-layer').selectOption('');
           const none = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(none, off, 'Analysis on without a metric is distinct from Analysis off');
@@ -586,6 +640,7 @@ async function finish(page, errors, writes) {
             assert.equal(await page.locator('#reader-metric-definition').textContent(), measure.hint);
           }
           await page.locator('#style-layer').selectOption('asl');
+          assert.equal(await overviewPicker.inputValue(), 'dist', 'Sentence length suggests the available rhythm report');
           const selected = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(selected, none);
           assert.ok(selected.includes(await page.locator('#style-layer option:checked').textContent()));
@@ -603,17 +658,26 @@ async function finish(page, errors, writes) {
           await settle(page);
           assert.equal(await page.locator('#reader-inspector').isVisible(), true);
           assert.equal(await page.locator('#reader-inspector-close').evaluate(node => node === document.activeElement), true);
+          assert.equal(await page.locator('#reader-inspector .paragraph-values > summary').evaluate(node => {
+            const text = document.createRange();
+            text.selectNodeContents(node);
+            return text.getClientRects().length;
+          }), 1, 'The passage values label fits on a line');
           await page.keyboard.press('Escape');
           await settle(page);
           assert.equal(await page.locator('#reader-inspector').isVisible(), false);
+          assert.equal(await guide.locator('summary').evaluate(node => node === document.activeElement), true,
+            'Closing paragraph details returns to the visible help trigger');
           await guide.locator('summary').click();
-          assert.equal(await guide.locator('[data-analysis-guide-action="example"]').isEnabled(), true);
-          await guide.locator('[data-analysis-guide-action="example"]').click();
+          assert.equal(await nextAction.getAttribute('data-analysis-guide-action'), 'example');
+          await nextAction.press('Enter');
           await settle(page);
           await page.waitForFunction(() => !document.getElementById('analysis-evidence-card').hidden);
           assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
           await page.keyboard.press('Escape');
           await settle(page);
+          assert.equal(await guide.locator('summary').evaluate(node => node === document.activeElement), true,
+            'Closing measurement evidence returns to the visible help trigger');
           await page.locator('#analysis-evidence-enabled').uncheck();
           await page.locator('#reader-focus').click();
           assert.equal(await guide.isVisible(), false, 'Focus reading hides optional guidance');
@@ -650,6 +714,7 @@ async function finish(page, errors, writes) {
           const navigation = page.locator('[data-analysis-workflows]');
           const entries = navigation.locator('[data-analysis-workflow]');
           assert.equal(await entries.count(), 3);
+          assert.equal(await entries.first().evaluate(button => getComputedStyle(button).textAlign), 'start');
           const boxes = await entries.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().toJSON()));
           for (let index = 1; index < boxes.length; index++) {
             const previous = boxes[index - 1], current = boxes[index];

@@ -44,7 +44,7 @@ print(json.dumps(fixtures))
       assert.equal(await page.locator('.welcome-more').getAttribute('open'), null,
         'Further research tools do not crowd the initial steps');
       await page.locator('#tab-view-analysis').click();
-      await page.locator('#analysis-empty-import').click();
+      await page.locator('#hero-btn-new-project').click();
       assert.equal(await page.locator('#modal-project-create').isVisible(), true);
       assert.equal(await page.locator('#tab-pane-import').isVisible(), true,
         'The empty analysis starts the existing import directly');

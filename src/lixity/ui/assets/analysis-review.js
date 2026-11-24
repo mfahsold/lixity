@@ -10,6 +10,7 @@
   var progress = document.getElementById("triage-progress");
   var next = document.getElementById("triage-next");
   var status = document.getElementById("triage-save-status");
+  var setStatus = window.LixityComponents.setStatus;
   var reload = document.getElementById("triage-reload");
   var native = panel.dataset.reviewCapable === "true" && !window.LixitySite.readOnly;
   if (!rows.length && !native) return;
@@ -41,7 +42,7 @@
       row.dataset.reviewState = "unknown";
       row.querySelector(".triage-saved-state").textContent = label("unknown");
     });
-    if (status) {status.textContent = label("unavailable"); status.className = "ctl-status err";}
+    setStatus(status, label("unavailable"), "err");
     if (reload) reload.hidden = false;
     if (window.LixityLog) LixityLog.warn("Analysis review state unavailable");
     apply();
@@ -77,14 +78,14 @@
   async function load() {
     if (!native || pending) return;
     pending = true; controls(true);
-    status.textContent = label("loading"); status.className = "ctl-status";
+    setStatus(status, label("loading"), "loading");
     var selected = token();
     var query = "?project_token=" + encodeURIComponent(selected);
     var data = await jsonApi(API + "/analysis-review" + query);
     pending = false;
     if (selected !== token() || !accept(data)) {failed(); return;}
     apply();
-    status.textContent = "";
+    setStatus(status, "");
   }
   function passageRow(passage) {
     if (!native || !passage || !passage.isConnected) return null;
@@ -129,7 +130,7 @@
     if (!choice) {row.querySelector(".triage-choice").focus(); return;}
     var selected = token(), before = accepted;
     pending = true; controls(true);
-    window.LixityComponents.setStatus(status, uiLabel("form_saving"), "");
+    setStatus(status, uiLabel("form_saving"), "loading");
     window.LixityComponents.postJson(API + "/analysis-review", {
       project_token: selected,
       observation_id: row.dataset.observationId,
@@ -141,7 +142,7 @@
       pending = false;
       if (selected !== token() || !accept(data)) {failed(); return;}
       apply();
-      window.LixityComponents.setStatus(status, label("saved"), "ok");
+      setStatus(status, label("saved"), "ok");
       if (row.hidden) next.focus();
     });
   });

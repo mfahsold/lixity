@@ -1,9 +1,8 @@
 // Synthetic native workspace: focused audio tabs, permission feedback and recording cleanup.
-const {launchChromium, launchFirefox} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const labels = require('../../src/lixity/locales/de.json');
 
@@ -57,12 +56,7 @@ server.serve_forever()
     ? await launchFirefox({firefoxUserPrefs: {'media.autoplay.default': 0}})
     : await launchChromium();
   const original = fs.readFileSync(server.fixture.source);
-  let axe;
-  for (const candidate of ['axe-core/axe.min.js',
-    path.join(os.homedir(), '.local/share/lixity/browser-tools/node_modules/axe-core/axe.min.js'),
-    path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.min.js')]) {
-    try { axe = require.resolve(candidate); break; } catch {}
-  }
+  const axe = resolveAxe();
   if (!axe) console.log('axe-core unavailable; full audio dialog accessibility audit not run');
   try {
     for (const width of [1440, 320]) {
@@ -172,6 +166,12 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-reference_id').isVisible(), false);
         assert.match(await page.locator('#speech-speed-hint').textContent(), /Modell|model|modèle/i,
           'ZONOS3 speed is explained as a model condition');
+        await tabs.nth(1).focus();
+        await page.keyboard.press('ArrowRight');
+        assert.equal(await tabs.nth(1).evaluate(element => element === document.activeElement), true,
+          'The keyboard stays on the active profile tab while edits block a switch');
+        assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
+        assert.equal(await page.locator('#speech-status').textContent(), labels.speech_profiles_unsaved);
         await page.locator('[data-speech-action=profiles_discard]').click();
         await assertTempo('speech_speed', 'speech_speed_hint', 1.1);
         await auditDialog('profiles');

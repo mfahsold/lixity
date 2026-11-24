@@ -235,7 +235,7 @@
   var directSpeechObserver = null;
   var directSpeechFrame = 0;
   var settings = document.getElementById("reader-settings");
-  var settingsPanels = [settings, document.getElementById("reader-analysis-guide")].filter(Boolean);
+  var settingsPanels = Array.from(controls.querySelectorAll(".reader-settings"));
   var analysisGuide = document.getElementById("reader-analysis-guide");
   var metric = document.getElementById("style-layer"), evidenceToggle = document.getElementById("analysis-evidence-enabled");
   var comparisonToggle = document.getElementById("analysis-comparison-enabled");
@@ -294,6 +294,12 @@
   function defaultMetric(force) {
     if (!metric || metric.value || (!force && preferences.metric !== null)) return;
     window.LixityComponents.changeSelectOption(metric, "asl");
+  }
+  function setAnalysisVisible(visible) {
+    retain(function() {
+      if (visible) defaultMetric(false);
+      workbench.dispatch({type:"analysis", value:visible});
+    });
   }
   function selectMetricPreference() {
     restoreEvidencePreference();
@@ -410,24 +416,51 @@
   document.addEventListener("pointerdown", function(event) {
     if (event.target === document.documentElement && event.clientX >= document.documentElement.clientWidth) scrollIntent();
   }, {passive:true});
-  function updateGuideActions() {
-    if (!analysisGuide) return;
+  if (analysisGuide && metric) {
+    var summary = analysisGuide.querySelector("summary");
+    var status = document.getElementById("reader-analysis-guide-state");
+    var reference = document.getElementById("reader-metric-reference");
+    var definition = document.getElementById("reader-metric-definition");
+    var countedHelp = document.getElementById("reader-guide-counted");
+    var comparisonHelp = document.getElementById("reader-guide-comparison");
+    var choose = analysisGuide.querySelector('[data-analysis-guide-action="choose"]');
     var example = analysisGuide.querySelector('[data-analysis-guide-action="example"]');
-    example.disabled = !panels.length || !metric || !metric.value || !window.LixityAnalysisEvidence || !LixityAnalysisEvidence.available();
-    analysisGuide.querySelector('[data-analysis-guide-action="explore"]').disabled = !panels.length;
-  }
-  if (analysisGuide) {
-    analysisGuide.addEventListener("toggle", updateGuideActions);
-    document.addEventListener("lixity:analysis-layer-change", updateGuideActions);
-    document.addEventListener("lixity:workbench-change", updateGuideActions);
+    var explore = analysisGuide.querySelector('[data-analysis-guide-action="explore"]');
+    function updateGuide() {
+      var state = workbench.state();
+      analysisGuide.hidden = state.surface !== "document" || state.focus;
+      var option = state.analysisVisible && metric.value ? metric.selectedOptions[0] : null;
+      var available = option && option.dataset.available !== "0";
+      var text = uiLabel(state.analysisVisible ? "analysis_guide_none" : "analysis_guide_off");
+      if (option) {
+        var unit = option.dataset.unit;
+        text = unit ? uiFormat("analysis_guide_selected", {metric:option.textContent, unit:unit}) : option.textContent;
+        if (!available) text += ". " + uiLabel("layer_language_unavailable");
+      }
+      if (status.textContent !== text) status.textContent = text;
+      reference.hash = option?.dataset.reference || "measurements";
+      definition.hidden = !option?.dataset.hint;
+      definition.textContent = option?.dataset.hint || "";
+      countedHelp.hidden = !available;
+      comparisonHelp.hidden = !available || option.dataset.inlineEvidence === "1";
+      var canInspect = Boolean(available && panels.length && window.LixityAnalysisEvidence?.available());
+      example.hidden = !canInspect;
+      explore.hidden = !state.analysisVisible || !panels.length;
+      choose.classList.toggle("primary", !canInspect);
+      example.classList.toggle("primary", canInspect);
+      choose.textContent = uiLabel(state.analysisVisible ? "analysis_guide_choose" : "analysis_guide_enable");
+    }
+    analysisGuide.addEventListener("toggle", updateGuide);
+    document.addEventListener("lixity:analysis-layer-change", updateGuide);
+    document.addEventListener("lixity:workbench-change", updateGuide);
     analysisGuide.addEventListener("click", async function(event) {
       var action = event.target.closest("[data-analysis-guide-action]");
-      if (!action || action.disabled) return;
+      if (!action || action.hidden) return;
       var anchor = capture();
       analysisGuide.open = false;
       if (action.dataset.analysisGuideAction === "choose") {
-        retain(function() {workbench.dispatch({type:"analysis", value:true});});
-        if (metric) metric.focus({preventScroll:true});
+        if (!workbench.state().analysisVisible) setAnalysisVisible(true);
+        metric.focus({preventScroll:true});
         return;
       }
       var panel = anchor && anchor.panel.matches(".ptext") ? anchor.panel : panels.find(function(item) {
@@ -441,14 +474,14 @@
           scrollAndFlash(panel, {behavior:"auto"});
           await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
         }
-        if (panel.isConnected) LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions") || panel);
+        if (panel.isConnected) LixityAnalysisEvidence.inspect(panel, panel.querySelector(".reader-paragraph-actions"), null, summary);
       }
       else {
-        current = panel; savedRange = null; evidencePoint = null; returnTarget = action;
+        current = panel; savedRange = null; evidencePoint = null; returnTarget = summary;
         run("values");
       }
     });
-    updateGuideActions();
+    updateGuide();
   }
   function restore(anchor, arrival, stillCurrent, didBegin) {
     if (!anchor) return;
@@ -802,6 +835,8 @@
       var flagTitle = document.createElement("span"); flagTitle.className = "reader-passage-flag-title";
       flagTitle.textContent = tenseTitle(panel);
       flagHeader.appendChild(flagBadge); flagHeader.appendChild(flagTitle);
+      var reviewHint = document.createElement("p"); reviewHint.className = "ctl-note";
+      reviewHint.textContent = uiLabel("reading_tense_flag_help");
       var cueHost = document.createElement("div"); cueHost.className = "reader-tense-evidence";
       var counts = document.createElement("details"); counts.className = "reader-tense-counts";
       var countsTitle = document.createElement("summary"); countsTitle.textContent = uiLabel("reading_tense_counts");
@@ -818,7 +853,7 @@
       help.className = "reader-tense-help"; helpTitle.textContent = uiLabel("reading_tense_help");
       var guidance = document.createElement("p"); guidance.className = "ctl-note";
       guidance.textContent = uiLabel("triage_author_guidance"); help.append(helpTitle, guidance);
-      flagCard.append(flagHeader, cueHost, counts, help);
+      flagCard.append(flagHeader, reviewHint, cueHost, counts, help);
       context.appendChild(flagCard);
       // Verification is asynchronous; the context identity is checked before display.
       Promise.resolve().then(function() {renderTenseCues(panel, cueHost);});
@@ -892,8 +927,6 @@
     analysisToggle.hidden = state.surface === "overview";
     var dossierToggle = document.getElementById("workspace-reader-toggle");
     if (dossierToggle) dossierToggle.hidden = state.surface === "overview";
-    var guideToggle = document.getElementById("reader-analysis-guide");
-    if (guideToggle) guideToggle.hidden = state.surface === "overview" || !state.analysisVisible;
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
     document.getElementById("workbench-overview-toolbar").hidden = state.surface !== "overview";
     focus.setAttribute("aria-pressed", String(state.focus));
@@ -1069,10 +1102,7 @@
   });
   analysisToggle.addEventListener("click", function() {
     var previous = workbench.state();
-    retain(function() {
-      if (!previous.analysisVisible) defaultMetric(false);
-      workbench.dispatch({type: "analysis", value: !previous.analysisVisible});
-    });
+    setAnalysisVisible(!previous.analysisVisible);
     if (previous.surface === "overview") {
       rememberPassageLocation(overviewAnchor && overviewAnchor.panel); restore(overviewAnchor, true);
     }
@@ -1111,32 +1141,12 @@
   });
   function codepointSpansToRanges(prose, text, spans) {
     if (!prose || !spans || !spans.length || prose.textContent !== text) return [];
-    var offsets = [0], offset = 0, nodes = [], walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
-    for (var ch of text) { offset += ch.length; offsets.push(offset); }
-    offset = 0;
-    while (walker.nextNode()) {
-      nodes.push({node: walker.currentNode, start: offset, end: offset + walker.currentNode.length});
-      offset += walker.currentNode.length;
-    }
-    if (!nodes.length) return [];
-    function point(at) {
-      var low = 0, high = nodes.length - 1;
-      while (low < high) {
-        var mid = Math.floor((low + high) / 2);
-        if (nodes[mid].end < at) low = mid + 1; else high = mid;
-      }
-      var target = nodes[low];
-      return {node: target.node, offset: Math.max(0, Math.min(target.node.length, at - target.start))};
-    }
+    var offsets = LixityComponents.cpOffsets(text), rangeAt = LixityComponents.textRangeMap(prose);
     var ranges = [];
     spans.forEach(function(span) {
       var s = offsets[span.start], e = offsets[span.end];
       if (!Number.isInteger(s) || !Number.isInteger(e) || e <= s) return;
-      var a = point(s), b = point(e);
-      var range = document.createRange();
-      range.setStart(a.node, a.offset);
-      range.setEnd(b.node, b.offset);
-      ranges.push(range);
+      ranges.push(rangeAt(s, e));
     });
     return ranges;
   }
@@ -1159,22 +1169,15 @@
       var dialogue = evidence && evidence.layers && evidence.layers.dialogue;
       if (!dialogue || !Array.isArray(dialogue.quotation_ranges)) return;
       var spans = dialogue.quotation_ranges.map(function(pair) {return {start:pair[0], end:pair[1]};});
-      if (spans.length > 0) {
-        var totalCp = Array.from(text.trim()).length;
-        var dlgCp = spans.reduce(function(acc, s) { return acc + Math.max(0, (s.end || 0) - (s.start || 0)); }, 0);
-        if (spans.length > 0 && totalCp > 0 && dlgCp >= totalCp - 4) {
-          panel.classList.add("direct-speech-only");
-        } else {
-          panel.classList.add("direct-speech-mixed");
-        }
-        if (hasHighlight && spans.length > 0) {
-          var prose = panel.querySelector(".ptext-inner > p");
-          if (prose) {
-            ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
-          }
-        }
-      } else if (dialogue.reason !== "quotation_context_unresolved") {
-        panel.classList.add("direct-speech-narrative");
+      var words = dialogue.denominator, quoted = dialogue.count;
+      var known = Number.isSafeInteger(words) && Number.isSafeInteger(quoted) && words > 0 && quoted >= 0 && quoted <= words;
+      if (known && dialogue.reason !== "quotation_context_unresolved") {
+        panel.classList.add(quoted === 0 ? "direct-speech-narrative" :
+          quoted === words ? "direct-speech-only" : "direct-speech-mixed");
+      }
+      if (hasHighlight && spans.length > 0) {
+        var prose = panel.querySelector(".ptext-inner > p");
+        if (prose) ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
       }
     });
     if (hasHighlight) {

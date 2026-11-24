@@ -84,45 +84,34 @@ server.serve_forever()
     await page.goto(fixture.url);
     assert.equal(await page.evaluate(() => typeof window.mermaid), 'undefined', 'Unused diagram library must remain uninitialized');
     await expect(page.locator('#welcome-hero')).toBeVisible();
+    await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#research-init-box')).not.toBeVisible();
+    await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-init-box')).toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 0);
-    // Onboarding is optional and never hides the persistent project actions.
-    await page.locator('#welcome-dismiss').click();
-    await expect(page.locator('#welcome-hero')).not.toBeVisible();
-    await expect(page.locator('#btn-modal-open-project')).toBeVisible();
-    await expect(page.locator('#btn-modal-new-project')).toBeVisible();
+    await page.locator('#tab-view-analysis').click();
+    // An empty workspace keeps its first actions visible across reloads.
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({width, height: 844});
       await page.reload();
       await page.evaluate(() => scrollTo(0, 0));
-      await expect(page.locator('#welcome-hero')).not.toBeVisible();
+      await expect(page.locator('#hero-btn-open-project')).toBeVisible();
+      await expect(page.locator('#hero-btn-new-project')).toBeVisible();
+      await expect(page.locator('#hero-btn-write')).toBeVisible();
+      await openProjectActions(page);
+      await expect(page.locator('#btn-modal-open-project')).toBeVisible();
+      await expect(page.locator('#btn-modal-new-project')).toBeVisible();
       assert.ok(await page.locator('.workspace-bar').evaluate(element => {
         const box = element.getBoundingClientRect();
         return box.top >= 0 && box.bottom <= innerHeight && box.right <= innerWidth;
-      }), `Collapsed guidance must keep project controls in the first viewport at ${width}px`);
-      await expect(page.locator('#welcome-show')).toBeVisible();
+      }), `Project controls stay in the first viewport at ${width}px`);
       await page.locator('.workspace-bar').screenshot({path: path.join(artifacts, `workspace-actions-${width}.png`)});
     }
     await page.setViewportSize({width: 1440, height: 1000});
-    await openProjectActions(page);
-    await page.locator('#welcome-show').click();
-    await expect(page.locator('#welcome-hero')).toBeVisible();
     assert.equal(await page.locator('#ms-file, [data-action=export], [data-action=sync], [data-action=gdrive]').count(), 0, 'Native UI must expose supported workflows only');
     assert.equal(await page.locator('#nda-draft-form').count(), 1, 'The empty native workspace advertises stateless NDA generation');
     assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
     assert.equal(await page.locator('#nda-project-name').inputValue(), '', 'An unloaded project has no inferred NDA name');
-    const noStoragePage = await browser.newPage();
-    noStoragePage.on('pageerror', error => errors.push('Blocked storage: ' + error.message));
-    await noStoragePage.addInitScript(() => {
-      Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Storage disabled', 'SecurityError'); }});
-    });
-    await noStoragePage.goto(fixture.url);
-    await noStoragePage.locator('#welcome-dismiss').click();
-    await expect(noStoragePage.locator('#welcome-hero')).not.toBeVisible();
-    await openProjectActions(noStoragePage);
-    await noStoragePage.locator('#welcome-show').click();
-    await expect(noStoragePage.locator('#welcome-hero')).toBeVisible();
-    await noStoragePage.close();
 
     // Import is an explicit separate workflow and merely selecting it sends no mutation.
     const mutations = [];
@@ -1162,6 +1151,19 @@ server.serve_forever()
     await page.locator('#welcome-show').click();
     await expect(page.locator('#welcome-hero')).toBeVisible();
     await page.locator('#welcome-dismiss').click();
+    await expect(page.locator('#welcome-hero')).not.toBeVisible();
+    const noStoragePage = await browser.newPage();
+    noStoragePage.on('pageerror', error => errors.push('Blocked storage: ' + error.message));
+    await noStoragePage.addInitScript(() => {
+      Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Storage disabled', 'SecurityError'); }});
+    });
+    await noStoragePage.goto(page.url());
+    await openProjectActions(noStoragePage);
+    await noStoragePage.locator('#welcome-show').click();
+    await expect(noStoragePage.locator('#welcome-hero')).toBeVisible();
+    await noStoragePage.locator('#welcome-dismiss').click();
+    await expect(noStoragePage.locator('#welcome-hero')).not.toBeVisible();
+    await noStoragePage.close();
     await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-init-box')).toBeVisible();
     await page.locator('#r-init-title').fill('Scratch research');

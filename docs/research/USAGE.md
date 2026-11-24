@@ -286,7 +286,7 @@ create or update an association.
 
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a read-only
 companion. It starts closed with no automatic selection. Refresh explicitly for
-the latest dossier. The companion and paragraph **Explore passage** inspector are
+the latest dossier. The companion and paragraph **Paragraph details** inspector are
 alternative tools; the **Analysis** display is a separate choice. Reading changes
 neither document, evidence links nor the statistical baseline. See
 [reader controls](../WORKSPACE.md#reading-paragraphs) for display preferences,
@@ -417,7 +417,7 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
-**Since v0.7.4:** the shared **Explore passage** inspector calls
+**Since v0.7.4:** the shared **Paragraph details** inspector calls
 this **Research for this passage**. Quotations of the same pinned claim are
 grouped under **Text associations**; its assessment belongs to that exact claim
 version. The title opens the current entry, while **Linked version N** explicitly
@@ -652,8 +652,9 @@ manuscript workspace, including when its research archive is elsewhere.
 Previewing is also available before the research archive is initialized.
 
 In the browser, open **Research → Dossiers → From manuscript** and select
-**New suggestions**. Review why the entry was proposed and the text that
-will be saved. The evidence area identifies project settings, measured text
+**Show suggestions**. Choose a suggestion and read **Why this suggestion?**
+before using **Create dossier**. The preview explains the evidence and shows
+the text that will be saved. It identifies project settings, measured text
 and heuristic suggestions. Character and place references use lines in the
 chapter body. Scene references use their position in the chapter.
 If the manuscript or settings change before saving, reload and review the
@@ -676,7 +677,7 @@ before recording a relationship or deciding that a location changed.
 | Linked object or term | The author links a configured term profile to an existing dossier. | Literal names and variants in the current manuscript. See [configured terms](#configured-terms-and-boundary-policies). |
 
 In a generated character dossier, choose **Preview manuscript analysis**. You
-can also choose **Update a character dossier** under **From manuscript**.
+can also choose **Review character analysis** under **From manuscript**.
 The preview groups name counts, chapters with matches and the selected report
 sections. Choose **Save dossier version** to save the
 analysis alongside your notes, or **Edit dossier text** to review and change

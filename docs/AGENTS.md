@@ -605,7 +605,7 @@ absent text or a smaller HTML payload.
 Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
 jumps expand folded chapters; the interactive reader keeps chapters
 and prose continuous and hides chapter-fold controls. Its paragraph menu opens
-**Explore passage** in the contextual inspector instead of an inline disclosure.
+**Paragraph details** in the contextual inspector instead of an inline disclosure.
 Opening that inspector preserves global Analysis; its explicit **Explain
 measurement** action may enable it. Analysis Off preserves an explicitly
 open inspector. Overview return restores the previous layer and tool. Section
@@ -667,7 +667,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `[data-dimension-loading]` | Metric trigger follows the style-space selected chapter; axis/loading origin is not a chapter contribution |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the interactive reader |
-| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Explore passage** without changing global Analysis visibility; the internal `values` action key is unchanged |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | interactive reader: open the paragraph menu, then **Paragraph details** without changing global Analysis visibility; the internal `values` action key is unchanged |
 | `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | contextual Passage values inspector, its passage context, source lines/measurements, saved-research route when supported and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |

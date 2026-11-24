@@ -12,6 +12,8 @@ from string import Template
 ROOT = Path(__file__).resolve().parents[1]
 LANGUAGES = {'en': 'English', 'de': 'Deutsch', 'fr': 'Français', 'es': 'Español',
              'it': 'Italiano', 'pt': 'Português', 'nl': 'Nederlands'}
+OG_LOCALES = {'en': 'en_US', 'de': 'de_DE', 'fr': 'fr_FR', 'es': 'es_ES',
+              'it': 'it_IT', 'pt': 'pt_PT', 'nl': 'nl_NL'}
 BASE = 'https://mfahsold.github.io/lixity/'
 
 
@@ -42,7 +44,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         'image': 'dashboard-light.png',
         'reader_focus': 'dashboard-reader-focus.png',
         'heatmap': 'dashboard-heatmap.png',
-        'research_timeline': 'dashboard-research-timeline.png',
+        'research_dossiers': 'dashboard-research-dossiers.png',
         'editorial': 'dashboard-editorial.png',
     }.items():
         width, height = struct.unpack('>II', (base / 'docs/screenshots' / filename).read_bytes()[16:24])
@@ -71,10 +73,18 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields['canonical'] = page_url(lang)
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
         fields['sandbox_language'] = 'de' if lang == 'de' else 'en'
-        fields['tour_url'] = 'guides/first-look-de.html' if lang == 'de' else 'guides/first-look.html'
+        fields['passage_guide_language'], fields['passage_guide_path'] = (
+            ('de', 'guides/first-look-de.html#rhythmus') if lang == 'de'
+            else ('en', 'guides/first-look.html#passage')
+        )
         fields['alternates'] = '\n'.join(
             f'<link rel="alternate" hreflang="{code}" href="{page_url(code)}"/>'
             for code in LANGUAGES) + f'\n<link rel="alternate" hreflang="x-default" href="{BASE}"/>'
+        fields['og_locales'] = '\n'.join(
+            [f'<meta property="og:locale" content="{OG_LOCALES[lang]}"/>']
+            + [f'<meta property="og:locale:alternate" content="{locale}"/>'
+               for code, locale in OG_LOCALES.items() if code != lang]
+        )
         fields['language_links'] = '\n'.join(
             f'<a href="{page_path(code)}" lang="{code}" hreflang="{code}"'
             + f' data-language-action="{html.escape(dictionaries[code]["language_action"], quote=True)}"'

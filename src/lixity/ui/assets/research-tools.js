@@ -6,6 +6,7 @@
   if (!manager || !host) return;
   var title = document.getElementById("research-tool-title");
   var closeButton = document.getElementById("research-tool-close");
+  var comparisonResults = document.getElementById("research-grounding-results");
   var active = "", origin = null, comparison = null, comparisonReturn = null, serial = 0;
   var reviewFilter = null;
   var panes = {};
@@ -17,6 +18,11 @@
   searchReader.id = "research-search-reader"; searchReader.hidden = true;
   panes.search.appendChild(searchReader);
   function attr(value) { return escapeHtml(String(value || "")).replace(/"/g, "&quot;"); }
+  function syncTermTabOrientation() {
+    var tabs = comparisonResults.querySelector(".grounding-term-tabs");
+    if (tabs) tabs.setAttribute("aria-orientation", getComputedStyle(tabs).flexDirection === "column" ? "vertical" : "horizontal");
+  }
+  if (typeof ResizeObserver === "function") new ResizeObserver(syncTermTabOrientation).observe(host);
   function context() {
     var manuscript = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader");
     return [researchContextToken(), researchSelectionProjectId, document.body.dataset.manuscriptProjectToken,
@@ -144,7 +150,7 @@
     document.getElementById("research-comparison-unavailable").textContent = reason ? uiLabel(reason) : "";
     document.getElementById("r-ground-btn").disabled = Boolean(reason);
     document.getElementById("r-ground-btn").setAttribute("aria-busy", "false");
-    document.getElementById("research-grounding-results").replaceChildren();
+    comparisonResults.replaceChildren();
     title.focus({preventScroll: true});
   }
   function comparisonOwnerCurrent(value) {
@@ -165,7 +171,7 @@
     if (value && !comparisonOwnerCurrent(value)) { invalidateComparison(value); return; }
     if (button.disabled || !value || unavailable(value.detail)) return;
     value.researchContext = researchReadContext();
-    var request = ++serial, gHost = document.getElementById("research-grounding-results");
+    var request = ++serial, gHost = comparisonResults;
     button.disabled = true; button.setAttribute("aria-busy", "true");
     gHost.textContent = uiLabel("research_grounding");
     var gres;
@@ -196,7 +202,7 @@
       comparisonMeta.source_language !== comparisonMeta.manuscript_language;
 
     function measured(value) { return typeof value === "number" && Number.isFinite(value); }
-    function count(value) { return measured(value) ? value.toLocaleString() : "–"; }
+    function count(value) { return measured(value) ? value.toLocaleString(document.documentElement.lang || "en") : "–"; }
     function percent(value) { return measured(value) ? (value * 100).toFixed(1) + "%" : "–"; }
     var jaccardVal = sum.jaccard_similarity;
     var jaccardPct = percent(jaccardVal);
@@ -296,6 +302,11 @@
       var srcTitle = prov.source_title || "";
       var langLabel = (comparisonMeta.source_language || "") + ' ↔ ' + (comparisonMeta.manuscript_language || "");
 
+      var termGroups = [
+        {key: "shared", label: "research_shared_words", count: topShared.length, chips: sharedChipsHtml},
+        {key: "keyness", label: "research_source_key_terms", count: sourceKeyTerms.length, chips: keyTermsHtml},
+        {key: "exclusive", label: "research_exclusive_terms", count: topExclusive.length, chips: exclusiveTermsHtml}
+      ];
       gHost.innerHTML = '<div class="research-card mt-3">' +
         '<div class="grounding-header-bar">' +
           '<div class="research-card-title">' + escapeHtml(uiLabel("research_results_for")) + ' <strong>' + escapeHtml(srcTitle) + '</strong></div>' +
@@ -306,23 +317,19 @@
         (crossLanguage ? '<p class="ctl-note research-comparison-warning" role="status">' + escapeHtml(uiLabel("research_cross_language_limit")) + '</p>' : '') +
 
         '<div class="grounding-term-toolbar">' +
-          '<div class="ctl-label">' + escapeHtml(uiLabel("research_top_terms_col")) + '</div>' +
-          '<div class="grounding-term-tabs" role="tablist">' +
-            '<button type="button" class="grounding-tab-btn active" data-ground-tab="shared" role="tab" aria-selected="true">' + escapeHtml(uiLabel("research_shared_words")) + ' (' + topShared.length + ')</button>' +
-            '<button type="button" class="grounding-tab-btn" data-ground-tab="keyness" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_source_key_terms")) + ' (' + sourceKeyTerms.length + ')</button>' +
-            '<button type="button" class="grounding-tab-btn" data-ground-tab="exclusive" role="tab" aria-selected="false">' + escapeHtml(uiLabel("research_exclusive_terms")) + ' (' + topExclusive.length + ')</button>' +
+          '<div class="ctl-label" id="ground-terms-label">' + escapeHtml(uiLabel("research_top_terms_col")) + '</div>' +
+          '<div class="grounding-term-tabs" role="tablist" aria-labelledby="ground-terms-label">' +
+            termGroups.map(function(group) {
+              return '<button type="button" class="grounding-tab-btn" id="ground-tab-' + group.key + '" data-ground-tab="' + group.key +
+                '" role="tab" aria-controls="ground-terms-' + group.key + '">' +
+                escapeHtml(uiLabel(group.label)) + ' (' + count(group.count) + ')</button>';
+            }).join("") +
           '</div>' +
         '</div>' +
-
-        '<div class="grounding-term-panel" id="ground-terms-shared">' +
-          '<div class="grounding-chips">' + (sharedChipsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
-        '<div class="grounding-term-panel" id="ground-terms-keyness" hidden>' +
-          '<div class="grounding-chips">' + (keyTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
-        '<div class="grounding-term-panel" id="ground-terms-exclusive" hidden>' +
-          '<div class="grounding-chips">' + (exclusiveTermsHtml || '<span class="muted-note">–</span>') + '</div>' +
-        '</div>' +
+        termGroups.map(function(group) {
+          return '<div id="ground-terms-' + group.key + '"' + (group.chips ? '' : ' tabindex="0"') + '>' +
+            '<div class="grounding-chips">' + (group.chips || '<span class="muted-note">–</span>') + '</div></div>';
+        }).join("") +
 
         (chRows ? '<div class="mt-4">' +
           '<div class="ctl-label mb-2">' + escapeHtml(uiLabel("research_chapter_density")) + '</div>' +
@@ -367,6 +374,14 @@
 
         registerContrastHtml + '</details>' +
       '</div>';
+      var tabs = gHost.querySelector(".grounding-term-tabs");
+      selectLinkedTab(tabs.querySelector("button"));
+      initKeyboardTabs(tabs, '[role="tab"]', false);
+      syncTermTabOrientation();
+      tabs.addEventListener("click", function(event) {
+        var tab = event.target.closest('[role="tab"]');
+        if (tab) selectLinkedTab(tab);
+      });
     }
   }
   var hitOrigin = null;

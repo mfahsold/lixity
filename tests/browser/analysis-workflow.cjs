@@ -31,12 +31,14 @@ dashboard = render_analysis(
 print(json.dumps({'controls': controls, 'dashboard': dashboard, 'words': num(analysis.metrics.tokens, 'en', 0)}))
 `);
 const script = fs.readFileSync('src/lixity/ui/assets/analysis-navigation.js', 'utf8');
+const interactions = fs.readFileSync('src/lixity/ui/assets/interactions.js', 'utf8');
 const css = fs.readFileSync('src/lixity/ui/assets/analysis-navigation.css', 'utf8');
 const html = `<!doctype html><title>Analysis workflow regression</title><style>${css}</style>
 <div id="analysis-outline-document" data-guided-analysis="1"><section id="analysis-review"><p>Status and next passage</p>${controls}</section>
 <div id="manuscript-analysis-panels"><details id="analysis-measurements"><summary>Manuscript measurements</summary><p>Measured manuscript scope</p></details><section id="flags"><h2>Flags</h2><input aria-label="Draft" value="Unsaved"><a href="#p-0" id="passage-link">Read passage</a></section><section id="matrix">Chapters<button id="open-metric">Inspect metric</button></section><section id="register-targets">Project register targets</section><dialog id="analysis-metric-context">Measured evidence</dialog><section id="style"><div id="dimensions">Dimensions</div></section><section id="pacing">Pacing</section><section id="scenes">Scenes</section></div></div>
 <nav id="analysis-sections"><a data-section-link="flags" href="#flags">Flags</a></nav><nav id="analysis-outline-nav"><a data-section-link="style" href="#style">Style</a></nav><main id="chapters"><p id="p-0">Actual manuscript passage</p></main>
-<script>${script}
+<script>${interactions}
+${script}
 document.getElementById("open-metric").onclick = function() { document.getElementById("analysis-metric-context").showModal(); };</script>`;
 
 async function checkNativeOverview(page, fragment, target = '') {
@@ -97,6 +99,8 @@ async function checkNativeOverview(page, fragment, target = '') {
       assert.equal(await page.locator('#manuscript-analysis-panels > :visible').count(), 1);
       await page.locator('[data-analysis-section-target="style"]').click();
       assert.equal(await page.locator('#style').isVisible(), true);
+      assert.equal(await page.locator('#style').evaluate(section => section.contains(document.activeElement)), true,
+        'Opening a report focuses its destination through the shared interaction helper');
       await page.evaluate(() => { location.hash = '#scenes'; });
       await page.waitForFunction(() => !document.getElementById('scenes').hidden);
       assert.equal(await page.locator('[data-analysis-workflow="explore"]').getAttribute('aria-pressed'), 'true');

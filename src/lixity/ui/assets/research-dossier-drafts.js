@@ -14,19 +14,21 @@ function resetManuscriptDossierDrafts() {
 var manuscriptDraftKinds = ["character", "location", "scene"];
 var existingManuscriptDraftsEndpoint = "research/manuscript-dossier-drafts?kind=character&include_existing=1";
 
-function setManuscriptDraftMode(state) {
+function setManuscriptDraftMode(state, retry = false) {
   manuscriptDraftsBox?.querySelectorAll("#r-manuscript-dossier-btn, [data-draft-load-existing]").forEach(function(button) {
-    var selected = Boolean(state && state.includeExisting === button.hasAttribute("data-draft-load-existing"));
+    var existing = button.hasAttribute("data-draft-load-existing");
+    var selected = Boolean(state && state.includeExisting === existing);
     button.setAttribute("aria-pressed", String(selected));
     button.classList.toggle("active", selected);
+    button.classList.toggle("primary", retry ? selected : !state && !existing);
   });
 }
 
-function setManuscriptDraftStatus(message) {
+function setManuscriptDraftStatus(message, state) {
   var status = document.getElementById("r-manuscript-drafts-status");
   if (!status) return;
-  status.textContent = message || "";
   status.hidden = !message;
+  LixityComponents.setStatus(status, message, state);
 }
 
 function existingCharacterDossier(draft) {
@@ -99,7 +101,7 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
       if (Number.isInteger(hints.words)) unit = number.format(hints.words) + " " + uiCountFormat("words", hints.words);
     } else if (Number.isInteger(hints.mentions)) unit = uiLabel("research_dossier_character_mentions") + " " + number.format(hints.mentions);
     var pressed = draft === selected;
-    return '<button type="button" class="ctl ctl-sm' + (pressed ? " active" : "") +
+    return '<button type="button" class="ctl ctl-sm ctl-choice' + (pressed ? " active" : "") +
       '" data-draft-select="' + escapeHtml(draft.id) + '" aria-pressed="' + pressed + '">' +
       escapeHtml(text) + (unit ? ' · ' + escapeHtml(unit) : '') + '</button>';
   }
@@ -149,8 +151,8 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
     } else if (draft.kind === "scene" && ["chapter", "scene", "register"].includes(hints.scene_scope)) {
       method = uiLabel("research_dossier_draft_reason_scene_" + hints.scene_scope);
     }
-    return method ? '<div class="research-draft-reason" data-draft-reason><h6>' + label("research_dossier_draft_reason") +
-      '</h6><p data-draft-reason-method>' + escapeHtml(method) + '</p>' + passage + '</div>' : "";
+    return method ? '<div class="ctl-guidance research-draft-reason" data-draft-reason><h6>' + label("research_dossier_draft_reason") +
+      '</h6><p id="r-manuscript-draft-why" data-draft-reason-method>' + escapeHtml(method) + '</p>' + passage + '</div>' : "";
   }
 
   function preview(draft) {
@@ -158,13 +160,15 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
     var canSave = !state.saving && !state.stale;
     var action = existing ? 'data-draft-stage-existing' : 'data-create-manuscript-draft';
     var actionLabel = existing ? "research_dossier_draft_stage_existing" : "research_dossier_draft_create";
-    return '<section id="r-manuscript-draft-preview" class="research-card">' +
-      '<div class="chip-row research-draft-preview-actions"><div><h5 class="research-card-title">' +
+    var reason = reasonMarkup(draft);
+    return '<section id="r-manuscript-draft-preview" class="research-card" aria-labelledby="r-manuscript-draft-title">' +
+      '<div class="chip-row research-draft-preview-actions"><div><h5 class="research-card-title" id="r-manuscript-draft-title">' +
       escapeHtml(existing ? uiFormat("research_dossier_draft_existing_notice", {title: existing.title}) : draft.title) + '</h5>' +
       (existing ? '<p class="ctl-note">' + label("research_dossier_draft_stage_help") + '</p>' : '') + '</div>' +
-      '<button type="button" class="ctl primary" ' + action + '="' + escapeHtml(draft.id) + '"' +
-      (canSave ? "" : " disabled") + '>' + label(actionLabel) + '</button></div>' +
-      reasonMarkup(draft) + manuscriptDraftSettingsHtml(draft.kind) +
+      '<button type="button" class="ctl' + (canSave ? ' primary' : '') + '" ' + action + '="' + escapeHtml(draft.id) + '"' +
+      (reason ? ' aria-describedby="r-manuscript-draft-why"' : '') + (canSave ? '' : ' disabled') +
+      '>' + label(actionLabel) + '</button></div>' +
+      reason + manuscriptDraftSettingsHtml(draft.kind) +
       (existing ? '' :
       '<h6>' + label("research_dossier_draft_preview") + '</h6>' +
       '<div data-draft-preview-body><div class="research-prose markdown-body research-dossier-body-rendered">' +
@@ -201,16 +205,18 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
 
   var html = "";
   if (state.saved) {
-    html += '<div class="chip-row"><p class="ctl-note" role="status">' +
+    html += '<div class="chip-row"><p class="ctl-status ok" role="status">' +
       label("research_dossier_draft_saved") + ' <strong>' + escapeHtml(state.saved.title) + '</strong></p>' +
-      '<button type="button" class="ctl ctl-sm" data-draft-open-saved data-research-history="dossier" data-record-id="' +
+      '<button type="button" class="ctl' + (selected || state.stale ? ' ctl-sm' : ' primary') +
+      '" data-draft-open-saved data-research-history="dossier" data-record-id="' +
       escapeHtml(state.saved.id) + '">' + label("research_dossier_draft_open_saved") + '</button></div>';
   }
   if (state.stale) {
-    html += '<div class="chip-row" data-draft-stale><p class="ctl-note err" role="alert">' +
-      label("research_dossier_draft_stale") + '</p><button type="button" class="ctl ctl-sm" data-draft-reload>' +
+    html += '<div class="chip-row" data-draft-stale><p class="ctl-status err" id="r-draft-reload-help" role="alert">' +
+      label("research_dossier_draft_stale") + '</p><button type="button" class="ctl primary" ' +
+      'aria-describedby="r-draft-reload-help" data-draft-reload>' +
       label("research_dossier_draft_reload") + '</button></div>';
-  } else if (state.error) html += '<p class="ctl-note err" role="alert" data-draft-error>' + escapeHtml(state.error) + '</p>';
+  } else if (state.error) html += '<p class="ctl-status err" role="alert" data-draft-error>' + escapeHtml(state.error) + '</p>';
   if (state.includeExisting) {
     host.innerHTML = html + (selected ? catalogue(groups.character, "research_dossier_draft_existing_choices", "character-existing") + preview(selected) :
       '<p class="ctl-note">' + label("research_dossier_draft_existing_empty") + '</p>');
@@ -222,9 +228,11 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
       label("research_dossier_draft_" + kind + "_unavailable") + '</p>';
   }).join("");
   if (!groups.character.length) {
-    html += '<div class="chip-row"><p class="ctl-note">' +
+    html += '<div class="chip-row"><p class="ctl-note ctl-guidance">' +
       label(drafts.length || unavailable.length ? "research_dossier_draft_no_characters" : "research_dossier_draft_empty") + '</p>' +
-      '<button type="button" class="ctl" data-draft-manual-character>' +
+      '<button type="button" class="ctl' +
+      (!selected && !state.saved && !state.stale && state.activeKind === "character" ? ' primary' : '') +
+      '" data-draft-manual-character>' +
       label("research_dossier_draft_manual_character") + '</button></div>';
   }
   if (!drafts.length) {
@@ -234,7 +242,7 @@ function renderManuscriptDraftsView(host, state, selectedButton) {
   html += '<div class="chip-row" role="group" aria-label="' + label("research_dossier_draft_cloud") + '">' +
     manuscriptDraftKinds.map(function(kind) {
       var pressed = kind === state.activeKind;
-      return '<button type="button" class="ctl ctl-sm' + (pressed ? " active" : "") +
+      return '<button type="button" class="ctl ctl-sm ctl-choice' + (pressed ? " active" : "") +
         '" data-draft-kind="' + kind + '" aria-pressed="' + pressed + '">' +
         escapeHtml(kindLabels[kind]) + " (" + number.format(groups[kind].length) + ")</button>";
     }).join("") + '</div>';
@@ -342,7 +350,7 @@ async function loadManuscriptDraftCatalogue(host, trigger) {
   function ownsLoad() { return token === researchContextToken() && (!state || currentManuscriptDraftCatalogue(state)); }
 
   host.setAttribute("aria-busy", "true");
-  setManuscriptDraftStatus(uiLabel("research_loading"));
+  setManuscriptDraftStatus(uiLabel("research_dossier_character_loading"), "loading");
   host.replaceChildren();
   try {
     if (!researchSelectionProjectId && researchProjectInfoPending) await researchProjectInfoPending;
@@ -362,8 +370,10 @@ async function loadManuscriptDraftCatalogue(host, trigger) {
     }
     renderManuscriptDraftsView(host, state);
   } catch (_) {
-    if (ownsLoad()) host.innerHTML = '<p class="ctl-note err" role="alert">' +
-      escapeHtml(uiLabel("research_status_unavailable")) + "</p>";
+    if (ownsLoad()) {
+      host.innerHTML = '<p class="ctl-status err" role="alert">' + escapeHtml(uiLabel("research_status_unavailable")) + "</p>";
+      setManuscriptDraftMode(state || {includeExisting: includeExisting}, true);
+    }
   } finally {
     host.removeAttribute("aria-busy");
     if (ownsLoad()) {
@@ -383,7 +393,7 @@ async function reviewManuscriptDraft(host, state, button, draft) {
   state.error = "";
   host.querySelector('[data-draft-error]')?.remove();
   button.setAttribute("aria-disabled", "true");
-  setManuscriptDraftStatus(uiLabel("research_loading"));
+  setManuscriptDraftStatus(uiLabel("research_dossier_character_loading"), "loading");
   var result;
   try {
     result = await stageCharacterDraft(existing.id, state.context, existing, function() {
@@ -397,7 +407,7 @@ async function reviewManuscriptDraft(host, state, button, draft) {
   }
   if (!currentManuscriptDraftCatalogue(state)) return;
   var message = manuscriptDraftStageMessage(result);
-  setManuscriptDraftStatus(result === "same" ? message : "");
+  setManuscriptDraftStatus(result === "same" ? message : "", result === "same" ? "ok" : "");
   state.stale = result === "stale";
   if (result !== "same" && result !== "stale") state.error = message;
   if (state.stale || state.error) {

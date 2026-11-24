@@ -22,6 +22,7 @@ from pathlib import Path
 
 import check_release
 from build_public_site import LANGUAGES, page_path
+from make_videos import PUBLIC_VIDEO_FILES
 
 JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
@@ -33,10 +34,25 @@ DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
 PAGES_VERIFY_FILES = (
     *(page_path(language) for language in LANGUAGES),
     *(f"guides/metrics/{language}.html" for language in LANGUAGES),
+    "guides/first-look.html",
+    "guides/first-look-de.html",
     "guides/installation.html",
+    "robots.txt",
+    "sitemap.xml",
+    "sitemap-alt.xml",
     "desktop-downloads.json",
     "llms.txt",
+    "assets/analytics.js",
+    "assets/analytics.json",
+    "assets/design-tokens.css",
+    "assets/components.css",
+    "assets/home.css",
+    "assets/product-tour.js",
+    "screenshots/dashboard-light.png",
+    "screenshots/dashboard-measurement-focus.png",
+    *(f"videos/{name}" for name in sorted(PUBLIC_VIDEO_FILES) if name != "README.md"),
     "sandbox/index.html",
+    "demo/report.html",
     "demo/manifest.json",
     "demo/reader/manifest.json",
     "demo/companion/manifest.json",

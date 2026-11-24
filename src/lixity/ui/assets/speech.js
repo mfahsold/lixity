@@ -1307,7 +1307,6 @@
           var active = k === mode || (mode === "output" && k === "reader");
           fields.tabs[k].classList.toggle("active", active);
           fields.tabs[k].setAttribute("aria-selected", String(active));
-          fields.tabs[k].tabIndex = active ? 0 : -1;
           if (active) fields.panel.setAttribute("aria-labelledby", fields.tabs[k].id);
         }
       });
@@ -1386,14 +1385,8 @@
     tabsBar.setAttribute("aria-label", label("action_title"));
     Object.keys(fields.tabs).forEach(function(key) {
       var tab = fields.tabs[key]; tab.id = "speech-tab-" + key; tab.setAttribute("role", "tab"); tab.setAttribute("aria-controls", content.id);
-      tab.addEventListener("keydown", function(event) {
-        var keys = Object.keys(fields.tabs), index = keys.indexOf(key), target;
-        if (event.key === "ArrowRight") target = keys[(index + 1) % keys.length];
-        if (event.key === "ArrowLeft") target = keys[(index + keys.length - 1) % keys.length];
-        if (event.key === "Home") target = keys[0]; if (event.key === "End") target = keys[keys.length - 1];
-        if (target) { event.preventDefault(); switchMode(target); if (mode === target) fields.tabs[target].focus(); }
-      });
     });
+    initKeyboardTabs(tabsBar, '[role="tab"]', false);
 
     fields.reference_section = node("div", content, "author-voice-studio");
     fields.reference_section.hidden = true;

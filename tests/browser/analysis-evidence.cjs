@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, browserLocales, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, browserLocales, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 const root = path.resolve(__dirname, '../..');
@@ -20,8 +20,9 @@ from lixity.ui import render_dashboard
 from lixity.api import dashboard
 text = '# Synthetic evidence\\n\\n😀 I feel the gate. The gate was opened slowly. "I can wait," she said. The organization might return. Wait. ' + 'The patient keeper watches the garden and the quiet river. ' * 8
 analysis = analyze_document(text, CorpusConfig(language='en'), resolve_thresholds(project_config={}), include_evidence=True)
-sticky_text = '# Synthetic sticky evidence\\n\\n🧭 The bell was on the wall and I was by the door. The bell rang.'
-sticky = analyze_document(sticky_text, CorpusConfig(language='en', sticky_min_words=9, sticky_glue_pct=55.125),
+sticky_text = '# Synthetic sticky evidence\\n\\n🧭 The bell was on the wall and I was near the door. The bell rang.'
+# At this exact threshold, the old JS division followed by multiplication rounded below Python.
+sticky = analyze_document(sticky_text, CorpusConfig(language='en', sticky_min_words=9, sticky_glue_pct=800 / 12),
     resolve_thresholds(project_config={}), include_evidence=True)
 result = {}
 result['static'] = dashboard(text, language='en', title='Synthetic static comparison')
@@ -64,6 +65,12 @@ comparison_text = '# Comparable synthetic paragraphs\\n\\nWait.\\n\\nKeeper wait
 comparison = analyze_document(comparison_text, CorpusConfig(language='en'), resolve_thresholds(project_config={}), include_evidence=True)
 result['comparable'] = render_dashboard(comparison.chapters, comparison.paragraphs, metrics=comparison.metrics,
     fingerprint=comparison.fingerprint, paragraph_evidence=comparison.evidence, title='Comparable synthetic paragraphs', controls=True,
+    labels={**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, language_key='en')
+echo_text = '# Partial echo mapping\\n\\nq\\u0315\\u0323abc q\\u0323\\u0315abc q\\u0323\\u0315abc'
+echo_config = CorpusConfig(language='en', word_regex=r'q\\u0323(\\u0315abc)')
+echo = analyze_document(echo_text, echo_config, resolve_thresholds(project_config={}), include_evidence=True)
+result['partial-echo'] = render_dashboard(echo.chapters, echo.paragraphs, metrics=echo.metrics,
+    fingerprint=echo.fingerprint, paragraph_evidence=echo.evidence, title='Partial echo mapping', controls=True,
     labels={**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, language_key='en')
 german_text = '# Deutsche Nominalhinweise\\n\\nZUR Untersuchung geht sie nur.\\n\\nZur Tür geht sie nur.'
 german = analyze_document(german_text, CorpusConfig(language='de'), resolve_thresholds(project_config={}), include_evidence=True)
@@ -233,8 +240,8 @@ async function localizedSentenceCards(browser) {
           'a short sentence explanation leaves viewport room for reading');
       }
       if (locale === 'en' && width === 320 && count === 1) {
-        const axePath = path.join(playwrightModule, '..', 'axe-core', 'axe.min.js');
-        if (fs.existsSync(axePath)) {
+        const axePath = resolveAxe();
+        if (axePath) {
           await page.addScriptTag({path:axePath});
           const passed = await card.evaluate(async node => {
             const badge = node.querySelector('.analysis-evidence-quote-context');
@@ -255,8 +262,8 @@ async function localizedSentenceCards(browser) {
 }
 
 async function localizedContributions(browser) {
-  const quote = '🧭 The bell was on the wall and I was by the door.';
-  const counted = ['The', 'was', 'on', 'the', 'and', 'I', 'was', 'by', 'the'];
+  const quote = '🧭 The bell was on the wall and I was near the door.';
+  const counted = ['The', 'was', 'on', 'the', 'and', 'I', 'was', 'the'];
   for (const locale of ['de', 'en', 'fr', 'es', 'it', 'pt', 'nl']) {
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, hasTouch:width === 320,
@@ -296,13 +303,14 @@ async function localizedContributions(browser) {
         const expected = await page.evaluate(() => {
           const format = new Intl.NumberFormat(document.documentElement.lang, {style:'percent',maximumFractionDigits:3});
           return {
-            count: uiFormat('evidence_sticky_count', {count:9, words:12, percent:format.format(0.75)}),
-            rule: uiFormat('evidence_sticky_rule', {words:9, percent:format.format(0.55125)}),
+            count: uiFormat('evidence_sticky_count', {count:8, words:12, percent:format.format(8 / 12)}),
+            rule: uiFormat('evidence_sticky_rule', {words:9, percent:format.format(8 / 12)}),
             review: uiLabel('evidence_review_sticky'),
           };
         });
         const explanation = await card.locator('.analysis-evidence-explanation').textContent();
-        assert.ok(Object.values(expected).every(text => explanation.includes(text)) && !explanation.includes('evidence_'));
+        assert.ok(Object.values(expected).every(text => explanation.includes(text)) && !explanation.includes('evidence_'),
+          'The UI explains the sentence selected by the backend at the exact threshold');
         assert.deepEqual(await page.evaluate(() => [...CSS.highlights.get('lixity-analysis-contribution')].map(range => range.toString())), counted);
         assert.ok(await card.evaluate(node => {const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight;}));
         assert.ok(await card.evaluate(node => {
@@ -740,6 +748,22 @@ async function metricPreferences(browser) {
     await pendingInspectorCards(browser);
     await localizedSentenceCards(browser);
     await localizedContributions(browser);
+    const echoPage = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
+    try {
+      await echoPage.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures['partial-echo']}));
+      await echoPage.goto('http://localhost/');
+      await echoPage.locator('#manuscript-analysis-toggle').click();
+      await selectMetric(echoPage, 'echo');
+      await echoPage.locator('.ptext .reader-paragraph-actions').first().click();
+      await explainFromMenu(echoPage);
+      const card = echoPage.locator('#analysis-evidence-card');
+      await card.waitFor({state:'visible'});
+      assert.match(await card.locator('.analysis-evidence-explanation .analysis-evidence-value').textContent(),
+        /appears 3 times here\. Lixity counted 3 word echoes/, 'partial mapping keeps backend group and paragraph counts');
+      assert.match(await card.locator('.analysis-evidence-warning').textContent(), /cannot be located exactly/);
+      assert.equal(await echoPage.evaluate(() => CSS.highlights.get('lixity-analysis-related').size), 1,
+        'only the mapped occurrence in the same backend group is highlighted');
+    } finally {await echoPage.close();}
     for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport:{width,height:width === 320 ? 480 : 950}, reducedMotion:'reduce', colorScheme:width === 320 ? 'dark' : 'light'});
       await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.comparable}));
@@ -751,7 +775,13 @@ async function metricPreferences(browser) {
         const card = page.locator('#analysis-evidence-card'); await card.waitFor({state:'visible'});
         const info = await target.evaluate(node => chipLayers(paragraphChips[node.id]).asl);
         assert.ok(index === 0 ? info[2] < 0 : info[2] > 2.5, 'native paragraph has the expected existing reference direction');
-        assert.equal(await card.locator('.analysis-evidence-comparison-label strong').textContent(), 'z = ' + (info[2] >= 0 ? '+' : '') + info[2].toFixed(2), 'comparison exposes the existing numeric paragraph score');
+        assert.deepEqual(await card.locator('.analysis-evidence-comparison dl dd').allTextContents(),
+          [`${info[3]} words per sentence`, `${info[6]} words per sentence`],
+          'comparison pairs the paragraph value and the engine’s chapter median in the metric unit');
+        const score = card.locator('.analysis-evidence-guide .analysis-evidence-comparison-score');
+        assert.equal(await score.textContent(), 'z = ' + (info[2] >= 0 ? '+' : '') + info[2].toFixed(2),
+          'the numeric z score remains in the analysis details');
+        assert.equal(await score.isVisible(), false, 'the technical score stays hidden until requested');
         assert.match(await card.locator('.analysis-evidence-comparison-label').textContent(), index === 0 ? /below the chapter median/ : /above the chapter median/);
         assert.equal(await card.locator('.analysis-evidence-scale').getAttribute('aria-label'), info[1], 'bounded visual scale retains the full paragraph reference explanation');
         assert.equal(await card.locator('.analysis-evidence-scale').evaluate(node => node.style.getPropertyValue('--evidence-comparison-position')),
@@ -1263,7 +1293,7 @@ manuscript = project / 'quotation-boundaries.md'
 manuscript.write_text(
     f'## Synthetic quotation chapter\n\n{intro}. {opening}{first}\n\n{second}{closing} {outro}\n\n'
     f'## Synthetic unresolved quotation\n\n{opening}{first}\n\n'
-    f'## Synthetic narration chapter\n\n{apostrophe}\n',
+    f'## Synthetic narration chapter\n\n{apostrophe}\n\n{opening}{first}{closing} X\n',
     encoding='utf-8',
 )
 LixityServerHandler.workspace_root = str(project)
@@ -1295,7 +1325,7 @@ server.serve_forever()
               quoteRanges:layer.quotation_ranges.map(([start,end]) => Array.from(item[0]).slice(start,end).join('')),
               spans:layer.spans.map(span => ({marker:span.quotation_marker, context:span.quotation_context}))};
           }));
-          assert.equal(evidence.length, 4);
+          assert.equal(evidence.length, 5);
           for (const [index, text] of [first, second].entries()) {
             assert.equal(evidence[index].count, 2);
             assert.equal(evidence[index].denominator, 4);
@@ -1307,6 +1337,8 @@ server.serve_forever()
           assert.equal(evidence[3].text, apostrophe);
           assert.equal(evidence[3].count, 0);
           assert.equal(evidence[3].reason, undefined);
+          assert.equal(evidence[4].count, 2);
+          assert.equal(evidence[4].denominator, 3);
 
           await page.locator('#manuscript-analysis-toggle').click();
           await selectMetric(page, 'dialogue');
@@ -1335,7 +1367,9 @@ server.serve_forever()
           await page.locator('#reader-direct-speech').click();
           assert.equal(await page.locator('#reader-direct-speech').getAttribute('aria-pressed'), 'true');
           await page.waitForFunction(expected => [...(CSS.highlights.get('lixity-direct-speech') || [])]
-            .map(range => range.toString()).join('|') === expected, first + '|' + second);
+            .map(range => range.toString()).join('|') === expected, [first, second, first].join('|'));
+          assert.equal(await page.locator('#chapters .ptext').nth(4).evaluate(node =>
+            node.classList.contains('direct-speech-mixed')), true, 'A short word outside the quote is still narration');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           assert.deepEqual(errors, []);
           assert.deepEqual(writes, []);

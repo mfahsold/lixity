@@ -409,20 +409,23 @@ function toggleParagraph(chip, forceOpen, instant) {
   }
 }
 
-function selectStyleView(viewId, focus) {
-  var tabs = document.querySelectorAll("#style-tabs [data-style-view]");
+function selectLinkedTab(selectedTab) {
+  var tablist = selectedTab.closest('[role="tablist"]');
+  var tabs = tablist.querySelectorAll('[role="tab"][aria-controls]');
   tabs.forEach(function(tab) {
-    var selected = tab.dataset.styleView === viewId;
-    tab.setAttribute("aria-selected", selected ? "true" : "false");
-    tab.tabIndex = selected ? 0 : -1;
-    var panel = document.getElementById(tab.dataset.styleView);
+    var selected = tab === selectedTab;
+    tab.setAttribute("aria-selected", String(selected));
+    var panel = document.getElementById(tab.getAttribute("aria-controls"));
     if (panel) {
       panel.hidden = !selected;
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", tab.id);
     }
-    if (selected && focus) tab.focus();
   });
+}
+
+function selectStyleTab(tab) {
+  selectLinkedTab(tab);
   window.dispatchEvent(new Event("resize"));
 }
 
@@ -442,9 +445,10 @@ function initKeyboardTabs(container, selector, manual) {
     queueMicrotask(function() { syncTabStops(container, selector); });
   });
   container.addEventListener("keydown", function(event) {
+    if (event.defaultPrevented) return;
     var tabs = Array.from(container.querySelectorAll(selector)).filter(function(tab) { return !tab.disabled; });
     var index = tabs.indexOf(event.target);
-    if (index < 0 || !tabs.length) return;
+    if (index < 0) return;
     var vertical = container.getAttribute("aria-orientation") === "vertical";
     if (event.key === (vertical ? "ArrowDown" : "ArrowRight")) index = (index + 1) % tabs.length;
     else if (event.key === (vertical ? "ArrowUp" : "ArrowLeft")) index = (index + tabs.length - 1) % tabs.length;
@@ -452,26 +456,34 @@ function initKeyboardTabs(container, selector, manual) {
     else if (event.key === "End") index = tabs.length - 1;
     else return;
     event.preventDefault();
-    tabs[index].focus();
-    if (!manual) tabs[index].click();
+    var next = tabs[index];
+    if (manual) {
+      next.focus();
+      return;
+    }
+    var focused = document.activeElement;
+    next.click();
+    // A view may block activation to protect a pending edit or move focus to a newly opened surface.
+    if (next.getAttribute("aria-selected") === "true" && document.activeElement === focused) next.focus();
   });
 }
 
 function revealStyleTarget(target) {
   if (window.LixityAnalysisScope) window.LixityAnalysisScope.reveal(target);
   var panel = target.closest("#style-panels > .panel");
-  if (panel) selectStyleView(panel.id, false);
+  var tab = panel && document.getElementById("style-tab-" + panel.id);
+  if (tab) selectStyleTab(tab);
 }
 
 (function() {
   var list = document.getElementById("style-tabs");
   if (!list) return;
-  var tabs = Array.prototype.slice.call(list.querySelectorAll("[data-style-view]"));
+  var firstTab = list.querySelector("[data-style-view]");
   list.hidden = false;
-  if (tabs.length) selectStyleView(tabs[0].dataset.styleView, false);
+  if (firstTab) selectStyleTab(firstTab);
   list.addEventListener("click", function(event) {
     var tab = event.target.closest("[data-style-view]");
-    if (tab) selectStyleView(tab.dataset.styleView, false);
+    if (tab) selectStyleTab(tab);
   });
   initKeyboardTabs(list, "[data-style-view]", false);
 })();

@@ -16,8 +16,6 @@
 .manuscript-link-dialog select { width: 100%; min-width: 0; max-width: 100%; }
 .manuscript-link-dialog .manuscript-link-retention { display: flex; align-items: start; gap: var(--space-2); font-size: var(--text-small); }
 .manuscript-link-retention input { flex: 0 0 auto; margin-top: var(--space-1); }
-.manuscript-link-dialog .modal-footer { flex-wrap: wrap; }
-.manuscript-link-dialog .modal-header h3 { overflow-wrap: anywhere; }
 
 .manuscript-link-feedback:empty { display: none; }
 .manuscript-link-reload { margin-left: .5rem; }

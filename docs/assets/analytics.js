@@ -69,6 +69,8 @@
 
       const labels = {
         'demo-open': 'Open demo',
+        'sandbox-open': 'Open sandbox',
+        'social-clip-open': 'Open share clip',
         'install-open': 'Open installation',
         'repository-open': 'Open repository',
         'pdf-download': 'Download PDF',
@@ -90,6 +92,8 @@
         let name;
         if (destination.origin === origin) {
           if (destination.pathname === '/lixity/demo/report.html') name = 'demo-open';
+          else if (['/lixity/sandbox/', '/lixity/sandbox/index.html'].includes(destination.pathname)) name = 'sandbox-open';
+          else if (/^\/lixity\/videos\/social-hook-(9x16|16x9)\.mp4$/.test(destination.pathname)) name = 'social-clip-open';
           else if (['/lixity/INSTALLATION.md', '/lixity/guides/installation.html'].includes(destination.pathname) ||
                    (destination.pathname === '/lixity/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
           else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(destination.pathname)) name = 'pdf-download';

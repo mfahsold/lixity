@@ -1012,7 +1012,7 @@ window.LixityWorkspaceReader = {
 })();
 initKeyboardTabs(document.getElementById("research-tabs"), window.LixitySite.readOnly ? "[data-rtab]:not([data-requires-live])" : "[data-rtab]", true);
 document.querySelectorAll(".modal-tabs").forEach(function(container) {
-  initKeyboardTabs(container, window.LixitySite.readOnly ? '[role="tab"]:not([data-requires-write])' : '[role="tab"]', container.closest("#modal-research-revision") !== null);
+  initKeyboardTabs(container, window.LixitySite.readOnly ? '[role="tab"]:not([data-requires-write])' : '[role="tab"]', false);
 });
 
 window.LixityManuscriptLinks = {

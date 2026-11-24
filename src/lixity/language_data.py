@@ -1430,6 +1430,8 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
 # "ist geöffnet" as perfect. Unlisted pairings keep ambiguous cues; auxiliary
 # variants depend on context. This inventory is not a participle/POS analyzer.
 # Auxiliary selection: https://grammis.ids-mannheim.de/fragen/86
+GERMAN_ARTICLE_CONTRACTIONS = frozenset({"am", "ans", "aufs", "beim", "im", "ins", "vom", "zum"})
+
 GERMAN_PERFECT_FORMS: dict[str, tuple[str, ...]] = {
     "haben": ("habe", "hast", "hat", "haben", "habt", "hatte", "hattest", "hatten", "hattet"),
     "sein": ("bin", "bist", "ist", "sind", "seid", "war", "warst", "waren", "wart"),

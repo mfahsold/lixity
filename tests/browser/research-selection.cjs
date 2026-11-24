@@ -88,6 +88,7 @@ server.serve_forever()
       });
       await page.route(fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: html}));
       await page.goto(fixture.url);
+      await page.locator('#tab-view-research').click();
       await page.locator('[data-rtab=sources]').click();
       await page.locator('[data-research-detail=source]').click();
       const doc = '.research-source-doc-rendered';

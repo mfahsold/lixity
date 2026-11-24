@@ -454,7 +454,8 @@ function paintLayerAction(panel, info) {
   if (marker) {
     marker.hidden = !notable;
     if (notable) {
-      var text = actions.dataset.layerSymbol + " " + info[3];
+      var unit = selectedLayerOption()?.dataset.unit;
+      var text = actions.dataset.layerSymbol + " " + info[3] + (unit ? " " + unit : "");
       if (marker.textContent !== text) marker.textContent = text;
       var aria = info[1] + ". " + uiLabel("evidence_inspect");
       if (marker.getAttribute("aria-label") !== aria) marker.setAttribute("aria-label", aria);
@@ -488,7 +489,10 @@ function syncEvidenceLegend() {
 var allChips = null;
 function applyLayer() {
   var key = layer ? layer.value : "";
-  var comparing = !!key && (!comparisonToggle || comparisonToggle.checked);
+  var option = selectedLayerOption();
+  var comparing = !!key && option?.dataset.available !== "0" && option?.dataset.inlineEvidence !== "1" &&
+    (!comparisonToggle || comparisonToggle.checked);
+  var comparisonMissing = comparing ? uiLabel("comparison_missing_mark") : "";
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
   syncParagraphReset();
@@ -498,6 +502,7 @@ function applyLayer() {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
     var notable = Boolean(info && info[4] === true);
+    chip.classList.toggle("layer-unavailable", comparing && !info);
     if (info && comparing) {
       chip.style.setProperty("--layer-color", info[0]);
       chip.classList.add("has-layer");
@@ -510,9 +515,19 @@ function applyLayer() {
       chip.style.removeProperty("--layer-color");
       chip.classList.remove("has-layer");
       chip.classList.remove("outlier");
-      chip.removeAttribute("data-tip");
-      var base = chip.getAttribute("data-tip-base");
-      if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
+      if (!comparing) {
+        chip.removeAttribute("data-tip");
+        var base = chip.getAttribute("data-tip-base");
+        if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
+      }
+    }
+    if (comparing && !info) {
+      var lines = panel && panel.dataset.start;
+      if (lines && panel.dataset.end !== lines) lines += "–" + panel.dataset.end;
+      var missing = lines ? uiLabel("line") + " " + lines + " · " + comparisonMissing : comparisonMissing;
+      chip.setAttribute("data-tip", missing);
+      chip.removeAttribute("title");
+      chip.setAttribute("aria-label", missing);
     }
     if (panel) {
       if (notable) {
@@ -531,7 +546,6 @@ function applyLayer() {
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
-      var option = selectedLayerOption();
       if (option) {
         var title = document.getElementById("layer-legend-title");
         var hint = option.getAttribute("data-hint") || "";
@@ -744,34 +758,6 @@ function reportSiteExport(stage, details) {
   });
 }
 var UI_LABELS = window.LixityLabels ? window.LixityLabels.all() : {};
-document.addEventListener("lixity:reader-ready", function initAnalysisGuide() {
-  var guide = document.getElementById("reader-analysis-guide");
-  var status = document.getElementById("reader-analysis-guide-state");
-  var reference = document.getElementById("reader-metric-reference");
-  var definition = document.getElementById("reader-metric-definition");
-  if (!guide || !status || !layer || !window.LixityWorkbench) return;
-  function update() {
-    var state = LixityWorkbench.state();
-    guide.hidden = state.surface !== "document" || state.focus;
-    var option = state.analysisVisible && layer.value ? selectedLayerOption() : null;
-    var text = uiLabel(state.analysisVisible ? "analysis_guide_none" : "analysis_guide_off");
-    if (option) {
-      var unit = option.dataset.unit;
-      text = unit ? uiFormat("analysis_guide_selected", {metric:option.textContent, unit:unit}) : option.textContent;
-      if (option.dataset.available === "0") text += ". " + uiLabel("layer_language_unavailable");
-    }
-    status.textContent = text;
-    if (reference) reference.hash = (option && option.dataset.reference) || "measurements";
-    var hint = option && option.dataset.hint;
-    if (definition) {
-      definition.hidden = !hint;
-      definition.textContent = hint || "";
-    }
-  }
-  document.addEventListener("lixity:workbench-change", update);
-  document.addEventListener("lixity:analysis-layer-change", update);
-  update();
-}, {once:true});
 var welcomeHero = document.getElementById("welcome-hero");
 var welcomeDismiss = document.getElementById("welcome-dismiss");
 var welcomeShow = document.getElementById("welcome-show");

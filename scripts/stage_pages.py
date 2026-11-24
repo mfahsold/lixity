@@ -23,9 +23,11 @@ from pathlib import Path
 try:
     import desktop_downloads
     from build_public_site import LANGUAGES, page_path
+    from make_videos import PUBLIC_VIDEO_FILES
 except ModuleNotFoundError:
     from scripts import desktop_downloads
     from scripts.build_public_site import LANGUAGES, page_path
+    from scripts.make_videos import PUBLIC_VIDEO_FILES
 
 #: Approved files inside ``docs/``, keyed by their path relative to it.
 #:
@@ -78,6 +80,7 @@ DOCS_ROOT_FILES = {
     "assets/analytics.json",
     "assets/research/hamburg-free-port-1900.jpg",
     "assets/research/hamburg-harbour-1890-1900.jpg",
+    *("videos/" + name for name in PUBLIC_VIDEO_FILES),
 }
 
 #: Approved subtrees, keyed by their first path segment.
@@ -87,7 +90,6 @@ PUBLIC_TREES = {
     "guides": {".html", ".md"},
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
-    "videos": {".mp4", ".webm", ".gif", ".png", ".webp", ".md"},
     "examples": {".html", ".pdf", ".md"},
     "research": {".md", ".json", ".txt"},
 }

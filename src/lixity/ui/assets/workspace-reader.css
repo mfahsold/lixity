@@ -80,27 +80,6 @@
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) var(--space-1) 0;
   min-height: 0;
 }
-.workspace-reader-head :is(#workspace-reader-close, [data-passage-research-close]) {
-  background: transparent;
-  border: 0;
-  color: var(--muted);
-  padding: 0;
-  min-inline-size: 2rem;
-  min-block-size: 2rem;
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-body);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  line-height: 1;
-  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
-}
-.workspace-reader-head :is(#workspace-reader-close, [data-passage-research-close]):hover {
-  background: var(--surface-hover);
-  color: var(--fg);
-}
 .workspace-reader-panel {
   min-width: 0;
   overflow-wrap: anywhere;

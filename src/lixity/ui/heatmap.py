@@ -24,6 +24,7 @@ from .components import (
     band_chart,
     chapter_link,
     checkbox_field,
+    comparison_legend,
     contrast_text,
     details_start,
     esc,
@@ -231,10 +232,10 @@ def render_heatmap_panel(
         ),
         panel_guide(L("heatmap_author_guide")),
     ]
+    parts.append('<div class="z-legend">' + comparison_legend(labels, chapter=False) + '</div>')
     parts.append(
-        '<div class="z-legend">'
-        f'<span>{L("heatmap_lower")}</span><span class="z-gradient" aria-hidden="true"></span>'
-        f'<span>{L("heatmap_higher")}</span></div>'
+        '<ul class="comparison-legend-notes">'
+        f'<li>{L("comparison_review_mark")}</li><li>{L("comparison_missing_mark")}</li></ul>'
     )
     reading = (
         label(labels, "matrix_reading")

@@ -58,7 +58,7 @@
 }
 .research-draft-preview-actions { align-items: start; }
 .research-draft-preview-actions > div { min-inline-size: 0; }
-.research-draft-reason { display: grid; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-raised); overflow-wrap: anywhere; }
+.research-draft-reason { display: grid; gap: var(--space-1); overflow-wrap: anywhere; }
 #r-manuscript-draft-preview > h6, .research-draft-reason > h6 { font-size: var(--text-control); }
 .research-draft-reason :is(p, figure, blockquote) { margin: 0; }
 .research-draft-reason figcaption { margin-block: var(--space-2) var(--space-1); }

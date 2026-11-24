@@ -2,7 +2,7 @@
 """
 scripts/make_screenshots.py
 ===========================
-Regenerates the README/GitHub-Pages screenshots reproducibly.
+Regenerates the public product screenshots reproducibly.
 
 Requires Node.js, Playwright with Chromium, and the public sample manuscript.
 Set PLAYWRIGHT_MODULE when Playwright is installed outside the repository.
@@ -53,6 +53,7 @@ from lixity.ui.dashboard import render_analysis  # noqa: E402
 from lixity.ui.manuscript_document import reader_blocks  # noqa: E402
 from lixity.ui.render_contracts import DashboardContent, DashboardOptions  # noqa: E402
 from scripts.example_project import DEMO_MANUSCRIPT, manuscript_title  # noqa: E402
+from scripts.make_videos import SOCIAL_CLIPS  # noqa: E402
 from scripts.stage_pages import screenshot_manifest  # noqa: E402
 
 CAPTURES: list[dict[str, str | int]] = []
@@ -479,13 +480,14 @@ def build_outreach_package(source: Path, output: Path) -> None:
                                          cwd=BASE_DIR, text=True).strip())
     manifest = {"schema_version": "lixity-outreach-assets/1", "state": "draft-unpublished",
                 "source_commit": commit, "source_dirty": dirty, "source_version": __version__,
-                "images": []}
+                "images": [], "clips": []}
     lines = ["# Lixity outreach package", "", "Prepared assets only. No account, queue or publication changes.",
              "Source commit: " + commit + (" (working tree has changes)." if dirty else "."), "",
              "Choose one reader question and one matching image per post. Do not send every alternative.", ""]
     with tempfile.TemporaryDirectory(prefix=".lixity-outreach-", dir=output.parent) as temporary:
         prepared = Path(temporary) / "package"
         (prepared / "images").mkdir(parents=True)
+        (prepared / "videos").mkdir()
         for item in images:
             content = (source / "screenshots" / item["file"]).read_bytes()
             (prepared / "images" / item["file"]).write_bytes(content)
@@ -493,13 +495,33 @@ def build_outreach_package(source: Path, output: Path) -> None:
             lines.extend(["## " + item["question"], "", "Image: images/" + item["file"],
                           "Alt: " + item["alt"], "Caption: " + item["caption"],
                           "Destination: https://mfahsold.github.io/lixity/" + item["destination"], ""])
+        lines.extend([
+            "## Why is this sentence underlined?", "",
+            "The silent clip opens a real explanation in the fictional manuscript.",
+            "English: Why is this sentence underlined? See what Lixity counted, then read it in context.",
+            "Text alternative: Lixity opens the selected sentence's explanation and marks the words it counted.",
+            "Destination: https://mfahsold.github.io/lixity/#product-tour-preview", "",
+            "Deutsch: Warum ist dieser Satz unterstrichen? Schau nach, welche Wörter Lixity gezählt hat, "
+            "und lies den Satz im Zusammenhang.",
+            "Alternativtext: Lixity öffnet im Beispielmanuskript die Erklärung zu einem unterstrichenen Satz "
+            "und hebt die gezählten Wörter hervor.",
+            "Ziel: https://mfahsold.github.io/lixity/index-de.html#product-tour-preview", "",
+        ])
+        for name, width, height, limit in SOCIAL_CLIPS:
+            content = (source / "videos" / name).read_bytes()
+            if not content or len(content) > limit:
+                raise ValueError(f"Invalid outreach clip size: {name}")
+            (prepared / "videos" / name).write_bytes(content)
+            manifest["clips"].append({"file": name, "width": width, "height": height,
+                                      "sha256": sha256(content).hexdigest(), "byte_length": len(content)})
+            lines.append(f"- [Clip, {width} x {height}](videos/{name})")
         (prepared / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         (prepared / "README.md").write_text("\n".join(lines), encoding="utf-8")
         prepared.rename(output)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
+    parser = argparse.ArgumentParser(description="Capture public product visuals or package reviewed outreach assets.")
     parser.add_argument("--manuscript", default="samples/first-look.md",
                         help="Analysis screenshot manuscript override; research captures keep the canonical Warehouse 4 project.")
     parser.add_argument("--only", nargs="+", help="Capture only these screenshot filenames.")

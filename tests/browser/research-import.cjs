@@ -1,5 +1,5 @@
 // Local source capture: preserve drafts, consent and project context.
-const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(require('node:path').join(playwrightModule, 'test'));
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -52,10 +52,8 @@ server.serve_forever()
     const status = page.locator('#r-ingest-btn-status');
     await expect(file).toHaveAccessibleName('Source file');
     await page.locator('#r-local-import').screenshot({path: path.join(artifacts, 'capture-320.png')});
-    let axePath;
-    try {axePath = require.resolve('axe-core');}
-    catch (_) {axePath = path.join(os.homedir(), 'rosts_services/node_modules/axe-core/axe.js');}
-    if (fs.existsSync(axePath)) {
+    const axePath = resolveAxe();
+    if (axePath) {
       await page.evaluate(fs.readFileSync(axePath, 'utf8'));
       const audit = await page.evaluate(async () => await axe.run(document.querySelector('#r-local-import'),
         {runOnly: {type: 'rule', values: ['label']}}));

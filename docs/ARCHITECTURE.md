@@ -112,6 +112,33 @@ and public contracts. [Rust analysis evaluation](RUST_EVALUATION_RFC.md)
 | `desktop/src-tauri` *(unreleased)* | Native windows and OS integrations, bundled runtime supervision and authenticated bridge | Analysis and rendering, manuscript mutations, research storage or background network telemetry |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
+### Analysis ownership across Python, Rust and JavaScript
+
+Python owns text classification, measurement, evidence offsets, comparison
+reference values and statistical selection. The renderer projects available
+analysis destinations from one registry for the reader and the overview. The
+chapter median and measured value travel together in the same unit, and the
+quotation projection supplies both quoted and total words to the reader.
+Sticky-sentence evidence already satisfies the configured selection rule.
+The reader formats the supplied counts and thresholds for the active locale.
+
+Rust owns native file selection, windows and authenticated transport. The
+WebView forwards the selected project path exactly as received. Python resolves
+the manuscript and returns its canonical project directory for the desktop
+recent-project store. JavaScript owns selection, focus, scrolling and rendering
+the supplied values. Conversion from code-point offsets to DOM ranges happens
+at the display boundary.
+
+The pipeline tests check dependency direction. The dashboard tests compare the
+rendered measurements, comparison positions and selection flags to prepared
+Python cells. Browser tests exercise the available destinations, source ranges
+and the unchanged project selector. The native WebView smoke exercises the
+authenticated Rust bridge. [Selecting maintainer checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#select-the-checks-for-your-change)
+
+The desktop view still merges browser-local history into the native list of
+recent projects. Consolidating the history calls for one store per mode. Verify
+open, remove and missing entries in the browser and the desktop app.
+
 `lixity.math_core` is the single mathematical vocabulary of the analysis core
 (robust scale, significance z, normal tail, ratio/share/density totalization,
 plug-in standard errors and published effect bands). Heuristics import it
@@ -957,7 +984,7 @@ than persisting a second text offset or editing manuscript content.
 Paragraph ellipsis, pointer context menus and keyboard context-menu shortcuts
 share one action builder; valid single-paragraph selection adds a small toolbar.
 Marker and claim actions retain existing save, capability and retention guards.
-**Explore passage** reuses the paragraph's measured markup in the closable
+**Paragraph details** reuses the paragraph's measured markup in the closable
 context inspector without changing global Analysis. **Explain measurement**
 delegates to the evidence owner and can enable Analysis; a saved-research route
 uses existing association reads. Tool changes retain each selection, and closing
@@ -1869,6 +1896,11 @@ field is peak level minus that estimate. These are heuristic signal checks, not 
 calibrated acoustic noise measurement or a validated speech-quality score.
 The −13 to −7 dBFS peak band controls the displayed verdict and suggested mixer
 setting; the suggestion is not automatically applied in a tuning loop.
+The native Rust capture path has a separate calibration implementation.
+Consolidate peak, clipping, RMS and verdict in one PCM analyzer while keeping
+device capture and mixer access at their respective boundaries. Verify identical
+PCM fixtures at the verdict and clipping thresholds, with silence and with
+partial windows through both entry points before removing a path.
 
 Browser Studio and Teleprompter captures use the shared `audio-take.js` PCM encoder
 and validator. They show permission, recording and failure states, resume their

@@ -25,10 +25,9 @@
     return active() && form.isConnected && document.getElementById("settings-form") === form &&
       form.dataset.projectToken === token;
   }
-  function message(key, failed) {
-    status.textContent = key ? text(key) : "";
+  function message(key, state) {
+    window.LixityComponents.setStatus(status, key ? text(key) : "", state);
     status.hidden = !key;
-    status.className = "ctl-status" + (failed ? " err" : "");
   }
   function clear() { body.replaceChildren(); body.hidden = true; }
   function idle() {
@@ -222,7 +221,7 @@
     if (pending) pending.abort();
     var controller = new AbortController(); pending = controller;
     clear(); overview.setAttribute("aria-busy", "true"); refresh.disabled = true;
-    message("project_structure_loading");
+    message("project_structure_loading", "loading");
     try {
       var api = (document.body.dataset.api || "/api").replace(/\/$/, "");
       var response = await fetch(api + "/project-structure?project_token=" + encodeURIComponent(token),
@@ -232,7 +231,7 @@
       if (!response.ok || !valid(data)) throw new Error("Project inspection unavailable");
       render(data, token); message("");
     } catch (_) {
-      if (request === revision && sameContext(form, token)) { clear(); message("project_structure_failed", true); }
+      if (request === revision && sameContext(form, token)) { clear(); message("project_structure_failed", "err"); }
     } finally {
       if (request === revision) {
         pending = null; idle();

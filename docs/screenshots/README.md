@@ -54,9 +54,9 @@ capture variant.
 ## Data and limits
 
 All product captures use [The Crate at Warehouse 4](../demo/report.html), the
-six-chapter synthetic manuscript owned by `samples/first-look.md`. They were
-captured from current development on 5 November 2026; installed releases can
-show an earlier interface. A Fontane or Austen article must identify these as
+six-chapter synthetic manuscript owned by `samples/first-look.md`. They show
+the development checkout used for capture. Installed releases may show an
+earlier interface. A Fontane or Austen article must identify these as
 interface illustrations, not measurements of that literary work.
 
 Historical Hamburg map and photochrom references retain their
@@ -82,8 +82,9 @@ From the repository root:
 
 Normal capture selects this manifest and updates the catalog table and embedded
 image dimensions. `--only` accepts reviewed names. Package preparation copies
-only lead/support images into a new directory, with questions, captions, alt
-text, destination URLs, source revision, working-tree status and byte hashes.
+lead/support images and the two reviewed social clips into a new directory.
+The handoff records questions, captions, text alternatives, destination URLs,
+source revision, working-tree status and byte hashes.
 It does not recapture images, send posts or alter an approval queue. Exact post
 copy and publication records belong in the separate outreach workspace; one
 current package there points to these assets rather than maintaining another

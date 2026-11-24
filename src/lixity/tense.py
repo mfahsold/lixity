@@ -14,6 +14,7 @@ from typing import Any
 
 from .language import ResolvedLanguage, compile_pattern
 from .language_data import (
+    GERMAN_ARTICLE_CONTRACTIONS,
     GERMAN_PERFECT_FORMS,
     GERMAN_PERFECT_PARTICIPLES,
     GERMAN_PRODUCTIVE_PARTICIPLE,
@@ -51,6 +52,15 @@ def _curated_word_set(pattern: str) -> frozenset[str]:
     if not pattern:
         return frozenset()
     return frozenset(w.lower() for w in pattern[3:-3].split("|"))
+
+
+def _after_german_article_contraction(
+    text: str, tokens: Sequence[tuple[int, int, str, str]], index: int,
+) -> bool:
+    if index == 0 or tokens[index - 1][3] not in GERMAN_ARTICLE_CONTRACTIONS:
+        return False
+    gap = text[tokens[index - 1][1]:tokens[index][0]]
+    return gap.isspace() and _BLANK_LINE.search(gap) is None
 
 
 class TenseMatcher:
@@ -409,9 +419,12 @@ class TenseMatcher:
                 spanish_auxiliary_starts.add(m_span[0])
         present = [
             (w_start, w_end)
-            for w_start, w_end, _w_raw, w_low in word_tokens
+            for index, (w_start, w_end, w_raw, w_low) in enumerate(word_tokens)
             if w_low in self._curated_present_words
             and w_start not in spanish_auxiliary_starts
             and not consumed(w_start, w_end, licensed_only=True)
+            # A title-case form immediately after a fused preposition and
+            # article ("beim Lesen") is a nominal use, not a finite cue.
+            and not (self._german and w_raw.istitle() and _after_german_article_contraction(text, word_tokens, index))
         ]
         return present, sorted(past)

@@ -246,8 +246,7 @@
   }
   function field(id) { return document.getElementById("dossier-image-" + id); }
   function status(message, error) {
-    field("status").textContent = message || "";
-    field("status").className = "ctl-status " + (error ? "err" : "");
+    window.LixityComponents.setStatus(field("status"), message, error ? "err" : "");
   }
   function releasePreview() {
     if (state.url) URL.revokeObjectURL(state.url);

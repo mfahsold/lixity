@@ -14,6 +14,9 @@ const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA
 const fixture = `<!doctype html><title>Lixity public guide</title>
 <main><h1>Public synthetic guide</h1><textarea>PRIVATE MANUSCRIPT DRAFT</textarea>
 <a id="demo" href="/lixity/demo/report.html?private=SECRET#selection">Demo</a>
+<a id="sandbox" href="/lixity/sandbox/index.html?lang=de&amp;private=SECRET">Sandbox</a>
+<a id="clip" href="/lixity/videos/social-hook-9x16.mp4?private=SECRET">Share clip</a>
+<a id="other-sandbox" href="/lixity/sandbox/other.html">Other sandbox path</a>
 <a id="install" href="/lixity/guides/installation.html">Install</a>
 <a id="install-reference" href="/lixity/INSTALLATION.md">Installation reference</a>
 <a id="install-anchor" href="/lixity/#install">Install section</a>
@@ -217,13 +220,15 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       })));
       await settle(page);
       assert.equal(state.pixels.length, 1, 'The public demo completion event is ignored on other pages');
-      const clicks = ['demo', 'install', 'repository', 'pdf', 'untracked', 'spoof', 'demo',
+      const clicks = ['demo', 'sandbox', 'clip', 'other-sandbox', 'install', 'repository', 'pdf', 'untracked', 'spoof', 'demo',
         'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'pdf-document', 'other-pdf',
         'pypi', 'mastodon', 'bluesky', 'blog'];
       for (const id of clicks) await page.locator('#' + id).click();
-      await expect.poll(() => state.pixels.length).toBe(16);
+      await expect.poll(() => state.pixels.length).toBe(18);
       assert.deepEqual(payloads(state).slice(1), [
         {p: 'demo-open', e: 'true', t: 'Open demo', r: ''},
+        {p: 'sandbox-open', e: 'true', t: 'Open sandbox', r: ''},
+        {p: 'social-clip-open', e: 'true', t: 'Open share clip', r: ''},
         {p: 'install-open', e: 'true', t: 'Open installation', r: ''},
         {p: 'repository-open', e: 'true', t: 'Open repository', r: ''},
         {p: 'pdf-download', e: 'true', t: 'Download PDF', r: ''},
@@ -239,7 +244,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       assert.deepEqual(await page.evaluate(() => window.__navigationPrevented), Array(clicks.length).fill(false));
       await page.addScriptTag({url: publicOrigin + '/lixity/assets/analytics.js'});
       await settle(page);
-      assert.equal(state.pixels.length, 16, 'Duplicate inclusion cannot add a pageview or event listener');
+      assert.equal(state.pixels.length, 18, 'Duplicate inclusion cannot add a pageview or event listener');
       assert.deepEqual(state.unexpected, []);
       assert.deepEqual(state.warnings, []);
       assert.deepEqual(state.errors, []);

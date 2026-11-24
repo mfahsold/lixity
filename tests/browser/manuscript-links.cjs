@@ -173,10 +173,10 @@ async function selectText(page, text) {
       }
       for (const unavailableState of ['ambiguous', 'changed', 'unavailable']) {
         anchorState = unavailableState;
-        const refreshed = page.waitForResponse(response => response.url().includes('/api/research/manuscript-review'));
+        const labelKey = unavailableState === 'unavailable' ? 'unavailable_anchor' : unavailableState;
+        const expectedStatus = await page.evaluate(key => uiLabel('manuscript_link_' + key), labelKey);
         await page.locator('#r-review-refresh').click();
-        await refreshed;
-        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.locator('#research-manuscript-review').getByText(expectedStatus, {exact: true}).waitFor();
         assert.equal(await page.locator('[data-manuscript-link-candidate]').count(), 0);
       }
       anchorState = 'adjusted';

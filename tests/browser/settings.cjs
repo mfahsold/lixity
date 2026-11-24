@@ -1,6 +1,6 @@
 const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 const {assertSelectGeometry} = require('./support/select-geometry.cjs');
-const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, resolveAxe} = require('../../scripts/browser_tools.cjs');
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
@@ -597,8 +597,8 @@ server.serve_forever()
       }
       await page.locator('#speech-direction_text').evaluate(el=>el.scrollIntoView({block:'center'}));
       await dialog.screenshot({path:path.join(artifacts,`direction-${locale}-${width}.png`)});
-      let axePath; try { axePath=require.resolve('axe-core'); } catch (_) { axePath=path.join(require('node:os').homedir(),'rosts_services/node_modules/axe-core/axe.js'); }
-      if(fs.existsSync(axePath)) {
+      const axePath = resolveAxe();
+      if(axePath) {
         await page.evaluate(fs.readFileSync(axePath,'utf8'));
         const audit=await page.evaluate(async()=>await axe.run(document.getElementById('modal-speech')));
         assert.deepEqual(audit.violations.map(v=>({id:v.id,impact:v.impact})),[], 'Audio direction accessibility');

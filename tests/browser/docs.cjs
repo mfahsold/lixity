@@ -907,6 +907,14 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
     const firstProseY = await firstProse.evaluate(paragraph => paragraph.getBoundingClientRect().top + scrollY);
     const limit = width >= 1100 ? 420 : 800;
     assert.ok(firstProseY <= limit, `The workspace reaches prose within ${limit}px at ${width}px, got ${firstProseY}`);
+    if (width <= 390 && await page.evaluate(() => matchMedia('(pointer: coarse)').matches)) {
+      const [search, terms] = await Promise.all([
+        page.locator('#text-search').boundingBox(),
+        page.locator('#research-reader-terms').boundingBox(),
+      ]);
+      assert.ok(search.height >= 44 && terms.height >= 44 && terms.width >= 44);
+      assert.equal(search.y, terms.y, 'The idle search and terms button share a narrow row without shrinking touch targets');
+    }
   }
   const context = page.locator('details#example-context');
   await expect(context).not.toHaveAttribute('open', '');
@@ -1430,7 +1438,9 @@ async function checkSandboxQuotationPairs(page) {
           if (homeRoutes.has(route)) {
             const locale = route ? route.slice(6, 8) : 'en';
             await expect(page.locator('html')).toHaveAttribute('lang', locale);
-            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', '#product-tour-preview');
+            const sandboxLanguage = locale === 'de' ? 'de' : 'en';
+            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'sandbox/index.html?lang=' + sandboxLanguage);
+            await expect(page.locator('#examples')).toHaveAttribute('href', '#product-tour-preview');
             await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html');
             await expect(page.locator('.language-list a')).toHaveCount(7);
             await expect(page.locator('head link[hreflang]')).toHaveCount(8);
@@ -1472,7 +1482,11 @@ async function checkSandboxQuotationPairs(page) {
           await expect(page.locator('#' + anchor)).toBeInViewport();
         }
         await page.goto(origin + '/lixity/');
-        await page.locator('.hero-cta a.primary').click();
+        await page.locator('#sandbox-cta').click();
+        await expect(page).toHaveURL(origin + '/lixity/sandbox/index.html?lang=en');
+        await expect(page.locator('#input')).toBeVisible();
+        await page.goto(origin + '/lixity/');
+        await page.locator('#examples').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await expect(page.locator('#product-tour-preview')).toBeInViewport();
         await page.locator('#guides a[href="guides/first-look.html"]').click();
@@ -1489,10 +1503,10 @@ async function checkSandboxQuotationPairs(page) {
         await returnToTop(page, 'Guides parent');
         await page.locator('.site-header .brand[href="./"]').click();
         await expect(page).toHaveURL(origin + '/lixity/');
-        await page.locator('.hero-cta a.primary').click();
+        await page.locator('#examples').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await page.locator('.tour-explore[href="demo/report.html"]').click();
-        await expect(page, 'The single discovery path leads from the tour to the demo').toHaveURL(isDemoReportURL);
+        await expect(page, 'The tour leads to the full, read-only example').toHaveURL(isDemoReportURL);
         await expect(page.locator('h1')).toHaveText(demoTitle);
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../"]').click();

@@ -118,6 +118,7 @@ with tempfile.TemporaryDirectory() as directory:
       return route.fulfill({contentType:'text/html',body:data.fixtures[language].html});
     });
     await page.goto('http://lixity.test/');
+    await page.locator('#tab-view-research').click();
     await page.waitForFunction(id => researchSelectionProjectId === id, data.project_id);
     await page.locator('[data-rtab=decisions]').click();
     await page.locator('[data-decision-impact]').click();

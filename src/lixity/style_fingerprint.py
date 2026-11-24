@@ -2318,14 +2318,8 @@ def lexical_structural_diagnostics(
     return result
 
 
-def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:
-    """Per-paragraph layer values with their within-chapter robust z-score.
-
-    Each chapter is its own reference (median/MAD), so the colour shows
-    deviation *within* the chapter, not against the whole manuscript.
-    Returns {paragraph_index: (value, robust z)}; empty for unknown layers
-    or chapters with fewer than three measurable paragraphs.
-    """
+def _layer_stats_with_reference(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float, float]]:
+    """Return each comparable paragraph's value, raw score and chapter median."""
     field_name = LAYER_PARAGRAPH_ATTR.get(layer, LAYER_FEATURES.get(layer))
     if field_name is None:
         return {}
@@ -2338,7 +2332,7 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         if not isinstance(value, int | float):
             continue
         by_chapter.setdefault(p.chapter_num, []).append((idx, float(value)))
-    stats: dict[int, tuple[float, float]] = {}
+    stats: dict[int, tuple[float, float, float]] = {}
     for pairs in by_chapter.values():
         if len(pairs) < 3:
             continue
@@ -2347,15 +2341,20 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         spread = mad(obs, centre)
         if spread > 0.0:
             for idx, value in pairs:
-                stats[idx] = (value, robust_z(value, centre, spread))
+                stats[idx] = (value, robust_z(value, centre, spread), centre)
         elif any(v != centre for v in obs):
             fallback_sigma = sn_estimator(obs)
             if fallback_sigma <= 0.0:
                 fallback_sigma = qn_estimator(obs)
             if fallback_sigma > 0.0 and math.isfinite(fallback_sigma):
                 for idx, value in pairs:
-                    stats[idx] = (value, (value - centre) / fallback_sigma)
+                    stats[idx] = (value, (value - centre) / fallback_sigma, centre)
     return stats
+
+
+def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:
+    """Return each comparable paragraph's value and within-chapter robust z-score."""
+    return {index: (value, score) for index, (value, score, _) in _layer_stats_with_reference(paragraphs, layer).items()}
 
 
 @dataclass(frozen=True)
@@ -2366,6 +2365,7 @@ class ParagraphLayerCell:
     z: float
     notable: bool
     raw_z: float
+    chapter_median: float
 
 
 ParagraphLayerData = dict[str, dict[int, ParagraphLayerCell]]
@@ -2374,9 +2374,9 @@ ParagraphLayerData = dict[str, dict[int, ParagraphLayerCell]]
 def paragraph_layer_cells(paragraphs: Sequence[Any], layer: str) -> dict[int, ParagraphLayerCell]:
     """Prepare comparable cells; absent cells represent unavailable comparisons."""
     cells: dict[int, ParagraphLayerCell] = {}
-    for index, (value, score) in layer_stats(paragraphs, layer).items():
+    for index, (value, score, chapter_median) in _layer_stats_with_reference(paragraphs, layer).items():
         z = round(score, PARAGRAPH_LAYER_Z_DECIMALS)
-        cells[index] = ParagraphLayerCell(value, z, abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF, score)
+        cells[index] = ParagraphLayerCell(value, z, abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF, score, chapter_median)
     return cells
 
 

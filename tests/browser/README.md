@@ -311,7 +311,7 @@ and unresolved linguistic limits stay centralized in
 The analysis-triage-layout suite checks the native decision list at 1440, 1280,
 1024, 768 and 320 px: readable action dimensions, columns/cards fitting the
 available pane and keyboard navigation without manuscript writes.
-The shared **Explore passage** entry opens the existing context inspector, with
+The shared **Paragraph details** entry opens the existing context inspector, with
 separate **Explain measurement** and **Research for this passage** actions. Native desktop
 and mobile checks cover localized sentence word counts, paragraph comparison
 scope and explanation opening when the mobile inspector moves prose offscreen.

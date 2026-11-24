@@ -275,7 +275,10 @@ class TestJsDomContract(unittest.TestCase):
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('aria-describedby="review-passage-reason"', review)
         self.assertIn('id="review-passage-reason"', review)
-        self.assertIn("No tense flags at the selected threshold.", review)
+        labels = get_language_profile("en").labels
+        self.assertIn(labels["review_passage_unflagged"], review)
+        self.assertIn(labels["review_open_start_action"], review)
+        self.assertNotIn(labels["review_flagged_passage_action"], review)
         for target in re.findall(r'href="#([^"]+)"', review):
             self.assertTrue(f'id="{target}"' in html, f"Review route has no target: {target}")
 
@@ -298,6 +301,7 @@ class TestJsDomContract(unittest.TestCase):
         review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('data-target="p-0"', review)
         self.assertIn("Ch. 1, line 3. Present and past in the same paragraph.", review)
+        self.assertIn(get_language_profile("en").labels["review_flagged_passage_action"], review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
         """Section links retain real panel anchors without becoming tabs."""
@@ -364,6 +368,10 @@ class TestJsDomContract(unittest.TestCase):
         targets = re.findall(r'data-section-link="([^"]+)"', nav)
         expected = [panel for panel, _key in ANALYSIS_SECTIONS if panel in set(targets)]
         self.assertEqual(targets, expected)
+        reader_picker = html.split('id="reader-analysis-overview-select"', 1)[1].split("</select>", 1)[0]
+        reader_targets = re.findall(r'<option value="([^"]+)"', reader_picker)
+        self.assertLessEqual(set(targets), set(reader_targets))
+        self.assertEqual(reader_targets, re.findall(r'data-analysis-section-target="([^"]+)"', html))
 
     def test_checkbox_controls_use_the_shared_component(self):
         """Every rendered checkbox row uses the one form-checkbox component."""

@@ -93,7 +93,7 @@ release-verify: ## Verify a published release (RELEASE_TAG=vX.Y.Z, optionally RE
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
 
-videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
+videos: ## Regenerate public walkthrough media locally (needs Chromium and ffmpeg)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py --video
 	PYTHONPATH=src $(VPY) scripts/make_videos.py
 

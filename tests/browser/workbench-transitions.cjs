@@ -107,6 +107,10 @@ async function assertToolDestination(page, heading, close, width, label) {
     `${width}: ${label} heading must enter the viewport after a passage request; got ${JSON.stringify(box)}`);
   assert.equal(await close.evaluate(node => document.activeElement === node), true,
     `${width}: ${label} request gives the visible close control keyboard focus`);
+  const target = await close.boundingBox();
+  const minimum = await page.evaluate(() => matchMedia('(pointer: coarse)').matches ? 44 : 40);
+  assert.ok(target && target.width >= minimum && target.height >= minimum,
+    `${width}: ${label} close uses the shared pointer target; got ${JSON.stringify(target)}`);
 }
 
 async function assertPassageReturn(page, origin, width, label, focusTarget) {

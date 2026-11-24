@@ -1,12 +1,12 @@
 // Shared startup for optional browser tests and documentation captures.
 //
 // Explicit environment overrides (PLAYWRIGHT_MODULE,
-// PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) take precedence; otherwise common
-// local locations are probed so `make browser` and `make screenshots` work
-// without manually exporting paths.
+// PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) take precedence. Browser checks and
+// captures also discover packages installed by `make browser-tools`.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const browserToolsDir = process.env.BROWSER_TOOLS_DIR || path.join(os.homedir(), '.local/share/lixity/browser-tools');
 
 function resolvePlaywright() {
   if (process.env.PLAYWRIGHT_MODULE) return process.env.PLAYWRIGHT_MODULE;
@@ -15,21 +15,16 @@ function resolvePlaywright() {
     // package directory, not the resolved main file (`index.js`).
     return path.dirname(require.resolve('playwright/package.json'));
   } catch {}
-  const home = os.homedir();
-  const candidates = [
-    path.resolve(__dirname, '../node_modules/playwright'),
-    path.join(home, '.local/share/lixity/browser-tools/node_modules/playwright'),
-    path.join(home, 'node_modules/playwright'),
-    path.join(home, 'rosts_services/node_modules/playwright'),
-  ];
-  return candidates.find(candidate => fs.existsSync(candidate)) || 'playwright';
+  const isolated = path.resolve(browserToolsDir, 'node_modules', 'playwright');
+  return fs.existsSync(isolated) ? isolated : 'playwright';
 }
 
 function resolveChromium() {
   if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) return process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) return undefined;
   const home = os.homedir();
   const caches = [
-    path.join(home, '.local/share/lixity/browser-tools/browsers'),
+    path.join(browserToolsDir, 'browsers'),
     path.join(home, '.cache', 'ms-playwright'),
   ];
   for (const cache of caches) {
@@ -51,6 +46,12 @@ function resolveChromium() {
 
 const playwrightModule = resolvePlaywright();
 const {chromium, firefox} = require(playwrightModule);
+
+function resolveAxe() {
+  const roots = [path.resolve(playwrightModule), path.resolve(browserToolsDir), __dirname];
+  try { return require.resolve('axe-core/axe.min.js', {paths: roots}); }
+  catch { return undefined; }
+}
 
 function launchChromium(options = {}) {
   const executablePath = resolveChromium();
@@ -74,4 +75,4 @@ function modShortcut(key) {
   return `ControlOrMeta+${key}`;
 }
 
-module.exports = {launchChromium, launchFirefox, playwrightModule, fullMatrix, browserLocales, modShortcut};
+module.exports = {launchChromium, launchFirefox, playwrightModule, resolveAxe, fullMatrix, browserLocales, modShortcut};

@@ -32,8 +32,11 @@ See [licensing](docs/LICENSING.md).
 | Material | Location | Commit / publish |
 | --- | --- | --- |
 | Engine behavior and shared UI | `src/lixity/` | Commit with relevant checks |
+| Desktop host, runtime bundle and installers | `desktop/` | Commit host and packaging changes with the [app checks](desktop/README.md#local-build-and-verification) |
 | Regression coverage and reusable tooling | `tests/`, `scripts/` | Commit when it protects or operates the product |
-| Installation, usage, methods, interfaces and supported architecture | `docs/` and README | Maintain as product documentation; label proposals and unreleased behavior |
+| Installation, usage, methods, interfaces and supported architecture | `docs/` | Keep the [technical manual index](docs/README.md) current and label proposals and unreleased behavior |
+| OSS project entry and contributor procedures | `README.md`, `CONTRIBUTING.md` | Maintain the repository entry and link to the guides that own command details |
+| Public site and examples | `docs/templates/`, `docs/locales/` and approved Pages paths | Edit canonical sources and follow [generation and preview](#generate-and-preview) |
 | Repository-wide agent rules | `AGENTS.md` | Commit concise, durable guidance |
 | Agent operating rules that `AGENTS.md` delegates to | `AGENT_PROFILE.md` | Commit only durable rules; a session log belongs in `.planning/` |
 | Task plans, session notes, temporary implementation decisions | `.planning/` | Local only, ignored |
@@ -63,12 +66,18 @@ after loading a change.
 | Change | Check |
 | --- | --- |
 | Source | Run the affected test first, then `make check` for pinned Ruff, `mypy --strict` and the full pytest suite with warnings as errors. |
-| UI behavior | Use `make browser` for the fast group or `make browser-changed` to select suites from modified paths. Run `make browser-full` on the final source before a release affecting rendered output. See [browser prerequisites and coverage](tests/browser/README.md). |
-| Rust desktop host | Follow the [desktop maintainer guide](desktop/README.md) for locked Cargo tests, Clippy, bundled runtime checks and the macOS WebView smoke test. |
-| Documentation | Follow [generation and preview](#updating-documentation-and-pages), then run `make docs-check` for a standalone docs pass. When also running `make check`, add `make docs-generated-check` to cover the generators without repeating the Python docs tests. |
+| Shared UI behavior | Use `make browser` for the fast group or `make browser-changed` to select suites from modified paths. Run `make browser-full` on the final source before a release affecting rendered output. See [browser prerequisites and coverage](tests/browser/README.md). |
+| Native desktop behavior | Follow the [desktop maintainer guide](desktop/README.md#rust-and-native-webview-checks) for locked Cargo tests, Clippy, bundled runtime checks and the macOS WebView smoke test. |
+| Documentation | Follow [generation and preview](#generate-and-preview), then run `make docs-check` for a standalone docs pass. When also running `make check`, add `make docs-generated-check` to cover the generators without repeating the Python docs tests. |
 | GitHub workflows | Run `make workflow-check` with `actionlint` installed. Override `ACTIONLINT` to use an explicit executable. |
 | Packaging | Run `make build` or add an isolated install smoke test with `.venv/bin/python scripts/check_release.py --build --smoke`. |
 | Public release | Follow [release preparation](#preparing-a-release) for the local and remote gates. |
+
+Use both UI rows when a change crosses the desktop bridge. Browser tests
+exercise the shared interface in Chromium. The native smoke exercises the
+bridge and navigation through WKWebView on macOS. For changes to OS menus,
+dialogs or input methods, use a synthetic project in the app on the affected
+platform.
 
 For a focused Python check, use
 `make test PYTEST_ARGS='-n 0 tests/test_NAME.py'`.
@@ -131,13 +140,10 @@ and iteration count.
 PYTHONPATH=src .venv/bin/python scripts/benchmark_pipeline.py --iterations 3 --json
 ```
 
-Compare the stage medians and result digests. This process reports a single
-peak resident memory figure for the run in MiB on macOS and Linux. Other
-platforms still report timings and digests. The JSON uses `null` when memory
-usage is unavailable. For a research workflow, profile the actual request
-with a synthetic archive and report the record count, page or result limit,
-and median. Prefer operation counts or output equivalence for regression
-assertions where timing varies by host.
+Compare stage medians and result digests. The command reports peak resident
+memory for the run in MiB on macOS and Linux. The JSON uses `null` when memory
+usage is unavailable. For workload design, archive benchmarks and regression
+assertions, follow [Investigating performance](#investigating-performance).
 
 #### CI and test environments
 
@@ -244,11 +250,11 @@ complete analysis, or a native browser interaction. Separate fresh `Repository`
 instances from repeated reads on one instance, and label a warm filesystem cache
 as warm. Record synthetic input size/shape, Python version, source revision,
 wall time, CPU time and several individual runs; compare their medians on the
-same machine without other test workers. Fixture construction, profiling and
+same machine without other test workers. For an archive request, record the
+record count and the page or result limit. Fixture construction, profiling and
 memory instrumentation belong outside timed runs. Check both tiny records and
-large payloads: reducing small-read allocations must not double image/PDF memory.
-A small test or a faster
-inner loop does not establish an equivalent end-to-end improvement.
+large payloads, including image and PDF memory. Measure the complete workflow
+again after optimizing an inner loop.
 
 Use [cProfile](https://docs.python.org/3/library/profile.html) for call attribution,
 then measure again without it: its instrumentation is not a benchmark. Inspect
@@ -431,6 +437,11 @@ origin-only referrer and fixed CTA names; exclude URL query/hash, form inputs,
 selection, manuscript/research data, local paths and persistent identifiers.
 The local app and generated user exports must never acquire this adapter.
 
+CTA counts measure link activation. Pageviews include direct visits. Playback
+completion and installation require separate evidence. Find event names and
+destination rules in the [public adapter](docs/assets/analytics.js). Check
+existing Search Console and GoatCounter read access before adding tools.
+
 The shared site script loads it for normal Pages; public example metadata adds
 it to the reviewed synthetic/public-domain examples. Do not add the provider's
 ordinary auto-tracking snippet alongside it: that would double-count and include
@@ -497,19 +508,25 @@ Google Search Console credentials do not grant Bing access.
    pages, Markdown alternates, `llms-full.txt` and localized metric references.
 3. Run the [documentation and browser checks](#select-the-checks-for-your-change).
    Inspect desktop and mobile layouts, titles, links and reviewed media.
-4. Stage a local preview with
-   `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`, using a
-   new directory. The staging rules select published content and explicitly
-   copy the shared design-token and component assets. Add new public paths
-   deliberately. Link to root documents such as README and CONTRIBUTING by
-   absolute GitHub URL. The documentation tests validate links in the staged tree.
+4. Serve the staged preview under the production path prefix `/lixity/` on a
+   loopback-only address. Open `http://127.0.0.1:8000/lixity/` while the server
+   is running. The staging rules select published content and copy the shared
+   design-token and component assets. Add public paths deliberately and use
+   absolute GitHub URLs for repository-root documents. The documentation tests
+   validate links in the staged tree.
+
+   ```sh
+   pages_preview_dir="$(mktemp -d "${TMPDIR:-/tmp}/lixity-pages.XXXXXX")"
+   python3 scripts/stage_pages.py --output "$pages_preview_dir/lixity" &&
+     python3 -m http.server 8000 --bind 127.0.0.1 --directory "$pages_preview_dir"
+   ```
 
 Screenshot selection is maintained once in `docs/screenshots/manifest.json`.
 Normal capture, the generated catalog and Pages staging use that inventory;
 adding an image alone does not publish it. Prepare the reusable lead/support
 asset handoff with `scripts/make_screenshots.py --outreach-package NEW_DIRECTORY`.
-It records the source revision, working-tree status, exact image hashes, captions,
-alt text and destinations without sending or scheduling posts. Keep one current
+It records the source revision, working-tree status, exact media hashes, captions,
+text alternatives and destinations without sending or scheduling posts. Keep one current
 editorial package in the separate outreach workspace; old publication records
 remain history rather than additional active campaigns. See the
 [screenshot catalog](docs/screenshots/README.md).
@@ -530,8 +547,10 @@ ref from the tag pipeline. It verifies generated documentation before staging.
 Wait for the run on the intended commit, then check `source_sha` and
 `workflow_run_url` in the live [deployment record](https://mfahsold.github.io/lixity/deployment.json)
 and open the affected public routes. Run `make pages-verify` from that deployed
-checkout to compare its exact SHA and representative public files with live
-Pages. The check works for deployments from `main` and from release tags.
+checkout to compare the exact SHA and public files with live Pages. The byte
+comparison covers the localized home pages and guides, crawl files, measurement
+assets, shared styles, demo, sandbox and reviewed video files. The check works
+for deployments from `main` and from release tags.
 
 #### Maintain the Wiki and historical references
 
@@ -591,19 +610,30 @@ Project migration, release publication and restart each require their own scope.
    required project migration; test the current path and migration behavior.
    If a transition warning is deliberately retained, state its removal version
    and test that ordinary current usage remains warning-free under `-W error`.
-7. Run the [checks for the affected surfaces](#select-the-checks-for-your-change).
+7. When a change crosses Python, Rust or JavaScript, name the owner of the
+   decision in the review description. Point to the existing call sites that
+   consume its result and to the checks for the payload they receive. A port
+   needs parity evidence and a plan for removing the superseded path.
+   [Analysis ownership](docs/ARCHITECTURE.md#analysis-ownership-across-python-rust-and-javascript)
+8. Run the [checks for the affected surfaces](#select-the-checks-for-your-change).
 
 ## Reporting bugs
 
-Open an issue with:
+For a [bug report](https://github.com/mfahsold/lixity/issues/new/choose), include
+the operating system, install method, expected result and exact steps. Attach
+a minimal synthetic example when the issue depends on a project. Identify the
+surface and version that actually showed the problem.
 
-- Lixity version (`lixity --version`)
-- Python version and OS
-- Minimal Markdown snippet that reproduces the problem
-- Command line used
+| Where it happened | Include |
+| --- | --- |
+| CLI | `lixity --version`, Python version and the command with private paths replaced |
+| Local browser app | Browser and version, running Lixity version and URL path without project IDs or query data. Check the running version with `lixity doctor`. [Service diagnostics](docs/INSTALLATION.md#logs) |
+| Desktop app | Version from **About Lixity**, installer or test-build identity and relevant lines from the desktop log. [Desktop logs](docs/INSTALLATION.md#find-the-desktop-logs) |
+| Public website, demo or sandbox | Public URL, browser and version, and the deployment source when available. [Deployment record](https://mfahsold.github.io/lixity/deployment.json) |
 
-Security issues: private mail to **mfahsold@googlemail.com** (see
-[`SECURITY.md`](SECURITY.md)).
+Review logs, diagnostics and screenshots for manuscript excerpts, account
+details, local paths and secrets before sharing. Report security issues
+privately. [Security policy](SECURITY.md)
 
 ## Support and governance
 

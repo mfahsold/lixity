@@ -32,8 +32,12 @@ const root = stagePages();
       const errors = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('https://tour.test/index-de.html');
       await expect(page.locator('.hero-cta a')).toHaveCount(2);
-      await expect(page.locator('.hero-cta a').first()).toHaveAttribute('href', '#product-tour-preview');
-      await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', 'sandbox/index.html?lang=de');
+      await expect(page.locator('.hero-cta a').first()).toHaveAttribute('href', 'sandbox/index.html?lang=de');
+      await expect(page.locator('.hero-cta .primary')).toHaveAttribute('id', 'sandbox-cta');
+      await expect(page.locator('.hero-cta a').nth(1)).toHaveAttribute('href', '#product-tour-preview');
+      await page.locator('#tour-share summary').click();
+      await expect(page.locator('#tour-share a[download]')).toHaveCount(3);
+      await page.locator('#tour-share summary').click();
       assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>

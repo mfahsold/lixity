@@ -16,6 +16,7 @@ import re
 import sys
 import unittest
 from fractions import Fraction
+from statistics import median
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -23,14 +24,18 @@ if BASE_DIR not in sys.path:
 
 from lixity import api  # noqa: E402
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
+from lixity.format import num as format_num  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FEATURES,
+    Z_COLOR_LIMIT,
     FingerprintThresholds,
     StyleFingerprint,
     layer_stats,
     lexical_structural_diagnostics,
+    paragraph_layer_cells,
+    prepare_paragraph_layers,
     z_color,
 )
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
@@ -484,6 +489,10 @@ class TestParagraphLayers(unittest.TestCase):
         # Filter-density outliers sit above the chapter median -> positive z
         self.assertGreater(max(z for _v, z in stats.values()), 0.0)
         self.assertLess(min(z for _v, z in stats.values()), 0.0)
+        self.assertEqual(
+            {cell.chapter_median for cell in paragraph_layer_cells(paragraphs, "filter").values()},
+            {median(value for value, _score in stats.values())},
+        )
         self.assertEqual(layer_stats(paragraphs, "unknown"), {})
 
 
@@ -511,6 +520,10 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertIn("data-layers=", html)
         self.assertIn("layer-legend", html)
         self.assertIn("z-gradient", html)
+        paragraph_legend = html.split('id="layer-comparison-legend"', 1)[1].split("</div>", 1)[0]
+        chapter_legend = html.split('class="z-legend"', 1)[1].split("</div>", 1)[0]
+        self.assertIn("Typical for this chapter", paragraph_legend)
+        self.assertIn("Typical for the manuscript", chapter_legend)
         self.assertIn("Comparisons within the limit", html)
 
     def test_dashboard_without_fingerprint_still_works(self):
@@ -531,17 +544,26 @@ class TestFingerprintDashboard(unittest.TestCase):
         rendered = render_dashboard(chapters, paragraphs, language_key="de")
         chips = re.findall(r"data-target=\"p-(\d+)\" data-layers='([^']+)'", rendered)
         self.assertTrue(chips)
-        compared = 0
+        prepared = prepare_paragraph_layers(paragraphs)
+        expected = {(key, index) for key, cells in prepared.items() for index in cells}
+        seen: set[tuple[str, int]] = set()
         for index, raw in chips:
             payload = json.loads(html_module.unescape(raw))
+            paragraph_index = int(index)
             for key, info in payload.items():
-                _value, score = layer_stats(paragraphs, key)[int(index)]
-                self.assertEqual(info[0], z_color(score))
-                self.assertEqual(info[2], round(score, 2))
-                self.assertIn("z", info[1])
-                self.assertIn(str(paragraphs[int(index)].start_line), info[1])
-                compared += 1
-        self.assertGreater(compared, 0)
+                cell = prepared[key][paragraph_index]
+                typical_value = format_num(cell.chapter_median, "de", 1)
+                bounded_z = min(Z_COLOR_LIMIT, max(-Z_COLOR_LIMIT, cell.z))
+                position = round(50.0 * (1.0 + bounded_z / Z_COLOR_LIMIT), 1)
+                self.assertEqual(info[0], z_color(cell.raw_z))
+                self.assertEqual(info[2], cell.z)
+                self.assertEqual(info[3], format_num(cell.value, "de", 1))
+                self.assertIs(info[4], cell.notable)
+                self.assertEqual(info[5], position)
+                self.assertEqual(info[6], typical_value)
+                self.assertIn(str(paragraphs[paragraph_index].start_line), info[1])
+                seen.add((key, paragraph_index))
+        self.assertEqual(seen, expected)
 
     def test_unavailable_paragraph_layer_has_no_invented_measurement_range(self):
         config = CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+")

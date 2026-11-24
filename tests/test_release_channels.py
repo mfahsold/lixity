@@ -604,6 +604,13 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
         channels.verify_pages(source, TAG, SHA, client, base_url=base)
 
     values[base + "guides/metrics/de.html"] = pages["guides/metrics/de.html"]
+    for path in ("sitemap.xml", "assets/analytics.json", "screenshots/dashboard-light.png",
+                 "videos/social-hook-9x16.mp4", "demo/report.html"):
+        values[base + path] = b"stale resource"
+        with pytest.raises(ValueError, match=f"resource differs from staged build: {path}"):
+            channels.verify_pages(source, TAG, SHA, client, base_url=base)
+        values[base + path] = pages[path]
+
     deployments = iter([{"schema_version": 1, "source_sha": SHA},
                         {"schema_version": 1, "source_sha": "b" * 40}])
     values[base + "deployment.json"] = lambda: next(deployments)

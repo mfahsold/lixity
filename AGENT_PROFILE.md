@@ -37,6 +37,13 @@ existing archived record and a missing source. Check that saved revisions and
 evidence still point to their original records and that an unavailable
 comparison stays visible.
 
+Before moving behavior across Python, Rust or JavaScript, identify which layer
+owns the decision and search the other entry points for copies. Move the
+decision and its verification together. Once a replacement qualifies, remove
+the superseded implementation from the production path. Use a real producer
+fixture at the boundary to test values, units and unavailable results.
+[Analysis ownership](docs/ARCHITECTURE.md#analysis-ownership-across-python-rust-and-javascript)
+
 For release artifacts, verify the real build output against the input contract
 of the pinned publication tool before pushing the tag.
 Exercise generated PDF wording with a supported fallback font. A locally

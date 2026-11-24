@@ -57,6 +57,7 @@ class EvidenceSpan(_EvidenceSpan, total=False):
     function_spans: list[tuple[int, int]]
     quotation_context: QuotationContext
     quotation_marker: str
+    echo_group: int  # Internal until the displayed spans have been mapped.
 
 
 class _LayerEvidence(TypedDict):
@@ -72,6 +73,7 @@ class LayerEvidence(_LayerEvidence, total=False):
     sticky_rule: tuple[int, float]
     denominator: int
     quotation_ranges: list[tuple[int, int]]
+    echo_groups: list[tuple[int, list[int]]]  # Group count and indices of mapped spans.
 
 
 class _TenseEvidence(TypedDict):
@@ -205,6 +207,7 @@ class _ParagraphScan:
     text: str
     asl_spans: list[EvidenceSpan]
     sticky_spans: list[EvidenceSpan]
+    echo_groups: list[list[Range]]
     quote_ranges: tuple[Range, ...]
     quote_counts: tuple[int, ...]
 
@@ -286,6 +289,15 @@ class ParagraphMatcher:
             return locations.pop()
         return "overlaps_quotation"
 
+    def _echo_groups(self, clean: str) -> list[list[Range]]:
+        positions: dict[str, list[Range]] = defaultdict(list)
+        group = 1 if self.word.groups == 1 else 0
+        for match in self.word.finditer(clean):
+            token = (match.group(group) or "").lower()
+            if len(token) >= 4 and token not in self.language.function_words:
+                positions[token].append(match.span(group))
+        return [matches for matches in positions.values() if len(matches) >= 2]
+
     def count(self, clean: str, *, quotation: QuotationAnalysis | None = None) -> ParagraphCounts:
         """Count canonical NFC prose with the configured token/capture rules."""
         if not is_normalized("NFC", clean):
@@ -320,13 +332,7 @@ class ParagraphMatcher:
             s_cnt = len(self.sensory.findall(clean))
             n_cnt = count_nominal_matches(clean, self.nominal, self.nominal_exclusions)
 
-        echo_positions: dict[str, list[tuple[int, int]]] = defaultdict(list)
-        group = 1 if self.word.groups == 1 else 0
-        for match in self.word.finditer(clean):
-            tok = (match.group(group) or "").lower()
-            if len(tok) >= 4 and tok not in self.language.function_words:
-                echo_positions[tok].append(match.span(group))
-        echo_count = sum(len(pos) for pos in echo_positions.values() if len(pos) >= 2)
+        echo_groups = self._echo_groups(clean)
 
         context = quotation or scan_quotations(clean, self.language.key, pattern=self.dialogue)
         quoted_spans = context.quote_ranges
@@ -342,7 +348,7 @@ class ParagraphMatcher:
         )
 
         quote_counts = quoted_word_counts(clean, self.word, quoted_spans)
-        self._last_scan = _ParagraphScan(clean, asl_spans, sticky_spans, quoted_spans, quote_counts)
+        self._last_scan = _ParagraphScan(clean, asl_spans, sticky_spans, echo_groups, quoted_spans, quote_counts)
         return ParagraphCounts(
             words=len(tokens), sentences=sentences, sentence_words=sentence_words,
             dialogue=sum(quote_counts),
@@ -354,7 +360,7 @@ class ParagraphMatcher:
             passive=len(self.passive.findall(clean)),
             sticky=len(sticky_spans),
             dialogue_tag=dialogue_tag_count,
-            echo=echo_count,
+            echo=sum(map(len, echo_groups)),
             indirect_speech=indirect_speech_count,
         )
 
@@ -405,26 +411,26 @@ class ParagraphMatcher:
         modals = self.modals
         function_spans = spans["function"]
         modal_spans = spans["modal"]
-        echo_positions: dict[str, list[tuple[int, int]]] = defaultdict(list)
         for match in self.word.finditer(clean):
             # With one capture findall returns that capture, not the full
             # match. Preserve the actual counted token and its exact range.
             token = (match.group(group) or "").lower()
             is_func = token in function_words
             is_modal = token in modals
-            is_echo_candidate = len(token) >= 4 and not is_func
-            if is_func or is_modal or is_echo_candidate:
+            if is_func or is_modal:
                 start, end = match.span(group)
                 if is_func:
                     function_spans.append({"start": start, "end": end, "count": 1})
                 if is_modal:
                     modal_spans.append({"start": start, "end": end, "count": 1})
-                if is_echo_candidate:
-                    echo_positions[token].append((start, end))
-        echo_spans_raw = sorted(
-            span for pos in echo_positions.values() if len(pos) >= 2 for span in pos
-        )
-        spans["echo"] = [{"start": s, "end": e, "count": 1} for s, e in echo_spans_raw]
+        echo_groups = last_scan.echo_groups if last_scan is not None else self._echo_groups(clean)
+        for index, positions in enumerate(echo_groups):
+            for start, end in positions:
+                echo_span: EvidenceSpan = {"start": start, "end": end, "count": 1}
+                if include_reader_details:
+                    echo_span["echo_group"] = index
+                spans["echo"].append(echo_span)
+        spans["echo"].sort(key=lambda span: (span["start"], span["end"]))
         if self._fast_cues:
             for match in CUE_WORD_RE.finditer(clean):
                 is_f, is_s, is_n = self._classify_cue(match.group())
@@ -512,6 +518,13 @@ class ParagraphMatcher:
                 )
         if include_reader_details and result_layers["sticky"]["spans"]:
             result_layers["sticky"]["sticky_rule"] = (self.sticky_min_words, self.sticky_glue_pct)
+        if include_reader_details and result_layers["echo"]["spans"]:
+            mapped_groups: dict[int, list[int]] = defaultdict(list)
+            for index, echo_span in enumerate(result_layers["echo"]["spans"]):
+                mapped_groups[echo_span.pop("echo_group")].append(index)
+            result_layers["echo"]["echo_groups"] = [
+                (len(echo_groups[group]), indices) for group, indices in mapped_groups.items()
+            ]
         if context.unclear and "dialogue" not in unavailable and "reason" not in result_layers["dialogue"]:
             result_layers["dialogue"]["reason"] = "quotation_context_unresolved"
         if include_reader_details and "dialogue" not in unavailable:

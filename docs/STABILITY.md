@@ -51,7 +51,9 @@ selected forms such as `übt`; unlisted regular past forms such as `flatterten`
 can now be missed. Listed forms and auxiliary/participle matches can still be
 ambiguous: for example, `Ich habe gelben Stoff` can still produce a spurious
 past cue from `habe gelben`. This changes counts and dependent results, so regenerate analyses and
-review previous decisions. Other languages retain their existing patterns. To use
+review previous decisions. The default matcher skips some capitalized German
+nominal forms after fused articles, such as `beim Lesen`. Other noun–verb
+ambiguities still require context. Other languages retain their existing patterns. To use
 the contextual path, explicitly select an installed model as described in
 [Usage](USAGE.md#grammatical-tense).
 
