@@ -15,7 +15,12 @@ import sys
 from pathlib import Path
 from urllib.parse import quote
 
-from verify_desktop_artifacts import DesktopArtifact, load_verified_artifacts
+from verify_desktop_artifacts import (
+    DESKTOP_CHECKSUMS,
+    DesktopArtifact,
+    desktop_checksums,
+    load_verified_artifacts,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGING = ROOT / "desktop" / "packaging"
@@ -109,10 +114,7 @@ def render_all(
     ], "Windows x64 MSI en-US")
     cask_text = render_homebrew_cask(version, arm, intel, packaging_dir / "homebrew" / "lixity.rb.in")
     winget_files = render_winget_manifests(version, nsis, msi, packaging_dir / "winget")
-    (artifacts_dir / "SHA256SUMS-desktop.txt").write_text(
-        "".join(f"{artifact.sha256}  {artifact.filename}\n" for artifact in artifacts),
-        encoding="utf-8", newline="\n",
-    )
+    (artifacts_dir / DESKTOP_CHECKSUMS).write_bytes(desktop_checksums(artifacts))
 
     hb_dir = out_dir / "homebrew"
     hb_dir.mkdir(parents=True, exist_ok=True)

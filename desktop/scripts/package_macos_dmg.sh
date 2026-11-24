@@ -83,11 +83,22 @@ fi
 
 if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     echo "[INFO] Signing DMG with Developer ID identity..."
-    codesign --force --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$OUT_DMG"
+    SIGN_ARGS=(--force --timestamp --sign "$APPLE_SIGNING_IDENTITY")
+    if [ -n "${APPLE_SIGNING_KEYCHAIN:-}" ]; then
+        SIGN_ARGS+=(--keychain "$APPLE_SIGNING_KEYCHAIN")
+    fi
+    codesign "${SIGN_ARGS[@]}" "$OUT_DMG"
     if [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
         echo "[INFO] Submitting DMG for Apple notarization..."
-        xcrun notarytool submit "$OUT_DMG" --keychain-profile "$APPLE_NOTARY_PROFILE" --wait
+        NOTARY_ARGS=(--keychain-profile "$APPLE_NOTARY_PROFILE" --wait)
+        if [ -n "${APPLE_SIGNING_KEYCHAIN:-}" ]; then
+            NOTARY_ARGS+=(--keychain "$APPLE_SIGNING_KEYCHAIN")
+        fi
+        xcrun notarytool submit "$OUT_DMG" "${NOTARY_ARGS[@]}"
         xcrun stapler staple "$OUT_DMG"
+        xcrun stapler validate "$OUT_DMG"
+        codesign --verify --strict --verbose=2 "$OUT_DMG"
+        spctl --assess --type open --context context:primary-signature --verbose=4 "$OUT_DMG"
     fi
 fi
 
@@ -99,6 +110,9 @@ else
 fi
 MOUNTED=1
 codesign --verify --deep --strict --verbose=2 "$VERIFY_MNT/Lixity.app"
+if [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
+    xcrun stapler validate "$VERIFY_MNT/Lixity.app"
+fi
 cmp "$INSTALL_GUIDE" "$VERIFY_MNT/$INSTALL_GUIDE_NAME"
 if [ $# -eq 3 ]; then
     "$3" "$SCRIPT_DIR/smoke_desktop_runtime.py" "$VERIFY_MNT/Lixity.app/Contents/Resources/runtime"

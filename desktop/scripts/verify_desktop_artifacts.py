@@ -13,7 +13,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+if __package__:
+    from .windows_artifact_signing import verify_signature
+else:
+    from windows_artifact_signing import verify_signature
+
 ARTIFACT_SCHEMA = "lixity-desktop-artifacts/1"
+DESKTOP_CHECKSUMS = "SHA256SUMS-desktop.txt"
+PUBLIC_INSTALLER_FORMATS = frozenset({
+    ("aarch64-apple-darwin", "macos-dmg"),
+    ("x86_64-apple-darwin", "macos-dmg"),
+    ("x86_64-pc-windows-msvc", "windows-nsis"),
+    ("x86_64-pc-windows-msvc", "windows-msi"),
+    ("x86_64-unknown-linux-gnu", "linux-deb"),
+    ("x86_64-unknown-linux-gnu", "linux-appimage"),
+})
+PUBLIC_INSTALLER_MANIFESTS = frozenset(
+    f"desktop-artifacts-{target}.json" for target, _ in PUBLIC_INSTALLER_FORMATS
+)
+PUBLIC_RELEASE_TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
 # Map Tauri's top-level bundle output subdirectories to (suffix, artifact kind).
 # Scanning only depth-1 entries under these known directories avoids descending
 # into unpacked app trees (e.g. macos/Lixity.app or appimage/Lixity.AppDir).
@@ -35,6 +53,16 @@ class DesktopArtifact:
     filename: str
     size: int
     sha256: str
+
+
+def desktop_checksums(artifacts: tuple[DesktopArtifact, ...]) -> bytes:
+    """Return the combined checksum file for the given verified inventory."""
+    return "".join(f"{artifact.sha256}  {artifact.filename}\n" for artifact in artifacts).encode("ascii")
+
+
+def public_installer_filename_pattern(tag: str) -> re.Pattern[str]:
+    """Match safe installer filenames for the exact public release version."""
+    return re.compile(rf"Lixity[_-]{re.escape(tag[1:])}[_-][A-Za-z0-9_.-]+")
 
 
 def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
@@ -131,11 +159,11 @@ def verify_container_magic(path: Path, kind: str) -> None:
         raise ValueError(f"{path.name}: missing UDIF koly trailer or compressed DMG header")
 
 
-def collect_artifacts(bundle_dir: Path) -> list[dict[str, Any]]:
+def collect_artifacts(bundle_dir: Path, *, windows_signtool: Path | None = None) -> list[dict[str, Any]]:
     if not bundle_dir.is_dir():
         raise FileNotFoundError(f"Bundle directory does not exist: {bundle_dir}")
 
-    found: list[dict[str, Any]] = []
+    files: list[tuple[Path, str]] = []
     for subdir_name, (suffix, kind) in sorted(INSTALLER_SUBDIRS.items()):
         subdir = bundle_dir / subdir_name
         if not subdir.is_dir():
@@ -146,16 +174,19 @@ def collect_artifacts(bundle_dir: Path) -> list[dict[str, Any]]:
             if not path.name.endswith(suffix):
                 continue
             verify_container_magic(path, kind)
-            found.append(
-                {
-                    "filename": path.name,
-                    "relative_path": path.relative_to(bundle_dir).as_posix(),
-                    "kind": kind,
-                    "bytes": path.stat().st_size,
-                    "sha256": sha256_file(path),
-                }
-            )
-    return found
+            if windows_signtool is not None and kind.startswith("windows-"):
+                verify_signature(windows_signtool, path)
+            files.append((path, kind))
+    return [
+        {
+            "filename": path.name,
+            "relative_path": path.relative_to(bundle_dir).as_posix(),
+            "kind": kind,
+            "bytes": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+        for path, kind in files
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -188,10 +219,15 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional destination directory to copy ONLY the verified top-level installer files",
     )
+    parser.add_argument(
+        "--windows-signtool",
+        type=Path,
+        help="Require timestamped Windows installer signatures using this SDK SignTool executable",
+    )
     args = parser.parse_args(argv)
 
     bundle_dir = args.bundle_dir.resolve()
-    artifacts = collect_artifacts(bundle_dir)
+    artifacts = collect_artifacts(bundle_dir, windows_signtool=args.windows_signtool)
     if not artifacts:
         raise SystemExit(f"No native installer artifacts found under {bundle_dir}")
 

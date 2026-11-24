@@ -148,6 +148,25 @@ def test_publication_permissions_and_serialization_are_job_scoped():
     assert "persist-credentials: false" in publish
 
 
+def test_desktop_publication_qualifies_exact_run_before_the_combined_draft():
+    release = workflow("release.yml")
+    publish = job(release, "publish")
+    assert "vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG" in publish
+    assert '.head_branch == "main" and .head_sha == $sha' in publish
+    assert '.path == ".github/workflows/desktop-release.yml"' in publish
+    assert "lixity-desktop-release-bundle" in publish
+    stage = publish.index("scripts/release_channels.py stage-desktop")
+    draft = publish.index("Create draft release with artifacts")
+    verify = publish.index("scripts/release_channels.py verify-draft")
+    promote = publish.index("gh release edit")
+    assert stage < draft < verify < promote
+    assert '--require-desktop --desktop-dist dist-desktop' in publish
+    assert "if [[ -d dist-desktop ]]; then echo 'dist-desktop/*'; fi" in publish
+    pypi = job(release, "pypi")
+    assert "--dist dist --python-only" in pypi
+    assert "dist-desktop" not in pypi
+
+
 def test_browser_release_gate_uses_the_shared_full_suite_command():
     source = workflow("browser.yml")
     assert "github.event_name == 'workflow_dispatch' && inputs.suites || ''" in source

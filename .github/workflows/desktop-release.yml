@@ -1,11 +1,18 @@
 name: desktop-release
 on:
   workflow_dispatch:
+    inputs:
+      notarize_macos:
+        description: Sign and notarize macOS candidates with Apple Developer ID
+        type: boolean
+        default: false
+      sign_windows:
+        description: Sign Windows candidates with Azure Artifact Signing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 
 concurrency:
   group: desktop-release-${{ github.ref }}
@@ -31,6 +38,8 @@ jobs:
   build-installers:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    env:
+      TAURI_CLI_VERSION: "2.12.6"
     strategy:
       fail-fast: false
       matrix:
@@ -60,6 +69,31 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Prepare Apple Developer ID signing
+        if: runner.os == 'macOS' && inputs.notarize_macos
+        id: apple-signing
+        shell: bash
+        env:
+          APPLE_DEVELOPER_ID_P12_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_P12_BASE64 }}
+          APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+          APPLE_NOTARY_KEY_P8_BASE64: ${{ secrets.APPLE_NOTARY_KEY_P8_BASE64 }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        run: bash desktop/scripts/prepare_macos_signing.sh
+
+      - name: Prepare Azure Artifact Signing
+        if: runner.os == 'Windows' && inputs.sign_windows
+        id: azure-signing
+        shell: pwsh
+        env:
+          LIXITY_AZURE_SIGNING_ENDPOINT: ${{ vars.LIXITY_AZURE_SIGNING_ENDPOINT }}
+          LIXITY_AZURE_SIGNING_ACCOUNT: ${{ vars.LIXITY_AZURE_SIGNING_ACCOUNT }}
+          LIXITY_AZURE_SIGNING_PROFILE: ${{ vars.LIXITY_AZURE_SIGNING_PROFILE }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: python desktop/scripts/windows_artifact_signing.py prepare
+
       - name: Install Linux desktop build and packaging dependencies
         if: runner.os == 'Linux'
         run: |
@@ -87,43 +121,97 @@ jobs:
             --output desktop/build/runtime/current
           python desktop/scripts/smoke_desktop_runtime.py desktop/build/runtime/current
 
-      - name: Test, lint and bundle native installers
+      - name: Test, lint and build native bundles
         working-directory: desktop
         shell: bash
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           NO_STRIP: "true"
-          LIXITY_APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          LIXITY_APPLE_NOTARY_PROFILE: ${{ secrets.APPLE_NOTARY_PROFILE }}
+          LIXITY_DESKTOP_BUILD_REVISION: ${{ github.sha }}
+          SIGN_WINDOWS: ${{ inputs.sign_windows }}
         run: |
           cargo test --locked --manifest-path Cargo.toml --all-targets
           cargo clippy --locked --manifest-path Cargo.toml --all-targets -- -D warnings
-          npx --yes @tauri-apps/cli@2 build --bundles "${{ matrix.bundles }}" -- --locked
-          if [ "${{ runner.os }}" = "macOS" ] && [ -d "target/release/bundle/macos/Lixity.app" ]; then
-            test -x target/release/bundle/macos/Lixity.app/Contents/Resources/runtime/python/bin/python3.12
-            if [ -n "${LIXITY_APPLE_SIGNING_IDENTITY:-}" ]; then
-              # The dedicated signing scripts handle the app and the disk image.
-              export APPLE_SIGNING_IDENTITY="$LIXITY_APPLE_SIGNING_IDENTITY"
-              export APPLE_NOTARY_PROFILE="${LIXITY_APPLE_NOTARY_PROFILE:-}"
-              bash scripts/sign_macos_bundle.sh target/release/bundle/macos/Lixity.app
-            else
-              bash scripts/sign_macos_bundle.sh --adhoc target/release/bundle/macos/Lixity.app
-            fi
-            VERSION="$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["version"])')"
-            TARGET="${{ matrix.target }}"
-            DMG_ARCH="aarch64"
-            case "$TARGET" in
-              x86_64-*) DMG_ARCH="x64" ;;
-            esac
-            bash scripts/package_macos_dmg.sh \
-              target/release/bundle/macos/Lixity.app \
-              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg" python
+          bundle_args=(--bundles "${{ matrix.bundles }}")
+          if [ "${{ runner.os }}" = macOS ]; then
+            bundle_args+=(--no-sign)
+          elif [ "${{ runner.os }}" = Windows ] && [ "$SIGN_WINDOWS" = true ]; then
+            bundle_args=(--no-bundle)
+          fi
+          npx --yes "@tauri-apps/cli@$TAURI_CLI_VERSION" build "${bundle_args[@]}" -- --locked
+
+      - name: Bundle and sign Windows installers
+        if: runner.os == 'Windows' && inputs.sign_windows
+        working-directory: desktop
+        shell: pwsh
+        env:
+          TAURI_SIGNING_CONFIG: ${{ steps.azure-signing.outputs.config }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          if (-not (Test-Path -LiteralPath $env:TAURI_SIGNING_CONFIG -PathType Leaf)) {
+            throw "Missing Azure Artifact Signing configuration"
+          }
+          npx --yes "@tauri-apps/cli@$env:TAURI_CLI_VERSION" bundle --bundles "${{ matrix.bundles }}" --config "$env:TAURI_SIGNING_CONFIG"
+
+      - name: Sign and package the macOS app
+        if: runner.os == 'macOS'
+        working-directory: desktop
+        shell: bash
+        env:
+          NOTARIZE_MACOS: ${{ inputs.notarize_macos }}
+          APPLE_SIGNING_IDENTITY: ${{ steps.apple-signing.outputs.identity }}
+          APPLE_SIGNING_KEYCHAIN: ${{ steps.apple-signing.outputs.keychain }}
+          APPLE_NOTARY_PROFILE: ${{ steps.apple-signing.outputs.profile }}
+        run: |
+          app=target/release/bundle/macos/Lixity.app
+          test -x "$app/Contents/Resources/runtime/python/bin/python3.12"
+          if [ "$NOTARIZE_MACOS" = true ]; then
+            : "${APPLE_SIGNING_IDENTITY:?Missing Developer ID identity}"
+            : "${APPLE_SIGNING_KEYCHAIN:?Missing Developer ID keychain}"
+            : "${APPLE_NOTARY_PROFILE:?Missing notarization profile}"
+            bash scripts/sign_macos_bundle.sh "$app"
+          else
+            bash scripts/sign_macos_bundle.sh --adhoc "$app"
+          fi
+          VERSION="$(python -c 'import json; print(json.load(open("src-tauri/tauri.conf.json"))["version"])')"
+          TARGET="${{ matrix.target }}"
+          DMG_ARCH="aarch64"
+          case "$TARGET" in
+            x86_64-*) DMG_ARCH="x64" ;;
+          esac
+          bash scripts/package_macos_dmg.sh "$app" \
+            "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg" python
+
+      - name: Remove the temporary signing keychain
+        if: always() && runner.os == 'macOS' && inputs.notarize_macos
+        shell: bash
+        env:
+          SIGNING_KEYCHAIN: ${{ steps.apple-signing.outputs.keychain }}
+        run: |
+          if [ -n "$SIGNING_KEYCHAIN" ]; then
+            security delete-keychain "$SIGNING_KEYCHAIN"
+          fi
+
+      - name: Verify native installer files
+        working-directory: desktop
+        shell: bash
+        env:
+          SIGN_WINDOWS: ${{ inputs.sign_windows }}
+          WINDOWS_SIGNTOOL: ${{ steps.azure-signing.outputs.signtool }}
+        run: |
+          signature_args=()
+          if [ "${{ runner.os }}" = Windows ] && [ "$SIGN_WINDOWS" = true ]; then
+            : "${WINDOWS_SIGNTOOL:?Missing Windows SDK SignTool executable}"
+            signature_args=(--windows-signtool "$WINDOWS_SIGNTOOL")
           fi
           mkdir -p build/installers
           python scripts/verify_desktop_artifacts.py \
             target/release/bundle \
             --target "${{ matrix.target }}" \
             ${{ matrix.expect_args }} \
+            "${signature_args[@]}" \
             --out-dir build/installers \
             --copy-to build/installers
 
@@ -139,6 +227,10 @@ jobs:
     needs: [rust-supply-chain, build-installers]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -176,7 +268,7 @@ jobs:
             dist-desktop/desktop-artifacts-*.json
             dist-desktop/SHA256SUMS-desktop.txt
 
-      - name: Upload combined release-ready desktop installer bundle
+      - name: Upload combined desktop installer bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: lixity-desktop-release-bundle

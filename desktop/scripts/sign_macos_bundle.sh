@@ -34,6 +34,9 @@ else
         exit 1
     fi
     SIGN_FLAGS=(--force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY")
+    if [ -n "${APPLE_SIGNING_KEYCHAIN:-}" ]; then
+        SIGN_FLAGS+=(--keychain "$APPLE_SIGNING_KEYCHAIN")
+    fi
 fi
 
 echo "[1/3] Signing bundled Mach-O libraries and Python executables..."
@@ -52,11 +55,16 @@ echo "[3/3] Verifying signature integrity..."
 codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 
 if [ "$ADHOC" -eq 0 ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
-    ZIP_TMP="$(mktemp -t lixity-notary).zip"
-    trap 'rm -f "$ZIP_TMP"' EXIT
-    ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_TMP"
-    xcrun notarytool submit "$ZIP_TMP" --keychain-profile "$APPLE_NOTARY_PROFILE" --wait
+    ZIP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/lixity-notary.XXXXXX")"
+    trap 'rm -rf "$ZIP_DIR"' EXIT
+    NOTARY_ARGS=(--keychain-profile "$APPLE_NOTARY_PROFILE" --wait)
+    if [ -n "${APPLE_SIGNING_KEYCHAIN:-}" ]; then
+        NOTARY_ARGS+=(--keychain "$APPLE_SIGNING_KEYCHAIN")
+    fi
+    ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_DIR/Lixity.zip"
+    xcrun notarytool submit "$ZIP_DIR/Lixity.zip" "${NOTARY_ARGS[@]}"
     xcrun stapler staple "$APP_BUNDLE"
+    xcrun stapler validate "$APP_BUNDLE"
     spctl --assess --type execute --verbose=4 "$APP_BUNDLE"
     echo "[OK] Signed, notarized, stapled and verified: $APP_BUNDLE"
 else

@@ -6,9 +6,18 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from desktop.scripts.qualify_desktop_release import QUALIFICATION_FILE, load_qualified_artifacts
+from desktop.scripts.verify_desktop_artifacts import (
+    DESKTOP_CHECKSUMS,
+    PUBLIC_RELEASE_TAG,
+    public_installer_filename_pattern,
+)
 
 if TYPE_CHECKING:
     from desktop.scripts.verify_desktop_artifacts import DesktopArtifact
@@ -19,8 +28,8 @@ TEST_BUILDS = "https://github.com/mfahsold/lixity/blob/main/desktop/README.md#do
 CATALOG = Path("docs/desktop-downloads.json")
 GUIDE = Path("docs/guides/installation.html")
 SCHEMA = "lixity-desktop-downloads/1"
-CHECKSUMS = "SHA256SUMS-desktop.txt"
-TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+CHECKSUMS = DESKTOP_CHECKSUMS
+TAG = PUBLIC_RELEASE_TAG
 SHA256 = re.compile(r"[0-9a-f]{64}")
 DOWNLOAD_BLOCK = re.compile(r"(<!-- desktop-downloads:start -->\n).*?(\n<!-- desktop-downloads:end -->)", re.S)
 
@@ -45,7 +54,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         return
     if not isinstance(tag, str) or not TAG.fullmatch(tag):
         raise ValueError("Expected a stable desktop release tag")
-    filename_pattern = re.compile(rf"Lixity[_-]{re.escape(tag[1:])}[_-][A-Za-z0-9_.-]+")
+    filename_pattern = public_installer_filename_pattern(tag)
     pairs: set[tuple[str, str]] = set()
     names: set[str] = set()
     for asset in installers:
@@ -66,13 +75,14 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
 
 
 def record_catalog(
-    release: dict[str, Any], artifacts: Iterable[DesktopArtifact], checksums: bytes,
+    release: dict[str, Any], artifacts: Iterable[DesktopArtifact], checksums: bytes, qualification: bytes,
 ) -> dict[str, Any]:
     """Approve exact installer bytes attached to the selected public GitHub release."""
     tag = release.get("tag_name")
     if (not isinstance(tag, str) or not TAG.fullmatch(tag)
             or release.get("html_url") != f"{RELEASES}/tag/{tag}"
             or release.get("draft") is not False or release.get("prerelease") is not False
+            or release.get("immutable") is not True
             or not release.get("published_at")):
         raise ValueError("Expected a public stable Lixity GitHub release")
     public = {entry["name"]: entry for entry in release["assets"]}
@@ -96,6 +106,7 @@ def record_catalog(
     if len(lines) != len(expected_lines) or set(lines) != expected_lines:
         raise ValueError("The published checksum list must describe the verified desktop installers")
     verify_asset(CHECKSUMS, len(checksums), hashlib.sha256(checksums).hexdigest())
+    verify_asset(QUALIFICATION_FILE, len(qualification), hashlib.sha256(qualification).hexdigest())
     return catalog
 
 
@@ -138,17 +149,19 @@ def build(*, check_only: bool, root: Path) -> list[str]:
 
 
 def main() -> None:
-    from desktop.scripts.verify_desktop_artifacts import load_verified_artifacts
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-info", type=Path, required=True, help="GitHub REST release JSON")
     parser.add_argument("--artifacts-dir", type=Path, required=True, help="Verified flattened installer artifacts")
+    parser.add_argument("--source-sha", required=True, help="Commit verified for the immutable release")
     parser.add_argument("--output", type=Path, default=ROOT / CATALOG, help="Reviewed desktop download catalog")
     args = parser.parse_args()
     try:
         release = json.loads(args.release_info.read_text(encoding="utf-8"))
-        catalog = record_catalog(release, load_verified_artifacts(args.artifacts_dir),
-                                 (args.artifacts_dir / CHECKSUMS).read_bytes())
+        qualification = args.artifacts_dir / QUALIFICATION_FILE
+        artifacts = load_qualified_artifacts(args.artifacts_dir, qualification, tag=release["tag_name"],
+                                             source_sha=args.source_sha)
+        catalog = record_catalog(release, artifacts, (args.artifacts_dir / CHECKSUMS).read_bytes(),
+                                 qualification.read_bytes())
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.error(str(exc))
     args.output.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")

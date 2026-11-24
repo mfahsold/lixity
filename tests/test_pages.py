@@ -43,12 +43,16 @@ class TestDesktopDownloads(unittest.TestCase):
 
         checksum_asset = published_asset(desktop_downloads.CHECKSUMS, len(checksums),
                                          hashlib.sha256(checksums).hexdigest())
+        qualification = b"qualification receipt fixture"
+        receipt_asset = published_asset(desktop_downloads.QUALIFICATION_FILE, len(qualification),
+                                        hashlib.sha256(qualification).hexdigest())
         release = {"tag_name": tag, "html_url": f"{base}/tag/{tag}", "draft": False, "prerelease": False,
+                   "immutable": True,
                    "published_at": "2026-01-01T00:00:00Z", "assets": [
                        *(published_asset(asset.filename, asset.size, asset.sha256) for asset in artifacts),
-                       checksum_asset,
+                       checksum_asset, receipt_asset,
                    ]}
-        catalog = desktop_downloads.record_catalog(release, artifacts, checksums)
+        catalog = desktop_downloads.record_catalog(release, artifacts, checksums, qualification)
         rendered = desktop_downloads.render(catalog)
         for asset in artifacts:
             self.assertIn(f'href="{base}/download/{tag}/{asset.filename}"', rendered)
@@ -61,14 +65,16 @@ class TestDesktopDownloads(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid or duplicate desktop installer"):
             desktop_downloads.validate_catalog(catalog_with_old_installer)
         with self.assertRaisesRegex(ValueError, "qualified installer formats"):
-            desktop_downloads.record_catalog(release, artifacts[:-1], checksums)
+            desktop_downloads.record_catalog(release, artifacts[:-1], checksums, qualification)
         with self.assertRaisesRegex(ValueError, "public stable"):
-            desktop_downloads.record_catalog({**release, "prerelease": True}, artifacts, checksums)
+            desktop_downloads.record_catalog({**release, "prerelease": True}, artifacts, checksums, qualification)
         with self.assertRaisesRegex(ValueError, "published checksum list"):
-            desktop_downloads.record_catalog(release, artifacts, checksums + checksums)
+            desktop_downloads.record_catalog(release, artifacts, checksums + checksums, qualification)
+        with self.assertRaisesRegex(ValueError, "Public release asset differs .*desktop-qualification"):
+            desktop_downloads.record_catalog(release, artifacts, checksums, b"replaced qualification")
         checksum_asset["digest"] = "sha256:" + "0" * 64
         with self.assertRaisesRegex(ValueError, "Public release asset differs"):
-            desktop_downloads.record_catalog(release, artifacts, checksums)
+            desktop_downloads.record_catalog(release, artifacts, checksums, qualification)
 
     def test_empty_catalog_and_platform_anchors_are_rendered_without_native_downloads(self):
         catalog = {"schema_version": desktop_downloads.SCHEMA, "tag": None, "installers": []}

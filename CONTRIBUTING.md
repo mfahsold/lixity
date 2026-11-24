@@ -361,12 +361,18 @@ remain fixed. Prepare and review release notes before tagging. Corrected code or
 artifacts belong in a new patch release, preserving the earlier checksums and
 provenance.
 
-The desktop build workflow produces qualification artifacts. The current
-tag workflow verifies and ships the Python package. The first public desktop
-release requires qualification of the native installers and a reviewed extension
-of draft and public release verification before the release becomes immutable.
-Follow the [desktop maintainer guide](desktop/README.md#public-desktop-downloads)
-to record the exact published installer set for Pages.
+The tag workflow always verifies the Python package. To include desktop
+installers for an upcoming tag, qualify a single desktop workflow run from
+the exact release commit on `main`. Set `DESKTOP_RELEASE_TAG`,
+`DESKTOP_RELEASE_RUN_ID` and `DESKTOP_RELEASE_QUALIFICATION` before pushing
+the tag. The first variable selects the tag, the second identifies the
+completed run, and the third contains its reviewed qualification JSON.
+Missing or mismatched installer evidence stops the selected release before
+publication. The workflow verifies the hosted desktop build attestations and
+uploads the qualified files to the same draft as the Python package. It
+verifies the draft and the immutable release against those bytes. PyPI receives
+the wheel and sdist from the separate Python directory.
+[Desktop qualification and catalog procedure](desktop/README.md#public-desktop-downloads)
 
 If a tag-triggered run fails, check the workflow, the remote tag target, the
 GitHub release and PyPI publication status before deciding how to recover.

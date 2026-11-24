@@ -14,6 +14,9 @@ from pathlib import Path
 
 import pytest
 
+from desktop.scripts import qualify_desktop_release as qualification
+from desktop.scripts import verify_desktop_artifacts as desktop
+
 ROOT = Path(__file__).resolve().parents[1]
 TAG = "v0.3.0"
 SHA = "a" * 40
@@ -67,6 +70,41 @@ def metadata(dist):
                 for i, path in enumerate(sorted(dist.iterdir()), 1)]}
 
 
+@pytest.fixture
+def desktop_candidate(tmp_path):
+    bundle = tmp_path / "installer-workflow"
+    version = TAG[1:]
+    magic = {
+        "macos-dmg": ("dmg", ".dmg", b"x\x01"),
+        "windows-msi": ("msi", ".msi", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"),
+        "windows-nsis": ("nsis", ".exe", b"MZ"),
+        "linux-deb": ("deb", ".deb", b"!<arch>\n"),
+        "linux-appimage": ("appimage", ".AppImage", b"\x7fELF"),
+    }
+    for target in sorted({target for target, _ in desktop.PUBLIC_INSTALLER_FORMATS}):
+        base = tmp_path / target
+        for index, (owner, kind) in enumerate(sorted(desktop.PUBLIC_INSTALLER_FORMATS)):
+            if owner == target:
+                directory, suffix, prefix = magic[kind]
+                path = base / directory / f"Lixity_{version}_{index}{suffix}"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(prefix.ljust(512, b"\0"))
+        assert desktop.main([str(base), "--target", target, "--out-dir", str(bundle),
+                             "--copy-to", str(bundle)]) == 0
+    (bundle / desktop.DESKTOP_CHECKSUMS).write_bytes(
+        desktop.desktop_checksums(desktop.load_verified_artifacts(bundle)),
+    )
+    receipt = qualification.qualification_template(bundle, tag=TAG, source_sha=SHA)
+    receipt["reviewed_by"] = "Synthetic reviewer"
+    for entry in receipt["installers"].values():
+        entry["checks"] = dict.fromkeys(entry["checks"], True)
+        entry["os"] = "Synthetic clean VM"
+        entry["evidence"] = "Synthetic fixture evidence"
+    review = tmp_path / qualification.QUALIFICATION_FILE
+    review.write_text(json.dumps(receipt))
+    return bundle, review
+
+
 class Responses:
     """Exercise HTTP classification and byte limits without external requests."""
 
@@ -109,6 +147,50 @@ def fake_git(monkeypatch, channels, sha=SHA):
         return original(argv, **kwargs)
 
     monkeypatch.setattr(channels.subprocess, "run", run)
+
+
+def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
+    channels, candidate, desktop_candidate, monkeypatch, tmp_path,
+):
+    root, dist = candidate
+    installers, review = desktop_candidate
+    fake_git(monkeypatch, channels)
+    calls = []
+    monkeypatch.setattr(
+        channels, "verify_attestations",
+        lambda paths, repo, tag, sha, **flags: calls.append(({p.name for p in paths}, flags)),
+    )
+    staged = tmp_path / "staged-desktop"
+    receipt = json.loads(review.read_bytes())
+    review.write_text(json.dumps({**receipt, "source_sha": "b" * 40}))
+    with pytest.raises(ValueError, match="different release tag or source"):
+        channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)
+    assert not staged.exists()
+    review.write_text(json.dumps(receipt))
+    assert channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)["installer_count"] == 6
+    assert calls[-1][1] == {"desktop": True}
+    assert channels.QUALIFICATION_FILE not in calls[-1][0]
+
+    release = metadata(dist)
+    client, opener = client_for(channels, dist, release=release)
+    with pytest.raises(ValueError, match="requires the qualified desktop installer set"):
+        channels.verify_github(root, TAG, SHA, REPO, dist, client, require_desktop=True)
+    release["prerelease"] = False
+    release["assets"].extend(metadata(staged)["assets"])
+    for path in staged.iterdir():
+        opener.values[f"https://github.com/{REPO}/releases/download/{TAG}/{path.name}"] = path.read_bytes()
+
+    release["draft"], release["immutable"] = True, False
+    assert channels.verify_github(root, TAG, SHA, REPO, dist, client, draft=True,
+                                  require_desktop=True, desktop_dist=staged)["state"] == "draft"
+    release["draft"], release["immutable"] = False, True
+    result = channels.recover(root, TAG, SHA, REPO, tmp_path / "recovered", client, include_digests=True)
+    assert set(result["digests"]) == {path.name for path in (*dist.iterdir(), *staged.iterdir())}
+    assert {path.name for path in (tmp_path / "recovered").iterdir()} == {path.name for path in dist.iterdir()}
+    review_asset = next(item for item in release["assets"] if item["name"] == channels.QUALIFICATION_FILE)
+    review_asset["digest"] = "sha256:" + "0" * 64
+    with pytest.raises(ValueError, match=r"digest differs for desktop-qualification\.json"):
+        channels.verify_github(root, TAG, SHA, REPO, dist, client, desktop_dist=staged)
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
@@ -277,6 +359,15 @@ def test_attestation_policy_pins_repository_workflow_source_tag_and_hosted_runne
         assert "--deny-self-hosted-runners" in command
         assert env is not None and "GIT_ASKPASS" not in env
         assert env["GIT_TERMINAL_PROMPT"] == "0"
+    commands.clear()
+    channels.verify_attestations([dist / "Lixity_0.3.0_aarch64.dmg"], REPO, TAG, SHA, desktop=True)
+    command = commands[0][0]
+    assert command[command.index("--source-ref") + 1] == "refs/heads/main"
+    assert command[command.index("--cert-identity") + 1] == (
+        "https://github.com/example/lixity/.github/workflows/desktop-release.yml@refs/heads/main")
+    assert command[command.index("--source-digest") + 1] == SHA
+    assert command[command.index("--signer-digest") + 1] == SHA
+    assert "--deny-self-hosted-runners" in command
     monkeypatch.setattr(channels.subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a[0], 1))
     with pytest.raises(ValueError, match="attestation"):
         channels.verify_attestations(sorted(dist.iterdir()), REPO, TAG, SHA)

@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      actions: read
       id-token: write
       attestations: write
     concurrency:
@@ -55,6 +56,7 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
+      DESKTOP_RELEASE_TAG: ${{ vars.DESKTOP_RELEASE_TAG }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -71,8 +73,10 @@ jobs:
       - name: Recover immutable published artifacts on a rerun
         if: steps.release_state.outputs.state == 'published'
         run: |
+          args=()
+          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop); fi
           python scripts/release_channels.py recover --root . --tag "$RELEASE_TAG" \
-            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
       - name: Fetch the verified release candidate from this run
         if: steps.release_state.outputs.state != 'published'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -98,13 +102,43 @@ jobs:
         with:
           subject-checksums: dist/SHA256SUMS
           sbom-path: .release-candidate/lixity-release.cdx.json
+      - name: Stage qualified desktop assets from the reviewed candidate
+        if: steps.release_state.outputs.state != 'published' && vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG
+        env:
+          DESKTOP_RUN_ID: ${{ vars.DESKTOP_RELEASE_RUN_ID }}
+          DESKTOP_QUALIFICATION: ${{ vars.DESKTOP_RELEASE_QUALIFICATION }}
+        run: |
+          [[ "$DESKTOP_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Set DESKTOP_RELEASE_RUN_ID."; exit 1; }
+          test -n "$DESKTOP_QUALIFICATION" || { echo "::error::Set DESKTOP_RELEASE_QUALIFICATION."; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DESKTOP_RUN_ID" |
+            jq -e --arg sha "$GITHUB_SHA" '
+              .path == ".github/workflows/desktop-release.yml" and
+              .event == "workflow_dispatch" and .conclusion == "success" and
+              .head_branch == "main" and .head_sha == $sha' >/dev/null
+          gh run download "$DESKTOP_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name lixity-desktop-release-bundle --dir "$RUNNER_TEMP/desktop-candidate"
+          printf '%s\n' "$DESKTOP_QUALIFICATION" > "$RUNNER_TEMP/desktop-qualification.json"
+          python scripts/release_channels.py stage-desktop --root . --tag "$RELEASE_TAG" \
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" \
+            --artifacts-dir "$RUNNER_TEMP/desktop-candidate" \
+            --qualification "$RUNNER_TEMP/desktop-qualification.json" --desktop-dist dist-desktop
+      - name: Select the asset files for the draft
+        if: steps.release_state.outputs.state != 'published'
+        id: release_files
+        run: |
+          {
+            echo 'files<<RELEASE_ASSETS'
+            echo 'dist/*'
+            if [[ -d dist-desktop ]]; then echo 'dist-desktop/*'; fi
+            echo 'RELEASE_ASSETS'
+          } >> "$GITHUB_OUTPUT"
       # Only unpublished drafts may be changed. Validate every uploaded digest
       # before publication locks the assets and tag permanently.
       - name: Create draft release with artifacts
         if: steps.release_state.outputs.state != 'published'
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
-          files: dist/*
+          files: ${{ steps.release_files.outputs.files }}
           fail_on_unmatched_files: true
           draft: true
           body_path: docs/releases/${{ github.ref_name }}.md
@@ -112,13 +146,18 @@ jobs:
       - name: Verify and publish the complete draft
         if: steps.release_state.outputs.state != 'published'
         run: |
+          args=()
+          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop --desktop-dist dist-desktop); fi
           python scripts/release_channels.py verify-draft --root . --tag "$RELEASE_TAG" \
-            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
       - name: Verify the immutable GitHub publication
         run: |
+          args=()
+          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop); fi
+          if [[ -d dist-desktop ]]; then args+=(--desktop-dist dist-desktop); fi
           python scripts/release_channels.py verify-github --root . --tag "$RELEASE_TAG" \
-            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
       - name: Stage the same verified artifacts for the PyPI job
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -181,7 +220,7 @@ jobs:
           RELEASE_SHA: ${{ steps.source.outputs.sha }}
         run: |
           python .release-tools/scripts/release_channels.py recover --root release-source --tag "$RELEASE_TAG" \
-            --expected-commit "$RELEASE_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
+            --expected-commit "$RELEASE_SHA" --repo "$GITHUB_REPOSITORY" --dist dist --python-only
       - name: Reconcile every existing PyPI filename and digest before staging missing files
         id: reconcile
         env:

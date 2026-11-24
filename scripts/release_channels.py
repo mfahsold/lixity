@@ -24,6 +24,17 @@ import check_release
 from build_public_site import LANGUAGES, page_path
 from make_videos import PUBLIC_VIDEO_FILES
 
+# Direct script calls in Actions start with scripts/ on the import path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from desktop.scripts.qualify_desktop_release import QUALIFICATION_FILE, load_qualified_artifacts
+from desktop.scripts.verify_desktop_artifacts import (
+    DESKTOP_CHECKSUMS,
+    INSTALLER_SUBDIRS,
+    PUBLIC_INSTALLER_MANIFESTS,
+    public_installer_filename_pattern,
+    sha256_file,
+)
+
 JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -74,6 +85,8 @@ _ATTESTATION_FLAGS = (
 _BASE_HOSTS = frozenset({
     "api.github.com", "github.com", "pypi.org", "files.pythonhosted.org", "zenodo.org",
 })
+DESKTOP_METADATA = PUBLIC_INSTALLER_MANIFESTS | {DESKTOP_CHECKSUMS, QUALIFICATION_FILE}
+DESKTOP_SUFFIXES = tuple(suffix for suffix, _ in INSTALLER_SUBDIRS.values())
 
 
 def resolve_gh_binary():
@@ -273,16 +286,26 @@ def published(release):
         raise ValueError("GitHub release must be immutable")
 
 
-def assets(release, repo, tag, *, draft=False):
-    names = {f"lixity-{tag[1:]}-py3-none-any.whl", f"lixity-{tag[1:]}.tar.gz", "SHA256SUMS"}
+def assets(release, repo, tag, *, draft=False, require_desktop=False):
+    python_names = _pypi_filenames(tag) | {"SHA256SUMS"}
     actual = release.get("assets")
-    if not isinstance(actual, list) or len(actual) != 3:
+    if not isinstance(actual, list):
+        raise ValueError("GitHub release asset list is unknown")
+    desktop = any(isinstance(asset, dict) and asset.get("name") == QUALIFICATION_FILE for asset in actual)
+    if require_desktop and not desktop:
+        raise ValueError("This release requires the qualified desktop installer set")
+    if desktop and release.get("prerelease") is not False:
+        raise ValueError("The qualified desktop installer set requires a stable release")
+    if not desktop and len(actual) != len(python_names):
         raise ValueError("GitHub release must contain exactly the wheel, sdist and SHA256SUMS")
+    installer_pattern = public_installer_filename_pattern(tag) if desktop else None
     result = {}
     for asset in actual:
-        if not isinstance(asset, dict) or asset.get("name") not in names:
+        name = asset.get("name") if isinstance(asset, dict) else None
+        if not isinstance(name, str) or (name not in python_names and not (
+                desktop and (name in DESKTOP_METADATA or (
+                    installer_pattern.fullmatch(name) and name.endswith(DESKTOP_SUFFIXES))))):
             raise ValueError("GitHub release has an unexpected asset")
-        name = asset["name"]
         digest = asset.get("digest")
         if name in result or asset.get("state") != "uploaded":
             raise ValueError("GitHub release has duplicate or incomplete assets")
@@ -299,21 +322,25 @@ def assets(release, repo, tag, *, draft=False):
         if url != expected_url and not (draft and isinstance(url, str) and draft_pattern.fullmatch(url)):
             raise ValueError("GitHub release asset URL differs from the selected release")
         result[name] = asset
-    if set(result) != names:
+    required = python_names | (DESKTOP_METADATA if desktop else set())
+    if not required <= result.keys():
         raise ValueError("GitHub release asset set is incomplete")
     return result
 
 
-def verify_attestations(paths, repo, tag, expected_commit):
+def verify_attestations(paths, repo, tag, expected_commit, *, desktop=False):
     """Require GitHub's signed workflow identity, tag/SHA and hosted runner."""
     gh_bin = resolve_gh_binary()
     sub_env = github_subprocess_env()
+    source_ref, workflow = ("refs/heads/main", "desktop-release.yml") if desktop else (
+        f"refs/tags/{tag}", "release.yml",
+    )
     for path in paths:
         command = [
             gh_bin, "attestation", "verify", str(path), "--repo", repo,
-            "--source-digest", expected_commit, "--source-ref", f"refs/tags/{tag}",
+            "--source-digest", expected_commit, "--source-ref", source_ref,
             "--signer-digest", expected_commit,
-            "--cert-identity", f"https://github.com/{repo}/.github/workflows/release.yml@refs/tags/{tag}",
+            "--cert-identity", f"https://github.com/{repo}/.github/workflows/{workflow}@{source_ref}",
             "--deny-self-hosted-runners",
         ]
         try:
@@ -327,21 +354,80 @@ def verify_attestations(paths, repo, tag, expected_commit):
             raise ValueError(f"attestation verification failed for {path.name}; a current gh CLI is required")
 
 
-def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False):
-    expected = assets(release, repo, tag, draft=draft)
-    check_release.verify_checksums(dist, tag[1:])
+def _qualified_desktop_names(directory, qualification, tag, expected_commit):
+    installers = load_qualified_artifacts(directory, qualification, tag=tag, source_sha=expected_commit)
+    return DESKTOP_METADATA | {asset.filename for asset in installers}
+
+
+def stage_desktop(root, tag, expected_commit, repo, artifacts_dir, qualification, destination):
+    """Stage only reviewed, attested files for the common GitHub Release draft."""
+    if not REPOSITORY.fullmatch(repo):
+        raise ValueError("repository must be owner/name")
+    check_release.source_version(root, tag)
+    _check_checkout_commit(root, expected_commit)
+    names = _qualified_desktop_names(artifacts_dir, qualification, tag, expected_commit)
+    empty_destination(destination)
+    with tempfile.TemporaryDirectory(prefix=".lixity-desktop-", dir=destination.parent) as scratch:
+        fresh = Path(scratch) / "desktop"
+        fresh.mkdir()
+        for name in sorted(names):
+            source = qualification if name == QUALIFICATION_FILE else artifacts_dir / name
+            shutil.copyfile(source, fresh / name)
+        _qualified_desktop_names(fresh, fresh / QUALIFICATION_FILE, tag, expected_commit)
+        verify_attestations([fresh / name for name in sorted(names - {QUALIFICATION_FILE})],
+                            repo, tag, expected_commit, desktop=True)
+        if destination.exists():
+            destination.rmdir()
+        os.replace(fresh, destination)
+    return {"state": "qualified", "installer_count": len(names - DESKTOP_METADATA),
+            "source_sha": expected_commit, "tag": tag}
+
+
+def _verify_asset_file(path, asset):
+    if (path.is_symlink() or not path.is_file() or path.stat().st_size != asset["size"]
+            or "sha256:" + sha256_file(path) != asset["digest"]):
+        raise ValueError(f"GitHub release digest differs for {path.name}")
+
+
+def _verify_desktop_files(directory, expected, tag, repo, expected_commit):
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("Desktop installer directory must be a regular directory")
     for name, asset in expected.items():
-        path = dist / name
-        if (path.stat().st_size != asset["size"]
-                or "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest() != asset["digest"]):
-            raise ValueError(f"GitHub release digest differs for {name}")
-    verify_attestations([dist / name for name in sorted(expected)], repo, tag, expected_commit)
+        _verify_asset_file(directory / name, asset)
+    names = _qualified_desktop_names(directory, directory / QUALIFICATION_FILE, tag, expected_commit)
+    if names != expected.keys():
+        raise ValueError("Desktop release listings and qualified files differ")
+    verify_attestations([directory / name for name in sorted(names - {QUALIFICATION_FILE})],
+                        repo, tag, expected_commit, desktop=True)
+
+
+def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False,
+                 require_desktop=False, desktop_dist=None, client=None, python_only=False):
+    expected = assets(release, repo, tag, draft=draft, require_desktop=require_desktop)
+    python_names = _pypi_filenames(tag) | {"SHA256SUMS"}
+    check_release.verify_checksums(dist, tag[1:])
+    for name in python_names:
+        _verify_asset_file(dist / name, expected[name])
+    verify_attestations([dist / name for name in sorted(python_names)], repo, tag, expected_commit)
     check_release.validate(root, dist, tag)
+    desktop_assets = {name: expected[name] for name in expected.keys() - python_names}
+    if desktop_assets and not python_only:
+        if desktop_dist is not None:
+            _verify_desktop_files(desktop_dist, desktop_assets, tag, repo, expected_commit)
+        elif draft or client is None:
+            raise ValueError("Desktop draft verification requires the staged installer directory")
+        else:
+            with tempfile.TemporaryDirectory(prefix="lixity-desktop-readback-") as scratch:
+                fresh = Path(scratch)
+                for name, asset in sorted(desktop_assets.items()):
+                    client.download(asset["browser_download_url"], fresh / name, asset["size"])
+                _verify_desktop_files(fresh, desktop_assets, tag, repo, expected_commit)
     return {name: asset["digest"].removeprefix("sha256:") for name, asset in expected.items()}
 
 
 def verify_github(root, tag, expected_commit, repo, dist, client, *,
-                  draft=False, include_digests=False):
+                  draft=False, include_digests=False, require_desktop=False,
+                  desktop_dist=None, python_only=False):
     identities(root, tag, expected_commit, repo, client)
     release = release_metadata(repo, tag, client, include_drafts=draft)
     if draft:
@@ -349,7 +435,9 @@ def verify_github(root, tag, expected_commit, repo, dist, client, *,
             raise ValueError("GitHub release must be an unpublished draft")
     else:
         published(release)
-    digests = verify_files(root, dist, tag, repo, expected_commit, release, draft=draft)
+    digests = verify_files(root, dist, tag, repo, expected_commit, release, draft=draft,
+                           require_desktop=require_desktop, desktop_dist=desktop_dist,
+                           client=client, python_only=python_only)
     return {"state": "draft" if draft else "published", "source_sha": expected_commit, "tag": tag,
             **({"digests": digests} if include_digests else {})}
 
@@ -360,18 +448,22 @@ def empty_destination(path):
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def recover(root, tag, expected_commit, repo, dist, client, *, include_digests=False):
+def recover(root, tag, expected_commit, repo, dist, client, *, include_digests=False,
+            require_desktop=False, python_only=False):
     identities(root, tag, expected_commit, repo, client)
     release = release_metadata(repo, tag, client)
     published(release)
-    expected = assets(release, repo, tag)
+    expected = assets(release, repo, tag, require_desktop=require_desktop)
+    python_names = _pypi_filenames(tag) | {"SHA256SUMS"}
     empty_destination(dist)
     with tempfile.TemporaryDirectory(prefix=".lixity-release-", dir=dist.parent) as scratch:
         fresh = Path(scratch) / "dist"
         fresh.mkdir()
-        for name, asset in sorted(expected.items()):
+        for name in sorted(python_names):
+            asset = expected[name]
             client.download(asset["browser_download_url"], fresh / name, asset["size"])
-        digests = verify_files(root, fresh, tag, repo, expected_commit, release)
+        digests = verify_files(root, fresh, tag, repo, expected_commit, release, client=client,
+                               require_desktop=require_desktop, python_only=python_only)
         if dist.exists():
             dist.rmdir()
         os.replace(fresh, dist)
@@ -410,7 +502,7 @@ def _pypi_release_files(dist, tag, client):
 
 
 def stage_pypi(root, tag, expected_commit, repo, dist, upload, client):
-    verify_github(root, tag, expected_commit, repo, dist, client)
+    verify_github(root, tag, expected_commit, repo, dist, client, python_only=True)
     published_files = _pypi_release_files(dist, tag, client)
     missing = sorted(_pypi_filenames(tag) - published_files.keys())
     empty_destination(upload)
@@ -435,7 +527,7 @@ def _wait_for_pypi(dist, tag, client):
 
 
 def verify_pypi(root, tag, expected_commit, repo, dist, client):
-    result = verify_github(root, tag, expected_commit, repo, dist, client)
+    result = verify_github(root, tag, expected_commit, repo, dist, client, python_only=True)
     _wait_for_pypi(dist, tag, client)
     return {**result, "state": "complete"}
 
@@ -633,12 +725,15 @@ def zenodo_status(repo, tag, client):
 def verify_release(
     root, tag, expected_commit, repo, dist, client, *,
     base_url=DEFAULT_PAGES_URL, check_zenodo=False, skip_pypi=False, skip_pages=False,
+    require_desktop=False,
 ):
     """Verify a GitHub release and its selected publication channels."""
     if not dist.exists() or not any(dist.iterdir()):
-        github = recover(root, tag, expected_commit, repo, dist, client, include_digests=True)
+        github = recover(root, tag, expected_commit, repo, dist, client, include_digests=True,
+                         require_desktop=require_desktop)
     else:
-        github = verify_github(root, tag, expected_commit, repo, dist, client, include_digests=True)
+        github = verify_github(root, tag, expected_commit, repo, dist, client, include_digests=True,
+                               require_desktop=require_desktop)
     result = {
         "state": "verified",
         "tag": tag,
@@ -669,13 +764,19 @@ def main():
     parser.add_argument(
         "command",
         choices=("inspect", "recover", "verify-github", "verify-draft", "stage-pypi",
-                 "verify-pypi", "doctor", "verify-pages", "verify-zenodo", "verify-release"),
+                 "verify-pypi", "doctor", "verify-pages", "verify-zenodo", "verify-release",
+                 "stage-desktop"),
     )
     parser.add_argument("--root", type=Path, help="Source checkout for local verification")
     parser.add_argument("--tag")
     parser.add_argument("--expected-commit")
     parser.add_argument("--repo", help="GitHub repository as owner/name")
     parser.add_argument("--dist", type=Path, default=Path("dist"))
+    parser.add_argument("--desktop-dist", type=Path, help="Separate directory for the reviewed desktop asset set")
+    parser.add_argument("--require-desktop", action="store_true", help="Reject a Python-only release")
+    parser.add_argument("--python-only", action="store_true", help="Recover only the artifacts required by PyPI")
+    parser.add_argument("--artifacts-dir", type=Path, help="Unpacked desktop release workflow bundle")
+    parser.add_argument("--qualification", type=Path, help="Reviewed desktop qualification receipt")
     parser.add_argument("--upload", type=Path, default=Path("upload"))
     parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
     parser.add_argument("--use-keyring", action="store_true",
@@ -698,6 +799,14 @@ def main():
         parser.error(f"--expected-commit is required for {args.command}")
     if args.command != "verify-release" and (args.skip_pypi or args.skip_pages):
         parser.error("--skip-pypi and --skip-pages apply only to verify-release")
+    if args.command == "stage-desktop" and not (args.artifacts_dir and args.qualification and args.desktop_dist):
+        parser.error("stage-desktop requires --artifacts-dir, --qualification and --desktop-dist")
+    if args.desktop_dist and args.command not in {"stage-desktop", "verify-draft", "verify-github"}:
+        parser.error("--desktop-dist applies to staging or checking GitHub desktop assets")
+    if args.require_desktop and args.command not in {"recover", "verify-draft", "verify-github", "verify-release"}:
+        parser.error("--require-desktop applies to GitHub release verification")
+    if args.python_only and (args.command != "recover" or args.require_desktop):
+        parser.error("--python-only is only for Python artifact recovery")
     if args.use_keyring:
         os.environ.pop("GH_TOKEN", None)
         os.environ.pop("GITHUB_TOKEN", None)
@@ -718,13 +827,17 @@ def main():
                 args.root, args.tag, args.expected_commit, args.repo, args.dist, client,
                 base_url=args.base_url, check_zenodo=args.check_zenodo,
                 skip_pypi=args.skip_pypi, skip_pages=args.skip_pages,
+                require_desktop=args.require_desktop,
             )
         else:
             common = (args.root, args.tag, args.expected_commit, args.repo)
             if args.command == "inspect":
                 result = inspect(*common, client)
             elif args.command == "recover":
-                result = recover(*common, args.dist, client)
+                result = recover(*common, args.dist, client, require_desktop=args.require_desktop,
+                                 python_only=args.python_only)
+            elif args.command == "stage-desktop":
+                result = stage_desktop(*common, args.artifacts_dir, args.qualification, args.desktop_dist)
             elif args.command == "stage-pypi":
                 result = stage_pypi(*common, args.dist, args.upload, client)
             elif args.command == "verify-pypi":
@@ -732,6 +845,7 @@ def main():
             else:
                 result = verify_github(
                     *common, args.dist, client, draft=args.command == "verify-draft",
+                    desktop_dist=args.desktop_dist, require_desktop=args.require_desktop,
                 )
         if args.github_output:
             with args.github_output.open("a", encoding="utf-8") as output:

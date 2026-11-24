@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import struct
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+import pytest
 
 try:
     import tomllib
@@ -170,6 +174,28 @@ def test_desktop_runtime_smoke_rejects_python_outside_the_bundle(tmp_path):
     )
     assert result.returncode != 0
     assert "Bundled Python executable resolves outside the runtime directory" in result.stderr
+
+
+def test_macos_signing_preflight_rejects_each_missing_credential_before_writing(tmp_path):
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("macOS signing preflight needs Bash")
+    credentials = dict.fromkeys((
+        "APPLE_DEVELOPER_ID_P12_BASE64", "APPLE_DEVELOPER_ID_P12_PASSWORD",
+        "APPLE_NOTARY_KEY_P8_BASE64", "APPLE_NOTARY_KEY_ID", "APPLE_NOTARY_ISSUER_ID",
+    ), "synthetic-fixture")
+    output = tmp_path / "output"
+    script = DESKTOP / "scripts" / "prepare_macos_signing.sh"
+    for missing in credentials:
+        env = {**os.environ, **credentials, "RUNNER_TEMP": str(tmp_path), "GITHUB_OUTPUT": str(output)}
+        env.pop(missing)
+        result = subprocess.run(  # noqa: S603 - fixed repository verification script
+            [bash, str(script)], env=env, capture_output=True, text=True, check=False, timeout=5,
+        )
+        assert result.returncode == 1
+        assert f"Missing GitHub secret {missing}" in result.stderr
+        assert "synthetic-fixture" not in result.stdout + result.stderr
+        assert not list(tmp_path.iterdir())
 
 
 def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files(tmp_path):

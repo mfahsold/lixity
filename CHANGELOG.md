@@ -48,6 +48,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the public installer catalog is empty, label test builds and link to the
   published browser app and CLI. Require installer filenames to match the
   verified release version.
+- Add opt-in Developer ID notarization on macOS and Azure Artifact Signing on Windows. Gate desktop
+  publication on exact installer bytes, hosted build attestations and a
+  per-installer qualification receipt. Verify the combined GitHub draft while
+  keeping PyPI's distribution set independent.
 - Explain how to update the desktop and CLI installations through their
   original installation channels.
 - Support verified local replacement of an installed macOS test build from

@@ -165,8 +165,9 @@ Chromium and browser WebKit tests cover the shared UI.
   steps sign the embedded app before building the disk image and smoke-test the
   runtime from the mounted image. The build uploads
   verified installers, checksums, Homebrew and WinGet manifests and build
-  provenance as workflow artifacts. Developer ID signing and notarization
-  require configured credentials.
+  provenance as workflow artifacts. Set `notarize_macos=true` on dispatch
+  for a Developer ID candidate. Both macOS jobs import the certificate into
+  an isolated runner keychain and verify app and DMG notarization.
   [Desktop release workflow](../.github/workflows/desktop-release.yml)
 
 ## Remaining work before distribution
@@ -182,29 +183,102 @@ Chromium and browser WebKit tests cover the shared UI.
 
 ### Public desktop downloads
 
-The [Pages installation guide](../docs/guides/installation.html#desktop) uses the
-reviewed catalog at `docs/desktop-downloads.json`. Its empty catalog directs
-readers to the published browser app while native builds are in testing.
-Use the verification matrix above for the same candidate on all four targets.
-The published v0.9.1 release has immutable Python assets. The first desktop
-release needs a new version. Before publishing it, extend the tag workflow's
-draft and public asset checks to verify the native installers and their
-checksum list alongside the Python artifacts. Then use the flattened
-workflow artifact directory with the per-target manifests and
-`SHA256SUMS-desktop.txt`. From the checkout root, record the public release:
+The [installation guide](../docs/guides/installation.html#desktop) reads
+`docs/desktop-downloads.json`. A public desktop release uses one reviewed set of
+installers and Python archives for the same commit. Prepare a new version
+following the [release procedure](../CONTRIBUTING.md#preparing-a-release).
+
+#### Configure macOS signing
+
+Set these credentials in GitHub Actions secrets before dispatching
+`desktop-release.yml` with `notarize_macos=true`.
+
+| Secret | Value |
+| --- | --- |
+| `APPLE_DEVELOPER_ID_P12_BASE64` | Base64 of the Developer ID Application certificate and private key exported as PKCS#12 |
+| `APPLE_DEVELOPER_ID_P12_PASSWORD` | Password protecting the PKCS#12 export |
+| `APPLE_NOTARY_KEY_P8_BASE64` | Base64 of the notarization API private key |
+| `APPLE_NOTARY_KEY_ID` and `APPLE_NOTARY_ISSUER_ID` | API key ID and issuer from App Store Connect |
+
+The signer must belong to the authorized Apple Developer team. The workflow
+removes the isolated keychain at the end of the job.
+[Developer ID](https://developer.apple.com/developer-id/) ·
+[Apple notarization](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution/)
+
+#### Configure Windows signing
+
+Use an Azure Artifact Signing account with a Public Trust certificate profile.
+Grant the Entra application the **Artifact Signing Certificate Profile Signer**
+role scoped to that certificate profile. Set the GitHub repository variables
+`LIXITY_AZURE_SIGNING_ENDPOINT`, `LIXITY_AZURE_SIGNING_ACCOUNT` and
+`LIXITY_AZURE_SIGNING_PROFILE`. Set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and
+`AZURE_CLIENT_SECRET` as Actions secrets for that application. Dispatch
+`desktop-release.yml` with `sign_windows=true`. Credentials are scoped to the
+opt-in Windows signing steps. Tauri invokes the signing command during
+bundling, and the workflow checks the timestamped Authenticode signatures
+before it records installer checksums.
+[Azure Artifact Signing setup](https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart) ·
+[Tauri Windows signing](https://v2.tauri.app/distribute/sign/windows/)
+
+#### Review and publish one candidate
+
+1. Dispatch the desktop build with `notarize_macos=true` and
+   `sign_windows=true` at the reviewed release commit on `main`. Download the
+   combined artifact from that exact successful run.
+   Set `release_tag`, `release_sha` and `desktop_run` to the prepared version,
+   full commit SHA and GitHub Actions run ID.
+
+   ```sh
+   gh run download "$desktop_run" --name lixity-desktop-release-bundle --dir desktop-candidate
+   python -m desktop.scripts.qualify_desktop_release --artifacts-dir desktop-candidate \
+     --tag "$release_tag" --source-sha "$release_sha" --template > desktop-qualification.json
+   ```
+
+2. Verify each exact installer on a fresh user environment. On macOS, check
+   Developer ID, the notarization ticket and Gatekeeper on both architectures.
+   On Windows, verify Authenticode on the installer and installed executable,
+   including the two MSI languages and the per-user EXE. On Linux, check Debian
+   package dependencies and run the AppImage without the CI extraction override.
+   Install, open a synthetic project, upgrade and roll back. Check that the
+   project and preferences survive each transition. Record the OS version and
+   the review evidence for each SHA-256 in the generated JSON.
+   [Windows signature verification](https://learn.microsoft.com/en-us/windows/win32/seccrypto/using-signtool-to-verify-a-file-signature)
+
+3. Run the same qualification and build-provenance checks used by the tag
+   workflow. The command stages the exact eligible files in an empty location.
+
+   ```sh
+   python scripts/release_channels.py stage-desktop --root . --tag "$release_tag" \
+     --expected-commit "$release_sha" --repo mfahsold/lixity \
+     --artifacts-dir desktop-candidate --qualification desktop-qualification.json \
+     --desktop-dist desktop-reviewed
+   ```
+
+4. Set `DESKTOP_RELEASE_TAG`, `DESKTOP_RELEASE_RUN_ID` and
+   `DESKTOP_RELEASE_QUALIFICATION` for the reviewed tag, run and JSON.
+   The qualification receipt becomes a public release asset, so use
+   publishable review notes and evidence references. Push the reviewed tag
+   through the regular release procedure. The workflow stages the same
+   installer bytes, validates the combined draft and verifies the immutable
+   release after publication.
+
+5. From the tagged checkout, verify the immutable release and record the
+   public catalog from the published bytes. Use a new download directory.
 
 ```sh
-gh api repos/mfahsold/lixity/releases/tags/vX.Y.Z > /tmp/lixity-release.json
-python -m scripts.desktop_downloads --release-info /tmp/lixity-release.json --artifacts-dir dist-desktop
+make release-verify RELEASE_TAG="$release_tag" RELEASE_VERIFY_ARGS=--require-desktop
+gh release download "$release_tag" --dir desktop-published
+gh api "repos/mfahsold/lixity/releases/tags/$release_tag" > desktop-release.json
+python -m scripts.desktop_downloads --release-info desktop-release.json \
+  --artifacts-dir desktop-published --source-sha "$release_sha"
 make docs-sync
 make docs-check
 ```
 
-The catalog tool compares the installers and checksum list with the attached
-GitHub assets by name, size and SHA-256. It expects a public stable release and
-all supported targets. Check platform signatures and attestations during
-release qualification. Review the catalog and generated install guide together
-before the authorized Pages deployment.
+The catalog tool compares the installers, checksum list and qualification
+receipt with the immutable GitHub assets. Review the catalog and generated
+installation guide together from the publishing branch. Follow the
+[Pages publication procedure](../CONTRIBUTING.md#publish-and-verify-pages).
 
 ### Update delivery
 
