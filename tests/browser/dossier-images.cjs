@@ -50,13 +50,15 @@ async function checkDiagramReadability(page) {
           return {width: bounds.width, height: bounds.height, intrinsicWidth: svg.viewBox.baseVal.width,
             minimumFont: Math.min(...fonts), viewportWidth: canvas.clientWidth, contentWidth: canvas.scrollWidth,
             inlinePadding: parseFloat(getComputedStyle(canvas).paddingLeft) + parseFloat(getComputedStyle(canvas).paddingRight),
-            left: outer.left, right: outer.right, diagramStart: bounds.left - viewport.left,
+            left: outer.left, right: outer.right, scrollLeft: canvas.scrollLeft,
+            // Measure the diagram at the scroll origin, even during keyboard scrolling.
+            diagramStart: bounds.left - viewport.left - canvas.clientLeft + canvas.scrollLeft,
             pageWidth: document.documentElement.scrollWidth};
         });
         await figure.screenshot({path: path.join(artifacts, `diagram-${name}-${theme}-${width}.png`)});
         assert.ok(Number.isFinite(metrics.minimumFont) && metrics.minimumFont >= 12, `${name} ${theme} ${width}px readable labels: ${JSON.stringify(metrics)}`);
         assert.ok(metrics.width >= metrics.intrinsicWidth * .98, `${name} retains Mermaid's intrinsic layout`);
-        assert.ok(metrics.diagramStart >= 0, 'The start of an overflowing diagram remains reachable');
+        assert.ok(metrics.diagramStart >= 0, `${name} ${theme} ${width}px diagram start remains reachable: ${JSON.stringify(metrics)}`);
         if (name === 'vertical' && width === 1440) assert.ok(metrics.right - metrics.left < width / 2, 'A small diagram keeps a compact frame');
         assert.ok(metrics.left >= 0 && metrics.right <= width && metrics.pageWidth <= width, `${name} must not widen the page`);
         if (name === 'wide' && width === 320) {
@@ -64,6 +66,7 @@ async function checkDiagramReadability(page) {
           const canvas = figure.locator('.research-diagram-canvas');
           await expect(canvas).toHaveAccessibleName('Diagram, scroll horizontally when needed');
           await canvas.focus();
+          await canvas.evaluate(element => element.scrollTo({left: 0, behavior: 'instant'}));
           await page.keyboard.press('ArrowRight');
           await expect.poll(() => canvas.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
           await page.keyboard.press('Tab');
@@ -74,7 +77,7 @@ async function checkDiagramReadability(page) {
           await expect.poll(() => viewer.locator('img.pswp__img').evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
           await page.keyboard.press('Escape');
           await expect(figure.locator('[data-diagram-enlarge]')).toBeFocused();
-          await canvas.evaluate(element => { element.scrollLeft = 0; });
+          await canvas.evaluate(element => element.scrollTo({left: 0, behavior: 'instant'}));
         }
         if (metrics.intrinsicWidth + metrics.inlinePadding <= metrics.viewportWidth) {
           assert.ok(metrics.contentWidth <= metrics.viewportWidth, `Fitting diagrams avoid unnecessary scrolling: ${JSON.stringify(metrics)}`);
