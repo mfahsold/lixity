@@ -486,6 +486,14 @@ fn desktop_context() -> tauri::Context<tauri::Wry> {
     tauri::generate_context!()
 }
 
+fn desktop_opener_plugin<R: tauri::Runtime>() -> impl tauri::plugin::Plugin<R> {
+    // WebView navigation owns external links. The plugin's default click hook
+    // cancels target="_blank" navigation before our Rust handler sees it.
+    tauri_plugin_opener::Builder::new()
+        .open_js_links_on_click(false)
+        .build()
+}
+
 pub fn run() {
     let locale = detect_system_locale();
     let app_version = env!("CARGO_PKG_VERSION").to_string();
@@ -493,7 +501,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .manage(OpenPathRequests::default())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
+        .plugin(desktop_opener_plugin())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();

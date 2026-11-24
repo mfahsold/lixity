@@ -78,6 +78,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the loopback workspace explicit access to the registered native commands.
 - Link to the full AGPL text and readable commercial licensing instructions.
   Apply the same self-publishing guidance in all seven interface languages.
+- Route links that open a new tab through the desktop host's URL policy so
+  both license links reach the system browser.
 - Process native microphone input in one path across host-supported PCM
   formats and avoid copying each input block or the finished take.
 - Open the analysis overview at measured manuscript values, with a direct

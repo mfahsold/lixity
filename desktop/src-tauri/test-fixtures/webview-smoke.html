@@ -2,7 +2,8 @@
 <html lang="en">
 <meta charset="utf-8">
 <title>Desktop WebView smoke test</title>
-<a id="new-window" href="https://example.org/license" target="_blank" rel="noopener noreferrer">License</a>
+<a id="license" href="https://github.com/mfahsold/lixity/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a>
+<a id="commercial-license" href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer" target="_blank" rel="noopener noreferrer">Commercial license</a>
 <a id="same-window" href="https://example.org/contact">Contact</a>
 <script nonce="ipc-smoke">
 document.addEventListener("DOMContentLoaded", async () => {
@@ -21,8 +22,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     if (!rejected) throw new Error("Unsupported URL was accepted");
     await fetch("/bridge-ok");
-    document.getElementById("new-window").click();
-    setTimeout(() => document.getElementById("same-window").click(), 250);
+    document.getElementById("license").click();
+    setTimeout(() => document.getElementById("commercial-license").click(), 250);
+    setTimeout(() => document.getElementById("same-window").click(), 500);
   } catch (error) {
     await fetch("/bridge-failed");
   }

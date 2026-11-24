@@ -101,8 +101,9 @@ cargo run --locked --manifest-path desktop/Cargo.toml --features webview-smoke -
 ```
 
 The smoke exercises the generated workspace capability, bridge and navigation
-callbacks against a synthetic loopback fixture in WKWebView. The runtime
-smoke checks Python startup and session authentication. Use the manual checks
+callbacks against a synthetic loopback fixture in WKWebView. It initializes the
+production opener configuration and verifies the two license link destinations.
+The runtime smoke checks Python startup and session authentication. Use the manual checks
 below for the author workflow, operating-system interactions and hardware.
 Chromium and browser WebKit tests cover the shared UI.
 [Browser verification](../tests/browser/README.md)

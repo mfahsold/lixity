@@ -16,7 +16,8 @@ const TIMEOUT: Duration = Duration::from_secs(15);
 enum Observation {
     Bridge,
     SameWindowLink,
-    NewWindowLink,
+    LicenseLink,
+    CommercialLicenseLink,
     Failure,
 }
 
@@ -69,7 +70,10 @@ fn serve_fixture(listener: TcpListener, observed: Sender<Observation>) {
 
 fn record_link(url: &Url, observed: &Sender<Observation>) {
     let observation = match url.as_str() {
-        "https://example.org/license" => Observation::NewWindowLink,
+        "https://github.com/mfahsold/lixity/blob/main/LICENSE" => Observation::LicenseLink,
+        "https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer" => {
+            Observation::CommercialLicenseLink
+        }
         "https://example.org/contact" => Observation::SameWindowLink,
         _ => Observation::Failure,
     };
@@ -86,6 +90,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::spawn(move || serve_fixture(listener, fixture_sender));
 
     tauri::Builder::default()
+        .plugin(crate::desktop_opener_plugin())
         .invoke_handler(tauri::generate_handler![
             get_preferences,
             open_external_url,
@@ -119,7 +124,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             std::thread::spawn(move || {
                 let required = HashSet::from([
                     Observation::Bridge,
-                    Observation::NewWindowLink,
+                    Observation::LicenseLink,
+                    Observation::CommercialLicenseLink,
                     Observation::SameWindowLink,
                 ]);
                 let mut observed = HashSet::new();
@@ -127,7 +133,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                 while let Ok(event) =
                     receiver.recv_timeout(deadline.saturating_duration_since(Instant::now()))
                 {
-                    observed.insert(event);
+                    if !observed.insert(event) {
+                        observed.insert(Observation::Failure);
+                        break;
+                    }
                     if event == Observation::Failure || observed == required {
                         break;
                     }
@@ -136,7 +145,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .as_deref() == Some("A synthetic project — Lixity");
                 if observed == required && title_matches {
                     println!(
-                        "Native WebView smoke passed: Rust IPC, bundled sample and both external link targets."
+                        "Native WebView smoke passed: Rust IPC, bundled sample, license popups and same-window external links."
                     );
                     handle.exit(0);
                 } else {

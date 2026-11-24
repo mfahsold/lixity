@@ -42,8 +42,8 @@ async function createPage(browser, html, width, desktop = false) {
     window.desktopPreferenceWrites = [];
     window.desktopExportRequests = [];
     window.desktopLinkCalls = [];
-    window.desktopUpdateResult = {current_version: '0.10.0', latest_tag: 'v0.9.1', update_available: false,
-      release_url: 'https://example.org/releases', note: 'Back up your archive.'};
+    window.desktopUpdateResult = {current_version: '0.10.0', latest_tag: 'v0.10.0', status: 'current',
+      guide_url: 'https://mfahsold.github.io/lixity/guides/installation.html#desktop'};
     window.lixityDesktop = {
       version: 1,
       openExternalUrl: async url => {
@@ -117,14 +117,17 @@ async function documentState(page) {
       await sendMenu('help-check-updates');
       const updateDialog = page.locator('#modal-desktop-environment');
       const updateStatus = updateDialog.getByRole('status');
-      await expect(updateStatus).toContainText('Up to date (0.10.0)');
-      await expect(updateStatus).not.toContainText('Back up your archive.');
+      const downloadGuide = updateDialog.getByRole('button', {name: 'Open desktop downloads'});
+      await expect(updateStatus).toContainText('The installed desktop version is current.');
+      await expect(updateStatus).toContainText('Installed 0.10.0 · Published v0.10.0');
+      await expect(downloadGuide).toHaveCount(0);
       await page.evaluate(() => {
-        window.desktopUpdateResult = {...window.desktopUpdateResult, latest_tag: 'v0.11.0', update_available: true};
+        window.desktopUpdateResult = {...window.desktopUpdateResult, latest_tag: 'v0.11.0', status: 'available'};
       });
       await updateDialog.getByRole('button', {name: 'Check for Updates…'}).click();
-      await expect(updateStatus).toContainText('Newer release available: v0.11.0');
-      await expect(updateStatus).toContainText('Back up your archive.');
+      await expect(updateStatus).toContainText('A newer desktop installer is available.');
+      await expect(updateStatus).toContainText('Installed 0.10.0 · Published v0.11.0');
+      await expect(downloadGuide).toBeVisible();
       await updateDialog.locator('[data-close-desktop-env]').click();
       await sendMenu('view-research');
       await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
