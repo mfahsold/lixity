@@ -2457,6 +2457,7 @@
   "desktop_env_no_public_installer": "Los instaladores de escritorio aún no están disponibles públicamente.",
   "desktop_env_no_matching_installer": "No hay un instalador de escritorio publicado para este sistema.",
   "desktop_env_installed_ahead": "Esta instalación es más reciente que el paquete de escritorio publicado.",
+  "desktop_env_build": "Compilación",
   "desktop_env_installed_version": "Instalado",
   "desktop_env_published_version": "Publicado"
 }

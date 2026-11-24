@@ -395,10 +395,15 @@ def _scene_stats(
     sticky_glue_pct: float,
     sticky_min_words: int,
     include_sticky_identity: bool = False,
+    premeasured_words: tuple[int, int] | None = None,
 ) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
-    words = len(word_re.findall(scene_text))
+    words = len(word_re.findall(scene_text)) if premeasured_words is None else premeasured_words[0]
     if not words:
         return None
+    dialogue_words = (
+        count_quoted_words(scene_text, word_re, quotation.quote_ranges)
+        if premeasured_words is None else premeasured_words[1]
+    )
     sentence_spans: list[tuple[int, int]] = []
     sentences: list[str] = []
     sentence_tokens: list[list[str]] = []
@@ -410,7 +415,6 @@ def _scene_stats(
             sentences.append(sentence)
             sentence_tokens.append([word.lower() for word in tokens])
     sentence_lengths = [len(tokens) for tokens in sentence_tokens]
-    dialogue_words = count_quoted_words(scene_text, word_re, quotation.spans)
     short = sum(1 for length in sentence_lengths if length <= short_sentence_max)
 
     glue_pcts: list[float] = []
@@ -590,6 +594,7 @@ def pacing_report(
         words = len(word_re.findall(clean))
         if not words:
             continue
+        dialogue_words = count_quoted_words(clean, word_re, chapter.analysis.quote_ranges)
         raw_scenes, scene_breaks = split_scenes(body)
         explicit_breaks += scene_breaks
         scenes: list[SceneStats] = []
@@ -610,6 +615,8 @@ def pacing_report(
                 sticky_glue_pct=config.sticky_glue_pct,
                 sticky_min_words=config.sticky_min_words,
                 include_sticky_identity=_include_sticky_identity,
+                # A chapter with a divider can have different token boundaries per scene.
+                premeasured_words=(words, dialogue_words) if not scene_breaks else None,
             )
             if scene_result is not None:
                 stats, scene_glue_pcts, scene_sticky_items = scene_result
@@ -634,7 +641,6 @@ def pacing_report(
             if scene_sentences
             else 0.0
         )
-        dialogue_words = count_quoted_words(clean, word_re, chapter.analysis.spans)
         staccato = (
             sum(scene.staccato_pct * scene.sentences for scene in scenes) / scene_sentences
             if scene_sentences

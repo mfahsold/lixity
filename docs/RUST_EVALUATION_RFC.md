@@ -39,12 +39,11 @@ The analyzer and paragraph/chapter profiling were the two largest stages on
 all three inputs. Measure the cost of quotation extraction within those stages
 before choosing a boundary.
 
-Measure request-local reuse of equivalent quotation counts first. The
-prototype below counted repeated work in the analyzer and supplementary
-reports. Share a result only for equivalent text, token pattern and quote
-ranges. Keep the cache within one analysis and include memory and the cost of
-looking up or building keys. Compare exact reporting and evidence before
-profiling a different native boundary.
+Profile again after the request-local reuse described below. Use equivalent
+text, token patterns and quote ranges when comparing any remaining duplicate
+work across the analyzer and supplementary reports. Include memory and the
+cost of looking up or building keys. Compare exact reporting and evidence
+before profiling a different native boundary.
 
 ## Acceptance criteria
 
@@ -111,6 +110,30 @@ if the workload or available boundary changes.
   single-threaded Python test matched the reference for 2,045 fixed and boundary
   cases and 100,000 seeded synthetic spans. Goose requires an exported function
   to run on the runtime's initializing thread. A Lixity benchmark must account
-  for worker scheduling as well as input conversion. End-to-end latency and
-  behavior on Windows, Linux and macOS 12 remain unmeasured.
+  for worker scheduling as well as input conversion. This first experiment
+  measured the C interface and result parity on Apple Silicon.
   [Goose C interface](https://aardappel.github.io/goose/docs/goose_spec.html#711-exporting-goose-functions-to-c)
+- **2026-11-24 · Reuse quotation counts within one analysis.** Paragraph
+  evidence reuses the latest counts for the same normalized text and quote
+  ranges. Pacing shares counts when a chapter forms a single scene. The
+  count-only path skips extracting token strings. On Apple Silicon with
+  Python 3.12.16, four runs of the full analysis with reader evidence and
+  supplementary reports produced identical result digests on all three
+  inputs. Median elapsed time changed from 3.310 to 3.215 s for *Pride and
+  Prejudice*, 2.761 to 2.689 s for *Effi Briest* and 2.399 to 2.305 s for
+  120 synthetic chapters. The medians of the three warm runs were 3.304 to
+  3.215 s, 2.757 to 2.685 s and 2.387 to 2.301 s respectively. Peak resident
+  memory across the runs changed from 244.27 to 245.42 MiB.
+- **2026-11-24 · Compare the same quotation-membership interface.** On Apple
+  Silicon, three alternating runs per implementation used the current
+  Python pipeline and the same two books and synthetic manuscript. Python
+  prepared the word spans for identical batch interfaces in Rust and Goose.
+  Goose ran on a dedicated worker thread. All metrics, evidence, and report
+  digests matched. Median full-analysis times in Python, Rust, and Goose were
+  3.328 / 3.507 / 3.547 s for *Pride and Prejudice*, 2.781 / 2.869 / 3.092 s for
+  *Effi Briest*, and 2.331 / 2.405 / 2.509 s for the synthetic manuscript.
+  Goose calls including worker handoffs took 68–111 ms per analysis. Python
+  regex preparation and packing took 234–313 ms. Both native implementations
+  increased total time at this boundary. Evaluate a boundary that can avoid
+  preparing and packing token spans only if profiling still identifies it as
+  a substantial part of the workload.

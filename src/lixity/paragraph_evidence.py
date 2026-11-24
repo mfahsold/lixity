@@ -30,7 +30,7 @@ from .models import CorpusConfig
 from .quotation import (
     QuotationAnalysis,
     QuotationContext,
-    count_quoted_words,
+    Range,
     quotation_context,
     quoted_word_counts,
     scan_quotations,
@@ -200,6 +200,15 @@ def _envelope(text: str, layers: dict[str, LayerEvidence]) -> ParagraphEvidence:
     return result
 
 
+@dataclass(frozen=True, slots=True)
+class _ParagraphScan:
+    text: str
+    asl_spans: list[EvidenceSpan]
+    sticky_spans: list[EvidenceSpan]
+    quote_ranges: tuple[Range, ...]
+    quote_counts: tuple[int, ...]
+
+
 class ParagraphMatcher:
     """Single counting path shared by paragraph profiles and their evidence."""
 
@@ -226,7 +235,7 @@ class ParagraphMatcher:
             and config.nominal_regex is None
         )
         self._cue_cache: dict[str, tuple[bool, bool, bool]] = {}
-        self._last_scan: tuple[str, list[EvidenceSpan], list[EvidenceSpan]] | None = None
+        self._last_scan: _ParagraphScan | None = None
 
     def _classify_cue(self, token: str) -> tuple[bool, bool, bool]:
         hit = self._cue_cache.get(token)
@@ -332,10 +341,11 @@ class ParagraphMatcher:
             else 0
         )
 
-        self._last_scan = (clean, asl_spans, sticky_spans)
+        quote_counts = quoted_word_counts(clean, self.word, quoted_spans)
+        self._last_scan = _ParagraphScan(clean, asl_spans, sticky_spans, quoted_spans, quote_counts)
         return ParagraphCounts(
             words=len(tokens), sentences=sentences, sentence_words=sentence_words,
-            dialogue=count_quoted_words(clean, self.word, quoted_spans),
+            dialogue=sum(quote_counts),
             function=sum(token in self.language.function_words for token in tokens),
             filter=f_cnt,
             sensory=s_cnt,
@@ -378,9 +388,10 @@ class ParagraphMatcher:
         if tense_spans is not None:
             for key, cues in zip(("present", "past"), tense_spans, strict=True):
                 spans[key] = [{"start": start, "end": end, "count": 1} for start, end in cues]
-        if self._last_scan is not None and self._last_scan[0] == clean:
-            spans["asl"] = [dict(sp) for sp in self._last_scan[1]]  # type: ignore[misc]
-            spans["sticky"] = [dict(sp) for sp in self._last_scan[2]]  # type: ignore[misc]
+        last_scan = self._last_scan if self._last_scan is not None and self._last_scan.text == clean else None
+        if last_scan is not None:
+            spans["asl"] = [dict(sp) for sp in last_scan.asl_spans]  # type: ignore[misc]
+            spans["sticky"] = [dict(sp) for sp in last_scan.sticky_spans]  # type: ignore[misc]
         else:
             for start, end in split_sentence_spans(clean, self.language.key):
                 s_tokens = [tok.lower() for tok in self.word.findall(clean[start:end])]
@@ -433,7 +444,9 @@ class ParagraphMatcher:
                         continue
                     spans[key].append({"start": match.start(), "end": match.end(), "count": 1})
         quoted_spans_for_tags = context.quote_ranges
-        for (start, end), count in zip(quoted_spans_for_tags, quoted_word_counts(clean, self.word, quoted_spans_for_tags), strict=True):
+        quote_counts = (last_scan.quote_counts if last_scan is not None and last_scan.quote_ranges == quoted_spans_for_tags
+                        else quoted_word_counts(clean, self.word, quoted_spans_for_tags))
+        for (start, end), count in zip(quoted_spans_for_tags, quote_counts, strict=True):
             if count:
                 source_span: EvidenceSpan = {"start": start, "end": end, "count": count}
                 if include_reader_details:

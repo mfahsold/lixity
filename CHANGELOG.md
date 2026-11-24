@@ -39,6 +39,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Generate public download links from verified GitHub Release assets.
 - Explain how to update the desktop and CLI installations through their
   original installation channels.
+- Support verified local replacement of an installed macOS test build from
+  a clean checkout, with a retained rollback copy.
 
 ### Fixed
 
@@ -67,6 +69,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Offer a desktop update only for a newer published version. Show the installed
   version and desktop availability using the verified installer catalog. Explain
   missing platform builds and connectivity failures in the interface language.
+- Reject incomplete or duplicate installer metadata before showing a desktop
+  update.
+- Show the source commit in System Status for local macOS update builds.
+- Reuse quotation counts for matching paragraph evidence and chapters that
+  form one scene.
 - Open external links from the desktop window through the Rust host and grant
   the loopback workspace explicit access to the registered native commands.
 - Link to the full AGPL text and readable commercial licensing instructions.

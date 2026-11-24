@@ -102,18 +102,18 @@ def merge_quotation_spans(spans: Iterable[QuotationSpan | Range]) -> tuple[Range
     return tuple(result)
 
 
-def _memberships(text: str, word_pattern: re.Pattern[str], ranges: tuple[Range, ...]
-                 ) -> Iterator[tuple[int | None, str]]:
+def _memberships(
+    text: str, word_pattern: re.Pattern[str], ranges: tuple[Range, ...], group: int,
+) -> Iterator[tuple[int | None, re.Match[str]]]:
     starts = tuple(start for start, _ in ranges)
-    group = 1 if word_pattern.groups else 0
     for match in word_pattern.finditer(text):
         start, end = match.span(group)
         if end <= start:
-            yield None, match[group] or ""
+            yield None, match
             continue
         index = bisect_right(starts, start) - 1
         quote = index if index >= 0 and end <= ranges[index][1] else None
-        yield quote, match[group]
+        yield quote, match
 
 
 def count_quoted_words(
@@ -121,7 +121,8 @@ def count_quoted_words(
 ) -> int:
     """Count word matches from the full scope that lie wholly in a quote."""
     ranges = merge_quotation_spans(spans)
-    return sum(index is not None for index, _ in _memberships(text, word_pattern, ranges)) if ranges else 0
+    group = 1 if word_pattern.groups else 0
+    return sum(index is not None for index, _ in _memberships(text, word_pattern, ranges, group)) if ranges else 0
 
 
 def quoted_word_counts(
@@ -131,7 +132,8 @@ def quoted_word_counts(
     ranges = merge_quotation_spans(spans)
     counts = [0] * len(ranges)
     if ranges:
-        for index, _ in _memberships(text, word_pattern, ranges):
+        group = 1 if word_pattern.groups else 0
+        for index, _ in _memberships(text, word_pattern, ranges, group):
             if index is not None:
                 counts[index] += 1
     return tuple(counts)
@@ -144,8 +146,9 @@ def partition_quoted_words(
     ranges = merge_quotation_spans(spans)
     quoted: list[list[str]] = [[] for _ in ranges]
     outside: list[str] = []
-    for index, word in _memberships(text, word_pattern, ranges):
-        (outside if index is None else quoted[index]).append(word)
+    group = 1 if word_pattern.groups else 0
+    for index, match in _memberships(text, word_pattern, ranges, group):
+        (outside if index is None else quoted[index]).append(match[group] or "")
     return quoted, outside
 
 

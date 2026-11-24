@@ -109,6 +109,12 @@
     }
 
     var app = res.app || {};
+    var desktop = window.lixityDesktop;
+    var revision = desktop && desktop.appRevision;
+    var buildStatus = typeof revision === "string" && /^[a-f0-9]{40}$/i.test(revision)
+      ? " · " + escapeHtml(label("desktop_env_build", "Build")) + ' <code title="' +
+        escapeHtml(revision) + '">' + escapeHtml(revision.slice(0, 8)) + "</code>"
+      : "";
     var tools = res.tools || {};
     var zoteroAvailable = Boolean(res.zotero && (res.zotero.available || res.zotero.reachable));
     var workers = Array.isArray(res.audio_workers) ? res.audio_workers : [];
@@ -132,7 +138,7 @@
       : "";
 
     bodyEl.innerHTML =
-      '<p class="ctl-note">Lixity <strong>v' + escapeHtml(app.version || "") + "</strong> · Python " +
+      '<p class="ctl-note">Lixity <strong>v' + escapeHtml(app.version || "") + "</strong>" + buildStatus + " · Python " +
       escapeHtml(app.python || "") + " · " + escapeHtml((app.platform || "") + " / " + (app.machine || "")) +
       (app.desktop_mode ? " · Desktop" : " · Local Browser") + "</p>" +
       '<p class="ctl-note">' + escapeHtml(label("desktop_env_note", "Core manuscript analysis runs offline without optional extensions. External tools stay separate from the core app.")) + "</p>" +

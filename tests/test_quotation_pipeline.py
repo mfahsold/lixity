@@ -2,12 +2,15 @@
 
 import pytest
 
+from lixity import pacing, paragraph_evidence, quotation
 from lixity.dialogue import dialogue_report
+from lixity.language import resolve_language
 from lixity.manuscript_editing import analyze_manuscript_snapshot
 from lixity.markdown_parser import prose_text
 from lixity.models import CorpusConfig
 from lixity.motifs import search_manuscript
 from lixity.pipeline import analyze_document, supplementary_reports
+from lixity.quotation import QuotationAnalysis, QuotationSpan
 from lixity.quotation_projection import quoted_prose
 from lixity.style_fingerprint import FingerprintThresholds
 
@@ -57,6 +60,49 @@ def test_word_share_never_retokenizes_a_quote_substring():
     assert len(layer["quotation_ranges"]) == 2
     assert dialogue_report(source, config).dialogue_words == 0
     assert analyze_manuscript_snapshot(source, config=config)["dialogue_ratio"] == 0
+
+
+def test_pacing_reuses_word_counts_for_an_identical_chapter_scene(monkeypatch):
+    original = pacing.count_quoted_words
+    scopes = []
+
+    def track(text, pattern, ranges):
+        scopes.append(text)
+        return original(text, pattern, ranges)
+
+    monkeypatch.setattr(pacing, "count_quoted_words", track)
+    source = '## First\n\n"Wait here."\n\n## Second\n\nNora waits.\n\n---\n\n"Come home."\n'
+    config = CorpusConfig(language="en", word_regex=r'^(?:")?(\w+)')
+    first, second = pacing.pacing_report(source, config).chapter_list
+    assert scopes == ['"Wait here."', 'Nora waits.\n\n"Come home."', 'Nora waits.', '"Come home."']
+    assert first.dialogue_pct == first.scene_list[0].dialogue_pct == 100
+    assert second.dialogue_pct == second.scene_list[0].dialogue_pct == 0
+    assert second.scene_list[1].dialogue_pct == 100
+
+
+def test_paragraph_evidence_reuses_counts_only_for_the_same_quote_ranges(monkeypatch):
+    original = quotation._memberships
+    scopes = []
+
+    def track(text, pattern, ranges, *args):
+        scopes.append(ranges)
+        return original(text, pattern, ranges, *args)
+
+    monkeypatch.setattr(quotation, "_memberships", track)
+    text = "Nora waits."
+    config = CorpusConfig(language="en")
+    matcher = paragraph_evidence.ParagraphMatcher(config, resolve_language(config))
+    first = QuotationAnalysis(spans=(QuotationSpan(0, 4, "custom"),))
+    second = QuotationAnalysis(spans=(QuotationSpan(5, 10, "custom"),))
+    counts = matcher.count(text, quotation=first)
+    layer = matcher.evidence(text, text, counts, quotation=first)["layers"]["dialogue"]
+    assert layer["count"] == 1
+    assert layer["spans"] == [{"start": 0, "end": 4, "count": 1}]
+    assert scopes == [((0, 4),)]
+
+    other = matcher.evidence(text, text, counts, quotation=second)["layers"]["dialogue"]
+    assert other["spans"] == [{"start": 5, "end": 10, "count": 1}]
+    assert scopes == [((0, 4),), ((5, 10),)]
 
 
 def test_a_scene_break_cannot_complete_an_open_quote():

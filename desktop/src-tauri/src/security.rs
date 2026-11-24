@@ -80,6 +80,9 @@ pub fn handshake_url(port: u16, nonce: &str, next_path: &str) -> Result<Url, Str
 /// The page never gets direct filesystem or shell plugin access; every capability routes
 /// through the audited Rust commands in `commands.rs`.
 pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
+    let app_revision = option_env!("LIXITY_DESKTOP_BUILD_REVISION")
+        .filter(|revision| revision.len() == 40 && revision.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .unwrap_or("");
     format!(
         r#"(function () {{
   "use strict";
@@ -102,6 +105,7 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
   const bridge = Object.freeze({{
     version: 1,
     appVersion: {app_version:?},
+    appRevision: {app_revision:?},
     platform: {platform_name:?},
     pickProjectDirectory: function () {{
       return invoke("pick_project_directory");

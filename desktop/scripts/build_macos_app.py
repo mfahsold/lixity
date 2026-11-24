@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from build_runtime_bundle import host_target_triple
+from macos_app_update import update_installed_app
 from smoke_desktop_runtime import verify_bundle
 from verify_desktop_artifacts import sha256_file, verify_container_magic
 
@@ -28,6 +29,15 @@ from scripts.check_release import validate  # noqa: E402
 
 def _run(command: list[str], *, cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
     subprocess.run(command, cwd=cwd, env=env, check=True)  # noqa: S603 - fixed local build tools
+
+
+def _clean_revision() -> str:
+    git = shutil.which("git")
+    if not git:
+        raise ValueError("Git is required when updating the installed app")
+    if subprocess.check_output([git, "status", "--porcelain"], cwd=ROOT):  # noqa: S603 - fixed Git query
+        raise ValueError("Commit the checkout before updating the installed app")
+    return subprocess.check_output([git, "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()  # noqa: S603
 
 
 def _verify_app(app: Path, prepared_runtime: Path, identifier: str, version: str) -> dict[str, Any]:
@@ -49,7 +59,7 @@ def _verify_app(app: Path, prepared_runtime: Path, identifier: str, version: str
     return smoke
 
 
-def build(*, offline: bool, dmg: bool) -> dict[str, Any]:
+def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str, Any]:
     if sys.platform != "darwin":
         raise ValueError("Local .app builds require macOS")
     required_tools = ("uv", "npx", "cargo", "codesign")
@@ -143,7 +153,7 @@ def build(*, offline: bool, dmg: bool) -> dict[str, Any]:
                 *network,
             ],
             cwd=DESKTOP,
-            env={**os.environ, "CARGO_TARGET_DIR": str(cache)},
+            env={**os.environ, "CARGO_TARGET_DIR": str(cache), "LIXITY_DESKTOP_BUILD_REVISION": revision or ""},
         )
         shutil.copytree(cache / target / "debug" / "bundle" / "macos" / name, app, symlinks=True)
     _run(["bash", str(DESKTOP / "scripts" / "sign_macos_bundle.sh"), "--adhoc", str(app)])
@@ -176,9 +186,15 @@ def main() -> int:
         "--offline", action="store_true", help="Use cached build tools and dependencies"
     )
     parser.add_argument("--dmg", action="store_true", help="Build and verify a local disk image")
+    parser.add_argument("--update-installed", action="store_true", help="Update the closed local app in /Applications")
     args = parser.parse_args()
     try:
-        report = build(offline=args.offline, dmg=args.dmg)
+        revision = _clean_revision() if args.update_installed else None
+        report = build(offline=args.offline, dmg=args.dmg, revision=revision)
+        if revision is not None:
+            if _clean_revision() != revision:
+                raise ValueError("The checkout changed during the build")
+            report["local_update"] = update_installed_app(Path(report["app"]), revision)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         parser.exit(1, f"macOS app build failed: {exc}\n")
     print(json.dumps(report, indent=2))

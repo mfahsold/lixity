@@ -2457,6 +2457,7 @@
   "desktop_env_no_public_installer": "Desktop-Pakete sind noch nicht öffentlich verfügbar.",
   "desktop_env_no_matching_installer": "Für dieses System steht kein öffentliches Desktop-Paket bereit.",
   "desktop_env_installed_ahead": "Diese Installation ist neuer als das veröffentlichte Desktop-Paket.",
+  "desktop_env_build": "Build-Stand",
   "desktop_env_installed_version": "Installiert",
   "desktop_env_published_version": "Veröffentlicht"
 }

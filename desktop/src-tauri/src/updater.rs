@@ -3,6 +3,7 @@
 use crate::sidecar::log_desktop_event;
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::io::Read;
 use std::time::Duration;
 
@@ -39,8 +40,42 @@ struct DesktopCatalog {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Installer {
     target: String,
+    kind: String,
+    filename: String,
+    bytes: u64,
+    sha256: String,
+}
+
+impl Installer {
+    fn is_valid(&self) -> bool {
+        let Some((arch, platform)) = self.target.split_once('-') else {
+            return false;
+        };
+        let extension = match (platform, self.kind.as_str()) {
+            ("apple-darwin", "macos-dmg") => ".dmg",
+            ("pc-windows-msvc", "windows-nsis") => ".exe",
+            ("pc-windows-msvc", "windows-msi") => ".msi",
+            ("unknown-linux-gnu", "linux-deb") => ".deb",
+            ("unknown-linux-gnu", "linux-appimage") => ".AppImage",
+            _ => return false,
+        };
+        !arch.is_empty()
+            && self.bytes > 0
+            && (self.filename.starts_with("Lixity_") || self.filename.starts_with("Lixity-"))
+            && self.filename.ends_with(extension)
+            && self
+                .filename
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.'))
+            && self.sha256.len() == 64
+            && self
+                .sha256
+                .bytes()
+                .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -112,6 +147,14 @@ fn evaluate_catalog(
     if catalog.schema_version != SCHEMA || catalog.tag.is_none() != catalog.installers.is_empty() {
         return Err(CheckFailure::Catalog);
     }
+    let mut filenames = HashSet::with_capacity(catalog.installers.len());
+    if !catalog
+        .installers
+        .iter()
+        .all(|entry| entry.is_valid() && filenames.insert(entry.filename.as_str()))
+    {
+        return Err(CheckFailure::Catalog);
+    }
     let current = Version::parse(current_version).map_err(|_| CheckFailure::InstalledVersion)?;
     let status = match catalog.tag.as_deref() {
         None => UpdateStatus::NoPublicInstaller,
@@ -161,9 +204,28 @@ pub fn check_latest_release(current_version: &str) -> Result<UpdateCheckResult, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{json, Value};
+
+    fn mac_installer() -> Value {
+        json!({
+            "target": "aarch64-apple-darwin",
+            "kind": "macos-dmg",
+            "filename": "Lixity_0.10.0_aarch64.dmg",
+            "bytes": 1_048_576,
+            "sha256": "a".repeat(64),
+        })
+    }
+
+    fn published_catalog(
+        tag: &str,
+        installers: Vec<Value>,
+    ) -> Result<DesktopCatalog, CheckFailure> {
+        let catalog = json!({"schema_version": SCHEMA, "tag": tag, "installers": installers});
+        parse_catalog(catalog.to_string().as_bytes())
+    }
 
     fn check(tag: &str, installed: &str, target: &str) -> Result<UpdateStatus, CheckFailure> {
-        let catalog = parse_catalog(format!(r#"{{"schema_version":"{SCHEMA}","tag":"{tag}","installers":[{{"target":"aarch64-apple-darwin"}}]}}"#).as_bytes())?;
+        let catalog = published_catalog(tag, vec![mac_installer()])?;
         evaluate_catalog(installed, catalog, Some(target)).map(|result| result.status)
     }
 
@@ -215,6 +277,60 @@ mod tests {
                     .unwrap_err(),
                 CheckFailure::Catalog
             );
+        }
+    }
+
+    #[test]
+    fn rejects_incomplete_or_unusable_installer_rows() {
+        let mut invalid = vec![
+            vec![json!({"target": "aarch64-apple-darwin"})],
+            vec![mac_installer(), mac_installer()],
+        ];
+        for (field, value) in [
+            ("kind", json!("windows-msi")),
+            ("filename", json!("Lixity_0.10.0_aarch64.exe")),
+            ("filename", json!("Lixity_../file.dmg")),
+            ("bytes", json!(0)),
+            ("sha256", json!("A".repeat(64))),
+            ("sha256", json!("a".repeat(63))),
+        ] {
+            let mut asset = mac_installer();
+            asset[field] = value;
+            invalid.push(vec![asset]);
+        }
+        for installers in invalid {
+            assert_eq!(
+                published_catalog("v0.10.0", installers)
+                    .and_then(|catalog| evaluate_catalog(
+                        "0.9.1",
+                        catalog,
+                        Some("aarch64-apple-darwin")
+                    ))
+                    .unwrap_err(),
+                CheckFailure::Catalog
+            );
+        }
+    }
+
+    #[test]
+    fn recognizes_published_formats_on_each_desktop_platform() {
+        for (os, arch, kind, extension) in [
+            ("macos", "aarch64", "macos-dmg", "dmg"),
+            ("macos", "x86_64", "macos-dmg", "dmg"),
+            ("windows", "x86_64", "windows-nsis", "exe"),
+            ("windows", "x86_64", "windows-msi", "msi"),
+            ("linux", "x86_64", "linux-deb", "deb"),
+            ("linux", "x86_64", "linux-appimage", "AppImage"),
+        ] {
+            let target = installer_target(os, arch).unwrap();
+            let mut asset = mac_installer();
+            asset["target"] = json!(target);
+            asset["kind"] = json!(kind);
+            asset["filename"] = json!(format!("Lixity_0.10.0_{arch}.{extension}"));
+            let result = published_catalog("v0.10.0", vec![asset])
+                .and_then(|catalog| evaluate_catalog("0.9.1", catalog, Some(&target)))
+                .unwrap();
+            assert_eq!(result.status, UpdateStatus::Available, "{kind} on {target}");
         }
     }
 }

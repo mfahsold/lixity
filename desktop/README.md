@@ -162,6 +162,24 @@ Homebrew, WinGet and repository-installed Linux packages should be updated by
 their package managers. A separate `uv` installation uses its own update path.
 [User update instructions](../docs/INSTALLATION.md#updates-and-removal)
 
+To replace an installed macOS development build, commit the tested checkout,
+save open work and quit Lixity. Run the local build with explicit update intent.
+
+```sh
+.venv/bin/python desktop/scripts/build_macos_app.py --offline --dmg --update-installed
+```
+
+The command verifies the app and disk image before applying the update. It
+compares the installed version and code signature, stages the replacement
+and preserves the old bundle at the backup path in `local_update`. It can
+replace a different build of the same test version. The app needs to be closed
+and both bundles must have ad-hoc signatures. If the replacement fails
+verification, the previous bundle is restored. Reopen Lixity and check the
+selected project. For a manual rollback, quit Lixity and use the backup
+listed in `rollout.json`.
+**Tools → System Status & Extensions** shows the source commit for builds
+installed with this command.
+
 Keep app-managed installation behind a release gate. The Tauri v2 Updater
 supports signed macOS app archives, Windows NSIS/MSI installers and Linux
 AppImages. OS publisher signing and macOS notarization are additional platform

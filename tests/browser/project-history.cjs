@@ -61,6 +61,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         window.lixityDesktop = {
           version: 1,
           platform: 'macos',
+          appRevision: '0123456789abcdef0123456789abcdef01234567',
           setWorkspaceTitle: async title => { window.desktopTitle = title; },
           setPreference: async (...entry) => window.desktopPreferenceWrites.push(entry),
           checkForUpdates: () => new Promise((resolve, reject) => {
@@ -87,6 +88,9 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       if (url.pathname === '/api/project-open') {
         opens.push(request.postDataJSON());
         return route.fulfill({json: result, status: resultStatus || (result.ok ? 200 : 400)});
+      }
+      if (url.pathname === '/api/desktop/environment') {
+        return route.fulfill({json: {ok: true, app: {version: '0.9.1', desktop_mode: true}}});
       }
       if (url.pathname === '/api/project-create') {
         creates.push(request.postDataJSON());
@@ -211,6 +215,8 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         const menuAction = () => samplePage.evaluate(() => window.dispatchEvent(new CustomEvent('lixity:desktop-menu', {detail: 'help-check-updates'})));
         await menuAction();
         await updateAction.waitFor();
+        await updates.getByText('Build-Stand', {exact: false}).waitFor();
+        assert.equal(await updates.locator('code[title="0123456789abcdef0123456789abcdef01234567"]').textContent(), '01234567');
         assert.ok(await updateAction.isDisabled());
         await menuAction();
         assert.equal(await samplePage.evaluate(() => desktopUpdateChecks), 1, 'An in-flight check prevents duplicates');
