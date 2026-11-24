@@ -179,12 +179,11 @@
     if (select.selectedOptions[0]?.dataset.available === "0") {
       clearHighlight(); setStatus(message("layer_language_unavailable")); return;
     }
-    var panels = Array.from(visible).filter(shown);
-    var prepared = await Promise.all(panels.map(prepare));
+    var prepared = await Promise.all(Array.from(visible).filter(function(panel) {return panel.isConnected;}).map(prepare));
     if (generation !== epoch || !enabled() || key !== select.value) return;
     var ranges = [], issues = new Set(), measured = false;
     prepared.forEach(function(record) {
-      if (records.get(record.panel) !== record || !shown(record.panel)) return;
+      if (records.get(record.panel) !== record || !visible.has(record.panel)) return;
       var layer = record.layers[key];
       var issue = evidenceIssue(record, layer);
       if (issue) issues.add(issue);
@@ -626,15 +625,15 @@
   document.addEventListener("scroll", function(event) {
     if (host.contains(event.target)) return;
     down = null;
+    if (!card && !opening && !touchTap && !candidate) return;
     var arrival = card && card.arrival || opening && opening.arrival;
     // Reader restoration emits scroll while an explicit opening settles. Actual
     // pointer, wheel, keyboard and state changes cancel that opening separately.
     if (!arrival || arrival.x !== scrollX || arrival.y !== scrollY || arrival.containers.some(function(item) {
       return item.node.scrollLeft !== item.x || item.node.scrollTop !== item.y;
     })) close(false, true);
-    schedule();
   }, {passive:true, capture:true});
-  window.addEventListener("resize", function() {close(false); schedule();}, {passive:true});
+  window.addEventListener("resize", function() {close(false);}, {passive:true});
   document.addEventListener("visibilitychange", function() {if (document.hidden) {close(false); clearTense(); clearHighlight();} else schedule();});
   function changed() {epoch++; close(false); clearTense(); clearHighlight(); schedule();}
   document.addEventListener("lixity:analysis-layer-change", changed);
@@ -650,12 +649,21 @@
       if (panel && (element.matches(".ptext-inner") || element.closest(".ptext-inner > p"))) dirty.add(panel);
     });
     dirty.forEach(function(panel) {records.delete(panel); if (tensePanel === panel) clearTense(); if (card && card.record.panel === panel) close(false);});
-    if (dirty.size) {epoch++; clearHighlight(); schedule();}
+    if (Array.from(dirty).some(function(panel) {return visible.has(panel);})) {epoch++; clearHighlight(); schedule();}
   }).observe(chapters, {childList:true, subtree:true, characterData:true});
   var observer = new IntersectionObserver(function(entries) {
-    entries.forEach(function(entry) {if (entry.isIntersecting) visible.add(entry.target); else visible.delete(entry.target);});
-    schedule();
-  }, {rootMargin:"128px"});
+    var update = false;
+    entries.forEach(function(entry) {
+      var panel = entry.target;
+      // A shared viewport edge has no visible prose. Track the transition to
+      // positive area so moving within one paragraph never rebuilds its marks.
+      var rect = entry.intersectionRect;
+      if (entry.isIntersecting && rect.width > 0 && rect.height > 0) {
+        if (!visible.has(panel)) {visible.add(panel); update = true;}
+      } else if (visible.delete(panel)) update = true;
+    });
+    if (update) {epoch++; schedule();}
+  }, {threshold:Number.EPSILON});
   chapters.querySelectorAll(".ptext").forEach(function(panel) {observer.observe(panel);});
   async function inspectSpan(panel, layerKey, spanIndex, options) {
     if (!panel || !panel.isConnected || !Number.isSafeInteger(spanIndex) || spanIndex < 0) return false;

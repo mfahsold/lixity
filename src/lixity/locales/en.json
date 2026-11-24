@@ -2458,6 +2458,8 @@
   "desktop_env_no_matching_installer": "There is no published desktop installer for this system.",
   "desktop_env_installed_ahead": "This installation is newer than the public desktop package.",
   "desktop_env_build": "Build",
+  "desktop_export_saved": "Saved {filename}",
+  "desktop_export_reveal": "Show in folder",
   "desktop_env_installed_version": "Installed",
   "desktop_env_published_version": "Published"
 }

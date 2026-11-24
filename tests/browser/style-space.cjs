@@ -430,7 +430,21 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
       assert.equal(await drawCount(), idle, 'Repeated size notifications without a size change do not paint');
       const spinControl = live.locator('#dim-ctl-spin');
       await spinControl.click();
+      await canvas.scrollIntoViewIfNeeded();
       await live.waitForFunction(count => window.styleSpaceDrawCount > count + 1, idle);
+      await live.setViewportSize({width:1440, height:480});
+      await canvas.evaluate(node => {
+        window.scrollBy({top:node.getBoundingClientRect().bottom + 1, behavior:'instant'});
+      });
+      await live.waitForFunction(() => document.getElementById('dim-3d-canvas').getBoundingClientRect().bottom <= 0);
+      await nextPaint(); await nextPaint();
+      const offscreen = await drawCount();
+      await nextPaint(); await nextPaint();
+      assert.equal(await drawCount(), offscreen, 'A plot that scrolls out of the viewport does not animate');
+      assert.equal(await spinControl.getAttribute('aria-pressed'), 'true');
+      await live.setViewportSize({width:1440, height:900});
+      await canvas.scrollIntoViewIfNeeded();
+      await live.waitForFunction(count => window.styleSpaceDrawCount > count + 1, offscreen);
       await live.locator('[data-analysis-workflow="review"]').click();
       assert.equal(await canvas.isVisible(), false);
       await nextPaint();
@@ -441,6 +455,7 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
       assert.deepEqual(await canvas.evaluate(node => [node.width, node.height]), backingSize,
         'The hidden canvas retains its bitmap size until the plot is visible again');
       await compare.click();
+      await canvas.scrollIntoViewIfNeeded();
       await live.waitForFunction(count => window.styleSpaceDrawCount > count + 1, paused);
       assert.equal(await canvas.evaluate(plotFits), true, 'The canvas uses the new mobile dimensions when revealed');
       assert.equal(await spinControl.getAttribute('aria-pressed'), 'true', 'The spinning state is preserved and running');

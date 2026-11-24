@@ -101,7 +101,8 @@ async function checkMarkdownSchemes(page, systemTheme) {
     host.className = 'research-prose';
     host.style.backgroundColor = 'var(--surface)';
     host.style.boxShadow = 'var(--shadow-modal)';
-    host.innerHTML = renderSafeMarkdown(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
+    host.innerHTML = renderSafeMarkdown('A [synthetic reference](https://example.test/reference).\n\n' +
+      ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION']
       .map(kind => `> [!${kind}]\n> A synthetic note.`).join('\n\n'));
     document.body.append(host);
     const canvas = document.createElement('canvas');
@@ -121,7 +122,10 @@ async function checkMarkdownSchemes(page, systemTheme) {
           return {kind: alert.classList[1], title: rgb(title.color), body: rgb(css.color),
             fill: rgb(getComputedStyle(host).backgroundColor, css.backgroundColor)};
         });
-        return [scheme, {colors, shadow: getComputedStyle(host).boxShadow}];
+        const link = getComputedStyle(host.querySelector('a'));
+        return [scheme, {colors, shadow: getComputedStyle(host).boxShadow,
+          link: {text: rgb(link.color), fill: rgb(getComputedStyle(host).backgroundColor),
+            decoration: link.textDecorationLine, offset: link.textUnderlineOffset}}];
       }));
     } finally {
       host.remove();
@@ -132,6 +136,10 @@ async function checkMarkdownSchemes(page, systemTheme) {
   assert.deepEqual(schemes.auto, schemes[systemTheme], 'Auto and explicit themes resolve the same presentation colors');
   assert.notEqual(schemes.light.shadow, schemes.dark.shadow, 'Dialog shadow responds to the selected theme');
   for (const theme of ['light', 'dark']) {
+    const {text, fill, decoration, offset} = schemes[theme].link;
+    assert.ok(contrast(text, fill) >= 4.5, `${theme} inline link contrast: ${text} against ${fill}`);
+    assert.equal(decoration, 'underline', `${theme} inline links have a non-color cue`);
+    assert.ok(parseFloat(offset) > 0, `${theme} inline link underline clears the text`);
     assert.equal(schemes[theme].colors.length, 5);
     for (const {kind, title, body, fill} of schemes[theme].colors) {
       assert.ok(contrast(title, fill) >= 4.5 && contrast(body, fill) >= 4.5,
@@ -201,11 +209,10 @@ async function checkScale(page, label) {
     const strays = sizes.filter(size => !allowed.includes(size));
     assert.deepEqual(strays, [], `${label} text sizes off the token ladder (${JSON.stringify(sizes)})`);
   }
-  // One control size per class: the computed minimum height is shared by every
-  // default control (and every compact one). Rendered height may grow when a
-  // long label wraps on narrow viewports - that is layout, not drift.
+  // Inline manuscript findings and links use their own touch-sized target
+  // even with a mouse. Default and compact controls each share a minimum.
   const controlSizes = await page.locator(
-    'button.ctl:not(.ctl-sm):not(.ctl-compact):not(.ctl-link):visible, select.ctl:not(.ctl-sm):visible, input.ctl:not(.ctl-sm):visible')
+    'button.ctl:not(.ctl-sm, .ctl-compact, .ctl-link, .reader-review-flag, .manuscript-link-related):visible, select.ctl:not(.ctl-sm):visible, input.ctl:not(.ctl-sm):visible')
     .evaluateAll(elements => elements.map(element => ({
       id: element.id || element.className, minHeight: getComputedStyle(element).minHeight})));
   if (controlSizes.length) {
@@ -296,6 +303,18 @@ async function checkScale(page, label) {
         await app.locator('#btn-modal-new-project').click();
         const createDialog = app.locator('#modal-project-create');
         assert.ok(await createDialog.isVisible());
+        const paint = locator => locator.evaluate(element => {
+          const css = getComputedStyle(element);
+          return {border: css.borderTopColor, background: css.backgroundColor};
+        });
+        const fieldStyle = await paint(createDialog.locator('#import-proj-title'));
+        const cancelStyle = await paint(createDialog.locator('#form-project-import button[data-close-modal]'));
+        assert.ok(contrast(fieldStyle.border, fieldStyle.background) >= 3,
+          `${theme} editable field boundary ${JSON.stringify(fieldStyle)}`);
+        assert.notEqual(cancelStyle.border, fieldStyle.border,
+          `${theme} secondary actions and fields have distinct boundaries`);
+        assert.notEqual(cancelStyle.background, fieldStyle.background,
+          `${theme} secondary actions use the quiet control surface`);
         assert.equal(await app.locator('#research-revision-history-tab').getAttribute('aria-selected'), 'true',
           'Opening project tabs must not reset the separate research revision tabs');
         // Short windows and mobile keyboards must not clip the end of a form.

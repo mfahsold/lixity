@@ -178,6 +178,18 @@ async function longOutline(page, detail) {
   .toMatchObject({visible:true}).catch(async error=>{console.error('Long outline bounds: '+JSON.stringify(await activeBounds()));throw error;});
  assert.equal(await page.evaluate(()=>scrollY),requestedScroll,'Revealing the active outline row never scrolls the reading document');
  await indicatorAtCurrent(nav);
+ const repeatedWrites=await nav.evaluate(async node=>{
+  let writes=0;
+  const observer=new MutationObserver(records=>{writes+=records.length;});
+  observer.observe(node,{subtree:true,attributes:true,attributeFilter:['aria-current','d']});
+  for(let step=0;step<4;step++) {
+   document.dispatchEvent(new Event('scroll'));
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  }
+  observer.disconnect();
+  return writes;
+ });
+ assert.equal(repeatedWrites,0,'Steady dossier scrolling keeps the current heading and outline path unchanged');
  const orientation=await contents.evaluate(node=>({outline:node.getBoundingClientRect().toJSON(),
   summary:node.querySelector('summary').getBoundingClientRect().toJSON(),scroll:node.scrollTop,
   position:getComputedStyle(node.querySelector('summary')).position,viewport:innerHeight}));

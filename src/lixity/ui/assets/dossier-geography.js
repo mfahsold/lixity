@@ -420,6 +420,7 @@
     if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(function(state) { stopTiles(state, true); });
   }, true);
   var checkingMaps = false, mapFrame = 0;
+  var geographyRoots = document.getElementsByClassName("dossier-geography");
   var observedContainers = new WeakSet();
   var observerConfig = {subtree: true, childList: true, attributes: true,
     attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]};
@@ -465,7 +466,11 @@
   document.addEventListener("toggle", scheduleMaps, true);
   document.addEventListener("lixity:viewchange", scheduleMaps);
   document.addEventListener("lixity:workbench-change", scheduleMaps);
-  document.addEventListener("scroll", scheduleMaps, true);
+  document.addEventListener("scroll", function() {
+    // The live collection includes newly attached maps outside observed hosts.
+    // Ordinary manuscript scrolling needs no map refresh on an empty page.
+    if (geographyRoots.length || observed.size || maps.size) scheduleMaps();
+  }, {capture: true, passive: true});
   window.addEventListener("resize", scheduleMaps);
   document.addEventListener("visibilitychange", function() {
     if (document.hidden) maps.forEach(function(state) { stopTiles(state, true); });

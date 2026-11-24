@@ -171,6 +171,9 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
     getPreferences: function () {{
       return invoke("get_preferences");
     }},
+    getRuntimeEnvironment: function () {{
+      return invoke("get_runtime_environment");
+    }},
     setPreference: function (key, value) {{
       return invoke("set_preference", {{ key: String(key || ""), value: value === undefined ? null : value }});
     }},

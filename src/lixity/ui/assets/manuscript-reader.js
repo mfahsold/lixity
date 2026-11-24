@@ -161,19 +161,27 @@
   var pendingDockAnchor = null, pendingDockFocusRevision = null, clampedAnchor = null, scrollIntentRevision = 0;
   var pendingComparisonRestore = null, comparisonRestoreRevision = 0, passageNavigationRevision = 0;
   var narrowContext = window.matchMedia("(max-width: 900px)");
-  var dockFitFrame = 0;
-  function fitContextDock() {
+  var dockFitFrame = 0, dockViewport = null;
+  function updateContextDock() {
     dockFitFrame = 0;
     if (!dock || !layout) return;
     if (narrowContext.matches) { dock.style.removeProperty("--context-available-height"); return; }
-    if (dock.hidden || !dock.getClientRects().length) return;
+    if (dock.hidden) return;
+    // Dock placement depends on viewport size and reading chrome. Neither
+    // computed style changes with ordinary scrolling through the manuscript.
+    if (!dockViewport) {
+      if (!dock.getClientRects().length) return;
+      dockViewport = {
+        top: parseFloat(getComputedStyle(dock).top),
+        bottom: innerHeight - parseFloat(getComputedStyle(document.documentElement).fontSize)
+      };
+    }
     // Sticky positioning is bounded by the grid, not just by the viewport.
     // Fit its existing scrollport without moving the prose or extending it
     // over the footer when the document is short or near its lower boundary.
     var bounds = layout.getBoundingClientRect();
-    var top = Math.max(parseFloat(getComputedStyle(dock).top), bounds.top);
-    var gutter = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    var bottom = Math.min(innerHeight - gutter, bounds.bottom);
+    var top = Math.max(dockViewport.top, bounds.top);
+    var bottom = Math.min(dockViewport.bottom, bounds.bottom);
     var height = Math.max(0, Math.floor(bottom - top)) + "px";
     if (dock.style.getPropertyValue("--context-available-height") !== height) {
       var atEnd = dock.scrollTop > 0 && Math.ceil(dock.scrollTop + dock.clientHeight) >= dock.scrollHeight - 1;
@@ -188,16 +196,31 @@
       }
     }
   }
-  function scheduleDockFit() {
-    if (!dockFitFrame) dockFitFrame = requestAnimationFrame(fitContextDock);
+  function fitContextDock() {
+    if (dockFitFrame) cancelAnimationFrame(dockFitFrame);
+    dockViewport = null;
+    updateContextDock();
   }
-  window.addEventListener("resize", scheduleDockFit);
-  document.addEventListener("scroll", scheduleDockFit, {capture: true, passive: true});
+  function scheduleDockFit() {
+    if (!dockFitFrame) dockFitFrame = requestAnimationFrame(updateContextDock);
+  }
+  function invalidateDockViewport() {
+    dockViewport = null;
+    scheduleDockFit();
+  }
+  window.addEventListener("resize", invalidateDockViewport);
+  // Scrolling within the dock or another scrollport leaves its viewport fit intact.
+  window.addEventListener("scroll", function() {
+    if (dock && !dock.hidden && !narrowContext.matches) scheduleDockFit();
+  }, {passive: true});
   if (typeof ResizeObserver === "function") {
-    var dockSizeObserver = new ResizeObserver(scheduleDockFit);
-    [layout, document.getElementById("workbench-thread")].forEach(function(node) {
-      if (node) dockSizeObserver.observe(node);
+    var dockSizeObserver = new ResizeObserver(function(entries) {
+      if (entries.some(function(entry) { return entry.target !== layout; })) dockViewport = null;
+      scheduleDockFit();
     });
+    var thread = document.getElementById("workbench-thread");
+    if (layout) dockSizeObserver.observe(layout);
+    if (thread) dockSizeObserver.observe(thread);
   }
 
   var panels = Array.from(chapters.querySelectorAll(".ptext"));

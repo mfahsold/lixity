@@ -85,6 +85,7 @@
   var lastX = 0, lastY = 0;
   var spinSpeed = 0.005;
   var animationFrame = null;
+  var plotInViewport = null;
   var dragDistance = 0;
   var projectedPoints = [];
   var selectedPoint = points[0];
@@ -738,9 +739,14 @@
     });
   }
 
+  function canSpin() {
+    return spin && (plotInViewport === null ? isPlotVisible() :
+      plotInViewport && !document.hidden && plotWidth > 0 && plotHeight > 0);
+  }
+
   function animate() {
     animationFrame = null;
-    if (!spin || !isPlotVisible()) return;
+    if (!canSpin()) return;
     yaw += spinSpeed;
     drawPlot();
     animationFrame = requestAnimationFrame(animate);
@@ -748,7 +754,7 @@
 
   function scheduleAnimation() {
     if (animationFrame !== null) cancelAnimationFrame(animationFrame);
-    animationFrame = spin && isPlotVisible() ? requestAnimationFrame(animate) : null;
+    animationFrame = canSpin() ? requestAnimationFrame(animate) : null;
   }
 
   document.addEventListener("visibilitychange", function() {
@@ -759,6 +765,14 @@
   new MutationObserver(refreshPalette).observe(document.documentElement, {
     attributes:true, attributeFilter:["data-theme", "class", "style"]
   });
+  if (typeof IntersectionObserver === "function") {
+    plotInViewport = false;
+    new IntersectionObserver(function(entries) {
+      var entry = entries[entries.length - 1], rect = entry.intersectionRect;
+      plotInViewport = entry.isIntersecting && rect.width > 0 && rect.height > 0;
+      scheduleAnimation();
+    }, {threshold:Number.EPSILON}).observe(canvas);
+  }
   if (typeof ResizeObserver === "function") new ResizeObserver(syncPlotSize).observe(canvas);
   window.addEventListener("resize", syncPlotSize);
   canvas.setAttribute("data-projection", projection);

@@ -42,6 +42,7 @@ async function createPage(browser, html, width, desktop = false) {
     window.desktopPreferenceWrites = [];
     window.desktopExportRequests = [];
     window.desktopLinkCalls = [];
+    window.desktopRevealCalls = [];
     window.desktopUpdateResult = {current_version: '0.10.0', latest_tag: 'v0.10.0', status: 'current',
       guide_url: 'https://mfahsold.github.io/lixity/guides/installation.html#desktop'};
     window.lixityDesktop = {
@@ -56,7 +57,7 @@ async function createPage(browser, html, width, desktop = false) {
       saveExport: (spec, filename) => new Promise((resolve, reject) => {
         window.desktopExportRequests.push({spec, filename, resolve, reject});
       }),
-      revealInFileManager: async () => {},
+      revealInFileManager: async path => window.desktopRevealCalls.push(path),
     };
   });
   await page.route('http://lixity.test/**', route => {
@@ -153,10 +154,12 @@ async function documentState(page) {
       await expect(layout).toBeVisible();
       await expect(layout).toBeFocused();
       await layout.selectOption('sheet');
+      const filename = String.raw`Kapitel \ Rohfassung.pdf`;
+      const savedPath = `/synthetic/${filename}`;
       for (const [index, outcome, message] of [
         [0, {saved: false}, ''],
         [1, null, 'The PDF could not be created. Try again; after changing projects, reload this page.'],
-        [2, {saved: true, path: '/synthetic/manuscript-sheet.pdf'}, 'PDF download started.'],
+        [2, {saved: true, path: savedPath, filename}, 'PDF download started.'],
       ]) {
         await download.click();
         await expect(download).toBeDisabled();
@@ -174,6 +177,25 @@ async function documentState(page) {
         await expect(download).toBeEnabled();
         await expect(page.locator('.desktop-save-toast')).toHaveCount(index === 2 ? 1 : 0);
       }
+      const toast = page.locator('.desktop-save-toast');
+      await expect(toast.getByRole('status')).toHaveText(`Saved ${filename}`);
+      await expect(page.locator('body > .desktop-save-toast')).toHaveCount(1);
+      await toast.getByRole('button', {name: 'Show in folder'}).click();
+      assert.deepEqual(await page.evaluate(() => desktopRevealCalls), [savedPath]);
+      await page.evaluate(({filename, savedPath}) => {
+        const modal = document.createElement('dialog');
+        modal.className = 'lixity-modal';
+        modal.textContent = 'Synthetic export dialog';
+        document.body.appendChild(modal);
+        modal.showModal();
+        window.LixityDesktopBridge.notifySavedExport({saved: true, path: savedPath, filename});
+      }, {filename, savedPath});
+      await expect(page.locator('dialog:modal .desktop-save-toast')).toHaveCount(1);
+      await toast.getByRole('button', {name: 'Show in folder'}).click();
+      assert.deepEqual(await page.evaluate(() => desktopRevealCalls), [savedPath, savedPath]);
+      await toast.getByRole('button', {name: 'Close', exact: true}).click();
+      await expect(toast).toBeHidden();
+      await page.evaluate(() => document.querySelector('dialog:modal').remove());
       await page.locator('#btn-site-export').click();
       const siteDownload = page.locator('#site-export-download');
       const siteStatus = page.locator('#site-export-status');
@@ -202,6 +224,30 @@ async function documentState(page) {
 
     const {page: shortcutPage} = await createPage(browser, fixtures.en, 1440);
     try {
+      await shortcutPage.mouse.move(320, 450);
+      await shortcutPage.mouse.wheel(0, 360);
+      await shortcutPage.waitForFunction(() => window.scrollY > 64 && window.LixityChrome.isHidden());
+      await shortcutPage.evaluate(() => {
+        const query = document.querySelectorAll;
+        let toolbarChecks = 0;
+        window.readToolbarChecks = () => {
+          document.querySelectorAll = query;
+          return toolbarChecks;
+        };
+        document.querySelectorAll = function(selector) {
+          if (selector === '.passage-jump-bar:not([hidden])') toolbarChecks++;
+          return query.call(this, selector);
+        };
+      });
+      for (let step = 0; step < 8; step++) {
+        const previous = await shortcutPage.evaluate(() => window.scrollY);
+        await shortcutPage.mouse.wheel(0, 70);
+        await shortcutPage.waitForFunction(top => window.scrollY > top, previous);
+      }
+      assert.equal(await shortcutPage.evaluate(() => window.readToolbarChecks()), 0,
+        'Steady downward scrolling keeps hidden toolbars without checking their geometry again');
+      await shortcutPage.mouse.wheel(0, -100);
+      await shortcutPage.waitForFunction(() => !window.LixityChrome.isHidden());
       const prompter = shortcutPage.locator('#teleprompter-modal');
       for (const view of ['research', 'project']) {
         await shortcutPage.locator('#tab-view-' + view).click();

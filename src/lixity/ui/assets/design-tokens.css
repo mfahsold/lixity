@@ -11,6 +11,7 @@
   --line: light-dark(#dce2ef, rgba(255, 255, 255, 0.08));
   --line-strong: light-dark(#94a3b8, rgba(255, 255, 255, 0.16));
   --line-subtle: light-dark(#eef2f8, rgba(255, 255, 255, 0.05));
+  --field-line: light-dark(#78849a, #687890);
   --accent: light-dark(#2949cc, #b4c3ff);
   --accent-hover: light-dark(#203ba6, #d5deff);
   --accent-light: light-dark(#e9edff, #242f51);
@@ -49,11 +50,13 @@
   --radius: 12px;
   --radius-lg: 16px;
   --radius-pill: 999px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .04);
-  --shadow-lift: 0 6px 18px rgba(0, 0, 0, .08);
+  --shadow-ink: light-dark(rgb(25 38 61 / .09), rgb(0 0 0 / .28));
+  --shadow: 0 1px 2px var(--shadow-ink), 0 4px 12px -8px var(--shadow-ink);
+  --shadow-lift: 0 3px 8px var(--shadow-ink), 0 14px 28px -12px var(--shadow-ink);
   --shadow-modal-ink: light-dark(rgb(0 0 0 / .22), rgb(0 0 0 / .75));
   --shadow-modal-outline: light-dark(rgb(0 0 0 / .04), rgb(255 255 255 / .08));
   --shadow-modal: 0 20px 48px -10px var(--shadow-modal-ink), 0 0 0 1px var(--shadow-modal-outline);
+  --modal-backdrop: light-dark(rgb(18 24 34 / .48), rgb(5 8 13 / .68));
   --ease: cubic-bezier(.2, .7, .3, 1);
   --ease-out: var(--ease);
   --dur-fast: 140ms;
@@ -99,6 +102,7 @@
   --surface-alt: light-dark(#f7f9fc, #161d29);
   --surface-raised: light-dark(#f2f4fa, #1a2230);
   --surface-hover: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.05));
+  --control-hover: color-mix(in srgb, var(--accent) 7%, var(--surface));
   --surface-glass: light-dark(rgba(255, 255, 255, 0.88), rgba(18, 24, 34, 0.88));
   --surface-glass-header: light-dark(rgba(250, 250, 247, 0.85), rgba(12, 16, 23, 0.85));
   --surface-popover: light-dark(rgba(255, 255, 255, 0.94), rgba(18, 24, 34, 0.94));

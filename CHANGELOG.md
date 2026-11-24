@@ -44,6 +44,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Skip repeated toolbar, analysis highlight and dossier outline updates during
+  steady scrolling. Fit the manuscript companion on viewport scroll and avoid
+  refreshing dossier maps on pages without maps.
+- Refine shared links, action and field boundaries, surface elevation, table
+  headings and dialog contrast in both themes.
+- Save and delete dossier collections through the shared research form before
+  locking the other controls during the request.
+- Route desktop diagnostics and exports through one authenticated Rust transport.
+  Keep the OS-selected filename in the native save result and show the folder
+  action in the same dialog that started the export.
 - Guide the first workspace in all seven interface languages with distinct
   actions for opening a project folder, importing a file and starting a draft.
   Show the desktop project destination before saving and remember newly created

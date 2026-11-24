@@ -208,6 +208,33 @@ async function assertDockGeometry(page) {
     throw error;
   });
 }
+
+async function assertIndependentDockScroll(page) {
+  const result = await page.locator('#workspace-context-panel').evaluate(async dock => {
+    const layout = document.getElementById('workspace-reader-layout');
+    const frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const spacer = document.createElement('div');
+    spacer.style.height = '200vh';
+    dock.appendChild(spacer);
+    await frame(); await frame();
+    const measure = layout.getBoundingClientRect;
+    const documentScroll = scrollY, dockScroll = dock.scrollTop;
+    let fits = 0;
+    layout.getBoundingClientRect = function() { fits++; return measure.call(this); };
+    try {
+      dock.scrollTop = dockScroll + 80;
+      await frame(); await frame();
+      return {fits, dockMoved: dock.scrollTop > dockScroll, documentMoved: scrollY !== documentScroll};
+    } finally {
+      delete layout.getBoundingClientRect;
+      dock.scrollTop = dockScroll;
+      spacer.remove();
+    }
+  });
+  assert.deepEqual(result, {fits: 0, dockMoved: true, documentMoved: false},
+    'Scrolling inside the dock does not remeasure the manuscript layout');
+}
+
 async function geometryJourneys(browser, shortServer) {
   const longSource = source.replace("anchor = api.resolve_manuscript_anchor(project, manuscript, query='😀 A repeated quotation.')",
     "manuscript.write_text(manuscript.read_text() + '\\n\\n' + '\\n\\n'.join('Synthetic long reading paragraph %d. ' % n + 'The quiet garden continues. ' * 12 for n in range(50)), encoding='utf-8')\nanchor = api.resolve_manuscript_anchor(project, manuscript, query='😀 A repeated quotation.')");
@@ -224,6 +251,7 @@ async function geometryJourneys(browser, shortServer) {
       await expect(page.locator('[data-passage-research]')).toHaveAttribute('data-state', 'ready');
       await assertDockGeometry(page);
       await expect.poll(async () => Math.abs((await paragraph.boundingBox()).y - top)).toBeLessThan(2);
+      if (name === 'long' && width === 1440) await assertIndependentDockScroll(page);
       for (const position of ['reading', 'bottom']) {
         if (position === 'bottom') await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
         for (const tool of ['research', 'analysis', 'dossier']) {

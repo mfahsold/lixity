@@ -1,10 +1,11 @@
 //! Atomic local artifact exports (blob + streaming loopback) and reveal allowlist.
 
-use crate::security::{is_valid_workspace_path, random_token_hex, DESKTOP_SECRET_HEADER};
+use crate::security::{is_valid_workspace_path, random_token_hex};
+use crate::sidecar::PythonSidecar;
 use base64::Engine;
 use reqwest::blocking::Response;
 use reqwest::header::CONTENT_TYPE;
-use reqwest::{redirect, StatusCode};
+use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
@@ -51,8 +52,33 @@ impl RevealAllowlist {
 pub struct SaveOutcome {
     pub saved: bool,
     pub path: Option<String>,
+    pub filename: Option<String>,
     pub bytes: u64,
     pub sha256: Option<String>,
+}
+
+impl SaveOutcome {
+    pub fn cancelled() -> Self {
+        Self {
+            saved: false,
+            path: None,
+            filename: None,
+            bytes: 0,
+            sha256: None,
+        }
+    }
+
+    fn written(destination: &Path, bytes: u64, sha256: String) -> Self {
+        Self {
+            saved: true,
+            path: Some(destination.display().to_string()),
+            filename: destination
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned()),
+            bytes,
+            sha256: Some(sha256),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -304,43 +330,30 @@ pub fn write_base64_blob(payload_base64: &str, destination: &Path) -> Result<Sav
         return Err("Export payload exceeds maximum desktop blob size".to_string());
     }
     let (bytes, sha256) = atomic_write_reader(&decoded[..], destination, decoded.len() as u64)?;
-    Ok(SaveOutcome {
-        saved: true,
-        path: Some(destination.display().to_string()),
-        bytes,
-        sha256: Some(sha256),
-    })
+    Ok(SaveOutcome::written(destination, bytes, sha256))
 }
 
 pub fn stream_loopback_export(
-    port: u16,
-    secret: &str,
+    sidecar: &PythonSidecar,
     artifact: ExportArtifact,
     spec: &ExportRequestSpec,
     destination: &Path,
 ) -> Result<SaveOutcome, ExportError> {
-    let url = format!("http://127.0.0.1:{port}{}", spec.path);
-    let client = reqwest::blocking::Client::builder()
-        .redirect(redirect::Policy::none())
-        .no_proxy()
-        .timeout(Duration::from_secs(300))
-        .build()
-        .map_err(|e| format!("Loopback client error: {e}"))?;
-
-    let req = match artifact {
-        ExportArtifact::DossierPdf | ExportArtifact::Canvas => client.get(&url),
-        ExportArtifact::ManuscriptPdf | ExportArtifact::WebsiteZip => {
-            let builder = client.post(&url);
-            if let Some(payload) = &spec.payload {
-                builder.json(payload)
-            } else {
-                builder.json(&serde_json::json!({}))
-            }
-        }
-    };
+    let posts_json = matches!(
+        artifact,
+        ExportArtifact::ManuscriptPdf | ExportArtifact::WebsiteZip
+    );
+    let method = if posts_json { Method::POST } else { Method::GET };
+    let mut req = sidecar.loopback_request(method, &spec.path, Duration::from_secs(300))?;
+    if posts_json {
+        req = if let Some(payload) = &spec.payload {
+            req.json(payload)
+        } else {
+            req.json(&serde_json::json!({}))
+        };
+    }
 
     let mut response = req
-        .header(DESKTOP_SECRET_HEADER, secret)
         .send()
         .map_err(|e| {
             format!(
@@ -360,17 +373,13 @@ pub fn stream_loopback_export(
         .ok_or_else(|| "Export response has no usable size".to_string())?;
     let prefix = artifact.validated_prefix(&mut response, expected)?;
     let (bytes, sha256) = atomic_write_reader(prefix.chain(response), destination, expected)?;
-    Ok(SaveOutcome {
-        saved: true,
-        path: Some(destination.display().to_string()),
-        bytes,
-        sha256: Some(sha256),
-    })
+    Ok(SaveOutcome::written(destination, bytes, sha256))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::security::DESKTOP_SECRET_HEADER;
     use std::io::{BufRead, BufReader};
     use std::net::TcpListener;
     use std::thread;
@@ -477,8 +486,7 @@ mod tests {
                 connection.write_all(&response).unwrap();
             });
             let result = stream_loopback_export(
-                port,
-                "synthetic-secret",
+                &PythonSidecar::fixture(port, "synthetic-secret"),
                 request.artifact().unwrap(),
                 request,
                 &self.0.join("saved"),
@@ -515,9 +523,22 @@ mod tests {
             )
             .unwrap();
         assert!(saved.saved);
+        assert_eq!(saved.filename.as_deref(), Some("saved"));
         assert_eq!(saved.bytes, body.len() as u64);
         assert_eq!(saved.sha256.unwrap(), hex::encode(Sha256::digest(body)));
         fixture.assert_saved(body);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn saved_blob_returns_the_native_filename() {
+        let fixture = ExportFixture::new();
+        let filename = r"Kapitel \ Rohfassung.pdf";
+        let destination = fixture.0.join(filename);
+        let saved = write_base64_blob("bGl4aXR5", &destination).unwrap();
+        assert_eq!(saved.filename.as_deref(), Some(filename));
+        assert_eq!(fs::read(destination).unwrap(), b"lixity");
+        assert!(SaveOutcome::cancelled().filename.is_none());
     }
 
     #[test]

@@ -12,6 +12,7 @@ commands.allow = [
     "check_for_updates",
     "clear_recent_projects",
     "get_preferences",
+    "get_runtime_environment",
     "list_recent_projects",
     "open_external_url",
     "open_logs_folder",

@@ -16,14 +16,16 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
 (async () => {
   const browser = await launchChromium();
   try {
-    const page = await browser.newPage({hasTouch: true});
     const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
-    await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
-      ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: fixture.stdout}));
     for (const width of [1920, 1440, 768, 390, 320]) {
-      await page.setViewportSize({width, height: 900});
+      // A reused page can lose its emulated coarse pointer after resizing and navigating.
+      const page = await browser.newPage({hasTouch: true, viewport: {width, height: 900}});
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
+        ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: fixture.stdout}));
       await page.goto('http://lixity.test/');
+      assert.ok(await page.evaluate(() => matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0),
+        `Layout fixture has touch emulation at ${width}px`);
       if (width === 320 || width === 1440) {
         const navigation = await page.evaluate(() => {
           const components = window.LixityComponents;
@@ -231,6 +233,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         await page.evaluate(() => document.activeElement.blur());
         await page.locator(selector).screenshot({path: `/tmp/lixity-layout-${width}-${selector.slice(1)}.png`});
       }
+      await page.close();
     }
     assert.deepEqual(errors, []);
     console.log('Layout: desktop/tablet/mobile spacing, readable overview charts and tables, tooltips, settings and paragraph diagnostics passed');

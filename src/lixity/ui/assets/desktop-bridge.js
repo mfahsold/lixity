@@ -95,21 +95,26 @@
   async function renderSystemStatus(bodyEl) {
     bodyEl.innerHTML = '<p class="ctl-status loading">' + escapeHtml(label("desktop_env_loading", "Checking local environment…")) + "</p>";
 
+    var desktop = window.lixityDesktop;
+    var failure = label("desktop_env_error", "Could not inspect environment");
     var res;
     try {
-      var response = await fetch(apiBase() + "/desktop/environment?probe_zotero=1");
-      res = await response.json();
-    } catch (error) {
-      bodyEl.innerHTML = '<p class="ctl-status err">' + escapeHtml(String(error)) + "</p>";
+      if (typeof desktop?.getRuntimeEnvironment === "function") {
+        res = await desktop.getRuntimeEnvironment();
+      } else {
+        var response = await fetch(apiBase() + "/desktop/environment?probe_zotero=1");
+        res = await response.json();
+      }
+    } catch (_) {
+      bodyEl.innerHTML = '<p class="ctl-status err">' + escapeHtml(failure) + "</p>";
       return;
     }
     if (!res || !res.ok) {
-      bodyEl.innerHTML = '<p class="ctl-status err">' + escapeHtml((res && res.message) || label("desktop_env_error", "Could not inspect environment")) + "</p>";
+      bodyEl.innerHTML = '<p class="ctl-status err">' + escapeHtml((res && res.message) || failure) + "</p>";
       return;
     }
 
     var app = res.app || {};
-    var desktop = window.lixityDesktop;
     var revision = desktop && desktop.appRevision;
     var buildStatus = typeof revision === "string" && /^[a-f0-9]{40}$/i.test(revision)
       ? " · " + escapeHtml(label("desktop_env_build", "Build")) + ' <code title="' +
@@ -290,7 +295,7 @@
   var savedToastTimer = null;
 
   function notifySavedExport(outcome) {
-    if (!outcome || !outcome.saved || !outcome.path || !window.lixityDesktop ||
+    if (!outcome || !outcome.saved || !outcome.path || !outcome.filename || !window.lixityDesktop ||
         typeof window.lixityDesktop.revealInFileManager !== "function") return;
     if (savedToastTimer) {
       clearTimeout(savedToastTimer);
@@ -298,23 +303,21 @@
     }
     if (!savedToastEl || !document.body.contains(savedToastEl)) {
       savedToastEl = document.createElement("div");
-      savedToastEl.className = "desktop-save-toast";
-      savedToastEl.setAttribute("role", "status");
-      savedToastEl.setAttribute("aria-live", "polite");
-      savedToastEl.style.cssText =
-        "position:fixed;right:1rem;bottom:1rem;z-index:9500;display:flex;align-items:center;gap:0.6rem;" +
-        "padding:0.65rem 0.9rem;border-radius:10px;background:var(--surface,#fff);color:var(--fg,#19263d);" +
-        "border:1px solid var(--line,#dce2ef);box-shadow:0 8px 24px rgba(0,0,0,0.18);font-size:0.875rem;";
-      document.body.appendChild(savedToastEl);
+      savedToastEl.className = "action-toast desktop-save-toast";
     }
-    var fileLabel = String(outcome.path).split(/[\\/]/).pop() || outcome.path;
-    savedToastEl.replaceChildren();
+    // Controls outside a modal dialog are inert. Keep the feedback in the
+    // same interaction surface as the export that triggered it.
+    var surface = document.querySelector("dialog:modal") || document.body;
+    if (savedToastEl.parentElement !== surface) surface.appendChild(savedToastEl);
     var text = document.createElement("span");
-    text.textContent = "✓ " + fileLabel;
+    text.className = "action-toast-message";
+    text.setAttribute("role", "status");
+    var actions = document.createElement("div");
+    actions.className = "action-toast-actions";
     var revealBtn = document.createElement("button");
     revealBtn.type = "button";
     revealBtn.className = "ctl ctl-sm";
-    revealBtn.textContent = label("open", "Open");
+    revealBtn.textContent = label("desktop_export_reveal", "Show in folder");
     revealBtn.addEventListener("click", function () {
       window.lixityDesktop.revealInFileManager(outcome.path).catch(function () {});
     });
@@ -326,8 +329,10 @@
     closeBtn.addEventListener("click", function () {
       if (savedToastEl) savedToastEl.hidden = true;
     });
-    savedToastEl.append(text, revealBtn, closeBtn);
+    actions.append(revealBtn, closeBtn);
+    savedToastEl.replaceChildren(text, actions);
     savedToastEl.hidden = false;
+    text.textContent = window.LixityComponents.uiFormat("desktop_export_saved", {filename: outcome.filename});
     savedToastTimer = setTimeout(function () {
       if (savedToastEl) savedToastEl.hidden = true;
     }, 9000);

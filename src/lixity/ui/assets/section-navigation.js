@@ -89,8 +89,7 @@
       var box = nav.getBoundingClientRect();
       var points = entries.map(function(item) {
         var rect = item.link.getBoundingClientRect();
-        return horizontal ? [rect.left - box.left + nav.scrollLeft + rect.width / 2, rect.bottom - box.top + nav.scrollTop - 2] :
-          [rect.left - box.left + nav.scrollLeft - 9, rect.top - box.top + nav.scrollTop + rect.height / 2];
+        return [rect.left - box.left + nav.scrollLeft - 9, rect.top - box.top + nav.scrollTop + rect.height / 2];
       });
       var path = points.map(function(point, index) { return (index ? "L" : "M") + point.join(","); }).join(" ");
       var changedGeometry = path !== geometry; geometry = path;
@@ -99,9 +98,10 @@
       var animate = !changedGeometry && !motion.matches;
       dot.style.transition = animate ? "transform 200ms ease-out" : "none";
       progress.style.transition = animate ? "stroke-dasharray 200ms ease-out" : "none";
+      if (!changedCurrent && !changedGeometry) return;
       // CSS owns the viewport size; copying scrollWidth here would let the
       // decoration's previous width prevent its parent from shrinking.
-      track.setAttribute("d", path); progress.setAttribute("d", path);
+      if (changedGeometry) { track.setAttribute("d", path); progress.setAttribute("d", path); }
       var lengths = [0];
       for (var i = 1; i < points.length; i++) lengths.push(lengths[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
       var index = entries.indexOf(entry), point = points[index];
@@ -115,7 +115,7 @@
       frame = 0;
       if (!nav.isConnected || !host.isConnected) { dispose(); return; }
       var shown = visible(host) && (visible(nav) || options.location && visible(options.location));
-      var root = horizontal ? document.scrollingElement : scrollRoot(host);
+      var root = shown ? (horizontal ? document.scrollingElement : scrollRoot(host)) : null;
       var fittedOutline = shown && fitOutline(root);
       if (resize && (shown !== observing || shown && root !== observedRoot)) {
         resize.disconnect(); observing = shown; observedRoot = root;
@@ -125,9 +125,9 @@
           entries.forEach(function(entry) { resize.observe(entry.target); });
         }
       }
-      var available = entries.filter(function(entry) { return visible(entry.target); });
+      var available = shown ? entries.filter(function(entry) { return visible(entry.target); }) : [];
       var selected = null;
-      if (available.length && visible(host)) {
+      if (available.length) {
         var windowRoot = root === document.scrollingElement;
         var bounds = windowRoot ? {top: 0, bottom: innerHeight, height: innerHeight} : root.getBoundingClientRect();
         var top = Math.max(0, bounds.top), bottom = Math.min(innerHeight, bounds.bottom);
@@ -152,12 +152,10 @@
         var last = available[available.length - 1];
         if (Math.ceil(root.scrollTop + root.clientHeight) >= root.scrollHeight - 1 && last.target.getBoundingClientRect().top < bottom) selected = last;
       }
-      entries.forEach(function(entry) {
-        if (entry === selected) entry.link.setAttribute("aria-current", "true");
-        else entry.link.removeAttribute("aria-current");
-      });
       var changedCurrent = current !== selected;
       if (changedCurrent) {
+        if (current) current.link.removeAttribute("aria-current");
+        if (selected) selected.link.setAttribute("aria-current", "true");
         current = selected;
         if (options.onCurrent) options.onCurrent(selected && selected.link);
       }

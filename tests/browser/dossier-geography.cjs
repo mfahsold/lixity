@@ -58,6 +58,31 @@ server.serve_forever()
     assert.equal(new URL(page.url()).origin, fixture.url);
     assert.match(await page.title(), /Synthetic manuscript/);
     assert.equal(await page.evaluate(() => window.L && window.L.version), '1.9.4', 'The interactive renderer is pinned and bundled offline');
+    const plainScroll = await page.evaluate(async () => {
+      const chapters = document.getElementById('chapters');
+      const originalQuery = Document.prototype.querySelectorAll;
+      const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+      let mapScans = 0;
+      chapters.style.minHeight = '300vh';
+      await nextFrame(); await nextFrame();
+      Document.prototype.querySelectorAll = function (selector) {
+        if (selector === '.dossier-geography[data-geo-geometries]') mapScans++;
+        return originalQuery.call(this, selector);
+      };
+      try {
+        window.scrollTo(0, 500);
+        await nextFrame(); await nextFrame();
+        const offset = window.scrollY;
+        window.scrollTo(0, 0);
+        await nextFrame(); await nextFrame();
+        return {offset, mapScans};
+      } finally {
+        Document.prototype.querySelectorAll = originalQuery;
+        chapters.style.removeProperty('min-height');
+      }
+    });
+    assert.ok(plainScroll.offset >= 500, 'The map-free manuscript genuinely scrolls');
+    assert.equal(plainScroll.mapScans, 0, 'Scrolling a manuscript with no maps does not run the geography scan');
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();
     const collision = await page.evaluate(() => {

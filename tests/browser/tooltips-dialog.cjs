@@ -103,6 +103,6 @@ const explanation = 'Erlaube dieser Seite den Mikrofonzugriff. Lies den Text in 
       await page.close();
     }
     assert.deepEqual(errors, []);
-    console.log(`${engine}: actual blurred native dialog help remains readable, unclipped and dismissible at desktop/mobile widths; ${artifacts}`);
+    console.log(`${engine}: native dialog help remains readable, unclipped and dismissible at desktop/mobile widths; ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

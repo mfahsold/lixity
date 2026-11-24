@@ -529,6 +529,7 @@ pub fn run() {
             commands::reveal_in_file_manager,
             commands::set_dirty_state,
             commands::set_workspace_title,
+            commands::get_runtime_environment,
             commands::list_recent_projects,
             commands::record_recent_project,
             commands::remove_recent_project,

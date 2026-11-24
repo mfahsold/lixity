@@ -8,6 +8,8 @@
 
 use crate::security::{random_token_hex, DESKTOP_SECRET_HEADER};
 use crate::StartupFailure;
+use reqwest::blocking::{RequestBuilder, Response};
+use reqwest::{redirect, Method};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
@@ -20,6 +22,7 @@ use zeroize::Zeroizing;
 
 const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_READY_BYTES: usize = 4096;
+const MAX_ENVIRONMENT_BYTES: usize = 64 * 1024;
 // Loading the project supplied at launch can include a full analysis before readiness.
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
 const LOOPBACK_HOST: &str = "127.0.0.1";
@@ -240,6 +243,19 @@ pub struct PythonSidecar {
 }
 
 impl PythonSidecar {
+    #[cfg(any(test, all(target_os = "macos", feature = "webview-smoke")))]
+    pub(crate) fn fixture(port: u16, secret: &str) -> Self {
+        Self {
+            port,
+            version: String::new(),
+            initial_nonce: Zeroizing::new(String::new()),
+            secret: Zeroizing::new(secret.to_string()),
+            child: Mutex::new(None),
+            #[cfg(target_os = "windows")]
+            _job_guard: None,
+        }
+    }
+
     /// Locate the bundled Python interpreter relative to Tauri's resource directory,
     /// with an explicit developer override (`LIXITY_DESKTOP_PYTHON`) for local testing.
     pub fn resolve_python(resource_dir: Option<&Path>) -> Result<PathBuf, String> {
@@ -355,29 +371,52 @@ impl PythonSidecar {
         })
     }
 
-    pub fn secret(&self) -> &str {
-        &self.secret
+    pub(crate) fn loopback_request(
+        &self,
+        method: Method,
+        path: &str,
+        timeout: Duration,
+    ) -> Result<RequestBuilder, String> {
+        if !path.starts_with('/') || path.starts_with("//") {
+            return Err("Desktop runtime requests require a local path".to_string());
+        }
+        let client = reqwest::blocking::Client::builder()
+            .timeout(timeout)
+            .redirect(redirect::Policy::none())
+            .no_proxy()
+            .build()
+            .map_err(|_| "Could not initialize the desktop runtime client".to_string())?;
+        let url = format!("http://{LOOPBACK_HOST}:{}{path}", self.port);
+        Ok(client
+            .request(method, url)
+            .header(DESKTOP_SECRET_HEADER, self.secret.as_str()))
+    }
+
+    fn request_runtime(
+        &self,
+        method: Method,
+        path: &'static str,
+        timeout: Duration,
+    ) -> Result<Response, String> {
+        let response = self
+            .loopback_request(method, path, timeout)?
+            .send()
+            .map_err(|_| "Could not contact the desktop runtime".to_string())?;
+        if !response.status().is_success() {
+            return Err(format!(
+                "Desktop runtime request rejected (HTTP {})",
+                response.status().as_u16()
+            ));
+        }
+        Ok(response)
     }
 
     /// Mint a fresh single-use handshake nonce for opening an additional window.
     pub fn mint_handshake_nonce(&self) -> Result<String, String> {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()
-            .map_err(|e| e.to_string())?;
-        let url = format!("http://127.0.0.1:{}/_desktop/nonce", self.port);
-        let resp = client
-            .post(url)
-            .header(DESKTOP_SECRET_HEADER, self.secret())
-            .send()
-            .map_err(|e| format!("Failed to request desktop nonce: {e}"))?;
-        if !resp.status().is_success() {
-            return Err(format!(
-                "Desktop nonce request rejected (HTTP {})",
-                resp.status().as_u16()
-            ));
-        }
-        let parsed: NonceResponse = resp.json().map_err(|e| e.to_string())?;
+        let parsed: NonceResponse = self
+            .request_runtime(Method::POST, "/_desktop/nonce", Duration::from_secs(5))?
+            .json()
+            .map_err(|_| "Invalid desktop nonce response".to_string())?;
         if !parsed.ok || parsed.nonce.is_empty() {
             return Err("Desktop nonce response missing nonce".to_string());
         }
@@ -386,22 +425,37 @@ impl PythonSidecar {
 
     /// Inspect pending/running audio jobs. An unreadable runtime status is unknown.
     pub(crate) fn has_active_audio_jobs(&self) -> Option<bool> {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_secs(2))
-            .redirect(reqwest::redirect::Policy::none())
-            .no_proxy()
-            .build()
+        let response = self
+            .request_runtime(Method::GET, "/api/runtime", Duration::from_secs(2))
             .ok()?;
-        let url = format!("http://127.0.0.1:{}/api/runtime", self.port);
-        let response = client
-            .get(url)
-            .header(DESKTOP_SECRET_HEADER, self.secret())
-            .send()
-            .ok()?;
-        if !response.status().is_success() {
-            return None;
-        }
         response.json::<RuntimeOverview>().ok()?.active_audio()
+    }
+
+    /// Read the Python runtime's content-free inventory without forwarding browser inputs.
+    pub(crate) fn runtime_environment(&self) -> Result<serde_json::Value, String> {
+        // Leave time for the runtime's ten-second Zotero status probe.
+        let response = self.request_runtime(
+            Method::GET,
+            "/api/desktop/environment?probe_zotero=1",
+            Duration::from_secs(15),
+        )?;
+        let mut body = Vec::new();
+        response
+            .take((MAX_ENVIRONMENT_BYTES + 1) as u64)
+            .read_to_end(&mut body)
+            .map_err(|_| "Could not read the desktop runtime environment".to_string())?;
+        if body.len() > MAX_ENVIRONMENT_BYTES {
+            return Err("Desktop runtime environment exceeded the response limit".to_string());
+        }
+        let invalid = || "Invalid desktop runtime environment".to_string();
+        let inventory: serde_json::Value = serde_json::from_slice(&body).map_err(|_| invalid())?;
+        if inventory["ok"].as_bool() != Some(true)
+            || inventory["schema_version"].as_str() != Some("lixity-desktop-env/1")
+            || !inventory["app"].is_object()
+        {
+            return Err(invalid());
+        }
+        Ok(inventory)
     }
 
     pub fn shutdown(&self) {
@@ -527,6 +581,48 @@ mod tests {
         ));
     }
 
+    fn runtime_response(
+        request: &'static str,
+        code: u16,
+        body: String,
+        assert_result: impl FnOnce(&PythonSidecar),
+    ) {
+        let listener = std::net::TcpListener::bind((LOOPBACK_HOST, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let fixture = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut lines = BufReader::new(&mut stream).lines();
+            assert_eq!(lines.next().unwrap().unwrap(), request);
+            let headers = lines
+                .map(Result::unwrap)
+                .take_while(|line| !line.is_empty());
+            let expected = format!("{DESKTOP_SECRET_HEADER}: fixture");
+            let mut authenticated = false;
+            for header in headers {
+                authenticated |= header.eq_ignore_ascii_case(&expected);
+            }
+            assert!(authenticated);
+            let redirect = if code == 302 {
+                "Location: /followed\r\n"
+            } else {
+                ""
+            };
+            write!(
+                stream,
+                "HTTP/1.1 {code} Fixture\r\n{redirect}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            )
+            .unwrap();
+        });
+
+        let sidecar = PythonSidecar::fixture(port, "fixture");
+        assert_result(&sidecar);
+        fixture.join().unwrap();
+    }
+
     #[test]
     fn runtime_audio_status_distinguishes_unavailable_from_idle() {
         let empty = r#"{"schema_version":"lixity-runtime-local/1","ok":true,"audio":{"jobs":[]}}"#;
@@ -552,43 +648,32 @@ mod tests {
             (200, r#"{"ok":true}"#.to_string(), None),
             (403, empty.to_string(), None),
         ] {
-            let listener = std::net::TcpListener::bind((LOOPBACK_HOST, 0)).unwrap();
-            let port = listener.local_addr().unwrap().port();
-            let fixture = thread::spawn(move || {
-                let (mut stream, _) = listener.accept().unwrap();
-                stream
-                    .set_read_timeout(Some(Duration::from_secs(2)))
-                    .unwrap();
-                let mut lines = BufReader::new(&mut stream).lines();
-                assert_eq!(lines.next().unwrap().unwrap(), "GET /api/runtime HTTP/1.1");
-                let headers = lines
-                    .map(Result::unwrap)
-                    .take_while(|line| !line.is_empty());
-                let expected = format!("{DESKTOP_SECRET_HEADER}: fixture");
-                let mut authenticated = false;
-                for header in headers {
-                    authenticated |= header.eq_ignore_ascii_case(&expected);
-                }
-                assert!(authenticated);
-                write!(
-                    stream,
-                    "HTTP/1.1 {code} Fixture\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                )
-                .unwrap();
+            runtime_response("GET /api/runtime HTTP/1.1", code, body, |sidecar| {
+                assert_eq!(sidecar.has_active_audio_jobs(), expected);
             });
+        }
+    }
 
-            let sidecar = PythonSidecar {
-                port,
-                version: String::new(),
-                initial_nonce: Zeroizing::new(String::new()),
-                secret: Zeroizing::new("fixture".to_string()),
-                child: Mutex::new(None),
-                #[cfg(target_os = "windows")]
-                _job_guard: None,
-            };
-            assert_eq!(sidecar.has_active_audio_jobs(), expected);
-            fixture.join().unwrap();
+    #[test]
+    fn runtime_environment_requires_a_bounded_inventory_from_the_loopback_route() {
+        const REQUEST: &str = "GET /api/desktop/environment?probe_zotero=1 HTTP/1.1";
+        let inventory =
+            r#"{"ok":true,"schema_version":"lixity-desktop-env/1","app":{"version":"0.9.1"}}"#;
+        runtime_response(REQUEST, 200, inventory.to_string(), |sidecar| {
+            assert_eq!(
+                sidecar.runtime_environment().unwrap()["app"]["version"],
+                "0.9.1"
+            );
+        });
+        for (status, body, error) in [
+            (302, inventory.to_string(), "HTTP 302"),
+            (200, inventory.replace("env/1", "env/2"), "Invalid"),
+            (200, inventory.replace("true", "false"), "Invalid"),
+            (200, " ".repeat(MAX_ENVIRONMENT_BYTES + 1), "response limit"),
+        ] {
+            runtime_response(REQUEST, status, body, |sidecar| {
+                assert!(sidecar.runtime_environment().unwrap_err().contains(error));
+            });
         }
     }
 }

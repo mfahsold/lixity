@@ -10,6 +10,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const bridge = window.lixityDesktop;
     if (await bridge.getPreferences() !== "Rust IPC reached") throw new Error("IPC response missing");
+    const inventory = await bridge.getRuntimeEnvironment();
+    if (inventory.schema_version !== "lixity-desktop-env/1" ||
+        inventory.app?.version !== "0.0.0-smoke" || !inventory.app.desktop_mode) {
+      throw new Error("Runtime environment response missing");
+    }
     await bridge.setWorkspaceTitle(" A synthetic project ");
     const sample = await bridge.readSampleManuscript();
     if (sample.language !== "en" || !sample.content.includes("# The Crate at Warehouse 4")) {

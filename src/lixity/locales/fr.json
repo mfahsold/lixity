@@ -2458,6 +2458,8 @@
   "desktop_env_no_matching_installer": "Aucun programme d’installation n’a été publié pour ce système.",
   "desktop_env_installed_ahead": "Cette installation est plus récente que le paquet publié.",
   "desktop_env_build": "Compilation",
+  "desktop_export_saved": "Fichier enregistré : {filename}",
+  "desktop_export_reveal": "Afficher dans le dossier",
   "desktop_env_installed_version": "Installée",
   "desktop_env_published_version": "Publiée"
 }

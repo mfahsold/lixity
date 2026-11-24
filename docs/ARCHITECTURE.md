@@ -73,6 +73,12 @@ WebView navigation to the exact bound loopback origin and delegates allowed
 external HTTPS and mail links to the OS. Native editor close protection uses
 the shared editor's dirty state. The final workspace checks queued audio off
 the event loop and rechecks local edits and recording state before closing.
+Rust routes System Status, handshake nonce, queued-audio and validated export
+requests through one authenticated loopback transport with no proxy or
+redirects. The desktop host retains the credential and returns the OS-selected
+filename after saving. Python provides the runtime inventory and export bytes.
+The shared UI presents the inventory using the workspace language. Browser
+sessions read the same inventory via the HTTP API.
 The workspace supplies the current project name to Rust for the native title.
 On macOS, the title bar uses the shared background tokens and keeps the system
 window controls and title-bar gestures. The Window and Help menus register with
@@ -723,6 +729,8 @@ renderer. Unmeasured chapters and absent axes are omitted.
 
 The local dashboard, reading exports and Pages share `ui/assets/design-tokens.css`.
 Components use its heading, body, metadata, reading measure and spacing roles.
+Fields and secondary actions use distinct boundaries, with shared surface and
+elevation tokens for panels, tables and dialogs in both themes.
 The manuscript reader can override its own font and leading. Authored Markdown
 notices and modal shadows resolve through the selected color scheme, including
 the system setting. Heatmap

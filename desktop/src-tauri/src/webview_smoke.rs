@@ -1,15 +1,25 @@
 //! Disposable macOS test of the real workspace WebView and IPC capability.
 
-use crate::security::{bridge_init_script, is_allowed_external_url, route_webview_navigation};
+use crate::commands::DesktopState;
+use crate::security::{
+    bridge_init_script, is_allowed_external_url, random_token_hex, route_webview_navigation,
+    DESKTOP_SECRET_HEADER,
+};
+use crate::sidecar::PythonSidecar;
 use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::sync::mpsc::{self, Sender};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tauri::webview::NewWindowResponse;
 use tauri::{ActivationPolicy, Manager, Url, WebviewUrl, WebviewWindowBuilder};
 
 const PAGE: &str = include_str!("../test-fixtures/webview-smoke.html");
+const ENVIRONMENT: &str = concat!(
+    r#"{"ok":true,"schema_version":"lixity-desktop-env/1","#,
+    r#""app":{"version":"0.0.0-smoke","desktop_mode":true}}"#
+);
 const TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -31,7 +41,7 @@ fn open_external_url(url: String) -> Result<(), String> {
     is_allowed_external_url(&url).map(|_| ())
 }
 
-fn serve_fixture(listener: TcpListener, observed: Sender<Observation>) {
+fn serve_fixture(listener: TcpListener, secret: &str, observed: Sender<Observation>) {
     for mut stream in listener.incoming().map_while(Result::ok) {
         if stream
             .set_read_timeout(Some(Duration::from_secs(2)))
@@ -48,15 +58,32 @@ fn serve_fixture(listener: TcpListener, observed: Sender<Observation>) {
         if parts.next() != Some("GET") {
             continue;
         }
-        let (body, result) = match parts.next() {
-            Some("/") => (PAGE, None),
-            Some("/bridge-ok") => ("", Some(Observation::Bridge)),
-            Some("/bridge-failed") => ("", Some(Observation::Failure)),
-            _ => ("", None),
+        let (status, content_type, body, result) = match parts.next() {
+            Some("/") => ("200 OK", "text/html", PAGE, None),
+            Some("/bridge-ok") => ("200 OK", "text/html", "", Some(Observation::Bridge)),
+            Some("/bridge-failed") => ("200 OK", "text/html", "", Some(Observation::Failure)),
+            Some("/api/desktop/environment?probe_zotero=1") => {
+                let authenticated = request
+                    .lines()
+                    .map_while(Result::ok)
+                    .take_while(|line| !line.is_empty())
+                    .any(|line| {
+                        line.split_once(':').is_some_and(|(name, value)| {
+                            name.eq_ignore_ascii_case(DESKTOP_SECRET_HEADER)
+                                && value.trim() == secret
+                        })
+                    });
+                if authenticated {
+                    ("200 OK", "application/json", ENVIRONMENT, None)
+                } else {
+                    ("403 Forbidden", "text/html", "", None)
+                }
+            }
+            _ => ("404 Not Found", "text/html", "", None),
         };
         let _ = write!(
             stream,
-            "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/html; charset=utf-8\r\n\
+            "HTTP/1.1 {status}\r\nConnection: close\r\nContent-Type: {content_type}; charset=utf-8\r\n\
              Content-Security-Policy: default-src 'none'; script-src 'nonce-ipc-smoke'; \
              connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost\r\n\
              Content-Length: {}\r\n\r\n{body}",
@@ -80,20 +107,31 @@ fn record_link(url: &Url, observed: &Sender<Observation>) {
     let _ = observed.send(observation);
 }
 
-/// Exercise the production link policy and bridge with synthetic loopback HTML.
+/// Exercise production navigation and runtime IPC against synthetic loopback data.
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let port = listener.local_addr()?.port();
     let origin = Url::parse(&format!("http://127.0.0.1:{port}/"))?;
     let (sender, receiver) = mpsc::channel();
     let fixture_sender = sender.clone();
-    std::thread::spawn(move || serve_fixture(listener, fixture_sender));
+    let secret = random_token_hex();
+    let sidecar = Arc::new(PythonSidecar::fixture(port, &secret));
+    std::thread::spawn(move || serve_fixture(listener, &secret, fixture_sender));
 
     tauri::Builder::default()
         .plugin(crate::desktop_opener_plugin())
+        .manage(DesktopState {
+            sidecar,
+            dirty: Default::default(),
+            reveal: Default::default(),
+            recorder: Default::default(),
+            app_version: "smoke".to_string(),
+            locale: "en".to_string(),
+        })
         .invoke_handler(tauri::generate_handler![
             get_preferences,
             open_external_url,
+            crate::commands::get_runtime_environment,
             crate::commands::read_sample_manuscript,
             crate::commands::set_workspace_title,
         ])
@@ -145,7 +183,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .as_deref() == Some("A synthetic project — Lixity");
                 if observed == required && title_matches {
                     println!(
-                        "Native WebView smoke passed: Rust IPC, bundled sample, license popups and same-window external links."
+                        "Native WebView smoke passed: authenticated runtime IPC, bundled sample, license popups and same-window external links."
                     );
                     handle.exit(0);
                 } else {

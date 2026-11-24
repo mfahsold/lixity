@@ -136,12 +136,7 @@ pub async fn save_blob(
     let suggested = sanitize_suggested_filename(&filename);
     let chosen = app.dialog().file().set_file_name(&suggested).blocking_save_file();
     let Some(fp) = chosen else {
-        return Ok(SaveOutcome {
-            saved: false,
-            path: None,
-            bytes: 0,
-            sha256: None,
-        });
+        return Ok(SaveOutcome::cancelled());
     };
     let dest = file_path_to_pathbuf(fp)?;
     let outcome = write_base64_blob(&payload_base64, &dest)?;
@@ -160,18 +155,12 @@ pub async fn save_export_stream(
     let suggested = sanitize_suggested_filename(&filename);
     let chosen = app.dialog().file().set_file_name(&suggested).blocking_save_file();
     let Some(fp) = chosen else {
-        return Ok(SaveOutcome {
-            saved: false,
-            path: None,
-            bytes: 0,
-            sha256: None,
-        });
+        return Ok(SaveOutcome::cancelled());
     };
     let dest = file_path_to_pathbuf(fp)?;
-    let port = state.sidecar.port;
-    let secret = state.sidecar.secret().to_string();
+    let sidecar = Arc::clone(&state.sidecar);
     let outcome = tauri::async_runtime::spawn_blocking(move || {
-        stream_loopback_export(port, &secret, artifact, &request, &dest)
+        stream_loopback_export(&sidecar, artifact, &request, &dest)
     })
     .await
     .map_err(|e| format!("Export task failed: {e}"))??;
@@ -284,6 +273,16 @@ pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
     app.opener()
         .open_path(logs_dir.to_string_lossy().as_ref(), None::<&str>)
         .map_err(|e| format!("Failed opening logs folder: {e}"))
+}
+
+#[tauri::command]
+pub async fn get_runtime_environment(
+    state: State<'_, DesktopState>,
+) -> Result<serde_json::Value, String> {
+    let sidecar = Arc::clone(&state.sidecar);
+    tauri::async_runtime::spawn_blocking(move || sidecar.runtime_environment())
+        .await
+        .map_err(|_| "Could not complete the desktop runtime environment request".to_string())?
 }
 
 fn open_system_url(app: &AppHandle, url: &Url) -> Result<(), String> {

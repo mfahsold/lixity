@@ -42,6 +42,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
   const opens = [];
   const creates = [];
   const saves = [];
+  const environmentRequests = [];
   let result = {ok: true, reload: false, message: 'Synthetic project opened'};
   let resultStatus = null;
   async function open({language = 'en', saved = history, blocked = false, initialized = false, desktop = false} = {}) {
@@ -56,6 +57,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       if (desktop) {
         window.desktopRecentWrites = [];
         window.desktopPreferenceWrites = [];
+        window.desktopEnvironmentReads = 0;
         window.desktopUpdateChecks = 0;
         window.desktopOpenedUrls = [];
         window.lixityDesktop = {
@@ -64,6 +66,11 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
           appRevision: '0123456789abcdef0123456789abcdef01234567',
           setWorkspaceTitle: async title => { window.desktopTitle = title; },
           setPreference: async (...entry) => window.desktopPreferenceWrites.push(entry),
+          getRuntimeEnvironment: async () => {
+            ++window.desktopEnvironmentReads;
+            if (window.desktopEnvironmentUnavailable) throw new Error('Synthetic native diagnostic');
+            return {ok: true, app: {version: '0.9.1', desktop_mode: true}};
+          },
           checkForUpdates: () => new Promise((resolve, reject) => {
             ++window.desktopUpdateChecks;
             window.resolveDesktopUpdate = resolve;
@@ -90,7 +97,8 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         return route.fulfill({json: result, status: resultStatus || (result.ok ? 200 : 400)});
       }
       if (url.pathname === '/api/desktop/environment') {
-        return route.fulfill({json: {ok: true, app: {version: '0.9.1', desktop_mode: true}}});
+        environmentRequests.push(url.search);
+        return route.fulfill({json: {ok: true, app: {version: '0.9.1', desktop_mode: false}}});
       }
       if (url.pathname === '/api/project-create') {
         creates.push(request.postDataJSON());
@@ -121,6 +129,11 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
   try {
     if (!process.argv.includes('--labels-only')) {
       const {context, page} = await open();
+      await page.evaluate(() => window.LixityDesktopBridge.openSystemStatus());
+      const browserStatus = page.locator('#modal-desktop-environment [data-desktop-env-body]');
+      await browserStatus.getByText('Local Browser', {exact: false}).waitFor();
+      assert.deepEqual(environmentRequests, ['?probe_zotero=1']);
+      await page.keyboard.press('Escape');
       assert.ok(await page.locator('#hero-btn-example').isHidden(), 'The browser welcome uses the online example');
       assert.equal(await page.locator('#welcome-project-recent-list [data-recent-project-path]').count(), 8, 'Welcome shows a bounded, deduplicated recent list');
       assert.equal(await page.locator('#welcome-project-recent-list img').count(), 0);
@@ -217,6 +230,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         await updateAction.waitFor();
         await updates.getByText('Build-Stand', {exact: false}).waitFor();
         assert.equal(await updates.locator('code[title="0123456789abcdef0123456789abcdef01234567"]').textContent(), '01234567');
+        assert.equal(await samplePage.evaluate(() => desktopEnvironmentReads), 1, 'Desktop status uses native IPC');
         assert.ok(await updateAction.isDisabled());
         await menuAction();
         assert.equal(await samplePage.evaluate(() => desktopUpdateChecks), 1, 'An in-flight check prevents duplicates');
@@ -240,6 +254,14 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         await samplePage.evaluate(() => window.rejectDesktopUpdate(new Error('Synthetic unreachable catalog')));
         await updateStatus.getByText(data.fixtures.de.labels.desktop_env_update_failed).waitFor();
         assert.ok(await updateAction.isEnabled());
+        await samplePage.keyboard.press('Escape');
+        await samplePage.evaluate(() => {
+          window.desktopEnvironmentUnavailable = true;
+          return window.LixityDesktopBridge.openSystemStatus();
+        });
+        await updates.getByText(data.fixtures.de.labels.desktop_env_error).waitFor();
+        assert.equal(await samplePage.evaluate(() => desktopEnvironmentReads), 2);
+        assert.deepEqual(environmentRequests, ['?probe_zotero=1'], 'Desktop failures stay in the native contract');
         await samplePage.keyboard.press('Escape');
         const preview = samplePage.locator('#import-preview-box');
         const submit = samplePage.locator('#btn-submit-import-project');

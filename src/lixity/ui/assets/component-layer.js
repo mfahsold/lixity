@@ -590,10 +590,6 @@
     var accumDelta = 0;
     var lastScrollTops = new WeakMap();
 
-    function getBars() {
-      return Array.from(document.querySelectorAll(CHROME_SELECTOR));
-    }
-
     function isPrimaryScrollTarget(target) {
       if (!target || target === document || target === document.documentElement || target === document.body) {
         return true;
@@ -664,15 +660,11 @@
     }
 
     function applyState(nextHidden) {
-      if (nextHidden && shouldHoldVisible()) nextHidden = false;
-      hidden = Boolean(nextHidden);
+      if (hidden === nextHidden) return;
+      hidden = nextHidden;
       if (document.body) {
         document.body.classList.toggle("chrome-autohidden", hidden);
       }
-      getBars().forEach(function (bar) {
-        if (hidden) bar.setAttribute("data-chrome-hidden", "true");
-        else bar.removeAttribute("data-chrome-hidden");
-      });
     }
 
     function scheduleIdle() {
@@ -691,7 +683,7 @@
     }
 
     function hide() {
-      if (!shouldHoldVisible()) {
+      if (!hidden && !shouldHoldVisible()) {
         applyState(true);
       }
     }
@@ -788,7 +780,7 @@
       hide: hide,
       isHidden: function () { return hidden; },
       resetTimer: scheduleIdle,
-      refresh: function () { applyState(hidden); }
+      refresh: function () { if (hidden && shouldHoldVisible()) applyState(false); }
     };
   })();
 

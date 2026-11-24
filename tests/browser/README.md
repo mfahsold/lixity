@@ -83,7 +83,7 @@ markup, IPA ruby, all range cues and structured/pause-only direction, preserved
 selection and explicit stale-plan fallback at desktop/mobile widths.
 
 `tooltips-dialog.cjs` checks readable, unclipped keyboard and pointer help inside
-the actual blurred native dialog styles at desktop and mobile sizes. It runs in
+the shared native dialog at desktop and mobile sizes. It runs in
 Chromium by default; `node tests/browser/tooltips-dialog.cjs --firefox` runs the
 same geometry checks when Playwright Firefox is installed.
 
@@ -739,6 +739,12 @@ links, unavailable storage, English guides, JavaScript-disabled navigation and
 The `home-tour` suite decodes the homepage video, checks localized captions after
 seeking, reduced-motion behavior, explicit and offscreen pauses, failure fallback
 and desktop/mobile framing. Recordings use the synthetic example only.
+
+Scroll regressions in the workbench, passage research, evidence and section
+navigation suites check repeated layout reads and writes alongside navigation
+outcomes. Use a long synthetic manuscript in the system WebView for desktop
+profiling. Compare the same input sequence before and after a change and record
+frame intervals separately from operation counts.
 
 Large-paste caveat: an exploratory Chromium `keyboard.insertText` run took about
 113 seconds for a 300,000-word insertion including persistence. The viewport

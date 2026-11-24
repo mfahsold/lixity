@@ -12,6 +12,9 @@ path is the Python package and its local browser workspace.
 - One bundled Python 3.12 runtime serves the shared workspace on an
   authenticated loopback port. Additional windows use distinct workspace views
   on that port. [Desktop host boundary](../docs/ARCHITECTURE.md#desktop-host-boundary)
+- System Status asks the Rust host to read the Python runtime inventory using
+  the same authenticated loopback transport as window handshakes and the
+  closing-time audio check. The shared dialog renders that inventory.
 - The project name appears in the native window title. On macOS, the title bar
   shares the workspace background and uses the system window controls, gestures,
   Window menu and fullscreen command.
@@ -101,10 +104,13 @@ cargo run --locked --manifest-path desktop/Cargo.toml --features webview-smoke -
 ```
 
 The smoke exercises the generated workspace capability, bridge and navigation
-callbacks against a synthetic loopback fixture in WKWebView. It initializes the
-production opener configuration and verifies the two license link destinations.
-The runtime smoke checks Python startup and session authentication. Use the manual checks
-below for the author workflow, operating-system interactions and hardware.
+callbacks against a synthetic loopback fixture in WKWebView. It calls the
+production Rust System Status command and checks that its authenticated
+loopback request returns the expected inventory. It initializes the production
+opener configuration and verifies the two license link destinations.
+The runtime smoke checks Python startup and session authentication. Use the
+manual checks below for the author workflow, operating-system interactions
+and hardware.
 Chromium and browser WebKit tests cover the shared UI.
 [Browser verification](../tests/browser/README.md)
 

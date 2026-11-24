@@ -2458,6 +2458,8 @@
   "desktop_env_no_matching_installer": "Für dieses System steht kein öffentliches Desktop-Paket bereit.",
   "desktop_env_installed_ahead": "Diese Installation ist neuer als das veröffentlichte Desktop-Paket.",
   "desktop_env_build": "Build-Stand",
+  "desktop_export_saved": "Gespeichert: {filename}",
+  "desktop_export_reveal": "Im Ordner anzeigen",
   "desktop_env_installed_version": "Installiert",
   "desktop_env_published_version": "Veröffentlicht"
 }

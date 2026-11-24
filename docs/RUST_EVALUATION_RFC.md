@@ -3,8 +3,8 @@
 The Rust/Tauri desktop host and the analysis engine have independent
 acceptance criteria. Desktop work owns native windows, OS integrations and
 installer verification. This evaluation applies to individual hot paths in
-the existing analysis engine and records the evidence for keeping two measured
-kernels in Python.
+the existing analysis engine and records which measured kernels qualify for
+production integration.
 [Desktop host boundary](ARCHITECTURE.md#desktop-host-boundary)
 
 The native desktop host uses Rust with Tauri. The Goose systems language can
@@ -137,3 +137,18 @@ if the workload or available boundary changes.
   increased total time at this boundary. Evaluate a boundary that can avoid
   preparing and packing token spans only if profiling still identifies it as
   a substantial part of the workload.
+- **2026-11-24 · Motif ranking.** A standard-library Rust process ranked
+  repetitions and chapter echoes from the Python pipeline's normalized tokens.
+  Python applied the configured tokenization and kept evidence offsets and the
+  report projection. The comparison covered 936 report cases in seven languages,
+  including custom token patterns, evidence variants and ranking limits. All
+  full-pipeline digests matched. Four alternating runs per implementation on
+  Apple M2 Pro used Python 3.12.16 and Rust 1.100. Including request packing,
+  process startup and response decoding, median warm ranking latency changed
+  from 190 to 65 ms for *Pride and Prejudice*, 149 to 54 ms for *Effi Briest*, and
+  57 to 39 ms for the 120-chapter synthetic manuscript. Warm median total time
+  changed from 3.397 to 3.321 s, 2.847 to 2.750 s, and 2.407 to 2.424 s
+  respectively. The production engine keeps the Python path because the
+  full-pipeline gains missed the 5% qualification target. The Apple Silicon
+  prototype was about 544 KiB. Cross-platform installation was outside this
+  measurement.

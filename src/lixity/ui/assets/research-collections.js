@@ -178,9 +178,13 @@ document.addEventListener("click", async function(event) {
   var payload = {action: deleting ? "delete_collection" : "save_collection", collection_id: idField.value};
   if (!deleting) { payload.name = name.value.trim(); payload.dossier_ids = researchCollectionMembers(); }
   var submitted = fieldSnapshot(researchCollectionFields), context = researchReadContext();
-  state.pending = true; updateResearchCollectionEditor();
+  state.pending = true;
   try {
-    var result = await submitResearchForm(button, "research-dossier", payload, researchCollectionFields, [], "research_dossier_complete", function() {});
+    // The shared submitter rejects disabled triggers. Let it claim the
+    // button before disabling the rest of the editor.
+    var pending = submitResearchForm(button, "research-dossier", payload, researchCollectionFields, [], "research_dossier_complete", function() {});
+    updateResearchCollectionEditor();
+    var result = await pending;
     if (!result || !result.ok || !acceptResearchContext(context, result)) return;
     if (JSON.stringify(fieldSnapshot(researchCollectionFields)) === JSON.stringify(submitted)) {
       if (deleting) resetResearchCollectionEditor(null);

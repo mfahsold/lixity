@@ -12,9 +12,12 @@ design tokens and before the views (see _CSS_FILES). */
 .reader-settings-body .reader-segmented-native { position: absolute; inset-block-start: 0; inset-inline-start: 0; width: 1px; height: 1px; min-height: 0; opacity: 0; pointer-events: none; padding: 0; border: 0; margin: 0; }
 /* Long localized headings and help text may wrap at enlarged text sizes. */
 :where(body) { overflow-wrap: anywhere; }
+/* Inline links share the workspace palette while explicit controls keep their roles. */
+:where(a:any-link, .ctl-link) { color: var(--accent); text-decoration-line: underline; text-underline-offset: .15em; }
+:where(a:any-link, .ctl-link):where(:hover, :focus-visible) { color: var(--accent-hover); }
 /* --- Panels & Cards --------------------------------------------------- */
-h2, .section-heading, .settings-heading { font-size: var(--text-section-title); font-weight: var(--weight-strong); letter-spacing: -.01em; margin: 0; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--panel-padding); margin: 0; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: 0 1px 2px rgba(0, 0, 0, .02); }
+h2, .section-heading, .settings-heading { font-size: var(--text-section-title); font-weight: var(--weight-strong); line-height: var(--line-heading); letter-spacing: -.01em; margin: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--panel-padding); margin: 0; display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow); }
 .panel h2 { color: var(--fg); }
 .panel > * { min-width: 0; margin-block: 0; }
 .panel .hint { margin: 0; }
@@ -116,7 +119,7 @@ h2, .section-heading, .settings-heading { font-size: var(--text-section-title); 
   border-radius: var(--radius);
   background: var(--surface);
   margin-block: var(--space-3);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--line) 30%, transparent);
+  box-shadow: var(--shadow);
 }
 .table-wrap table { width: 100%; }
 .flags-wrap table { min-width: 36rem; }
@@ -157,13 +160,13 @@ th {
   text-transform: none;
   font-size: var(--text-micro);
   letter-spacing: .02em;
-  background: var(--surface);
+  background: var(--surface-alt);
   word-break: normal;
 }
 tbody tr { transition: background-color .15s cubic-bezier(0.16, 1, 0.3, 1); }
 tbody tr:hover { background: var(--surface-hover); }
 tbody tr:last-child td { border-bottom: 0; }
-.table-wrap th { position: sticky; top: 0; z-index: 2; background: var(--surface); box-shadow: 0 1px 0 var(--line); }
+.table-wrap th { position: sticky; top: 0; z-index: 2; box-shadow: 0 1px 0 var(--line); }
 table th:first-child, table td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
 th.sortable, th[data-sort], table[data-sortable] th:not(.no-sort) { cursor: pointer; user-select: none; white-space: nowrap; transition: color 0.15s ease, background-color 0.15s ease; }
 th.sortable:hover, th[data-sort]:hover, table[data-sortable] th:not(.no-sort):hover { color: var(--fg); background: var(--surface-hover); }
@@ -245,7 +248,7 @@ input[type="file"].ctl { max-width: 100%; }
   max-inline-size: 100%;
   min-block-size: var(--control-block-size);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--field-line);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--fg);
@@ -265,16 +268,15 @@ input[type="file"].ctl { max-width: 100%; }
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
-/* Field outlines identify editable values; ordinary actions use a quieter
-boundary until hover, focus, selection or an explicit primary/danger role. */
-:where(button, a).ctl { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; text-decoration: none; border-color: var(--line); }
+/* Editable fields use a distinct boundary. Labeled actions share a quieter
+tinted surface, with a clearer accent when hovered or focused. */
+:is(button, a).ctl { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; text-decoration: none; border-color: var(--line); background: var(--surface-alt); }
 button.ctl.ctl-icon { flex: none; min-inline-size: var(--control-block-size); padding-inline: 0; }
-button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
-a.chapter-link { color: var(--accent); text-decoration: underline; text-underline-offset: .15em; }
-a.chapter-link:hover { color: var(--accent-hover); }
+button.ctl-link { background: none; border: none; cursor: pointer; padding: 0; }
+button.ctl.ctl-link { color: var(--accent); text-decoration: underline; }
 /* Hover feedback keeps the hit target stable, including at its edges when a
 dialog moves beneath a stationary pointer after showing a status message. */
-:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
+:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):hover { border-color: var(--accent); color: var(--accent); background: var(--control-hover); box-shadow: var(--shadow); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
 :is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
@@ -286,7 +288,7 @@ button.ctl[aria-pressed="true"],
 .loading-spinner { content: ""; display: inline-block; box-sizing: border-box; inline-size: .8rem; block-size: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; flex: none; }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: 0 3px 10px rgba(0, 0, 0, .14); }
+:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: var(--shadow-lift); }
 :is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):active { box-shadow: none; }
 .ctl-select { position: relative; display: grid; min-inline-size: 0; }
 /* Reserve the chevron space after the control-size variants set block padding. */
@@ -311,6 +313,29 @@ details.nda .row { margin-top: .5rem; }
 .ctl-status.err { color: var(--flag); }
 .ctl-status.loading { color: var(--muted); display: inline-flex; align-items: center; gap: .45rem; }
 .ctl-status:empty { display: none; }
+
+.action-toast {
+  position: fixed;
+  inset-inline-end: var(--space-4);
+  inset-block-end: var(--space-4);
+  z-index: var(--z-popover);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  box-sizing: border-box;
+  max-inline-size: min(var(--measure-reading), calc(100% - 2 * var(--space-4)));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-lift);
+  font-size: var(--text-control);
+}
+.action-toast[hidden] { display: none; }
+.action-toast-message { min-inline-size: 0; overflow-wrap: anywhere; }
+.action-toast-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .loading-state { display: inline-flex; align-items: center; gap: .55rem; color: var(--muted); font-size: var(--text-control); padding: .5rem .75rem; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); margin-block: .4rem; }
 /* .loading-spinner shares the single spinner recipe (see Controls). */
 /* Shared layout primitives: rows wrap, keep one gap and let sized fields
@@ -378,8 +403,8 @@ audio.media-player { width: 100%; max-width: 100%; }
 .speech-player-controls button.speech-rate-btn.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); font-weight: 600; }
 /* Inner bodies own scrolling. Account for the dialog border so focusing a
 field cannot scroll the outer shell and move its header or click target. */
-dialog.lixity-modal { position: fixed; inset: 0; margin: auto; border: 1px solid var(--line); padding: 0; background: color-mix(in srgb, var(--surface) 97%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--fg); max-width: 38rem; width: min(94vw, 38rem); max-height: min(90dvh, 44rem); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); overflow: clip; }
-dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+dialog.lixity-modal { position: fixed; inset: 0; margin: auto; border: 1px solid var(--line); padding: 0; background: var(--surface); color: var(--fg); max-width: 38rem; width: min(94vw, 38rem); max-height: min(90dvh, 44rem); border-radius: var(--radius-lg); box-shadow: var(--shadow-modal); overflow: clip; }
+dialog.lixity-modal::backdrop { background: var(--modal-backdrop); }
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
 .modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }

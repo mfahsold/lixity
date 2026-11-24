@@ -2458,6 +2458,8 @@
   "desktop_env_no_matching_installer": "Er is geen openbaar installatiepakket voor dit systeem.",
   "desktop_env_installed_ahead": "Deze installatie is nieuwer dan het gepubliceerde desktop-pakket.",
   "desktop_env_build": "Build",
+  "desktop_export_saved": "Opgeslagen: {filename}",
+  "desktop_export_reveal": "Tonen in map",
   "desktop_env_installed_version": "Geïnstalleerd",
   "desktop_env_published_version": "Gepubliceerd"
 }

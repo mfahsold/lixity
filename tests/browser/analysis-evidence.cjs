@@ -54,7 +54,8 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
         entry[3:4] = [evidence]
     page = page[:match.start(2)] + json.dumps(content).replace('</', '<\\/') + page[match.end(2):]
     result[locale] = page
-long_text = '# Long evidence\\n\\nI feel the gate. ' + 'The quiet keeper watches the garden and waits beside the river. ' * 250 + 'I felt the rain.'
+long_text = ('# Long evidence\\n\\nI feel the gate. ' + 'The quiet keeper watches the garden and waits beside the river. ' * 250
+    + 'I felt the rain.\\n\\nShe put the amber lantern by her gate. ' + 'She waited by the steps and watched the moon rise. ' * 65)
 long_analysis = analyze_document(long_text, CorpusConfig(language='en'), resolve_thresholds(project_config={}), include_evidence=True)
 result['longNative'] = render_dashboard(long_analysis.chapters, long_analysis.paragraphs, metrics=long_analysis.metrics,
     fingerprint=long_analysis.fingerprint, paragraph_evidence=long_analysis.evidence, title='Long evidence', controls=True,
@@ -845,6 +846,39 @@ async function metricPreferences(browser) {
     assert.ok(benchmark.rectangleCalls <= benchmark.ranges * 2, 'stable pointer frames do not repeatedly measure every evidence rectangle');
     fs.writeFileSync(path.join(artifacts,'hit-benchmark.json'), JSON.stringify(benchmark,null,2));
     console.log('worst-case range hit benchmark:', benchmark);
+    await long.evaluate(() => {
+      const panel = document.querySelector('.ptext');
+      window.scrollBy({top:panel.getBoundingClientRect().top + innerHeight, behavior:'instant'});
+    });
+    await settle(long);
+    const scrollBenchmark = await long.evaluate(async () => {
+      const key = 'lixity-analysis-evidence', registry = CSS.highlights;
+      const marks = registry.get(key), original = registry.set, initialY = scrollY;
+      let replacements = 0;
+      registry.set = function(name, value) {
+        if (name === key) replacements++;
+        return original.call(this, name, value);
+      };
+      try {
+        for (let frame = 0; frame < 12; frame++) {
+          window.scrollBy({top:12, behavior:'instant'});
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }
+      } finally {delete registry.set;}
+      return {distance:scrollY - initialY, ranges:marks.size, sameMarks:marks === registry.get(key), replacements};
+    });
+    console.log('in-paragraph scroll benchmark:', scrollBenchmark);
+    assert.deepEqual(scrollBenchmark, {distance:144, ranges:benchmark.ranges, sameMarks:true, replacements:0},
+      'scrolling through one long paragraph keeps its exact highlight ranges without replacements');
+    await long.locator('.ptext').last().evaluate(panel => {
+      window.scrollBy({top:panel.getBoundingClientRect().top + 1, behavior:'instant'});
+    });
+    await long.waitForFunction(() => {
+      const marks = [...(CSS.highlights.get('lixity-analysis-evidence') || [])];
+      const panels = document.querySelectorAll('.ptext');
+      const last = panels[panels.length - 1];
+      return marks.length > 0 && last && marks.every(range => last.contains(range.startContainer));
+    });
     await long.close();
     console.log('long paragraph next-match arrival: passed');
     for (const locale of browserLocales) for (const width of [1440, 320]) {
@@ -1156,8 +1190,7 @@ async function verifyNativeMetricReference(page, locale, chapterFeatures) {
   assert.equal(await reference.textContent(), label);
   const [guide] = await Promise.all([page.waitForEvent('popup'), reference.click()]);
   try {
-    await guide.waitForLoadState('domcontentloaded');
-    assert.equal(guide.url(), new URL(`${guideBase}#measure-asl`, source).href);
+    await guide.waitForURL(new URL(`${guideBase}#measure-asl`, source).href, {waitUntil:'domcontentloaded'});
     assert.equal(await guide.locator('html').getAttribute('lang'), locale);
     assert.ok(await guide.locator('#measure-asl:target').isVisible());
     assert.ok(await guide.evaluate(() => window.opener === null));
