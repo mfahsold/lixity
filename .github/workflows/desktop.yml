@@ -142,6 +142,12 @@ jobs:
             --out-dir build/installers \
             --copy-to build/installers
 
+      - name: Verify Linux DEB dependencies on clean Ubuntu
+        if: runner.os == 'Linux' && inputs.build_bundle == true
+        timeout-minutes: 10
+        shell: bash
+        run: bash desktop/scripts/smoke_linux_deb.sh desktop/build/installers/*.deb
+
       - name: Upload verified native desktop installers
         if: inputs.build_bundle == true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

@@ -7,6 +7,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Qualify the exact release commit with the hosted source, browser, native and
+  dependency checks before tagging. Promote the attested candidate packages by
+  run and artifact ID. Verify published releases independently of build retention.
+- Check Chromium and the accessibility tools before running browser suites.
+  Bound setup and test time, report each step's outcome and rebalance the four
+  shards using v0.9.2 timings.
+
+### Fixed
+
+- Declare the ALSA runtime required by the Linux DEB. Verify the installed Rust
+  host and bundled Python session on clean Ubuntu before uploading installers.
+
 ## [0.9.2] - 2026-11-24
 
 ### Added

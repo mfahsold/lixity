@@ -204,7 +204,7 @@ sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
   `Lixity_VERSION_amd64.deb` with your package installer or run
   `sudo apt install ./Lixity_VERSION_amd64.deb` with the actual filename.
   This is a system package installation. APT can resolve
-  the WebKitGTK 4.1 and GTK 3 dependencies from configured repositories.
+  the WebKitGTK 4.1, GTK 3 and ALSA dependencies declared by the package.
   Start **Lixity** from the applications menu.
   [Ubuntu package installation](https://ubuntu.com/server/docs/tutorial/managing-software/#installing-a-deb-file)
 - **AppImage.** Keep `Lixity_VERSION_amd64.AppImage` in your test folder.
@@ -214,6 +214,10 @@ sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
   for your distribution. The published browser app and CLI are available
   when the host lacks the required libraries.
   [AppImage FUSE troubleshooting](https://docs.appimage.org/user-guide/troubleshooting/fuse.html)
+
+If a v0.9.2 test build reports missing `libasound.so.2`, install the ALSA
+runtime through your package manager. Ubuntu 22.04 provides `libasound2`,
+and Ubuntu 24.04 provides `libasound2t64`.
 
 #### Check the first desktop session
 

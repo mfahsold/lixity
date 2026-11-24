@@ -244,6 +244,12 @@ jobs:
             --out-dir build/installers \
             --copy-to build/installers
 
+      - name: Verify Linux DEB dependencies on clean Ubuntu
+        if: runner.os == 'Linux'
+        timeout-minutes: 10
+        shell: bash
+        run: bash desktop/scripts/smoke_linux_deb.sh desktop/build/installers/*.deb
+
       - name: Include the offline guide in test archives
         if: >-
           (runner.os == 'Windows' && !inputs.sign_windows) ||

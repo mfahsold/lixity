@@ -32,26 +32,6 @@ def job(source, name):
     return match.group(1)
 
 
-def test_release_reuses_source_browser_and_native_checks_for_tag_pushes():
-    source = workflow("release.yml")
-    for job_name, filename in RELEASE_GATES.items():
-        gate = job(source, job_name)
-        assert "if: github.event_name == 'push'" in gate
-        assert f"uses: ./.github/workflows/{filename}" in gate
-        assert "needs: preflight" in gate
-        assert "continue-on-error" not in gate
-        assert re.search(r"(?m)^      contents: read$", gate)
-        called = workflow(filename)
-        assert re.search(r"(?m)^  workflow_dispatch:\s*$", called)
-        assert re.search(r"(?m)^  workflow_call:\s*$", called)
-        assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", called)
-    published = job(source, "publish")
-    assert f"needs: [preflight, {', '.join(RELEASE_GATES)}]" in published
-    assert "if: github.event_name == 'push'" in published
-    assert "always()" not in published and "continue-on-error" not in published
-    assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", published)
-
-
 def test_source_gate_runs_full_suite_on_minimum_supported_python():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     minimum = re.fullmatch(r">=(\d+\.\d+)", project["project"]["requires-python"])
@@ -99,17 +79,6 @@ def test_catchup_uses_workflow_helpers_and_immutable_assets_without_rebuilding()
     assert "source_ref: ${{ github.sha }}" in pages
 
 
-def test_native_gate_requests_full_scope_and_blocks_publication_on_failure():
-    source = workflow("release.yml")
-    native = job(source, "native_checks")
-    assert "scope: full" in native
-    assert "needs: preflight" in native
-    publish = job(source, "publish")
-    assert "native_checks" in re.search(r"needs: \[(.*?)\]", publish).group(1)
-    assert "always()" not in publish and "!cancelled()" not in publish
-    assert "continue-on-error" not in publish
-
-
 def test_first_publication_and_reruns_select_one_verified_artifact_set():
     source = workflow("release.yml")
     publish = job(source, "publish")
@@ -119,10 +88,14 @@ def test_first_publication_and_reruns_select_one_verified_artifact_set():
     assert "release_channels.py verify-github" in publish
     assert "--build" not in publish and "--smoke" not in publish
     assert "actions/download-artifact@" in publish
-    assert "name: verified-release-candidate" in publish
+    assert "run-id: ${{ needs.preflight.outputs.candidate_run_id }}" in publish
+    assert "artifact-ids: ${{ needs.preflight.outputs.candidate_artifact_id }}" in publish
     assert "skip-decompress: true" in publish
     assert 'python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate' in publish
-    assert 'scripts/check_release.py --dist .release-candidate/dist --tag "$RELEASE_TAG"' in publish
+    verify = publish.index("scripts/release_channels.py verify-rc-artifacts")
+    attest = publish.index("Attest the promoted release artifacts for this tag")
+    assert verify < attest < publish.index("Create draft release with artifacts")
+    assert '--expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist .release-candidate/dist' in publish
     assert "if: steps.release_state.outputs.state != 'published'" in publish
     assert "if: steps.release_state.outputs.state == 'published'" in publish
     assert "echo missing" not in publish
@@ -179,9 +152,18 @@ def test_release_preflight_preserves_immutable_recovery():
     preflight = job(release, "preflight")
     assert "if: github.event_name == 'push'" in preflight
     assert "--source-only --require-release-notes --tag" in preflight
-    assert "if: steps.release_state.outputs.state != 'published'" in preflight
+    selection = preflight.split("- name: Resolve the qualified release candidate", 1)[1].split("- name:", 1)[0]
+    assert "release_channels.py verify-rc" in selection
+    assert '--expected-commit "$GITHUB_SHA"' in selection
+    assert "if: steps.release_state.outputs.state != 'published'" in selection
     assert "contents: write" not in preflight and "id-token: write" not in preflight
     publish = job(release, "publish")
+    assert "needs: preflight" in publish
+    assert "if: github.event_name == 'push'" in publish
+    assert "always()" not in publish and "continue-on-error" not in publish
+    assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", publish)
+    for gate in RELEASE_GATES.values():
+        assert f"uses: ./.github/workflows/{gate}" not in release
     recover = publish.split("- name: Recover immutable published artifacts on a rerun", 1)[1].split("- name:", 1)[0]
     assert "if: steps.release_state.outputs.state == 'published'" in recover
     assert "DESKTOP_RELEASE_" not in recover and "--require-desktop" not in recover
@@ -214,25 +196,38 @@ def test_source_gate_runs_wheel_smoke_on_each_python_matrix_version():
     assert "--install-report" in gate
     assert "name: verified-release-candidate" in gate
     assert "inputs.stage_candidate && matrix.python-version == '3.12'" in gate
-    for name in ("release.yml", "rc.yml"):
-        assert "stage_candidate: true" in job(workflow(name), "source_checks")
+    assert "stage_candidate: true" in job(workflow("rc.yml"), "source_checks")
 
 
 def test_release_candidate_workflow_qualifies_source_browser_and_native_before_tagging():
     source = workflow("rc.yml")
     assert "workflow_dispatch:" in source
-    assert "--source-only --require-release-notes" in job(source, "preflight")
+    assert re.search(r"(?m)^      expected_sha:\s*$", source)
+    preflight = job(source, "preflight")
+    assert "--source-only --require-release-notes" in preflight
+    assert '"$GITHUB_SHA" != "$EXPECTED_SHA"' in preflight
+    assert "EXPECTED_SHA: ${{ inputs.expected_sha }}" in preflight
     for job_name, filename in RELEASE_GATES.items():
         gate = job(source, job_name)
         assert f"uses: ./.github/workflows/{filename}" in gate
         assert "needs: preflight" in gate
+        assert "continue-on-error" not in gate
+        assert re.search(r"(?m)^      contents: read$", gate)
+        called = workflow(filename)
+        assert re.search(r"(?m)^  workflow_dispatch:\s*$", called)
+        assert re.search(r"(?m)^  workflow_call:\s*$", called)
+        assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", called)
     assert "scope: full" in job(source, "native_checks")
     ready = job(source, "ready")
     assert f"needs: [{', '.join(RELEASE_GATES)}]" in ready
+    assert "always()" not in ready and "continue-on-error" not in ready
     assert "name: verified-release-candidate" in ready
     assert "skip-decompress: true" in ready
     assert 'python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate' in ready
-    assert "scripts/check_release.py --dist .release-candidate/dist" in ready
+    assert ready.index("scripts/check_release.py --dist .release-candidate/dist") < ready.index("actions/attest@")
+    assert "subject-path: .release-candidate/dist/*" in ready
+    assert "sbom-path: .release-candidate/lixity-release.cdx.json" in ready
+    assert ready.count("if: github.ref == 'refs/heads/main'") == 2
 
 
 def test_release_checks_install_synthetic_audio_prerequisites():

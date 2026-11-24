@@ -21,6 +21,8 @@ jobs:
       contents: read
       actions: read
     outputs:
+      candidate_run_id: ${{ steps.candidate.outputs.run_id }}
+      candidate_artifact_id: ${{ steps.candidate.outputs.artifact_id }}
       desktop_run_id: ${{ steps.desktop.outputs.run_id }}
       desktop_artifact_id: ${{ steps.desktop.outputs.artifact_id }}
       desktop_qualification_digest: ${{ steps.desktop.outputs.qualification_digest }}
@@ -39,9 +41,17 @@ jobs:
         run: |
           python scripts/release_channels.py inspect --root . --tag "$RELEASE_TAG" \
             --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT"
-      - name: Verify release notes before running the release checks
+      - name: Verify release notes against the tagged source
         if: steps.release_state.outputs.state != 'published'
         run: python scripts/check_release.py --source-only --require-release-notes --tag "$RELEASE_TAG"
+      - name: Resolve the qualified release candidate for the tagged commit
+        id: candidate
+        if: steps.release_state.outputs.state != 'published'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/release_channels.py verify-rc --root . --tag "$RELEASE_TAG" \
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT"
       - name: Identify the signed desktop bundle for this tag
         id: desktop
         if: steps.release_state.outputs.state != 'published' && vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG
@@ -76,40 +86,8 @@ jobs:
           printf 'run_id=%s\nartifact_id=%s\nqualification_digest=%s\n' \
             "$DESKTOP_RUN_ID" "$artifact_id" "$qualification_digest" >> "$GITHUB_OUTPUT"
 
-  source_checks:
-    needs: preflight
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/tests.yml
-    with:
-      stage_candidate: true
-
-  browser_checks:
-    needs: preflight
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/browser.yml
-
-  native_checks:
-    needs: preflight
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/research-platforms.yml
-    with:
-      scope: full
-
-  dependency_checks:
-    needs: preflight
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-    uses: ./.github/workflows/dependencies.yml
-
   publish:
-    needs: [preflight, source_checks, browser_checks, native_checks, dependency_checks]
+    needs: preflight
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -141,21 +119,35 @@ jobs:
         run: |
           python scripts/release_channels.py recover --root . --tag "$RELEASE_TAG" \
             --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
-      - name: Fetch the verified release candidate from this run
+      - name: Require the candidate selected by preflight for new publication
+        if: steps.release_state.outputs.state != 'published'
+        env:
+          RC_RUN_ID: ${{ needs.preflight.outputs.candidate_run_id }}
+          RC_ARTIFACT_ID: ${{ needs.preflight.outputs.candidate_artifact_id }}
+        run: |
+          if [[ -z "$RC_RUN_ID" || -z "$RC_ARTIFACT_ID" ]]; then
+            echo "::error::Rerun preflight so it can select the qualified candidate."
+            exit 1
+          fi
+      - name: Fetch the verified release candidate identified by preflight
         if: steps.release_state.outputs.state != 'published'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: verified-release-candidate
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.preflight.outputs.candidate_run_id }}
+          artifact-ids: ${{ needs.preflight.outputs.candidate_artifact_id }}
           path: ${{ runner.temp }}/candidate-archive
           # Verify the download digest before extracting with Python's zipfile.
           skip-decompress: true
-      - name: Verify the candidate against the tagged source and checksums
+      - name: Verify source, checksums and build attestations for the selected candidate
         if: steps.release_state.outputs.state != 'published'
         run: |
           python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate
-          python scripts/check_release.py --dist .release-candidate/dist --tag "$RELEASE_TAG"
+          python scripts/release_channels.py verify-rc-artifacts --root . --tag "$RELEASE_TAG" \
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist .release-candidate/dist
+          test -s .release-candidate/lixity-release.cdx.json
           mv .release-candidate/dist dist
-      - name: Attest the new release artifacts
+      - name: Attest the promoted release artifacts for this tag
         if: steps.release_state.outputs.state != 'published'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:

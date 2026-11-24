@@ -1,6 +1,6 @@
 # Browser regression suites are local-first: run `make browser` after UI
-# changes and before preparing a release. Tagged releases and release-candidate
-# checks reuse this same sharded Chromium workflow as a publication gate.
+# changes and before preparing a release. Candidate qualification uses the
+# same sharded Chromium workflow before a release tag can be published.
 name: browser
 on:
   workflow_dispatch:
@@ -20,6 +20,8 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.59.1-noble@sha256:b0ab6f3cb99aa7803adbc14d9027ec1785fc6e433b97e134e0f8fe61683b6b53
       options: --init --ipc=host
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     defaults:
       run:
         shell: bash
@@ -39,11 +41,14 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check Python TLS in the browser container
+        id: python_tls
         run: python -c 'import ssl; print(ssl.OPENSSL_VERSION)'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "22"
       - name: Install Python dependencies in an isolated environment
+        id: python_dependencies
+        timeout-minutes: 4
         run: |
           python -m venv "$RUNNER_TEMP/browser-venv"
           export PATH="$RUNNER_TEMP/browser-venv/bin:$PATH"
@@ -51,9 +56,32 @@ jobs:
           mkdir -p "$PIP_CACHE_DIR"
           python -m pip install ".[dev]"
           printf '%s\n' "$RUNNER_TEMP/browser-venv/bin" >> "$GITHUB_PATH"
-      - run: npm install --no-save playwright@1.59.1 axe-core@4.13.0
+      - name: Install pinned browser tooling
+        id: browser_dependencies
+        timeout-minutes: 2
+        run: npm install --no-save --fetch-timeout=20000 --fetch-retries=1 playwright@1.59.1 axe-core@4.13.0
+      - name: Check Chromium launch and accessibility tooling
+        id: browser_runtime
+        timeout-minutes: 1
+        run: |
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const {launchChromium, resolveAxe} = require('./scripts/browser_tools.cjs');
+          const playwrightVersion = require('playwright/package.json').version;
+          const axeVersion = require('axe-core/package.json').version;
+          assert.ok(resolveAxe(), 'The browser gate requires axe-core');
+          launchChromium({timeout: 15000}).then(async browser => {
+            console.log(`Playwright ${playwrightVersion}, Chromium ${browser.version()}, axe-core ${axeVersion}`);
+            await browser.close();
+          }).catch(error => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          NODE
       - name: Run browser regression suites (shard ${{ matrix.shard }})
         id: suites
+        # Leave time inside the job budget for the partial result and log upload.
+        timeout-minutes: 20
         env:
           PYTHON_BIN: python
           SUITES: ${{ github.event_name == 'workflow_dispatch' && inputs.suites || '' }}
@@ -69,11 +97,20 @@ jobs:
       - name: Summarize browser evidence
         if: always()
         env:
+          PYTHON_TLS_OUTCOME: ${{ steps.python_tls.outcome }}
+          PYTHON_DEPENDENCIES_OUTCOME: ${{ steps.python_dependencies.outcome }}
+          BROWSER_DEPENDENCIES_OUTCOME: ${{ steps.browser_dependencies.outcome }}
+          BROWSER_RUNTIME_OUTCOME: ${{ steps.browser_runtime.outcome }}
           BROWSER_STEP_OUTCOME: ${{ steps.suites.outcome }}
           SHARD: ${{ matrix.shard }}
         run: |
-          printf 'Browser shard %s outcome: %s\n\n' "$SHARD" "$BROWSER_STEP_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
-          python scripts/run_browser_suites.py --summary "$RUNNER_TEMP/lixity-browser-evidence" >> "$GITHUB_STEP_SUMMARY"
+          {
+            printf 'Browser shard %s for commit %s\n\n' "$SHARD" "$GITHUB_SHA"
+            printf -- '- Python TLS: %s\n- Python dependencies: %s\n- Browser dependencies: %s\n- Chromium and axe-core: %s\n- Browser suites: %s\n\n' \
+              "$PYTHON_TLS_OUTCOME" "$PYTHON_DEPENDENCIES_OUTCOME" "$BROWSER_DEPENDENCIES_OUTCOME" \
+              "$BROWSER_RUNTIME_OUTCOME" "$BROWSER_STEP_OUTCOME"
+            python scripts/run_browser_suites.py --summary "$RUNNER_TEMP/lixity-browser-evidence"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Retain bounded synthetic browser diagnostics
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

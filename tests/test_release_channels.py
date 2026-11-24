@@ -149,6 +149,98 @@ def fake_git(monkeypatch, channels, sha=SHA):
     monkeypatch.setattr(channels.subprocess, "run", run)
 
 
+def rc_responses(channels, *, run=None, artifact=None):
+    valid_run = {"id": 123, "head_repository": {"full_name": REPO}, "head_branch": "main",
+                 "head_sha": SHA, "path": ".github/workflows/rc.yml", "event": "workflow_dispatch",
+                 "status": "completed", "conclusion": "success"}
+    valid_artifact = {"id": 456, "name": channels.RC_ARTIFACT, "digest": "sha256:" + "f" * 64,
+                      "expired": False, "workflow_run": {"id": 123, "head_sha": SHA, "head_branch": "main"}}
+    base = API + "/actions"
+    runs = base + f"/workflows/rc.yml/runs?branch=main&event=workflow_dispatch&status=success&head_sha={SHA}&per_page=30"
+    artifacts = base + "/runs/123/artifacts?name=verified-release-candidate"
+    return {runs: {"workflow_runs": [{**valid_run, **(run or {})}]},
+            artifacts: {"total_count": 1, "artifacts": [{**valid_artifact, **(artifact or {})}]}}
+
+
+def test_rc_cli_uses_exact_successful_run_without_needing_a_tag_ref(channels, candidate, monkeypatch, tmp_path, capsys):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    values = rc_responses(channels)
+    runs_url, artifacts_url = values
+    run = values[runs_url]["workflow_runs"][0]
+    values[runs_url]["workflow_runs"].insert(0, {**run, "id": 124})
+    expired_url = artifacts_url.replace("/123/", "/124/")
+    expired = {**values[artifacts_url]["artifacts"][0], "expired": True}
+    values[expired_url] = {"total_count": 1, "artifacts": [expired]}
+    opener = Responses(values)
+    client = channels.HttpClient(opener=opener)
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    output = tmp_path / "github_output"
+    monkeypatch.setattr(sys, "argv", ["release_channels", "verify-rc", "--root", str(root),
+                                    "--tag", TAG, "--expected-commit", SHA, "--repo", REPO,
+                                    "--github-output", str(output)])
+    channels.main()
+    assert json.loads(capsys.readouterr().out) == {
+        "tag": TAG, "source_sha": SHA, "run_id": 123, "artifact_id": 456, "artifact_digest": expired["digest"],
+    }
+    assert {"run_id=123", "artifact_id=456"} <= set(output.read_text().splitlines())
+    assert [request.full_url for request in opener.requests] == [runs_url, expired_url, artifacts_url]
+
+
+@pytest.mark.parametrize(("run", "artifact", "error"), [
+    ({"head_sha": "b" * 40}, {}, "unexpected identity"),
+    ({"head_repository": {"full_name": "fork/lixity"}}, {}, "unexpected identity"),
+    ({"event": "pull_request"}, {}, "unexpected identity"),
+    ({"conclusion": "failure"}, {}, "unexpected identity"),
+    ({}, {"digest": None}, "invalid identity or SHA-256"),
+    ({}, {"workflow_run": {"id": 124, "head_branch": "main", "head_sha": SHA}}, "invalid identity or SHA-256"),
+    ({}, {"expired": True}, "no successful rc.yml run retains a candidate"),
+])
+def test_rc_refuses_unqualified_runs_and_artifacts(channels, candidate, monkeypatch, run, artifact, error):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    values = rc_responses(channels, run=run, artifact=artifact)
+    with pytest.raises(ValueError, match=error):
+        channels.verify_rc(root, TAG, SHA, REPO, channels.HttpClient(opener=Responses(values)))
+
+
+def test_rc_without_a_run_fails_with_the_pre_tag_recovery_command(channels, candidate, monkeypatch):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    runs_url = next(iter(rc_responses(channels)))
+    client = channels.HttpClient(opener=Responses({runs_url: {"workflow_runs": []}}))
+    with pytest.raises(ValueError, match=r"make rc-gate RELEASE_TAG=v0\.3\.0"):
+        channels.verify_rc(root, TAG, SHA, REPO, client)
+
+
+def test_candidate_bytes_are_bound_to_hosted_rc_provenance(channels, candidate, monkeypatch):
+    root, dist = candidate
+    fake_git(monkeypatch, channels)
+    subprocess_run = channels.subprocess.run
+    commands = []
+
+    def run(argv, **kwargs):
+        if argv[1:3] == ["attestation", "verify"]:
+            commands.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+        return subprocess_run(argv, **kwargs)
+
+    monkeypatch.setattr(channels.subprocess, "run", run)
+    assert channels.verify_rc_artifacts(root, TAG, SHA, REPO, dist)["state"] == "qualified"
+    assert {Path(command[3]).name for command in commands} == {path.name for path in dist.iterdir()}
+    for command in commands:
+        assert command[command.index("--source-ref") + 1] == "refs/heads/main"
+        assert command[command.index("--signer-digest") + 1] == SHA
+        assert command[command.index("--cert-identity") + 1] == (
+            "https://github.com/example/lixity/.github/workflows/rc.yml@refs/heads/main")
+        assert "--deny-self-hosted-runners" in command
+    commands.clear()
+    (dist / "SHA256SUMS").unlink()
+    with pytest.raises(ValueError, match="SHA256SUMS must be a regular file"):
+        channels.verify_rc_artifacts(root, TAG, SHA, REPO, dist)
+    assert not commands
+
+
 def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
     channels, candidate, desktop_candidate, monkeypatch, tmp_path,
 ):
@@ -168,7 +260,7 @@ def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
     assert not staged.exists()
     review.write_text(json.dumps(receipt))
     assert channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)["installer_count"] == 7
-    assert calls[-1][1] == {"desktop": True}
+    assert calls[-1][1] == {"workflow": "desktop-release.yml"}
     assert channels.QUALIFICATION_FILE not in calls[-1][0]
 
     release = metadata(dist)
@@ -240,7 +332,8 @@ def test_catalog_records_attested_public_installer_bytes_atomically(
     catalog = json.loads(output.read_bytes())
     assert catalog["tag"] == TAG
     assert {entry["filename"] for entry in catalog["installers"]} == desktop.public_installer_inventory(TAG).keys()
-    assert calls[-1] == ({path.name for path in staged.iterdir()} - {channels.QUALIFICATION_FILE}, {"desktop": True})
+    assert calls[-1] == ({path.name for path in staged.iterdir()} - {channels.QUALIFICATION_FILE},
+                         {"workflow": "desktop-release.yml"})
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
@@ -444,7 +537,7 @@ def test_attestation_policy_pins_repository_workflow_source_tag_and_hosted_runne
         assert env is not None and "GIT_ASKPASS" not in env
         assert env["GIT_TERMINAL_PROMPT"] == "0"
     commands.clear()
-    channels.verify_attestations([dist / "Lixity_0.3.0_aarch64.dmg"], REPO, TAG, SHA, desktop=True)
+    channels.verify_attestations([dist / "Lixity_0.3.0_aarch64.dmg"], REPO, TAG, SHA, workflow="desktop-release.yml")
     command = commands[0][0]
     assert command[command.index("--source-ref") + 1] == "refs/heads/main"
     assert command[command.index("--cert-identity") + 1] == (

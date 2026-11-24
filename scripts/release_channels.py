@@ -13,11 +13,13 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zipfile
 from pathlib import Path
 
 import check_release
@@ -42,6 +44,8 @@ SHA = re.compile(r"[0-9a-f]{40}")
 DIGEST = re.compile(r"[0-9a-f]{64}")
 RELEASE_TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
+RC_WORKFLOW = "rc.yml"
+RC_ARTIFACT = "verified-release-candidate"
 DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
 PAGES_VERIFY_FILES = (
     *(page_path(language) for language in LANGUAGES),
@@ -286,6 +290,56 @@ def inspect(root, tag, expected_commit, repo, client):
     return {"state": state, "tag": tag, "source_sha": expected_commit}
 
 
+def verify_rc(root, tag, expected_commit, repo, client):
+    """Find a successful main-branch qualification with a retained artifact."""
+    if not REPOSITORY.fullmatch(repo):
+        raise ValueError("repository must be owner/name")
+    if not RELEASE_TAG.fullmatch(tag):
+        raise ValueError("release tag must have the form vX.Y.Z")
+    check_release.source_version(root, tag)
+    _check_checkout_commit(root, expected_commit)
+    base = f"https://api.github.com/repos/{repo}/actions"
+    listing = client.json(f"{base}/workflows/{RC_WORKFLOW}/runs?branch=main&event=workflow_dispatch"
+                          f"&status=success&head_sha={expected_commit}&per_page=30")
+    runs = listing.get("workflow_runs")
+    if not isinstance(runs, list):
+        raise ValueError("GitHub release-candidate runs are unknown")
+    for run in runs:
+        head_repo = run.get("head_repository") if isinstance(run, dict) else None
+        if (not isinstance(head_repo, dict) or head_repo.get("full_name") != repo
+                or run.get("path") != f".github/workflows/{RC_WORKFLOW}"
+                or run.get("head_branch") != "main" or run.get("head_sha") != expected_commit
+                or run.get("event") != "workflow_dispatch" or run.get("status") != "completed"
+                or run.get("conclusion") != "success"):
+            raise ValueError("GitHub returned a release-candidate run with unexpected identity or state")
+        run_id = run.get("id")
+        if type(run_id) is not int or run_id <= 0:
+            raise ValueError("GitHub release-candidate run ID is invalid")
+        listing = client.json(f"{base}/runs/{run_id}/artifacts?name={RC_ARTIFACT}")
+        artifacts = listing.get("artifacts")
+        if (not isinstance(artifacts, list) or listing.get("total_count") != len(artifacts)
+                or any(not isinstance(item, dict) or item.get("name") != RC_ARTIFACT
+                       or not isinstance(item.get("expired"), bool) for item in artifacts)):
+            raise ValueError("GitHub release-candidate artifact listing is incomplete or malformed")
+        retained = [item for item in artifacts if not item["expired"]]
+        if not retained:
+            continue
+        if len(retained) != 1:
+            raise ValueError("GitHub run must retain exactly one release-candidate artifact")
+        artifact = retained[0]
+        artifact_id, digest = artifact.get("id"), artifact.get("digest")
+        origin = artifact.get("workflow_run")
+        if (type(artifact_id) is not int or artifact_id <= 0 or not isinstance(digest, str)
+                or not digest.startswith("sha256:") or not DIGEST.fullmatch(digest[7:])
+                or not isinstance(origin, dict) or origin.get("id") != run_id
+                or origin.get("head_branch") != "main" or origin.get("head_sha") != expected_commit):
+            raise ValueError("GitHub release-candidate artifact has an invalid identity or SHA-256 digest")
+        return {"tag": tag, "source_sha": expected_commit, "run_id": run_id,
+                "artifact_id": artifact_id, "artifact_digest": digest}
+    raise ValueError(f"no successful rc.yml run retains a candidate for {expected_commit}; "
+                     f"run make rc-gate RELEASE_TAG={tag} and wait for qualification")
+
+
 def published(release):
     if release is None or release["draft"] or not release.get("published_at"):
         raise ValueError("GitHub release must already be published")
@@ -332,13 +386,11 @@ def assets(release, repo, tag, *, draft=False, require_desktop=False):
     return result
 
 
-def verify_attestations(paths, repo, tag, expected_commit, *, desktop=False):
-    """Require GitHub's signed workflow identity, tag/SHA and hosted runner."""
+def verify_attestations(paths, repo, tag, expected_commit, *, workflow="release.yml"):
+    """Require GitHub's signed workflow identity, source ref/SHA and hosted runner."""
     gh_bin = resolve_gh_binary()
     sub_env = github_subprocess_env()
-    source_ref, workflow = ("refs/heads/main", "desktop-release.yml") if desktop else (
-        f"refs/tags/{tag}", "release.yml",
-    )
+    source_ref = f"refs/tags/{tag}" if workflow == "release.yml" else "refs/heads/main"
     for path in paths:
         command = [
             gh_bin, "attestation", "verify", str(path), "--repo", repo,
@@ -356,6 +408,17 @@ def verify_attestations(paths, repo, tag, expected_commit, *, desktop=False):
             raise ValueError(f"attestation verification unavailable for {path.name}") from None
         if result.returncode:
             raise ValueError(f"attestation verification failed for {path.name}; a current gh CLI is required")
+
+
+def verify_rc_artifacts(root, tag, expected_commit, repo, dist):
+    """Compare the candidate with the tagged source and verify its build provenance."""
+    if not REPOSITORY.fullmatch(repo):
+        raise ValueError("repository must be owner/name")
+    _check_checkout_commit(root, expected_commit)
+    version = check_release.validate(root, dist, tag)
+    check_release.verify_checksums(dist, version)
+    verify_attestations(sorted(dist.iterdir()), repo, tag, expected_commit, workflow=RC_WORKFLOW)
+    return {"tag": tag, "source_sha": expected_commit, "state": "qualified"}
 
 
 def _qualified_desktop_names(directory, qualification, tag, expected_commit):
@@ -379,7 +442,7 @@ def stage_desktop(root, tag, expected_commit, repo, artifacts_dir, qualification
             shutil.copyfile(source, fresh / name)
         _qualified_desktop_names(fresh, fresh / QUALIFICATION_FILE, tag, expected_commit)
         verify_attestations([fresh / name for name in sorted(names - {QUALIFICATION_FILE})],
-                            repo, tag, expected_commit, desktop=True)
+                            repo, tag, expected_commit, workflow="desktop-release.yml")
         if destination.exists():
             destination.rmdir()
         os.replace(fresh, destination)
@@ -404,7 +467,7 @@ def _verify_desktop_files(directory, expected, tag, repo, expected_commit):
     if names != expected.keys():
         raise ValueError("Desktop release listings and qualified files differ")
     verify_attestations([directory / name for name in sorted(names - {QUALIFICATION_FILE})],
-                        repo, tag, expected_commit, desktop=True)
+                        repo, tag, expected_commit, workflow="desktop-release.yml")
     return installers
 
 
@@ -843,7 +906,7 @@ def main():
         "command",
         choices=("inspect", "recover", "verify-github", "verify-draft", "stage-pypi",
                  "verify-pypi", "doctor", "verify-pages", "verify-zenodo", "verify-release",
-                 "stage-desktop", "record-desktop-catalog"),
+                 "stage-desktop", "record-desktop-catalog", "verify-rc", "verify-rc-artifacts"),
     )
     parser.add_argument("--root", type=Path, help="Source checkout for local verification")
     parser.add_argument("--tag")
@@ -921,6 +984,10 @@ def main():
             common = (args.root, args.tag, args.expected_commit, args.repo)
             if args.command == "inspect":
                 result = inspect(*common, client)
+            elif args.command == "verify-rc":
+                result = verify_rc(*common, client)
+            elif args.command == "verify-rc-artifacts":
+                result = verify_rc_artifacts(*common, args.dist)
             elif args.command == "recover":
                 result = recover(*common, args.dist, client, require_desktop=args.require_desktop,
                                  python_only=args.python_only)
@@ -941,7 +1008,7 @@ def main():
             with args.github_output.open("a", encoding="utf-8") as output:
                 for key, value in result.items():
                     output.write(f"{key}={value}\n")
-    except (ValueError, OSError) as exc:
+    except (ValueError, OSError, tarfile.TarError, zipfile.BadZipFile) as exc:
         parser.exit(1, f"release channel check failed: {exc}\n")
     print(json.dumps(result, sort_keys=True))
 

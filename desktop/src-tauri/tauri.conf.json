@@ -99,7 +99,8 @@
         "section": "editors",
         "depends": [
           "libwebkit2gtk-4.1-0",
-          "libgtk-3-0"
+          "libgtk-3-0",
+          "libasound2t64 | libasound2"
         ],
         "desktopTemplate": "../packaging/linux/lixity.desktop.in",
         "files": {

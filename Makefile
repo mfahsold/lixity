@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -79,8 +79,18 @@ release-prepare: ## Prepare a new release: bump version, draft notes, sync docs 
 github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
 	$(SCRIPT_PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
 
-rc-gate: ## Trigger pre-tag release-candidate qualification on main (source, sharded browser, Windows/macOS)
-	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml --ref main
+rc-gate: ## Qualify this commit on remote main before tagging (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to qualify a release candidate"; exit 1)
+	$(SCRIPT_PYTHON) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
+	@commit=$$(git rev-parse --verify HEAD) && \
+		env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml \
+		--repo mfahsold/lixity --ref main --raw-field expected_sha="$$commit"
+
+rc-verify: ## Check the hosted result and artifact availability for this commit (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to check a release candidate"; exit 1)
+	@commit=$$(git rev-parse --verify HEAD) && \
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-rc --root . --tag "$(RELEASE_TAG)" \
+		--expected-commit "$$commit" --repo mfahsold/lixity
 
 RELEASE_VERIFY_ROOT ?= .
 

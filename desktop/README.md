@@ -84,6 +84,7 @@ New Windows and Linux test archives also include a platform-specific
 - On Linux, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`. Open the
   verified `.deb` with your package installer on a Debian-based distribution.
   For the AppImage, give the file execute permission and launch it.
+  [Troubleshooting missing runtime libraries](../docs/INSTALLATION.md#linux-desktop-test)
   [Linux test build instructions](../docs/guides/installation.html#linux)
 
 Actions archives are temporary development builds. Public stable installers
@@ -173,6 +174,11 @@ Chromium and browser WebKit tests cover the shared UI.
   for a Developer ID candidate. Both macOS jobs import the certificate into
   an isolated runner keychain and verify app and DMG notarization.
   [Desktop release workflow](../.github/workflows/desktop-release.yml)
+- Both Linux installer jobs install the finished DEB in a clean Ubuntu 22.04
+  container without recommended packages and check that its Rust host loads
+  every shared library and its packaged runtime serves an authenticated first
+  session. To repeat locally with Docker, run
+  `bash desktop/scripts/smoke_linux_deb.sh /path/to/Lixity_VERSION_amd64.deb`.
 
 ## Remaining work before distribution
 

@@ -308,33 +308,43 @@ operation.
    override prevents Git or `gh` from using authorized keyring credentials,
    clear it for the affected command with
    `env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS`.
-   Push the reviewed commit to `main` before an optional `make rc-gate`
-   (`rc.yml`). It qualifies the commit at remote `main` without publishing.
-   If local qualification has covered the candidate, the tagged workflow can
-   run the hosted gates once. When using an RC run, confirm its SHA before
-   creating the annotated `vX.Y.Z` tag. Compare
-   the reviewed SHA with `git rev-parse 'vX.Y.Z^{commit}'` before pushing the
-   tag, then verify the dereferenced remote tag and the release run's SHA.
+   Push the reviewed commit to `main`, then run the candidate workflow and
+   verify its result from the reviewed checkout:
+
+   ```bash
+   make rc-gate RELEASE_TAG=vX.Y.Z
+   # Wait for the dispatched run to finish on GitHub Actions.
+   make rc-verify RELEASE_TAG=vX.Y.Z
+   ```
+
+   `rc-gate` sends the full local commit SHA to GitHub. The workflow stops at
+   preflight if the dispatch resolves to a different commit. `rc-verify` reports
+   the successful run, retained artifact ID and SHA-256 digest for that commit.
+   If a check fails, diagnose it before creating the annotated `vX.Y.Z` tag.
+   Qualify each corrected commit again. If the build artifact is missing or has
+   expired, rerun the original workflow in full or dispatch qualification again
+   while the reviewed commit is at the tip of `main`. Compare the reviewed SHA
+   with `git rev-parse 'vX.Y.Z^{commit}'` before pushing the tag, then verify the
+   dereferenced remote tag and the release run's SHA.
 3. **Follow tag publication.**
-   The tag workflow (`release.yml`) checks the release notes, tag identity and
-   any selected signed desktop bundle before starting the full source, browser
-   and platform checks. The candidate workflow checks the same release notes.
-   A new release requires reusable full source (`tests.yml`
+   The candidate workflow (`rc.yml`) checks the release notes, then runs the
+   reusable full source checks (`tests.yml`
    across Python 3.10 and 3.12, including isolated wheel build + smoke),
-   4-shard Chromium browser (`browser.yml`) and full native
-   (`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
-   checks on the exact tagged commit, along with the dependency gate. These
-   run concurrently in both release and RC workflows. Publication waits for
-   all of them to pass.
+   four Chromium shards (`browser.yml`), full native tests
+   (`research-platforms.yml` on `windows-latest` and `macos-latest`) and the
+   dependency gate concurrently.
    The Python 3.12 source job stages its smoke-tested archives and a CycloneDX
-   SBOM from that same install. The RC workflow validates the handoff against
-   its checked-out source. A new tag publication retrieves the staged archive
-   set from its own run and checks the contents and checksums against the tag.
-   It attests the archives and their SBOM, attaches the archives to a draft release,
-   verifies the draft manifest, digests and provenance via `scripts/release_channels.py verify-draft`,
-   publishes the immutable GitHub Release and confirms it with `verify-github`. On a rerun
-   of an already published tag, `scripts/release_channels.py recover` retrieves and
-   verifies the immutable GitHub assets instead of rebuilding.
+   SBOM from that same install. After every gate passes, the candidate workflow
+   verifies the handoff against its checkout and attests the archives on `main`.
+   The tag workflow (`release.yml`) checks release notes, tag identity, the
+   candidate run and any selected signed desktop bundle. It downloads the
+   candidate by run and artifact ID, verifies the source, checksums and hosted
+   build attestations, and reuses those bytes for the release. It adds tag-bound
+   attestations for the archives and their SBOM, attaches the archives to a draft,
+   verifies the draft manifest, digests and provenance with `verify-draft`,
+   publishes the immutable GitHub Release and confirms it with `verify-github`.
+   For an already published tag, `scripts/release_channels.py recover` retrieves
+   and verifies the immutable GitHub assets independently of candidate retention.
    After GitHub publication and a successful or intentionally skipped PyPI
    step, the release pipeline considers Pages from that exact tag. The
    serialized Pages job checks whether the tag is still the latest published
