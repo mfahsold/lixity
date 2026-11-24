@@ -242,3 +242,23 @@ def test_french_ment_and_mute_ent_verbs(word, expected):
 )
 def test_english_syllabic_le_before_ed_and_es(word, expected):
     assert count_en(word) == expected
+
+
+def test_generic_non_latin_script_withholds_flesch_while_preserving_lix():
+    from lixity.formatters import ReportFormatter
+    from lixity.ui.dashboard import render_dashboard
+
+    text = "## Глава\n\nВетер дует над широкой рекой.\n"  # noqa: RUF001 - intentional Cyrillic script fixture
+    metrics = CorpusAnalyzer(CorpusConfig(language="generic")).analyze_text(text)
+    assert metrics.tokens == 5
+    assert metrics.total_sentences == 1
+    assert metrics.asw == 0.0
+    assert metrics.flesch_de == 0.0
+    assert metrics.lix == pytest.approx(5.0 + (1 / 5) * 100.0)
+    html = render_dashboard([], [], metrics=metrics)
+    assert "<b>–</b><span>Estimated syllables – · – per word</span>" in html
+    assert "<b>25.0</b>" in html
+    md = ReportFormatter.format_markdown_report(metrics, language_key="en")
+    assert "| **Flesch Reading Ease** | **–** |" in md
+    assert "| **LIX (readability index)** | **25.0** |" in md
+

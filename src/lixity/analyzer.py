@@ -614,7 +614,11 @@ class CorpusAnalyzer:
             flesch_variant = self.readability(0.0, 0.0)[1]
             lix = 0.0
         else:
-            flesch_de, flesch_variant = self.readability(stats.asl, asw)
+            flesch_de, flesch_variant = (
+                self.readability(stats.asl, asw)
+                if total_syllables > 0
+                else (0.0, self.readability(0.0, 0.0)[1])
+            )
             lix = stats.asl + (long_words / n_tokens) * 100.0
 
         # 6. Dialogue ratio

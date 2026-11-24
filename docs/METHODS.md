@@ -702,7 +702,11 @@ foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
 The generic counter uses Latin `a–z` vowel groups. A token with no retained
-letters contributes zero estimated syllables. Generic ASW and derived
+letters contributes zero estimated syllables. When no token in a manuscript has
+retained syllable letters (`asw == 0.0`, for example in non-Latin scripts under
+`generic`), Flesch returns the `0.0` unavailable sentinel and displays as
+unavailable (`–`) across dashboard, CLI, Markdown and reading-site reports while
+LIX remains available. Generic ASW and derived
 syllable-based readability are unsuitable for comparing texts in scripts
 outside that alphabet. The word tokenizer can still recognize those tokens.
 

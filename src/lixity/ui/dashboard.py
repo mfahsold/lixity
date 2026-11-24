@@ -249,11 +249,12 @@ _script_json = script_json
 def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | None, language_key: str) -> str:
     L, N, P = panel_formatters(labels, language_key)
     available = metrics.tokens > 0 and metrics.total_sentences > 0
+    flesch_available = available and metrics.asw > 0
     asl = N(metrics.asl, 2) if available else "–"
-    asw = N(metrics.asw, 2) if metrics.tokens else "–"
+    asw = N(metrics.asw, 2) if flesch_available else "–"
     syllables = L("readability_syllables")
     if metrics._readability_syllables is not None:
-        syllables += f" {N(metrics._readability_syllables, 0)}"
+        syllables += f" {N(metrics._readability_syllables, 0) if flesch_available else '–'}"
     long_count = metrics._readability_long_words
     long_words = "–" if long_count is None else N(long_count, 0)
     if long_count is not None and metrics.tokens:
@@ -266,7 +267,7 @@ def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | No
         f'{L("readability_sentences")} {N(metrics.total_sentences, 0)} · {asl} {L("readability_asl")}</p>'
         '<dl>'
         f'<div><dt>{help_term(labels, "flesch", variant)}</dt>'
-        f'<dd><b>{N(metrics.flesch_de, 1) if available else "–"}</b>'
+        f'<dd><b>{N(metrics.flesch_de, 1) if flesch_available else "–"}</b>'
         f'<span>{syllables} · {asw} {L("readability_per_word")}</span></dd></div>'
         f'<div><dt>{help_term(labels, "lix", "LIX")}</dt>'
         f'<dd><b>{N(metrics.lix, 1) if available else "–"}</b>'

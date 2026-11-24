@@ -504,6 +504,7 @@ def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, t
             f'<h1>{L("publication_analysis_title")}</h1>', f'<p>{L("publication_analysis_cap_note")}</p>']
         if "language" in sections:
             valid = metrics.tokens > 0 and metrics.total_sentences > 0
+            flesch_valid = valid and metrics.asw > 0
             page_parts.extend(['<section id="analysis-section-language">', f'<h2>{L("publication_analysis_language")}</h2>',
                 f'<p class="ctl-note">{metric_reference_link(labels, "measurements")}</p>', '<dl>',
                 f'<dt>{L("words")}</dt><dd>{number(metrics.tokens)}</dd>',
@@ -511,7 +512,7 @@ def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, t
                 f'<dt>{L("layer_asl")}</dt><dd>{number(metrics.asl, valid)}</dd>',
                 f'<dt>{L("dialogue")}</dt><dd>{percentage(metrics.dialog_ratio, metrics.tokens > 0)}</dd>',
                 f'<dt>LIX</dt><dd>{number(metrics.lix, valid)}</dd>',
-                f'<dt>{esc(metrics.flesch_variant or "Flesch")}</dt><dd>{number(metrics.flesch_de, valid)}</dd>', '</dl></section>'])
+                f'<dt>{esc(metrics.flesch_variant or "Flesch")}</dt><dd>{number(metrics.flesch_de, flesch_valid)}</dd>', '</dl></section>'])
         if "chapters" in sections:
             page_parts.extend(['<section id="analysis-section-chapters">', f'<h2>{L("publication_analysis_chapters")}</h2>',
                                f'<p class="ctl-note">{metric_reference_link(labels, "matrix")}</p>'])

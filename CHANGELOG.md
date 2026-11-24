@@ -80,7 +80,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and unrelated DOM changes. Release map resources on removal.
 - Resolve an explicit `auto` against the direct analyzer's input when no sample
   was provided. Reject a nonfinite comparison scale and avoid overflow in the
-  medcouple skewness kernel.
+  medcouple skewness kernel. Withhold Flesch Reading Ease when no syllables can
+  be estimated for the analyzed tokens (such as non-Latin scripts under `generic`)
+  while keeping LIX available.
 - Explain the exploratory selection limits in the comparison report and name
   the separate BH setting used by trend and manuscript-half summaries. Correct
   the documented guarded segment objective and the two sentence-length bin roles.
