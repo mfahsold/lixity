@@ -231,6 +231,33 @@ function setPassageScrollMargin(target) {
 var paragraphContentNode = document.getElementById("paragraph-content");
 var paragraphContent = paragraphContentNode ? JSON.parse(paragraphContentNode.textContent) : {};
 if (paragraphContentNode) paragraphContentNode.remove();
+var paragraphEvidenceRequests = new Map();
+async function loadParagraphEvidence(id) {
+  var entry = paragraphContent[id], batch = entry?.[4]?.batch, view = document.body.dataset.paragraphEvidenceView;
+  if (!view || typeof batch !== "string" || entry[3]) return entry?.[3];
+  if (!paragraphEvidenceRequests.has(batch)) {
+    var query = new URLSearchParams({view:view, batch:batch});
+    var request = LixityComponents.jsonApi(document.body.dataset.api + "/paragraph-evidence?" + query)
+      .then(function(data) {
+        if (!data.ok || data.schema_version !== "lixity-paragraph-evidence-batch/1" ||
+            document.body.dataset.paragraphEvidenceView !== view ||
+            !data.paragraphs || typeof data.paragraphs !== "object") return;
+        Object.entries(data.paragraphs).forEach(function(pair) {
+          var target = paragraphContent[pair[0]];
+          if (target?.[4]?.batch === batch) target[3] = pair[1];
+        });
+      }).finally(function() {paragraphEvidenceRequests.delete(batch);});
+    paragraphEvidenceRequests.set(batch, request);
+  }
+  await paragraphEvidenceRequests.get(batch);
+  return entry[3];
+}
+function paragraphEvidenceCount(id, key) {
+  var entry = paragraphContent[id];
+  if (entry?.[4]) return entry[4].counts[key] || 0;
+  var spans = entry?.[3]?.layers?.[key]?.spans;
+  return Array.isArray(spans) ? spans.length : 0;
+}
 document.querySelectorAll("#chapters .ptext > noscript").forEach(function(fallback) {
   fallback.remove();
 });

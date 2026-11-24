@@ -1,7 +1,8 @@
 """Descriptive scene measurements and explicit manuscript register references."""
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from functools import partial
 from hashlib import sha256
 from typing import Any, TypedDict
 
@@ -15,7 +16,6 @@ from .pacing import HOOK_TYPES, _classify_span_hook, _hook_score
 from .quotation import count_words_and_quoted_words, quoted_word_counts
 from .quotation_projection import QuotedProse, quoted_prose
 from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
-from .sentences import split_prose_sentence_spans
 from .style_fingerprint import FEATURES
 
 _INTRA_SCENE_MIN_WORDS = 120
@@ -315,6 +315,7 @@ def scene_report_for_display(
     text: str, config: CorpusConfig, settings: Any = None, *,
     premeasured_chapters: Sequence[ChapterMetrics] | None = None,
     pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
+    _read_prose: Callable[[str], QuotedProse] | None = None,
 ) -> dict[str, Any]:
     """Keep the dashboard readable when project assignments need maintenance.
 
@@ -327,6 +328,7 @@ def scene_report_for_display(
             text, config, settings,
             _premeasured_chapters=premeasured_chapters,
             pov_by_chapter=pov_by_chapter,
+            _read_prose=_read_prose,
         )
     except ValueError as exc:
         return {"error": str(exc)}
@@ -380,6 +382,7 @@ def scene_report(
     _premeasured_chapters: Sequence[ChapterMetrics] | None = None,
     pov_by_chapter: Mapping[int, Sequence[str]] | None = None,
     _include_draft_evidence: bool = False,
+    _read_prose: Callable[[str], QuotedProse] | None = None,
 ) -> dict[str, Any]:
     """Use existing analysis features per pacing unit; never analyze sources.
 
@@ -396,6 +399,7 @@ def scene_report(
     analyzer = CorpusAnalyzer(config, sample_text=text)
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
+    read_prose = _read_prose or partial(quoted_prose, config=config, language=resolved, chapter_body=True)
     content_blacklist = resolved.function_words | resolved.stopwords
     filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
@@ -406,7 +410,7 @@ def scene_report(
     breaks = 0
     implicit_breaks: list[dict[str, Any]] = []
     for chapter_num, title, body in split_chapters(text, config):
-        chapter_prose = quoted_prose(body, config, language=resolved, chapter_body=True)
+        chapter_prose = read_prose(body)
         recurring_names = _chapter_recurring_names(
             chapter_prose.parts,
             language_key=resolved.key,
@@ -416,7 +420,7 @@ def scene_report(
         breaks += scene_breaks
         para_offset = 0
         for index, part in enumerate(parts, 1):
-            scene = quoted_prose(part, config, language=resolved, chapter_body=True) if scene_breaks else chapter_prose
+            scene = read_prose(part) if scene_breaks else chapter_prose
             part_breaks, para_offset = _detect_implicit_breaks(
                 chapter_num, index, scene.parts, para_offset, recurring_names, word_re, content_blacklist
             )
@@ -453,7 +457,7 @@ def scene_report(
                             "above" if bounds[1] is not None and value > bounds[1] else "within")
                 comparisons[field] = {"lower": bounds[0], "upper": bounds[1], "position": position}
             scene_sentences = [
-                (start, end) for start, end in split_prose_sentence_spans(scene.text, resolved.key)
+                (start, end) for start, end in scene.sentence_spans
                 if word_re.search(scene.text[start:end])
             ]
             first = scene_sentences[0] if scene_sentences else (0, 0)

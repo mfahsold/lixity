@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 
 from lixity.research import api, catalogue
-from lixity.research.repository import ResearchError
+from lixity.research.repository import Repository, ResearchError
 from tests.research_support import capture_research, retained_files
 
 
@@ -83,6 +83,22 @@ def test_malformed_index_reports_sqlite_cause_then_explicit_refresh_recovers(ind
     assert len(result["hits"]) == 1
     assert result["warnings"] == ["Search index was refreshed to current project snapshot"]
     assert retained_files(project) == before
+
+
+def test_search_rechecks_accepted_revisions_when_head_and_index_are_unchanged(indexed_project):
+    project = indexed_project
+    other = api.create_dossier(project, "Other note", "An unrelated synthetic watchdog.")["dossier_id"]
+    api.reindex(project)
+    assert len(api.search(project, "original", scope="dossiers")["hits"]) == 1
+
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    entry = next(entry for entry in snapshot.manifest.entries if entry.ref.id == other)
+    record = repository.record_path(entry)
+    record.write_bytes(record.read_bytes().replace(b"watchdog", b"elephant"))
+
+    with pytest.raises(ResearchError, match="Research object checksum mismatch"):
+        api.search(project, "original", scope="dossiers", ensure_fresh=True)
 
 
 def test_strict_search_cli_keeps_failure_exit_code_and_actual_diagnostic(indexed_project):

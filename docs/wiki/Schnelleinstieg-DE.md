@@ -5,9 +5,8 @@
 - [Deutsche Sandbox mit Beispieltexten](https://mfahsold.github.io/lixity/sandbox/index.html?lang=de)
 - [Metrikreferenz auf Deutsch](https://mfahsold.github.io/lixity/guides/metrics/de.html)
 
-Für dein eigenes Manuskript kannst du die veröffentlichte Browser-App
-installieren oder einen Desktop-Testinstaller für dein Betriebssystem wählen.
-Die Installationsanleitung und die ausführliche Anleitung zur ersten Sitzung
-sind auf Englisch verfügbar.
-[Installation](https://mfahsold.github.io/lixity/guides/installation.html) ·
+Schau zuerst nach, welche Desktop-Downloads es für dein Betriebssystem gibt.
+Dort findest du auch den Weg zur veröffentlichten Browser-App. Die
+Installationsanleitung und die Anleitung zur ersten Sitzung sind auf Englisch.
+[Desktop-Download und Einrichtung](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
 [Erste Sitzung](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)

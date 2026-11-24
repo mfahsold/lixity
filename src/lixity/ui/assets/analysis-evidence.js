@@ -35,7 +35,11 @@
     return rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
   }
   function message(key) { return uiLabel(key); }
-  function setStatus(value) { if (status && status.textContent !== value) status.textContent = value; }
+  function setStatus(value) {
+    if (!status) return;
+    if (status.textContent !== value) status.textContent = value;
+    status.removeAttribute("aria-busy");
+  }
   function evidenceIssue(record, layer) {
     if (select.selectedOptions[0]?.dataset.available === "0") return "layer_language_unavailable";
     if (record.error) return record.error;
@@ -102,63 +106,72 @@
     }).map(function(hit) { return [offsets[hit[0]], offsets[hit[1]]]; });
     return {count:span.function_words, share:span.function_words / span.words, minWords:rule[0], minPct:rule[1], ranges:ranges};
   }
-  async function prepare(panel) {
+  async function prepare(panel, key) {
+    await loadParagraphEvidence(panel.id);
     var prose = paragraph(panel), content = paragraphContent[panel.id], evidence = content && content[3];
-    var old = records.get(panel);
-    if (old && old.prose === prose && old.evidence === evidence && old.text === (content && content[0])) return old.promise;
-    var record = {panel:panel, prose:prose, text:content && content[0], evidence:evidence, layers:{}, tense:{}, error:"evidence_unavailable"};
-    records.set(panel, record);
-    record.promise = (async function() {
-      if (!prose || typeof record.text !== "string" || !evidence) return record;
-      if (!window.crypto || !crypto.subtle) {record.error = "evidence_verification_unavailable"; return record;}
-      record.error = "evidence_mismatch";
-      if (evidence.schema_version !== "paragraph-evidence/1" || evidence.offset_unit !== "unicode_codepoint" ||
-          !/^[a-f0-9]{64}$/.test(evidence.paragraph_sha256 || "") || prose.textContent !== record.text ||
-          !evidence.layers || typeof evidence.layers !== "object") return record;
-      var digest;
-      try { digest = await crypto.subtle.digest("SHA-256", (textEncoder || (textEncoder = new TextEncoder())).encode(record.text)); }
-      catch (_) { record.error = "evidence_verification_unavailable"; return record; }
-      var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
-      if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return record;
-      // Build one codepoint→UTF-16 table and text-node map per actual prose generation.
-      var offsets = LixityComponents.cpOffsets(record.text);
-      record.rangeAt = LixityComponents.textRangeMap(prose);
-      function prepareLayers(values, target) {
-        if (!values || typeof values !== "object") return;
-        Object.keys(values).forEach(function(key) {
-          var value = values[key];
-          if (!validLayer(value, offsets.length - 1)) return;
-          var echoByIndex = key === "echo" && Array.isArray(value.echo_groups) ? new Map() : null;
-          if (echoByIndex) value.echo_groups.forEach(function(group) {
-            if (!Array.isArray(group) || !Number.isSafeInteger(group[0]) || group[0] < 2 || group[0] > value.count ||
-                !Array.isArray(group[1]) || group[1].length > group[0]) return;
-            group[1].forEach(function(index) {
-              if (Number.isSafeInteger(index) && index >= 0 && index < value.spans.length) echoByIndex.set(index, group);
-            });
-          });
-          var spans = value.spans.map(function(span, index) {
-            var qctx = typeof span.quotation_context === "string" &&
-              ["in_quotation", "outside_quotation", "overlaps_quotation"].includes(span.quotation_context)
-              ? span.quotation_context
-              : null;
-            var echoGroup = echoByIndex?.get(index) || null;
-            return {range:record.rangeAt(offsets[span.start], offsets[span.end]),
-              count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
-              echoGroup:echoGroup,
-              sticky:key === "sticky" ? stickyDetails(span, value.sticky_rule, offsets) : null,
-              quotation_context:qctx,
-              quotation_marker:typeof span.quotation_marker === "string" ? span.quotation_marker : "",
-              start:offsets[span.start], end:offsets[span.end],
-              quote:record.text.slice(offsets[span.start], offsets[span.end])};
-          });
-          target[key] = {value:value, spans:spans};
-        });
+    var record = records.get(panel);
+    if (!record || record.prose !== prose || record.evidence !== evidence || record.text !== content?.[0]) {
+      record = {panel:panel, prose:prose, text:content?.[0], evidence:evidence, layers:{}, tense:{}, error:"evidence_unavailable"};
+      records.set(panel, record);
+      record.promise = verify(record);
+    }
+    await record.promise;
+    if (!record.error) {
+      if (key === null) {
+        record.prepareLayer(evidence.tense, record.tense, "present");
+        record.prepareLayer(evidence.tense, record.tense, "past");
+      } else {
+        record.prepareLayer(evidence.layers, record.layers, key);
       }
-      prepareLayers(evidence.layers, record.layers);
-      prepareLayers(evidence.tense, record.tense);
-      record.error = null; return record;
-    })();
-    return record.promise;
+    }
+    return record;
+  }
+  async function verify(record) {
+    var prose = record.prose, evidence = record.evidence, panel = record.panel;
+    if (!prose || typeof record.text !== "string" || !evidence) return;
+    if (!window.crypto || !crypto.subtle) {record.error = "evidence_verification_unavailable"; return;}
+    record.error = "evidence_mismatch";
+    if (evidence.schema_version !== "paragraph-evidence/1" || evidence.offset_unit !== "unicode_codepoint" ||
+        !/^[a-f0-9]{64}$/.test(evidence.paragraph_sha256 || "") || prose.textContent !== record.text ||
+        !evidence.layers || typeof evidence.layers !== "object") return;
+    var digest;
+    try { digest = await crypto.subtle.digest("SHA-256", (textEncoder || (textEncoder = new TextEncoder())).encode(record.text)); }
+    catch (_) { record.error = "evidence_verification_unavailable"; return; }
+    var hash = Array.from(new Uint8Array(digest), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
+    if (hash !== evidence.paragraph_sha256 || records.get(panel) !== record || prose.textContent !== record.text) return;
+    // Build one codepoint→UTF-16 table and text-node map per actual prose generation.
+    var offsets = LixityComponents.cpOffsets(record.text);
+    record.rangeAt = LixityComponents.textRangeMap(prose);
+    record.prepareLayer = function(values, target, key) {
+      if (!values || Object.prototype.hasOwnProperty.call(target, key)) return;
+      var value = values[key];
+      if (!validLayer(value, offsets.length - 1)) {target[key] = null; return;}
+      var echoByIndex = key === "echo" && Array.isArray(value.echo_groups) ? new Map() : null;
+      if (echoByIndex) value.echo_groups.forEach(function(group) {
+        if (!Array.isArray(group) || !Number.isSafeInteger(group[0]) || group[0] < 2 || group[0] > value.count ||
+            !Array.isArray(group[1]) || group[1].length > group[0]) return;
+        group[1].forEach(function(index) {
+          if (Number.isSafeInteger(index) && index >= 0 && index < value.spans.length) echoByIndex.set(index, group);
+        });
+      });
+      var spans = value.spans.map(function(span, index) {
+        var qctx = typeof span.quotation_context === "string" &&
+          ["in_quotation", "outside_quotation", "overlaps_quotation"].includes(span.quotation_context)
+          ? span.quotation_context
+          : null;
+        var echoGroup = echoByIndex?.get(index) || null;
+        return {range:record.rangeAt(offsets[span.start], offsets[span.end]),
+          count:span.count, words:Number.isSafeInteger(span.words) && span.words >= 0 ? span.words : null,
+          echoGroup:echoGroup,
+          sticky:key === "sticky" ? stickyDetails(span, value.sticky_rule, offsets) : null,
+          quotation_context:qctx,
+          quotation_marker:typeof span.quotation_marker === "string" ? span.quotation_marker : "",
+          start:offsets[span.start], end:offsets[span.end],
+          quote:record.text.slice(offsets[span.start], offsets[span.end])};
+      });
+      target[key] = {value:value, spans:spans};
+    };
+    record.error = null;
   }
   function schedule() {
     if (frame) return;
@@ -170,7 +183,10 @@
     if (select.selectedOptions[0]?.dataset.available === "0") {
       clearHighlight(); setStatus(message("layer_language_unavailable")); return;
     }
-    var prepared = await Promise.all(Array.from(visible).filter(function(panel) {return panel.isConnected;}).map(prepare));
+    status?.setAttribute("aria-busy", "true");
+    var prepared = await Promise.all(Array.from(visible).filter(function(panel) {
+      return panel.isConnected;
+    }).map(function(panel) {return prepare(panel, key);}));
     if (generation !== epoch || !enabled() || key !== select.value) return;
     var ranges = [], issues = new Set(), measured = false;
     prepared.forEach(function(record) {
@@ -432,7 +448,7 @@
       content && content[0] === record.text && content[3] === record.evidence && !record.error;
   }
   async function tenseEvidence(panel) {
-    var record = await prepare(panel);
+    var record = await prepare(panel, null);
     if (!currentRecord(record)) return null;
     var result = {};
     ["present", "past"].forEach(function(key) {
@@ -448,7 +464,7 @@
     return result;
   }
   async function revealTense(panel, key, index) {
-    var record = await prepare(panel), layer = record.tense[key];
+    var record = await prepare(panel, null), layer = record.tense[key];
     if (!currentRecord(record) || !layer || !Number.isSafeInteger(index) || index < 0 || index >= layer.spans.length) return false;
     var range = layer.spans[index].range;
     close(false); clearTense(); revealRange(panel, range); tensePanel = panel;
@@ -478,7 +494,7 @@
     var verification = {key:select.value, pinned:true, trigger:trigger || panel.querySelector(".reader-paragraph-actions"),
       arrival:scrollPosition(passageScrollContainers(panel), trigger)};
     opening = verification;
-    var serial = ++request, key = select.value, record = await prepare(panel);
+    var serial = ++request, key = select.value, record = await prepare(panel, key);
     var inspectorTrigger = trigger && trigger.isConnected && trigger.closest("#reader-inspector") && trigger.dataset.readerEvidenceParagraph === panel.id &&
       panel.classList.contains("reader-inspector-target") && shown(trigger) &&
       panel.isConnected && panel.getClientRects().length && !panel.closest("[hidden]");
@@ -669,9 +685,7 @@
   chapters.querySelectorAll(".ptext").forEach(function(panel) {observer.observe(panel);});
   async function inspectSpan(panel, layerKey, spanIndex, options) {
     if (!panel || !panel.isConnected || !Number.isSafeInteger(spanIndex) || spanIndex < 0) return false;
-    var content = paragraphContent[panel.id], evidence = content && content[3];
-    var candidateLayer = evidence && evidence.layers && evidence.layers[layerKey];
-    if (!candidateLayer || !Array.isArray(candidateLayer.spans) || spanIndex >= candidateLayer.spans.length) return false;
+    if (spanIndex >= paragraphEvidenceCount(panel.id, layerKey)) return false;
     var guided = options?.guided;
     if (guided && passageBlocker(panel)) return false;
     var serial = ++spanRequest;
@@ -696,7 +710,7 @@
       toggle.dispatchEvent(new Event("change", {bubbles:true}));
     }
     await new Promise(function(resolve) {requestAnimationFrame(function() {requestAnimationFrame(resolve);});});
-    var record = await prepare(panel), layer = record.layers[layerKey];
+    var record = await prepare(panel, layerKey), layer = record.layers[layerKey];
     if (serial !== spanRequest || !currentRecord(record) || select.value !== layerKey || !layer ||
         spanIndex >= layer.spans.length || passageBlocker(panel)) return false;
     request++;

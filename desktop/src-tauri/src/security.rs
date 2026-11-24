@@ -152,8 +152,8 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
     setWorkspaceTitle: function (project) {{
       return invoke("set_workspace_title", {{ project: project }});
     }},
-    recentProjects: function () {{
-      return invoke("list_recent_projects");
+    recentProjects: function (legacyPaths) {{
+      return invoke("list_recent_projects", {{ legacyPaths: legacyPaths || null }});
     }},
     recordRecentProject: function (path, title, language) {{
       return invoke("record_recent_project", {{

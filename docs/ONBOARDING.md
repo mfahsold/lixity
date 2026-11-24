@@ -6,9 +6,9 @@ Open Lixity and choose a project, a manuscript file, or a blank manuscript.
 Once your text is open, read one passage, check what a measurement counted,
 and decide whether the difference matters to the scene.
 
-For a desktop test build, follow the [steps for your operating system](guides/installation.html#desktop).
-Lixity starts its bundled local engine when you open the app.
-For the CLI-installed browser app, follow
+Find the [desktop installer for your operating system](guides/installation.html#desktop)
+and check its availability in the guide. Lixity starts its bundled local
+engine when you open the app. For the CLI-installed browser app, follow
 [Start the browser workspace](#use-the-interactive-workspace).
 
 <a id="the-journey-at-a-glance"></a>

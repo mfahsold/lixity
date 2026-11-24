@@ -53,6 +53,13 @@ class TestDesktopDownloads(unittest.TestCase):
         for asset in artifacts:
             self.assertIn(f'href="{base}/download/{tag}/{asset.filename}"', rendered)
         self.assertIn(f'href="{base}/download/{tag}/{desktop_downloads.CHECKSUMS}"', rendered)
+        self.assertNotIn(desktop_downloads.TEST_BUILDS, rendered)
+        catalog_with_old_installer = {**catalog, "installers": [
+            {**entry, "filename": entry["filename"].replace("0.10.0", "0.9.1")}
+            for entry in catalog["installers"]
+        ]}
+        with self.assertRaisesRegex(ValueError, "Invalid or duplicate desktop installer"):
+            desktop_downloads.validate_catalog(catalog_with_old_installer)
         with self.assertRaisesRegex(ValueError, "qualified installer formats"):
             desktop_downloads.record_catalog(release, artifacts[:-1], checksums)
         with self.assertRaisesRegex(ValueError, "public stable"):
@@ -67,6 +74,7 @@ class TestDesktopDownloads(unittest.TestCase):
         catalog = {"schema_version": desktop_downloads.SCHEMA, "tag": None, "installers": []}
         rendered = desktop_downloads.render(catalog)
         self.assertIn('href="#install"', rendered)
+        self.assertIn(f'href="{desktop_downloads.TEST_BUILDS}"', rendered)
         self.assertNotIn("/download/", rendered)
         guide = (desktop_downloads.ROOT / desktop_downloads.GUIDE).read_text(encoding="utf-8")
         for anchor in ("macos", "windows", "linux"):

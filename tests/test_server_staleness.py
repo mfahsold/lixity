@@ -108,6 +108,40 @@ def test_unchanged_manuscript_serves_the_cache(tmp_path: Path, monkeypatch) -> N
         assert response.status == 200 and "Eins" in response.body.decode("utf-8")
 
 
+def test_reader_evidence_is_scoped_to_the_rendered_view_and_chapter(tmp_path: Path) -> None:
+    manuscript = tmp_path / "manuscript.md"
+    sentence = "😀 A patient keeper watches the garden."
+    second = "Another keeper waited by the river."
+    manuscript.write_text(f"## First\n\n{sentence}\n\n## Second\n\n{second}\n", encoding="utf-8")
+    handler = make_handler(tmp_path, source_input=manuscript, language="en")
+    handler.refresh()
+
+    with LoopbackServer(handler) as server:
+        response = server.request("/")
+        view = re.search(rb'data-paragraph-evidence-view="([a-f0-9]{64})"', response.body)
+        paragraph_json = re.search(rb'id="paragraph-content">(.*?)</script>', response.body, re.S)
+        assert view and paragraph_json
+        entries = json.loads(paragraph_json[1])
+        first, following = entries["p-0"], entries["p-1"]
+        assert first[3] is None and following[3] is None
+        assert first[4]["counts"]["asl"] == 1 and first[4]["batch"] != following[4]["batch"]
+
+        path = "/api/paragraph-evidence?" + urlencode({"view": view[1].decode(), "batch": first[4]["batch"]})
+        batch = server.request(path)
+        assert batch.status == 200
+        payload = json.loads(batch.body)
+        assert payload["schema_version"] == "lixity-paragraph-evidence-batch/1"
+        evidence = payload["paragraphs"]
+        assert set(evidence) == {"p-0"}
+        assert evidence["p-0"]["paragraph_sha256"] == hashlib.sha256(sentence.encode()).hexdigest()
+        span = evidence["p-0"]["layers"]["asl"]["spans"][0]
+        assert sentence[span["start"]:span["end"]] == sentence
+
+        manuscript.write_text("## New\n\nThe text changed.\n", encoding="utf-8")
+        assert server.request("/").status == 200
+        assert server.request(path).status == 409
+
+
 def test_reload_observes_externally_changed_audio_settings(tmp_path: Path, monkeypatch) -> None:
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("## First\n\nA small bird sings.\n", encoding="utf-8")

@@ -1,6 +1,6 @@
 # Install Lixity and open your manuscript
 
-Start with the [published browser app and CLI](#install) or [try a desktop build](#desktop). Built-in analysis runs locally without a Lixity account. See the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for updates, optional tools and troubleshooting.
+Find the [desktop app for your computer](#desktop). If you work from the terminal or there is no installer for your system, use the [local browser app and CLI](#install). Built-in analysis runs locally without a Lixity account. See the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for updates, optional tools and troubleshooting.
 
 Updated 24 November 2026
 
@@ -8,9 +8,9 @@ Updated 24 November 2026
 
 ## Desktop downloads
 
-Desktop installers are in testing. You can start today with the [published local browser app](#install).
+Desktop installers are in testing. For the current public release, [install the local browser app and CLI](#install). [Get a desktop test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
 
-A desktop installer includes Python. Open Lixity from your application menu to start the bundled local engine. [Find and verify a desktop test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
+The desktop app includes Python. Open Lixity from your application menu to start the bundled local engine.
 
 <a id="macos"></a>
 
@@ -54,7 +54,7 @@ Choose **Open a project folder**, **Import a manuscript**, or **Start writing** 
 
 If the workspace cannot start, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. The [first-session guide](first-look.html) walks through reading your first finding.
 
-This source guide describes **v0.9.1**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md). The regular install uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
+This source guide describes **v0.9.1**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
 <a id="requirements"></a>
 

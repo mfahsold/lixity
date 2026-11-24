@@ -7,12 +7,13 @@ For a session with your own manuscript, follow the
 
 ## 1. Installation
 
-Choose the published browser app and CLI or find the desktop test installer for
-your computer. [Installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
+Start with the desktop download guide for your computer. It shows what you can
+install and links to the published browser app and CLI.
+[Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
 
 ## 2. Starting the workbench
 
-Open a desktop test build from your application menu. To start the published
+Open the desktop app from your application menu. To start the published
 browser app, follow the local service instructions.
 [Start Lixity](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#use-the-interactive-workspace)
 

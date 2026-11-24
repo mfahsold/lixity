@@ -487,6 +487,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     paragraph_evidence = data.paragraph_evidence
     project_overview_enabled = options.project_overview_enabled
     esc = html.escape
+    evidence_view = f'data-paragraph-evidence-view="{esc(options.paragraph_evidence_view)}" ' if options.paragraph_evidence_view else ""
     allowed_actions = set(enabled_actions) if enabled_actions is not None else None
     can_edit = controls and not read_only
     show_project_overview = can_edit and project_overview_enabled
@@ -625,7 +626,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-research-compare-capable="{str(controls and not read_only and action_enabled("research-compare")).lower()}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
-        f'data-manuscript-links="{manuscript_links_mode}" '
+        f'{evidence_view}data-manuscript-links="{manuscript_links_mode}" '
         f'data-image-limits="{image_limits_attribute()}" '
         f'data-dossier-pdf-capable="{str(can_edit and allowed_actions is not None and action_enabled("research-dossier-pdf")).lower()}" '
         f'data-dossier-media-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-media")).lower()}" '
@@ -1588,7 +1589,25 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 ))
                 paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
                 if paragraph_evidence is not None and idx in paragraph_evidence:
-                    paragraph_content[f"p-{idx}"].append(paragraph_evidence[idx])
+                    evidence = paragraph_evidence[idx]
+                    batch = options.paragraph_evidence_batches.get(idx)
+                    if batch is None:
+                        paragraph_content[f"p-{idx}"].append(evidence)
+                    else:
+                        layers = evidence["layers"]
+                        meta: dict[str, Any] = {
+                            "batch": batch,
+                            "counts": {key: len(layer["spans"]) for key, layer in layers.items() if layer["spans"]},
+                        }
+                        dialogue = layers.get("dialogue")
+                        if dialogue is not None:
+                            meta["dialogue"] = {
+                                "count": dialogue["count"], "denominator": dialogue.get("denominator"),
+                                "reason": dialogue.get("reason"), "has_ranges": bool(dialogue.get("quotation_ranges")),
+                            }
+                        if evidence.get("tense", {}).get("grammar"):
+                            meta["grammar"] = True
+                        paragraph_content[f"p-{idx}"].extend((None, meta))
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(

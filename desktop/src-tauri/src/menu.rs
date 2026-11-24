@@ -1,7 +1,8 @@
 //! Localized 7-language native OS menu bar built from `generated/menu-locales.json`.
 
-use crate::recent::list_recent;
+use crate::recent::{list_recent, RecentProject};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::Path;
 use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
@@ -9,6 +10,7 @@ use tauri::{AppHandle, Runtime};
 
 const MENU_LOCALES_JSON: &str = include_str!("../generated/menu-locales.json");
 const MAX_MENU_RECENT: usize = 8;
+pub(crate) const RECENT_MENU_PREFIX: &str = "recent-open-";
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct MenuLabels {
@@ -91,6 +93,17 @@ fn recent_item_label(title: Option<&str>, path: &str) -> String {
         .collect()
 }
 
+fn recent_menu_id(path: &str) -> String {
+    format!("{RECENT_MENU_PREFIX}{:x}", Sha256::digest(path.as_bytes()))
+}
+
+pub(crate) fn recent_menu_path<'a>(id: &str, entries: &'a [RecentProject]) -> Option<&'a str> {
+    entries
+        .iter()
+        .find(|entry| entry.exists && recent_menu_id(&entry.path) == id)
+        .map(|entry| entry.path.as_str())
+}
+
 pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Result<Menu<R>> {
     let l = labels_for_locale(locale);
 
@@ -102,9 +115,9 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
             .build(app)?;
         recent_builder = recent_builder.item(&empty_item);
     } else {
-        for (idx, entry) in recent_entries.iter().take(MAX_MENU_RECENT).enumerate() {
+        for entry in recent_entries.iter().take(MAX_MENU_RECENT) {
             let label = recent_item_label(entry.title.as_deref(), &entry.path);
-            let item = MenuItemBuilder::with_id(format!("recent-open-{idx}"), label)
+            let item = MenuItemBuilder::with_id(recent_menu_id(&entry.path), label)
                 .enabled(entry.exists)
                 .build(app)?;
             recent_builder = recent_builder.item(&item);
@@ -247,6 +260,23 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recent_menu_selection_keeps_its_path_after_reordering() {
+        let entry = |path: &str, exists| RecentProject {
+            path: path.to_owned(),
+            title: None,
+            language: None,
+            last_opened_unix: 0,
+            exists,
+        };
+        let id = recent_menu_id("/synthetic/first");
+        let other = entry("/synthetic/newer", true);
+        let selected = entry("/synthetic/first", true);
+        assert_eq!(recent_menu_path(&id, &[other.clone(), selected]), Some("/synthetic/first"));
+        assert_eq!(recent_menu_path(&id, std::slice::from_ref(&other)), None);
+        assert_eq!(recent_menu_path(&id, &[entry("/synthetic/first", false)]), None);
+    }
 
     #[test]
     fn resolves_all_seven_locales_and_falls_back_to_english() {

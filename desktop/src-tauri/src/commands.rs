@@ -11,7 +11,7 @@ use crate::downloads::{
 };
 use crate::menu::build_app_menu;
 use crate::preferences::{load_preferences, update_preference, DesktopPreferences, DEFAULT_ZOOM};
-use crate::recent::{clear_recent, list_recent, record_recent, remove_recent, RecentProject};
+use crate::recent::{clear_recent, import_legacy_recent, record_recent, remove_recent, RecentProject};
 use crate::security::{
     bridge_init_script, handshake_url, is_allowed_external_url, is_valid_workspace_path,
     route_webview_navigation,
@@ -324,8 +324,16 @@ pub fn set_dirty_state(
 }
 
 #[tauri::command]
-pub fn list_recent_projects() -> Vec<RecentProject> {
-    list_recent()
+pub fn list_recent_projects(
+    app: AppHandle,
+    state: State<'_, DesktopState>,
+    legacy_paths: Option<Vec<String>>,
+) -> Result<Vec<RecentProject>, String> {
+    let (entries, imported) = import_legacy_recent(legacy_paths.as_deref().unwrap_or_default())?;
+    if imported {
+        refresh_app_menu(&app, &state.locale);
+    }
+    Ok(entries)
 }
 
 #[tauri::command]
@@ -357,10 +365,10 @@ pub fn remove_recent_project(
 pub fn clear_recent_projects(
     app: AppHandle,
     state: State<'_, DesktopState>,
-) -> Result<(), String> {
-    clear_recent()?;
+) -> Result<Vec<RecentProject>, String> {
+    let updated = clear_recent()?;
     refresh_app_menu(&app, &state.locale);
-    Ok(())
+    Ok(updated)
 }
 
 #[tauri::command]

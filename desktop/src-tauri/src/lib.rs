@@ -18,7 +18,7 @@ use audio_capture::InteractiveRecorder;
 use commands::{spawn_desktop_window, DesktopState, WindowLaunchSpec};
 use dirty_state::{AudioJobStatus, CloseAttempt, CloseRequest, DirtyRegistry};
 use downloads::RevealAllowlist;
-use menu::{build_app_menu, labels_for_locale, MenuLabels};
+use menu::{build_app_menu, labels_for_locale, recent_menu_path, MenuLabels, RECENT_MENU_PREFIX};
 use preferences::{load_preferences, step_zoom, DEFAULT_ZOOM, ZOOM_STEP};
 use recent::list_recent;
 use sidecar::{log_desktop_event, PythonSidecar};
@@ -241,14 +241,9 @@ fn show_fatal_startup_error(app: &AppHandle, locale: &str, failure: StartupFailu
 }
 
 fn handle_menu_event(app: &AppHandle, id: &str) {
-    if let Some(idx_str) = id.strip_prefix("recent-open-") {
-        if let Ok(idx) = idx_str.parse::<usize>() {
-            if let Some(entry) = list_recent().get(idx) {
-                let path = PathBuf::from(&entry.path);
-                if path.exists() {
-                    queue_open_path(app, None, path);
-                }
-            }
+    if id.starts_with(RECENT_MENU_PREFIX) {
+        if let Some(path) = recent_menu_path(id, &list_recent()) {
+            queue_open_path(app, None, PathBuf::from(path));
         }
         return;
     }

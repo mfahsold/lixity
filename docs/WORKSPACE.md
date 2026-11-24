@@ -212,6 +212,11 @@ metric's help links directly to its method. The reader separates a measured
 zero, missing language rules and a measured count without exact text ranges.
 Reports without paragraph evidence omit the evidence-only options.
 
+In the installed workspace, all matching passages count toward navigation
+before their detailed highlights load. Opening a finding loads its exact
+text ranges for the current analysis. If the view has been replaced, reopen
+the manuscript to see evidence from the current view.
+
 Lixity computes these choices and their text ranges from the current source and
 project settings. The browser stores the selected metric as a display preference.
 SQLite retains selected aggregate measurements for saved versions. In the

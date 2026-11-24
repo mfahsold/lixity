@@ -78,6 +78,7 @@ class TestDocumentPipeline(unittest.TestCase):
         from lixity.dialogue import dialogue_report
         from lixity.motifs import motif_report
         from lixity.pacing import pacing_report
+        from lixity.quotation_projection import quoted_prose
         from lixity.scenes import scene_report
         from lixity.showing import showing_report
 
@@ -107,10 +108,12 @@ class TestDocumentPipeline(unittest.TestCase):
                 }
                 original = CorpusAnalyzer.measure_unit
                 with patch.object(CorpusAnalyzer, "analyze_text", side_effect=AssertionError("reanalysis")), \
-                        patch.object(CorpusAnalyzer, "measure_unit", autospec=True, side_effect=original) as measure:
+                        patch.object(CorpusAnalyzer, "measure_unit", autospec=True, side_effect=original) as measure, \
+                        patch("lixity.pipeline.quoted_prose", wraps=quoted_prose) as project:
                     actual = pipeline.supplementary_reports(text, config, analysis, scene_settings=settings)
                 self.assertEqual(actual, expected)
                 self.assertEqual(measure.call_count, scene_count)
+                self.assertEqual(project.call_count, 1 + scene_count)
                 self.assertEqual(analysis.metrics.model_dump(), before)
                 self.assertEqual(actual["motifs"]["motifs"][0]["name"], "Weather")
                 self.assertEqual(actual["scenes"]["items"][0]["group"], "quiet")

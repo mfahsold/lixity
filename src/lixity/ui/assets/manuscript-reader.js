@@ -233,7 +233,10 @@
   var directSpeechBtn = document.getElementById("reader-direct-speech");
   var directSpeechActive = false;
   var directSpeechObserver = null;
+  var directSpeechIntersection = null;
+  var directSpeechVisible = new Set();
   var directSpeechFrame = 0;
+  var directSpeechGeneration = 0;
   var settings = document.getElementById("reader-settings");
   var settingsPanels = Array.from(controls.querySelectorAll(".reader-settings"));
   var analysisGuide = document.getElementById("reader-analysis-guide");
@@ -934,8 +937,7 @@
       context.appendChild(flagCard);
       // Verification is asynchronous; the context identity is checked before display.
       Promise.resolve().then(function() {renderTenseCues(panel, cueHost);});
-    } else if (paragraphContent[panel.id] && paragraphContent[panel.id][3] &&
-        paragraphContent[panel.id][3].tense && paragraphContent[panel.id][3].tense.grammar) {
+    } else if (paragraphContent[panel.id]?.[4]?.grammar || paragraphContent[panel.id]?.[3]?.tense?.grammar) {
       var grammarHost = document.createElement("div"); grammarHost.className = "reader-tense-evidence";
       context.appendChild(grammarHost);
       Promise.resolve().then(function() {renderTenseCues(panel, grammarHost);});
@@ -1239,40 +1241,25 @@
     });
     return ranges;
   }
-  function applyDirectSpeech() {
+  async function applyDirectSpeech() {
     directSpeechFrame = 0;
-    var hasHighlight = Boolean(window.CSS && CSS.highlights && window.Highlight);
-    if (!directSpeechActive) {
-      panels.forEach(function(panel) {
-        panel.classList.remove("direct-speech-narrative", "direct-speech-mixed", "direct-speech-only");
-      });
-      if (hasHighlight) CSS.highlights.delete("lixity-direct-speech");
-      return;
-    }
-    var ranges = [];
-    panels.forEach(function(panel) {
-      panel.classList.remove("direct-speech-narrative", "direct-speech-mixed", "direct-speech-only");
-      var content = typeof paragraphContent !== "undefined" ? paragraphContent[panel.id] : null;
-      var text = content && typeof content[0] === "string" ? content[0] : "";
-      var evidence = content && content[3];
-      var dialogue = evidence && evidence.layers && evidence.layers.dialogue;
-      if (!dialogue || !Array.isArray(dialogue.quotation_ranges)) return;
-      var spans = dialogue.quotation_ranges.map(function(pair) {return {start:pair[0], end:pair[1]};});
-      var words = dialogue.denominator, quoted = dialogue.count;
-      var known = Number.isSafeInteger(words) && Number.isSafeInteger(quoted) && words > 0 && quoted >= 0 && quoted <= words;
-      if (known && dialogue.reason !== "quotation_context_unresolved") {
-        panel.classList.add(quoted === 0 ? "direct-speech-narrative" :
-          quoted === words ? "direct-speech-only" : "direct-speech-mixed");
-      }
-      if (hasHighlight && spans.length > 0) {
-        var prose = panel.querySelector(".ptext-inner > p");
-        if (prose) ranges = ranges.concat(codepointSpansToRanges(prose, text, spans));
-      }
+    var generation = ++directSpeechGeneration;
+    if (!directSpeechActive || !directSpeechIntersection) return;
+    var visiblePanels = Array.from(directSpeechVisible);
+    var evidence = await Promise.all(visiblePanels.map(function(panel) {return loadParagraphEvidence(panel.id);}));
+    if (!directSpeechActive || generation !== directSpeechGeneration) return;
+    var highlight = new Highlight();
+    visiblePanels.forEach(function(panel, index) {
+      if (!directSpeechVisible.has(panel)) return;
+      var record = evidence[index], pairs = record?.layers?.dialogue?.quotation_ranges;
+      if (record?.paragraph_sha256 !== panel.dataset.paragraphSha256 || !Array.isArray(pairs)) return;
+      var prose = panel.querySelector(".ptext-inner > p"), text = paragraphContent[panel.id]?.[0];
+      codepointSpansToRanges(prose, text, pairs.map(function(pair) {
+        return {start:pair[0], end:pair[1]};
+      })).forEach(function(range) {highlight.add(range);});
     });
-    if (hasHighlight) {
-      if (ranges.length) CSS.highlights.set("lixity-direct-speech", new Highlight(...ranges));
-      else CSS.highlights.delete("lixity-direct-speech");
-    }
+    if (highlight.size) CSS.highlights.set("lixity-direct-speech", highlight);
+    else CSS.highlights.delete("lixity-direct-speech");
   }
   function scheduleDirectSpeech() {
     if (directSpeechActive && !directSpeechFrame) {
@@ -1283,16 +1270,40 @@
     directSpeechActive = Boolean(enabled);
     document.body.classList.toggle("reader-direct-speech", directSpeechActive);
     if (directSpeechBtn) directSpeechBtn.setAttribute("aria-pressed", directSpeechActive ? "true" : "false");
+    if (directSpeechIntersection) {directSpeechIntersection.disconnect(); directSpeechIntersection = null;}
+    if (directSpeechObserver) {directSpeechObserver.disconnect(); directSpeechObserver = null;}
+    directSpeechVisible.clear();
+    directSpeechGeneration++;
+    if (window.CSS && CSS.highlights) CSS.highlights.delete("lixity-direct-speech");
     if (directSpeechActive) {
-      if (!directSpeechObserver && typeof MutationObserver === "function") {
+      if (window.CSS && CSS.highlights && window.Highlight && typeof IntersectionObserver === "function") {
+        directSpeechIntersection = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting && entry.intersectionRect.height > 0) directSpeechVisible.add(entry.target);
+            else directSpeechVisible.delete(entry.target);
+          });
+          scheduleDirectSpeech();
+        }, {threshold:Number.EPSILON});
         directSpeechObserver = new MutationObserver(scheduleDirectSpeech);
         directSpeechObserver.observe(chapters, {childList: true, subtree: true});
       }
-      applyDirectSpeech();
-    } else {
-      if (directSpeechObserver) { directSpeechObserver.disconnect(); directSpeechObserver = null; }
-      applyDirectSpeech();
     }
+    panels.forEach(function(panel) {
+      panel.classList.remove("direct-speech-narrative", "direct-speech-mixed", "direct-speech-only");
+      if (!directSpeechActive) return;
+      var content = paragraphContent[panel.id];
+      var dialogue = content?.[4]?.dialogue || content?.[3]?.layers?.dialogue;
+      if (!dialogue) return;
+      var quoted = dialogue.count, words = dialogue.denominator;
+      if (dialogue.reason !== "quotation_context_unresolved" && Number.isSafeInteger(words) &&
+          Number.isSafeInteger(quoted) && words > 0 && quoted >= 0 && quoted <= words) {
+        panel.classList.add(quoted === 0 ? "direct-speech-narrative" :
+          quoted === words ? "direct-speech-only" : "direct-speech-mixed");
+      }
+      if ((dialogue.has_ranges || dialogue.quotation_ranges?.length) && directSpeechIntersection) {
+        directSpeechIntersection.observe(panel);
+      }
+    });
   }
   if (directSpeechBtn) {
     directSpeechBtn.addEventListener("click", function() {
@@ -1338,10 +1349,10 @@
       var nativeRange = !caret && document.caretRangeFromPoint ? document.caretRangeFromPoint(event.clientX, event.clientY) : null;
       var node = caret ? caret.offsetNode : nativeRange && nativeRange.startContainer;
       var offset = caret ? caret.offset : nativeRange && nativeRange.startOffset;
-      var content = paragraphContent[panel.id], evidence = content && content[3];
-      if (node && prose.contains(node) && evidence && prose.textContent === content[0]) {
+      var content = paragraphContent[panel.id];
+      if (node && prose.contains(node) && content && prose.textContent === content[0]) {
         var prefix = document.createRange(); prefix.selectNodeContents(prose); prefix.setEnd(node, offset);
-        point = {offset:prefix.toString().length, hash:evidence.paragraph_sha256};
+        point = {offset:prefix.toString().length, hash:panel.dataset.paragraphSha256};
       }
     }
     event.preventDefault(); openMenu(panel, event.clientX, event.clientY, null, point);

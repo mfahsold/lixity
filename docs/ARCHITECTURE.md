@@ -129,15 +129,22 @@ recent-project store. JavaScript owns selection, focus, scrolling and rendering
 the supplied values. Conversion from code-point offsets to DOM ranges happens
 at the display boundary.
 
+The live reader renders compact evidence counts with the manuscript. It loads
+the exact ranges for a chapter batch from the corresponding rendered workspace
+view. The server holds the serialized batches with that view, and the reader
+creates DOM ranges for the requested layer. Static reports retain their
+embedded evidence so that reading and passage navigation work offline.
+
 The pipeline tests check dependency direction. The dashboard tests compare the
 rendered measurements, comparison positions and selection flags to prepared
 Python cells. Browser tests exercise the available destinations, source ranges
 and the unchanged project selector. The native WebView smoke exercises the
 authenticated Rust bridge. [Selecting maintainer checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#select-the-checks-for-your-change)
 
-The desktop view still merges browser-local history into the native list of
-recent projects. Consolidating the history calls for one store per mode. Verify
-open, remove and missing entries in the browser and the desktop app.
+The desktop and its system menu use the same Rust recent-project store. The
+desktop imports its earlier browser-local entries once. Standalone browser
+sessions manage their own history. Native menu actions identify the project
+shown in the menu, even if the list order changes before the callback runs.
 
 `lixity.math_core` is the single mathematical vocabulary of the analysis core
 (robust scale, significance z, normal tail, ratio/share/density totalization,
@@ -207,6 +214,9 @@ Backend-owned `AnalysisIdentity` keeps source scope and pinned provenance
 independent of unverified document context and renders them even without scripts. Narrower profile/fingerprint requests use the same pipeline. Native
 and review-site adapters obtain dialogue, pacing, motifs, showing and scenes from
 `pipeline.supplementary_reports`, reusing the supplied analysis measurements.
+The supplementary reports reuse the quotation projection and sentence ranges
+for identical chapter or scene bodies within that call. Explicit scene
+dividers still produce independently projected scene bodies.
 Character error policy and reader construction remain at the adapter boundary;
 smaller CLI/API projections do not acquire additional panels.
 Dashboard refresh validates manuscript bytes before serving cached measurements and rebuilds

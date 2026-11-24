@@ -215,13 +215,10 @@
     });
     var data = await response.json();
     if (!response.ok || !data || !data.ok) return;
-    if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
-      window.lixityDesktop.recordRecentProject(
-        data.workspace_root || targetPath,
-        data.title || null,
-        data.language || null
-      ).catch(function () {});
-    }
+    await recordRecentWorkspace(
+      data.manuscript || targetPath, data.workspace_root || targetPath,
+      data.title || null, data.language || null
+    );
     if (typeof data.workspace_url === "string" && data.workspace_url) {
       if (window.lixityDesktop && typeof window.lixityDesktop.openProjectWindow === "function" &&
           document.body && document.body.dataset && document.body.dataset.manuscriptSourceSha256) {

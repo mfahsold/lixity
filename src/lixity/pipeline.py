@@ -5,6 +5,7 @@ import time
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import cache, partial
 from hashlib import sha256
 from typing import Any
 from unicodedata import normalize
@@ -20,7 +21,7 @@ from .motifs import motif_report, resolve_motif_settings
 from .pacing import MEDIUM_SENTENCE_MAX as PACING_MEDIUM_SENTENCE_MAX
 from .pacing import pacing_report, sentence_group_intervals
 from .paragraph_evidence import ParagraphEvidence, available_paragraph_layers
-from .quotation_projection import QuotedProse, project_quotations
+from .quotation_projection import QuotedProse, project_quotations, quoted_prose
 from .scenes import scene_report_for_display
 from .showing import showing_report
 from .style_fingerprint import (
@@ -241,7 +242,11 @@ def supplementary_reports(
     still require their own measurements. Character error policies and reader
     document construction remain with the caller. No project settings are read.
     """
-    pacing_obj = pacing_report(text, config, _include_sticky_identity=analysis.evidence is not None)
+    resolved = resolve_language(config, sample_text=text)
+    read_prose = cache(partial(quoted_prose, config=config, language=resolved, chapter_body=True))
+    pacing_obj = pacing_report(
+        text, config, _include_sticky_identity=analysis.evidence is not None, _read_prose=read_prose,
+    )
     pacing_dict = pacing_obj.to_dict()
     pacing_dict["rhythm_word_bounds"] = (config.short_sentence_max, PACING_MEDIUM_SENTENCE_MAX)
     pacing_dict["hook_short_sentence"] = config.hook_short_sentence
@@ -257,7 +262,7 @@ def supplementary_reports(
         _projection=analysis.projection,
     ).to_display_dict()
     reports: dict[str, Any] = {
-        "dialogue": dialogue_report(text, config).to_display_dict(config),
+        "dialogue": dialogue_report(text, config, _read_prose=read_prose).to_display_dict(config),
         "pacing": pacing_dict,
         "motifs": motifs_dict,
         "showing": showing_report(text, config, metrics=analysis.metrics).to_dict(),
@@ -265,6 +270,7 @@ def supplementary_reports(
             text, config, scene_settings,
             premeasured_chapters=analysis.metrics.chapters,
             pov_by_chapter=pov_by_chapter,
+            _read_prose=read_prose,
         ),
     }
     effective_genre = genre_corridor or config.genre_corridor

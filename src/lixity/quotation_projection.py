@@ -5,7 +5,7 @@ from __future__ import annotations
 from bisect import bisect_left, bisect_right
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from itertools import accumulate
 from types import MappingProxyType
 from typing import Any
@@ -14,6 +14,7 @@ from .language import ResolvedLanguage, compile_pattern, resolve_language
 from .markdown_parser import counting_inline_text, parse_markdown_blocks
 from .models import CorpusConfig
 from .quotation import QuotationAnalysis, QuotationSpan, scan_quotations
+from .sentences import split_prose_sentence_spans
 
 # Each of these is one NFC-stable space. It passes through the same inline
 # Markdown rules as the ASCII space inserted by paragraph folding.
@@ -45,8 +46,14 @@ class QuotedProse:
     analysis: QuotationAnalysis
     regions: tuple[tuple[int, int], ...]
     blocks: Mapping[int, tuple[int, int]]
+    language_key: str
     _span_ends: tuple[int, ...] = field(init=False, repr=False)
     _unclear_ends: tuple[int, ...] = field(init=False, repr=False)
+
+    @cached_property
+    def sentence_spans(self) -> tuple[tuple[int, int], ...]:
+        """Split the same projected text just once for its language profile."""
+        return tuple(split_prose_sentence_spans(self.text, self.language_key))
 
     def __post_init__(self) -> None:
         # Prefix maxima also find outer spans when a nested span ends first.
@@ -125,7 +132,7 @@ def project_quotations(
     flush()
     return QuotedProse(
         "\n\n".join(parts), tuple(parts), QuotationAnalysis(tuple(spans), tuple(unclear), tuple(empty)),
-        tuple(regions), MappingProxyType(by_line),
+        tuple(regions), MappingProxyType(by_line), language.key,
     )
 
 

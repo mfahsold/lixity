@@ -124,6 +124,12 @@ def digest(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def _verified_content(content: bytes, expected: str) -> bytes:
+    if digest(content) != expected:
+        raise ResearchStorageError("Research object checksum mismatch")
+    return content
+
+
 def sync_directory(directory: Path) -> None:
     if os.name == "nt":
         return
@@ -220,13 +226,18 @@ class Repository:
         self._snapshot: Snapshot | None = None
 
     def safe(self, path: Path) -> Path:
-        """Rejects paths outside the project or through a symlinked component.
+        """Return a path after checking that it belongs to this archive."""
+        self._check_containment(os.fspath(path))
+        return path
+
+    def _check_containment(self, text: str) -> None:
+        """Reject paths outside the project or through a symlinked component.
 
         The check runs once per archive object, so it stays on plain strings and
         ``os.path`` calls: the previous per-component ``pathlib`` checks
         dominated the profile of large archives.
         """
-        root, text = self._root_text, os.fspath(path)
+        root = self._root_text
         if text != root and not text.startswith(root + os.sep):
             raise ResearchStorageError("Research path escapes the project")
         current = root
@@ -238,7 +249,6 @@ class Repository:
             current = os.path.join(current, part)
             if os.path.islink(current):
                 raise ResearchStorageError("Symlinks are not allowed inside the research store")
-        return path
 
     @contextmanager
     def locked(self) -> Iterator[None]:
@@ -274,7 +284,13 @@ class Repository:
                     fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
     def read(self, path: Path, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
-        with self.safe(path).open("rb") as stream:
+        return self._read_bytes(path, maximum=maximum)
+
+    def _read_bytes(self, path: Path | str, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
+        # String paths only come from _record_path, which joins validated manifest
+        # components using the native separator. Other callers supply a Path.
+        self._check_containment(os.fspath(path))
+        with (path.open("rb") if isinstance(path, Path) else open(path, "rb")) as stream:
             # Small records should not allocate the full object ceiling per read.
             first_size = min(8192, maximum + 1)
             content = stream.read(first_size)
@@ -290,10 +306,7 @@ class Repository:
         return content
 
     def verified(self, path: Path, expected: str, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
-        content = self.read(path, maximum=maximum)
-        if digest(content) != expected:
-            raise ResearchStorageError("Research object checksum mismatch")
-        return content
+        return _verified_content(self.read(path, maximum=maximum), expected)
 
     def require_storage(self) -> None:
         """Require the current explicit physical layout before normal access."""
@@ -350,11 +363,11 @@ class Repository:
         publish(self.manifest_path(checksum), gzip.compress(content, compresslevel=6, mtime=0))
 
     def record_path(self, entry: Entry) -> Path:
-        return self.safe(self._record_path(entry))
+        return self.safe(Path(self._record_path(entry)))
 
-    def _record_path(self, entry: Entry) -> Path:
-        """Construct a revision path; its I/O owner must still check containment."""
-        return Path(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json")
+    def _record_path(self, entry: Entry) -> str:
+        """Construct a revision path for the bounded, verified read."""
+        return os.path.join(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json")
 
     def snapshot(self, kinds: frozenset[str] | None = None) -> Snapshot:
         """Read the accepted snapshot; ``kinds`` narrows large archives.
@@ -379,9 +392,10 @@ class Repository:
             for entry in manifest.entries:
                 if wanted is not None and entry.kind not in wanted:
                     continue
-                record = ENTITY.validate_json(self.verified(self._record_path(entry), entry.sha256))
+                content = _verified_content(self._read_bytes(self._record_path(entry)), entry.sha256)
+                record = ENTITY.validate_json(content)
                 key = (record.id, record.revision)
-                if key in revisions or reference(record) != entry.ref or record.kind != entry.kind:
+                if key in revisions or key != (entry.ref.id, entry.ref.revision) or record.kind != entry.kind:
                     raise ResearchError("Duplicate or mismatched record identity")
                 revisions[key] = record
                 previous = records.get(record.id)

@@ -37,15 +37,17 @@ on the language. [Language coverage](https://github.com/mfahsold/lixity/blob/mai
 
 ## Install and start
 
-**Desktop test build.** Use a DMG on macOS (Apple Silicon or Intel), an EXE or
-MSI on Windows x64, or a DEB or AppImage on Linux x64. The app includes Python
-and opens from your system's application launcher. GitHub Actions offers the
-test artifacts to signed-in users for a limited time.
-[Get a desktop test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build) ·
-[Platform instructions and public installer catalog](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+**Desktop app.** Start at the download guide and choose a DMG for macOS
+(Apple Silicon or Intel), an EXE or MSI for Windows x64, or a DEB or AppImage
+for Linux x64. The app includes Python and opens from your system's application
+launcher. The guide shows whether public installers or test builds are
+available for your computer.
+[Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
 
-**Published browser app and CLI.** Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
-and run this on macOS, Windows or Linux.
+**Browser app and CLI.** Use the published package for terminal workflows or
+when a desktop installer is unavailable. Install
+[uv](https://docs.astral.sh/uv/getting-started/installation/) and run this on
+macOS, Windows or Linux.
 
 ```sh
 uv tool install --python 3.12 --managed-python lixity

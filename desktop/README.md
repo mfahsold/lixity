@@ -2,8 +2,9 @@
 
 The Rust/Tauri v2 app opens the Lixity workspace in an operating-system window.
 It uses the shared manuscript editor, analysis, and research views. The desktop
-host and native installers are under development. The published installation
-path is the Python package and its local browser workspace.
+app is the intended first install for authors. The download guide shows the
+current availability. Native installers are in qualification, and the existing
+public release provides the Python package and its local browser workspace.
 [Installation guide](../docs/INSTALLATION.md#packaging-direction)
 · [Published releases](https://github.com/mfahsold/lixity/releases)
 
@@ -26,6 +27,9 @@ path is the Python package and its local browser workspace.
   preferences survive changes of loopback port. Menus include the shared
   Analysis overview. HTTPS and mail links open through the operating system
   from both current-window and new-window links.
+- The system menu and desktop welcome view use one native recent-project list.
+  The desktop imports its previous browser-local entries once. Removing a
+  project from the list or clearing history preserves its files.
 - Native save dialogs, atomic exports and streamed manuscript PDFs, dossier
   PDFs and reading-site ZIPs with SHA-256 receipts. Analysis, research records
   and document bytes remain the responsibility of the shared application.
@@ -181,7 +185,11 @@ Chromium and browser WebKit tests cover the shared UI.
 The [Pages installation guide](../docs/guides/installation.html#desktop) uses the
 reviewed catalog at `docs/desktop-downloads.json`. Its empty catalog directs
 readers to the published browser app while native builds are in testing.
-After native release qualification and approved publication, use the flattened
+Use the verification matrix above for the same candidate on all four targets.
+The published v0.9.1 release has immutable Python assets. The first desktop
+release needs a new version. Before publishing it, extend the tag workflow's
+draft and public asset checks to verify the native installers and their
+checksum list alongside the Python artifacts. Then use the flattened
 workflow artifact directory with the per-target manifests and
 `SHA256SUMS-desktop.txt`. From the checkout root, record the public release:
 

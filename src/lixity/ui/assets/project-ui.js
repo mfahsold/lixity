@@ -318,17 +318,7 @@ document.addEventListener("click", function (event) {
   }
   var clearRecent = event.target.closest("[data-clear-recent-projects]");
   if (clearRecent) {
-    try {
-      localStorage.removeItem(RECENT_PROJECTS_KEY);
-      if (window.lixityDesktop && typeof window.lixityDesktop.clearRecentProjects === "function") {
-        window.lixityDesktop.clearRecentProjects().catch(function () {});
-      }
-      renderRecentProjects();
-    } catch (_) {
-      var recentStatus = clearRecent.closest("[data-recent-projects]").querySelector("[data-recent-project-status]");
-      recentStatus.textContent = uiLabel("recent_projects_clear_failed");
-      recentStatus.hidden = false;
-    }
+    void clearRecentProjects();
     return;
   }
   var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project");
@@ -438,8 +428,12 @@ document.addEventListener("change", function (event) {
 
 var RECENT_PROJECTS_KEY = "lixity:recent-projects";
 var RECENT_PROJECTS_LIMIT = 8;
+var desktopHistory = typeof window.lixityDesktop?.recentProjects === "function" ? window.lixityDesktop : null;
+var desktopRecentProjects = [];
+var desktopRecentRevision = 0;
+var desktopLegacyChecked = false;
 
-function getRecentProjects() {
+function browserRecentPaths() {
   try {
     var raw = localStorage.getItem(RECENT_PROJECTS_KEY);
     if (!raw) return [];
@@ -458,30 +452,110 @@ function getRecentProjects() {
   return [];
 }
 
-function addRecentProject(path) {
-  if (!path || typeof path !== "string") return;
-  var norm = path.trim();
-  if (!norm) return;
-  var recents = getRecentProjects().filter(function(p) { return p !== norm; });
-  recents.unshift(norm);
-  if (recents.length > RECENT_PROJECTS_LIMIT) recents = recents.slice(0, RECENT_PROJECTS_LIMIT);
-  try {
-    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
-  } catch (_) {}
+function showRecentProjectsFailure(key) {
+  document.querySelectorAll("[data-recent-projects]").forEach(function(wrap) {
+    var status = wrap.querySelector("[data-recent-project-status]");
+    if (status) {
+      status.textContent = uiLabel(key);
+      status.hidden = false;
+      wrap.hidden = false;
+    }
+  });
 }
 
-function removeRecentProject(path) {
-  var recents = getRecentProjects().filter(function(p) { return p !== path; });
+async function refreshRecentProjects() {
+  if (!desktopHistory) {
+    renderRecentProjects();
+    return;
+  }
+  var revision = ++desktopRecentRevision;
+  var legacyPaths = desktopLegacyChecked ? [] : browserRecentPaths();
   try {
-    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
+    var entries = await desktopHistory.recentProjects(legacyPaths.length ? legacyPaths : null);
+    if (!Array.isArray(entries)) throw new Error("Invalid desktop project history");
+    desktopLegacyChecked = true;
+    if (legacyPaths.length) {
+      try { localStorage.removeItem(RECENT_PROJECTS_KEY); } catch (_) {}
+    }
+    if (revision === desktopRecentRevision) {
+      desktopRecentProjects = entries;
+      renderRecentProjects();
+    }
+  } catch (_) {
+    if (revision === desktopRecentRevision) showRecentProjectsFailure("recent_projects_update_failed");
+  }
+}
+
+async function changeDesktopRecentProjects(change, failureKey) {
+  var revision = ++desktopRecentRevision;
+  try {
+    var entries = await change();
+    if (revision !== desktopRecentRevision) {
+      // A refresh or another action may have read the old store while this write ran.
+      await refreshRecentProjects();
+      return;
+    }
+    if (!Array.isArray(entries)) throw new Error("Invalid desktop project history");
+    desktopRecentProjects = entries;
+    renderRecentProjects();
+  } catch (_) {
+    if (revision === desktopRecentRevision) showRecentProjectsFailure(failureKey);
+  }
+}
+
+async function recordRecentWorkspace(browserPath, desktopPath, title, language) {
+  if (desktopHistory) {
+    if (typeof desktopPath === "string" && desktopPath) {
+      await changeDesktopRecentProjects(function() {
+        return desktopHistory.recordRecentProject(desktopPath, title, language);
+      }, "recent_projects_update_failed");
+    }
+    return;
+  }
+  if (typeof browserPath !== "string" || !browserPath.trim()) return;
+  var path = browserPath.trim();
+  var paths = [path, ...browserRecentPaths().filter(function(item) { return item !== path; })];
+  try {
+    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(paths.slice(0, RECENT_PROJECTS_LIMIT)));
   } catch (_) {}
-  if (window.lixityDesktop && typeof window.lixityDesktop.removeRecentProject === "function") {
-    window.lixityDesktop.removeRecentProject(path).catch(function () {});
+  renderRecentProjects();
+}
+
+async function removeRecentProject(path) {
+  if (desktopHistory) {
+    await changeDesktopRecentProjects(function() {
+      return desktopHistory.removeRecentProject(path);
+    }, "recent_projects_update_failed");
+    return;
+  }
+  try {
+    var paths = browserRecentPaths().filter(function(item) { return item !== path; });
+    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(paths));
+    renderRecentProjects();
+  } catch (_) {
+    showRecentProjectsFailure("recent_projects_update_failed");
+  }
+}
+
+async function clearRecentProjects() {
+  if (desktopHistory) {
+    await changeDesktopRecentProjects(function() {
+      return desktopHistory.clearRecentProjects();
+    }, "recent_projects_clear_failed");
+    return;
+  }
+  try {
+    localStorage.removeItem(RECENT_PROJECTS_KEY);
+    renderRecentProjects();
+  } catch (_) {
+    showRecentProjectsFailure("recent_projects_clear_failed");
   }
 }
 
 function renderRecentProjects() {
-  var recents = getRecentProjects();
+  var recents = desktopHistory
+    ? desktopRecentProjects.slice(0, RECENT_PROJECTS_LIMIT)
+    : browserRecentPaths().map(function(path) { return {path: path}; });
   document.querySelectorAll("[data-recent-projects]").forEach(function(wrap) {
     var list = wrap.querySelector("[data-recent-project-list]");
     var status = wrap.querySelector("[data-recent-project-status]");
@@ -489,7 +563,8 @@ function renderRecentProjects() {
     if (!list) return;
     list.replaceChildren();
     if (status) status.hidden = true;
-    recents.forEach(function(path) {
+    recents.forEach(function(recent) {
+      var path = recent.path;
       var item = document.createElement("li");
       item.className = "recent-project-item";
 
@@ -498,6 +573,7 @@ function renderRecentProjects() {
       btn.className = "recent-project-btn";
       btn.dataset.recentProjectPath = path;
       btn.title = path;
+      btn.disabled = recent.exists === false;
 
       var isFile = /\.(md|markdown|txt|docx|pdf|html|epub)$/i.test(path);
       var icon = document.createElement("span");
@@ -509,7 +585,7 @@ function renderRecentProjects() {
       textWrap.className = "recent-project-text";
 
       var parts = path.replace(/[\\/]+$/, "").split(/[\\/]/);
-      var name = parts[parts.length - 1] || path;
+      var name = recent.title || parts[parts.length - 1] || path;
       var dir = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
 
       var nameEl = document.createElement("span");
@@ -518,7 +594,7 @@ function renderRecentProjects() {
 
       var dirEl = document.createElement("span");
       dirEl.className = "recent-project-dir";
-      dirEl.textContent = dir;
+      dirEl.textContent = btn.disabled ? uiLabel("project_structure_state_missing") : dir;
 
       textWrap.append(nameEl, dirEl);
       btn.append(icon, textWrap);
@@ -531,8 +607,7 @@ function renderRecentProjects() {
       del.title = uiLabel("remove_recent_project");
       del.addEventListener("click", function(e) {
         e.stopPropagation();
-        removeRecentProject(path);
-        renderRecentProjects();
+        void removeRecentProject(path);
       });
 
       item.append(btn, del);
@@ -542,7 +617,7 @@ function renderRecentProjects() {
 }
 
 function openExistingProject(path, browse) {
-  renderRecentProjects();
+  void refreshRecentProjects();
   var modal = document.getElementById("modal-project-open");
   var input = document.getElementById("open-proj-path");
   if (!modal || typeof modal.showModal !== "function") return;
@@ -553,24 +628,8 @@ function openExistingProject(path, browse) {
   else document.getElementById("open-proj-choose").focus();
 }
 
-renderRecentProjects();
-
-if (window.lixityDesktop && typeof window.lixityDesktop.recentProjects === "function") {
-  window.lixityDesktop.recentProjects().then(function(entries) {
-    if (!Array.isArray(entries) || !entries.length) return;
-    var merged = entries
-      .filter(function(item) { return item && typeof item.path === "string" && item.path.trim() && item.exists !== false; })
-      .map(function(item) { return item.path.trim(); });
-    getRecentProjects().forEach(function(localPath) {
-      if (!merged.includes(localPath)) merged.push(localPath);
-    });
-    merged = merged.slice(0, RECENT_PROJECTS_LIMIT);
-    try {
-      localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(merged));
-    } catch (_) {}
-    renderRecentProjects();
-  }).catch(function () {});
-}
+void refreshRecentProjects();
+if (desktopHistory) window.addEventListener("focus", refreshRecentProjects);
 
 function projectPathMessage(data) {
   switch (data && data.code) {
@@ -598,17 +657,10 @@ async function submitProjectForm(form, action, payload, button) {
   if (result && result.ok) {
     var projectFolder = action === "project-create" ? result.path : result.workspace_root;
     var openedPath = result.manuscript || projectFolder || payload.path;
-    if (typeof openedPath === "string" && openedPath) {
-      addRecentProject(openedPath);
-      renderRecentProjects();
-      if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
-        window.lixityDesktop.recordRecentProject(
-          typeof projectFolder === "string" && projectFolder ? projectFolder : openedPath,
-          result.title || payload.title || null,
-          result.language || payload.language || null
-        ).catch(function () {});
-      }
-    }
+    await recordRecentWorkspace(
+      openedPath, projectFolder || openedPath,
+      result.title || payload.title || null, result.language || payload.language || null
+    );
     var modal = form.closest("dialog");
     if (modal && typeof modal.close === "function") modal.close();
   } else if (feedback) {

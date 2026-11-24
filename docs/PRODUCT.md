@@ -42,7 +42,7 @@ These priorities describe evidence to gather for future release decisions.
 | Recoverable revision | Edit, undo, compare saved and draft text and recover from an external change. Check real IME, dead keys, screen readers and interrupted saves. Ask authors where deliberate named checkpoints would help. |
 | Findings that lead back to the text | Ask someone to open a measurement, explain why the passage appeared and return to it without help. Include short and multilingual manuscripts. |
 | Research you can pick up again | After an edit, distinguish unchanged, moved and ambiguous links. Open a saved dossier PDF and verify its passages and pinned source quotations. |
-| A clean first run | Install, update and roll back on macOS, Windows and Linux. Check signing, open an existing project and verify that it can still be edited and exported. [Desktop installer targets](INSTALLATION.md#packaging-direction) |
+| Desktop installation as the normal entry point | Install, update and roll back on macOS, Windows and Linux. Check signing, open an existing project and verify that it can still be edited and exported. The download guide promotes public installers once the target matrix qualifies. [Desktop installer targets](INSTALLATION.md#packaging-direction) |
 | A project you can restore | Restore a project in a fresh directory. Verify the inventory, content hashes and retained evidence links. [Project backup](PROJECT_BACKUP.md) |
 
 The previous product assessment records earlier writing and architecture proposals.

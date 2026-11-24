@@ -9,8 +9,11 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Mapping
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
+
+import orjson
 
 from ..analysis_intents import has_retained_scene_intents, scene_intent_context
 from ..characters import presence_report, resolve_character_settings
@@ -23,7 +26,13 @@ from ..dossier_draft_settings import AUTOMATIC_LOCATION_NAMES, DOSSIER_DRAFT_SET
 from ..io import FileUtils
 from ..markers import list_markers
 from ..models import CORPUS_DETAIL_KEYS
-from ..pipeline import analyze_document, resolve_document_config, supplementary_reports
+from ..paragraph_evidence import ParagraphEvidence
+from ..pipeline import (
+    DocumentAnalysis,
+    analyze_document,
+    resolve_document_config,
+    supplementary_reports,
+)
 from ..project_identity import manuscript_identity_check, project_title
 from ..publication import load_publication
 from ..style_fingerprint import FingerprintThresholds
@@ -33,6 +42,34 @@ from ..ui.render_contracts import DashboardContent, DashboardOptions
 from .constants import NATIVE_UI_ACTIONS
 from .middleware import ANALYSIS_OVERRIDE_KEYS, load_selected_project_config
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
+
+_EVIDENCE_BATCH_PARAGRAPHS = 64
+_EVIDENCE_BATCH_SCHEMA = "lixity-paragraph-evidence-batch/1"
+
+
+def _pack_reader_evidence(batch: dict[str, ParagraphEvidence]) -> bytes:
+    return orjson.dumps({"ok": True, "schema_version": _EVIDENCE_BATCH_SCHEMA, "paragraphs": batch})
+
+
+def _reader_evidence_batches(analysis: DocumentAnalysis) -> tuple[dict[int, str], dict[str, bytes]]:
+    """Keep one compact, revision-bound copy of the existing paragraph evidence."""
+    if not analysis.evidence:
+        return {}, {}
+    assignments: dict[int, str] = {}
+    batches: dict[str, bytes] = {}
+    chapter: int | None = None
+    batch: dict[str, ParagraphEvidence] = {}
+    for index, evidence in analysis.evidence.items():
+        current_chapter = analysis.paragraphs[index].chapter_num
+        if batch and (current_chapter != chapter or len(batch) >= _EVIDENCE_BATCH_PARAGRAPHS):
+            batches[str(len(batches))] = _pack_reader_evidence(batch)
+            batch = {}
+        chapter = current_chapter
+        assignments[index] = str(len(batches))
+        batch[f"p-{index}"] = evidence
+    if batch:
+        batches[str(len(batches))] = _pack_reader_evidence(batch)
+    return assignments, batches
 
 
 def sanitize_filename(raw: str | None) -> str:
@@ -173,6 +210,7 @@ def build_server_dashboard(
     resolved_thresholds = thresholds or resolve_thresholds(project_config=settings)
 
     analysis = analyze_document(text, config, resolved_thresholds, include_evidence=True)
+    evidence_assignments, evidence_batches = _reader_evidence_batches(analysis) if controls else ({}, {})
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
     markers = list_markers(text) if text else []
 
@@ -227,6 +265,13 @@ def build_server_dashboard(
         thresholds=resolved_thresholds,
         config_bytes=project_config_bytes,
     ) if manuscript_readable else ""
+    evidence_view = ""
+    if evidence_batches:
+        identity = sha256(f"{api_base}\0{selected_token}\0{manuscript_source_sha256}".encode())
+        for batch in evidence_batches.values():
+            identity.update(len(batch).to_bytes(8, "big"))
+            identity.update(batch)
+        evidence_view = identity.hexdigest()
     html_doc = render_analysis(
         analysis,
         resolved,
@@ -276,6 +321,8 @@ def build_server_dashboard(
             manuscript_pdf_token=selected_token if not is_empty else "",
             scene_intents_token=selected_token if rehearsal else "",
             research_context_token=research_context_token(research_root or project_root),
+            paragraph_evidence_view=evidence_view,
+            paragraph_evidence_batches=evidence_assignments,
             external_diagram_library=True,
         ),
     )
@@ -298,5 +345,7 @@ def build_server_dashboard(
         "project_settings_token": settings_token,
         "corpus_config": config,
         "scene_intent_context": intent_context,
+        "paragraph_evidence_view": evidence_view,
+        "paragraph_evidence_batches": evidence_batches,
     }
     return html_doc, info

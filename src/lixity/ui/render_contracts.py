@@ -97,6 +97,8 @@ class DashboardOptions:
     corpus_config: CorpusConfig | None = None
     project_overview_enabled: bool = False
     project_create_base: str = ""
+    paragraph_evidence_view: str = ""
+    paragraph_evidence_batches: Mapping[int, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

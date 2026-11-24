@@ -16,8 +16,9 @@ import math
 import re
 from bisect import bisect_left
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from statistics import median
 from typing import Any
 
@@ -40,7 +41,7 @@ from .quotation import (
     merge_quotation_spans,
     partition_quoted_words,
 )
-from .quotation_projection import quoted_prose
+from .quotation_projection import QuotedProse, quoted_prose
 from .sentences import split_prose_sentences
 
 # A paragraph counts as dialogue paragraph when at least this share of its
@@ -588,14 +589,13 @@ def _overlapping_turn_lengths(
 
 
 def _turn_stats(
-    body: str,
+    projection: QuotedProse,
     config: CorpusConfig,
     word_re: re.Pattern[str],
     language: ResolvedLanguage,
     *,
     dialogue_paragraph_share: float = DIALOGUE_PARAGRAPH_SHARE,
 ) -> _ChapterTurnStats:
-    projection = quoted_prose(body, config, language=language, chapter_body=True)
     paragraphs = projection.parts
     clean = projection.text
     quoted_spans = projection.analysis.quote_ranges
@@ -691,11 +691,15 @@ def _turn_stats(
     )
 
 
-def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueReport:
+def dialogue_report(
+    text: str, config: CorpusConfig | None = None, *,
+    _read_prose: Callable[[str], QuotedProse] | None = None,
+) -> DialogueReport:
     """Dialogue turn structure of a manuscript (deterministic, heuristic)."""
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
+    read_prose = _read_prose or partial(quoted_prose, config=config, language=resolved, chapter_body=True)
 
     chapters: list[DialogueChapter] = []
     all_turn_lengths: list[int] = []
@@ -719,7 +723,7 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
 
     for number, title, body in split_chapters(text, config):
         stats = _turn_stats(
-            body,
+            read_prose(body),
             config,
             word_re,
             resolved,

@@ -45,6 +45,48 @@ work across the analyzer and supplementary reports. Include memory and the
 cost of looking up or building keys. Compare exact reporting and evidence
 before profiling a different native boundary.
 
+### Desktop and large-project priorities
+
+- **Native project history.** The native menu and welcome screen share the
+  Rust recent-project store. Menu IDs follow the displayed project path.
+  The desktop imports legacy browser-local entries once. DOM selection,
+  keyboard navigation, input methods and CodeMirror history belong to the
+  shared web interface. [Desktop host boundary](ARCHITECTURE.md#desktop-host-boundary)
+  · [Tauri process model](https://v2.tauri.app/concept/process-model/)
+- **Opening evidence.** Live paragraphs carry counts and load exact spans in
+  chapter batches. On a synthetic manuscript with 2,000 paragraphs across
+  20 chapters, the uncompressed initial HTML fell from 14.52 MB to 9.39 MB.
+  Paragraph JSON fell from 6.30 MB to 1.18 MB. The first requested batch
+  transferred 175 kB. These measurements describe payload sizes. Measure
+  first-jump latency, resident memory and scroll frame time separately in
+  each native WebView.
+- **Research search and recovery.** SQLite already executes queries and
+  transactions in native code. The research catalogue is a rebuildable FTS5
+  index, and manuscript recovery is a separate transactional store. In a
+  local synthetic test of 2,000 dossiers, median search with a new repository
+  instance took 105 ms, including 104 ms for the archive snapshot. The FTS
+  read and connection took under 1 ms. Reducing allocations for verified
+  revision paths lowered the median from 100.0 to 88.5 ms in an alternating
+  comparison on 2,000 synthetic dossiers. Each query still checks record
+  digests, including unrelated revisions when the accepted HEAD is unchanged.
+  In a separate book-scale
+  recovery test, consecutive saves took about 645 ms, with about 633 ms spent
+  computing measurements. Profile and reuse the exact saved-text projection
+  before considering a different SQLite binding.
+  [Research storage](research/DATA_MODEL.md) · [SQLite WAL](https://www.sqlite.org/wal.html)
+- **Computation candidates.** Profile the shared chapter and paragraph
+  measurements after removing equivalent sentence and quotation preparation
+  across report stages. Compare a Rust kernel only at a batch
+  boundary that includes text preparation, offsets and transfer costs. The
+  evaluated quote and motif prototypes below did not meet the whole-operation
+  target. The first trial that qualifies should serve the same engine for the
+  CLI, browser and desktop app.
+
+Run the combined workspace benchmark with
+`PYTHONPATH=src .venv/bin/python scripts/benchmark_pipeline.py --workspace --json`.
+It measures analysis with evidence and supplementary reports, excluding HTTP
+and rendering. Compare the result digests as well as the median times.
+
 ## Acceptance criteria
 
 1. Set targets before writing the spike. Measure stage time, end-to-end
@@ -169,3 +211,18 @@ continues to exercise the authenticated host boundary.
   *Effi Briest*, and 275 to 271 ms for 120 synthetic chapters. Report digests
   matched on all three inputs. These are scene-stage timings. Profile the
   full request again before selecting a native boundary.
+- **2026-11-24 · Reuse complete chapter and scene prose.** Supplementary
+  reports share the quotation projection and sentence spans for identical
+  bodies within a request. Three alternating local comparisons produced
+  identical metric, evidence and report digests. Median combined time went
+  from 3.264 to 3.028 s for *Pride and Prejudice*, 2.670 to 2.505 s for
+  *Effi Briest*, and 2.296 to 2.117 s for 120 synthetic chapters.
+- **2026-11-24 · Batched Rust sentence-range scan.** A local Apple Silicon
+  prototype handled prepared UTF-8 paragraphs in one call per prose unit.
+  Python still protected abbreviations. The Rust scan matched 8,000 seeded
+  cases across all eight profiles, including generic, and preserved all
+  three full-workspace digests. Median complete times with conversion,
+  buffer allocation and result unpacking were 3.225 → 3.144 s,
+  2.803 → 2.810 s and 2.276 → 2.249 s on the same three workloads.
+  The shared engine keeps its current splitter under the 5% acceptance
+  target. The prototype did not test cross-platform packaging.

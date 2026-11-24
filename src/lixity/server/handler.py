@@ -85,6 +85,7 @@ class LixityServerHandler(
         "/api/project-paths": "_handle_project_paths",
         "/api/analysis-intents": "_handle_analysis_intents",
         "/api/analysis-review": "_handle_analysis_review",
+        "/api/paragraph-evidence": "_handle_paragraph_evidence",
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
         "/api/research/image": "_handle_research_image",
@@ -251,6 +252,24 @@ class LixityServerHandler(
     def _handle_diagram_library(self) -> None:
         self._send(200, _bundle((DIAGRAM_LIBRARY_FILE,)).encode("utf-8"),
                    "application/javascript; charset=utf-8", headers={"Cache-Control": "private, max-age=86400"})
+
+    def _handle_paragraph_evidence(self) -> None:
+        query = self._parse_query(
+            required=("view", "batch"), non_empty=("view", "batch"),
+            error_message="Choose one rendered manuscript view and evidence batch",
+        )
+        if query is None:
+            return
+        with self._workspace_lock:
+            info = self.dashboard_info
+            current = info.get("paragraph_evidence_view")
+            body = info.get("paragraph_evidence_batches", {}).get(query["batch"])
+        if not current or current != query["view"]:
+            self._error("The manuscript view changed; reopen it to load paragraph evidence", 409)
+        elif body is None:
+            self._error("Paragraph evidence batch not found", 404)
+        else:
+            self._send(200, body, "application/json; charset=utf-8")
 
     def _handle_audio_capture_asset(self) -> None:
         self._send(200, _bundle(("audio-capture.js",)).encode("utf-8"), MIME_TYPES[".js"])

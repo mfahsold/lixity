@@ -15,13 +15,13 @@ if TYPE_CHECKING:
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASES = "https://github.com/mfahsold/lixity/releases"
+TEST_BUILDS = "https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build"
 CATALOG = Path("docs/desktop-downloads.json")
 GUIDE = Path("docs/guides/installation.html")
 SCHEMA = "lixity-desktop-downloads/1"
 CHECKSUMS = "SHA256SUMS-desktop.txt"
 TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
 SHA256 = re.compile(r"[0-9a-f]{64}")
-FILENAME = re.compile(r"Lixity[_-][A-Za-z0-9_.-]+")
 DOWNLOAD_BLOCK = re.compile(r"(<!-- desktop-downloads:start -->\n).*?(\n<!-- desktop-downloads:end -->)", re.S)
 
 # The approved public formats. Runtime build targets can be broader.
@@ -45,6 +45,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         return
     if not isinstance(tag, str) or not TAG.fullmatch(tag):
         raise ValueError("Expected a stable desktop release tag")
+    filename_pattern = re.compile(rf"Lixity[_-]{re.escape(tag[1:])}[_-][A-Za-z0-9_.-]+")
     pairs: set[tuple[str, str]] = set()
     names: set[str] = set()
     for asset in installers:
@@ -54,7 +55,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         pair = (asset["target"], asset["kind"])
         variant = INSTALLERS.get(pair)
         filename = asset["filename"]
-        if (variant is None or not FILENAME.fullmatch(filename) or not filename.endswith(variant[1])
+        if (variant is None or not filename_pattern.fullmatch(filename) or not filename.endswith(variant[1])
                 or filename in names or type(asset["bytes"]) is not int or asset["bytes"] <= 0
                 or not SHA256.fullmatch(asset["sha256"])):
             raise ValueError(f"Invalid or duplicate desktop installer: {filename}")
@@ -102,8 +103,9 @@ def render(catalog: dict[str, Any]) -> str:
     validate_catalog(catalog)
     tag = catalog["tag"]
     if tag is None:
-        return ('<p class="notice-box">Desktop installers are in testing. You can start today with the '
-                '<a href="#install">published local browser app</a>.</p>')
+        return ('<p class="notice-box">Desktop installers are in testing. For the current public release, '
+                '<a href="#install">install the local browser app and CLI</a>. '
+                f'<a href="{TEST_BUILDS}">Get a desktop test installer</a>.</p>')
     installers = sorted(catalog["installers"], key=lambda asset: (
         INSTALLERS[(asset["target"], asset["kind"])][0], asset["filename"],
     ))
@@ -114,7 +116,8 @@ def render(catalog: dict[str, Any]) -> str:
         size = asset["bytes"] / (1024 * 1024)
         links.append(f'<li><a href="{RELEASES}/download/{tag}/{filename}">{label} '
                      f'<code>{filename}</code></a> · {size:.1f} MiB</li>')
-    return (f'<p>Published desktop installers for <a href="{RELEASES}/tag/{tag}">{tag}</a>. '
+    return ('<p>Choose the installer for your computer to run Lixity as a desktop app. '
+            f'<a href="{RELEASES}/tag/{tag}">Release {tag}</a> · '
             f'<a href="{RELEASES}/download/{tag}/{CHECKSUMS}">Check SHA-256 sums</a>.</p>\n'
             '<ul>\n' + '\n'.join(links) + '\n</ul>')
 

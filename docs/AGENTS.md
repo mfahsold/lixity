@@ -1292,6 +1292,17 @@ becomes an empty success. Writes change only project-local author review state,
 never manuscript text or Research records. `enabled_actions=["analysis-review"]`
 is an explicit native save capability; static reading sites omit private state.
 
+**Live paragraph evidence:** `GET <prefix>/paragraph-evidence?view=…&batch=…`
+reads one batch from the selected rendered view. Use the issued view and batch
+identifiers. The view identifier covers the selected source and the exact
+evidence bytes. Reapplying identical settings keeps the identifier valid.
+The response uses `lixity-paragraph-evidence-batch/1` and returns
+`paragraphs` keyed by displayed paragraph ID; records retain the
+`paragraph-evidence/1` text hashes and Unicode code-point offsets. A replaced
+view returns 409 and an absent batch in the current view returns 404. The
+normal workspace, same-origin and desktop session guards apply. CLI evidence
+and offline reports continue to carry their own results.
+
 #### Author intent endpoints
 
 **Unreleased.** Native editable workspaces advertise `analysis_intents` in the

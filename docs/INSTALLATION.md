@@ -3,12 +3,12 @@
 Lixity runs locally on Linux, macOS and Windows. Choose the instructions for
 your installation.
 
-- **Desktop test build.** Use the supplied installer for your operating system.
-  The app includes Python and starts its own local engine when you open it.
-  [macOS disk image instructions](#macos-desktop-dmg) ·
-  [Windows and Linux instructions](guides/installation.html#desktop)
-- **Published browser app and CLI.** Install the package from PyPI or use a
-  verified release wheel. [Install and start](#cli-current-release)
+- **Desktop app.** Start with the download guide to see which build is
+  available for your computer. The installer includes Python, and opening the
+  app starts its local engine. [Desktop downloads and setup](guides/installation.html#desktop)
+- **Browser app and CLI.** For terminal workflows or systems without a
+  published desktop installer, use PyPI or the verified release wheel.
+  [Install and start](#cli-current-release)
 
 Built-in analysis runs offline without a manuscript upload, account or API key.
 Lixity is **open source under AGPL-3.0-or-later** and may be used for commercial
@@ -29,8 +29,8 @@ writing. A separate written commercial license covers closed-source integrations
 
 | Task | Section |
 | --- | --- |
+| Install or open the desktop app | [Check download availability](guides/installation.html#desktop) · [macOS](#macos-desktop-dmg) · [Windows](guides/installation.html#windows) · [Linux](guides/installation.html#linux) |
 | Install the published browser app and CLI | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
-| Install or open a desktop test build | [macOS](#macos-desktop-dmg) · [Windows](guides/installation.html#windows) · [Linux](guides/installation.html#linux) |
 | Start with a manuscript | [First result](#first-useful-result) |
 | Update or uninstall | [Desktop test builds](#update-a-desktop-test-build) · [CLI and browser app](#update-the-cli-and-browser-app) |
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
@@ -50,11 +50,12 @@ runtime installation and lifecycle.
 
 | Channel | Use it for | Notes |
 |---|---|---|
-| [`lixity` on PyPI](https://pypi.org/project/lixity/) | normal install and upgrades | `uv tool install lixity`; pipx and pip work as well |
-| [GitHub Releases](https://github.com/mfahsold/lixity/releases) | pinned, checksum-verified setups | wheel, sdist and `SHA256SUMS`; build attestations via `gh attestation verify` |
+| [Desktop download guide](guides/installation.html#desktop) | desktop app | shows the verified public installers when available and the test route while they are being qualified |
+| [`lixity` on PyPI](https://pypi.org/project/lixity/) | browser app and CLI | `uv tool install lixity`; pipx and pip work as well |
+| [GitHub Releases](https://github.com/mfahsold/lixity/releases) | pinned, checksum-verified setups | published packages and checksum lists; build attestations via `gh attestation verify` |
 | Zenodo | citing a released version | releases are archived automatically; concept DOI `10.5281/zenodo.23390297` (see [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff)) |
 
-Use the isolated **uv tool** installation for the application and CLI. Install
+Use the isolated **uv tool** installation for the browser app and CLI. Install
 [uv](https://docs.astral.sh/uv/getting-started/installation/) first if needed.
 uv installs the published release wheel and supplies managed Python 3.12;
 neither Git nor a separate Python installation is needed for this route.

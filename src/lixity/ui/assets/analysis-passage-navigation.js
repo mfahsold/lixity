@@ -150,9 +150,9 @@
     if (!layerPassageIndex.has(key)) {
       var measured = [];
       panels.forEach(function(panel) {
-        var spans = paragraphContent[panel.id]?.[3]?.layers?.[key]?.spans;
-        if (Array.isArray(spans) && spans.length) {
-          measured.push({panel:panel, chapter:chapterForPanel.get(panel.id), count:spans.length});
+        var count = paragraphEvidenceCount(panel.id, key);
+        if (count) {
+          measured.push({panel:panel, chapter:chapterForPanel.get(panel.id), count:count});
         }
       });
       layerPassageIndex.set(key, measured);

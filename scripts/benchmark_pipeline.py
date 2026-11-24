@@ -24,9 +24,11 @@ from lixity.dialogue import dialogue_report
 from lixity.motifs import motif_report
 from lixity.pacing import pacing_report
 from lixity.pipeline import (
+    analyze_document,
     fingerprint_document,
     profile_document,
     resolve_document_config,
+    supplementary_reports,
 )
 from lixity.scenes import scene_report_for_display
 from lixity.showing import showing_report
@@ -171,8 +173,26 @@ def benchmark_text(label: str, text: str, language: str, iterations: int) -> dic
     }
 
 
-def benchmark_manuscript(path: Path, language: str, iterations: int) -> dict[str, Any]:
-    return benchmark_text(str(path), path.read_text(encoding="utf-8"), language, iterations)
+def benchmark_workspace(label: str, text: str, language: str, iterations: int) -> dict[str, Any]:
+    """Measure shared workspace computation without the server or renderer."""
+    config, _ = resolve_document_config(text, language)
+    thresholds = FingerprintThresholds()
+    timings: dict[str, list[float]] = {key: [] for key in ("analysis", "reports", "total")}
+    for _ in range(iterations):
+        start = time.perf_counter()
+        analysis = analyze_document(text, config, thresholds, include_evidence=True)
+        measured = time.perf_counter()
+        reports = supplementary_reports(text, config, analysis)
+        finished = time.perf_counter()
+        timings["analysis"].append((measured - start) * 1000)
+        timings["reports"].append((finished - measured) * 1000)
+        timings["total"].append((finished - start) * 1000)
+    return {
+        "file": label, "language": language, "chars": len(text), "words": analysis.metrics.raw_words,
+        "median_ms": {name: round(statistics.median(values), 2) for name, values in timings.items()},
+        "digests": {"workspace": _digest((analysis.metrics.model_dump(), analysis.paragraphs,
+                                          analysis.chapters, analysis.evidence, reports))},
+    }
 
 
 def _peak_rss_mib() -> float | None:
@@ -195,18 +215,21 @@ def main() -> int:
         help="Chapters for synthetic varying-chapter fixture (0 to skip)",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
+    parser.add_argument("--workspace", action="store_true",
+                        help="Measure shared analysis with evidence and supplementary reports")
     args = parser.parse_args()
 
     iters = max(1, args.iterations)
+    benchmark = benchmark_workspace if args.workspace else benchmark_text
     results = [
-        benchmark_manuscript(Path(rel_path), lang, iters)
+        benchmark(rel_path, Path(rel_path).read_text(encoding="utf-8"), lang, iters)
         for rel_path, lang in DEFAULT_CORPUS
         if Path(rel_path).exists()
     ]
     if args.synthetic_chapters > 0:
         synthetic_text = synthetic_varying_chapter_manuscript(args.synthetic_chapters)
         results.append(
-            benchmark_text(
+            benchmark(
                 f"synthetic://varying-chapters-{args.synthetic_chapters}",
                 synthetic_text,
                 "en",

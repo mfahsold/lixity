@@ -25,8 +25,9 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from hashlib import sha256
 from itertools import pairwise
 from typing import Any
@@ -40,8 +41,8 @@ from .models import (
     CorpusConfig,
 )
 from .quotation import QuotationAnalysis, count_quoted_words, scan_quotations
-from .quotation_projection import quoted_prose
-from .sentences import SHORT_SENTENCE_MAX, split_prose_sentence_spans, split_prose_sentences
+from .quotation_projection import QuotedProse, quoted_prose
+from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
 from .sticky import measure_function_words
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
@@ -381,13 +382,11 @@ class PacingReport:
 
 
 def _scene_stats(
-    scene_text: str,
+    scene: QuotedProse,
     index: int,
     chapter_num: int,
     word_re: re.Pattern[str],
-    quotation: QuotationAnalysis,
     filter_verbs_re: re.Pattern[str],
-    language_key: str,
     function_words: frozenset[str],
     *,
     short_sentence_max: int = SHORT_SENTENCE_MAX,
@@ -397,6 +396,7 @@ def _scene_stats(
     include_sticky_identity: bool = False,
     premeasured_words: tuple[int, int] | None = None,
 ) -> tuple[SceneStats, list[float], list[dict[str, Any]]] | None:
+    scene_text, quotation = scene.text, scene.analysis
     words = len(word_re.findall(scene_text)) if premeasured_words is None else premeasured_words[0]
     if not words:
         return None
@@ -407,7 +407,7 @@ def _scene_stats(
     sentence_spans: list[tuple[int, int]] = []
     sentences: list[str] = []
     sentence_tokens: list[list[str]] = []
-    for start, end in split_prose_sentence_spans(scene_text, language_key):
+    for start, end in scene.sentence_spans:
         sentence = scene_text[start:end]
         tokens = word_re.findall(sentence)
         if tokens:
@@ -565,11 +565,13 @@ def _chapter_flow_stats(
 
 def pacing_report(
     text: str, config: CorpusConfig | None = None, *, _include_sticky_identity: bool = False,
+    _read_prose: Callable[[str], QuotedProse] | None = None,
 ) -> PacingReport:
     """Scene structure, pacing signals and chapter hooks (deterministic)."""
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
+    read_prose = _read_prose or partial(quoted_prose, config=config, language=resolved, chapter_body=True)
     filter_verbs_re = compile_pattern(resolved.filter_verbs_regex)
     sticky_available = bool(resolved.function_words)
 
@@ -589,7 +591,7 @@ def pacing_report(
     all_corpus_sentence_lengths: list[int] = []
 
     for number, title, body in split_chapters(text, config):
-        chapter = quoted_prose(body, config, language=resolved, chapter_body=True)
+        chapter = read_prose(body)
         clean = chapter.text
         words = len(word_re.findall(clean))
         if not words:
@@ -600,15 +602,13 @@ def pacing_report(
         scenes: list[SceneStats] = []
         chapter_glue_pcts: list[float] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
-            scene = quoted_prose(scene_text, config, language=resolved, chapter_body=True) if scene_breaks else chapter
+            scene = read_prose(scene_text) if scene_breaks else chapter
             scene_result = _scene_stats(
-                scene.text,
+                scene,
                 index,
                 number,
                 word_re,
-                scene.analysis,
                 filter_verbs_re,
-                resolved.key,
                 resolved.function_words,
                 short_sentence_max=config.short_sentence_max,
                 hook_short_sentence=config.hook_short_sentence,
@@ -647,7 +647,7 @@ def pacing_report(
             else 0.0
         )
 
-        sentence_spans = split_prose_sentence_spans(clean, resolved.key)
+        sentence_spans = chapter.sentence_spans
         closing_span = sentence_spans[-1] if sentence_spans else (0, 0)
         closing = clean[closing_span[0]:closing_span[1]]
         closing_is_dialogue = bool(sentence_spans and _span_overlaps_quotation(closing_span, chapter.analysis))

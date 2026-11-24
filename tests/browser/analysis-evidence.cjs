@@ -1419,18 +1419,30 @@ server.serve_forever()
     try {
       for (const width of locale === 'de' || locale === 'en' ? [320, 1440] : [320]) {
         const page = await browser.newPage({viewport:{width,height:780},reducedMotion:'reduce',colorScheme:width === 320 ? 'dark' : 'light'});
-        const errors = [], writes = [];
+        const errors = [], writes = [], evidenceRequests = [];
         page.on('pageerror', error => errors.push(error.message));
-        page.on('request', request => {if (request.method() !== 'GET') writes.push(request.url());});
+        page.on('request', request => {
+          if (request.method() !== 'GET') writes.push(request.url());
+          if (new URL(request.url()).pathname === '/api/paragraph-evidence') evidenceRequests.push(request.url());
+        });
         try {
           await page.goto(server.fixture.url);
           assert.equal(await page.locator('html').getAttribute('lang'), locale);
-          const evidence = await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => {
-            const item = paragraphContent[node.id], layer = item[3].layers.dialogue;
+          assert.deepEqual(evidenceRequests, [], 'Opening the reader does not fetch hidden evidence');
+          assert.equal(await page.evaluate(() => Object.values(paragraphContent).some(item => item[3])), false);
+          const loaded = await page.evaluate(async () => {
+            const ids = Object.keys(paragraphContent);
+            await Promise.all(ids.slice(0, 2).map(loadParagraphEvidence));
+            return ids.filter(id => paragraphContent[id][3]);
+          });
+          assert.deepEqual(loaded, ['p-0', 'p-1'], 'Only the opened chapter evidence is retained by the browser');
+          assert.equal(evidenceRequests.length, 1, 'Concurrent paragraph reads share one chapter request');
+          const evidence = await page.locator('#chapters .ptext').evaluateAll(async nodes => Promise.all(nodes.map(async node => {
+            const item = paragraphContent[node.id], layer = (await loadParagraphEvidence(node.id)).layers.dialogue;
             return {text:item[0], count:layer.count, denominator:layer.denominator, reason:layer.reason,
               quoteRanges:layer.quotation_ranges.map(([start,end]) => Array.from(item[0]).slice(start,end).join('')),
               spans:layer.spans.map(span => ({marker:span.quotation_marker, context:span.quotation_context}))};
-          }));
+          })));
           assert.equal(evidence.length, 6);
           for (const [index, text] of [first, second].entries()) {
             assert.equal(evidence[index].count, 2);
@@ -1494,8 +1506,14 @@ server.serve_forever()
           assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
           await page.locator('#reader-direct-speech').click();
           assert.equal(await page.locator('#reader-direct-speech').getAttribute('aria-pressed'), 'true');
-          await page.waitForFunction(expected => [...(CSS.highlights.get('lixity-direct-speech') || [])]
-            .map(range => range.toString()).join('|') === expected, [first, second, first, first].join('|'));
+          for (const [index, expected] of [[0, first], [1, second], [4, first], [5, first]]) {
+            const passage = page.locator('#chapters .ptext').nth(index);
+            await passage.scrollIntoViewIfNeeded();
+            const id = await passage.getAttribute('id');
+            await page.waitForFunction(({id, expected}) => [...(CSS.highlights.get('lixity-direct-speech') || [])]
+              .some(range => range.toString() === expected && document.getElementById(id).contains(range.startContainer)),
+            {id, expected});
+          }
           assert.equal(await page.locator('#chapters .ptext').nth(4).evaluate(node =>
             node.classList.contains('direct-speech-mixed')), true, 'A short word outside the quote is still narration');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -1564,7 +1582,9 @@ server.serve_forever()
           assert.match(await page.title(), /Synthetic legend clarity/);
           assert.equal(await page.locator('h1').textContent(), 'Synthetic legend clarity');
           const before = await page.locator('#chapters .ptext').evaluateAll(nodes => nodes.map(node => ({id:node.id, hash:node.dataset.paragraphSha256, text:node.querySelector('.ptext-inner > p').textContent})));
-          if (fault === 'missing') await page.evaluate(() => {Object.values(paragraphContent).forEach(entry => {entry[3] = null;});});
+          if (fault === 'missing') await page.route(/\/api\/paragraph-evidence\?/, route => route.fulfill({
+            json:{ok:true, schema_version:'lixity-paragraph-evidence-batch/1', paragraphs:{}},
+          }));
           const legend = page.locator('#layer-legend'), counted = page.locator('#layer-evidence-legend'), comparison = page.locator('#layer-comparison-legend');
           assert.equal(await legend.isVisible(), false);
           await page.locator('#manuscript-analysis-toggle').click();

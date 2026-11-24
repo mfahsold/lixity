@@ -45,8 +45,31 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
   const environmentRequests = [];
   let result = {ok: true, reload: false, message: 'Synthetic project opened'};
   let resultStatus = null;
-  async function open({language = 'en', saved = history, blocked = false, initialized = false, desktop = false} = {}) {
+  async function open({
+    language = 'en', saved = history, blocked = false, initialized = false, desktop = false, desktopRecents = [],
+  } = {}) {
     const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
+    const nativeHistory = {entries: desktopRecents, imported: false, fail: false};
+    if (desktop) {
+      await context.exposeFunction('testNativeRecentProjects', (action, ...args) => {
+        if (nativeHistory.fail) throw new Error('Synthetic desktop history unavailable');
+        const [value, title, language] = args;
+        if (action === 'list' && !nativeHistory.imported && value?.length) {
+          const known = new Set(nativeHistory.entries.map(entry => entry.path));
+          nativeHistory.entries.push(...value.filter(item => !known.has(item)).map(item => ({path: item})));
+          nativeHistory.imported = true;
+        } else if (action === 'record') {
+          nativeHistory.entries = [{path: value, title, language}, ...nativeHistory.entries.filter(entry => entry.path !== value)];
+        } else if (action === 'remove') {
+          nativeHistory.entries = nativeHistory.entries.filter(entry => entry.path !== value);
+          nativeHistory.imported = true;
+        } else if (action === 'clear') {
+          nativeHistory.entries = [];
+          nativeHistory.imported = true;
+        }
+        return nativeHistory.entries;
+      });
+    }
     await context.addInitScript(({saved, blocked, recentKey, desktop, sample}) => {
       if (!sessionStorage.getItem('synthetic-history-seeded')) {
         if (typeof saved === 'string') localStorage.setItem(recentKey, saved);
@@ -80,7 +103,13 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
           openExternalUrl: async url => window.desktopOpenedUrls.push(url),
           pickProjectDirectory: async () => { throw new Error('Synthetic picker failure'); },
           takeOpenPath: async () => window.desktopPendingPaths.shift() || null,
-          recordRecentProject: async (...entry) => window.desktopRecentWrites.push(entry),
+          recentProjects: paths => window.testNativeRecentProjects('list', paths),
+          recordRecentProject: (...entry) => {
+            window.desktopRecentWrites.push(entry);
+            return window.testNativeRecentProjects('record', ...entry);
+          },
+          removeRecentProject: selected => window.testNativeRecentProjects('remove', selected),
+          clearRecentProjects: () => window.testNativeRecentProjects('clear'),
           readSampleManuscript: () => new Promise((resolve, reject) => {
             window.resolveSample = () => resolve(sample);
             window.rejectSample = () => reject(new Error('Synthetic sample failure'));
@@ -126,7 +155,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       return route.fulfill({contentType: 'text/html', body: data.fixtures[language].html});
     });
     await page.goto('http://lixity.test/');
-    return {context, page};
+    return {context, page, nativeHistory};
   }
   try {
     if (!process.argv.includes('--labels-only')) {
@@ -193,11 +222,42 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         }
         await check.context.close();
       }
-      const desktop = await open({desktop: true, saved: []});
+      const nativePath = '/synthetic/native-project';
+      const legacyPath = '/synthetic/legacy-project';
+      const missingPath = '/synthetic/missing-project';
+      const desktop = await open({desktop: true, saved: [nativePath, legacyPath], desktopRecents: [
+        {path: nativePath, title: 'Native project title'}, {path: missingPath, exists: false},
+      ]});
       try {
         const page = desktop.page;
         const workspaceRoot = '/synthetic/Manuskript über Regen';
         const configuration = `${workspaceRoot}/lixity.toml`;
+        const recentList = page.locator('#welcome-project-recent-list');
+        const card = selected => recentList.locator('[data-recent-project-path="' + selected + '"]');
+        await card(legacyPath).waitFor();
+        assert.equal(await card(nativePath).count(), 1);
+        assert.ok((await card(nativePath).innerText()).includes('Native project title'));
+        assert.ok(await card(missingPath).isDisabled());
+        assert.ok((await card(missingPath).innerText()).includes(data.fixtures.en.labels.project_structure_state_missing));
+        assert.equal(await page.evaluate(key => localStorage.getItem(key), recentKey), null, 'Successful migration removes the desktop origin copy');
+        await card(legacyPath).locator('..').getByRole('button', {name: /Remove/}).click();
+        await card(legacyPath).waitFor({state: 'detached'});
+        await page.evaluate(({recentKey, legacyPath}) => localStorage.setItem(recentKey, JSON.stringify([legacyPath])), {recentKey, legacyPath});
+        await page.reload();
+        await card(nativePath).waitFor();
+        assert.equal(await card(legacyPath).count(), 0, 'A stale origin cannot restore a removed entry');
+        desktop.nativeHistory.fail = true;
+        await page.locator('#welcome-project-recent [data-clear-recent-projects]').click();
+        await page.getByText(data.fixtures.en.labels.recent_projects_clear_failed).first().waitFor();
+        assert.ok(await card(nativePath).isVisible(), 'Failed native clear preserves the rendered history');
+        desktop.nativeHistory.fail = false;
+        await page.locator('#welcome-project-recent [data-clear-recent-projects]').click();
+        await page.locator('#welcome-project-recent').waitFor({state: 'hidden'});
+        await page.evaluate(({recentKey, legacyPath}) => localStorage.setItem(recentKey, JSON.stringify([legacyPath])), {recentKey, legacyPath});
+        await page.reload();
+        await page.waitForFunction(key => localStorage.getItem(key) === null, recentKey);
+        assert.ok(await page.locator('#welcome-project-recent').isHidden(), 'Cleared native history survives reload and stale local storage');
+
         result = {ok: true, workspace_root: workspaceRoot, title: 'Synthetic selected project', language: 'de'};
         const nativeOpen = page.waitForResponse('http://lixity.test/api/project-open');
         await page.evaluate(selected => {
@@ -224,6 +284,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
           [workspaceRoot, 'Synthetic selected project', 'de'],
           ['/synthetic/profile/Lixity/first-draft', 'First draft', 'en']
         ]);
+        assert.equal(await page.evaluate(key => localStorage.getItem(key), recentKey), null, 'Native opens and creates use only the desktop store');
       } finally { await desktop.context.close(); }
 
       const {context: sampleContext, page: samplePage} = await open({desktop: true, saved: [], language: 'de'});

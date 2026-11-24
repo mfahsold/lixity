@@ -44,6 +44,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the bundled text before creating an editable local project.
 - Document the desktop download, installation and first-launch steps together.
   Generate public download links from verified GitHub Release assets.
+- Lead with desktop installation across the website and documentation. While
+  the public installer catalog is empty, label test builds and link to the
+  published browser app and CLI. Require installer filenames to match the
+  verified release version.
 - Explain how to update the desktop and CLI installations through their
   original installation channels.
 - Support verified local replacement of an installed macOS test build from
@@ -51,6 +55,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Use one native recent-project list for the desktop welcome window and system
+  menu. Keep each menu action bound to the displayed project.
 - Open counted text matches directly from the reader and chapter comparison
   gaps. Keep the result count and navigation in the current reading scope.
 - Preserve unknown paragraph values in CLI output for unsupported language
@@ -213,6 +219,12 @@ The tagged candidate stopped before publication at the hosted macOS PDF check.
   where available and highlights the names in the matching passage.
 
 ### Changed
+
+- Load live paragraph evidence in chapter batches. Keep manuscript-wide
+  result navigation and preserve self-contained offline reports.
+- Reuse chapter and scene prose projections across the supplementary reports
+  in one analysis. Archive searches process validated revision paths with less
+  allocation and continue checking each record's digest.
 
 - Combine sentence lengths and pacing in one view. Open verified rhythm and
   word-pattern examples in the manuscript and identify their quotation context.
