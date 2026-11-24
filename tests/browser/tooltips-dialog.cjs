@@ -6,8 +6,10 @@ const assert = require('node:assert/strict');
 const {expect} = require(path.join(playwrightModule, 'test'));
 
 const assets = path.resolve(__dirname, '../../src/lixity/ui/assets');
+// Reproduce the narrow dialog left by a classic scrollbar on overlay-scrollbar hosts.
 const css = ['design-tokens.css', 'components.css', 'dashboard.css', 'speech-player.css']
-  .map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
+  .map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n') +
+  '\n@media (max-width: 320px) { dialog.lixity-modal { inset-inline-end: 16px; } }';
 const script = ['vendor/preact-10.29.8.min.js', 'vendor/htm-3.1.1.umd.js', 'component-layer.js', 'tooltips.js']
   .map(file => fs.readFileSync(path.join(assets, file), 'utf8')).join('\n');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-tooltips-dialog-'));
@@ -68,7 +70,7 @@ const explanation = 'Erlaube dieser Seite den Mikrofonzugriff. Lies den Text in 
       const hovered = await tip.boundingBox();
       assert.ok(hovered.width >= Math.min(240, geometry.dialog.width - 24), 'Pointer help must also retain its width');
       assert.ok(hovered.x >= geometry.dialog.left && hovered.x + hovered.width <= geometry.dialog.right,
-        'Pointer placement must fit the dialog horizontally');
+        `Pointer placement must fit the dialog horizontally: ${JSON.stringify({hovered, dialog: geometry.dialog})}`);
       await page.screenshot({path: path.join(artifacts, `${engine}-${viewport.width}-hover.png`)});
       await trigger.focus();
       await page.keyboard.press('Escape');

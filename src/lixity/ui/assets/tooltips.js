@@ -267,11 +267,14 @@
       // The fixed popup may sit outside the reader toolbar's bounded scrollport.
       // Only its trigger must remain visible inside those compact controls.
       if (parent.matches(".manuscript-reader-controls, .workspace-shell")) continue;
-      if (clipX && parent.scrollWidth > parent.clientWidth) {
+      // An open native dialog bounds its help even when the popup's fixed
+      // positioning resolves to the viewport instead of the dialog.
+      var dialogBoundary = parent.matches("dialog[open]");
+      if (dialogBoundary || (clipX && parent.scrollWidth > parent.clientWidth)) {
         visible.left = Math.max(visible.left, left);
         visible.right = Math.min(visible.right, left + parent.clientWidth);
       }
-      if (clipY && parent.scrollHeight > parent.clientHeight) {
+      if (dialogBoundary || (clipY && parent.scrollHeight > parent.clientHeight)) {
         visible.top = Math.max(visible.top, top);
         visible.bottom = Math.min(visible.bottom, top + parent.clientHeight);
       }

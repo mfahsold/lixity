@@ -136,18 +136,25 @@ server.serve_forever()
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,
           `${language} at ${width}px: settings do not widen the page`);
         if(language==='de' && width===1440){
-          const beforeDensity=await page.locator('#view-pane-project .pane-ribbon').evaluate(ribbon=>{
-            // Reproduce the first layout after crossing the mobile wrapping breakpoint.
+          const geometry=await page.locator('#view-pane-project .pane-ribbon').evaluate(ribbon=>{
+            // Force a narrow ribbon without relying on platform font metrics.
+            const originalWidth=ribbon.style.maxInlineSize;
+            ribbon.style.maxInlineSize='20rem';
             delete ribbon.dataset.ribbonCompact;
             delete ribbon.dataset.ribbonWrap;
-            const geometry={ribbonWidth:ribbon.clientWidth,ribbonScroll:ribbon.scrollWidth,
+            const before={ribbonWidth:ribbon.clientWidth,ribbonScroll:ribbon.scrollWidth,
               pageWidth:innerWidth,pageScroll:document.documentElement.scrollWidth};
             LixityRibbonDensity.sync(ribbon);
-            return geometry;
+            const compacted=ribbon.dataset.ribbonCompact==='true';
+            const fit=ribbon.scrollWidth<=ribbon.clientWidth+1;
+            ribbon.style.maxInlineSize=originalWidth;
+            LixityRibbonDensity.sync(ribbon);
+            return {before,compacted,fit};
           });
-          assert.ok(beforeDensity.ribbonScroll>beforeDensity.ribbonWidth,'Full German ribbon labels require compaction');
-          assert.ok(beforeDensity.pageScroll<=beforeDensity.pageWidth,
-            `The ribbon cannot widen the page before compaction (${beforeDensity.pageScroll}/${beforeDensity.pageWidth}px)`);
+          assert.ok(geometry.before.ribbonScroll>geometry.before.ribbonWidth,'The narrow German ribbon requires compaction');
+          assert.ok(geometry.before.pageScroll<=geometry.before.pageWidth,
+            `The ribbon cannot widen the page before compaction (${geometry.before.pageScroll}/${geometry.before.pageWidth}px)`);
+          assert.ok(geometry.compacted&&geometry.fit,'Compaction fits the actions inside the narrow German ribbon');
         }
         assert.equal(await page.locator('#set-publication-year').getAttribute('type'),'text');
         assert.equal(await page.locator('#settings-publication').getByText('publication_title',{exact:true}).count(),0);

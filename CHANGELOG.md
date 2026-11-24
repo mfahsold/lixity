@@ -77,6 +77,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   site or a deployment from a different source history.
 - Keep subprocess tests on the selected checkout when they change their
   working directory to a temporary project.
+- Keep pointer and keyboard help inside narrow dialogs when the operating
+  system reserves space for scrollbars.
 
 - Use one native recent-project list for the desktop welcome window and system
   menu. Keep each menu action bound to the displayed project.

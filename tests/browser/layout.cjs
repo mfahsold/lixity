@@ -171,6 +171,29 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
       assert.equal(await sentenceHelp.getAttribute('aria-describedby'), 'microhint');
       if (width === 1440) {
+        // Escape suppresses hover help until the pointer leaves its trigger.
+        await page.mouse.move(0, 0);
+        await sentenceHelp.scrollIntoViewIfNeeded();
+        // Wait for the report's smooth arrival and any focus-induced scroll
+        // before starting a fresh pointer dwell.
+        await sentenceHelp.evaluate(element => new Promise((resolve, reject) => {
+          let previous = '', stableSince = performance.now(), frame;
+          const timeout = setTimeout(() => {
+            cancelAnimationFrame(frame);
+            reject(new Error('Matrix help trigger did not settle before the hover check'));
+          }, 3000);
+          function watch(now) {
+            const {x, y, width, height} = element.getBoundingClientRect();
+            const position = [x, y, width, height, scrollX, scrollY].join(',');
+            if (position !== previous) stableSince = now;
+            previous = position;
+            if (now - stableSince >= 100) {
+              clearTimeout(timeout);
+              resolve();
+            } else frame = requestAnimationFrame(watch);
+          }
+          frame = requestAnimationFrame(watch);
+        }));
         await sentenceHelp.hover();
         await page.locator('#lixity-tooltip').hover();
         assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'false', 'Hovering an explanation keeps it readable');
