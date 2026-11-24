@@ -1,6 +1,6 @@
 .analysis-workflow-entries {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: var(--space-3);
 }
 .analysis-workflow-entry {
@@ -24,7 +24,7 @@
 .analysis-workflow-entry span,
 .analysis-workflow-entry .analysis-workflow-preview { overflow-wrap: anywhere; }
 .analysis-workflow-entry strong { color: var(--fg); font-weight: var(--weight-semibold); }
-.analysis-workflow-entry span { font-size: var(--text-note); color: var(--fg-secondary); line-height: var(--line-tight); font-weight: normal; }
+.analysis-workflow-entry span { font-size: var(--text-note); color: var(--fg-secondary); line-height: var(--line-compact); font-weight: normal; }
 .analysis-workflow-preview {
   margin-top: auto;
   padding-block-start: var(--space-1);
@@ -37,7 +37,6 @@ button.ctl.analysis-workflow-entry[aria-pressed="true"] {
   background: var(--accent-light);
   color: var(--fg);
   border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 button.ctl.analysis-workflow-entry[aria-pressed="true"] strong { color: var(--accent); }
 button.ctl.analysis-workflow-entry[aria-pressed="true"] .analysis-workflow-preview { color: var(--fg-secondary); }
@@ -49,16 +48,16 @@ button.ctl.analysis-workflow-entry[aria-pressed="true"] .analysis-workflow-previ
   padding-block-start: var(--space-3);
   border-top: 1px solid var(--line);
 }
-.analysis-workflow-sections[hidden],
-.analysis-workflows [hidden],
-#analysis-outline-document[data-guided-analysis="1"] #manuscript-analysis-panels > [hidden] { display: none !important; }
+.analysis-workflow-sections > .ctl { white-space: normal; text-align: start; }
 @container analysis-outline (max-width: 42rem) {
   .analysis-workflow-entries { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
   button.ctl.analysis-workflow-entry { padding: var(--space-2) var(--space-3); }
   .analysis-workflow-preview { display: none; }
 }
 
-body:not(.has-guided-analysis) .analysis-workflows { display: none; }
+body:not(.has-guided-analysis) .analysis-workflows,
+#workbench-overview-sections { display: none; }
+.has-guided-analysis.workbench-overview #workbench-overview-sections { display: inline-flex; }
 
 .has-guided-analysis #analysis-sections,
 .has-guided-analysis #analysis-outline-nav { display: none !important; }

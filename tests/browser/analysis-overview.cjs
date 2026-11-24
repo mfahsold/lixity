@@ -194,6 +194,9 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
           'Returning restores the previous reading choice');
         await page.locator('#workbench-overview-open').click();
+        assert.ok(await initialMeasurements.locator('.kpi').first().isVisible(),
+          'An explicit return to the overview lands on measured values again');
+        assert.equal(await page.locator('#style').isVisible(), false);
       }
       if (locale === 'en' || locale === 'de') await navigation.screenshot({
         path:path.join(artifacts, `navigation-${locale}-${width}.png`)});
@@ -357,6 +360,16 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.ok(await page.locator('#matrix').evaluate(node=>{
           const rect=node.getBoundingClientRect(); return rect.top>=0 && rect.top<innerHeight;
         }), 'A section arrival remains visible at480px height and200% text');
+        const sectionPicker = page.locator('#workbench-overview-sections');
+        assert.equal((await sectionPicker.textContent()).trim(),
+          await page.evaluate(() => uiLabel('workflow_choose_section')));
+        await sectionPicker.press('Enter');
+        await page.waitForFunction(() => {
+          const focused = document.activeElement;
+          const bounds = focused.getBoundingClientRect();
+          return focused.dataset.analysisWorkflow === 'compare' && bounds.top >= 0 && bounds.bottom <= innerHeight;
+        });
+        assert.ok(await page.locator('#matrix').isVisible(), 'Returning to the choices retains the open matrix');
         await page.screenshot({path:path.join(artifacts,`navigation-short-enlarged-${locale}.png`)});
       }
       await page.close();

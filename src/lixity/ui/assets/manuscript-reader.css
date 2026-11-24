@@ -29,7 +29,7 @@
 .reader-analysis-guide ol { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-inline-start: 1.5rem; }
 .reader-analysis-guide li .ctl { width: 100%; white-space: normal; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
-.manuscript-reading.workbench-analysis:not(.reader-focus):not(.manuscript-writing) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
+.manuscript-reading.workbench-analysis:not(.reader-focus, .manuscript-writing, .workbench-overview) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
 .reader-settings > summary .reader-control-icon { font-family: var(--font-title); font-weight: 600; letter-spacing: -0.03em; font-size: 1rem; }
@@ -515,8 +515,30 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   #chapters .ptext::before, #chapters .reader-return-target::after { background: CanvasText; }
 }
 
-.workbench-surface-label { font-size: var(--text-control); color: var(--accent); padding: .4rem .6rem; border-left: 3px solid var(--accent); }
-.workbench-overview .reader-settings, .workbench-overview #reader-focus, .workbench-overview #reader-teleprompter, .workbench-overview #reader-direct-speech, .workbench-overview #reader-speech, .workbench-overview .reader-chapter, .workbench-overview .reader-analysis-toggle-controls, .workbench-overview #workspace-reader-toggle, .workbench-overview [data-context-tool="dossier"] { display: none !important; }
+.workbench-overview-toolbar, .workbench-overview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.workbench-overview-toolbar { flex: 1 1 100%; }
+.workbench-surface-label {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  font-size: var(--text-control);
+  color: var(--fg);
+  padding-block: var(--space-2);
+}
+.workbench-overview-actions .ctl { white-space: normal; text-align: start; }
+@container reader-tools (max-width: 32rem) {
+  .workbench-overview-toolbar { display: grid; }
+  .workbench-overview-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .workbench-overview-actions .ctl { min-width: 0; justify-content: flex-start; }
+}
+.workbench-overview .manuscript-reader-controls :is(.reader-settings, .reader-chapter, .reader-analysis-toggle-controls,
+    .reader-controls, #reader-focus, #reader-teleprompter, #reader-direct-speech, #reader-speech, #manuscript-write,
+    #workspace-reader-toggle, [data-context-tool="dossier"]) { display: none !important; }
 .manuscript-reading .reader-preface:has(> .reader-heading):not(:has(.ptext, .reader-coverage)) { padding-top: .35rem; padding-bottom: .35rem; }
 .manuscript-reading .reader-preface:has(> .reader-heading):not(:has(.ptext, .reader-coverage)) > .reader-heading { margin: .5rem 0; }
 @media (max-width: 600px) {

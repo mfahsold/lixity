@@ -23,7 +23,7 @@ for locale in ('en', 'de'):
     def render(*args, **kwargs):
         return original(*args, **{**kwargs,
             'labels': {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]},
-            'language_key': locale, 'enabled_actions': ['analyze', 'research-reader'],
+            'language_key': locale, 'enabled_actions': ['analyze', 'research-reader', 'manuscript-pdf', 'site-export'],
             'manuscript_pdf_token': 'synthetic-project', 'research_context_token': 'synthetic-research',
             'manuscript_source_sha256': 'a' * 64})
     full_dashboard.__globals__['render_dashboard'] = render
@@ -40,10 +40,15 @@ async function createPage(browser, html, width, desktop = false) {
   page.on('pageerror', error => errors.push(error.message));
   if (desktop) await page.addInitScript(() => {
     window.desktopPreferenceWrites = [];
+    window.desktopExportRequests = [];
     window.lixityDesktop = {
       version: 1,
       getPreferences: async () => ({theme: 'light'}),
       setPreference: async (key, value) => window.desktopPreferenceWrites.push([key, value]),
+      saveExport: (spec, filename) => new Promise((resolve, reject) => {
+        window.desktopExportRequests.push({spec, filename, resolve, reject});
+      }),
+      revealInFileManager: async () => {},
     };
   });
   await page.route('http://lixity.test/**', route => {
@@ -105,6 +110,55 @@ async function documentState(page) {
       await sendMenu('view-toggle-theme');
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
       assert.deepEqual(await page.evaluate(() => desktopPreferenceWrites), [['theme', 'dark']]);
+      await sendMenu('file-export-pdf');
+      const layout = page.locator('#manuscript-pdf-layout');
+      const download = page.locator('#manuscript-pdf-download');
+      const status = page.locator('#manuscript-pdf-status');
+      await expect(layout).toBeVisible();
+      await expect(layout).toBeFocused();
+      await layout.selectOption('sheet');
+      for (const [index, outcome, message] of [
+        [0, {saved: false}, ''],
+        [1, null, 'The PDF could not be created. Try again; after changing projects, reload this page.'],
+        [2, {saved: true, path: '/synthetic/manuscript-sheet.pdf'}, 'PDF download started.'],
+      ]) {
+        await download.click();
+        await expect(download).toBeDisabled();
+        await expect(status).not.toHaveText('PDF download started.');
+        assert.deepEqual(await page.evaluate(i => {
+          const {spec, filename} = desktopExportRequests[i];
+          return {spec, filename};
+        }, index), {spec: {path: '/api/manuscript-pdf', method: 'POST',
+          payload: {layout: 'sheet', project_token: 'synthetic-project'}}, filename: 'manuscript-sheet.pdf'});
+        await page.evaluate(([i, saved]) => {
+          if (saved) desktopExportRequests[i].resolve(saved);
+          else desktopExportRequests[i].reject('Synthetic save failure');
+        }, [index, outcome]);
+        await expect(status).toHaveText(message);
+        await expect(download).toBeEnabled();
+        await expect(page.locator('.desktop-save-toast')).toHaveCount(index === 2 ? 1 : 0);
+      }
+      await page.locator('#btn-site-export').click();
+      const siteDownload = page.locator('#site-export-download');
+      const siteStatus = page.locator('#site-export-status');
+      await page.locator('#site-export-research').check();
+      await page.locator('#site-export-sources').check();
+      for (const saved of [false, true]) {
+        await siteDownload.click();
+        await expect(siteDownload).toBeDisabled();
+        await expect(siteStatus).toHaveText('Preparing website…');
+        assert.deepEqual(await page.evaluate(() => {
+          const {spec, filename} = desktopExportRequests.at(-1);
+          return {spec, filename};
+        }), {spec: {path: '/api/site-export', method: 'POST', payload: {
+          project_token: 'synthetic-project', include_research: true, include_source_files: true,
+        }}, filename: 'lixity-reading-website.zip'});
+        await page.evaluate(saved => desktopExportRequests.at(-1).resolve({saved}), saved);
+        await expect(siteDownload).toBeEnabled();
+        if (saved) await expect(siteStatus).toContainText('Unzip the ZIP and open index.html');
+        else await expect(siteStatus).toHaveText('');
+      }
+      assert.deepEqual(desktop.writes, []);
       assert.deepEqual(desktop.errors, []);
     } finally {
       await desktop.page.close();

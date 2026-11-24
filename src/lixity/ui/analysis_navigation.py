@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 from html import escape
 
-from .components import attr_json, label
+from .components import label
 
 _WORKFLOW_SECTIONS = {
     "review": ("flags", "markers"),
@@ -31,31 +31,25 @@ def render_analysis_workflows(
         key: [section for section in sections if section in available]
         for key, sections in _WORKFLOW_SECTIONS.items()
     }
-    payload = attr_json(groups)
     parts = [
-        f'<div class="analysis-workflows" data-analysis-workflows="{payload}">',
+        '<div class="analysis-workflows" id="analysis-workflows" data-analysis-workflows>',
         '<div class="analysis-workflow-entries">',
     ]
     for workflow, sections in groups.items():
+        if not sections:
+            continue
         title = escape(label(labels, f"workflow_{workflow}"))
         hint = escape(label(labels, f"workflow_{workflow}_hint"))
-        title_id = f"analysis-workflow-{workflow}-title"
-        hint_id = f"analysis-workflow-{workflow}-hint"
         preview_items = [escape(label(labels, available[section])) for section in sections]
-        preview = (
-            f'<small class="analysis-workflow-preview" aria-hidden="true">{" · ".join(preview_items)}</small>'
-            if preview_items
-            else ""
-        )
+        preview = f'<small class="analysis-workflow-preview" aria-hidden="true">{" · ".join(preview_items)}</small>'
         parts.append(
             f'<button type="button" class="ctl analysis-workflow-entry" '
             f'data-analysis-workflow="{workflow}" aria-pressed="false" '
-            f'aria-labelledby="{title_id}" aria-describedby="{hint_id}" '
-            f'aria-controls="manuscript-analysis-panels">'
-            f'<strong id="{title_id}">{title}</strong><span id="{hint_id}">{hint}</span>{preview}</button>'
+            f'aria-controls="analysis-workflow-sections manuscript-analysis-panels">'
+            f'<strong>{title}</strong><span>{hint}</span>{preview}</button>'
         )
     parts.append(
-        '</div><div class="analysis-workflow-sections" role="group" '
+        '</div><div class="analysis-workflow-sections" id="analysis-workflow-sections" role="group" '
         f'aria-label="{escape(label(labels, "workflow_sections"), quote=True)}">'
     )
     for workflow, sections in groups.items():

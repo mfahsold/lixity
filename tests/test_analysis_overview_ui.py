@@ -97,6 +97,36 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertRegex(disclosure[1], r"\bopen\b")
         self.assertIn('id="matrix"', html)
 
+    def test_measurement_links_resolve_for_every_style_availability(self):
+        config = CorpusConfig(language="en")
+        thresholds = FingerprintThresholds()
+        short = analyze_document("## One\n\nMara waits at the gate. Tomas sees her.", config, thresholds)
+        empty = analyze_document("", config, thresholds)
+        for controls in (True, False):
+            for case, analysis, has_fingerprint, expected in (
+                ("calibrated", self.analysis, True, {"heatmap", "bands", "matrix", "chapters"}),
+                ("short", short, True, {"style", "matrix", "chapters"}),
+                ("without fingerprint", self.analysis, False, {"matrix", "chapters"}),
+                ("empty", empty, True, set()),
+            ):
+                with self.subTest(controls=controls, case=case):
+                    html = render_dashboard(
+                        analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
+                        fingerprint=analysis.fingerprint if has_fingerprint else None, controls=controls,
+                    )
+                    measurements = html.split('id="analysis-measurements"', 1)[1].split('id="flags"', 1)[0]
+                    targets = set(re.findall(r'data-jump="#([^"]+)"', measurements))
+                    self.assertTrue(expected <= targets)
+                    self.assertTrue(targets <= HtmlControls(html).elements.keys())
+                    if case != "calibrated":
+                        self.assertFalse({"heatmap", "bands"} & targets)
+                    if case == "short":
+                        vocabulary = measurements.split('id="kpi-lexis-drawer"', 1)[1].split("</details>", 1)[0]
+                        self.assertIn('<div class="kpi"><b>–</b>', vocabulary)
+                        self.assertNotRegex(vocabulary, r'<div class="kpi kpi-link"[^>]*><b>–</b>')
+                    if case == "empty":
+                        self.assertFalse(targets)
+
     def test_style_space_review_route_requires_measured_chapter_scores(self):
         analysis = self.analysis
         for controls in (True, False):

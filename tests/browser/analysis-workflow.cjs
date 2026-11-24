@@ -57,6 +57,9 @@ async function checkNativeOverview(page, fragment, target = '') {
     assert.equal(await total.textContent(), words);
     assert.equal(await page.locator('[data-analysis-workflow][aria-pressed="true"]').count(), 0);
     assert.equal(await page.locator('.analysis-workflow-sections').isVisible(), false);
+    const compareName = await page.evaluate(() => `${uiLabel('workflow_compare')} ${uiLabel('workflow_compare_hint')}`);
+    assert.ok(await page.getByRole('button', {name: compareName, exact: true}).isVisible(),
+      'The workflow is addressable by its displayed title and hint');
     if (fragment) {
       await page.waitForFunction(() => {
         const title = document.querySelector('#analysis-measurements > summary').getBoundingClientRect();
@@ -118,6 +121,10 @@ async function checkNativeOverview(page, fragment, target = '') {
       await checkNativeOverview(page, '#manuscript-analysis-panels');
       await checkNativeOverview(page, '#matrix', 'matrix');
       await checkNativeOverview(page, '#heatmap', 'style');
+      await page.goto('http://workflow.test/native?landing=unknown#%5B');
+      await page.locator('#workbench-overview-open').click();
+      assert.ok(await page.locator('#analysis-measurements[open]').isVisible(),
+        'An unrecognized link fragment leaves the overview reachable');
       assert.deepEqual(errors, []);
       await page.close();
     }

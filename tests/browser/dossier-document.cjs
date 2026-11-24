@@ -139,6 +139,47 @@ server.serve_forever()
         const history = page.locator('#research-revision-history-detail');
         await expect(history).toContainText('Die erste Notiz zur Figur.');
         await downloadPdf(history, 1, 'pinned-version');
+        if (width === 1440) {
+          await page.evaluate(() => {
+            window.lixityDesktop = {saveExport: (spec, filename) => new Promise((resolve, reject) => {
+              window.pendingDossierExport = {spec, filename, resolve, reject};
+            })};
+          });
+          const requestCount = requests.length;
+          const button = history.locator('[data-dossier-pdf-export]');
+          const status = history.locator('[data-dossier-pdf-status]');
+          for (const [result, expected] of [
+            [{saved: false}, ''],
+            [{status: 404}, 'Diese Fassung ist nicht verfügbar.'],
+            [{status: 409, serverCode: 'stale-context'}, 'Öffne das Projekt erneut'],
+            [{status: 410}, 'Öffne das Projekt erneut'],
+            [{saved: true}, 'PDF-Download gestartet.'],
+          ]) {
+            await button.press('Enter');
+            await expect(button).toBeDisabled();
+            const {spec, filename} = await page.evaluate(() => {
+              const {spec, filename} = window.pendingDossierExport;
+              return {spec, filename};
+            });
+            const target = new URL(spec.path, url);
+            assert.equal(spec.method, 'GET');
+            assert.equal(target.pathname, '/api/research/dossier-pdf');
+            assert.equal(target.searchParams.get('id'), id);
+            assert.equal(target.searchParams.get('revision'), '1');
+            assert.equal(target.searchParams.get('research_token'), await button.getAttribute('data-research-token'));
+            assert.equal(filename, 'dossier-v1.pdf');
+            await page.evaluate(result => {
+              const {resolve, reject} = window.pendingDossierExport;
+              if (result.status) reject(result);
+              else resolve(result);
+            }, result);
+            await expect(button).toBeEnabled();
+            if (expected) await expect(status).toContainText(expected);
+            else await expect(status).toHaveText('');
+          }
+          assert.equal(requests.length, requestCount, 'The desktop bridge owns every native PDF request');
+          await page.evaluate(() => { delete window.lixityDesktop; });
+        }
         await page.keyboard.press('Escape');
         await page.locator(`[data-workspace-dossier="${id}"]`).click();
         await downloadPdf(page.locator('#workspace-reader-body'), 2, 'alongside');

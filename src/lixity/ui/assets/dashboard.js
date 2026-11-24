@@ -842,6 +842,7 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
   var layoutDesc = document.getElementById("manuscript-pdf-layout-desc");
   var button = document.getElementById("manuscript-pdf-download");
   var status = document.getElementById("manuscript-pdf-status");
+  var components = window.LixityComponents;
   var available = form.dataset.available === "true" && !!form.dataset.projectToken;
   var busy = false;
   function syncLayoutDescription() {
@@ -866,20 +867,39 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
     if (busy || !available) return;
     var selected = layout.value;
     if (!Array.from(layout.options).some(function(option) { return option.value === selected && !option.disabled; })) return;
+    var token = form.dataset.projectToken;
+    var payload = {layout: selected, project_token: token};
+    var path = form.getAttribute("action");
+    var filename = "manuscript-" + selected + ".pdf";
+    function isCurrent() {
+      return form.isConnected && token === form.dataset.projectToken && token === document.body.dataset.manuscriptProjectToken;
+    }
     pending(true);
     message("manuscript_pdf_busy", false);
     try {
-      var response = await fetch(API + "/manuscript-pdf", {
+      var nativeSave = components.saveExport({path: path, method: "POST", payload: payload}, filename, isCurrent);
+      if (nativeSave) {
+        var outcome = await nativeSave;
+        if (isCurrent() && outcome.saved) message("manuscript_pdf_success", false);
+        else components.setStatus(status, "", "");
+        return;
+      }
+      var response = await fetch(path, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({layout: selected, project_token: form.dataset.projectToken})
+        body: JSON.stringify(payload)
       });
-      var blob = await window.LixityComponents.readPdfBlob(response);
-      window.LixityComponents.downloadBlob(blob, "manuscript-" + selected + ".pdf", 1000);
+      var blob = await components.readPdfBlob(response);
+      if (!isCurrent()) return;
+      components.downloadBlob(blob, filename, 1000);
       message("manuscript_pdf_success", false);
     } catch (error) {
+      if (!isCurrent()) return;
       message("manuscript_pdf_error", true);
       if (error?.serverMessage) status.textContent += " " + error.serverMessage;
-    } finally { pending(false); }
+    } finally {
+      pending(false);
+      if (!isCurrent()) components.setStatus(status, "", "");
+    }
   });
   pending(false);
 })();
@@ -1083,20 +1103,17 @@ if (window.LixityIcons && typeof window.LixityIcons.svg === "function") {
     var failureKey = "site_export_network_error";
     var exportId = "", stage = "response_read";
     try {
-      if (!checking && window.lixityDesktop && typeof window.lixityDesktop.saveExport === "function") {
+      var nativeSave = !checking && window.LixityComponents.saveExport(
+        {path: API + "/site-export", method: "POST", payload: payload},
+        "lixity-reading-website.zip", sameExportContext
+      );
+      if (nativeSave) {
         stage = "download_start";
         failureKey = "site_export_download_error";
-        var outcome = await window.lixityDesktop.saveExport(
-          { path: API + "/site-export", method: "POST", payload: payload },
-          "lixity-reading-website.zip"
-        );
+        var outcome = await nativeSave;
         if (!sameExportContext()) return;
         if (outcome && outcome.saved) {
           message("site_export_success");
-          if (outcome.path && window.LixityDesktopBridge &&
-              typeof window.LixityDesktopBridge.notifySavedExport === "function") {
-            window.LixityDesktopBridge.notifySavedExport(outcome);
-          }
         } else {
           status.textContent = "";
         }

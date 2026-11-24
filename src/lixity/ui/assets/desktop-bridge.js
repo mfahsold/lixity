@@ -202,17 +202,21 @@
     if (typeof data.workspace_url === "string" && data.workspace_url) {
       if (window.lixityDesktop && typeof window.lixityDesktop.openProjectWindow === "function" &&
           document.body && document.body.dataset && document.body.dataset.manuscriptSourceSha256) {
-        window.lixityDesktop.openProjectWindow(data.workspace_url, data.title || "Lixity").catch(function () {
-          window.location.assign(data.workspace_url);
-        });
-      } else {
-        window.location.assign(data.workspace_url);
+        try {
+          await window.lixityDesktop.openProjectWindow(data.workspace_url, data.title || "Lixity");
+          return false;
+        } catch (_) {
+          // Keep the project reachable when the native window could not be created.
+        }
       }
-      return;
+      window.location.assign(data.workspace_url);
+      return true;
     }
     if (data.reload) {
       window.location.reload();
+      return true;
     }
+    return false;
   }
 
   function handleMenuAction(actionId) {
@@ -229,11 +233,7 @@
       }
       case "file-export-pdf": {
         switchActiveView("project", true);
-        var pdfDetails = document.getElementById("manuscript-pdf");
-        if (pdfDetails) {
-          pdfDetails.open = true;
-          pdfDetails.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }
+        window.LixityComponents.openManuscriptPdf();
         break;
       }
       case "view-analysis":
@@ -386,9 +386,36 @@
     if (event && typeof event.detail === "string") handleMenuAction(event.detail);
   });
 
+  var openPathsRequested = false;
+  var drainingOpenPaths = false;
+  var leavingForProject = false;
+
+  async function openPendingPaths() {
+    var bridge = window.lixityDesktop;
+    if (!bridge || typeof bridge.takeOpenPath !== "function" || leavingForProject) return;
+    openPathsRequested = true;
+    if (drainingOpenPaths) return;
+
+    drainingOpenPaths = true;
+    try {
+      while (openPathsRequested && !leavingForProject) {
+        openPathsRequested = false;
+        var path = await bridge.takeOpenPath();
+        if (path) {
+          openPathsRequested = true;
+          leavingForProject = await openPath(path).catch(function () { return false; });
+        }
+      }
+    } finally {
+      drainingOpenPaths = false;
+    }
+  }
+
   window.addEventListener("lixity:desktop-open-path", function (event) {
     if (event && typeof event.detail === "string") {
       openPath(event.detail).catch(function () {});
+    } else {
+      openPendingPaths().catch(function () {});
     }
   });
 
@@ -401,4 +428,7 @@
     decodeBase64Wav: decodeBase64Wav,
     recordWavTake: recordWavTake
   });
+
+  // Carry requests received before this document was able to listen, including cold OS launches.
+  openPendingPaths().catch(function () {});
 })();

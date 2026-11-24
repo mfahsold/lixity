@@ -711,11 +711,19 @@ document.addEventListener("click", async function(event) {
   components.setStatus(status, uiLabel("manuscript_pdf_busy"), "loading");
   try {
     var params = new URLSearchParams({id: button.dataset.recordId, revision: revision, research_token: token});
-    var response = await fetch(API + "/research/dossier-pdf?" + params);
+    var path = API + "/research/dossier-pdf?" + params;
+    var filename = "dossier-v" + revision + ".pdf";
+    var nativeSave = components.saveExport({path: path, method: "GET"}, filename, isCurrent);
+    if (nativeSave) {
+      var outcome = await nativeSave;
+      if (isCurrent()) components.setStatus(status, outcome.saved ? uiLabel("manuscript_pdf_success") : "", outcome.saved ? "ok" : "");
+      return;
+    }
+    var response = await fetch(path);
     var blob = await components.readPdfBlob(response);
     if (!isCurrent()) return;
     var disposition = response.headers.get("Content-Disposition") || "";
-    var filename = disposition.match(/\bfilename="([A-Za-z0-9._-]+\.pdf)"/i)?.[1] || "dossier-v" + revision + ".pdf";
+    filename = disposition.match(/\bfilename="([A-Za-z0-9._-]+\.pdf)"/i)?.[1] || filename;
     components.downloadBlob(blob, filename);
     components.setStatus(status, uiLabel("manuscript_pdf_success"), "ok");
   } catch (error) {

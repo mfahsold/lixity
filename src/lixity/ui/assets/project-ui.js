@@ -897,7 +897,9 @@ function checkUrlHashView(event) {
       return;
     }
   }
-  var target = document.querySelector(hash);
+  var id;
+  try { id = decodeURIComponent(hash.slice(1)); } catch (_) { return; }
+  var target = document.getElementById(id);
   if (!target) return;
   revealStyleTarget(target);
   if (target.classList.contains("ptext")) {

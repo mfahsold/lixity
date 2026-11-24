@@ -25,9 +25,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   packaging (signed-before-DMG macOS `.app`/`.dmg`/Homebrew, Windows NSIS/WiX/WinGet,
   Linux `.deb`/`.rpm`/`.AppImage`/Flatpak/AppStream), top-level artifact container
   verification, and three-OS CI and release workflows.
+- Record teleprompter takes through the Rust microphone in the desktop app.
+  The interface shows the native 30-second recording limit. The desktop host
+  binds active recordings to the window that started them.
 
 ### Fixed
 
+- Open the analysis overview at measured manuscript values, with a direct
+  route back to the analysis sections from tables and charts. Keep the toolbar
+  compact on narrow screens and explain unavailable style comparisons.
+- Pause the 3D style plot while hidden and redraw it at the correct size when
+  its analysis section is shown again.
+- Retain native desktop requests to open manuscripts and projects while the
+  local engine starts or the workspace changes.
+- Stream desktop manuscript PDFs, saved dossier PDFs and website ZIPs into
+  the selected file and report completion after the transfer succeeds.
 - Keep manuscript measurements reachable in the analysis overview on narrow
   screens and reveal a flagged passage's review list before moving focus.
 - Use the same analysis overview from the reader, command palette and desktop

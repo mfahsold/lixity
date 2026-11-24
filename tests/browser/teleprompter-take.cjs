@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const labels=pythonFixture('import json; from lixity.workspace_labels import WORKSPACE_LABELS; print(json.dumps(WORKSPACE_LABELS["de"]))');
+const workspace = '<!doctype html><html lang="en"><body data-speech-capable="false" data-manuscript-source-sha256="synthetic-source"><form id="settings-form" data-project-token="synthetic-project"></form><button id="reader-teleprompter">Teleprompter</button><main id="chapters"><section class="chapter" id="ch-1"><h2>Garden</h2><div class="ptext" data-start="3" data-end="3" data-paragraph-sha256="synthetic-paragraph"><div class="ptext-inner"><p>A synthetic reading script is not a transcript.</p></div></div></section></main></body></html>';
 
 const textContrast = locator => locator.evaluate(element => {
   const channels = color => color.match(/[\d.]+/g).map(Number);
@@ -24,6 +25,182 @@ const textContrast = locator => locator.evaluate(element => {
   return (Math.max(foreground, backdrop) + .05) / (Math.min(foreground, backdrop) + .05);
 });
 
+async function checkDesktopCapture(browser, width) {
+  const page = await browser.newPage({viewport:{width,height:900}, reducedMotion:'reduce'});
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  try {
+    await page.route('http://localhost:41739/**', route => route.request().method() === 'POST'
+      ? route.fulfill({json:{ok:false}})
+      : route.fulfill({contentType:'text/html',body:workspace}));
+    await page.goto('http://localhost:41739/');
+    await page.evaluate(labels => { window.uiLabel = key => labels[key] || key; }, labels);
+    for (const file of ['design-tokens.css','components.css','teleprompter.css','speech-player.css']) {
+      await page.addStyleTag({path:path.resolve('src/lixity/ui/assets',file)});
+    }
+    for (const file of ['icons.js','audio-take.js','speech-player.js','desktop-bridge.js','teleprompter.js']) {
+      await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
+    }
+    await page.evaluate(async () => {
+      const fixture = window.nativeCapture = {
+        starts:[], stops:[], cancels:0, browserRequests:0, autoStop:false, returnedError:false
+      };
+      const sampleRate = 24000, frames = sampleRate * 2;
+      const wav = LixityAudioTake.encodeWav([new Float32Array(frames).fill(0.25)], frames, sampleRate);
+      const take = await LixityAudioTake.create(new Blob([wav], {type:'audio/wav'}));
+      fixture.resolveTake = (invalidHash = false) => {
+        const {filename, sha256, ...audio} = take.metadata.audio;
+        fixture.stops.at(-1).resolve({...audio, schema_version:take.metadata.schema_version,
+          filename:fixture.starts.at(-1).filename, sha256:invalidHash ? '0'.repeat(64) : sha256,
+          wav_base64:btoa(wav.reduce((value, byte) => value + String.fromCharCode(byte), ''))});
+      };
+      window.lixityDesktop = {audioCapture:{
+        startRecording: (device, filename) => new Promise((resolve, reject) => {
+          fixture.starts.push({device, filename, resolve, reject});
+        }),
+        stopRecording: () => new Promise((resolve, reject) => fixture.stops.push({resolve, reject})),
+        cancelRecording: async () => { fixture.cancels += 1; },
+        recordingStatus: async () => ({
+          recording:!fixture.autoStop && !fixture.returnedError,
+          auto_stopped:fixture.autoStop,
+          max_duration_seconds:27
+        })
+      }};
+      Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async () => {
+        fixture.browserRequests += 1;
+        throw new Error('Desktop capture must use the native microphone');
+      }}});
+      document.addEventListener('lixity:open-speech-studio', event => { fixture.handoff = event.detail; });
+    });
+    const record = page.locator('.teleprompter-btn-record');
+    const state = page.locator('#teleprompter-record-status');
+    const card = page.locator('.teleprompter-take-card');
+    const open = page.locator('#reader-teleprompter');
+    const stateIs = expected => page.waitForFunction(value =>
+      document.querySelector('#teleprompter-record-status')?.dataset.state === value, expected);
+    const countIs = (kind, expected) => page.waitForFunction(([key, value]) =>
+      (Array.isArray(nativeCapture[key]) ? nativeCapture[key].length : nativeCapture[key]) === value, [kind, expected]);
+    const recordEnabled = () => page.waitForFunction(() => !document.querySelector('.teleprompter-btn-record').disabled);
+    const resolveStart = () => page.evaluate(() => nativeCapture.starts.at(-1).resolve());
+    const durationHint = labels.teleprompter_take_native_limit.replace('{seconds}', '27');
+    await open.click();
+    await stateIs('idle');
+    assert.equal(await state.innerText(), durationHint, 'The native limit comes from Rust status before recording');
+    assert.equal(await record.getAttribute('aria-description'), durationHint);
+    await record.click();
+    await countIs('starts', 1);
+    await stateIs('pending');
+    assert.equal(await record.getAttribute('aria-busy'), 'true');
+    assert.equal(await state.innerText(), labels.teleprompter_take_native_pending + ' ' + durationHint);
+    const request = await page.evaluate(() => {
+      const {device, filename} = nativeCapture.starts[0];
+      return {device, filename};
+    });
+    assert.equal(request.device, null);
+    assert.match(request.filename, /^teleprompter-take-.+\.wav$/);
+    await resolveStart();
+    await stateIs('running');
+    assert.equal(await state.innerText(), labels.teleprompter_take_running + ' ' + durationHint);
+    await record.click();
+    await countIs('stops', 1);
+    assert.ok(await record.isDisabled());
+    await page.evaluate(() => { document.body.dataset.speechCapable = 'true'; nativeCapture.resolveTake(); });
+    await card.waitFor();
+    await stateIs('ready');
+    assert.equal(await card.locator('textarea').inputValue(), '', 'A native take starts without an inferred transcript');
+    const preservedUrl = await card.locator('audio').getAttribute('src');
+
+    await record.click();
+    await countIs('starts', 2);
+    await page.evaluate(() => LixityTeleprompter.close());
+    await resolveStart();
+    await countIs('cancels', 1);
+    await open.click();
+    await recordEnabled();
+    assert.equal(await page.evaluate(() => nativeCapture.stops.length), 1);
+    assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl);
+
+    await record.click();
+    await countIs('starts', 3);
+    await page.evaluate(() => nativeCapture.starts.at(-1).reject('A recording session is already running'));
+    await stateIs('failed');
+    await recordEnabled();
+    assert.equal(await page.evaluate(() => nativeCapture.cancels), 1, 'A rejected start never cancels another recording');
+
+    await record.click();
+    await countIs('starts', 4);
+    await resolveStart();
+    await stateIs('running');
+    await page.evaluate(() => { nativeCapture.autoStop = true; });
+    await countIs('stops', 2);
+    await page.evaluate(() => { nativeCapture.autoStop = false; nativeCapture.resolveTake(true); });
+    await stateIs('failed');
+    assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl, 'A mismatched Rust checksum cannot replace a take');
+
+    await record.click();
+    await countIs('starts', 5);
+    await resolveStart();
+    await stateIs('running');
+    await record.click();
+    await countIs('stops', 3);
+    await page.evaluate(() => {
+      document.body.dataset.manuscriptSourceSha256 = 'changed-source';
+      nativeCapture.resolveTake();
+    });
+    await stateIs('failed');
+    assert.equal(await state.innerText(), labels.teleprompter_take_context);
+    assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl, 'A late take cannot enter the new source');
+
+    await page.evaluate(() => { document.body.dataset.manuscriptSourceSha256 = 'synthetic-source'; });
+    await record.click();
+    await countIs('starts', 6);
+    await resolveStart();
+    await stateIs('running');
+    await page.evaluate(() => { document.body.dataset.manuscriptSourceSha256 = 'changed-source'; });
+    await countIs('cancels', 2);
+    await stateIs('failed');
+    assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl, 'Changing the source cancels an active native take');
+    await page.evaluate(() => { document.body.dataset.manuscriptSourceSha256 = 'synthetic-source'; });
+
+    await record.click();
+    await countIs('starts', 7);
+    await resolveStart();
+    await stateIs('running');
+    await page.evaluate(() => { nativeCapture.returnedError = true; });
+    await countIs('stops', 4);
+    await page.evaluate(() => {
+      nativeCapture.returnedError = false;
+      nativeCapture.stops.at(-1).reject('Synthetic microphone driver failure');
+    });
+    await stateIs('failed');
+    assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl, 'A stopped Rust capture consumes the driver error and preserves the take');
+
+    await record.click();
+    await countIs('starts', 8);
+    await resolveStart();
+    await stateIs('running');
+    await page.evaluate(() => { nativeCapture.autoStop = true; });
+    await countIs('stops', 5);
+    await page.evaluate(() => nativeCapture.resolveTake());
+    await stateIs('ready');
+    assert.equal(await state.innerText(), labels.teleprompter_take_ready);
+    await card.locator('textarea').fill('A deliberate transcript.');
+    await card.locator('input[type=checkbox]').check();
+    await card.locator('[data-take-studio]').click();
+    const handoff = await page.evaluate(() => ({
+      ...nativeCapture.handoff.context, ...nativeCapture.handoff.take.metadata.audio,
+      transcript:nativeCapture.handoff.take.transcript_status
+    }));
+    assert.equal(handoff.project_token, 'synthetic-project');
+    assert.equal(handoff.source_sha256, 'synthetic-source');
+    assert.equal(handoff.transcript, 'confirmed');
+    assert.equal(handoff.sample_rate_hz, 24000);
+    assert.equal(handoff.frames, 48000);
+    assert.equal(await page.evaluate(() => nativeCapture.browserRequests), 0);
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+}
+
 (async () => {
   const browser = await launchChromium();
   const artifacts = fs.mkdtempSync('/tmp/lixity-teleprompter-take-');
@@ -31,7 +208,7 @@ const textContrast = locator => locator.evaluate(element => {
     for (const width of [1440,320]) {
       const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'}), errors=[];
       page.on('pageerror',error=>errors.push(error.message));
-      await page.route('http://localhost:41739/**',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html lang="en"><body data-speech-capable="false" data-manuscript-source-sha256="synthetic-source"><form id="settings-form" data-project-token="synthetic-project"></form><button id="reader-teleprompter">Teleprompter</button><main id="chapters"><section class="chapter" id="ch-1"><h2>Garden</h2><div class="ptext" data-start="3" data-end="3" data-paragraph-sha256="synthetic-paragraph"><div class="ptext-inner"><p>A synthetic reading script is not a transcript.</p></div></div></section></main></body></html>'}));
+      await page.route('http://localhost:41739/**',route=>route.fulfill({contentType:'text/html',body:workspace}));
       await page.goto('http://localhost:41739/');
       const theme = width === 1440 ? 'light' : 'dark';
       await page.evaluate(({labels, theme})=>{
@@ -154,6 +331,7 @@ const textContrast = locator => locator.evaluate(element => {
         assert.equal(await record.evaluate(el=>el.classList.contains('is-active')),false);assert.deepEqual(errors,[]);
       } finally {await page.close();}
     }
-    console.log('Teleprompter capture, transcript review, portable files, preserved take and Studio handoff passed: '+artifacts);
+    for (const width of [1440,320]) await checkDesktopCapture(browser, width);
+    console.log('Browser and desktop teleprompter capture, transcript review, portable files, preserved take and Studio handoff passed: '+artifacts);
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

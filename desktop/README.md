@@ -10,12 +10,17 @@ single canonical Lixity analysis engine and UI. The host is unreleased.
   handshake nonce over `stdin`, authenticates the WebView via `HttpOnly` session cookie, and
   exposes a minimal frozen `window.lixityDesktop` bridge:
   - Native OS folder/file dialogs (`pick_project_directory`, `pick_import_file`)
-  - Atomic blob and streaming loopback exports with SHA-256 verification (`save_blob`, `save_export_stream`)
-  - Cross-platform interactive & timed 24 kHz mono PCM microphone capture and level calibration (`cpal` + `hound`)
+  - Native save dialogs and atomic loopback exports for manuscript PDFs, saved
+    dossier PDFs and reading website ZIPs, with SHA-256 receipts
+    (`save_blob`, `save_export_stream`)
+  - 24 kHz mono PCM microphone capture and level calibration with `cpal` and
+    `hound`. The teleprompter and Author's voice share the native recorder.
+    An interactive take is tied to its window and stops after 30 seconds.
   - 7-language native OS menu bar with dynamic Recent Projects submenu (`generated/menu-locales.json`)
   - Direct access to the shared Analysis overview from View, with native page
     zoom and a theme preference that persists across desktop sessions
   - Drag-and-drop project/manuscript opening, single-instance handoff, macOS Dock reopen, window geometry persistence, and dirty-editor/active-audio close guards
+    Native open requests wait for an authenticated workspace to receive them.
   - Explicit opt-in GitHub Releases version check (zero automatic background traffic)
 - **Isolated Python runtime (`scripts/build_runtime_bundle.py`)**: builds a self-contained
   relocatable `python-build-standalone` 3.12 runtime plus Lixity and its core dependencies.

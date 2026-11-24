@@ -112,6 +112,9 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
         title: String(title || "Lixity")
       }});
     }},
+    takeOpenPath: function () {{
+      return invoke("take_open_path");
+    }},
     openExternalUrl: function (url) {{
       return invoke("open_external_url", {{ url: String(url || "") }});
     }},

@@ -89,6 +89,7 @@
   var projectedPoints = [];
   var selectedPoint = points[0];
   var projection = "3d";
+  var plotWidth = 0, plotHeight = 0, plotPixelRatio = 1;
   var palette = null;
   var colorProbe = document.createElement("span");
   colorProbe.hidden = true;
@@ -227,16 +228,19 @@
     maxCoord = Math.max(maxCoord, Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
   }
 
-  function resize() {
-    var dpr = window.devicePixelRatio || 1;
-    var w = canvas.clientWidth || canvas.offsetWidth || (canvas.parentElement ? canvas.parentElement.clientWidth : 800) || 800;
-    var h = canvas.clientHeight || canvas.offsetHeight || 440;
-    if (w < 10) w = 800;
-    if (h < 10) h = 440;
-    if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
+  function syncPlotSize() {
+    var width = canvas.clientWidth, height = canvas.clientHeight, pixelRatio = window.devicePixelRatio || 1;
+    if (width === plotWidth && height === plotHeight && pixelRatio === plotPixelRatio) return;
+    plotWidth = width; plotHeight = height; plotPixelRatio = pixelRatio;
+    clearHover();
+    if (width && height) {
+      var pixelWidth = Math.max(1, Math.floor(width * pixelRatio));
+      var pixelHeight = Math.max(1, Math.floor(height * pixelRatio));
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+      draw();
     }
+    scheduleAnimation();
   }
 
   function project(x, y, z, cx, cy, radius) {
@@ -274,9 +278,16 @@
     };
   }
 
+  function isPlotVisible() {
+    return !document.hidden && plotWidth > 0 && plotHeight > 0 && canvas.getClientRects().length > 0;
+  }
+
   function draw() {
-    resize();
-    var dpr = window.devicePixelRatio || 1;
+    if (isPlotVisible()) drawPlot();
+  }
+
+  function drawPlot() {
+    var dpr = plotPixelRatio;
     var w = canvas.width / dpr;
     var h = canvas.height / dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -729,30 +740,28 @@
 
   function animate() {
     animationFrame = null;
-    if (spin && !document.hidden && canvas.getClientRects().length) {
-      yaw += spinSpeed;
-      draw();
-    }
-    scheduleAnimation();
+    if (!spin || !isPlotVisible()) return;
+    yaw += spinSpeed;
+    drawPlot();
+    animationFrame = requestAnimationFrame(animate);
   }
 
   function scheduleAnimation() {
     if (animationFrame !== null) cancelAnimationFrame(animationFrame);
-    animationFrame = spin && !document.hidden && canvas.getClientRects().length
-      ? requestAnimationFrame(animate) : null;
+    animationFrame = spin && isPlotVisible() ? requestAnimationFrame(animate) : null;
   }
 
-  document.addEventListener("visibilitychange", scheduleAnimation);
+  document.addEventListener("visibilitychange", function() {
+    if (!document.hidden) draw();
+    scheduleAnimation();
+  });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshPalette);
   new MutationObserver(refreshPalette).observe(document.documentElement, {
     attributes:true, attributeFilter:["data-theme", "class", "style"]
   });
-  window.addEventListener("resize", function() {
-    clearHover();
-    draw();
-    scheduleAnimation();
-  });
+  if (typeof ResizeObserver === "function") new ResizeObserver(syncPlotSize).observe(canvas);
+  window.addEventListener("resize", syncPlotSize);
   canvas.setAttribute("data-projection", projection);
   renderSelection();
-  draw();
+  syncPlotSize();
 })();

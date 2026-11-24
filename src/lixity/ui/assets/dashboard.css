@@ -1253,7 +1253,6 @@ selected destinations, display state and explicit primary save actions. */
 .manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):not(#workbench-overview-back):enabled:hover,
 .manuscript-reader-controls .reader-controls > button.ctl:enabled:hover,
 .manuscript-reader-controls .reader-settings > summary:hover { background: var(--surface-hover); border-color: var(--line-strong); color: var(--fg); }
-#workbench-overview-back { margin-inline-start: auto; }
 @media screen and (min-width: 1100px) {
 body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace > .page { max-width: 96rem; }
@@ -1472,7 +1471,7 @@ prose invalidates the whole book during paragraph enhancement on mobile. */
 }
 /* Reading controls are adjacent tools; repeated section spacing should not
 turn the short mobile entry into several screens of application chrome. */
-.manuscript-reading:not(.workbench-overview) #workspace-analysis-body { gap: var(--space-3); }
+.manuscript-reading #workspace-analysis-body { gap: var(--space-3); }
 /* Ordinary counts are available in their views; warnings stay visible at every width. */
 .lixity-workspace .status-strip:not(:has(.warn, .error, .unknown)):not(#dashboard-freshness) { display: none; }
 /* Public demo builders insert reviewed credits at this retained footer hook. */

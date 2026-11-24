@@ -6,8 +6,8 @@ use crate::audio_capture::{
 };
 use crate::dirty_state::DirtyRegistry;
 use crate::downloads::{
-    sanitize_suggested_filename, stream_loopback_export, write_base64_blob, ExportRequestSpec,
-    RevealAllowlist, SaveOutcome,
+    sanitize_suggested_filename, stream_loopback_export, write_base64_blob, ExportError,
+    ExportRequestSpec, RevealAllowlist, SaveOutcome,
 };
 use crate::menu::build_app_menu;
 use crate::preferences::{load_preferences, update_preference, DesktopPreferences, DEFAULT_ZOOM};
@@ -137,7 +137,8 @@ pub async fn save_export_stream(
     state: State<'_, DesktopState>,
     request: ExportRequestSpec,
     filename: String,
-) -> Result<SaveOutcome, String> {
+) -> Result<SaveOutcome, ExportError> {
+    let artifact = request.artifact()?;
     let suggested = sanitize_suggested_filename(&filename);
     let chosen = app.dialog().file().set_file_name(&suggested).blocking_save_file();
     let Some(fp) = chosen else {
@@ -152,7 +153,7 @@ pub async fn save_export_stream(
     let port = state.sidecar.port;
     let secret = state.sidecar.secret().to_string();
     let outcome = tauri::async_runtime::spawn_blocking(move || {
-        stream_loopback_export(port, &secret, &request, &dest)
+        stream_loopback_export(port, &secret, artifact, &request, &dest)
     })
     .await
     .map_err(|e| format!("Export task failed: {e}"))??;
@@ -388,36 +389,60 @@ pub async fn audio_capture_record_take(
 
 #[tauri::command]
 pub async fn audio_capture_start_recording(
+    window: WebviewWindow,
     state: State<'_, DesktopState>,
     device_name: Option<String>,
     filename: String,
 ) -> Result<(), String> {
     let recorder = Arc::clone(&state.recorder);
-    tauri::async_runtime::spawn_blocking(move || recorder.start(device_name, filename))
-        .await
-        .map_err(|e| format!("Failed starting recording task: {e}"))?
+    tauri::async_runtime::spawn_blocking(move || {
+        let open = || {
+            window
+                .app_handle()
+                .get_webview_window(window.label())
+                .is_some()
+        };
+        if !open() {
+            return Err("The recording window has closed".to_string());
+        }
+        recorder.start(window.label().to_string(), device_name, filename)?;
+        if !open() {
+            recorder.cancel(window.label());
+            return Err("The recording window has closed".to_string());
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Failed starting recording task: {e}"))?
 }
 
 #[tauri::command]
-pub fn audio_capture_status(state: State<'_, DesktopState>) -> RecordingLiveStatus {
-    state.recorder.status()
+pub fn audio_capture_status(
+    window: WebviewWindow,
+    state: State<'_, DesktopState>,
+) -> RecordingLiveStatus {
+    state.recorder.status(window.label())
 }
 
 #[tauri::command]
 pub async fn audio_capture_stop_recording(
+    window: WebviewWindow,
     state: State<'_, DesktopState>,
 ) -> Result<RecordedTakeResult, String> {
     let recorder = Arc::clone(&state.recorder);
-    tauri::async_runtime::spawn_blocking(move || recorder.stop())
+    tauri::async_runtime::spawn_blocking(move || recorder.stop(window.label()))
         .await
         .map_err(|e| format!("Failed finishing recording task: {e}"))?
 }
 
 #[tauri::command]
-pub async fn audio_capture_cancel_recording(state: State<'_, DesktopState>) -> Result<(), String> {
+pub async fn audio_capture_cancel_recording(
+    window: WebviewWindow,
+    state: State<'_, DesktopState>,
+) -> Result<(), String> {
     let recorder = Arc::clone(&state.recorder);
     tauri::async_runtime::spawn_blocking(move || {
-        recorder.cancel();
+        recorder.cancel(window.label());
     })
     .await
     .map_err(|e| format!("Failed cancelling recording task: {e}"))

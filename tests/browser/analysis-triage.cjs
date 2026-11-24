@@ -142,6 +142,9 @@ server.serve_forever()
     await page.locator('#triage-next').click();
     await expect(page.locator('#chapters')).toBeVisible();
     await page.locator('#workbench-overview-open').click();
+    await expect(page.locator('#analysis-measurements[open]')).toBeVisible();
+    await openAnalysisSection(page, 'flags');
+    await expect(page.locator('#triage-status-filter')).toHaveValue('unreviewed');
     await page.locator('#triage-status-filter').selectOption('');
     await rows.nth(1).locator('.triage-choice').selectOption('later');
     await rows.nth(1).locator('[data-triage-save]').click();

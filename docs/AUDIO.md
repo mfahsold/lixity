@@ -707,10 +707,12 @@ without synthesizing speech:
    Loading and failed reads are visible; there is no inferred chapter fallback.
 
 5. **Integrated Recording:**
-   Click **Take record** (**Take aufnehmen** in German, `R`) in the prompter header and grant browser microphone access.
-   Pending, recording and failed states are visible beside the control. Hardware mixer
-   calibration does not grant browser permission. Stop to review the PCM WAV take; playback
-   starts only when requested.
+   Click **Take record** (**Take aufnehmen** in German, `R`) in the prompter
+   header and grant microphone access. The Desktop app uses its Rust recorder
+   and stops the take automatically after 30 seconds. The browser uses its
+   microphone capture and the portable WAV size limit. Pending, recording and
+   failed states appear beside the control. Stop to review the PCM WAV take.
+   Playback starts only when requested.
 
 6. **Take export, import and author-reference review:**
    Download the WAV and its matching JSON metadata, or hand the take to **Author's voice** for

@@ -344,14 +344,18 @@
     body.appendChild(sidebar);
     modal.appendChild(body);
     document.body.appendChild(modal);
-    var researchObserver = new MutationObserver(function() {
+    var contextObserver = new MutationObserver(function() {
       if (!modal.hidden && researchView && !researchView.current()) {
         ++dossierSequence; researchView.invalidated = true; researchView.state = "failed";
         passageContexts = null; researchDossiers = null;
         dossierFailure();
       }
+      if (desktopRecording && isRecording && !matchesCaptureContext()) {
+        captureFailed(captureContextError());
+        if (isPlaying) togglePlay();
+      }
     });
-    researchObserver.observe(document.body, {subtree:true, attributes:true,
+    contextObserver.observe(document.body, {subtree:true, attributes:true,
       attributeFilter:["data-project-token", "data-research-token", "data-manuscript-source-sha256"]});
 
     modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -673,16 +677,72 @@
   var pcmSourceNode = null;
   var pcmRecordedChunks = [];
   var pcmTotalSamples = 0;
-  var pcmCaptureSequence = 0;
-  var pcmCaptureContext = null;
+  var captureSequence = 0;
+  var captureContext = null;
+  var desktopRecording = null;
+  var desktopLimitHint = "";
 
-  function recordingState(state, key) {
+  function matchesCaptureContext() {
+    return JSON.stringify(captureContext) === JSON.stringify(selectedContext());
+  }
+
+  function captureContextError() {
+    var error = new Error("Recording context changed");
+    error.name = "ContextChangedError";
+    return error;
+  }
+
+  function desktopRecorder() {
+    var api = window.lixityDesktop && window.lixityDesktop.audioCapture;
+    var bridge = window.LixityDesktopBridge;
+    return api && bridge && typeof bridge.decodeBase64Wav === "function" &&
+      ["startRecording", "stopRecording", "cancelRecording", "recordingStatus"].every(function(method) {
+        return typeof api[method] === "function";
+      }) ? api : null;
+  }
+
+  function finishDesktopRecording(recording, save) {
+    if (!recording.finish) {
+      recording.finish = recording.start.then(function() {
+        return save ? recording.api.stopRecording() : recording.api.cancelRecording();
+      }).finally(function() {
+        if (desktopRecording === recording) desktopRecording = null;
+      });
+    }
+    return recording.finish;
+  }
+
+  function cancelDesktopRecording(recording) {
+    var sequence = takeSequence;
+    recordBtn.disabled = takeImportBtn.disabled = true;
+    finishDesktopRecording(recording, false).catch(function() {
+      // A failed start does not own a native recording to cancel.
+    }).finally(function() {
+      if (sequence === takeSequence) recordBtn.disabled = takeImportBtn.disabled = false;
+    });
+  }
+
+  function recordingState(state, key, hint) {
     recordStatusAnnouncer.dataset.state = state;
-    recordStatusAnnouncer.textContent = label(key);
+    recordStatusAnnouncer.textContent = key ? label(key) + (hint ? " " + hint : "") : hint;
     recordStatusAnnouncer.hidden = false;
   }
+  function showDesktopLimit(status) {
+    var maximum = status && status.max_duration_seconds;
+    if (!Number.isFinite(maximum) || maximum <= 0) return;
+    var seconds = maximum.toLocaleString(document.documentElement.lang || "en");
+    var hint = label("teleprompter_take_native_limit").replace("{seconds}", seconds);
+    if (hint === desktopLimitHint) return;
+    desktopLimitHint = hint;
+    recordBtn.title = label("teleprompter_record_hint") + " (R). " + hint;
+    recordBtn.setAttribute("aria-description", hint);
+    if (recordStatusAnnouncer.hidden) recordingState("idle", null, hint);
+    else if (desktopRecording && desktopRecording.running && isRecording) {
+      recordingState("running", "teleprompter_take_running", hint);
+    }
+  }
   function resetCapture() {
-    ++pcmCaptureSequence; isRecording = false;
+    ++captureSequence; isRecording = false;
     if (recordTimerId) clearInterval(recordTimerId); recordTimerId = null;
     if (pcmProcessorNode) { pcmProcessorNode.close(); pcmProcessorNode = null; }
     if (pcmSourceNode) { pcmSourceNode.disconnect(); pcmSourceNode = null; }
@@ -699,8 +759,13 @@
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint"));
     takeImportBtn.disabled = false;
   }
-  function captureFailed(error) {
+  function discardCapture() {
+    var desktop = desktopRecording;
     resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
+    if (desktop) cancelDesktopRecording(desktop);
+  }
+  function captureFailed(error) {
+    discardCapture();
     if (error && error.name === "ContextChangedError") {
       recordingState("failed", "teleprompter_take_context"); return;
     }
@@ -708,78 +773,126 @@
     recordingState("failed", denied ? "teleprompter_take_denied" : "teleprompter_take_failed");
   }
   async function startAudioCapture() {
-    pcmRecordedChunks = []; pcmTotalSamples = 0; ++takeSequence; pcmCaptureContext = selectedContext();
+    pcmRecordedChunks = []; pcmTotalSamples = 0; ++takeSequence; captureContext = selectedContext();
     if (takeCard) takeCard.querySelectorAll("audio").forEach(function(audio) { audio.pause(); });
     var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    var desktop = desktopRecorder();
     isRecording = true; takeImportBtn.disabled = true;
-    var request = ++pcmCaptureSequence;
-    var captureIdentity = JSON.stringify(pcmCaptureContext);
+    var request = ++captureSequence;
     function sameContext() {
-      if (captureIdentity !== JSON.stringify(selectedContext())) {
-        var error = new Error("Recording context changed"); error.name = "ContextChangedError"; throw error;
-      }
+      if (!matchesCaptureContext()) throw captureContextError();
     }
-    recordingState("pending", "teleprompter_take_pending");
+    recordingState("pending", desktop ? "teleprompter_take_native_pending" : "teleprompter_take_pending",
+      desktop ? desktopLimitHint : "");
     recordBtn.setAttribute("aria-busy", "true");
     try {
+      if (desktop) {
+        var recording = {
+          api: desktop,
+          start: Promise.resolve().then(function() { return desktop.startRecording(null, takeFilename()); }),
+          running: false,
+          checking: false
+        };
+        desktopRecording = recording;
+        await recording.start;
+        if (request !== captureSequence || !isRecording || modal.hidden) return;
+        sameContext();
+        recording.running = true;
+        showActiveCapture(recording);
+        return;
+      }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AudioCtxClass) throw new Error("Microphone unavailable");
       var stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
-      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) { stream.getTracks().forEach(function(track) { track.stop(); }); return; }
+      if (request !== captureSequence || !isRecording || modal.hidden) { stream.getTracks().forEach(function(track) { track.stop(); }); return; }
       pcmMediaStream = stream; sameContext(); var context = new AudioCtxClass({sampleRate:24000}); pcmAudioContext = context;
       await context.resume();
-      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) return;
+      if (request !== captureSequence || !isRecording || modal.hidden) return;
       sameContext();
       if (context.state !== "running") throw new Error("Audio capture is suspended");
       pcmSourceNode = context.createMediaStreamSource(stream);
       var capture = await window.LixityAudioTake.openPcmCapture(context, function(input) {
-        if (request !== pcmCaptureSequence || !isRecording) return;
+        if (request !== captureSequence || !isRecording) return;
         var remaining = Math.floor((window.LixityAudioTake.maximumBytes - 44) / 2) - pcmTotalSamples;
         var chunk = input.subarray(0, remaining);
         if (chunk.length) { pcmRecordedChunks.push(chunk); pcmTotalSamples += chunk.length; }
         if (chunk.length < input.length) {
-          toggleRecording(); recordingState("ready", "teleprompter_take_limit");
+          toggleRecording(true);
         }
       }, function() {
-        if (request === pcmCaptureSequence && isRecording) captureFailed();
+        if (request === captureSequence && isRecording) captureFailed();
       });
-      if (request !== pcmCaptureSequence || !isRecording || modal.hidden) { capture.close(); return; }
+      if (request !== captureSequence || !isRecording || modal.hidden) { capture.close(); return; }
       pcmProcessorNode = capture; sameContext();
       pcmProcessorNode.connect(pcmSourceNode);
-      recordBtn.removeAttribute("aria-busy"); recordBtn.classList.add("is-active");
-      recordBtn.setAttribute("aria-label", label("teleprompter_recording"));
-      recordingState("running", "teleprompter_take_running");
-      recordStartTime = Date.now();
-      function tick() { var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-        recordBtn.textContent = "⏹ " + String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0"); }
-      tick(); recordTimerId = setInterval(tick, 1000);
-      if (!isPlaying) togglePlay();
-    } catch (error) { if (request === pcmCaptureSequence) captureFailed(error); }
+      showActiveCapture();
+    } catch (error) { if (request === captureSequence) captureFailed(error); }
   }
-  function stopAudioCapture() {
+  function showActiveCapture(desktop) {
+    recordBtn.removeAttribute("aria-busy"); recordBtn.classList.add("is-active");
+    recordBtn.setAttribute("aria-label", label("teleprompter_recording"));
+    recordingState("running", "teleprompter_take_running", desktop && desktopLimitHint);
+    recordStartTime = Date.now();
+    function tick() {
+      var elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+      recordBtn.textContent = "⏹ " + String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0");
+      if (!desktop || desktop.checking) return;
+      desktop.checking = true;
+      desktop.api.recordingStatus().then(function(status) {
+        if (desktopRecording === desktop && isRecording) {
+          showDesktopLimit(status);
+          if (status && (status.auto_stopped || status.recording === false)) toggleRecording();
+        }
+      }).catch(function() { /* Live status is advisory. The user can still stop. */ })
+        .finally(function() { desktop.checking = false; });
+    }
+    tick(); recordTimerId = setInterval(tick, 1000);
+    if (!isPlaying) togglePlay();
+  }
+  function takeFilename() {
+    return "teleprompter-take-" + new Date().toISOString().replace(/[:.]/g, "-") + ".wav";
+  }
+  async function desktopTake(raw) {
+    var blob = window.LixityDesktopBridge.decodeBase64Wav(raw);
+    var take = await window.LixityAudioTake.create(blob, {filename:raw.filename});
+    if (raw.schema_version !== take.metadata.schema_version || raw.sha256 !== take.metadata.audio.sha256) {
+      throw new Error("Native audio take metadata does not match the recording");
+    }
+    return take;
+  }
+  function stopAudioCapture(limit) {
     var sampleRate = pcmAudioContext && pcmAudioContext.sampleRate, chunks = pcmRecordedChunks, count = pcmTotalSamples;
+    var desktop = desktopRecording;
     resetCapture(); pcmRecordedChunks = []; pcmTotalSamples = 0;
     recordingState("idle", "teleprompter_take_stopped");
+    if (desktop) {
+      if (desktop.running) {
+        acceptTake(finishDesktopRecording(desktop, true).then(desktopTake), captureContext, true);
+      } else {
+        cancelDesktopRecording(desktop);
+      }
+      return;
+    }
     if (count) {
       try {
         var blob = new Blob([window.LixityAudioTake.encodeWav(chunks, count, sampleRate)], {type:"audio/wav"});
-        var stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        acceptTake(window.LixityAudioTake.create(blob, {filename:"teleprompter-take-" + stamp + ".wav"}), pcmCaptureContext, true);
+        acceptTake(window.LixityAudioTake.create(blob, {filename:takeFilename()}), captureContext, true, limit);
       } catch (error) { captureFailed(error); }
     }
   }
-  async function acceptTake(pending, context, captured) {
+  async function acceptTake(pending, context, captured, limit) {
     var sequence = ++takeSequence, view = contextSequence; recordBtn.disabled = true; takeImportBtn.disabled = true;
     try {
       var value = await pending;
       if (sequence !== takeSequence) return;
-      if (!captured && (modal.hidden || view !== contextSequence || JSON.stringify(context) !== JSON.stringify(selectedContext()))) {
+      if (JSON.stringify(context) !== JSON.stringify(selectedContext()) ||
+          (!captured && (modal.hidden || view !== contextSequence))) {
         if (!modal.hidden) recordingState("failed", "teleprompter_take_context");
         return;
       }
       renderTake(value, context);
-      recordingState("ready", "teleprompter_take_ready");
+      recordingState("ready", limit ? "teleprompter_take_limit" : "teleprompter_take_ready");
     } catch (_) {
-      if (sequence === takeSequence) recordingState("failed", "teleprompter_take_import_failed");
+      if (sequence === takeSequence) recordingState("failed", captured ? "teleprompter_take_failed" : "teleprompter_take_import_failed");
     } finally { if (sequence === takeSequence) { recordBtn.disabled = false; takeImportBtn.disabled = false; } }
   }
   function importTakeFiles() {
@@ -848,9 +961,9 @@
     if (document.body.dataset.speechCapable === "true") takeCard.appendChild(studio);
     sidebarScroll.prepend(takeCard); sidebar.classList.add("is-open"); sidebarToggleBtn.classList.add("is-active"); sidebarToggleBtn.setAttribute("aria-pressed", "true");
   }
-  function toggleRecording() {
+  function toggleRecording(limit) {
     if (recordBtn.disabled) return;
-    if (isRecording) { stopAudioCapture(); if (isPlaying) togglePlay(); }
+    if (isRecording) { stopAudioCapture(limit === true); if (isPlaying) togglePlay(); }
     else startAudioCapture();
   }
 
@@ -870,6 +983,10 @@
     modal.hidden = false;
     loadContextData();
     document.body.classList.add("teleprompter-open");
+    var desktop = desktopRecorder();
+    if (desktop && !desktopLimitHint) desktop.recordingStatus().then(showDesktopLimit).catch(function() {
+      // A failed advisory read must not prevent recording.
+    });
 
     // Scroll to initial paragraph or synchronize top paragraph
     if (startParagraphSha) {
@@ -910,6 +1027,9 @@
   }
 
   function init() {
+    window.addEventListener("pagehide", function() {
+      if (desktopRecording && isRecording) discardCapture();
+    });
 
     document.addEventListener("click", function(e) {
       var target = e.target.closest("#reader-teleprompter");

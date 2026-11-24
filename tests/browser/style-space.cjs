@@ -6,8 +6,11 @@ const path = require('node:path');
 const os = require('node:os');
 const {pythonFixture} = require('./support/python-fixture.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
-const {locales, pairs} = pythonFixture(`
+const {locales, pairs, workspace} = pythonFixture(`
 from lixity.api import dashboard
+from lixity.server.views import build_server_dashboard
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from tests.locales import LOCALES
 import json
 # Three varying chapters above the diversity floor expose optional style axes.
@@ -24,10 +27,14 @@ text += "\\n\\n## Third chapter\\n\\n" + (
 text += "\\n\\nI walk home." * 100
 text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
 pair_text = text.split("## Third chapter")[0]
+with TemporaryDirectory(prefix="lixity-style-workspace-") as directory:
+    manuscript = Path(directory) / "manuscript.md"
+    manuscript.write_text(text, encoding="utf-8")
+    workspace = build_server_dashboard(str(manuscript))[0]
 print(json.dumps({"locales": {language: dashboard(text, language=language, title="Browser regression")
                               for language in LOCALES},
                   "pairs": {language: dashboard(pair_text, language=language, title="Two chapters")
-                            for language in LOCALES}}))
+                            for language in LOCALES}, "workspace": workspace}))
 `);
 
 (async () => {
@@ -383,6 +390,61 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     await page.waitForTimeout(100);
     assert.ok(await page.evaluate(() => window.frameCount) - before > 1, 'The visible canvas resumes');
     await page.locator('#dim-ctl-reset').click();
+  });
+  await check('the workspace fits and resumes the plot after hiding it through a workflow', async () => {
+    const live = await browser.newPage({viewport:{width:1440, height:900}, deviceScaleFactor:2, reducedMotion:'reduce'});
+    const nextPaint = () => live.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const drawCount = () => live.evaluate(() => window.styleSpaceDrawCount);
+    const plotFits = (canvas) => canvas.clientWidth > 0 && canvas.clientHeight > 0 &&
+      canvas.width === Math.floor(canvas.clientWidth * devicePixelRatio) &&
+      canvas.height === Math.floor(canvas.clientHeight * devicePixelRatio);
+    try {
+      await live.addInitScript(() => {
+        window.styleSpaceDrawCount = 0;
+        const clear = CanvasRenderingContext2D.prototype.clearRect;
+        CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+          if (this.canvas.id === 'dim-3d-canvas') window.styleSpaceDrawCount++;
+          return clear.apply(this, args);
+        };
+      });
+      await live.route('http://lixity.test/**', route => route.request().url() === 'http://lixity.test/'
+        ? route.fulfill({contentType:'text/html', body:workspace}) : route.fulfill({json:{ok:false}}));
+      await live.goto('http://lixity.test/');
+      const canvas = live.locator('#dim-3d-canvas');
+      const compare = live.locator('[data-analysis-workflow="compare"]');
+      await nextPaint();
+      assert.equal(await drawCount(), 0, 'The initial reader does not paint a concealed plot');
+      await live.locator('#workbench-overview-open').click();
+      await compare.click();
+      await live.locator('[data-analysis-section-target="style"]').click();
+      await live.locator('#style-tab-dimensions').click();
+      await nextPaint();
+      assert.equal(await canvas.evaluate(plotFits), true);
+      const backingSize = await canvas.evaluate(node => [node.width, node.height]);
+      const idle = await drawCount();
+      await live.evaluate(() => {
+        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event('resize'));
+      });
+      await nextPaint();
+      assert.equal(await drawCount(), idle, 'Repeated size notifications without a size change do not paint');
+      const spinControl = live.locator('#dim-ctl-spin');
+      await spinControl.click();
+      await live.waitForFunction(count => window.styleSpaceDrawCount > count + 1, idle);
+      await live.locator('[data-analysis-workflow="review"]').click();
+      assert.equal(await canvas.isVisible(), false);
+      await nextPaint();
+      const paused = await drawCount();
+      await live.setViewportSize({width:390, height:850});
+      await nextPaint();
+      assert.equal(await drawCount(), paused, 'A hidden plot does not draw even when the window resizes');
+      assert.deepEqual(await canvas.evaluate(node => [node.width, node.height]), backingSize,
+        'The hidden canvas retains its bitmap size until the plot is visible again');
+      await compare.click();
+      await live.waitForFunction(count => window.styleSpaceDrawCount > count + 1, paused);
+      assert.equal(await canvas.evaluate(plotFits), true, 'The canvas uses the new mobile dimensions when revealed');
+      assert.equal(await spinControl.getAttribute('aria-pressed'), 'true', 'The spinning state is preserved and running');
+    } finally { await live.close(); }
   });
   await check('chapter scores provide semantic text and safe chapter links', async () => {
     assert.equal(await page.locator('#dim-scores tbody tr').count(), 3);

@@ -30,6 +30,11 @@
   var _cachedLabelsRaw = null;
   var _cachedLabelsMap = {};
   var jumpBarParts = new WeakMap();
+  function notifySavedExport(outcome) {
+    if (outcome?.saved && outcome.path) {
+      window.LixityDesktopBridge?.notifySavedExport?.(outcome);
+    }
+  }
   function readUiLabels() {
     var raw = (typeof document !== "undefined" && document.body && document.body.dataset)
       ? (document.body.dataset.uiLabels || "")
@@ -141,14 +146,17 @@
     isDesktop: function () {
       return Boolean(window.lixityDesktop && window.lixityDesktop.version >= 1);
     },
+    saveExport: function (request, filename, isCurrent) {
+      var desktop = window.lixityDesktop;
+      if (typeof desktop?.saveExport !== "function") return null;
+      return desktop.saveExport(request, filename).then(function (outcome) {
+        if (!isCurrent || isCurrent()) notifySavedExport(outcome);
+        return outcome;
+      });
+    },
     downloadBlob: function (blob, filename, revokeMs) {
       if (window.lixityDesktop && typeof window.lixityDesktop.saveBlob === "function") {
-        window.lixityDesktop.saveBlob(blob, filename || "download").then(function (outcome) {
-          if (outcome && outcome.saved && outcome.path && window.LixityDesktopBridge &&
-              typeof window.LixityDesktopBridge.notifySavedExport === "function") {
-            window.LixityDesktopBridge.notifySavedExport(outcome);
-          }
-        }).catch(function () {});
+        window.lixityDesktop.saveBlob(blob, filename || "download").then(notifySavedExport).catch(function () {});
         return "";
       }
       var url = URL.createObjectURL(blob);
@@ -158,6 +166,15 @@
       link.click();
       setTimeout(function () { URL.revokeObjectURL(url); }, typeof revokeMs === "number" ? revokeMs : 1500);
       return url;
+    },
+    openManuscriptPdf: function () {
+      var disclosure = document.getElementById("manuscript-pdf");
+      if (!disclosure) return;
+      var projectActions = disclosure.closest("#project-actions");
+      if (projectActions) projectActions.open = true;
+      disclosure.open = true;
+      var layout = document.getElementById("manuscript-pdf-layout");
+      (layout && !layout.disabled ? layout : disclosure.querySelector("summary"))?.focus();
     },
     readPdfBlob: async function (response) {
       if (!response.ok) {

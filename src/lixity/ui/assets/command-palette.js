@@ -365,19 +365,7 @@
         subtitle: cmdText("cmd_export_pdf_sub", "Print-ready typeset or editorial report"),
         icon: "download",
         action: function () {
-          var pdfBtn = document.querySelector("#export-pdf-trigger, button[data-export='pdf'], [data-action='export-pdf']");
-          if (pdfBtn) {
-            pdfBtn.click();
-            return;
-          }
-          var projectActions = document.getElementById("project-actions");
-          if (projectActions) projectActions.open = true;
-          var manuscriptPdf = document.getElementById("manuscript-pdf");
-          if (manuscriptPdf) {
-            manuscriptPdf.open = true;
-            var layoutSelect = document.getElementById("manuscript-pdf-layout");
-            if (layoutSelect) layoutSelect.focus();
-          }
+          window.LixityComponents.openManuscriptPdf();
         }
       },
       {

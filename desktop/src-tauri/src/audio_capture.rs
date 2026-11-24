@@ -69,18 +69,33 @@ pub struct RecordingLiveStatus {
     pub peak_dbfs: f64,
     pub rms_dbfs: f64,
     pub auto_stopped: bool,
+    pub max_duration_seconds: f32,
+}
+
+impl Default for RecordingLiveStatus {
+    fn default() -> Self {
+        Self {
+            recording: false,
+            elapsed_seconds: 0.0,
+            peak_dbfs: -120.0,
+            rms_dbfs: -120.0,
+            auto_stopped: false,
+            max_duration_seconds: MAX_DURATION_SEC,
+        }
+    }
 }
 
 type CaptureResult = Result<(Vec<f32>, u32), String>;
 
 struct ActiveCapture {
+    window: String,
     stop_flag: Arc<AtomicBool>,
     auto_stopped: Arc<AtomicBool>,
     live_peak_bits: Arc<AtomicU32>,
     live_rms_bits: Arc<AtomicU32>,
-    started_at: Instant,
+    started_at: Option<Instant>,
     filename: String,
-    join_handle: Option<JoinHandle<CaptureResult>>,
+    join_handle: JoinHandle<CaptureResult>,
 }
 
 /// Thread-safe handle for interactive Start / Stop voice recording across OSes.
@@ -93,7 +108,12 @@ pub struct InteractiveRecorder {
 }
 
 impl InteractiveRecorder {
-    pub fn start(&self, device_name: Option<String>, filename: String) -> Result<(), String> {
+    pub fn start(
+        &self,
+        window: String,
+        device_name: Option<String>,
+        filename: String,
+    ) -> Result<(), String> {
         let mut guard = self
             .active
             .lock()
@@ -124,90 +144,111 @@ impl InteractiveRecorder {
             )
         });
 
-        match ready_rx.recv_timeout(Duration::from_secs(5)) {
-            Ok(Ok(())) => {
-                *guard = Some(ActiveCapture {
-                    stop_flag,
-                    auto_stopped,
-                    live_peak_bits,
-                    live_rms_bits,
-                    started_at: Instant::now(),
-                    filename,
-                    join_handle: Some(join_handle),
-                });
-                Ok(())
-            }
-            Ok(Err(err)) => {
-                let _ = join_handle.join();
-                Err(err)
-            }
-            Err(_) => {
-                stop_flag.store(true, Ordering::SeqCst);
-                let _ = join_handle.join();
-                Err("Timed out initializing microphone stream".to_string())
-            }
+        *guard = Some(ActiveCapture {
+            window,
+            stop_flag: Arc::clone(&stop_flag),
+            auto_stopped,
+            live_peak_bits,
+            live_rms_bits,
+            started_at: None,
+            filename,
+            join_handle,
+        });
+        // The window can close while a microphone driver is still starting.
+        drop(guard);
+        let result = ready_rx
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap_or_else(|_| Err("Timed out initializing microphone stream".to_string()));
+        let same_session = |active: &ActiveCapture| Arc::ptr_eq(&active.stop_flag, &stop_flag);
+        if let Err(err) = result {
+            self.cancel_matching(same_session);
+            return Err(err);
+        }
+        let mut guard = self
+            .active
+            .lock()
+            .map_err(|_| "Recorder state lock poisoned".to_string())?;
+        if let Some(active) = guard.as_mut().filter(|active| same_session(active)) {
+            active.started_at = Some(Instant::now());
+            Ok(())
+        } else {
+            Err("Recording was cancelled before the microphone was ready".to_string())
         }
     }
 
-    pub fn status(&self) -> RecordingLiveStatus {
+    pub fn owns_capture(&self, window: &str) -> bool {
+        self.active
+            .lock()
+            .is_ok_and(|guard| guard.as_ref().is_some_and(|active| active.window == window))
+    }
+
+    pub fn status(&self, window: &str) -> RecordingLiveStatus {
         let Ok(guard) = self.active.lock() else {
-            return RecordingLiveStatus {
-                recording: false,
-                elapsed_seconds: 0.0,
-                peak_dbfs: -120.0,
-                rms_dbfs: -120.0,
-                auto_stopped: false,
-            };
+            return RecordingLiveStatus::default();
         };
-        let Some(active) = guard.as_ref() else {
-            return RecordingLiveStatus {
-                recording: false,
-                elapsed_seconds: 0.0,
-                peak_dbfs: -120.0,
-                rms_dbfs: -120.0,
-                auto_stopped: false,
-            };
+        let Some(active) = guard.as_ref().filter(|active| active.window == window) else {
+            return RecordingLiveStatus::default();
+        };
+        let Some(started_at) = active.started_at else {
+            return RecordingLiveStatus::default();
         };
         let auto = active.auto_stopped.load(Ordering::Relaxed);
         let peak_amp = f32::from_bits(active.live_peak_bits.load(Ordering::Relaxed)) as f64;
         let rms_amp = f32::from_bits(active.live_rms_bits.load(Ordering::Relaxed)) as f64;
         RecordingLiveStatus {
-            recording: !auto && !active.stop_flag.load(Ordering::Relaxed),
-            elapsed_seconds: round2(active.started_at.elapsed().as_secs_f64()),
+            recording: !auto && !active.join_handle.is_finished(),
+            elapsed_seconds: round2(started_at.elapsed().as_secs_f64()),
             peak_dbfs: round1(dbfs(peak_amp * 32_768.0)),
             rms_dbfs: round1(dbfs(rms_amp * 32_768.0)),
             auto_stopped: auto,
+            max_duration_seconds: MAX_DURATION_SEC,
         }
     }
 
-    pub fn stop(&self) -> Result<RecordedTakeResult, String> {
-        let mut session = {
-            let mut guard = self
-                .active
-                .lock()
-                .map_err(|_| "Recorder state lock poisoned".to_string())?;
-            guard
-                .take()
-                .ok_or_else(|| "No active recording session".to_string())?
+    fn take_matching(
+        &self,
+        matches: impl FnOnce(&ActiveCapture) -> bool,
+    ) -> Result<Option<ActiveCapture>, String> {
+        let mut guard = self
+            .active
+            .lock()
+            .map_err(|_| "Recorder state lock poisoned".to_string())?;
+        let Some(active) = guard.as_ref().filter(|active| matches(active)) else {
+            return Ok(None);
         };
-        session.stop_flag.store(true, Ordering::SeqCst);
+        active.stop_flag.store(true, Ordering::SeqCst);
+        Ok(guard.take())
+    }
+
+    pub fn stop(&self, window: &str) -> Result<RecordedTakeResult, String> {
+        let session = self
+            .take_matching(|active| active.window == window && active.started_at.is_some())?
+            .ok_or_else(|| "No active recording session for this window".to_string())?;
         let (raw, rate) = session
             .join_handle
-            .take()
-            .ok_or_else(|| "Capture thread handle missing".to_string())?
             .join()
             .map_err(|_| "Audio capture thread panicked".to_string())??;
         finalize_wav_take(&raw, rate, &session.filename)
     }
 
-    pub fn cancel(&self) {
-        let session = self.active.lock().ok().and_then(|mut g| g.take());
-        if let Some(mut active) = session {
-            active.stop_flag.store(true, Ordering::SeqCst);
-            if let Some(handle) = active.join_handle.take() {
-                let _ = handle.join();
-            }
+    fn cancel_matching(&self, matches: impl FnOnce(&ActiveCapture) -> bool) {
+        if let Ok(Some(active)) = self.take_matching(matches) {
+            let _ = active.join_handle.join();
         }
+    }
+
+    pub fn cancel(&self, window: &str) {
+        self.cancel_matching(|active| active.window == window);
+    }
+
+    pub fn discard_window(&self, window: &str) {
+        // Window events run on the GUI thread. Signal shutdown now and let
+        // the capture thread finish without blocking its former window.
+        let _ = self.take_matching(|active| active.window == window);
+    }
+
+    pub fn cancel_all(&self) {
+        self.cancel_matching(|_| true);
     }
 }
 
@@ -568,6 +609,11 @@ fn run_capture_loop(
         }
     };
 
+    if stop_flag.load(Ordering::SeqCst) {
+        let error = "Recording was cancelled".to_string();
+        let _ = ready_tx.send(Err(error.clone()));
+        return Err(error);
+    }
     if let Err(e) = stream.play() {
         let msg = format!("Failed starting microphone stream: {e}");
         let _ = ready_tx.send(Err(msg.clone()));
@@ -577,7 +623,10 @@ fn run_capture_loop(
 
     let started = Instant::now();
     let max_dur = Duration::from_secs_f32(MAX_DURATION_SEC);
-    while !stop_flag.load(Ordering::Relaxed) && !auto_stopped.load(Ordering::Relaxed) {
+    while !stop_flag.load(Ordering::Relaxed)
+        && !auto_stopped.load(Ordering::Relaxed)
+        && stream_err.lock().is_ok_and(|error| error.is_none())
+    {
         if started.elapsed() >= max_dur {
             auto_stopped.store(true, Ordering::Relaxed);
             break;
@@ -586,7 +635,11 @@ fn run_capture_loop(
     }
     drop(stream);
 
-    if let Some(err) = stream_err.lock().ok().and_then(|g| g.clone()) {
+    let failure = stream_err
+        .lock()
+        .map_err(|_| "Audio capture error state poisoned".to_string())?
+        .take();
+    if let Some(err) = failure {
         return Err(format!("Microphone capture error: {err}"));
     }
     let samples = captured
@@ -741,9 +794,64 @@ mod tests {
     #[test]
     fn interactive_recorder_idle_status_and_stop_guard() {
         let recorder = InteractiveRecorder::default();
-        let st = recorder.status();
+        let st = recorder.status("main");
         assert!(!st.recording);
         assert!(!st.auto_stopped);
-        assert!(recorder.stop().is_err());
+        assert!(recorder.stop("main").is_err());
+    }
+
+    fn test_capture(started_at: Option<Instant>) -> ActiveCapture {
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let capture_stop = Arc::clone(&stop_flag);
+        ActiveCapture {
+            window: "recording-window".to_string(),
+            stop_flag,
+            auto_stopped: Arc::new(AtomicBool::new(false)),
+            live_peak_bits: Arc::new(AtomicU32::new(0)),
+            live_rms_bits: Arc::new(AtomicU32::new(0)),
+            started_at,
+            filename: "synthetic.wav".to_string(),
+            join_handle: thread::spawn(move || {
+                while !capture_stop.load(Ordering::Relaxed) {
+                    thread::park_timeout(Duration::from_millis(1));
+                }
+                Ok((vec![0.25; 240], TARGET_SAMPLE_RATE))
+            }),
+        }
+    }
+
+    #[test]
+    fn another_window_cannot_inspect_stop_or_cancel_a_take() {
+        let capture = test_capture(Some(Instant::now()));
+        let stopped = Arc::clone(&capture.stop_flag);
+        let recorder = InteractiveRecorder {
+            active: Mutex::new(Some(capture)),
+        };
+        assert_eq!(recorder.status("other"), RecordingLiveStatus::default());
+        assert!(recorder.stop("other").is_err());
+        recorder.cancel("other");
+        assert!(recorder.status("recording-window").recording);
+        assert!(!stopped.load(Ordering::SeqCst));
+
+        let take = recorder.stop("recording-window").unwrap();
+        assert_eq!(take.frames, 240);
+        assert!(stopped.load(Ordering::SeqCst));
+        assert!(!recorder.owns_capture("recording-window"));
+    }
+
+    #[test]
+    fn closing_the_recording_window_signals_even_a_pending_take() {
+        let capture = test_capture(None);
+        let stopped = Arc::clone(&capture.stop_flag);
+        let recorder = InteractiveRecorder {
+            active: Mutex::new(Some(capture)),
+        };
+        assert!(recorder.owns_capture("recording-window"));
+        assert!(!recorder.status("recording-window").recording);
+        recorder.discard_window("other");
+        assert!(!stopped.load(Ordering::SeqCst));
+        recorder.discard_window("recording-window");
+        assert!(stopped.load(Ordering::SeqCst));
+        assert!(!recorder.owns_capture("recording-window"));
     }
 }

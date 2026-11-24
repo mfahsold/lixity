@@ -90,10 +90,22 @@ Prefer, in this order, before any language change:
   Outcome for this kernel: stay on Python. The analyzer memoization
   (pure Python, byte-identical, ~42 % on `analyze`) remains the
   recommended shape of optimization here.
+- 2026-11-24, quotation membership (`quotation._memberships`). On Apple
+  Silicon with Python 3.12.16, profiling attributed about 8–10% of runtime
+  to the generator, including Python regex iteration and match extraction.
+  A dependency-free Rust spike classified the same pre-extracted code-point
+  spans. Output was byte-identical for 22 fixture spans and 2,353,850 word
+  matches across *Pride and Prejudice*, *Effi Briest* and the 120-chapter
+  synthetic benchmark. Three runs per corpus gave 3.75–4.51 ms for the Rust
+  kernel. Extracting and packing inputs in Python and calling Rust once per
+  book took 312–373 ms altogether, compared with 268–316 ms for the Python
+  replay. That projects to 1.82–1.96% slower full pipeline runs. The packed
+  process boundary misses the 5% minimum gain and the production operation
+  stays in Python.
 
 ## Open questions (assumptions flagged)
 
 - The interpretation of "maschinennah" above is the author's proposal;
   confirm or correct it before spending evaluation effort.
-- Which pipeline stage, if any, is actually too slow today — no accepted
-  measurement exists yet, so gate 1 is currently unmet by definition.
+- Which measured stage can benefit from a native boundary that preserves
+  exact results and improves the end-to-end pipeline?

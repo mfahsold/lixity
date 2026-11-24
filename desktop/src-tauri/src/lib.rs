@@ -20,11 +20,12 @@ use menu::{build_app_menu, labels_for_locale};
 use preferences::{load_preferences, step_zoom, DEFAULT_ZOOM, ZOOM_STEP};
 use recent::list_recent;
 use sidecar::{log_desktop_event, PythonSidecar};
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tauri::{
-    AppHandle, DragDropEvent, Manager, RunEvent, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
-    WindowEvent,
+    AppHandle, DragDropEvent, Manager, RunEvent, State, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_opener::OpenerExt;
@@ -86,6 +87,61 @@ fn find_target_workspace_window(
         .cloned()
 }
 
+#[derive(Default)]
+struct OpenPathRequests(Mutex<VecDeque<(Option<String>, PathBuf)>>);
+
+impl OpenPathRequests {
+    fn enqueue(&self, label: Option<&str>, path: PathBuf) {
+        self.0
+            .lock()
+            .unwrap()
+            .push_back((label.map(str::to_owned), path));
+    }
+
+    fn take(&self, label: &str) -> Option<PathBuf> {
+        let mut requests = self.0.lock().unwrap();
+        let index = requests
+            .iter()
+            .position(|(target, _)| target.as_deref().is_none_or(|target| target == label))?;
+        requests.remove(index).map(|(_, path)| path)
+    }
+
+    fn release_window(&self, label: &str) -> bool {
+        let mut released = false;
+        for (target, _) in self.0.lock().unwrap().iter_mut() {
+            if target.as_deref() == Some(label) {
+                *target = None;
+                released = true;
+            }
+        }
+        released
+    }
+}
+
+fn notify_open_paths(window: &WebviewWindow) {
+    let _ = window.eval("window.dispatchEvent(new Event('lixity:desktop-open-path'));");
+}
+
+fn queue_open_path(app: &AppHandle, preferred_label: Option<&str>, path: PathBuf) {
+    let target = find_target_workspace_window(app, preferred_label);
+    app.state::<OpenPathRequests>()
+        .enqueue(target.as_ref().map(WebviewWindow::label), path);
+    if let Some(window) = target {
+        notify_open_paths(&window);
+    }
+}
+
+#[tauri::command]
+fn take_open_path(
+    window: WebviewWindow,
+    requests: State<'_, OpenPathRequests>,
+    state: State<'_, DesktopState>,
+) -> Option<String> {
+    let path = requests.take(window.label())?;
+    state.reveal.allow(&path);
+    Some(path.to_string_lossy().into_owned())
+}
+
 fn dispatch_dom_event_to_window(
     app: &AppHandle,
     preferred_label: Option<&str>,
@@ -130,15 +186,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
             if let Some(entry) = list_recent().get(idx) {
                 let path = PathBuf::from(&entry.path);
                 if path.exists() {
-                    if let Some(state) = app.try_state::<DesktopState>() {
-                        state.reveal.allow(&path);
-                    }
-                    dispatch_dom_event_to_window(
-                        app,
-                        None,
-                        "lixity:desktop-open-path",
-                        &entry.path,
-                    );
+                    queue_open_path(app, None, path);
                 }
             }
         }
@@ -180,15 +228,7 @@ fn handle_window_event(window: &tauri::Window, event: &WindowEvent) {
     match event {
         WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) => {
             if let Some(target) = paths.iter().find(|p| is_openable_project_path(p)) {
-                if let Some(state) = window.try_state::<DesktopState>() {
-                    state.reveal.allow(target);
-                }
-                dispatch_dom_event_to_window(
-                    window.app_handle(),
-                    Some(window.label()),
-                    "lixity:desktop-open-path",
-                    &target.display().to_string(),
-                );
+                queue_open_path(window.app_handle(), Some(window.label()), target.clone());
             }
         }
         WindowEvent::CloseRequested { api, .. } => {
@@ -217,7 +257,7 @@ fn handle_window_event(window: &tauri::Window, event: &WindowEvent) {
             } else {
                 0
             };
-            if is_dirty || active_jobs > 0 {
+            if is_dirty || active_jobs > 0 || state.recorder.owns_capture(&label) {
                 api.prevent_close();
                 if !state.dirty.begin_close_confirmation(&label) {
                     return;
@@ -240,6 +280,12 @@ fn handle_window_event(window: &tauri::Window, event: &WindowEvent) {
                     });
             } else {
                 state.dirty.remove_window(&label);
+            }
+        }
+        WindowEvent::Destroyed => {
+            if let Some(state) = window.try_state::<DesktopState>() {
+                state.recorder.discard_window(window.label());
+                state.dirty.remove_window(window.label());
             }
         }
         _ => {}
@@ -304,9 +350,10 @@ pub fn run() {
     let app_version = env!("CARGO_PKG_VERSION").to_string();
 
     let app = tauri::Builder::default()
+        .manage(OpenPathRequests::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.set_focus();
@@ -314,21 +361,14 @@ pub fn run() {
             if let Some(path) = argv
                 .iter()
                 .skip(1)
-                .map(PathBuf::from)
+                .map(|argument| Path::new(&cwd).join(argument))
                 .find(|p| is_openable_project_path(p))
             {
-                if let Some(state) = app.try_state::<DesktopState>() {
-                    state.reveal.allow(&path);
-                }
-                dispatch_dom_event_to_window(
-                    app,
-                    None,
-                    "lixity:desktop-open-path",
-                    &path.display().to_string(),
-                );
+                queue_open_path(app, None, path);
             }
         }))
         .invoke_handler(tauri::generate_handler![
+            take_open_path,
             commands::pick_project_directory,
             commands::pick_import_file,
             commands::save_blob,
@@ -450,20 +490,17 @@ pub fn run() {
     app.run(|app_handle, event| match event {
         #[cfg(target_os = "macos")]
         RunEvent::Opened { urls } => {
+            let mut queued = false;
             for url in urls {
                 if let Ok(path) = url.to_file_path() {
                     if is_openable_project_path(&path) {
-                        if let Some(state) = app_handle.try_state::<DesktopState>() {
-                            state.reveal.allow(&path);
-                        }
-                        dispatch_dom_event_to_window(
-                            app_handle,
-                            None,
-                            "lixity:desktop-open-path",
-                            &path.display().to_string(),
-                        );
+                        queue_open_path(app_handle, None, path);
+                        queued = true;
                     }
                 }
+            }
+            if queued && app_handle.webview_windows().is_empty() {
+                open_fresh_window_async(app_handle.clone(), Some("main"));
             }
         }
         #[cfg(target_os = "macos")]
@@ -475,12 +512,59 @@ pub fn run() {
                 open_fresh_window_async(app_handle.clone(), Some("main"));
             }
         }
+        RunEvent::WindowEvent {
+            label,
+            event: WindowEvent::Destroyed,
+            ..
+        } => {
+            if app_handle
+                .state::<OpenPathRequests>()
+                .release_window(&label)
+            {
+                if let Some(window) = find_target_workspace_window(app_handle, None) {
+                    notify_open_paths(&window);
+                }
+            }
+        }
         RunEvent::Exit => {
             if let Some(state) = app_handle.try_state::<DesktopState>() {
-                state.recorder.cancel();
+                state.recorder.cancel_all();
                 state.sidecar.shutdown();
             }
         }
         _ => {}
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cold_open_paths_wait_for_the_workspace_and_survive_its_redirect() {
+        let requests = OpenPathRequests::default();
+        requests.enqueue(None, PathBuf::from("Cold launch/lixity.toml"));
+        requests.enqueue(None, PathBuf::from("Second manuscript.md"));
+
+        assert_eq!(
+            requests.take("main"),
+            Some(PathBuf::from("Cold launch/lixity.toml"))
+        );
+        assert_eq!(
+            requests.take("main"),
+            Some(PathBuf::from("Second manuscript.md"))
+        );
+        assert_eq!(requests.take("main"), None);
+    }
+
+    #[test]
+    fn open_request_uses_the_target_workspace_or_moves_when_it_closes() {
+        let requests = OpenPathRequests::default();
+        requests.enqueue(Some("project-1"), PathBuf::from("Pending.md"));
+
+        assert_eq!(requests.take("main"), None);
+        assert!(requests.release_window("project-1"));
+        assert_eq!(requests.take("main"), Some(PathBuf::from("Pending.md")));
+        assert!(!requests.release_window("project-1"));
+    }
 }

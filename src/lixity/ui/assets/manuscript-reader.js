@@ -589,6 +589,7 @@
   function showOverview() {
     if (document.body.classList.contains("manuscript-writing")) return;
     if (workbench.state().view !== "analysis") switchActiveView("analysis", true);
+    if (workbench.state().surface !== "overview") window.LixityAnalysisNavigation?.showMeasurements();
     openOverview();
     (document.getElementById("workspace-reader") || controls).scrollIntoView({block: "start", behavior: "instant"});
     document.getElementById("workbench-overview-back").focus({preventScroll: true});
@@ -871,8 +872,7 @@
     var guideToggle = document.getElementById("reader-analysis-guide");
     if (guideToggle) guideToggle.hidden = state.surface === "overview" || !state.analysisVisible;
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
-    document.getElementById("workbench-overview-back").hidden = state.surface !== "overview";
-    document.getElementById("workbench-overview-label").hidden = state.surface !== "overview";
+    document.getElementById("workbench-overview-toolbar").hidden = state.surface !== "overview";
     focus.setAttribute("aria-pressed", String(state.focus));
     var focusLabel = uiLabel(state.focus ? "reading_focus_exit" : "reading_focus");
     focus.querySelector(".reader-control-label").textContent = focusLabel;

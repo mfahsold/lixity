@@ -1610,10 +1610,15 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     parts.append('<div id="manuscript-analysis-panels">')
 
     # --- Key metrics (grouped for scanability) ----------------------------
+    matrix_jump = "#matrix" if chapters else None
+    has_style_panel = fingerprint is not None and metrics is not None and bool(metrics.chapters)
+    style_jump = "#style" if has_style_panel else None
+    heatmap_jump = "#heatmap" if has_style_panel and has_house_style else style_jump
+    bands_jump = "#bands" if has_style_panel and has_house_style else style_jump
     scope_tiles = [
-        kpi(N(total_words, 0), help_term(labels, "corpus_words" if metrics is not None else "words", L("words_prose")), jump="#matrix"),
-        kpi(N(len(chapters), 0), L("chapter"), jump="#matrix"),
-        kpi(N(len(paragraphs), 0), L("paragraphs"), jump="#matrix"),
+        kpi(N(total_words, 0), help_term(labels, "corpus_words" if metrics is not None else "words", L("words_prose")), jump=matrix_jump),
+        kpi(N(len(chapters), 0), L("chapter"), jump=matrix_jump),
+        kpi(N(len(paragraphs), 0), L("paragraphs"), jump=matrix_jump),
     ]
     rhythm_tiles: list[str] = []
     language_tiles: list[str] = []
@@ -1621,8 +1626,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     style_details: list[str] = []
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
-        scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
-        rhythm_jump = "#pacing" if has_pacing else "#dist"
+        scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump=matrix_jump))
+        rhythm_jump = ("#pacing" if has_pacing else "#dist") if has_tokens else None
         rhythm_tiles.append(
             kpi(
                 N(metrics.asl, 2) if has_tokens else "–",
@@ -1638,13 +1643,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 jump=rhythm_jump,
             )
         )
+        has_dialogue_share = has_tokens and bool(metrics.clean_words)
+        dialogue_layer = "dialogue" if has_dialogue_share and paragraphs and measured("dialogue") else None
         language_tiles.append(
             kpi(
-                P(metrics.dialog_ratio) if (has_tokens and metrics.clean_words) else "–",
+                P(metrics.dialog_ratio) if has_dialogue_share else "–",
                 help_term(labels, "dialogue", L("measurement_quoted_words")),
-                bar=metrics.dialog_ratio if (has_tokens and metrics.clean_words) else None,
-                jump="#chapters",
-                layer="dialogue",
+                bar=metrics.dialog_ratio if has_dialogue_share else None,
+                layer=dialogue_layer,
             )
         )
         language_tiles.append(
@@ -1652,72 +1658,43 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 P(metrics.first_person_start_rate) if has_tokens else "–",
                 help_term(labels, "first_start", L("feat_ich_start")),
                 bar=metrics.first_person_start_rate if has_tokens else None,
-                jump="#heatmap",
+                jump=heatmap_jump,
             )
         )
     scope_tiles.append(
         kpi(
             N(total_flagged, 0),
             help_term(labels, "flagged", L("panel_flags")),
-            jump="#flags",
+            jump="#flags" if has_chapters else None,
             flags=True,
         )
     )
+    function_layer = "function" if function_pct is not None and paragraphs and measured("function") else None
     language_tiles.append(
         kpi(
             P(function_pct) if function_pct is not None else "–",
             help_term(labels, "function_words", L("function_words")),
             bar=function_pct,
-            jump="#chapters",
-            layer="function",
+            layer=function_layer,
         )
     )
     if metrics is not None:
-        mtld_value = (
-            N(metrics.mtld, 1)
-            if (has_tokens and getattr(metrics, "mtld", None) is not None)
-            else "–"
-        )
-        lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
-        lexis_tiles.append(
-            kpi(
-                N(metrics.guiraud_r, 2) if has_tokens else "–",
-                help_term(labels, "guiraud", "Guiraud R"),
-                jump="#bands",
-            )
-        )
-        lexis_tiles.append(
-            kpi(
-                N(metrics.ttr, 4) if has_tokens else "–",
-                help_term(labels, "ttr", "TTR"),
-                jump="#bands",
-            )
-        )
-        lexis_tiles.append(
-            kpi(
-                N(metrics.yules_k, 1) if has_tokens else "–",
-                help_term(labels, "yules", "Yule&#8217;s K"),
-                jump="#bands",
-            )
-        )
-        hd_d_value = (
-            N(metrics.hd_d, 3)
-            if (has_tokens and getattr(metrics, "hd_d", None) is not None)
-            else "–"
-        )
-        lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
-        mattr_value = (
-            N(metrics.mattr, 3)
-            if (has_tokens and getattr(metrics, "mattr", None) is not None)
-            else "–"
-        )
-        lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
-        maas_value = (
-            N(metrics.maas_a2, 3)
-            if (has_tokens and getattr(metrics, "maas_a2", None) is not None)
-            else "–"
-        )
-        lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
+        for key, name, lexical_value, precision in (
+            ("mtld", "MTLD", getattr(metrics, "mtld", None), 1),
+            ("guiraud", "Guiraud R", metrics.guiraud_r, 2),
+            ("ttr", "TTR", metrics.ttr, 4),
+            ("yules", "Yule&#8217;s K", metrics.yules_k, 1),
+            ("hd_d", "HD-D", getattr(metrics, "hd_d", None), 3),
+            ("mattr", "MATTR", getattr(metrics, "mattr", None), 3),
+            ("maas", "Maas a²", getattr(metrics, "maas_a2", None), 3),
+        ):
+            if lexical_value is None or not has_tokens:
+                display_value, lexical_jump = "–", None
+            else:
+                display_value, lexical_jump = N(lexical_value, precision), bands_jump
+            lexis_tiles.append(kpi(
+                display_value, help_term(labels, key, name), jump=lexical_jump,
+            ))
     if fingerprint is not None:
         drifters = fingerprint.top_deviants(1)
         if drifters:
@@ -1736,8 +1713,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                         f"{L('deviation')} · {L('chapter')} {num}"
                         + (f" · {esc(top_title)}" if top_title else ""),
                     ),
-                    jump=f"#ch-{num}",
-                    layer=top_layer,
+                    jump=f"#ch-{num}" if top_chapter is not None else None,
+                    layer=top_layer if top_chapter is not None else None,
                     only=bool(devs),
                 )
             )
@@ -1746,7 +1723,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–",
                 help_term(labels, "consistency", L("consistency")),
                 bar=fingerprint.consistency * 100 if fingerprint.measured_cells else None,
-                jump="#heatmap",
+                jump=heatmap_jump,
             )
         )
 

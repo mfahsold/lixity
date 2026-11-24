@@ -41,6 +41,9 @@ def test_older_metric_payload_without_global_function_share_displays_unknown():
     old_metrics = CorpusMetrics.model_validate(raw)
     assert old_metrics.function_word_pct is None
     document = render_dashboard([], [], metrics=old_metrics)
-    tile = re.search(r'<div[^>]*data-layer="function"[^>]*><b>([^<]*)</b>', document)
+    tile = re.search(
+        r'<div class="kpi"><b>([^<]*)</b><span><span class="help"[^>]*>function words</span>',
+        document,
+    )
     assert tile is not None
     assert tile.group(1) == "–"

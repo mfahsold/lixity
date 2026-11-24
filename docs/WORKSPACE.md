@@ -438,6 +438,9 @@ measurements**, manuscript status, the next passage and three task choices.
 Selecting **Review passages**, **Compare
 chapters** or **Explore patterns** reveals one existing analysis section.
 Secondary choices switch sections within that task and retain your inputs.
+Use **Sections** in the overview toolbar to reach the choices again
+from a long table or chart. Opening the overview again starts at manuscript
+measurements, with your previous choices still available inside each task.
 Selecting **Manuscript measurements** opens its overview. Deep links reveal
 their owning section before navigating, including nested style views.
 **Back to passage** restores the manuscript position and analysis choice.
