@@ -248,6 +248,34 @@ async function documentState(page) {
         'Steady downward scrolling keeps hidden toolbars without checking their geometry again');
       await shortcutPage.mouse.wheel(0, -100);
       await shortcutPage.waitForFunction(() => !window.LixityChrome.isHidden());
+      const readerControls = shortcutPage.locator('#manuscript-reader-controls');
+      const analysisToggle = shortcutPage.locator('#manuscript-analysis-toggle');
+      const toolbarOpacities = () => shortcutPage
+        .locator('#manuscript-reader-controls, #analysis-outline-document > .toolbar')
+        .evaluateAll(bars => bars.map(bar => getComputedStyle(bar).opacity));
+      await shortcutPage.clock.install();
+      await analysisToggle.click();
+      await analysisToggle.blur();
+      await settle(shortcutPage);
+      await shortcutPage.mouse.move(1000, 650);
+      const beforeReviewScroll = await shortcutPage.evaluate(() => window.scrollY);
+      await shortcutPage.mouse.wheel(0, 360);
+      await shortcutPage.waitForFunction(top => window.scrollY > top, beforeReviewScroll);
+      assert.deepEqual(await toolbarOpacities(), ['1', '1'],
+        'Downward scrolling leaves the active manuscript analysis toolbar visible');
+      for (const selector of ['#manuscript-analysis-toggle', '#style-layer', '#text-search']) {
+        const control = shortcutPage.locator(selector);
+        await expect(control).toBeInViewport({ratio: 1});
+        assert.ok(await control.evaluate(node => {
+          const rect = node.getBoundingClientRect();
+          const target = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+          return node.contains(target);
+        }), 'Active manuscript analysis controls are reachable without moving the pointer back to the toolbar');
+      }
+      await shortcutPage.clock.fastForward(4000);
+      assert.deepEqual(await toolbarOpacities(), ['1', '1'],
+        'Inactivity leaves the active manuscript analysis toolbar visible');
+      await analysisToggle.click();
       const prompter = shortcutPage.locator('#teleprompter-modal');
       for (const view of ['research', 'project']) {
         await shortcutPage.locator('#tab-view-' + view).click();
@@ -256,6 +284,20 @@ async function documentState(page) {
       }
       await shortcutPage.locator('#tab-view-analysis').click();
       await shortcutPage.locator('#workbench-overview-open').click();
+      await openAnalysisSection(shortcutPage, 'style');
+      await shortcutPage.locator('[data-analysis-section-target="style"]').blur();
+      await settle(shortcutPage);
+      await shortcutPage.evaluate(() => window.scrollTo({top: 0, behavior: 'instant'}));
+      await shortcutPage.mouse.move(1000, 650);
+      const beforeOverviewScroll = await shortcutPage.evaluate(() => window.scrollY);
+      await shortcutPage.mouse.wheel(0, 240);
+      await shortcutPage.waitForFunction(top => window.scrollY > top, beforeOverviewScroll);
+      assert.equal(await readerControls.evaluate(node => getComputedStyle(node).opacity), '1',
+        'Downward scrolling leaves the analysis overview return controls visible');
+      await expect(shortcutPage.locator('#workbench-overview-back')).toBeInViewport({ratio: 1});
+      await shortcutPage.clock.fastForward(4000);
+      assert.equal(await readerControls.evaluate(node => getComputedStyle(node).opacity), '1',
+        'Inactivity leaves the analysis overview return controls visible');
       await shortcutPage.keyboard.press('p');
       assert.equal(await prompter.isVisible(), false, 'P leaves the analysis overview open');
       await shortcutPage.locator('#workbench-overview-back').click();

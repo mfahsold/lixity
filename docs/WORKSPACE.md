@@ -179,7 +179,8 @@ It does not automatically merge retained sources into the manuscript's analysis.
 ## Dashboard workflow
 
 In the local app, read in **Manuscript** and use **Analysis overview** for
-comparisons. The sections below describe both navigation and the explicit
+comparisons. The manuscript toolbar stays visible while analysis is active and
+while you browse the overview. The sections below describe navigation and the
 actions that need a running server. For a separate offline analysis snapshot:
 
 ```bash

@@ -44,6 +44,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep analysis controls visible when scrolling or pausing in the manuscript
+  and analysis overview.
 - Show quoted text directly in the reader with a word count on inspection.
   Keep the share in chapter and manuscript reports.
 - Describe the OSS architecture and contributor workflows in the repository

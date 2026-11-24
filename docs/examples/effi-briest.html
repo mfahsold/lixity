@@ -6505,6 +6505,12 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 
     function shouldHoldVisible() {
       if (!document.body) return true;
+      // Reviewing measurements requires the metric picker and the way back
+      // to the text even after the pointer and keyboard leave the toolbar.
+      if (document.body.matches(
+        '.manuscript-reading.workbench-analysis[data-workspace-view="analysis"]' +
+        ":not(.reader-focus, .manuscript-writing, .teleprompter-open)"
+      )) return true;
       if (document.documentElement.style.fontSize === "200%" || window.innerHeight <= 500) return true;
       var active = document.activeElement;
       if (active && active !== document.body && active.closest && active.closest(CHROME_SELECTOR)) {
