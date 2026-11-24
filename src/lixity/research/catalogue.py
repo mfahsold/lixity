@@ -7,7 +7,7 @@ import tempfile
 from contextlib import closing
 from typing import Any
 
-from .models import Claim, Decision, Dossier, Extraction, Passage, Source, SourceVersion, Tombstone
+from .models import Claim, Decision, Dossier, Extraction, Passage, Source, SourceVersion
 from .repository import Repository, ResearchError, Snapshot, sync_directory
 
 SEARCH_SCOPES = {"sources": "passage", "dossiers": "dossier", "claims": "claim", "decisions": "decision", "all": None}
@@ -39,14 +39,14 @@ def excerpt(text: str, terms: list[str]) -> str:
 
 def _unavailable_ids(snapshot: Snapshot) -> set[str]:
     return {
-        record.target_ref.id
-        for record in snapshot.records.values()
-        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+        target_id
+        for operation, _kind, target_id in snapshot.lifecycle
+        if operation in ("withdraw", "purge")
     }
 
 
-def current_versions(snapshot: Snapshot) -> set[str]:
-    withdrawn_or_purged = _unavailable_ids(snapshot)
+def current_versions(snapshot: Snapshot, unavailable: set[str] | None = None) -> set[str]:
+    withdrawn_or_purged = _unavailable_ids(snapshot) if unavailable is None else unavailable
     latest: dict[str, SourceVersion] = {}
     for record in snapshot.records.values():
         if isinstance(record, SourceVersion):
@@ -62,7 +62,7 @@ def _reindex_snapshot(repository: Repository) -> tuple[dict[str, Any], Snapshot,
     with repository.locked():
         snapshot = repository.snapshot()
         unavailable = _unavailable_ids(snapshot)
-        selected = current_versions(snapshot)
+        selected = current_versions(snapshot, unavailable)
         destination = repository.safe(repository.cache / "catalogue.sqlite3")
         descriptor, temporary = tempfile.mkstemp(dir=destination.parent, prefix=".index-")
         os.close(descriptor)
@@ -132,7 +132,7 @@ def search(
     else:
         snapshot = repository.snapshot()
         unavailable = _unavailable_ids(snapshot)
-        selected = current_versions(snapshot)
+        selected = current_versions(snapshot, unavailable) if scope in ("sources", "all") else set()
 
     terms = re.findall(r"[^\W_]+", query, re.UNICODE)
     expression = " AND ".join('"' + term + '"' for term in terms)

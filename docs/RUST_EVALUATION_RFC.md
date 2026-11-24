@@ -57,22 +57,37 @@ before profiling a different native boundary.
   chapter batches. On a synthetic manuscript with 2,000 paragraphs across
   20 chapters, the uncompressed initial HTML fell from 14.52 MB to 9.39 MB.
   Paragraph JSON fell from 6.30 MB to 1.18 MB. The first requested batch
-  transferred 175 kB. These measurements describe payload sizes. Measure
-  first-jump latency, resident memory and scroll frame time separately in
-  each native WebView.
+  transferred 175 kB. These measurements describe payload sizes. In native
+  macOS `WKWebView` (`1440×900`, Apple M2 Pro, commit `d1e56cb9`), standalone
+  dashboards measured:
+  - **50,000 words** (480 paragraphs, 20 chapters): cold open `466.7 ms`,
+    warm open `193.2 ms`, first evidence jump `643.0 ms`, scroll frame
+    p50/p95 `17.0 / 22.0 ms` (`0` frames `> 34 ms`), host RSS `296.91 MiB`.
+  - **150,000 words** (1,440 paragraphs, 20 chapters): cold open `349.0 ms`,
+    warm open `457.6 ms`, first evidence jump `720.0 ms`, scroll frame
+    p50/p95 `22.0 / 82.0 ms`, host RSS `318.98 MiB`.
+  - **300,000 words** (2,860 paragraphs, 20 chapters): cold open `648.9 ms`,
+    warm open `904.7 ms`, first evidence jump `738.0 ms`, scroll frame
+    p50/p95 `25.0 / 114.0 ms`, host RSS `340.45 MiB`.
+  - **2,000 paragraphs** (104,063 words, 20 chapters): cold open `379.6 ms`,
+    warm open `484.9 ms`, first evidence jump `745.0 ms`, scroll frame
+    p50/p95 `19.0 / 92.0 ms`, host RSS `322.27 MiB` (`321.77 MiB` with two
+    project windows open simultaneously).
+  Measure WebView2 and WebKitGTK separately on Windows and Linux.
 - **Research search and recovery.** SQLite already executes queries and
   transactions in native code. The research catalogue is a rebuildable FTS5
   index, and manuscript recovery is a separate transactional store. In a
-  local synthetic test of 2,000 dossiers, median search with a new repository
-  instance took 105 ms, including 104 ms for the archive snapshot. The FTS
-  read and connection took under 1 ms. Reducing allocations for verified
-  revision paths lowered the median from 100.0 to 88.5 ms in an alternating
-  comparison on 2,000 synthetic dossiers. Each query still checks record
-  digests, including unrelated revisions when the accepted HEAD is unchanged.
-  In a separate book-scale
-  recovery test, consecutive saves took about 645 ms, with about 633 ms spent
-  computing measurements. Profile and reuse the exact saved-text projection
-  before considering a different SQLite binding.
+  local synthetic test of 500, 2,000 and 6,000 dossiers, snapshot validation
+  took `73.7 ms`, `479.7 ms` and `960.3 ms`, FTS5 index build took `6.4 ms`,
+  `17.1 ms` and `35.6 ms`, and warm search using `Snapshot.lifecycle`
+  without scanning non-source records took `1.18 ms`, `2.84 ms` and
+  `11.07 ms` (with the SQLite FTS query and connection under `1 ms`).
+  In the book-scale recovery test, reusing unchanged chapter projections and
+  combining chapter token, sentence and quotation counts lowered consecutive
+  `ManuscriptStore.save()` latency from `495.9 ms` to `69.7 ms` on *Effi Briest*
+  (measurement portion `508.1 → 50.4 ms`) and from `638.2 ms` to `112.3 ms` on
+  *Pride and Prejudice* (measurement portion `639.1 → 79.4 ms`), while keeping
+  snapshot JSON digests identical.
   [Research storage](research/DATA_MODEL.md) · [SQLite WAL](https://www.sqlite.org/wal.html)
 - **Computation candidates.** Profile the shared chapter and paragraph
   measurements after removing equivalent sentence and quotation preparation

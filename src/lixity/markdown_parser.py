@@ -265,6 +265,12 @@ def _is_opening_prose(block: dict[str, Any], lines: list[str]) -> bool:
     return not (first_line.isalpha() and initial.isupper())
 
 
+@lru_cache(maxsize=256)
+def _has_chapter_prose(body: str, word_re: re.Pattern[str]) -> bool:
+    prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
+    return word_re.search(normalize("NFC", prose)) is not None
+
+
 def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:
     """Compute accepted chapters with original heading lines for profile alignment."""
     from .language import compile_word_pattern, resolve_language
@@ -309,8 +315,7 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
                 body = _trim_blank_lines("\n".join(lines[1:]))
         else:
             title = saved_title
-        prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
-        if not word_re.search(normalize("NFC", prose)):
+        if not _has_chapter_prose(body, word_re):
             continue
         chapters.append((len(chapters) + 1, title, body, line))
     return chapters

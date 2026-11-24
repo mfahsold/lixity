@@ -17,6 +17,7 @@ from collections import OrderedDict, defaultdict
 from collections.abc import Mapping
 from contextlib import closing
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -27,7 +28,10 @@ from .io import FileUtils
 from .language import compile_word_pattern, resolve_language
 from .log import get_logger, log_event
 from .markdown_parser import (
+    _front_matter_end,
+    _without_comments,
     before_appendix,
+    chapter_heading_spans,
     legacy_whitespace_text,
     prose_text,
     split_chapters,
@@ -782,6 +786,108 @@ class ManuscriptStore:
         }
 
 
+@lru_cache(maxsize=16)
+def _chapter_context(
+    cfg_json: str, lang_key: str,
+) -> tuple[CorpusConfig, Any, re.Pattern[str], frozenset[str], bool, bool]:
+    cfg = CorpusConfig.model_validate_json(cfg_json)
+    resolved = resolve_language(cfg.model_copy(update={"language": lang_key}))
+    word_re = compile_word_pattern(resolved.word_regex)
+    function_words = resolved.function_words
+    return (
+        cfg,
+        resolved,
+        word_re,
+        function_words,
+        bool(function_words),
+        indirect_speech_available(lang_key),
+    )
+
+
+@lru_cache(maxsize=256)
+def _measure_chapter_body(
+    body: str, cfg_json: str, lang_key: str,
+) -> tuple[
+    int,
+    float | None,
+    float | None,
+    list[str],
+    str,
+    tuple[str, ...],
+    tuple[int, ...],
+    int,
+    int,
+    int,
+    int,
+    int,
+] | None:
+    cfg, resolved, word_re, function_words, sticky_available, ind_speech_available = _chapter_context(
+        cfg_json, lang_key
+    )
+    chapter = quoted_prose(body, cfg, language=resolved, chapter_body=True)
+    cl_b = chapter.text
+    c_words = word_re.findall(cl_b)
+    if not c_words:
+        return None
+    n_cw = len(c_words)
+    c_lower = tuple(w.lower() for w in c_words)
+    sig, text_hash = _chapter_signature(list(c_lower))
+    c_sentences = split_prose_sentences(cl_b, lang_key)
+    c_sent_tokens = [[w.lower() for w in word_re.findall(s)] for s in c_sentences]
+    c_sent_lengths = tuple(len(toks) for toks in c_sent_tokens if toks)
+    c_total_sents = len(c_sent_lengths)
+    c_asl = (sum(c_sent_lengths) / c_total_sents) if c_total_sents else 0.0
+    c_dial_words = count_quoted_words(cl_b, word_re, chapter.analysis.spans)
+    c_dial_pct = (c_dial_words / n_cw) * 100.0
+
+    sticky_sents = 0
+    sticky_denom = 0
+    if sticky_available:
+        raw_scenes, _ = split_scenes(body)
+        for scene_raw in raw_scenes:
+            if len(raw_scenes) == 1 and scene_raw == body:
+                scene_tokens = iter(c_sent_tokens)
+            else:
+                scene_clean = prose_text(scene_raw, _front_matter=False)
+                if not word_re.search(scene_clean):
+                    continue
+                scene_tokens = (
+                    [word.lower() for word in word_re.findall(sentence)]
+                    for sentence in split_prose_sentences(scene_clean, lang_key)
+                )
+            for sentence_tokens in scene_tokens:
+                if sentence_tokens:
+                    sticky_denom += 1
+                    sticky_sents += measure_function_words(
+                        sentence_tokens, function_words,
+                        min_words=cfg.sticky_min_words, min_pct=cfg.sticky_glue_pct,
+                    ).sticky
+
+    ind_words = 0
+    ind_hits = 0
+    if ind_speech_available:
+        ind_words = n_cw
+        for start, end in chapter.regions:
+            analysis = chapter.slice_analysis(start, end)
+            excluded = merge_quotation_spans((*analysis.quote_ranges, *analysis.unclear))
+            ind_hits += len(find_indirect_speech_spans(cl_b[start:end], excluded, lang_key))
+
+    return (
+        n_cw,
+        round(float(c_asl), 2) if c_total_sents > 0 else None,
+        round(float(c_dial_pct), 2) if n_cw > 0 else None,
+        sig,
+        text_hash,
+        c_lower,
+        c_sent_lengths,
+        c_dial_words,
+        sticky_sents,
+        sticky_denom,
+        ind_words,
+        ind_hits,
+    )
+
+
 def analyze_manuscript_snapshot(
     text: str,
     *,
@@ -799,34 +905,13 @@ def analyze_manuscript_snapshot(
         resolved = resolve_language(cfg, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     lang_key = resolved.key
-    function_words = resolved.function_words
-    sticky_available = bool(function_words)
-    ind_speech_available = indirect_speech_available(lang_key)
+    cfg_json = cfg.model_dump_json()
 
     main_text = before_appendix(text, cfg)
     clean_words = len(legacy_whitespace_text(main_text, cfg).split())
 
-    projection = quoted_prose(main_text, cfg, language=resolved)
-    prose_main = projection.text
-
-    tokens = word_re.findall(prose_main)
-    n_tokens = len(tokens)
-    lower_tokens = [t.lower() for t in tokens]
-    mattr_score = mattr_value(lower_tokens) if lower_tokens else None
-
-    sentences = split_prose_sentences(prose_main, lang_key)
-    sent_lengths = [n for n in (len(word_re.findall(s)) for s in sentences) if n > 0]
-    total_sentences = len(sent_lengths)
-    if total_sentences > 0:
-        asl = sum(sent_lengths) / total_sentences
-        variance = sum((x - asl) ** 2 for x in sent_lengths) / total_sentences
-        sentence_cv = (math.sqrt(variance) / asl) if asl else 0.0
-    else:
-        asl = 0.0
-        sentence_cv = 0.0
-
-    dialog_words = count_quoted_words(prose_main, word_re, projection.analysis.spans)
-    dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
+    ch_list = split_chapters(main_text, cfg)
+    headings = chapter_heading_spans(main_text, cfg)
 
     chapters: list[dict[str, Any]] = []
     all_corpus_sentence_lengths: list[int] = []
@@ -834,12 +919,12 @@ def analyze_manuscript_snapshot(
     total_sticky_denom = 0
     indirect_speech_words = 0
     all_indirect_speech = 0
+    chapter_lower_tokens: list[str] = []
+    chapter_dial_words = 0
 
-    for number, title, body in split_chapters(main_text, cfg):
-        chapter = quoted_prose(body, cfg, language=resolved, chapter_body=True)
-        cl_b = chapter.text
-        c_words = word_re.findall(cl_b)
-        if not c_words:
+    for number, title, body in ch_list:
+        measured = _measure_chapter_body(body, cfg_json, lang_key)
+        if measured is None:
             chapters.append({
                 "num": int(number),
                 "title": str(title),
@@ -851,58 +936,89 @@ def analyze_manuscript_snapshot(
             })
             continue
 
-        n_cw = len(c_words)
-        c_lower = [w.lower() for w in c_words]
-        sig, text_hash = _chapter_signature(c_lower)
-        c_sentences = split_prose_sentences(cl_b, lang_key)
-        c_sent_tokens = [
-            [w.lower() for w in word_re.findall(s)]
-            for s in c_sentences
-        ]
-        c_sent_lengths = [len(toks) for toks in c_sent_tokens if toks]
-        c_total_sents = len(c_sent_lengths)
-        c_asl = (sum(c_sent_lengths) / c_total_sents) if c_total_sents else 0.0
-        c_dial_words = count_quoted_words(cl_b, word_re, chapter.analysis.spans)
-        c_dial_pct = (c_dial_words / n_cw) * 100.0
-
+        (
+            n_cw,
+            c_asl_rounded,
+            c_dial_pct_rounded,
+            sig,
+            text_hash,
+            c_lower,
+            c_sent_lengths,
+            c_dial_words,
+            sticky_sents,
+            sticky_denom,
+            ind_words,
+            ind_hits,
+        ) = measured
+        chapter_lower_tokens.extend(c_lower)
+        chapter_dial_words += c_dial_words
         chapters.append({
             "num": int(number),
             "title": str(title),
             "words": int(n_cw),
-            "asl": round(float(c_asl), 2) if c_total_sents > 0 else None,
-            "dialog_pct": round(float(c_dial_pct), 2) if n_cw > 0 else None,
-            "sig": sig,
+            "asl": c_asl_rounded,
+            "dialog_pct": c_dial_pct_rounded,
+            "sig": list(sig),
             "text_hash": text_hash,
         })
         all_corpus_sentence_lengths.extend(c_sent_lengths)
+        total_sticky_sentences += sticky_sents
+        total_sticky_denom += sticky_denom
+        indirect_speech_words += ind_words
+        all_indirect_speech += ind_hits
 
-        if sticky_available:
-            raw_scenes, _ = split_scenes(body)
-            for scene_raw in raw_scenes:
-                if len(raw_scenes) == 1 and scene_raw == body:
-                    scene_tokens = iter(c_sent_tokens)
-                else:
-                    scene_clean = prose_text(scene_raw, _front_matter=False)
-                    if not word_re.search(scene_clean):
-                        continue
-                    scene_tokens = (
-                        [word.lower() for word in word_re.findall(sentence)]
-                        for sentence in split_prose_sentences(scene_clean, lang_key)
-                    )
-                for sentence_tokens in scene_tokens:
-                    if sentence_tokens:
-                        total_sticky_denom += 1
-                        total_sticky_sentences += measure_function_words(
-                            sentence_tokens, function_words,
-                            min_words=cfg.sticky_min_words, min_pct=cfg.sticky_glue_pct,
-                        ).sticky
+    can_reuse_chapters = False
+    prefix_lower: list[str] = []
+    prefix_sents: list[int] = []
+    prefix_dial = 0
+    if cfg.word_regex is None:
+        if not headings and len(ch_list) == 1:
+            can_reuse_chapters = True
+        elif headings and len(ch_list) == len(headings):
+            first_end = headings[0][0]
+            first_lines = _without_comments(main_text[:first_end]).splitlines(keepends=True)
+            fm_end = _front_matter_end(first_lines)
+            first = "".join(first_lines[fm_end:]).strip()
+            if not first:
+                can_reuse_chapters = True
+            elif first.startswith("# "):
+                can_reuse_chapters = True
+                prefix_proj = quoted_prose(main_text[:first_end], cfg, language=resolved)
+                if prefix_proj.text:
+                    prefix_lower = [w.lower() for w in word_re.findall(prefix_proj.text)]
+                    prefix_sents = [
+                        n
+                        for n in (len(word_re.findall(s)) for s in split_prose_sentences(prefix_proj.text, lang_key))
+                        if n > 0
+                    ]
+                    prefix_dial = count_quoted_words(prefix_proj.text, word_re, prefix_proj.analysis.spans)
 
-        if ind_speech_available:
-            indirect_speech_words += n_cw
-            for start, end in chapter.regions:
-                analysis = chapter.slice_analysis(start, end)
-                excluded = merge_quotation_spans((*analysis.quote_ranges, *analysis.unclear))
-                all_indirect_speech += len(find_indirect_speech_spans(cl_b[start:end], excluded, lang_key))
+    if can_reuse_chapters:
+        lower_tokens = [*prefix_lower, *chapter_lower_tokens] if prefix_lower else chapter_lower_tokens
+        n_tokens = len(lower_tokens)
+        sent_lengths = [*prefix_sents, *all_corpus_sentence_lengths] if prefix_sents else all_corpus_sentence_lengths
+        dialog_words = prefix_dial + chapter_dial_words
+    else:
+        projection = quoted_prose(main_text, cfg, language=resolved)
+        prose_main = projection.text
+        tokens = word_re.findall(prose_main)
+        n_tokens = len(tokens)
+        lower_tokens = [t.lower() for t in tokens]
+        sentences = split_prose_sentences(prose_main, lang_key)
+        sent_lengths = [n for n in (len(word_re.findall(s)) for s in sentences) if n > 0]
+        dialog_words = count_quoted_words(prose_main, word_re, projection.analysis.spans)
+
+    mattr_score = mattr_value(lower_tokens) if lower_tokens else None
+    total_sentences = len(sent_lengths)
+    if total_sentences > 0:
+        asl = sum(sent_lengths) / total_sentences
+        variance = sum((x - asl) ** 2 for x in sent_lengths) / total_sentences
+        sentence_cv = (math.sqrt(variance) / asl) if asl else 0.0
+    else:
+        asl = 0.0
+        sentence_cv = 0.0
+
+    dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 
     rhythm = compute_rhythm_profile(
         all_corpus_sentence_lengths, short_sentence_max=cfg.short_sentence_max

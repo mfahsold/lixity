@@ -83,6 +83,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   medcouple skewness kernel. Withhold Flesch Reading Ease when no syllables can
   be estimated for the analyzed tokens (such as non-Latin scripts under `generic`)
   while keeping LIX available.
+- Reuse unchanged chapter projections during manuscript editor saves and read
+  tombstone lifecycle indexes directly during research catalogue searches.
 - Explain the exploratory selection limits in the comparison report and name
   the separate BH setting used by trend and manuscript-half summaries. Correct
   the documented guarded segment objective and the two sentence-length bin roles.
