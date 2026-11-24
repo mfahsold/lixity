@@ -118,8 +118,13 @@ async function showOverview(page) {
 async function openValues(page, passage) {
   const analysis = page.locator('#manuscript-analysis-toggle');
   const priorAnalysis = await analysis.getAttribute('aria-pressed');
-  await passage.locator('.reader-paragraph-actions').click();
-  await page.locator('#manuscript-context-menu [data-reader-action=values]').click();
+  const actions = passage.locator('.reader-paragraph-actions');
+  // A preceding chapter or strip jump can still be moving the viewport.
+  // Finish positioning the target before opening its transient menu.
+  await actions.scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await actions.press('Enter');
+  await page.locator('#manuscript-context-menu [data-reader-action=values]').press('Enter');
   await expect(page.locator('#reader-inspector')).toBeVisible();
   await expect(analysis).toHaveAttribute('aria-pressed', priorAnalysis);
 }
