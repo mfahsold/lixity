@@ -138,10 +138,15 @@ def test_make_uses_explicit_interpreter_with_space_containing_venv(tmp_path, tar
         "Path(os.environ['LIXITY_LAUNCHER_TEST_MARKER']).write_text(json.dumps(sys.argv[1:]))\n"
     )
     executable.chmod(0o755)
+    environment = {**os.environ, "LIXITY_LAUNCHER_TEST_MARKER": str(marker)}
+    # This is a fresh Make invocation. A parent `make test VPY=...` would
+    # otherwise pass its interpreter override on to the launcher fixture.
+    for name in ("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS", "GNUMAKEFLAGS", "MAKELEVEL", "MAKEFILES"):
+        environment.pop(name, None)
     result = subprocess.run(  # noqa: S603 - explicit Makefile and synthetic interpreter
         [make, "-f", str(SCRIPT.parent.parent / "Makefile"), target, f"VENV={venv}", "LIXITY_PORT=59996"],
-        cwd=tmp_path, env={**os.environ, "LIXITY_LAUNCHER_TEST_MARKER": str(marker)},
+        cwd=tmp_path, env=environment,
         capture_output=True, text=True, timeout=10, check=False,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(marker.read_text()) == arguments
