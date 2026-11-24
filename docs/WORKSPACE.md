@@ -198,14 +198,14 @@ The local app serves it offline. Exported reports link to the public reference.
 Read the [English measurement reference](guides/metrics/en.html) to browse all
 sections.
 
-In the manuscript, **Measure** offers eight paragraph measurements with a
-within-chapter comparison: sentence length, function words, quoted text,
-perception and thought cues, sensory cues, passive patterns, modal forms and
-nominal-style patterns. The function-word sentence filter, dialogue tags,
-indirect-speech cues and repeated words show text evidence. The selected
+In the manuscript, **Measure** offers within-chapter paragraph comparisons for
+sentence length, function words, perception and thought cues, sensory cues,
+passive patterns, modal forms and nominal-style patterns. Quoted text, the
+function-word sentence filter, dialogue tags, indirect-speech cues and repeated
+words show text evidence. The selected
 metric's help links directly to its method. The reader separates a measured
 zero, missing language rules and a measured count without exact text ranges.
-Reports without paragraph evidence omit the four evidence-only options.
+Reports without paragraph evidence omit the evidence-only options.
 
 Lixity computes these choices and their text ranges from the current source and
 project settings. The browser stores the selected metric as a display preference.
@@ -216,12 +216,15 @@ sentence-length or quoted-speech value. Deltas require a matched chapter and the
 source revision shown in the reader. Tense review uses its own saved decisions
 in `.lixity/analysis-review.json`. [Revision comparison](#compare-versions-and-resolve-a-conflict)
 
-**Words in quotes and marked speech** shows the counted words in the selection
-and their share of the paragraph. A quote can continue across paragraphs in the
-same chapter and scene. The evidence card identifies the recognized marks and
-reports uncertain boundaries. A project's `dialogue_regex` can declare other
-quotation or reply markers. The editor labels a version delta with the
-date of its actual baseline.
+**Quotes and marked speech** underlines the words recognized in the manuscript.
+Open a mark to see how many of the paragraph's words contributed. A standalone
+four-word reply can contribute all four words. The chapter bars in **Analysis
+overview** show the share of all analyzed words in each chapter, so you can
+compare the balance of marked and unmarked prose across chapters. A quote can
+continue across paragraphs in the same chapter and scene. The evidence card
+identifies the recognized marks and reports uncertain boundaries. A project's
+`dialogue_regex` can declare other quotation or reply markers. The editor
+labels a version delta with the date of its actual baseline.
 
 Use Zotero to manage your source library and Lixity to retain selected evidence,
 record claims and decisions, and link them to manuscript passages. The

@@ -141,12 +141,14 @@ class TestPagesWorkflow(unittest.TestCase):
                                                cwd=root, text=True).strip()
             (root / "lixity-pages").mkdir()
             summary = root / "summary.md"
+            outputs = root / "outputs"
             run_url = "https://github.com/example/synthetic/actions/runs/123"
             result = subprocess.run(  # noqa: S603 - reviewed workflow step, synthetic repository
                 [BASH, "-e", "-c", pages_workflow_script("Record exact public deployment source")],
                 cwd=root, capture_output=True, text=True, check=False, timeout=10,
                 env={**os.environ, "RUNNER_TEMP": directory, "GITHUB_STEP_SUMMARY": str(summary),
-                     "SOURCE_RUN_URL": run_url, "GITHUB_SHA": "0" * 40},
+                     "SOURCE_RUN_URL": run_url, "GITHUB_SHA": "0" * 40,
+                     "GITHUB_OUTPUT": str(outputs), "GITHUB_RUN_ATTEMPT": "2"},
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             metadata = json.loads((root / "lixity-pages/deployment.json").read_text())
@@ -154,6 +156,7 @@ class TestPagesWorkflow(unittest.TestCase):
                                         "workflow_run_url": run_url})
             self.assertIn(expected, summary.read_text())
             self.assertNotIn(directory, json.dumps(metadata))
+            self.assertEqual(outputs.read_text(), "artifact_name=github-pages-2\n")
 
     def test_production_deployment_preserves_an_active_run_and_uses_an_immutable_default(self):
         source = (Path(__file__).resolve().parents[1] / ".github/workflows/pages.yml").read_text()

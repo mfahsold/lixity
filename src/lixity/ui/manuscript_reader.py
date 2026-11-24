@@ -17,6 +17,10 @@ from .components import (
 )
 from .manuscript_document import ReaderBlock
 
+# Quotation evidence in the reader identifies marked text. The share still
+# belongs to the chapter and manuscript reports, which have a useful scope.
+PARAGRAPH_COMPARISON_LAYERS = tuple(key for key in LAYER_FEATURES if key != "dialogue")
+
 _LAYER_GROUPS = (
     ("layer_group_rhythm", ("asl", "function", "sticky")),
     ("layer_group_voice", ("dialogue", "dialogue_tag", "indirect_speech", "filter", "sensory", "echo")),
@@ -79,21 +83,23 @@ def reading_metric_control(
     sections = dict(overview_sections)
 
     def option(key: str) -> str:
-        inline = key not in LAYER_FEATURES
+        inline = key not in PARAGRAPH_COMPARISON_LAYERS
         if inline and not include_evidence:
             return ""
-        title = text(("evidence_layer_" if inline else "layer_") + key)
+        has_metric_labels = key in LAYER_FEATURES
+        title = text(("layer_" if has_metric_labels else "evidence_layer_") + key)
         unavailable = available is not None and key not in available
         if unavailable:
             title = f'{text("metric_context_missing")} · {title}'
-        hint = text(("reading_help_evidence_" if inline else "layer_hint_") + key)
+        hint = text(("layer_hint_" if has_metric_labels else "reading_help_evidence_") + key)
         unit = "" if inline else escape(units[LAYER_FEATURES[key]])
         capability = ' data-available="0"' if unavailable else ""
         inline_attr = ' data-inline-evidence="1"' if inline else ""
         related = next((section for section in _RELATED_OVERVIEWS.get(key, ()) if section in sections), "")
         overview_attr = f' data-related-overview="{related}"' if related else ""
+        comparable = 0 if inline else len(comparisons.get(key, {}))
         return (f'<option value="{key}" data-hint="{hint}" data-unit="{unit}" '
-                f'data-comparable="{len(comparisons.get(key, {}))}" data-reference="measure-{key}"'
+                f'data-comparable="{comparable}" data-reference="measure-{key}"'
                 f'{capability}{inline_attr}{overview_attr}>{title}</option>')
 
     groups = "".join(f'<optgroup label="{text(group)}">{"".join(map(option, keys))}</optgroup>'

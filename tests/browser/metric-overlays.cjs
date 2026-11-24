@@ -13,6 +13,7 @@ import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, PARAGRAPH_LAYER_Z_CUTOFF, layer_stats, z_color
+from lixity.ui.manuscript_reader import PARAGRAPH_COMPARISON_LAYERS
 from dashboard_fixtures import full_dashboard
 reading_html = full_dashboard()
 full_dashboard.__globals__['SAMPLE'] = '## Measured paragraphs\\n\\n' + '\\n\\n'.join(
@@ -28,7 +29,7 @@ for locale in ('en','de','fr','es','it','pt','nl'):
             for field in LAYER_PARAGRAPH_ATTR.values():
                 setattr(paragraph, field, [0, 1, 2, 3, 8, 30, 60][index % 7] if paragraph.chapter_num == 1 else 0)
         expected = {key: [f'p-{i}' for i, (_, z) in layer_stats(args[1], key).items() if abs(round(z, 2)) >= PARAGRAPH_LAYER_Z_CUTOFF]
-                    for key in LAYER_PARAGRAPH_ATTR}
+                    for key in PARAGRAPH_COMPARISON_LAYERS}
         fixtures[locale] = {'expected': expected, 'labels': labels}
         return original(*args, **{**kwargs, 'labels': labels, 'language_key': locale})
     full_dashboard.__globals__['render_dashboard'] = rendered

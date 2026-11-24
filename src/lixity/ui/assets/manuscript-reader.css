@@ -421,7 +421,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 @keyframes reader-layer-reveal { from { opacity: 0; } to { opacity: 1; } }
 @keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: 0; } }
 
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing) .strip { display: flex; margin: .6rem 0 1.25rem; }
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing):is(:not(.layer-on), .comparison-on) .strip { display: flex; margin: .6rem 0 1.25rem; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }

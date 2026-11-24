@@ -514,6 +514,7 @@ def test_characters_panel_surfaces_character_voices(locale):
 
 @pytest.mark.parametrize("locale", LOCALES)
 def test_reader_metric_options_match_available_measurements_and_reference(locale):
+    from lixity.style_fingerprint import LAYER_FEATURES
     from lixity.ui.manuscript_reader import reading_metric_control
     from lixity.ui.metric_reference import METRIC_REFERENCE_ENTRIES
 
@@ -531,11 +532,16 @@ def test_reader_metric_options_match_available_measurements_and_reference(locale
             assert item.attrib["data-reference"] == f"measure-{key}"
             assert item.attrib["data-reference"] in METRIC_REFERENCE_ENTRIES
             inline = item.attrib.get("data-inline-evidence") == "1"
-            assert item.text == labels[("evidence_layer_" if inline else "layer_") + key]
-            assert item.attrib["data-hint"] == labels[("reading_help_evidence_" if inline else "layer_hint_") + key]
+            assert inline == (key == "dialogue" or key not in LAYER_FEATURES)
+            assert item.text == labels[("layer_" if key in LAYER_FEATURES else "evidence_layer_") + key]
+            assert item.attrib["data-hint"] == labels[("layer_hint_" if key in LAYER_FEATURES else "reading_help_evidence_") + key]
+            if inline:
+                assert item.attrib["data-comparable"] == "0"
+                assert item.attrib["data-unit"] == ""
 
     report = reading_metric_control(labels, locale, {}, include_evidence=False, report=True)
     assert 'data-inline-evidence="1"' not in report
+    assert 'value="dialogue"' not in report
 
 
 @pytest.mark.parametrize("locale", LOCALES)

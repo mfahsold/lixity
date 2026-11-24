@@ -2335,14 +2335,14 @@ The local app serves it offline. Exported reports link to the public reference.
 Read the [English measurement reference](guides/metrics/en.html) to browse all
 sections.
 
-In the manuscript, **Measure** offers eight paragraph measurements with a
-within-chapter comparison: sentence length, function words, quoted text,
-perception and thought cues, sensory cues, passive patterns, modal forms and
-nominal-style patterns. The function-word sentence filter, dialogue tags,
-indirect-speech cues and repeated words show text evidence. The selected
+In the manuscript, **Measure** offers within-chapter paragraph comparisons for
+sentence length, function words, perception and thought cues, sensory cues,
+passive patterns, modal forms and nominal-style patterns. Quoted text, the
+function-word sentence filter, dialogue tags, indirect-speech cues and repeated
+words show text evidence. The selected
 metric's help links directly to its method. The reader separates a measured
 zero, missing language rules and a measured count without exact text ranges.
-Reports without paragraph evidence omit the four evidence-only options.
+Reports without paragraph evidence omit the evidence-only options.
 
 Lixity computes these choices and their text ranges from the current source and
 project settings. The browser stores the selected metric as a display preference.
@@ -2353,12 +2353,15 @@ sentence-length or quoted-speech value. Deltas require a matched chapter and the
 source revision shown in the reader. Tense review uses its own saved decisions
 in `.lixity/analysis-review.json`. [Revision comparison](#compare-versions-and-resolve-a-conflict)
 
-**Words in quotes and marked speech** shows the counted words in the selection
-and their share of the paragraph. A quote can continue across paragraphs in the
-same chapter and scene. The evidence card identifies the recognized marks and
-reports uncertain boundaries. A project's `dialogue_regex` can declare other
-quotation or reply markers. The editor labels a version delta with the
-date of its actual baseline.
+**Quotes and marked speech** underlines the words recognized in the manuscript.
+Open a mark to see how many of the paragraph's words contributed. A standalone
+four-word reply can contribute all four words. The chapter bars in **Analysis
+overview** show the share of all analyzed words in each chapter, so you can
+compare the balance of marked and unmarked prose across chapters. A quote can
+continue across paragraphs in the same chapter and scene. The evidence card
+identifies the recognized marks and reports uncertain boundaries. A project's
+`dialogue_regex` can declare other quotation or reply markers. The editor
+labels a version delta with the date of its actual baseline.
 
 Use Zotero to manage your source library and Lixity to retain selected evidence,
 record claims and decisions, and link them to manuscript passages. The
@@ -7619,6 +7622,11 @@ outside detected quotations. The legacy whitespace count `clean_words` is
 unchanged and is not the dialogue-ratio denominator. Recompute older dialogue
 reports and dependent style results before comparing across this correction.
 
+The manuscript reader shows the recognized words and the paragraph word count.
+A paragraph containing just one marked reply can contribute all of its words.
+Chapter bars use the chapter's full analyzed word count to show how much of its
+prose falls within recognized marks.
+
 ### Perception/filter word cues
 
 Density features (`filter_density`, modal, passive, nominalisation) are counts
@@ -9239,7 +9247,7 @@ The audit also reproduces unresolved weaknesses:
 | Unicode | NFC equivalence is corrected, preserving source bytes and offsets. Combining sequences without a precomposed letter can still exceed the word patterns' coverage; the mapper does not claim full grapheme segmentation. See [Unicode UAX #29](https://www.unicode.org/reports/tr29/). |
 | Tense | Curated present-only forms no longer also count as productive past candidates. Listed German perfect/pluperfect pairs count as one construction across chapter, scene and paragraph analysis, with bounded intervening words. Unlicensed auxiliary/participle combinations retain both cues; regional/transitive variants, unlisted forms and other languages can still produce spurious mixed classifications. A `mixed` result is not proof of a grammatical tense switch. English `read` and Portuguese `falamos` require context. |
 | Spanish compound cues | Under the default lexical patterns, adjacent present-tense `haber` plus a detected regular `-ado/-ido` candidate is counted once as past, not again as present. This remains a surface pattern: irregular participles and intervening adverbs may be missed, and the broad past bucket does not establish the construction's temporal reference. French, Italian and Dutch compound cues may still count auxiliary and participle in both categories. Custom patterns and optional contextual models are unchanged. |
-| Dialogue | Romance language profiles (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`), but inline mid-paragraph dashes and unclosed quotes remain outside default patterns. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words more than once in turn and quote-word totals, although paragraph shares use their union. |
+| Dialogue | Romance language profiles (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`), but inline mid-paragraph dashes and unclosed quotes remain outside default patterns. Zero detected quotation words does not establish absence of speech. Overlapping custom matches can count the same words in more than one turn. Counts and shares of quoted words use the union of recognized ranges. |
 | Syllables | Italian `count_it()` strips silent `qu`/`gu` and merges rising `[iu]`+vowel diphthongs; unmarked hiatuses (`paura`, `mio` vs. `fiore`) and stress-dependent splits remain heuristic. French `count_fr()` adds exceptions for `-ment` mute verbs, `souvent`, and `-éC+ent`, while remaining orthographic rather than phonological. The corrected Dutch `ij` rule is not a complete pronunciation model. |
 | Sentence spans | Sentence-final abbreviations can merge sentences. Paired spaced closers and German single `‚…‘` closers have direct boundary/evidence controls, but quotation pairing and abbreviation tables are incomplete; a matching total does not guarantee correct boundaries. |
 | Nominal/passive cues | Word endings and auxiliary patterns do not resolve lexical category, adjectival participles or syntactic voice. Short regular and selected irregular passive forms have positive/negative controls; German `ist geöffnet` state passive remains outside the event-passive cue pattern. Coverage is improved, not complete. |

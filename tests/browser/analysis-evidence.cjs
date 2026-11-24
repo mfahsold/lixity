@@ -636,7 +636,7 @@ server.serve_forever()
   } finally {await server.close();}
 }
 async function metricPreferences(browser) {
-  const keys = ['asl', 'function', 'dialogue', 'filter', 'passive', 'modal', 'nominal'];
+  const keys = ['asl', 'function', 'filter', 'passive', 'modal', 'nominal'];
   for (const width of [1440, 320]) {
     const page = await browser.newPage({viewport:{width,height:900}, reducedMotion:'reduce'});
     await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
@@ -1241,7 +1241,7 @@ async function verifyInlineMarkPreferences(browser, url) {
   const page = await browser.newPage({viewport:{width:320,height:480}, reducedMotion:'reduce'});
   const marks = page.locator('#analysis-evidence-enabled');
   const analysis = page.locator('#manuscript-analysis-toggle');
-  const inlineOptions = ['sticky', 'dialogue_tag', 'indirect_speech', 'echo'];
+  const inlineOptions = ['sticky', 'dialogue', 'dialogue_tag', 'indirect_speech', 'echo'];
   try {
     await page.goto(url);
     await analysis.click();
@@ -1293,7 +1293,8 @@ manuscript = project / 'quotation-boundaries.md'
 manuscript.write_text(
     f'## Synthetic quotation chapter\n\n{intro}. {opening}{first}\n\n{second}{closing} {outro}\n\n'
     f'## Synthetic unresolved quotation\n\n{opening}{first}\n\n'
-    f'## Synthetic narration chapter\n\n{apostrophe}\n\n{opening}{first}{closing} X\n',
+    f'## Synthetic narration chapter\n\n{apostrophe}\n\n{opening}{first}{closing} X\n\n'
+    f'{opening}{first}{closing}\n',
     encoding='utf-8',
 )
 LixityServerHandler.workspace_root = str(project)
@@ -1325,7 +1326,7 @@ server.serve_forever()
               quoteRanges:layer.quotation_ranges.map(([start,end]) => Array.from(item[0]).slice(start,end).join('')),
               spans:layer.spans.map(span => ({marker:span.quotation_marker, context:span.quotation_context}))};
           }));
-          assert.equal(evidence.length, 5);
+          assert.equal(evidence.length, 6);
           for (const [index, text] of [first, second].entries()) {
             assert.equal(evidence[index].count, 2);
             assert.equal(evidence[index].denominator, 4);
@@ -1339,10 +1340,17 @@ server.serve_forever()
           assert.equal(evidence[3].reason, undefined);
           assert.equal(evidence[4].count, 2);
           assert.equal(evidence[4].denominator, 3);
+          assert.equal(evidence[5].count, 2);
+          assert.equal(evidence[5].denominator, 2);
 
           await page.locator('#manuscript-analysis-toggle').click();
+          assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true);
           await selectMetric(page, 'dialogue');
-          await marksEnabled(page, true);
+          assert.equal(await page.locator('#analysis-evidence-enabled').isChecked(), true);
+          assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), false);
+          assert.equal(await page.locator('#chapters .strip:visible').count(), 0);
+          assert.equal(await page.locator('#chapters .metric-notable').count(), 0);
+          assert.equal(await page.locator('#chapters .reader-comparison-value:visible').count(), 0);
           const paragraph = page.locator('#chapters .ptext').nth(1);
           await paragraph.scrollIntoViewIfNeeded();
           await page.waitForFunction(text => [...(CSS.highlights.get('lixity-analysis-evidence') || [])]
@@ -1358,16 +1366,30 @@ server.serve_forever()
             marker:uiFormat('evidence_quotation_marker', {marker:value}),
           }), marker);
           assert.ok((await card.locator('.analysis-evidence-paragraph').textContent()).includes(localized.share));
+          assert.equal(await card.locator('.analysis-evidence-comparison').count(), 0);
           assert.equal(await card.locator('.analysis-evidence-explanation p').first().textContent(), localized.marker);
           assert.equal(await card.evaluate(node => {
             const box = node.getBoundingClientRect();
             return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
           }), true);
           await page.keyboard.press('Escape');
+          const fullQuoteActions = page.locator('#chapters .ptext').nth(5).locator('.reader-paragraph-actions');
+          await fullQuoteActions.scrollIntoViewIfNeeded();
+          await settle(page);
+          await fullQuoteActions.press('Enter');
+          await explainFromMenu(page, true);
+          await card.waitFor({state:'visible'});
+          const fullQuoteShare = await page.evaluate(() => uiCountFormat('evidence_quotation_share', 2, {quoted:2}));
+          assert.ok((await card.locator('.analysis-evidence-paragraph').textContent()).includes(fullQuoteShare));
+          assert.equal(await card.locator('.analysis-evidence-comparison').count(), 0);
+          await page.keyboard.press('Escape');
+          await selectMetric(page, 'asl');
+          assert.equal(await page.locator('#analysis-comparison-enabled').isChecked(), true);
+          assert.equal(await page.locator('#analysis-comparison-enabled').isVisible(), true);
           await page.locator('#reader-direct-speech').click();
           assert.equal(await page.locator('#reader-direct-speech').getAttribute('aria-pressed'), 'true');
           await page.waitForFunction(expected => [...(CSS.highlights.get('lixity-direct-speech') || [])]
-            .map(range => range.toString()).join('|') === expected, [first, second, first].join('|'));
+            .map(range => range.toString()).join('|') === expected, [first, second, first, first].join('|'));
           assert.equal(await page.locator('#chapters .ptext').nth(4).evaluate(node =>
             node.classList.contains('direct-speech-mixed')), true, 'A short word outside the quote is still narration');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

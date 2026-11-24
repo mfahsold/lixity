@@ -186,7 +186,7 @@ class TestAnalysisOverview(unittest.TestCase):
         self.assertEqual(len(optgroups), 3)
         expected_groups = [
             ("Sentence & Rhythm", ("asl", "function")),
-            ("Voice & Dialogue", ("dialogue", "filter", "sensory")),
+            ("Voice & Dialogue", ("filter", "sensory")),
             ("Grammar & Style", ("passive", "modal", "nominal")),
         ]
         for (expected_label, expected_members), group in zip(expected_groups, optgroups, strict=True):

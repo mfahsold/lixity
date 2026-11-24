@@ -111,6 +111,11 @@ outside detected quotations. The legacy whitespace count `clean_words` is
 unchanged and is not the dialogue-ratio denominator. Recompute older dialogue
 reports and dependent style results before comparing across this correction.
 
+The manuscript reader shows the recognized words and the paragraph word count.
+A paragraph containing just one marked reply can contribute all of its words.
+Chapter bars use the chapter's full analyzed word count to show how much of its
+prose falls within recognized marks.
+
 ### Perception/filter word cues
 
 Density features (`filter_density`, modal, passive, nominalisation) are counts

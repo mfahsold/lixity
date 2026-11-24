@@ -44,6 +44,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Show quoted text directly in the reader with a word count on inspection.
+  Keep the share in chapter and manuscript reports.
 - Describe the OSS architecture and contributor workflows in the repository
   README. Show the author workflow, the interactive sandbox and the read-only
   example distinctly on the localized product pages.

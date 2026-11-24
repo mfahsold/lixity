@@ -92,7 +92,12 @@ from .heatmap import (
     render_style_passport_panel,
 )
 from .manuscript_document import ReaderBlock, reader_block_html
-from .manuscript_reader import reading_controls, reading_metric_control, reading_overview_control
+from .manuscript_reader import (
+    PARAGRAPH_COMPARISON_LAYERS,
+    reading_controls,
+    reading_metric_control,
+    reading_overview_control,
+)
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -1469,7 +1474,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
                 )
                 layer_payload: dict[str, list[Any]] = {}
-                for key in LAYER_FEATURES:
+                for key in PARAGRAPH_COMPARISON_LAYERS:
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
                         value, z = info.value, info.z
@@ -1541,8 +1546,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 if paragraph_evidence is not None and idx in paragraph_evidence:
                     paragraph_content[f"p-{idx}"].append(paragraph_evidence[idx])
                     paragraph_content[f"p-{idx}"].append({
-                        key: _layer_text(key, getattr(p, attribute)) if p.words > 0 and measured(key) else None
-                        for key, attribute in LAYER_PARAGRAPH_ATTR.items()
+                        key: _layer_text(key, getattr(p, LAYER_PARAGRAPH_ATTR[key]))
+                        if p.words > 0 and measured(key) else None
+                        for key in PARAGRAPH_COMPARISON_LAYERS
                     })
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
@@ -1639,11 +1645,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         )
         has_dialogue_share = has_tokens and bool(metrics.clean_words)
-        dialogue_layer = "dialogue" if has_dialogue_share and paragraphs and measured("dialogue") else None
+        dialogue_layer = "dialogue" if has_dialogue_share and paragraph_evidence and measured("dialogue") else None
         language_tiles.append(
             kpi(
                 P(metrics.dialog_ratio) if has_dialogue_share else "–",
-                help_term(labels, "dialogue", L("measurement_quoted_words")),
+                help_term(labels, "dialogue", L("analysis_dialogue_share")),
                 bar=metrics.dialog_ratio if has_dialogue_share else None,
                 layer=dialogue_layer,
             )
