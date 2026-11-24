@@ -38,7 +38,7 @@ Wie sehen diese Lektorats-Signale an vollständigen Klassikern aus? Die folgende
 | Wortbrücke Folgesätze (Satz-Kohäsion) | 23,7 % der Satzpaare | 23,6 % der Satzpaare | Inhaltswort-Wiederaufnahme zwischen Nachbarsätzen im Absatz |
 | Gleiche Satzanfänge (Ketten ≥ 3) | 5 Ketten in 36 Kapiteln | 21 Ketten in 61 Kapiteln | Stellen für bewusste Anaphern oder Satzanfangs-Monotonie |
 
-Besonders aufschlussreich ist der **ASL-Abstand zwischen Zitaten und Erzähltext**. Obwohl über achtzig Jahre und zwei verschiedene Sprachen zwischen Fontanes deutschem Gesellschaftsroman und Austens englischem Klassiker liegen, ist der Befund derselbe. Beide trennen ihre Figurenrede im Schnitt um **fast exakt 10 Wörter pro Satz** (`−9,90` bzw. `−9,73`) vom Erzähltext. Wenn Dialoge in einem Rohmanuskript steif oder „papierern“ wirken, liegt dieser Differenzwert häufig nahe bei `0` – die Figuren sprechen dann in denselben Satzbögen wie die Erzählstimme.
+Beim **ASL-Abstand zwischen Zitaten und Erzähltext** liegen beide Romane nah beieinander. Die Sätze in erkannten Zitaten sind im Mittel um **knapp 10 Wörter** kürzer als im übrigen Text (`−9,90` bzw. `−9,73`). Ein Wert nahe `0` bedeutet, dass die beiden Mittelwerte ähnlich sind. Wenn dir ein Dialog im Rohmanuskript steif vorkommt, lies eine Stelle mit dem umgebenden Text. Passen Satzbau und Wortwahl zur Stimme, die du dir vorstellst?
 
 <a id="kapitel-diagnose"></a>
 

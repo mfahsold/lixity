@@ -40,13 +40,13 @@ To see how these signals behave on real books rather than toy paragraphs, we can
 | Adjacent sentence overlap (cohesion) | 23.7% of adjacent pairs | 23.6% of adjacent pairs | Within-paragraph content-word chaining from sentence to sentence |
 | Repeated sentence starts (runs ≥ 3) | 5 runs across 36 chapters | 21 runs across 61 chapters | Candidates for deliberate anaphora or unintended start monotony |
 
-Look at the **Voice contrast (ASL Δ)** row in both novels. Although Fontane writes in late-19th-century German and Austen writes in Regency English, both novelists maintain an almost identical structural separation of nearly **10 words per sentence** between their narrative prose and their characters' spoken dialogue:
+Look at the **Voice contrast (ASL Δ)** row in both novels. In Fontane's German text and Austen's English text, the measured difference between recognized quotations and unquoted prose is close to **10 words per sentence**:
 
 - In *Effi Briest*, unquoted narration averages **21.10 words per sentence**, while recognized quoted spans average **11.20 words per sentence** (`ASL Δ = −9.90`), and half of all quoted spans (`49.9%`) are 12 words or shorter.
 
 - In *Pride and Prejudice*, unquoted narration averages **23.39 words per sentence**, while quoted spans average **13.67 words per sentence** (`ASL Δ = −9.73`), with `45.2%` short spans.
 
-When a draft manuscript feels wooden in dialogue scenes, one of the most common causes is that `ASL Δ` hovers near zero. The characters are speaking in the exact same 20-word syntactic periods as the narrator.
+An `ASL Δ` near zero means the two measured averages are close. If a draft's dialogue feels stiff, read a passage alongside the surrounding prose. Are the sentence shapes and turns of phrase doing the work you want?
 
 <a id="chapter-drills"></a>
 
