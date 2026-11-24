@@ -25,6 +25,14 @@
       <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-project-settings.png</image:loc>
       <image:title>Unsaved example chapter register draft with range and assignment</image:title>
     </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://mfahsold.github.io/lixity/videos/product-tour.webp</video:thumbnail_loc>
+      <video:title>Lixity in 48 seconds: reading, measuring and reporting one chapter</video:title>
+      <video:description>Six eight-second scenes: open an analysis suggestion, see the exact counted words, compare an unsaved draft, read a chapter measurement, open a saved dossier and download its PDF.</video:description>
+      <video:content_loc>https://mfahsold.github.io/lixity/videos/product-tour.mp4</video:content_loc>
+      <video:duration>48</video:duration>
+      <video:publication_date>2026-11-24</video:publication_date>
+    </video:video>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc>
