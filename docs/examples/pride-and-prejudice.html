@@ -9053,6 +9053,7 @@ if (filter) {
   var prev = document.getElementById("text-search-prev");
   var next = document.getElementById("text-search-next");
   var clear = document.getElementById("text-search-clear");
+  var group = input.closest(".text-search-group");
   var hits = [];
   var cursor = -1;
   var restored = null;
@@ -9127,6 +9128,16 @@ if (filter) {
         matches: hits.length,
         paragraphs: blocks.length
       });
+    }
+    if (query && !hits.length && group && group.contains(document.activeElement)) {
+      // Removing all chapter results can move the search feedback behind the
+      // sticky reader. Keep the active field, its status and Clear available.
+      var bounds = group.getBoundingClientRect(), toolbar = group.closest(".toolbar");
+      var boundary = toolbar && getComputedStyle(toolbar).position === "sticky" ? 0 : readingViewportTop();
+      if (bounds.top < boundary || bounds.bottom > innerHeight) {
+        setPassageScrollMargin(group);
+        window.LixityComponents.scrollIntoViewSafe(group, {block: "nearest", behavior: "instant"});
+      }
     }
     var dur = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
     if (window.LixityLog && query) {

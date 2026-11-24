@@ -249,6 +249,13 @@ async function finish(page, errors, writes) {
           assert.equal(await page.locator('#text-search-status').innerText(), await page.evaluate(() => uiLabel('text_search_none')));
           assert.equal(await page.locator('#paragraph-filter-suspended').isVisible(), true);
           assert.equal(await page.locator('#text-search-next').isDisabled(), true);
+          assert.equal(await page.evaluate(() => {
+            return ['text-search-status', 'text-search-clear', 'paragraph-filter-suspended'].every(id => {
+              const node = document.getElementById(id), bounds = node.getBoundingClientRect();
+              const visible = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+              return bounds.top >= 0 && bounds.bottom <= innerHeight + 1 && node.contains(visible);
+            });
+          }), true, 'Empty search feedback and its next action remain inside the visible reading viewport');
           const clearSearch = page.locator('#text-search-clear');
           await clearSearch.focus(); await page.keyboard.press('Enter'); await settle(page);
           assert.equal(await search.evaluate(node => node === document.activeElement), true);
