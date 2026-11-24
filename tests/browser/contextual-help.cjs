@@ -452,7 +452,8 @@ async function settingsGeometry(page, locale, width) {
   try {
     for (const height of [480, 900]) {
       await page.setViewportSize({width, height}); await settle(page);
-      for (const id of ['reader-settings', 'reader-analysis-overview']) {
+      {
+        const id = 'reader-settings';
         await page.setViewportSize({width, height}); await settle(page);
         const settings = page.locator('#' + id), summary = settings.locator(':scope > summary');
         const closedArrow = await summary.evaluate(node => getComputedStyle(node, '::after').transform);
@@ -493,9 +494,7 @@ async function settingsGeometry(page, locale, width) {
       }
       const group = page.locator('#reader-analysis-settings');
       assert.equal(await group.getAttribute('role'), 'group');
-      assert.deepEqual(await group.locator('summary').evaluateAll(nodes =>
-        nodes.map(node => node.closest('details').id)), ['reader-analysis-overview'],
-      'The overview has its own disclosure and leaves analysis settings directly accessible');
+      assert.equal(await group.locator('summary').count(), 0, 'Analysis settings are directly accessible');
       for (const selector of ['#style-layer', '#analysis-evidence-enabled', '#analysis-comparison-enabled']) {
         const control = page.locator(selector);
         assert.equal(await control.evaluate(node => node.closest('details')), null);

@@ -90,9 +90,100 @@ async function documentState(page) {
   })));
 }
 
+async function nativeReaderPreferences(browser) {
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: 'reduce'});
+  const reader = {size: 22, width: 'wide', spacing: 'relaxed', metric: 'dialogue', comparison: false,
+    evidenceByMetric: {dialogue: false}};
+  let releaseFirst, markReading;
+  const holdFirst = new Promise(resolve => { releaseFirst = resolve; });
+  const reading = new Promise(resolve => { markReading = resolve; });
+  const patches = [];
+  const errors = [];
+  try {
+    let firstRead = true;
+    await context.exposeFunction('readWorkspacePreferences', async () => {
+      const snapshot = structuredClone(reader);
+      if (firstRead) {
+        firstRead = false;
+        markReading();
+        await holdFirst;
+      }
+      return {reader: snapshot};
+    });
+    await context.exposeFunction('writeWorkspacePreference', (key, patch) => {
+      assert.equal(key, 'reader');
+      patches.push(patch);
+      const {evidenceByMetric, ...fields} = patch;
+      Object.assign(reader, fields);
+      if (evidenceByMetric) Object.assign(reader.evidenceByMetric, evidenceByMetric);
+    });
+    await context.addInitScript(() => {
+      window.lixityDesktop = {version: 1, getPreferences: window.readWorkspacePreferences,
+        setPreference: window.writeWorkspacePreference};
+    });
+    await context.route('http://127.0.0.1:*/*', route => route.fulfill(
+      new URL(route.request().url()).pathname.startsWith('/api/') ?
+        {json: {ok: true, records: [], links: []}} : {contentType: 'text/html', body: fixtures.en}
+    ));
+    const page = await context.newPage();
+    page.on('pageerror', error => errors.push(error.message));
+    async function openReader(port) {
+      await page.goto(`http://127.0.0.1:${port}/`);
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#manuscript-analysis-toggle').click();
+    }
+    const metric = page.locator('#style-layer');
+    const counted = page.locator('#analysis-evidence-enabled');
+    const comparison = page.locator('#analysis-comparison-enabled');
+
+    await openReader(18731);
+    await reading;
+    assert.deepEqual(patches, [], 'The temporary default selection does not overwrite native preferences');
+    await metric.selectOption('function');
+    await counted.check();
+    await expect.poll(() => patches.length).toBe(2);
+    releaseFirst();
+    await expect(page.locator('#reader-size-value')).toHaveText('22');
+    await expect(page.locator('#reader-width')).toHaveValue('wide');
+    await expect(page.locator('#reader-spacing')).toHaveValue('relaxed');
+    await expect(metric).toHaveValue('function');
+    await expect(counted).toBeChecked();
+    await expect(comparison).not.toBeChecked();
+    assert.deepEqual(patches, [{metric: 'function'}, {evidenceByMetric: {function: true}}],
+      'Hydration respects the subsequent edits without publishing a stale snapshot');
+
+    await page.locator('#reader-settings summary').click();
+    await page.locator('#reader-text-larger').click();
+    await page.locator('#reader-settings [data-reader-choice="narrow"]').click();
+    await page.locator('#reader-settings [data-reader-choice="compact"]').click();
+    await expect.poll(() => patches.length).toBe(5);
+
+    // A fresh loopback port has a different localStorage origin.
+    await openReader(18732);
+    await expect(page.locator('#reader-size-value')).toHaveText('24');
+    await expect(page.locator('#reader-width')).toHaveValue('narrow');
+    await expect(page.locator('#reader-spacing')).toHaveValue('compact');
+    await expect(metric).toHaveValue('function');
+    await expect(counted).toBeChecked();
+    await expect(comparison).not.toBeChecked();
+    assert.equal(patches.length, 5, 'Loading the portable preferences sends no redundant writes');
+
+    await metric.selectOption('');
+    await expect.poll(() => reader.metric).toBe('');
+    await openReader(18733);
+    await expect(page.locator('#reader-size-value')).toHaveText('24');
+    await expect(metric).toHaveValue('');
+    assert.deepEqual(errors, []);
+  } finally {
+    releaseFirst();
+    await context.close();
+  }
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
+    await nativeReaderPreferences(browser);
     const desktop = await createPage(browser, fixtures.en, 1440, true);
     try {
       const {page} = desktop;

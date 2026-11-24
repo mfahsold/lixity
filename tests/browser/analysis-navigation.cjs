@@ -33,24 +33,36 @@ text = '\\n\\n'.join(
     for chapter in range(1, 5))
 text += '\\n\\n## Brief chapter\\n\\nRain.'
 config = CorpusConfig(language='en', chapter_regex=r'(?m)^##\\s+')
-analysis = analyze_document(text, config, resolve_thresholds(project_config={}), include_evidence=True)
-analysis.paragraphs[0].severity = 3
-analysis.chapters[0].flagged = sum(paragraph.is_flagged for paragraph in analysis.paragraphs
-                                if paragraph.chapter_num == analysis.chapters[0].num)
-# Controlled paragraph display values provide several outliers; chapter/PCA
-# measurements retain their independently computed synthetic-text baselines.
-for index, paragraph in enumerate(analysis.paragraphs):
-    paragraph.asl = (0, 1, 2, 3, 8, 30, 60)[index % 7]
-scenes = scene_report_for_display(text, config, premeasured_chapters=analysis.metrics.chapters)
-result = {}
-for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
-    result[locale] = render_dashboard(
+def measure(source):
+    analysis = analyze_document(source, config, resolve_thresholds(project_config={}), include_evidence=True)
+    analysis.paragraphs[0].severity = 3
+    analysis.chapters[0].flagged = sum(paragraph.is_flagged for paragraph in analysis.paragraphs
+                                    if paragraph.chapter_num == analysis.chapters[0].num)
+    # Controlled display values provide multiple outliers without changing
+    # independently computed chapter/PCA measurements.
+    for index, paragraph in enumerate(analysis.paragraphs):
+        paragraph.asl = (0, 1, 2, 3, 8, 30, 60)[index % 7]
+    return analysis, scene_report_for_display(source, config, premeasured_chapters=analysis.metrics.chapters)
+def render(locale, source, analysis, scenes):
+    return render_dashboard(
         analysis.chapters, analysis.paragraphs, metrics=analysis.metrics,
         fingerprint=analysis.fingerprint, scenes=scenes, title='Synthetic navigation',
         labels={**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]},
         language_key=locale, controls=True, enabled_actions=['analyze', 'research-reader'],
         manuscript_pdf_token='a' * 64, manuscript_source_sha256='b' * 64,
-        reader_document=reader_blocks(text, config, analysis.paragraphs), paragraph_evidence=analysis.evidence)
+        reader_document=reader_blocks(source, config, analysis.paragraphs), paragraph_evidence=analysis.evidence)
+analysis, scenes = measure(text)
+result = {}
+for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
+    result[locale] = render(locale, text, analysis, scenes)
+for paragraph in analysis.paragraphs:
+    paragraph.severity = 0
+for chapter in analysis.chapters:
+    chapter.flagged = 0
+result['en-without-tense-signals'] = render('en', text, analysis, scenes)
+with_cues = text.replace('Synthetic passage 0. ', 'Synthetic passage 0. '
+    'I am tired. She is here. I was waiting. She was alone. They were waiting. ', 1)
+result['en-with-tense-cues'] = render('en', with_cues, *measure(with_cues))
 print(json.dumps(result))
 `, {root});
 
@@ -74,8 +86,8 @@ async function settle(page) {
     .some(animation => animation.playState === 'running'));
 }
 
-async function createPage(browser, locale, width, motion = 'reduce') {
-  const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: motion});
+async function createPage(browser, locale, width, motion = 'reduce', hasTouch = false) {
+  const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: motion, hasTouch});
   page.setDefaultTimeout(10000);
   const errors = [], writes = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -88,7 +100,7 @@ async function createPage(browser, locale, width, motion = 'reduce') {
       writes.push(url.pathname);
       return route.fulfill({status: 400, json: {ok: false, message: 'Read-only navigation fixture'}});
     }
-    if (url.origin !== 'http://lixity.test') return route.abort();
+    if (url.origin !== 'http://localhost') return route.abort();
     if (url.pathname === '/api/manuscript-delta') return route.fulfill({json: {
       ok: true, schema_version: 'lixity-timeline/1', current: {revision: 'b'.repeat(64)},
       has_baseline: true, base: {created_at: 1708000000}, chapter_deltas: [
@@ -101,7 +113,9 @@ async function createPage(browser, locale, width, motion = 'reduce') {
     }});
     return route.fulfill({contentType: 'text/html', body: fixtures[locale]});
   });
-  await page.goto('http://lixity.test/');
+  // The loopback origin exposes the same secure context as the local app,
+  // including Web Crypto for checking manuscript evidence offsets.
+  await page.goto('http://localhost/');
   assert.match(await page.title(), /^Synthetic navigation – /);
   await page.locator('#tab-view-analysis').click();
   return {page, errors, writes};
@@ -189,7 +203,109 @@ async function finish(page, errors, writes) {
         } finally { await page.close(); }
       }
     });
+    await check('an empty tense filter explains how to continue', async () => {
+      const {page, errors, writes} = await createPage(browser, 'en-without-tense-signals', 320);
+      try {
+        await page.locator('#manuscript-analysis-toggle').click();
+        await page.locator('#style-layer').selectOption('asl');
+        const filter = page.locator('#filter-flags');
+        await filter.focus(); await page.keyboard.press('Space'); await settle(page);
+        assert.equal(await page.locator('#chapters .chapter:visible').count(), 0);
+        const status = page.locator('#paragraph-filter-empty');
+        assert.equal(await status.isVisible(), true);
+        assert.match(await status.innerText(), /tense/i);
+        assert.equal(await page.locator('#layer-next').isDisabled(), true);
+        const reset = page.locator('#paragraph-filter-reset');
+        await reset.focus(); await page.keyboard.press('Enter'); await settle(page);
+        assert.equal(await filter.isChecked(), false);
+        assert.equal(await filter.evaluate(node => node === document.activeElement), true);
+        assert.equal(await status.isVisible(), false);
+        assert.ok(await page.locator('#chapters .chapter:visible').count() > 0);
+        assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+        await finish(page, errors, writes);
+      } finally { await page.close(); }
+    });
     for (const width of [1440, 320]) {
+      await check('measurement, tense review and return share the reading position ' + width, async () => {
+        const {page, errors, writes} = await createPage(browser, 'en-with-tense-cues', width, 'reduce', width === 320);
+        try {
+          if (width === 320) await page.setViewportSize({width, height: 535});
+          await page.locator('#manuscript-analysis-toggle').click();
+          const metric = page.locator('#style-layer');
+          await metric.selectOption('asl');
+          const all = await page.locator('#chapters .chip.outlier').count();
+          const filter = page.locator('#filter-flags');
+          await filter.check(); await settle(page);
+          const scoped = await page.locator('#chapters .chapter.has-flags .chip.outlier').count();
+          assert.ok(scoped > 0 && scoped < all);
+          assert.match(await page.locator('#layer-position').textContent(), new RegExp(`(?:of | · )${scoped}$`));
+          await page.locator('#layer-next').click(); await settle(page);
+          const target = page.locator(new URL(page.url()).hash);
+          assert.equal(await target.evaluate(node => !!node.closest('.chapter.has-flags')), true);
+          assert.equal(await target.isVisible(), true);
+          const search = page.locator('#text-search');
+          await search.fill('No matching synthetic passage');
+          await search.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#text-search-status').innerText(), await page.evaluate(() => uiLabel('text_search_none')));
+          assert.equal(await page.locator('#paragraph-filter-suspended').isVisible(), true);
+          assert.equal(await page.locator('#text-search-next').isDisabled(), true);
+          const clearSearch = page.locator('#text-search-clear');
+          await clearSearch.focus(); await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await search.evaluate(node => node === document.activeElement), true);
+          assert.equal(await page.locator('#paragraph-filter-suspended').isVisible(), false);
+          assert.equal(await filter.isChecked(), true);
+          assert.equal(await page.locator('#chapters .chapter:not(.has-flags):visible').count(), 0,
+            'Clearing search restores the author’s chosen tense scope');
+          const chapter = page.locator('#chapters .chapter:not(.has-flags)').first();
+          const chapterId = await chapter.getAttribute('id');
+          const chapterSelector = page.locator('#reader-chapter');
+          await chapterSelector.focus(); await chapterSelector.selectOption(chapterId); await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + chapterId);
+          assert.equal(await chapter.isVisible(), true);
+          assert.equal(await chapterSelector.evaluate(node => node === document.activeElement), true);
+          assert.equal(await filter.isChecked(), false, 'An explicit chapter jump clears only its blocking filter');
+          assert.equal(await metric.inputValue(), 'asl');
+          // Start at prose below the chapter heading so the reading position
+          // is unambiguous even when sticky controls gain or lose one row.
+          const start = await chapter.locator('.ptext').first().getAttribute('id');
+          await page.evaluate(id => scrollAndFlash(document.getElementById(id)), start);
+          await settle(page);
+          assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), start);
+          await metric.selectOption('dialogue'); await settle(page);
+          assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), start);
+          await metric.selectOption('asl'); await settle(page);
+          assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), start);
+          await openOverview(page);
+          await page.locator('#workbench-overview-back').focus();
+          await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.evaluate(() => LixityReader.capture()?.panel.id), start);
+          assert.equal(await page.locator('#workbench-overview-open').evaluate(node => node === document.activeElement), true);
+          await openOverview(page);
+          const review = page.locator('[data-review-tense]');
+          const flaggedId = await review.getAttribute('data-target');
+          if (width === 320) await review.tap();
+          else { await review.focus(); await page.keyboard.press('Enter'); }
+          await settle(page);
+          assert.equal(new URL(page.url()).hash, '#' + flaggedId);
+          assert.equal(await metric.inputValue(), 'asl');
+          const close = page.locator('#reader-inspector-close');
+          const explanation = page.locator('#reader-inspector .reader-passage-flag');
+          assert.equal(await explanation.isVisible(), true);
+          assert.equal(await explanation.locator('.reader-passage-flag-title').textContent(),
+            await page.evaluate(() => uiLabel('reading_tense_mixed')));
+          await explanation.locator('.reader-tense-cue').first().waitFor({state: 'visible'});
+          assert.equal(await close.evaluate(button => button === document.activeElement), true);
+          await page.keyboard.press('Enter'); await settle(page);
+          assert.equal(await page.locator('#reader-inspector').isVisible(), false);
+          const cue = page.locator('#' + flaggedId + ' [data-reader-flag]');
+          assert.equal(await cue.evaluate(button => button === document.activeElement), true);
+          assert.equal(await cue.evaluate(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.bottom > readingViewportTop() && rect.top < innerHeight;
+          }), true);
+          await finish(page, errors, writes);
+        } finally { await page.close(); }
+      });
       await check('compact abnormal paragraph navigation ' + width, async () => {
         const {page, errors, writes} = await createPage(browser, 'en', width);
         try {
@@ -212,7 +328,7 @@ async function finish(page, errors, writes) {
           const middle = Math.floor(metric.ids.length / 2);
           await page.evaluate(id => scrollAndFlash(document.getElementById(id)), metric.ids[middle]);
           await settle(page);
-          assert.equal((await page.locator('#layer-position').textContent()).trim(), `${middle + 1} / ${metric.ids.length}`);
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), `Difference ${middle + 1} of ${metric.ids.length}`);
           await page.locator('#layer-next').focus(); await page.keyboard.press('Enter'); await settle(page);
           assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 1) % metric.ids.length],
             'Next continues from the current passage in manuscript order');
@@ -252,7 +368,7 @@ async function finish(page, errors, writes) {
             panel.focus({preventScroll: true}); scrollAndFlash(document.getElementById(current));
           }, {focused: metric.ids[0], current: metric.ids[middle]});
           await settle(page);
-          assert.equal((await page.locator('#layer-position').textContent()).trim(), `${middle + 1} / ${metric.ids.length}`,
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), `Difference ${middle + 1} of ${metric.ids.length}`,
             'A paragraph focused above the viewport does not override the current reading position');
           await page.locator('#' + metric.ids[middle] + ' .ptext-inner > p').evaluate(prose => {
             const range = document.createRange(); range.selectNodeContents(prose);
@@ -264,18 +380,25 @@ async function finish(page, errors, writes) {
           await page.locator('#layer-next').click(); await settle(page);
           assert.equal(new URL(page.url()).hash, '#' + metric.ids[(middle + 2) % metric.ids.length],
             'A previous text selection does not restart each subsequent navigation step');
-          await page.locator('#text-search').fill('Synthetic passage 0.');
+          const query = (await page.locator('#' + metric.ids[0] + ' .ptext-inner > p').textContent()).match(/^Synthetic passage \d+\./)[0];
+          await page.locator('#text-search').fill(query);
           await page.locator('#text-search').press('Enter'); await settle(page);
+          const scoped = await page.evaluate(ids => ids.filter(id => !document.getElementById(id).closest('.text-miss')), metric.ids);
+          assert.ok(scoped.length > 0 && scoped.length < metric.ids.length, 'Search limits the set of reachable differences');
+          assert.match(await page.locator('#layer-position').textContent(), new RegExp(`(?:of | · )${scoped.length}$`));
           await page.locator('#layer-next').click(); await settle(page);
-          assert.equal(await page.locator('#' + metric.ids[0]).isVisible(), true,
-            'Global paragraph navigation reveals an abnormal passage outside the current search');
-          assert.equal(await page.locator('#text-search').inputValue(), '');
+          assert.ok(scoped.includes(new URL(page.url()).hash.slice(1)), 'Difference navigation remains within the searchable result set');
+          assert.equal(await page.locator('#text-search').inputValue(), query);
           assert.equal(await page.locator('#style-layer').inputValue(), metric.key,
             'Revealing a filtered passage retains the selected metric');
+          await page.locator('#text-search').fill('No matching synthetic passage');
+          await page.locator('#text-search').press('Enter'); await settle(page);
+          assert.equal(await page.locator('#layer-next').isDisabled(), true);
+          assert.equal((await page.locator('#layer-position').textContent()).trim(), 'Differing paragraphs · 0');
           await page.locator('#style-layer').selectOption('');
           assert.equal(await page.locator('#layer-prev').isDisabled(), true);
           assert.equal(await page.locator('#layer-next').isDisabled(), true);
-          assert.equal((await page.locator('#layer-position').textContent()).trim(), '0 / 0');
+          assert.equal(await page.locator('#layer-position').isVisible(), false);
           await finish(page, errors, writes);
         } finally { await page.close(); }
       });
@@ -598,19 +721,12 @@ async function finish(page, errors, writes) {
           await nextAction.press('Enter');
           assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'true');
           assert.equal(await page.locator('#style-layer').evaluate(node => node === document.activeElement), true);
-          const overviewPicker = page.locator('#reader-analysis-overview-select');
-          const overviewOpen = page.locator('#reader-analysis-overview-form button');
-          const overviewIds = await overviewPicker.locator('option').evaluateAll(options =>
-            options.map(option => option.value).filter(Boolean));
-          assert.deepEqual(overviewIds, await page.locator('[data-analysis-section-target]').evaluateAll(buttons =>
-            buttons.map(button => button.dataset.analysisSectionTarget)),
-            'Reader picker offers exactly the available overview workflows');
-          const overviewMenu = page.locator('#reader-analysis-overview > summary');
-          await overviewMenu.click();
-          await overviewPicker.selectOption('matrix');
-          assert.equal(await page.locator('#chapters').isVisible(), true,
-            'Changing the overview selection keeps the reader open until the explicit action');
-          await overviewOpen.press('Enter');
+          const overview = page.locator('#workbench-overview-open');
+          assert.equal(await overview.locator('.reader-control-label').isVisible(), true,
+            'The analysis overview keeps a visible label on compact screens');
+          await overview.press('Enter');
+          await page.locator('[data-analysis-workflow="compare"]').click();
+          await page.locator('[data-analysis-section-target="matrix"]').press('Enter');
           await settle(page);
           assert.equal(await page.locator('#matrix').isVisible(), true);
           assert.equal(await page.locator('#matrix > h2').evaluate(node => node === document.activeElement), true,
@@ -618,9 +734,6 @@ async function finish(page, errors, writes) {
           await page.locator('#workbench-overview-back').click();
           await settle(page);
           assert.equal(await page.locator('#chapters').isVisible(), true);
-          await overviewMenu.click();
-          await overviewPicker.selectOption('');
-          await overviewMenu.click();
           await page.locator('#style-layer').selectOption('');
           const none = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(none, off, 'Analysis on without a metric is distinct from Analysis off');
@@ -640,7 +753,6 @@ async function finish(page, errors, writes) {
             assert.equal(await page.locator('#reader-metric-definition').textContent(), measure.hint);
           }
           await page.locator('#style-layer').selectOption('asl');
-          assert.equal(await overviewPicker.inputValue(), 'dist', 'Sentence length suggests the available rhythm report');
           const selected = await page.locator('#reader-analysis-guide-state').textContent();
           assert.notEqual(selected, none);
           assert.ok(selected.includes(await page.locator('#style-layer option:checked').textContent()));
@@ -692,7 +804,7 @@ async function finish(page, errors, writes) {
           if (width === 320) assert.ok(controls.height <= 480 * .45 + 1,
             'Compact analysis leaves most of the short viewport available for manuscript prose');
           const documentScroll = await page.evaluate(() => scrollY);
-          for (const selector of ['#style-layer', '.reader-outlier-navigation', '.reader-evidence-toggle',
+          for (const selector of ['#style-layer', '.reader-evidence-toggle',
             '.reader-comparison-toggle', '#reader-settings > summary', '#reader-focus', '#workbench-overview-open',
             '#workspace-reader-toggle']) {
             await page.locator(selector).evaluate(node => node.scrollIntoView({block:'nearest', inline:'nearest'}));

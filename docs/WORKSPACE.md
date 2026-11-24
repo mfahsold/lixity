@@ -163,8 +163,8 @@ then read the passage to decide what the difference means in context.
    **Compare chapters** for the chapter matrix or style measurements, or
    **Explore patterns** for sentence rhythm. Choose a comparison within the
    supplied text rather than treating its internal reference as a population norm.
-3. Return to a passage and open its measurement explanation. **Counted text**
-   exposes the words or sentences behind the value; **Paragraph comparison**
+3. Return to a passage and open its measurement explanation. **Underline counted passages**
+   exposes the words or sentences behind the value. **Mark differing paragraphs**
    describes a separate comparison with the chapter. Read both in context.
 4. Check the [formula](METHODS.md), [language coverage](LOCALIZATION.md) and
    [interpretation limits](STABILITY.md) before drawing a conclusion. An unknown
@@ -235,8 +235,8 @@ record claims and decisions, and link them to manuscript passages. The
 
 1. Open or import a manuscript, confirm its language and read a chapter with analysis
    off. The import preview writes nothing until you confirm the destination.
-2. Turn analysis on for one question. Use **Counted text** to inspect the original
-   words or sentences; **Paragraph comparison** independently compares the paragraph
+2. Turn analysis on for one question. Use **Underline counted passages** to inspect the original
+   words or sentences. **Mark differing paragraphs** compares the paragraph
    with its chapter. Return to the unmarked passage before deciding what to change.
 3. Open a linked dossier beside the manuscript. Follow its retained source passages,
    claims and decisions; distinguish an exact earlier link from the current record.
@@ -292,8 +292,8 @@ Happy path for an author or lector (no technical setup beyond the local app):
 
 1. Read with **Analysis Off**. Use the chapter selector, text search (`Enter` /
    `Shift+Enter`) or **Back to passage** to stay oriented.
-2. Turn **Analysis On** for exactly one question. Inspect **Counted text** or the
-   **Paragraph comparison**, then return to the unmarked passage before deciding.
+2. Turn **Analysis On** for exactly one question. Use **Underline counted passages** or
+   **Mark differing paragraphs**, then return to the unmarked passage before deciding.
 3. In **Analysis overview**, choose one task: **Review passages**
    (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
    **Explore patterns** (**Muster erkunden**). These unreleased native entrypoints
@@ -346,11 +346,10 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-Use **Inspect passages** to choose what to inspect in the text. **Chapter &
-manuscript** lists the reports currently available in the overview. Choose a
-report and press **Open in overview**. When a passage measurement has a related
-report, Lixity suggests it in this picker. **Back to passage** restores your
-reading position and selected measurement.
+Use **Inspect passages** to choose what to inspect in the text. Open **Analysis
+overview** to compare chapters or find manuscript-wide patterns. **Back to passage**
+restores your reading position and selected measurement. Changing the measurement in
+the reader keeps your place in the text.
 
 **Analysis help** highlights the next step for the current state. Turn on
 analysis, choose a measurement or inspect the measurement at the current
@@ -362,23 +361,28 @@ In the overview, read the reason beside the first suggested passage. The
 button identifies whether it opens a tense flag or the manuscript start.
 Choose a question to reach its available reports and their measurement guides.
 
-**Counted text** and **Paragraph comparison** are
-independent switches. **Counted text** initially follows the selected measure's
-inline-evidence availability and remembers your choice for each measure.
-**Paragraph comparison** starts on and is a shared choice across measures.
+**Underline counted passages** asks what went into the selected value. Its initial
+state follows inline-evidence availability and your choice is remembered per measure.
+**Mark differing paragraphs** asks how a paragraph differs from a typical paragraph in
+that chapter. It starts on and is shared across measures. Measures with no paragraph
+comparison explain that in the visible legend.
 For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
 screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;
-unchecking either switch hides only its own marks and key. The selected metric and
-the switch preferences persist in the browser, including deliberate **None** and
-disabled switches. Turning Analysis on again preserves those choices.
+unchecking either switch hides its own marks and key. The selected measure and
+switch preferences persist, including deliberate **None** and disabled switches.
+The desktop app also keeps them when it starts on a different local port.
 
-While a measurement overlay is active, separate tense-pattern badges are hidden
-in the text. Tense findings remain available in the analysis overview and passage
-inspector, subject to the configured severity threshold.
+The deviation count and arrow buttons use the paragraphs reachable under the active
+filters. When a search or filter has no matching passages, use the adjacent clear
+action to keep the measurement and see more text. Text search covers the whole
+manuscript. Clearing the search resumes the active tense filter. **Chapters with tense
+findings** keeps the rest of each matching chapter available for context. **Review tense
+findings** opens the cues for a specific passage, subject to the configured severity
+threshold.
 
 ### Explore a passage
 
@@ -391,11 +395,12 @@ action reveals the stacked tool heading; close or Escape returns to that passage
 and its control. Desktop tools occupy adjacent space; the reader toolbar compacts
 to the available width when the context panel is open.
 
-The visible keys distinguish violet **Counted text** underlines from
-**Paragraph comparison**. Notable paragraphs have a raw-value marker with a
+The visible keys explain violet underlines and the marks for differing paragraphs.
+Notable paragraphs have a raw-value marker with a
 down/up arrow and a blue/orange edge for below/above the chapter median; the prose
 background receives only a subtle edge wash. Click the marker to see the paragraph
-value and the typical measured value in that chapter in the same units. The
+value and the typical measured value in that chapter in the same units. The evidence
+card shows what was marked, why, and what you can review in context. The chapter
 chapter matrix uses the manuscript as its reference. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
@@ -476,9 +481,39 @@ finding or the opening paragraph.
 CLI `profile --help` gives the same source-lines → counted-text workflow;
 default outputs and JSON contracts are unchanged.
 
+### Compare scene evidence and rehearse an intent
+
+**Unreleased.** Open **Analysis overview → Explore patterns → Scenes & style
+registers**. Read down the two tracks in manuscript order. One shows the share
+of counted words within recognized quotations or marked speech. The other shows
+mean words per sentence. Each track has its own unit and scale. If there are no
+scene dividers, the rows use chapters as their units.
+
+Open a scene's detail to see how many quotation blocks are short, medium or
+long and how the two halves compare. Check the counted words, sentences and
+any unresolved quotation ranges before interpreting a change. Two scenes can
+have the same share with very different block lengths. **Who has the floor
+here?** is a question to take back to the text. Any voice entered in a card is
+the author's own reading. [How the measurements work](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+Open **Story rehearsal** in the scene panel to add a card. Choose a
+scene and a beat such as **Question**, **Delayed answer** or **Revelation**.
+Write what that beat should disclose and, optionally, which voice it belongs
+to and what effect you want to investigate. Save to retain the card with the
+project. Move cards up or down to try a different order, then either reset it
+or explicitly save it. The measurement rows keep the manuscript's order.
+
+After a change to the source or analysis, a saved card can show that it needs
+review. Open the current scene, select it in the card and save again to confirm
+the current anchor. If the scene is missing, its earlier label remains in the
+card for orientation. You can still review the saved cards if the scene measurements
+are temporarily unavailable. If the manuscript has no chapters, open **Story rehearsal**
+from the reader. The saved state belongs to the project and stays local.
+[Storage and update contract](AGENTS.md#author-intent-endpoints)
+
 ### Save review decisions
 
-Open **Analysis overview → Review passages → Flagged passages** in the local
+Open **Analysis overview → Review passages → Tense findings** in the local
 app. Expand a finding's explanation to see the configured present and past
 marker counts and the criteria for a mix or a switch. Use **Show in manuscript**
 to read the passage in context. Chapter, severity and decision filters narrow

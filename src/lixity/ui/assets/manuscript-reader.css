@@ -36,6 +36,19 @@
 .reader-guide-actions { display: flex; flex-direction: column; gap: var(--space-1); }
 .reader-guide-actions .ctl { justify-content: flex-start; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
+@media (max-width: 36rem), (max-height: 34rem) {
+  .manuscript-reader-controls:has(.reader-analysis-guide[open]) {
+    position: relative; max-height: none; overflow: visible;
+  }
+  .reader-analysis-toggle-controls:has(.reader-analysis-guide[open]) {
+    flex-wrap: wrap; flex-basis: 100%; min-width: 0;
+  }
+  .reader-analysis-guide[open] { flex: 1 0 100%; min-width: 0; }
+  .reader-analysis-guide .reader-settings-body {
+    position: static; width: 100%; max-width: none; max-height: none;
+    overflow: visible; margin-block-start: var(--space-2); box-shadow: none;
+  }
+}
 .manuscript-reading.workbench-analysis:not(.reader-focus, .manuscript-writing, .workbench-overview) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
@@ -99,8 +112,6 @@
   min-inline-size: 0;
   flex: 0 1 auto;
 }
-#reader-analysis-overview .reader-settings-body select { min-inline-size: 0; }
-#reader-analysis-overview > summary { border-color: var(--line); background: var(--surface-alt); }
 .reader-analysis-controls .metric-layer-label {
   font-size: var(--text-small);
   font-weight: var(--weight-semibold);
@@ -228,7 +239,7 @@
 /* Keep the scroll anchor in the prose when sticky controls reflow or resize. */
 .manuscript-reading :is(.manuscript-reader-controls, .toolbar) { overflow-anchor: none; }
 body.manuscript-reading:not(.workbench-analysis).only-flags:not(.text-search-active) .chapter { display: block; }
-body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .chapter:not(.has-flags):not(:has(.ptext.metric-notable)) { display: none; }
+body.manuscript-reading.only-flags:not(.text-search-active) .chip.sev-1 { display: block; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
 .manuscript-reading:not(.workbench-overview) .analysis-outline-contents,
 .manuscript-reading #microhint,
@@ -459,7 +470,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   margin-block: var(--space-2) 0; margin-inline: 0 var(--space-2);
   max-inline-size: calc(100% - var(--space-2)); white-space: normal;
 }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .reader-review-flag {
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .reader-review-flag {
   display: inline-flex; color: var(--flag); background: var(--flag-light);
   border-color: currentColor; border-inline-start-width: 3px;
 }
@@ -593,7 +604,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 }
 @container reader-tools (max-width: 78rem) {
   #workbench-overview-open, #manuscript-write { min-width: 2.5rem; }
-  #workbench-overview-open .reader-control-label,
   #manuscript-write .reader-control-label { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
@@ -601,6 +611,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .reader-compact-control { min-width: 2.5rem; }
   .reader-analysis-guide > summary { padding-inline: var(--space-1); }
 }
+.manuscript-reader-controls :is(#workbench-overview-open, #reader-analysis-guide) .reader-control-label { display: inline; }
+.manuscript-reader-controls .reader-overview-control { inline-size: auto; max-inline-size: 100%; }
 /* An open context dock narrows the reader: keep every tool on one row
    (including the dock toggle) by capping the chapter picker and gaps. */
 @container reader-tools (max-width: 62rem) {

@@ -269,8 +269,8 @@ async function settleGeometry(page) {
       const flagged = page.locator('#chapters .ptext.flagged').first();
       await flagged.scrollIntoViewIfNeeded();
       await page.locator('#style-layer').selectOption('asl');
-      assert.equal(await flagged.locator('.reader-review-flag').isVisible(), false,
-        'Tense actions do not compete with a selected metric');
+      assert.equal(await flagged.locator('.reader-review-flag').isVisible(), true,
+        'Tense findings remain reachable independently of the selected metric');
       await page.locator('#style-layer').selectOption('');
       await flagged.locator('.reader-review-flag').waitFor({state: 'visible'});
       // A saved-association control exercises the same adjacent layout without

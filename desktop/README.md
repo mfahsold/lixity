@@ -21,7 +21,9 @@ path is the Python package and its local browser workspace.
 - Native menus in seven languages, folder and file dialogs, drag-and-drop,
   recent projects, macOS Dock reopen, window geometry, theme and zoom. Open
   requests wait until the workspace is ready. Settings, recent projects and
-  window geometry use atomic file replacement. Menus include the shared
+  window geometry use atomic file replacement. Reader text size, width,
+  spacing, measurement, counted-text settings and paragraph comparison
+  preferences survive changes of loopback port. Menus include the shared
   Analysis overview. HTTPS and mail links open through the operating system
   from both current-window and new-window links.
 - Native save dialogs, atomic exports and streamed manuscript PDFs, dossier

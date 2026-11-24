@@ -538,8 +538,9 @@ Documented research directions, **not** current product features:
 - Worked examples that walk one chapter from KPI → heatmap → paragraph →
   marker, suitable as a tutorial on the project page.
 - Glossary of every passport key for non-statisticians (beyond `llms.txt`).
-- Exportable “method card” (estimator + citation + guard) per metric for
-  peer review / replication packages.
+- Exportable method cards for every metric in replication packages. The
+  [scene method cards](#scene-evidence-and-dramaturgical-rehearsal) are documented
+  here.
 
 ## 5. Exploratory style dimensions
 
@@ -1307,11 +1308,14 @@ they do not estimate literary quality or a reader's experienced immersion.
   - `adverbial_tags` (int), `adverbial_tag_pct` (float), and
     `adverbial_tag_available` (bool) at corpus level and per `chapters[]` entry,
     counting speech-attribution tags accompanied by manner adverbs.
-- **Deep scene dynamics (`scenes.py`):** `scene_report()` extends each
-  `items[]` entry with `asl_shift` (`float | null`), `dialogue_shift`
-  (`float | null`), `scene_dynamic` (`"accelerating"`, `"decelerating"`,
-  `"dialogue_surge"`, `"steady"`, or `"insufficient_length"` when `< 120`
-  words), `filter_per_1000`, and `sensory_per_1000`. Corpus-level
+- **Within-scene changes (`scenes.py`):** `scene_report()` keeps `asl_shift`
+  and `dialogue_shift` (`float | null`) and the `scene_dynamic` wire values
+  `"accelerating"`, `"decelerating"`, `"dialogue_surge"`, `"steady"`, and
+  `"insufficient_length"`. The interface describes the measured changes in
+  words per sentence and percentage points. See the
+  [method cards](#scene-evidence-and-dramaturgical-rehearsal) for the minimum
+  sample and the count fields that support the displayed comparisons. The
+  scene report also includes `filter_per_1000` and `sensory_per_1000`. Corpus-level
   `pacing_plateaus` lists `[{start_id, end_id, scene_count, mean_asl, reason}]`
   where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
   `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
@@ -1325,8 +1329,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   2-paragraph windows inside the scene, and `cue_type` is `"time"`, `"place"`,
   `"character"`, `"cohesion_drop"` (when both windows have `>= 10` content words
   and `cohesion_similarity <= 0.05`), or `+`-joined combinations (e.g.
-  `"time+cohesion_drop"`). Purely descriptive shift markers inspired by
-  computational scene-segmentation work (Gurung & Lapata, Chiron).
+  `"time+cohesion_drop"`). Descriptive shift markers relate to the distinct
+  scene-segmentation task studied by [Zehe et al. (2021)](https://aclanthology.org/2021.eacl-main.276/)
+  and [Zehe et al. (2025)](https://aclanthology.org/2025.naacl-long.500/).
 - **Character voice separation & interaction matrix (`dialogue.py`, `characters.py`):**
   `character_voice_profiles()` (and `presence_report()["character_voices"]`)
   computes `{min_turns: 3, narrator: {words, asl, question_excl_rate,
@@ -1374,12 +1379,92 @@ they do not estimate literary quality or a reader's experienced immersion.
   `asl_cv`, `dialogue_ratio`, `mattr`, `flags_count`, and `chapter_deltas`.
   Exposed via `lixity diff` and the read-only `revision_diff` MCP tool.
 
-Literature context for dramaturgical & computational narratology heuristics:
-- Li et al. (2026) — narrative flattening and sentence-length dispersion.
-- Michel et al. (EMNLP 2024) — character voice separation in literary dialogue.
-- Gurung & Lapata — Chiron scene segmentation and implicit narrative shifts.
-- GermAnProse (LaTeCH-CLfL 2026) & CHR (2024/2025) — computational narratology,
-  speech representation, and indirect speech / *Konjunktiv I* cues.
+### Scene evidence and dramaturgical rehearsal
+
+The scene panel keeps measured text in manuscript order and identifies each
+claim using the [evidence ladder](LOCALIZATION.md#evidence-levels-for-analysis-claims).
+An explicit divider defines a scene unit. In its absence, the panel identifies
+the chapter used as the unit. Counts use the configured word regex and the
+shared quotation projection. The method cards below state how to reproduce
+the two tracks and their details.
+
+| Level and measure | Formula and scope | Guard and interpretation |
+| --- | --- | --- |
+| L0 · Quoted-word share | `100 × recognized quoted words / counted words` for the complete unit. The same token membership is used for `features.dialog_pct` and the block detail. | An empty denominator gives an unavailable share. Zero recognized words in a non-empty unit describes the output of the configured recognizer. The track has a fixed 0–100% scale. |
+| L0 · Words per sentence | `counted sentence words / counted sentences`, the scene's `features.asl`. Both tracks follow manuscript order. | A missing sentence count makes the mean unavailable. The track uses a shared panel scale in words per sentence. The measurement describes text length. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
+| L1 · Within-scene change | Split the counted sentences at `floor(n / 2)` in manuscript order. Each half retains `words`, `sentences` and `quote_words` in `within_scene`. Changes are second minus first and are displayed to two decimal places in words per sentence (`asl_shift`) and percentage points (`dialogue_shift`). | A unit needs at least 120 words and two counted sentences. `within_scene_limits` reports the guard and the descriptive cutoffs for the compatibility class (2.5 words per sentence, 15 percentage points). The signed differences describe the two halves. Scene-level standard errors are separate from these descriptive half differences. |
+| L2 · Quotation-block lengths | Count positive word lengths of the unioned recognized quotation ranges using the same word membership. `quote_blocks.short` counts lengths ≤ `short_max_words`, `long` counts lengths ≥ `long_min_words`, and `medium` counts lengths strictly between them. `words` totals the counted quoted words. | `quote_block_limits` reports the configured cutoffs, 12 and 80 words by default. `unresolved_ranges` counts unresolved ranges separately. Nested or overlapping recognized marks share a block. Any longer narrative or acoustic unit would need a separate annotation. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
+| L3 · Author intent | An authored card can place a question, delayed answer, turn, revelation or resolution against the text. The author supplies any voice note and effect hypothesis. The card sequence can be rehearsed independently of the measured text. | It is an explicit act of revision planning. **Who has the floor here?** is a reading question. The quote analysis supplies no speaker identity. [Bakhtin, Discourse in the Novel](https://utpress.utexas.edu/9780292715349/) |
+
+For example, two units can each have 96 recognized quoted words among 192
+counted words. With the default cutoffs, twelve 8-word blocks and one 96-word
+block both produce 50% quoted words. Their L2 distributions differ. Reporting
+clauses can interrupt a block, and a quotation can represent a letter or a
+cited expression. Fictional elapsed time requires evidence about depicted
+events. Questions about the relationship between voices require reading their
+context. [Genette (1980), *Narrative Discourse*](https://utpdistribution.com/9780801410994/narrative-discourse/) ·
+[Bakhtin (1981), *The Dialogic Imagination*](https://utpress.utexas.edu/9780292715349/)
+
+The order of disclosure matters as a reading question. Fish considers
+interpretation as it unfolds, Iser describes a shifting viewpoint, and Jauss
+places expectations in the context of prior reading and history. For Lixity,
+this motivates showing measures in manuscript order, and letting authors
+revisit an intent after revision with the outcome already in mind. Displaying
+counts, scope and cutoffs makes the construction of the observations visible.
+[Fish (1970), *New Literary History* 2(1), 123–162](https://doi.org/10.2307/468593) ·
+[Iser (1978), *The Act of Reading*](https://www.press.jhu.edu/books/title/2456/act-reading) ·
+[Jauss (1970), *New Literary History* 2(1), 7–37](https://www.jstor.org/stable/468585) ·
+[Drucker (2011), *Digital Humanities Quarterly* 5(1)](https://dhq-static.digitalhumanities.org/pdf/000091.pdf)
+
+Structural-affect and narratological work motivates rehearsing different
+orders of disclosure. Hoeken and van Vliet report suspense among readers who
+knew the outcome of the story in their experiment. Gerrig's three experiments
+recorded disruptions in verifying facts that readers already knew. These
+findings remain L4 study evidence. The rehearsal provides an L3 author
+hypothesis about the sequence. Reader effects and literary quality are outside
+the scene measurements.
+[Brewer & Lichtenstein (1982), *Journal of Pragmatics* 6(5–6), 473–486](https://doi.org/10.1016/0378-2166%2882%2990021-2) ·
+[Sternberg (1990), *Poetics Today* 11(4), 901–948](https://www.jstor.org/stable/1773082) ·
+[Sternberg (1992), *Poetics Today* 13(3), 463–541](https://www.jstor.org/stable/1772872) ·
+[Gerrig (1989), *Journal of Memory and Language* 28(6), 633–648](https://doi.org/10.1016/0749-596X%2889%2990001-6) ·
+[Hoeken & van Vliet (2000), *Poetics* 27(4), 277–286](https://research-portal.uu.nl/en/publications/suspense-curiosity-and-surprise-how-discourse-structure-influence/)
+
+Modern computational work targets different tasks. CHIRON evaluates rich
+character representations through tasks such as masked-character prediction.
+The scene-segmentation studies define and evaluate annotated narrative
+boundaries. Neither result validates these surface measurements as scene
+detectors or speaker attribution. [Gurung & Lapata (2024)](https://aclanthology.org/2024.findings-emnlp.499/) ·
+[Zehe et al. (2021)](https://aclanthology.org/2021.eacl-main.276/) ·
+[Zehe et al. (2025)](https://aclanthology.org/2025.naacl-long.500/)
+
+#### Exploratory author study proposal
+
+Recruit 8–12 authors for a within-subject usability study. Use three synthetic
+fixtures with predefined measurement changes, plus passages from chapter 26 of
+*Effi Briest* and chapter 35 of *Pride and Prejudice*. Include an equal-share
+pair with different block lengths, a signed within-scene change, and a fixture
+with insufficient support or unresolved quotation marks. Freeze the baseline
+scene panel at a named revision. Counterbalance condition order and passage
+assignment across authors. Record prior familiarity with the public passages
+and language proficiency. [Fontane, Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323) ·
+[Austen, Project Gutenberg #1342](https://www.gutenberg.org/ebooks/1342)
+
+| Question | Procedure and outcome |
+| --- | --- |
+| RQ1 · Locate a measured change | Compare the baseline scene panel with the two-track reading view on matched tasks. Record the first correctly identified passage or boundary, task time and number of text-specific revision questions. Synthetic fixtures supply exact target locations. For published passages, predefine permissible observations and record ambiguities. |
+| RQ2 · Formulate a revision question | Compare the scene review task with and without the intent card, holding measured evidence constant. Two raters independently code think-aloud records for a specific passage, a stated intent, and a question the author can check. Record counts, agreement and Cohen's κ per binary criterion when estimable, before adjudicating disagreements. |
+| RQ3 · Revisit an intent | After an assigned revision to a synthetic text, ask authors to find the held-over intent, explain its review state, and reopen the relevant passage. Compare previously reviewed and unreviewed states. Record recovery and interpretation accuracy, time and whether the author explicitly confirms after rereading. |
+
+Preregister the materials, assignment, hypotheses, rubric, exclusions and
+stopping rule before recruitment. Keep consent, recordings and identifiable
+notes outside the repository. Report task completion, missing results and
+within-author differences descriptively with the exact sample and limitations.
+The outcomes are about using the interface. They exclude reader affect,
+literary merit and prose quality. The existing nominal FDR estimates concern
+manuscript diagnostics and do not calibrate study outcomes. Research on
+foregrounding and engagement uses its own materials and observations.
+[Miall & Kuiken (1994), *Poetics* 22(5), 389–407](https://doi.org/10.1016/0304-422X%2894%2900011-5) ·
+[Busselle & Bilandzic (2009), *Media Psychology* 12(4)](https://doi.org/10.1080/15213260903287259)
 
 ## Manuscript evidence in dossier suggestions
 

@@ -31,6 +31,63 @@ SETTINGS = {"scene_analysis": {
 
 
 class SceneContracts(unittest.TestCase):
+    def test_equal_quotation_shares_can_have_different_lengths(self):
+        narration = "The lamps stood quietly against the tall windows. " * 6
+        many = ('"One two three four five six seven eight." ' * 12).strip()
+        one = '"' + ("one two three four five six seven eight " * 12).strip() + '."'
+        text = f"## Exchange\n\n{narration}\n\n{many}\n\n---\n\n{narration}\n\n{one}"
+
+        report = api.scenes(text)["scenes"]
+
+        self.assertEqual(report["quote_block_limits"], {"short_max_words": 12, "long_min_words": 80})
+        self.assertEqual([scene["id"] for scene in report["items"]], ["1:1", "1:2"])
+        first, second = report["items"]
+        self.assertEqual(first["features"]["dialog_pct"], second["features"]["dialog_pct"])
+        self.assertEqual(first["quote_blocks"],
+                         {"short": 12, "medium": 0, "long": 0, "words": 96, "unresolved_ranges": 0})
+        self.assertEqual(second["quote_blocks"],
+                         {"short": 0, "medium": 0, "long": 1, "words": 96, "unresolved_ranges": 0})
+
+    def test_quote_lengths_use_active_boundaries_and_exclude_empty_spans(self):
+        text = "## Sample\n\n" + " ".join(
+            f'“{("word " * length).strip()}.”' for length in (0, 12, 13, 79, 80)
+        )
+        default = api.scenes(text)["scenes"]["items"][0]["quote_blocks"]
+        self.assertEqual(default,
+                         {"short": 1, "medium": 2, "long": 1, "words": 184, "unresolved_ranges": 0})
+        report = api.scenes(text, project_config={"short_turn_max_words": 13, "long_turn_min_words": 79})["scenes"]
+        self.assertEqual(report["quote_block_limits"], {"short_max_words": 13, "long_min_words": 79})
+        self.assertEqual(report["items"][0]["quote_blocks"],
+                         {"short": 2, "medium": 0, "long": 2, "words": 184, "unresolved_ranges": 0})
+
+    def test_unclear_quote_ranges_are_not_counted_as_blocks(self):
+        report = api.scenes("## Sample\n\nFirst, we sat.\n\n---\n\n“Will we leave tomorrow?")["scenes"]
+        first, second = report["items"]
+        empty_counts = {"short": 0, "medium": 0, "long": 0, "words": 0, "unresolved_ranges": 0}
+        self.assertEqual(first["quote_blocks"], empty_counts)
+        self.assertEqual(second["quote_blocks"], {**empty_counts, "unresolved_ranges": 1})
+        self.assertIsNone(second["within_scene"])
+        self.assertIsNone(second["dialogue_shift"])
+
+    def test_human_report_describes_both_signed_changes_in_the_local_units(self):
+        narration = "Ein zwei drei vier fünf sechs sieben acht neun zehn elf zwölf dreizehn vierzehn fünfzehn. " * 6
+        speech = '„Ein zwei drei vier fünf sechs sieben acht.“ ' * 6
+        text = f"## Abend\n\n{narration}\n\n{speech}"
+        with tempfile.TemporaryDirectory() as root:
+            manuscript = Path(root, "scene.md")
+            manuscript.write_text(text, encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["scenes", str(manuscript), "--language", "de"]), 0)
+
+        rendered = output.getvalue()
+        self.assertIn("-7,00", rendered)
+        self.assertIn("+100,00 Prozentpunkte", rendered)
+        self.assertIn("≤12", rendered)
+        self.assertIn("13–79", rendered)
+        self.assertIn("≥80", rendered)
+        self.assertNotIn("dialogue_surge", rendered)
+
     def test_human_cli_uses_analysis_language_for_counts_units_and_targets(self):
         text = "## Sample\n\nI see rain. Doors close."
         cases = (
@@ -155,8 +212,8 @@ class SceneContracts(unittest.TestCase):
         overview = html.split("scene-overview", 1)[1].split("</tbody>", 1)[0]
         # The overview lists every scene with values; the per-scene tables below
         # stay collapsed.
-        self.assertGreaterEqual(overview.count("<td>"), len(report["items"]))
-        self.assertNotIn("—</td><td>—", overview.replace(" ", ""))
+        self.assertEqual(overview.count("data-scene-row="), len(report["items"]))
+        self.assertEqual(overview.count('class="scene-track"'), 2 * len(report["items"]))
 
     def test_scene_detail_only_keeps_comparisons_the_project_defines(self):
         """Without register assignments the detail table drops empty columns."""

@@ -593,6 +593,31 @@ chapters are separate metadata, not inferred first-person presence. There is no
 NER or coreference. Hook and repetition scores also locate surface patterns;
 deliberate calm endings and repeated motifs can be appropriate author choices.
 
+#### Scene evidence and author intent
+
+The scene tracks report recognized quotation-word share and mean words per
+sentence in manuscript order. Quotation marks may enclose a letter or a term.
+Indirect speech and other unmarked voices can lie outside the recognized
+ranges. The block distribution depends on the configured quotation and word
+rules and the reported short and long cutoffs. It describes textual length.
+The interface shows unresolved quotation ranges and unavailable measurements
+as such. A recognized count of zero leaves undetected speech possible. No
+fictional duration, speaking time, speaker identity or reader response follows
+from these measurements. [Scene method cards](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+The within-scene comparisons report signed differences between the two halves
+in words per sentence and percentage points. The sample floor is a display
+guard. It supplies no calibrated uncertainty for the shifts. The wire value
+`steady` means the legacy selection cutoffs were not crossed. A zero shift
+between means or shares can coexist with substantial variation inside each
+half. The measured scope may be a whole chapter when the text has no explicit
+scene divisions.
+
+An author intent records a human's question or hypothesis. A changed source
+or analysis context calls for reviewing the anchor. It provides no judgement
+of the hypothesis. Reordering cards changes the rehearsal only. Lixity's
+analysis claims follow the [evidence ladder](LOCALIZATION.md#evidence-levels-for-analysis-claims).
+
 ### Structural diagnostics
 
 These diagnostics preserve their declared numerical definitions; an exact
@@ -738,9 +763,9 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   unquoted/free indirect speech. `adverbial_tags` relies on curated per-language
   manner-adverb and attribution-verb patterns; non-adverbial modifiers or
   adverbs separated from the attribution verb are not counted.
-- **Intra-scene dynamics & pacing plateaus:** scenes under `120` words report
-  `scene_dynamic: "insufficient_length"` with `null` shifts so short scenes
-  are not over-interpreted. `pacing_plateaus` (`"low_exit_hooks"` or
+- **Within-scene changes & pacing plateaus:** scenes under the sample floor
+  report `scene_dynamic: "insufficient_length"` with `null` shifts and no
+  per-half observations. `pacing_plateaus` (`"low_exit_hooks"` or
   `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
   descriptive review prompts, not structural defects (deliberate meditative
   passages or epistolary sequences can legitimately exhibit steady pacing).

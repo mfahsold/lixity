@@ -59,15 +59,18 @@ counting rules and limitations; [Research data model](research/DATA_MODEL.md)
 owns retained records and relations. The existing language resource packs own
 translations, not a second glossary service or a separate runtime term registry.
 
-The interface distinguishes **observation**, **interpretation**, **action** and
-**saved state**. A short familiar name is paired with an explanation of what is
-counted or changed, its scope/reference, and what cannot be inferred. Technical
-terms and stable command/JSON identifiers stay available for reproducibility.
+The interface distinguishes **observation**, **interpretation**, **action**,
+**saved state** and **author intent**. A short familiar name accompanies the
+scope and basis of each measurement or operation. Technical terms and stable
+command and JSON identifiers stay available for reproducibility.
 
 | Concept | DE / EN display direction | Meaning and excluded inference |
 | --- | --- | --- |
 | Counted pattern | Nomen-Endungen / Noun endings | Selected ending matches, not a grammatical noun classification or a nominal-style verdict. |
 | Quoted-text measurement | Text in Anführungszeichen / Quoted words | Recognized quoted spans in the manuscript; neither proof of dialogue nor research-source citations. |
+| Reader measurement switch | Gezählte Stellen unterstreichen / Underline counted passages | Marks the source text that entered the selected calculation. |
+| Reader comparison switch | Abweichende Absätze markieren / Mark differing paragraphs | Shows each marked paragraph's value and its chapter reference in the same unit. |
+| Reader tense action | Zeitformhinweise prüfen / Review tense findings | Opens the cues for a possible tense change. The chapter filter retains each matching chapter's surrounding text. |
 | Statistical comparison | Vergleiche innerhalb der Schwelle / Comparisons within the limit | Measurable chapter/feature cells inside the selected bound, not plot coherence or quality. Unavailable is not zero. |
 | Composite comparison | Signalgruppen im Vergleich / Signal-group comparison | Word-pattern cues versus quotation/short-sentence shares; not validated narrative distance or show/tell classification. |
 | Ending cues | Schlussmerkmale / Ending cues | Three closing-pattern checks, not suspense or chapter effectiveness. |
@@ -82,6 +85,29 @@ terms and stable command/JSON identifiers stay available for reproducibility.
 | Publication selection | Ausgewähltes Begleitmaterial / Selected background | Explicit dossier entries in a reading package; no generated synopsis or publication action is implied. |
 | Chapter display gate | Anzeigen nach abgeschlossenem Kapitel / Show after completing chapter | Display after chapter N is marked finished; zero means from the start. This is not access control or physical exclusion from the files. The separate export chapter cap controls package selection. |
 | Operation receipt | Download gestartet / Download started | A download was initiated; the application cannot establish that the recipient saved the file. |
+
+### Evidence levels for analysis claims
+
+The claim ladder is a binding copy and display rule for analysis claims in the
+interface. Its levels identify the kind of evidence required. They carry no
+meaning as scores, confidence grades or ranks. Use the exact metric and scope
+in the label or its immediate explanation. Keep the level and its name visible
+on the measurement track, detail, or author-intent section. A tooltip or color
+alone is insufficient. Use the existing translation packs in all supported
+interface languages. [Formulas, guards and sources](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+| Level | Evidence | Allowed DE / EN example | Limit |
+| --- | --- | --- | --- |
+| L0 · Measurement | Text matched by a stated rule. Show the observed count and the denominator for a share. | Anteil erkannter Zitatwörter / Share of recognized quoted words | A defined text property. Reader effects require separate evidence. |
+| L1 · Comparison | A derived difference with the comparison scope, units, applicable sample floors and available uncertainty. | Sätze werden kürzer, zweite Hälfte −2,5 Wörter pro Satz / Sentences are shorter in the second half, −2.5 words per sentence | This says how the measurement changes within this text. Do not infer speed, significance, or suspense. |
+| L2 · Distribution | Counts or a spread across stated classes with their limits. | Zwölf kurze Zitatblöcke / Twelve short quotation blocks | Block length is textual. Speaker identity, fictional duration and discourse function require other evidence. |
+| L3 · Author intent | A reading question, author-entered intent, voice note, or effect hypothesis. | Wem gehört hier das Wort? / Who has the floor here? | Keep the question open and label saved hypotheses as authored. A measurement cannot create an intent card. |
+| L4 · Reader response | Observations from an identified study with its sample, materials and conditions. | Readers in the cited experiment reported suspense even when they knew the ending. | Cite this in research documentation. Do not attach study outcomes to an individual passage as a prediction. |
+| L5 · Literary quality | Outside the product's evidence model. | — | No verdict, score, ranking or recommendation about literary quality. |
+
+For a review state, describe the operation or current evidence, for example
+**Erneut prüfen / Review again** after a source change. A state change says
+which source was reviewed. It establishes no new interpretation.
 
 ### Resource boundaries and editorial style
 

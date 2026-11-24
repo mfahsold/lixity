@@ -1309,21 +1309,57 @@ def _cmd_analysis_report(
 
             labels = resolved.labels
             units = FEATURE_UNITS.get(resolved.key, {})
+            scene_report = report["scenes"]
+            limits = scene_report["quote_block_limits"]
+            half_limits = scene_report["within_scene_limits"]
+            short_limit, long_limit = limits["short_max_words"], limits["long_min_words"]
 
-            for item in report["scenes"]["items"]:
+            def whole(value: int) -> str:
+                return num(value, resolved.key, 0)
+
+            medium_range = (
+                "—" if short_limit + 1 == long_limit
+                else whole(short_limit + 1) if short_limit + 2 == long_limit
+                else f"{whole(short_limit + 1)}–{whole(long_limit - 1)}"
+            )
+            quote_ranges = {"short": f"≤{whole(short_limit)}", "medium": medium_range,
+                            "long": f"≥{whole(long_limit)}"}
+            for item in scene_report["items"]:
                 group = item["group"] or labels["scene_unassigned"]
                 print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
                 print(
-                    f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
-                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']} · "
-                    f"{item.get('scene_dynamic', 'insufficient_length')}"
+                    f"  {whole(item['words'])} {labels['words']} · "
+                    f"{whole(item['sentences'])} {labels['sentences']}"
                 )
                 print(
-                    f"  filter/1k: {num(item.get('filter_per_1000', 0.0), resolved.key, 2)} · "
-                    f"sensory/1k: {num(item.get('sensory_per_1000', 0.0), resolved.key, 2)}"
+                    f"  L1 · {labels['scene_half_comparison']} · "
+                    f"{labels['scene_dynamic_' + item['scene_dynamic']]}"
+                )
+                if item["within_scene"] is not None:
+                    asl = num(item["asl_shift"], resolved.key, 2, signed=True)
+                    dialogue = num(item["dialogue_shift"], resolved.key, 2, signed=True)
+                    samples = {
+                        f"{half}_{key}": whole(value)
+                        for half, counts in item["within_scene"].items()
+                        for key, value in counts.items()
+                    }
+                    print(f"    {labels['scene_half_asl'].format(delta=asl)}")
+                    print(f"    {labels['scene_half_dialogue'].format(delta=dialogue)}")
+                    print(f"    {labels['scene_half_samples'].format(**samples)}")
+                quote_blocks = item["quote_blocks"]
+                quote_bins = " · ".join(
+                    f"{labels['scene_block_' + key]} ({range_text}): {whole(quote_blocks[key])}"
+                    for key, range_text in quote_ranges.items()
+                )
+                print(f"  L2 · {labels['scene_quote_lengths']} · {quote_bins}")
+                if quote_blocks["unresolved_ranges"]:
+                    print(f"    {labels['scene_quote_unresolved']}")
+                print(
+                    f"  {labels['scene_filter_per_1000']}: {num(item['filter_per_1000'], resolved.key, 2)} · "
+                    f"{labels['scene_sensory_per_1000']}: {num(item['sensory_per_1000'], resolved.key, 2)}"
                 )
                 for field, label_key, unit in FEATURES:
-                    value = item["features"][field]
+                    value = item["features"][field] if field != "asl" or item["sentences"] else None
                     target = item["targets"].get(field)
                     detail = ""
                     if target:
@@ -1337,24 +1373,32 @@ def _cmd_analysis_report(
                             if target["upper"] is None
                             else num(target["upper"], resolved.key, 2)
                         )
-                        detail = f" · {labels['scene_' + target['position']]} [{lower} – {upper}]"
+                        position = target["position"] if value is not None else "unavailable"
+                        detail = f" · {labels['scene_' + position]} [{lower} – {upper}]"
                     rendered = "—" if value is None else num(value, resolved.key, 2)
+                    level_prefix = "L0 · " if field in {"asl", "dialog_pct"} else ""
                     print(
-                        f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
+                        f"  {level_prefix}{labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
                     )
-            plateaus = report["scenes"].get("pacing_plateaus", [])
+            plateaus = scene_report.get("pacing_plateaus", [])
             if plateaus:
                 for p in plateaus:
                     print(safe_text(
-                        f"  plateau: {p['start_id']}–{p['end_id']} ({p['scene_count']} scenes, "
-                        f"mean ASL {num(p['mean_asl'], resolved.key, 2)}, {p['reason']})"
+                        f"  {labels['scene_pacing_plateaus']} · {p['start_id']}–{p['end_id']} · "
+                        f"{whole(p['scene_count'])} · {labels['scene_mean_words']}: "
+                        f"{num(p['mean_asl'], resolved.key, 2)} · {labels['scene_plateau_' + p['reason']]}"
                     ))
-            planned_items = report["scenes"].get("planned_items", [])
+            planned_items = scene_report.get("planned_items", [])
             if planned_items:
                 print(labels["scene_planned"])
                 for item in planned_items:
                     print(safe_text(f"  {item['id']} · {item['group']}"))
                 print(labels["scene_planned_note"])
+            if scene_report["items"]:
+                print(labels["scene_half_rule"].format(
+                    words=whole(half_limits["min_words"]), sentences=whole(half_limits["min_sentences"]),
+                ))
+                print(labels["scene_quote_lengths_help"])
             print(labels["scene_guidance"])
             print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
         return EXIT_OK

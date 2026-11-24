@@ -85,11 +85,11 @@ class CorpusConfig(BaseModel):
     )
     short_turn_max_words: int = Field(
         default=DEFAULT_SHORT_TURN_MAX_WORDS, ge=1,
-        description="Word threshold up to which a dialogue turn is classified as a short/rapid turn.",
+        description="Maximum word count for a recognized quotation block to count as short.",
     )
     long_turn_min_words: int = Field(
         default=DEFAULT_LONG_TURN_MIN_WORDS, ge=1,
-        description="Word threshold from which a dialogue turn is classified as an extended monologue/turn.",
+        description="Minimum word count for a recognized quotation block to count as long.",
     )
     dialogue_paragraph_share: float = Field(
         default=DEFAULT_DIALOGUE_PARAGRAPH_SHARE, gt=0, le=1,

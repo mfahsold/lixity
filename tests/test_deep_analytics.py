@@ -155,7 +155,9 @@ def test_cli_and_mcp_expose_deep_analytics(tmp_path, capsys, monkeypatch):
     tools = {t["name"]: t for t in responses[0]["result"]["tools"]}
     assert "voice_separation" in tools["lixity_dialogue"]["description"]
     assert "pacing_plateaus" in tools["lixity_scenes"]["description"]
+    assert "quote_blocks" in tools["lixity_scenes"]["description"]
     dlg_mcp = json.loads(responses[1]["result"]["content"][0]["text"])
     assert "voice_separation" in dlg_mcp["dialogue"]
     scn_mcp = json.loads(responses[2]["result"]["content"][0]["text"])
     assert "pacing_plateaus" in scn_mcp["scenes"]
+    assert scn_mcp["scenes"]["items"][0]["quote_blocks"]["short"] == 1

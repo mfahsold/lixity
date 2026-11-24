@@ -48,9 +48,11 @@ _PACING_DESCRIPTION = (
 )
 _SCENES_DESCRIPTION = (
     "Scene-level measurements, entry/exit hook classification (dialogue/action/reflection/question), "
-    "hook distribution, intra-scene dynamics (asl_shift, dialogue_shift, scene_dynamic), "
-    "scene showing-vs-telling (filter_per_1000, sensory_per_1000), corpus pacing_plateaus, "
-    "and heuristic implicit_breaks."
+    "hook distribution, within-scene changes in words per sentence and quoted-word share "
+    "(asl_shift, dialogue_shift, within_scene, legacy scene_dynamic), and quote_blocks by word length "
+    "using the reported quote_block_limits. Also includes filter_per_1000, sensory_per_1000, corpus pacing_plateaus "
+    "and heuristic implicit_breaks. Measured scenes follow manuscript order. These fields describe text and its "
+    "recognized quotation boundaries. They do not establish story time, speakers or reader effects."
 )
 _CORRIDORS_DESCRIPTION = (
     "List optional non-prescriptive genre reference corridors (crime_thriller, literary, romance, speculative) "

@@ -150,7 +150,7 @@ class TestAnalysisOverview(unittest.TestCase):
 
     def test_scrollable_tables_have_named_keyboard_regions_and_column_scopes(self):
         html = self.render()
-        for panel_id, name in (("flags", "Flagged passages"), ("matrix", "Chapter matrix"),
+        for panel_id, name in (("flags", "Tense findings"), ("matrix", "Chapter matrix"),
                                ("heatmap", "Style fingerprint")):
             with self.subTest(panel=panel_id):
                 panel = html.split(f'id="{panel_id}"', 1)[1].split("</section>", 1)[0]

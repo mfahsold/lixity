@@ -182,7 +182,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <ul>
 <li><a href="#analysis-review">Ayuda de análisis</a></li>
 <li><a href="#measurements">Medidas del manuscrito</a></li>
-<li><a href="#flags">Pasajes señalados</a></li>
+<li><a href="#flags">Indicios de tiempo verbal</a></li>
 <li><a href="#pacing">Ritmo de las frases</a></li>
 <li><a href="#dist">Longitudes de frase</a></li>
 <li><a href="#sticky">Frases con muchas palabras funcionales</a></li>
@@ -222,7 +222,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 </dl>
 </section>
 <section id="flags" aria-labelledby="heading-flags">
-<h2 id="heading-flags">Pasajes señalados</h2>
+<h2 id="heading-flags">Indicios de tiempo verbal</h2>
 <p>Párrafos con indicios de cambio o mezcla de tiempos verbales. Heurística para revisar en contexto.</p>
 <p>Lee también los párrafos vecinos. Un cambio de tiempo verbal puede formar parte de un recuerdo o de una cita. La revisión se limita a los patrones de tiempo verbal.</p>
 <dl>
@@ -328,7 +328,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <h2 id="heading-matrix">Matriz de capítulos</h2>
 <p>Cada fila resume un capítulo. Un guion indica que no hay un valor de comparación disponible. Abre el pasaje marcado y comprueba el efecto del patrón en ese capítulo.</p>
 <dl>
-<div id="measure-chapter_flags"><dt>Pasajes señalados</dt><dd><p>Número de párrafos que alcanzan el umbral de gravedad activo. Indicaciones de revisión, no errores ni resultados FDR.</p></dd></div>
+<div id="measure-chapter_flags"><dt>Indicios de tiempo verbal</dt><dd><p>Número de párrafos que alcanzan el umbral de gravedad activo. Indicaciones de revisión, no errores ni resultados FDR.</p></dd></div>
 <div id="measure-chapter_deviation"><dt>desviación</dt><dd><p>Número de rasgos que superan el umbral de desviación. 0 = ninguno; – = sin comparación. No es una selección FDR ni una nota de calidad.</p></dd></div>
 <div id="measure-layer"><dt>Sobre esta comparación</dt><dd><p>Valores de párrafos respecto a la mediana del capítulo: azul = menor, naranja = mayor. Anillo = desviación |z| ≥ 1,5; no es una nota de calidad.</p></dd></div>
 </dl>

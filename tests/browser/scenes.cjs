@@ -13,7 +13,11 @@ const fixtures = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/
 import json, sys
 from pathlib import Path
 from lixity import api
-text = '## Sample <svg onload="window.injected=1">\\n\\nA door shuts.\\n\\n---\\n\\n' + 'A report was recorded. ' * 30
+narration = 'The lamps stood quietly against the tall windows. ' * 12
+exchanges = '"One two three four five six seven eight." ' * 12
+speech = '"' + ('one two three four five six seven eight ' * 12).strip() + '."'
+text = ('## Sample <svg onload="window.injected=1">\\n\\n' + narration + '\\n\\n' + exchanges
+        + '\\n\\n---\\n\\n' + narration + '\\n\\n' + speech)
 settings = {'scene_analysis': {'assignments': {'1:1': '<b>close</b>', '1:2': 'formal', '3:1': 'formal'},
     'planned': ['3:1'],
     'groups': {'<b>close</b>': {'targets': {'asl': [2, 6]}}, 'formal': {'targets': {'hd_d': [0.2, 0.8]}}}}}
@@ -50,16 +54,26 @@ const documents = JSON.parse(fixtures.stdout);
         assert.equal(await page.locator('#scenes .scene-planned').count(), 1);
         assert.equal(await page.locator('#scenes svg, #scenes b').count(), 0);
         assert.equal(await page.evaluate(() => window.injected), undefined);
+        const rows = page.locator('#scenes .scene-overview tbody tr');
+        assert.deepEqual(await rows.evaluateAll(elements => elements.map(row => row.dataset.sceneRow)), ['1:1', '1:2']);
+        assert.equal(await page.locator('#scenes .scene-overview [data-claim-level="L0"]').count(), 2);
+        assert.deepEqual(await rows.locator('td:first-of-type .scene-track > span:last-child').allTextContents(),
+          language === 'en' ? ['50.0%', '50.0%'] : ['50,0 %', '50,0 %'],
+          'Equal quoted-word shares remain equal on the measured track');
         const measurements = page.locator('#scenes > .scene-measurements');
         assert.equal(await measurements.getAttribute('open'), null);
         assert.equal(await page.locator('#scenes .scene-detail summary').first().isVisible(), false);
         const link = page.locator('#scenes .scene-overview a').first();
         await link.focus();
         await page.keyboard.press('Enter');
-        assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-metrics-1-1',
-          'Opening scene measurements transfers keyboard focus to the destination');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-evidence-1-1',
+          'Opening a scene transfers keyboard focus to the evidence');
         assert.equal(await measurements.getAttribute('open'), '');
         assert.equal(await page.locator('#scenes .scene-detail[open]').count(), 1);
+        const evidence = page.locator('#scenes .scene-detail[open] .scene-evidence');
+        assert.deepEqual(await evidence.locator('[data-claim-level]').evaluateAll(elements =>
+          elements.map(element => element.dataset.claimLevel)), ['L0', 'L2', 'L1', 'L3']);
+        assert.deepEqual(await evidence.locator('.scene-block-counts strong').allTextContents(), ['12', '0', '0']);
         assert.equal(await page.locator('#scenes .scene-detail[open] tbody tr').count(), 16);
         for (const cell of await page.locator('#scenes .scene-detail[open] td, #scenes .scene-detail[open] thead th:not(:first-child)').all()) {
           assert.ok(await cell.evaluate(element => {
@@ -75,6 +89,7 @@ const documents = JSON.parse(fixtures.stdout);
         assert.equal(await wrap.getAttribute('tabindex'), '0');
         if (width === 320) {
           assert.ok(await wrap.evaluate(el => el.scrollWidth > el.clientWidth));
+          await wrap.focus();
           await page.keyboard.press('ArrowRight');
           await page.waitForFunction(() => document.querySelector('#scenes .scene-detail[open] .table-wrap').scrollLeft > 0);
         }
@@ -89,6 +104,11 @@ const documents = JSON.parse(fixtures.stdout);
         assert.equal(await measurements.getAttribute('open'), null);
         assert.equal(await measurements.locator(':scope > summary').evaluate(el => el === document.activeElement), true);
         await link.focus(); await page.keyboard.press('Enter');
+        await page.keyboard.press('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.getAttribute('href')), '#ch-1',
+          'Tab from the evidence reaches the corresponding manuscript chapter');
+        await page.keyboard.press('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-metrics-1-1');
         await page.keyboard.press('Tab');
         assert.equal(await page.locator('#scenes .scene-detail[data-scene="1:2"] > summary')
           .evaluate(el => el === document.activeElement), true,
@@ -106,6 +126,8 @@ const documents = JSON.parse(fixtures.stdout);
           assert.equal(await plain.locator('#scenes > .scene-measurements').getAttribute('open'), '');
           assert.equal(await plain.locator('#scenes .scene-detail[data-scene="1:2"]').getAttribute('open'), '');
           assert.equal(await plain.locator('#scene-metrics-1-2 table').isVisible(), true);
+          assert.deepEqual(await plain.locator('#scenes .scene-detail[open] .scene-block-counts strong').allTextContents(),
+            ['0', '0', '1'], 'The same quoted-word share can describe one long block');
         } finally { await context.close(); }
       }
     }
@@ -135,7 +157,7 @@ const documents = JSON.parse(fixtures.stdout);
     }
     await nativeLongScenes(browser);
     assert.deepEqual(errors, []);
-    console.log('Scenes: real values and separate reversible plans, inert labels, keyboard details, scrolling tables, seven locales and desktop/mobile passed. ' + artifacts);
+    console.log('Scenes: ordered evidence, keyboard details, seven locales, and local intent rehearsal passed. ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});
 
@@ -225,8 +247,8 @@ server.serve_forever()
       await firstLink.focus(); await page.keyboard.press('Enter');
       assert.equal(await catalogue.getAttribute('open'), '');
       assert.equal(await page.locator('#scene-metrics-1-1 table').isVisible(), true);
-      assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-metrics-1-1',
-        'Native scene navigation keeps keyboard focus at the visible measurements');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-evidence-1-1',
+        'Native scene navigation keeps keyboard focus at the visible evidence');
       await page.keyboard.press('Escape');
       assert.equal(await catalogue.locator('.scene-detail[open]').count(), 0);
       assert.equal(await catalogue.locator('.scene-detail[data-scene="1:1"] > summary')
@@ -256,7 +278,99 @@ server.serve_forever()
       } finally { await context.close(); }
     }
     assert.deepEqual(fs.readFileSync(path.join(directory, 'manuscript.md')), original);
-    assert.deepEqual(errors, []);
     assert.deepEqual(writes, []);
+    await rehearse(page, server.fixture.url, directory, original);
+    assert.deepEqual(errors, []);
   } finally { await page.close(); await server.close(); }
+}
+
+async function rehearse(page, url, directory, original) {
+  const board = page.locator('#scene-rehearsal');
+  const form = board.locator('form');
+  const cards = board.locator('[data-intent-id]');
+  const statePath = path.join(directory, '.lixity', 'analysis-intents.json');
+  async function openBoard() {
+    await page.goto(url);
+    await page.locator('#workbench-overview-open').click();
+    await openAnalysisSection(page, 'scenes');
+    await board.locator(':scope > summary').click();
+  }
+  async function add(scene, kind, text) {
+    await page.locator('#scene-intent-editor > summary').click();
+    await form.locator('[name="scene_id"]').selectOption(scene);
+    await form.locator('[name="kind"]').selectOption(kind);
+    await form.locator('[name="intent"]').fill(text);
+    await form.locator('[name="voice"]').fill('Mara');
+    await form.locator('[name="hypothesis"]').fill('The disclosure may reframe the question.');
+    const response = page.waitForResponse(r => r.url().endsWith('/api/analysis-intents') && r.request().method() === 'POST');
+    await form.locator('button[type="submit"]').click();
+    assert.equal((await response).status(), 200);
+    await board.locator('#scene-rehearsal-status.ok').waitFor();
+  }
+  const order = () => cards.locator('[data-intent-field="intent"]').allTextContents();
+  const measured = () => page.locator('.scene-overview [data-scene-row]').evaluateAll(
+    rows => rows.map(row => row.dataset.sceneRow)
+  );
+  await page.setViewportSize({width: 390, height: 840});
+  await openBoard();
+  await board.locator('#scene-rehearsal-empty').waitFor();
+  assert.equal(fs.existsSync(statePath), false, 'Opening the rehearsal writes nothing');
+  await add('1:1', 'question', '<em>What was in the letter?</em>');
+  await add('1:2', 'reveal', 'The letter was empty.');
+  assert.equal(await cards.locator('em').count(), 0, 'Authored intentions render as text');
+  const sourceOrder = await measured();
+  const beforeOrder = await order();
+  const beforeMove = fs.readFileSync(statePath);
+  await cards.first().locator('[data-intent-action="down"]').click();
+  const reverse = beforeOrder.slice().reverse();
+  assert.deepEqual(await order(), reverse);
+  assert.deepEqual(await measured(), sourceOrder);
+  assert.deepEqual(fs.readFileSync(statePath), beforeMove, 'Moving a card alone writes nothing');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  await board.screenshot({path: path.join(artifacts, 'rehearsal-mobile.png')});
+  await openBoard();
+  await cards.last().waitFor();
+  assert.deepEqual(await order(), beforeOrder, 'Reloading discards an unconfirmed rehearsal order');
+  await cards.first().locator('[data-intent-action="down"]').click();
+  await board.locator('[data-intent-action="save_order"]').click();
+  await board.locator('#scene-rehearsal-status.ok').waitFor();
+  await openBoard();
+  await cards.last().waitFor();
+  assert.deepEqual(await order(), reverse);
+  assert.deepEqual(await measured(), sourceOrder);
+  assert.deepEqual(fs.readFileSync(path.join(directory, 'manuscript.md')), original);
+
+  const revised = Buffer.concat([original, Buffer.from('\n\nA letter falls through the door.\n')]);
+  fs.writeFileSync(path.join(directory, 'manuscript.md'), revised);
+  const refresh = await page.request.post(url + '/api/analyze', {data: {}});
+  assert.equal(refresh.status(), 200);
+  await openBoard();
+  await cards.last().waitFor();
+  assert.deepEqual(await cards.locator('[data-intent-field="status"]').allTextContents(),
+    ['Review after revision', 'Review after revision']);
+  assert.equal(await cards.locator('a:visible').count(), 0, 'A stale anchor has no authoritative link');
+  await cards.first().locator('[data-intent-action="edit"]').click();
+  assert.equal(await form.locator('[name="scene_id"]').inputValue(), '');
+  await form.locator('[name="scene_id"]').selectOption('1:2');
+  await form.locator('button[type="submit"]').click();
+  await board.locator('#scene-rehearsal-status.ok').waitFor();
+  assert.deepEqual(await cards.locator('[data-intent-field="status"]').allTextContents(),
+    ['Current text', 'Review after revision']);
+  const measuredLink = cards.first().locator('[data-intent-field="scene-link"]');
+  await measuredLink.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'scene-evidence-1-2');
+  assert.deepEqual(fs.readFileSync(path.join(directory, 'manuscript.md')), revised);
+
+  fs.writeFileSync(path.join(directory, 'manuscript.md'), '');
+  const savedState = fs.readFileSync(statePath);
+  assert.equal((await page.request.post(url + '/api/analyze', {data: {}})).status(), 200);
+  await page.goto(url);
+  await page.locator('#tab-view-analysis').click();
+  await board.locator(':scope > summary').click();
+  await cards.last().waitFor();
+  assert.deepEqual(await cards.locator('[data-intent-field="status"]').allTextContents(),
+    ['Review after revision', 'Review after revision']);
+  assert.equal(await board.locator('#scene-intent-editor').isVisible(), false);
+  assert.deepEqual(fs.readFileSync(statePath), savedState);
 }

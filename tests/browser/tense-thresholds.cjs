@@ -45,7 +45,8 @@ print(json.dumps(fixtures))
       await page.locator('#manuscript-analysis-toggle').click();
       const panel = page.locator(`#p-${Number(threshold) - 1}`);
       await page.locator('#style-layer').selectOption('asl');
-      assert.equal(await panel.locator('.reader-review-flag').isVisible(), false);
+      assert.equal(await panel.locator('.reader-review-flag').isVisible(), true,
+        'The local tense cue remains reachable with an independent metric selected');
       await panel.locator('.reader-paragraph-actions').click();
       await page.locator('#manuscript-context-menu [data-reader-action=values]').click();
       assert.equal(await page.locator('#reader-inspector .reader-passage-flag').isVisible(), true,

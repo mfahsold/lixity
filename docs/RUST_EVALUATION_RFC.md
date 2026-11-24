@@ -70,6 +70,15 @@ Retain the Python implementation when the complete operation misses the
 agreed targets. Keep the measurements so later work can revisit the decision
 if the workload or available boundary changes.
 
+The scene comparison uses the shared quotation projection in the current
+engine. Its JSON fields serve the CLI, MCP and the desktop's bundled app.
+The rehearsal card store uses the same selected-project guards as other
+server writes. If profiling identifies a candidate, port the shared analysis
+operation at its engine boundary and switch its consumers together. Compare
+the exact counts, order, units, unknown values and API results on the same
+fixtures before removing the prior implementation. The native Rust WebView
+continues to exercise the authenticated host boundary.
+
 ## Evaluation log
 
 - **2026-11-11 · Nominal-suffix kernel.** The Rust regex/PyO3 prototype for

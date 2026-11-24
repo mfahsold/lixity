@@ -136,8 +136,9 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
     'scenes': (
         'USAGE.md#scene-registers-and-project-targets',
         (
-            'Select one scene or chapter without narrowing the comparison baseline. latest means the '
-            'last measured scene in document order, not the most recently edited scene.'
+            'Quote lengths describe the distribution of recognized text blocks. Changes within a scene '
+            'compare counted words and sentences in the first and second halves. Select one scene or chapter '
+            'without narrowing the comparison baseline. latest means the last measured scene in document order.'
         ),
         ('lixity scenes --project ./novel --latest', 'lixity scenes manuscript.md --scene 1:1 --json'),
     ),

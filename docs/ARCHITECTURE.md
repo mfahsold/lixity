@@ -813,6 +813,16 @@ numeric identifiers remain language-neutral. The localization contract also
 defines action/category distinctions, German voice and the native language
 setting's existing analysis/interface coupling.
 
+The [claim ladder](LOCALIZATION.md#evidence-levels-for-analysis-claims) adds
+explicit evidence levels and an author-intent role. In the scene panel, the
+analysis engine supplies recognized quotation counts, sentence lengths and
+within-scene comparisons. The renderer labels the evidence and its scope.
+The two measurement tracks share the order of the manuscript. A separate
+detail shows the quote-block length classes and their thresholds. Review
+questions and author-entered hypotheses sit in the intent role. They use
+ordinary interaction feedback and a neutral surface, distinct from measured
+directions and magnitudes. [Method cards and rationale](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
 **Since v0.7.6:** manuscript annotations distinguish the assertion
 being made, using pattern, position and a visible label as well as color. This
 is the central design contract; exact token values and dimensions remain in CSS.
@@ -824,10 +834,20 @@ is the central design contract; exact token values and dimensions remain in CSS.
 | Saved research | Neutral dotted inline borders identify exact saved quotation associations. A book icon and localized Research/count label open their context. Neither count nor line pattern establishes truth, confidence or statistical significance. | `research.manuscript`, `manuscript-links.js` and its stylesheet |
 | Search | The active query's background mark identifies literal matches. It can coexist with a research border or native analysis highlight. | `interactions.js` text renderer |
 | Work markers | Explicit author notes and tasks remain authored actions. A diagnostic never creates one automatically. | Existing marker API and controls |
+| Author intent | Explicit author cards record why an information beat is placed at a point in the manuscript. The interface labels the authorship and the review state in text. | Scene panel and project-local rehearsal state |
 
-The same semantics apply in the native workspace and read-only review website.
-Curated reader/companion publications expose only their selected content and do
-not acquire analysis overlays or the private manuscript-review state.
+The same measurement semantics apply in the native workspace and read-only
+review website. Rehearsal state belongs to the editable workspace. Curated
+reader/companion publications expose only their selected content.
+
+The rehearsal keeps an experimental card order in memory. Saving an intent or
+its order requires an explicit action. A saved order describes one hypothesis
+about disclosure and leaves measurement rows in manuscript order. The server
+checks source, analysis and author-state identities before updates. Changed
+evidence leaves a saved card available with a visible review state. A reviewer
+selects the current scene again before confirming the card. Measurements,
+authored rehearsal state and the source manuscript have separate storage and
+write paths. [Character knowledge proposal](research/KNOWLEDGE_HORIZON_RFC.md)
 
 Research uses neutral foreground/surface/line tokens. Its icon is decorative;
 the visible localized label supplies the accessible meaning. The selected
@@ -937,9 +957,18 @@ comparison score and scale position together. The floating card renders that
 position and the native counts. If the position is missing, the card shows the
 comparison label and score without a scale.
 
-The reader's directly visible native controls share one metric selector and
-independent Counted text / Paragraph comparison switches. Browser preferences
-preserve each choice, including deliberate None and disabled switches. First
+The reader's directly visible controls share one metric selector and independent
+switches for underlining counted passages and marking differing paragraphs. A
+single projection of the active filters drives the deviation count, arrow targets
+and empty state. Explicit passage actions restore the confirmed source position
+and clear a filter that blocks their destination. Tense cues use the same evidence
+owner and stay independent of the selected measurement. Passage details and the
+chapter measurement dialog show the reason and main action directly. Tooltips
+provide optional context.
+
+Browser preferences preserve each choice, including deliberate None and disabled
+switches. The desktop bridge sends validated updates to the existing Rust display
+preferences store so changes in loopback origin leave the choices usable. First
 explicit Analysis On defaults to `asl` only without a saved choice. Explicit
 measurement inspection delegates visibility to the workbench owner without
 overwriting disabled paint. Missing cryptographic verification remains distinct

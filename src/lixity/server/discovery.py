@@ -18,6 +18,7 @@ def api_index(get_routes: Mapping[str, str], post_routes: Mapping[str, str], *,
         "routes": {"GET": sorted(get_routes), "POST": sorted(f"/api/{action}" for action in post_routes)},
         "capabilities": {
             "analysis": {"analyze", "rebuild"}.issubset(post_routes),
+            "analysis_intents": "analysis-intents" in post_routes,
             "analysis_review": "analysis-review" in post_routes,
             "markers": {"marker-add", "marker-resolve"}.issubset(post_routes),
             "motif_search": "motif-search" in post_routes,

@@ -361,7 +361,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   color: var(--fg-secondary);
   font-size: var(--text-small);
 }
-.metric-context-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
+.metric-context-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: var(--space-2); margin: 0; }
 .metric-context-comparison > div { padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .metric-context-comparison dt { color: var(--fg-secondary); font-size: var(--text-small); }
 .metric-context-comparison dd { margin: 0; overflow-wrap: anywhere; font-weight: var(--weight-strong); }
@@ -633,6 +633,40 @@ button:is(.modal-close, .ctl-dismiss):focus-visible { border-radius: var(--radiu
 .modal-card > .modal-footer { flex: none; margin: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
 .modal-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); min-height: 0; min-width: 0; overscroll-behavior: contain; scroll-padding-block: var(--space-3); overflow-y: auto; background: var(--surface); }
 .modal-footer { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-3); margin-block-start: var(--space-2); padding-block-start: var(--space-4); border-block-start: 1px solid var(--line); }
+/* Explanatory dialogs have one vertical reading surface. Keeping the action
+   in that flow also makes it reachable when enlarged text fills the frame. */
+.lixity-modal[data-modal-scroll="content"] .modal-card {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: calc(var(--control-touch-size) + 2 * var(--space-3));
+}
+.lixity-modal[data-modal-scroll="content"] .modal-body { flex: none; overflow: visible; }
+.lixity-modal[data-modal-scroll="content"] :is(.modal-header, .modal-footer) { position: sticky; z-index: 1; }
+.lixity-modal[data-modal-scroll="content"] .modal-header { inset-block-start: 0; }
+.lixity-modal[data-modal-scroll="content"] .modal-footer { inset-block-end: 0; }
+@media (max-height: 36rem) {
+  .lixity-modal[data-modal-scroll="content"] :is(.modal-header, .modal-body, .modal-footer) {
+    padding: var(--space-2);
+  }
+  .lixity-modal[data-modal-scroll="content"] .modal-header { padding-block: var(--space-1); }
+  .lixity-modal[data-modal-scroll="content"] .modal-body { gap: var(--space-2); }
+  .lixity-modal[data-modal-scroll="content"] .modal-card { scroll-padding-block: calc(var(--control-touch-size) + 2 * var(--space-2)); }
+}
+/* Keep the close targets usable without spending most of a short dialog on an icon. */
+@media (max-height: 30rem) {
+  :is(.lixity-modal[data-modal-scroll="content"], .analysis-evidence-card) button:is(.modal-close, .analysis-evidence-close) {
+    --close-size: max(44px, min(var(--control-touch-size), 15dvh));
+    min-inline-size: var(--close-size);
+    min-block-size: var(--close-size);
+    inline-size: var(--close-size);
+    block-size: var(--close-size);
+  }
+}
+.heatmap-wrap { container: chapter-heatmap / inline-size; }
+@container chapter-heatmap (max-width: 26rem) {
+  /* Keep a horizontal scroll destination free from the pinned chapter column. */
+  .heatmap-wrap table.heatmap :is(th, td).ch { left: auto; }
+}
 #runtime-status { margin: 0; font-size: var(--text-small); color: var(--muted); }
 #runtime-status[data-state="error"] { color: var(--flag); font-weight: var(--weight-semibold); }
 #runtime-content { display: grid; gap: var(--space-4); }
@@ -2422,12 +2456,30 @@ line-height: var(--line-compact);
 #register-targets table { min-width: 48rem; }
 #register-targets thead th, #register-targets td:nth-child(n+4) { white-space: nowrap; }
 .scene-overview { margin: .4rem 0 .9rem; max-height: 26rem; overflow: auto; }
-.scene-overview table { min-width: 36rem; }
+.scene-overview table { min-width: 27rem; }
 .scene-overview th { white-space: normal; }
 .scene-overview thead th { text-wrap: balance; }
 .scene-overview tbody th { top: auto; }
 .scene-overview a { color: var(--accent); text-underline-offset: .15em; }
 .scene-overview tbody th small { display: block; color: var(--muted); font-weight: normal; }
+.scene-track { display: grid; grid-template-columns: minmax(2rem, 1fr) auto; align-items: center; gap: var(--space-2); }
+.scene-track-bar { display: block; height: var(--space-2); background: var(--surface-hover); border-radius: var(--radius-sm); overflow: hidden; }
+.scene-track-bar i { display: block; height: 100%; background: var(--accent); }
+.scene-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-3); }
+.scene-evidence h3, .scene-evidence p { margin-block: var(--space-2); overflow-wrap: anywhere; }
+.scene-sample, .scene-voice-prompt { grid-column: 1 / -1; }
+.scene-block-counts { list-style: none; padding: 0; margin-block: var(--space-2); }
+.scene-block-counts li { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-1); border-bottom: 1px solid var(--line); }
+#scene-intent-order { padding-inline-start: var(--space-5); }
+.scene-intent-card { padding: var(--space-3); margin-block: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); overflow-wrap: anywhere; }
+.scene-intent-card p { margin-block: 0 var(--space-2); white-space: pre-wrap; }
+.scene-intent-card .row, #scene-rehearsal .row { flex-wrap: wrap; }
+#scene-intent-form fieldset { padding: 0; margin: var(--space-3) 0 0; border: 0; min-inline-size: 0; }
+.scene-intent-editor-unavailable { display: none; }
+.paragraph-filter-state:not(:has(> :not([hidden]))) { display: none; }
+.paragraph-filter-state { margin-block: var(--space-2); }
+.scene-intent-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-2); margin-block-end: var(--space-3); }
+.scene-intent-fields input, .scene-intent-fields textarea, .scene-intent-fields select { box-sizing: border-box; width: 100%; min-width: 0; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
 their off-screen rendering once they are open. A closed <details> must keep
 its natural summary height: the intrinsic placeholder would otherwise
@@ -4196,6 +4248,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .reader-guide-actions { display: flex; flex-direction: column; gap: var(--space-1); }
 .reader-guide-actions .ctl { justify-content: flex-start; text-align: start; }
 .reader-analysis-guide[hidden], .reader-focus .reader-analysis-guide { display: none; }
+@media (max-width: 36rem), (max-height: 34rem) {
+  .manuscript-reader-controls:has(.reader-analysis-guide[open]) {
+    position: relative; max-height: none; overflow: visible;
+  }
+  .reader-analysis-toggle-controls:has(.reader-analysis-guide[open]) {
+    flex-wrap: wrap; flex-basis: 100%; min-width: 0;
+  }
+  .reader-analysis-guide[open] { flex: 1 0 100%; min-width: 0; }
+  .reader-analysis-guide .reader-settings-body {
+    position: static; width: 100%; max-width: none; max-height: none;
+    overflow: visible; margin-block-start: var(--space-2); box-shadow: none;
+  }
+}
 .manuscript-reading.workbench-analysis:not(.reader-focus, .manuscript-writing, .workbench-overview) .reader-secondary-controls { display: flex; flex-wrap: wrap; gap: .5rem; padding-block: .5rem; }
 .reader-focus .reader-secondary-controls { display: none !important; }
 .reader-control-icon { display: inline-flex; align-items: center; font-size: 0.95rem; line-height: 1; }
@@ -4259,8 +4324,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   min-inline-size: 0;
   flex: 0 1 auto;
 }
-#reader-analysis-overview .reader-settings-body select { min-inline-size: 0; }
-#reader-analysis-overview > summary { border-color: var(--line); background: var(--surface-alt); }
 .reader-analysis-controls .metric-layer-label {
   font-size: var(--text-small);
   font-weight: var(--weight-semibold);
@@ -4388,7 +4451,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 /* Keep the scroll anchor in the prose when sticky controls reflow or resize. */
 .manuscript-reading :is(.manuscript-reader-controls, .toolbar) { overflow-anchor: none; }
 body.manuscript-reading:not(.workbench-analysis).only-flags:not(.text-search-active) .chapter { display: block; }
-body.workbench-analysis.manuscript-reading.only-flags:not(.text-search-active) .chapter:not(.has-flags):not(:has(.ptext.metric-notable)) { display: none; }
+body.manuscript-reading.only-flags:not(.text-search-active) .chip.sev-1 { display: block; }
 .manuscript-reading:not(.workbench-overview) #analysis-review,
 .manuscript-reading:not(.workbench-overview) .analysis-outline-contents,
 .manuscript-reading #microhint,
@@ -4619,7 +4682,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   margin-block: var(--space-2) 0; margin-inline: 0 var(--space-2);
   max-inline-size: calc(100% - var(--space-2)); white-space: normal;
 }
-.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.layer-on) .reader-review-flag {
+.manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .reader-review-flag {
   display: inline-flex; color: var(--flag); background: var(--flag-light);
   border-color: currentColor; border-inline-start-width: 3px;
 }
@@ -4753,7 +4816,6 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 }
 @container reader-tools (max-width: 78rem) {
   #workbench-overview-open, #manuscript-write { min-width: 2.5rem; }
-  #workbench-overview-open .reader-control-label,
   #manuscript-write .reader-control-label { display: none; }
 }
 @container reader-tools (max-width: 68rem) {
@@ -4761,6 +4823,8 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
   .reader-compact-control { min-width: 2.5rem; }
   .reader-analysis-guide > summary { padding-inline: var(--space-1); }
 }
+.manuscript-reader-controls :is(#workbench-overview-open, #reader-analysis-guide) .reader-control-label { display: inline; }
+.manuscript-reader-controls .reader-overview-control { inline-size: auto; max-inline-size: 100%; }
 /* An open context dock narrows the reader: keep every tool on one row
    (including the dock toggle) by capping the chapter picker and gaps. */
 @container reader-tools (max-width: 62rem) {
@@ -5018,6 +5082,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
   text-decoration-thickness: 2px;
 }
 .analysis-evidence-card {
+  container: passage-evidence / inline-size;
   position: fixed;
   z-index: var(--z-popover, 220);
   box-sizing: border-box;
@@ -5039,7 +5104,6 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-2); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-.analysis-evidence-heading-text { min-inline-size: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); }
 .analysis-evidence-card p { margin: var(--space-1) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }
 .analysis-evidence-has-quote { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
@@ -5055,7 +5119,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .analysis-evidence-explanation { padding-block: var(--space-1) var(--space-2); }
 .analysis-evidence-card .analysis-evidence-review { margin-block: var(--space-2) 0; padding: var(--space-1) var(--space-2); }
 .analysis-evidence-review > strong { display: block; }
-.analysis-evidence-quote-context { --status-neutral-fg: var(--fg); max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; }
+.analysis-evidence-quote-context { --status-neutral-fg: var(--fg); max-inline-size: 100%; margin-block-end: var(--space-2); white-space: normal; overflow-wrap: anywhere; }
 .analysis-evidence-card .analysis-evidence-key-note { color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-key-note mark { padding: .1em .35em; }
 .analysis-evidence-paragraph { padding-block: var(--space-2); border-block: 1px solid var(--line); }
@@ -5069,9 +5133,9 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 .analysis-evidence-card .analysis-evidence-unavailable { margin-block: var(--space-2) 0; color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-card .analysis-evidence-warning { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--line-strong); background: var(--bg-subtle); color: var(--fg-secondary); font-size: var(--text-note); }
 .analysis-evidence-actions { padding-block-start: var(--space-2); }
-.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 auto; white-space: nowrap; }
+.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 auto; }
 .analysis-evidence-edit-row { display: flex; padding-block-start: var(--space-2); }
-.analysis-evidence-edit-row .ctl { width: 100%; justify-content: center; white-space: nowrap; }
+.analysis-evidence-edit-row .ctl { width: 100%; justify-content: center; }
 .analysis-evidence-progress { flex: 0 0 auto; color: var(--muted); font-size: var(--text-note); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .analysis-evidence-guide, .analysis-evidence-all-values { color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-guide summary, .analysis-evidence-all-values summary { cursor: pointer; min-height: 2.75rem; padding-block: var(--space-2); box-sizing: border-box; }
@@ -5084,6 +5148,12 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 @media (max-width: 420px) {
   .analysis-evidence-card:not(:has(.analysis-evidence-contribution)) { max-height: min(30rem, 82dvh); }
   .analysis-evidence-heading { padding-block: var(--space-1); }
+}
+@container passage-evidence (max-width: 19rem) {
+  .analysis-evidence-has-quote, .analysis-evidence-comparison .metric-context-comparison { grid-template-columns: minmax(0, 1fr); }
+  .analysis-evidence-has-quote { gap: var(--space-1); }
+  .analysis-evidence-measure { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); text-align: start; }
+  .analysis-evidence-measure .analysis-evidence-scope, .analysis-evidence-count { white-space: normal; }
   .analysis-evidence-actions .analysis-evidence-navigation-label { display: none; }
 }
 @media (forced-colors: active) {

@@ -362,17 +362,21 @@
         try { localStorage.removeItem("lixity-theme"); } catch (_) { /* Keep the OS theme. */ }
       }
     });
-    // Persist the theme across ephemeral ports and let Rust apply native zoom.
-    if (typeof window.lixityDesktop.getPreferences === "function") {
-      window.lixityDesktop.getPreferences().then(function (prefs) {
-        if (prefs && root.dataset.theme === initialTheme && (prefs.theme === "dark" || prefs.theme === "light")) {
-          lastTheme = prefs.theme;
-          window.LixityComponents.applyTheme(prefs.theme);
-        }
-      }).catch(function () {});
-    }
+    // Read portable desktop settings once. Rust also applies native zoom.
+    var settings = typeof window.lixityDesktop.getPreferences === "function" ?
+      window.lixityDesktop.getPreferences() : Promise.resolve(null);
+    settings.then(function (prefs) {
+      if (prefs && root.dataset.theme === initialTheme && (prefs.theme === "dark" || prefs.theme === "light")) {
+        lastTheme = prefs.theme;
+        window.LixityComponents.applyTheme(prefs.theme);
+      }
+    }).catch(function () {});
 
     if (typeof window.lixityDesktop.setPreference === "function") {
+      window.LixityReader?.connectDesktopPreferences?.(
+        settings.then(function (prefs) { return prefs?.reader; }),
+        function (changes) { window.lixityDesktop.setPreference("reader", changes).catch(function () {}); }
+      );
       new MutationObserver(function () {
         var nextTheme = root.dataset.theme;
         if ((nextTheme === "dark" || nextTheme === "light") && nextTheme !== lastTheme) {

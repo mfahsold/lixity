@@ -120,13 +120,14 @@ def render_metric_context(
     )
     body = (
         '<div class="modal-body">'
-        '<p id="metric-context-chapter"></p><p class="ctl-note" id="metric-context-sample"></p>'
-        '<p id="metric-context-definition"></p>'
-        f'<p class="ctl-note">{metric_reference_link(labels, "style", element_id="metric-context-reference-link")}</p>'
+        '<p id="metric-context-chapter"></p>'
         '<dl class="metric-context-comparison">'
         f'<div><dt>{esc(label(labels, "metric_context_this_chapter"))}</dt><dd id="metric-context-value"></dd></div>'
         f'<div><dt>{esc(label(labels, "metric_context_typical"))}</dt><dd id="metric-context-typical"></dd></div>'
         '</dl>'
+        '<p id="metric-context-definition"></p>'
+        '<p class="ctl-note" id="metric-context-sample"></p>'
+        f'<p class="ctl-note">{metric_reference_link(labels, "style", element_id="metric-context-reference-link")}</p>'
         '<p class="ctl-note" id="metric-context-origin" hidden></p>'
         '<p class="ctl-note" id="metric-context-no-layer" hidden>'
         f'{esc(label(labels, "metric_context_no_layer"))}</p>'
@@ -145,12 +146,12 @@ def render_metric_context(
     )
     close_label = label(labels, "modal_close")
     footer = modal_footer(
-        f'<button type="button" class="ctl" data-metric-close>{esc(close_label)}</button>'
-        f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "dim_read_chapter"))}</a>'
+        f'<a class="ctl primary" id="metric-context-read">{esc(label(labels, "metric_context_read_chapter"))}</a>'
     )
     return modal_shell(
         "analysis-metric-context", "metric-context-title", esc(label(labels, "metric_context_title")), body,
-        close_label=close_label, footer_html=footer, extra_attrs=f'data-metric-context="{payload}"',
+        close_label=close_label, footer_html=footer,
+        extra_attrs=f'data-modal-scroll="content" data-metric-context="{payload}"',
         title_tag="h2", focusable_title=True, close_attrs="data-metric-close",
     )
 

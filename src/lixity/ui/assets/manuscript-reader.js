@@ -253,28 +253,36 @@
     return {key: key, select: select, options: options, buttons: buttons};
   });
   function boundedSize(size) { return Math.min(maxSize, Math.max(minSize, size)); }
-  function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
-  function save(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* Display works without storage. */ } }
-  try {
-    var stored = JSON.parse(read("lixity.manuscript.reader") || "null");
-    if (stored && typeof stored === "object") {
-      if (Number.isFinite(stored.size)) preferences.size = boundedSize(stored.size);
-      appearanceChoices.forEach(function(choice) {
-        if (choice.options.has(stored[choice.key])) preferences[choice.key] = stored[choice.key];
+  var preferenceKey = "lixity.manuscript.reader";
+  var publishReaderPreferences = null, applyingNativePreferences = false, choosingDefaultMetric = false;
+  var knownMetrics = new Set(metric ? Array.from(metric.options, function(option) { return option.value; }) : []);
+  function useReaderPreferences(stored) {
+    if (!stored || typeof stored !== "object") return;
+    if (Number.isFinite(stored.size)) preferences.size = boundedSize(stored.size);
+    appearanceChoices.forEach(function(choice) {
+      if (choice.options.has(stored[choice.key])) preferences[choice.key] = stored[choice.key];
+    });
+    if (knownMetrics.has(stored.metric)) preferences.metric = stored.metric;
+    if (typeof stored.evidence === "boolean") preferences.evidence = stored.evidence;
+    if (stored.evidenceByMetric && typeof stored.evidenceByMetric === "object" && !Array.isArray(stored.evidenceByMetric)) {
+      Object.keys(stored.evidenceByMetric).forEach(function(key) {
+        if (key && knownMetrics.has(key) && typeof stored.evidenceByMetric[key] === "boolean") {
+          preferences.evidenceByMetric[key] = stored.evidenceByMetric[key];
+        }
       });
-      if (typeof stored.metric === "string" && metric && Array.from(metric.options).some(function(option) {return option.value === stored.metric;})) preferences.metric = stored.metric;
-      if (typeof stored.evidence === "boolean") preferences.evidence = stored.evidence;
-      if (stored.evidenceByMetric && typeof stored.evidenceByMetric === "object" && !Array.isArray(stored.evidenceByMetric)) {
-        Object.keys(stored.evidenceByMetric).forEach(function(key) {
-          if (key && typeof stored.evidenceByMetric[key] === "boolean") preferences.evidenceByMetric[key] = stored.evidenceByMetric[key];
-        });
-      } else if (preferences.metric && typeof stored.evidence === "boolean") {
-        // A global legacy choice belongs only to the last selected metric.
-        preferences.evidenceByMetric[preferences.metric] = stored.evidence;
-      }
-      if (typeof stored.comparison === "boolean") preferences.comparison = stored.comparison;
+    } else if (preferences.metric && typeof stored.evidence === "boolean") {
+      // A global legacy choice belongs only to the last selected metric.
+      preferences.evidenceByMetric[preferences.metric] = stored.evidence;
     }
-  } catch (_) { /* A malformed preference never changes manuscript data. */ }
+    if (typeof stored.comparison === "boolean") preferences.comparison = stored.comparison;
+  }
+  function saveReaderPreferences(changes) {
+    try { localStorage.setItem(preferenceKey, JSON.stringify(preferences)); }
+    catch (_) { /* Display works without browser storage. */ }
+    if (changes && publishReaderPreferences) publishReaderPreferences(changes);
+  }
+  try { useReaderPreferences(JSON.parse(localStorage.getItem(preferenceKey) || "null")); }
+  catch (_) { /* A malformed preference never changes manuscript data. */ }
   if (metric && preferences.metric !== null) metric.value = preferences.metric;
   function restoreEvidencePreference() {
     if (!metric || !evidenceToggle) return;
@@ -285,15 +293,54 @@
   }
   restoreEvidencePreference();
   if (comparisonToggle) comparisonToggle.checked = preferences.comparison;
-  function rememberAnalysis() {
+  function rememberAnalysis(changes) {
     if (metric) preferences.metric = metric.value;
     if (metric && metric.value && evidenceToggle) preferences.evidence = evidenceToggle.checked;
     if (comparisonToggle) preferences.comparison = comparisonToggle.checked;
-    save("lixity.manuscript.reader", JSON.stringify(preferences));
+    saveReaderPreferences(changes);
+  }
+  function connectDesktopPreferences(initial, publish) {
+    // A late IPC reply can restore untouched fields, but never overwrite an
+    // explicit change made while the desktop preference read was in flight.
+    var touched = new Set(), touchedEvidence = new Set();
+    publishReaderPreferences = function(changes) {
+      Object.keys(changes).forEach(function(key) { touched.add(key); });
+      Object.keys(changes.evidenceByMetric || {}).forEach(function(key) { touchedEvidence.add(key); });
+      publish(changes);
+    };
+    initial.then(function(stored) {
+      publishReaderPreferences = publish;
+      if (!stored || typeof stored !== "object") return;
+      var restored = {};
+      ["size", "width", "spacing", "metric", "comparison"].forEach(function(key) {
+        if (!touched.has(key) && Object.prototype.hasOwnProperty.call(stored, key)) restored[key] = stored[key];
+      });
+      if (stored.evidenceByMetric && typeof stored.evidenceByMetric === "object") {
+        restored.evidenceByMetric = Object.fromEntries(Object.entries(stored.evidenceByMetric).filter(function(pair) {
+          return !touchedEvidence.has(pair[0]);
+        }));
+      }
+      retain(function() {
+        var before = [metric?.value, evidenceToggle?.checked, comparisonToggle?.checked];
+        useReaderPreferences(restored);
+        if (metric && preferences.metric !== null) metric.value = preferences.metric;
+        restoreEvidencePreference();
+        if (comparisonToggle) comparisonToggle.checked = preferences.comparison;
+        appearance();
+        if (metric && (metric.value !== before[0] || evidenceToggle?.checked !== before[1] ||
+            comparisonToggle?.checked !== before[2])) {
+          applyingNativePreferences = true;
+          try { metric.dispatchEvent(new Event("change", {bubbles: true})); }
+          finally { applyingNativePreferences = false; }
+        }
+      });
+    }).catch(function() { publishReaderPreferences = publish; });
   }
   function defaultMetric(force) {
     if (!metric || metric.value || (!force && preferences.metric !== null)) return;
-    window.LixityComponents.changeSelectOption(metric, "asl");
+    choosingDefaultMetric = true;
+    try { window.LixityComponents.changeSelectOption(metric, "asl"); }
+    finally { choosingDefaultMetric = false; }
   }
   function setAnalysisVisible(visible) {
     retain(function() {
@@ -302,19 +349,26 @@
     });
   }
   function selectMetricPreference() {
+    if (applyingNativePreferences) return;
     restoreEvidencePreference();
-    rememberAnalysis();
+    rememberAnalysis(choosingDefaultMetric ? undefined : {metric: metric.value});
   }
-  // Restore before the dashboard's change listener updates the visible overlay.
-  if (metric) metric.addEventListener("change", selectMetricPreference, true);
+  if (metric) {
+    // Capture the passage before the dashboard changes the visible evidence and comparison badges.
+    metric.addEventListener("change", queueAnalysisRestore, true);
+    metric.addEventListener("change", selectMetricPreference, true);
+  }
   if (evidenceToggle) evidenceToggle.addEventListener("change", function() {
-    if (metric && metric.value) preferences.evidenceByMetric[metric.value] = evidenceToggle.checked;
-    rememberAnalysis();
+    if (!metric || !metric.value) return;
+    preferences.evidenceByMetric[metric.value] = evidenceToggle.checked;
+    rememberAnalysis({evidenceByMetric: {[metric.value]: evidenceToggle.checked}});
   });
   if (comparisonToggle) {
     // Capture before the dashboard changes comparison badges and paragraph height.
-    comparisonToggle.addEventListener("change", queueComparisonRestore, true);
-    comparisonToggle.addEventListener("change", rememberAnalysis);
+    comparisonToggle.addEventListener("change", queueAnalysisRestore, true);
+    comparisonToggle.addEventListener("change", function() {
+      rememberAnalysis({comparison: comparisonToggle.checked});
+    });
   }
   function capture() {
     if (workbench.state().view !== "analysis" || workbench.state().surface !== "document") return null;
@@ -382,7 +436,8 @@
     }
     return panel;
   }
-  function queueComparisonRestore() {
+  function queueAnalysisRestore() {
+    if (applyingNativePreferences) return;
     var previous = pendingComparisonPassage() && pendingComparisonRestore;
     var anchor = previous ? previous.anchor : captureForRestore();
     if (!anchor) { cancelComparisonRestore(); return; }
@@ -501,7 +556,7 @@
         if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
         return;
       }
-      if (!anchor.panel.isConnected || sourceContext() !== scheduledContext ||
+      if (!anchor.panel.isConnected || !anchor.panel.getClientRects().length || sourceContext() !== scheduledContext ||
           anchor.panel.dataset.paragraphSha256 !== scheduledHash) {
         clampedAnchor = null;
         if (pendingDockAnchor && pendingDockAnchor.revision === revision) pendingDockAnchor = null;
@@ -547,7 +602,7 @@
     if (previous.contextTool !== next.contextTool && next.surface === "document") return;
     restore(anchor);
   }
-  function appearance() {
+  function appearance(changes) {
     document.body.style.setProperty("--reader-font-size", (preferences.size / 16) + "rem");
     appearanceChoices.forEach(function(choice) {
       var value = preferences[choice.key];
@@ -560,7 +615,7 @@
     sizeOutput.value = String(preferences.size);
     smaller.disabled = preferences.size <= minSize;
     larger.disabled = preferences.size >= maxSize;
-    save("lixity.manuscript.reader", JSON.stringify(preferences));
+    saveReaderPreferences(changes);
   }
   function enhanceText(panel) {
     renderParagraph(panel, true);
@@ -592,11 +647,26 @@
     if (returnTarget) returnTarget.setAttribute("aria-expanded", "false");
     if (restoreFocus && returnTarget && returnTarget.isConnected) returnTarget.focus({preventScroll: true});
   }
+  function revealPassageControl(control) {
+    // Sticky toolbar controls already have a visible return position.
+    if (!control.closest("#chapters")) return;
+    var bounds = control.getBoundingClientRect();
+    if (bounds.top >= readingViewportTop() && bounds.bottom <= innerHeight) return;
+    setPassageScrollMargin(control);
+    window.LixityComponents.scrollIntoViewSafe(control, {block: "nearest", behavior: "instant"});
+  }
   function closeInspector(restoreFocus) {
     workbench.dispatch({type: "tool", value: "none"});
     if (restoreFocus && inspectorTarget && inspectorTarget.isConnected) {
       var button = inspectorTrigger && inspectorTrigger.isConnected ? inspectorTrigger : inspectorTarget.querySelector(".reader-paragraph-actions");
-      if (button) button.focus({preventScroll: true});
+      if (!button) return;
+      button.focus({preventScroll: true});
+      if (!narrowContext.matches) {
+        var revision = arrangementRevision;
+        requestAnimationFrame(function() {
+          if (revision === arrangementRevision && document.activeElement === button) revealPassageControl(button);
+        });
+      }
     }
   }
   function requestTool(value, panel, trigger) {
@@ -956,6 +1026,7 @@
               trigger = destination.panel.querySelector(".reader-paragraph-actions") || destination.panel;
             }
             trigger.focus({preventScroll: true});
+            revealPassageControl(trigger);
           }
           if (window.LixityMotion) window.LixityMotion.passage(destination.panel);
         }
@@ -1034,6 +1105,12 @@
     returnTarget.setAttribute("aria-expanded", "true");
     var first = menu.querySelector("button"); if (first) { first.tabIndex = 0; first.focus({preventScroll: true}); }
   }
+  function inspectValues(panel, point, trigger) {
+    showValues(panel, point);
+    inspectorTrigger = trigger;
+    requestTool("analysis", panel, trigger);
+    if (trigger) document.getElementById("reader-inspector-close").focus({preventScroll: true});
+  }
   function run(action) {
     if (!current || !current.isConnected) return;
     var panel = current, range = rangeFor(current) || savedRange, point = evidencePoint;
@@ -1041,10 +1118,7 @@
     renderParagraph(panel);
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
-      showValues(panel, point);
-      inspectorTrigger = returnTarget;
-      requestTool("analysis", panel, returnTarget);
-      document.getElementById("reader-inspector-close").focus({preventScroll: true});
+      inspectValues(panel, point, returnTarget);
     } else if (action === "link") {
       if (!range) {
         var pnode = panel.querySelector(".ptext-inner > p");
@@ -1080,11 +1154,18 @@
   }
   window.addEventListener("resize", fitSearchScrollMargin);
   fitSearchScrollMargin();
+  function guideInFlow(panel, body) {
+    return panel === analysisGuide && getComputedStyle(body || panel.querySelector(".reader-settings-body")).position !== "fixed";
+  }
   function placeSettings() {
     settingsPanels.forEach(function(panel) {
       if (!panel.open) return;
-      var summary = panel.querySelector("summary").getBoundingClientRect();
       var body = panel.querySelector(".reader-settings-body"), gutter = 8, gap = 6;
+      if (guideInFlow(panel, body)) {
+        body.style.left = body.style.top = body.style.maxHeight = "";
+        return;
+      }
+      var summary = panel.querySelector("summary").getBoundingClientRect();
       var limit = Math.max(0, innerHeight - gutter * 2);
       // Measure afresh after a resize; a previous placement may have capped height.
       body.style.maxHeight = limit + "px";
@@ -1121,7 +1202,7 @@
   function resizeText(direction) {
     retain(function() {
       preferences.size = boundedSize(preferences.size + direction * sizeStep);
-      appearance();
+      appearance({size: preferences.size});
     });
   }
   smaller.addEventListener("click", function() { resizeText(-1); });
@@ -1129,7 +1210,7 @@
   appearanceChoices.forEach(function(choice) {
     function choose(value) {
       if (!choice.options.has(value)) return;
-      retain(function() { preferences[choice.key] = value; appearance(); });
+      retain(function() { preferences[choice.key] = value; appearance({[choice.key]: value}); });
     }
     choice.select.addEventListener("change", function() { choose(choice.select.value); });
     choice.buttons.forEach(function(button) {
@@ -1213,9 +1294,8 @@
   document.getElementById("reader-chapter").addEventListener("change", function(event) {
     var chapter = document.getElementById(event.target.value);
     if (chapter) {
-      var search = document.getElementById("text-search");
-      if (search && search.value) document.getElementById("text-search-clear").click();
       event.target.dataset.currentChapter = chapter.id;
+      rememberPassageLocation(chapter);
       scrollAndFlash(chapter);
       event.target.value = "";
     }
@@ -1364,7 +1444,7 @@
   window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; placeSettings(); });
   document.addEventListener("scroll", function(event) {
     settingsPanels.forEach(function(panel) {
-      if (!panel.open || panel.contains(event.target)) return;
+      if (!panel.open || panel.contains(event.target) || guideInFlow(panel)) return;
       var summary = panel.querySelector("summary"), box = summary.getBoundingClientRect();
       if (!summary.getClientRects().length || box.bottom <= 0 || box.top >= innerHeight) panel.open = false;
       else placeSettings();
@@ -1446,18 +1526,18 @@
       }});
   }
   window.LixityReader = {fitContext: fitContextDock, requestTool: requestTool, leavePassage: leavePassage, capture: capture, captureForRestore: captureForRestore, restore: restore, retain: retain,
+    connectDesktopPreferences: connectDesktopPreferences,
     cancelRestore: function() { ++passageNavigationRevision; pendingDockAnchor = null; clampedAnchor = null; },
     contextFocusReturnPending: function() { return pendingDockFocusRevision === arrangementRevision; },
     pendingComparisonPassage: pendingComparisonPassage,
     enableEvidence: function() { retain(function() {defaultMetric(true); workbench.dispatch({type:"analysis", value:true});}); },
     openOverview: openOverview,
     showOverview: showOverview,
-    inspectPassage: function(panel, point) {
+    inspectPassage: function(panel, point, trigger) {
       if (!panel) return;
       retain(function() {
         workbench.dispatch({type: "analysis", value: true});
-        requestTool("analysis", panel);
-        showValues(panel, point);
+        inspectValues(panel, point, trigger || null);
       });
     }};
   document.body.classList.add("manuscript-reading");

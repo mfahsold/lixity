@@ -368,10 +368,9 @@ class TestJsDomContract(unittest.TestCase):
         targets = re.findall(r'data-section-link="([^"]+)"', nav)
         expected = [panel for panel, _key in ANALYSIS_SECTIONS if panel in set(targets)]
         self.assertEqual(targets, expected)
-        reader_picker = html.split('id="reader-analysis-overview-select"', 1)[1].split("</select>", 1)[0]
-        reader_targets = re.findall(r'<option value="([^"]+)"', reader_picker)
-        self.assertLessEqual(set(targets), set(reader_targets))
-        self.assertEqual(reader_targets, re.findall(r'data-analysis-section-target="([^"]+)"', html))
+        self.assertEqual(html.count('id="workbench-overview-open"'), 1)
+        self.assertNotIn('id="reader-analysis-overview-select"', html)
+        self.assertLessEqual(set(targets), set(re.findall(r'data-analysis-section-target="([^"]+)"', html)))
 
     def test_checkbox_controls_use_the_shared_component(self):
         """Every rendered checkbox row uses the one form-checkbox component."""
@@ -562,6 +561,7 @@ class TestJsDomContract(unittest.TestCase):
         )
         # Declared chapter groups add conditional comparison controls.
         from lixity.api import dashboard
+        from lixity.scenes import scene_report
 
         scope_text = "\n\n".join(
             f"## Chapter {number}\n\n" + (("moss " * length).strip() + ". ") * 30
@@ -571,6 +571,8 @@ class TestJsDomContract(unittest.TestCase):
             "register_profiles": {"Letters": {}}, "chapter_registers": {"2": "Letters"},
             "characters": {"Alex": {"pov_in_chapters": [1, 3]}},
         })
+        html += _full_dashboard(("analysis-intents",), scenes=scene_report(scope_text, CorpusConfig()),
+                                manuscript_pdf_token="a" * 64)
         from lixity.ui.publication import render_publication
 
         html += render_publication({"mode":"companion", "title":"Synthetic context", "max_chapter":0})

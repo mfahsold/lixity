@@ -32,6 +32,7 @@ from .constants import (
 from .desktop import DesktopSession, desktop_environment_summary
 from .discovery import api_index
 from .pdf_context import project_settings_token
+from .routes_analysis_intents import AnalysisIntentRoutesMixin
 from .routes_analysis_review import AnalysisReviewRoutesMixin
 from .routes_editing import MAX_EDITOR_COMPARISON_PAYLOAD_BYTES, EditingRoutesMixin
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
@@ -46,6 +47,7 @@ from .routes_speech import SpeechRoutesMixin
 
 class LixityServerHandler(
     EditingRoutesMixin,
+    AnalysisIntentRoutesMixin,
     AnalysisReviewRoutesMixin,
     ProjectRoutesMixin,
     MarkerRoutesMixin,
@@ -81,6 +83,7 @@ class LixityServerHandler(
         "/api/audio-microphone": "_handle_audio_microphone",
         "/api/project-structure": "_handle_project_structure",
         "/api/project-paths": "_handle_project_paths",
+        "/api/analysis-intents": "_handle_analysis_intents",
         "/api/analysis-review": "_handle_analysis_review",
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
@@ -126,6 +129,7 @@ class LixityServerHandler(
         "site-export": "_handle_site_export",
         "site-preflight": "_handle_site_preflight",
         "site-export-report": "_handle_site_export_report",
+        "analysis-intents": "_handle_analysis_intents_save",
         "analysis-review": "_handle_analysis_review_save",
         "analyze": "_handle_refresh",
         "rebuild": "_handle_refresh",

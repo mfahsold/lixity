@@ -55,6 +55,17 @@ def test_reports_count_only_existing_scope_words_in_quotes():
     assert report.dialogue_words == 0
     assert report.dialogue_pct == chapter.dialogue_pct == chapter.scene_list[0].dialogue_pct == 0.0
     assert scene["features"]["dialog_pct"] == 0.0
+    assert scene["quote_blocks"] == {"short": 0, "medium": 0, "long": 0, "words": 0, "unresolved_ranges": 0}
+
+
+def test_scene_quote_blocks_union_overlapping_configured_matches():
+    text = "## One\n\nAlpha beta gamma. The lamp flickered.\n"
+    config = CorpusConfig(dialogue_regex=r"(?i)(?=(alpha beta|beta gamma))")
+    scene = scene_report(text, config)["items"][0]
+
+    assert dialogue_report(text, config).turns == 2
+    assert scene["features"]["dialog_pct"] == 50.0
+    assert scene["quote_blocks"] == {"short": 1, "medium": 0, "long": 0, "words": 3, "unresolved_ranges": 0}
 
 
 def test_reports_project_line_initial_spanish_dialogue_after_a_soft_wrap():
@@ -67,6 +78,7 @@ def test_reports_project_line_initial_spanish_dialogue_after_a_soft_wrap():
     assert report.dialogue_words == 2
     assert report.dialogue_pct == chapter.dialogue_pct == chapter.scene_list[0].dialogue_pct == 50.0
     assert scene["features"]["dialog_pct"] == 50.0
+    assert scene["quote_blocks"]["short"] == 2 and scene["quote_blocks"]["words"] == 2
     assert scene["exit_hook_type"] == "dialogue"
 
 
@@ -75,7 +87,14 @@ def test_scene_halves_reuse_quotes_that_cross_sentences():
     speech = "Tomorrow we will travel to the coast before the warm sun goes down. " * 6
     text = f"## One\n\n{narration.strip()}\n\n“{speech.strip()}”\n"
     config = CorpusConfig(language="en")
-    scene = scene_report(text, config)["items"][0]
+    report = scene_report(text, config)
+    scene = report["items"][0]
+    assert report["within_scene_limits"]["min_words"] == 120
+    assert scene["within_scene"] == {
+        "first": {"sentences": 6, "words": 78, "quote_words": 0},
+        "second": {"sentences": 6, "words": 78, "quote_words": 78},
+    }
+    assert scene["quote_blocks"] == {"short": 0, "medium": 1, "long": 0, "words": 78, "unresolved_ranges": 0}
     assert scene["dialogue_shift"] == 100.0
     assert scene["scene_dynamic"] == "dialogue_surge"
 

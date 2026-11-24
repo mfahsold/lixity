@@ -168,7 +168,7 @@ class TestLocalization(unittest.TestCase):
                                 title="Synthetic title")
         self.assertIn("1 Absatz", html)
         self.assertNotIn("1 Abs\u00e4tze", html)
-        self.assertIn("0 Auff\u00e4lligkeiten", html)
+        self.assertIn("0 Zeitformhinweise", html)
         self.assertIn("</span> \u00b7 <span>", html)
 
     def test_workspace_actions_remain_available_without_guidance_or_legacy_actions(self):

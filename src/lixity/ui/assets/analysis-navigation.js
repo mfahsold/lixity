@@ -81,24 +81,6 @@
   }
   var sectionsLink = document.getElementById("workbench-overview-sections");
   if (sectionsLink) sectionsLink.addEventListener("click", showSections);
-  var form = document.getElementById("reader-analysis-overview-form");
-  if (form) {
-    var picker = form.querySelector("select"), open = form.querySelector("button");
-    var metric = document.getElementById("style-layer"), suggestion = "";
-    function syncOpen() { open.disabled = !workflowByPanel.has(byId.get(picker.value)); }
-    picker.addEventListener("change", syncOpen);
-    document.addEventListener("lixity:analysis-layer-change", function() {
-      var related = metric?.selectedOptions[0]?.dataset.relatedOverview || "";
-      if (!picker.value || picker.value === suggestion) picker.value = related;
-      suggestion = related;
-      syncOpen();
-    });
-    form.addEventListener("submit", function(event) {
-      event.preventDefault();
-      openReport(byId.get(picker.value));
-    });
-    syncOpen();
-  }
   document.body.classList.add("has-guided-analysis");
   window.LixityAnalysisNavigation = {
     reveal: reveal,

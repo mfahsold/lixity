@@ -692,8 +692,11 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await selectMetric(page, 'asl');
   assert.equal(await page.locator('#layer-legend').isVisible(), true);
   assert.ok(await page.locator('.chip.has-layer').count() > 0, 'Selecting a layer changes actual paragraph data');
+  await page.locator('#filter-flags').check();
   await page.locator('#paragraph-filter-reset').click();
-  assert.equal(await page.locator('#style-layer').inputValue(), '');
+  assert.equal(await page.locator('#style-layer').inputValue(), 'asl');
+  assert.equal(await page.locator('#layer-legend').isVisible(), true);
+  await selectMetric(page, '');
   assert.equal(await page.locator('#layer-legend').isVisible(), false);
   const canvas = page.locator('#dim-3d-canvas');
   await showOverview(page);
@@ -810,6 +813,8 @@ async function checkDemoCapabilities(page, width) {
   }
 
   await page.locator('[data-review-passage]').click();
+  const reviewExplanation = page.locator('#reader-inspector-close');
+  if (await reviewExplanation.isVisible()) await reviewExplanation.click();
   const passage = page.locator('#chapters .ptext.open').first();
   const passageId = await passage.getAttribute('id');
   const originalText = await passage.locator('p').first().innerText();

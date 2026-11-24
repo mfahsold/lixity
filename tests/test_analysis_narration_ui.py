@@ -49,9 +49,10 @@ def test_scene_overview_links_reach_all_measurements_inside_one_closed_disclosur
     for row, detail in zip(overview, details, strict=True):
         identifier = detail.attrib["data-scene"].replace(":", "-")
         link = row.find("th/a")
-        target = f"scene-metrics-{identifier}"
+        target = f"scene-evidence-{identifier}"
         assert link.attrib["href"] == link.attrib["data-jump"] == "#" + target
-        assert detail.find(f"./div[@id='{target}']/table") is not None
+        assert detail.find(f"./div[@id='{target}'][@tabindex='-1']") is not None
+        assert detail.find(f"./div[@id='scene-metrics-{identifier}']/table") is not None
         assert "open" not in detail.attrib and "name" not in detail.attrib
         assert len(detail.findall(".//tbody/tr")) == 16
     # Plans stay outside the measured catalogue and never acquire fabricated values.
@@ -269,7 +270,7 @@ def test_dialogue_panel_surfaces_voice_separation_and_adverbial_tags(locale):
 
 
 @pytest.mark.parametrize("locale", LOCALES)
-def test_scenes_panel_surfaces_dynamics_showing_rates_and_plateaus(locale):
+def test_scenes_panel_surfaces_evidence_with_no_legacy_dynamic_verdict(locale):
     from lixity.ui.narration import FEATURES
 
     labels = get_language_profile(locale).labels
@@ -289,11 +290,20 @@ def test_scenes_panel_surfaces_dynamics_showing_rates_and_plateaus(locale):
                 "standard_errors": {},
                 "targets": {},
                 "scene_dynamic": "accelerating",
+                "asl_shift": -2.5,
+                "dialogue_shift": 4,
+                "within_scene": {
+                    "first": {"words": 82, "sentences": 6, "quote_words": 14},
+                    "second": {"words": 68, "sentences": 6, "quote_words": 16},
+                },
+                "quote_blocks": {"short": 2, "medium": 1, "long": 0, "words": 30, "unresolved_ranges": 0},
                 "filter_per_1000": 6.67,
                 "sensory_per_1000": 13.33,
             }
         ],
         "baselines": {},
+        "quote_block_limits": {"short_max_words": 12, "long_min_words": 80},
+        "within_scene_limits": {"min_words": 120, "min_sentences": 2},
         "pacing_plateaus": [
             {
                 "start_id": "1:1",
@@ -307,8 +317,12 @@ def test_scenes_panel_surfaces_dynamics_showing_rates_and_plateaus(locale):
     html = render_scenes_panel(scenes, labels, locale)
     panel = ElementTree.fromstring(html)  # noqa: S314
     text = "".join(panel.itertext())
-    assert labels["scene_dynamic"] in text
-    assert labels["scene_dynamic_accelerating"] in text
+    assert labels["scene_dynamic_accelerating"] not in text
+    assert labels["scene_quote_lengths"] in text
+    assert labels["scene_voice_question"] in text
+    assert {node.get("data-claim-level") for node in panel.findall(".//*[@data-claim-level]")} == {
+        "L0", "L1", "L2", "L3",
+    }
     assert labels["scene_filter_per_1000"] in text
     assert labels["scene_sensory_per_1000"] in text
     assert labels["scene_pacing_plateaus"] in text

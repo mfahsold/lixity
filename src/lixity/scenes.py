@@ -3,7 +3,7 @@
 import re
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
-from typing import Any
+from typing import Any, TypedDict
 
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
@@ -12,13 +12,16 @@ from .markdown_parser import split_chapters, split_scenes
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
 from .pacing import HOOK_TYPES, _classify_span_hook, _hook_score
-from .quotation import count_quoted_words
+from .quotation import count_quoted_words, quoted_word_counts
 from .quotation_projection import QuotedProse, quoted_prose
 from .registers import MAX_REGISTER_NAME_CHARS, validate_target_ranges
 from .sentences import split_prose_sentence_spans
 from .style_fingerprint import FEATURES
 
 _INTRA_SCENE_MIN_WORDS = 120
+_INTRA_SCENE_MIN_SENTENCES = 2
+_INTRA_SCENE_ASL_DELTA_WORDS = 2.5
+_INTRA_SCENE_QUOTE_DELTA_PP = 15.0
 _COHESION_MIN_WINDOW_WORDS = 10
 _COHESION_DROP_THRESHOLD = 0.05
 
@@ -193,20 +196,31 @@ def _detect_implicit_breaks(
     return breaks, para_offset + len(paragraphs)
 
 
+class _SceneHalf(TypedDict):
+    words: int
+    sentences: int
+    quote_words: int
+
+
+class _WithinScene(TypedDict):
+    first: _SceneHalf
+    second: _SceneHalf
+
+
 def _intra_scene_dynamics(
     projection: QuotedProse,
     scene_sentences: Sequence[tuple[int, int]],
     words: int,
     word_re: re.Pattern[str],
-) -> tuple[float | None, float | None, str]:
+) -> tuple[float | None, float | None, str, _WithinScene | None]:
     """Measure first-half vs. second-half ASL and dialogue shifts within a scene."""
-    if words < _INTRA_SCENE_MIN_WORDS or len(scene_sentences) < 2:
-        return None, None, "insufficient_length"
+    if words < _INTRA_SCENE_MIN_WORDS or len(scene_sentences) < _INTRA_SCENE_MIN_SENTENCES:
+        return None, None, "insufficient_length", None
     mid = len(scene_sentences) // 2
     first_half = scene_sentences[:mid]
     second_half = scene_sentences[mid:]
 
-    def _half_stats(sents: Sequence[tuple[int, int]]) -> tuple[float, float]:
+    def _half_stats(sents: Sequence[tuple[int, int]]) -> _SceneHalf:
         total_w = dialogue_words = 0
         for start, end in sents:
             sentence = projection.text[start:end]
@@ -214,24 +228,34 @@ def _intra_scene_dynamics(
             dialogue_words += count_quoted_words(
                 sentence, word_re, projection.slice_analysis(start, end).spans,
             )
-        asl = total_w / len(sents)
-        dlg_pct = (dialogue_words / total_w * 100.0) if total_w else 0.0
-        return asl, dlg_pct
+        return {"words": total_w, "sentences": len(sents), "quote_words": dialogue_words}
 
-    first_asl, first_dlg = _half_stats(first_half)
-    second_asl, second_dlg = _half_stats(second_half)
-    asl_shift = round(second_asl - first_asl, 2)
-    dialogue_shift = round(second_dlg - first_dlg, 2)
+    first = _half_stats(first_half)
+    second = _half_stats(second_half)
+    asl_shift = round(second["words"] / second["sentences"] - first["words"] / first["sentences"], 2)
+    first_quote_pct = first["quote_words"] / first["words"] * 100.0
+    second_quote_pct = second["quote_words"] / second["words"] * 100.0
+    dialogue_shift = round(second_quote_pct - first_quote_pct, 2)
 
-    if dialogue_shift >= 15.0:
+    if dialogue_shift >= _INTRA_SCENE_QUOTE_DELTA_PP:
         dynamic = "dialogue_surge"
-    elif asl_shift <= -2.5:
+    elif asl_shift <= -_INTRA_SCENE_ASL_DELTA_WORDS:
         dynamic = "accelerating"
-    elif asl_shift >= 2.5:
+    elif asl_shift >= _INTRA_SCENE_ASL_DELTA_WORDS:
         dynamic = "decelerating"
     else:
         dynamic = "steady"
-    return asl_shift, dialogue_shift, dynamic
+    return asl_shift, dialogue_shift, dynamic, {"first": first, "second": second}
+
+
+def _quote_blocks(scene: QuotedProse, word_re: re.Pattern[str], config: CorpusConfig) -> dict[str, int]:
+    """Describe nonempty contiguous quote ranges using the scene's word membership."""
+    lengths = quoted_word_counts(scene.text, word_re, scene.analysis.quote_ranges)
+    short = sum(0 < length <= config.short_turn_max_words for length in lengths)
+    medium = sum(config.short_turn_max_words < length < config.long_turn_min_words for length in lengths)
+    long = sum(length >= config.long_turn_min_words for length in lengths)
+    return {"short": short, "medium": medium, "long": long, "words": sum(lengths),
+            "unresolved_ranges": len(scene.analysis.unclear)}
 
 
 def _detect_pacing_plateaus(items: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -442,7 +466,7 @@ def scene_report(
                 word_re,
                 hook_short_sentence=config.hook_short_sentence,
             )
-            asl_shift, dialogue_shift, scene_dynamic = _intra_scene_dynamics(
+            asl_shift, dialogue_shift, scene_dynamic, within_scene = _intra_scene_dynamics(
                 scene, scene_sentences, measured.words, word_re,
             )
             entry_counts[entry_hook_type] = entry_counts.get(entry_hook_type, 0) + 1
@@ -458,6 +482,8 @@ def scene_report(
                 "asl_shift": asl_shift,
                 "dialogue_shift": dialogue_shift,
                 "scene_dynamic": scene_dynamic,
+                "within_scene": within_scene,
+                "quote_blocks": _quote_blocks(scene, word_re, config),
                 "filter_per_1000": round(float(measured.filter_density), 2),
                 "sensory_per_1000": round(float(measured.sensory_density), 2),
                 "data_support": {"diversity_min_tokens": MIN_TOKENS_LD,
@@ -509,6 +535,11 @@ def scene_report(
             }
     report: dict[str, Any] = {"items": items, "baselines": baselines, "explicit_scene_breaks": breaks,
               "scenes_are_chapters": breaks == 0,
+              "quote_block_limits": {"short_max_words": config.short_turn_max_words,
+                                     "long_min_words": config.long_turn_min_words},
+              "within_scene_limits": {"min_words": _INTRA_SCENE_MIN_WORDS, "min_sentences": _INTRA_SCENE_MIN_SENTENCES,
+                                      "asl_delta_words": _INTRA_SCENE_ASL_DELTA_WORDS,
+                                      "quote_delta_pp": _INTRA_SCENE_QUOTE_DELTA_PP},
               "hook_distribution": {"entry": entry_counts, "exit": exit_counts},
               "pacing_plateaus": _detect_pacing_plateaus(items),
               "implicit_breaks": implicit_breaks,

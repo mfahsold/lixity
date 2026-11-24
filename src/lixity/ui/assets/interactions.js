@@ -151,16 +151,11 @@ function scrollAndFlash(target, options) {
   options = options || {};
   if (window.LixityReader) window.LixityReader.leavePassage(target);
   var focused = document.activeElement;
-  if (target.closest("#chapters") && target.closest(".text-miss")) {
-    var clearSearch = document.getElementById("text-search-clear");
-    if (clearSearch) clearSearch.click();
-    if (focused && focused.isConnected) focused.focus({preventScroll: true});
-  }
   var leavingOverview = target.closest("#chapters") && window.LixityWorkbench &&
     window.LixityWorkbench.state().surface === "overview";
   var returnFocus = leavingOverview && focused &&
     focused.closest("#manuscript-analysis-panels, #analysis-review, #analysis-sections");
-  var sceneDrill = focused && focused.matches(".scene-overview a[data-jump]") &&
+  var sceneDrill = focused && target.closest(".scene-detail") && focused.matches("#scenes a[data-jump]") &&
     focused.getAttribute("data-jump") === "#" + target.id;
   var view = target.closest(".view-pane");
   if (view && !view.classList.contains("active")) switchActiveView(view.dataset.viewPane);
@@ -177,6 +172,7 @@ function scrollAndFlash(target, options) {
       contextTool: options.contextTool
     });
   }
+  if (target.closest("#chapters") && typeof revealPassageScope === "function") revealPassageScope(target);
   if (window.LixityReader && window.LixityReader.cancelRestore) window.LixityReader.cancelRestore();
   if (window.LixityAnalysisNavigation) window.LixityAnalysisNavigation.reveal(target);
   revealStyleTarget(target);

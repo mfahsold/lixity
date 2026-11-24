@@ -311,27 +311,26 @@
       : !span.echoGroup ? uiFormat("evidence_echo_single", {word:span.quote, total:layer.value.count})
       : uiCountFormat("evidence_echo_summary", span.echoGroup[0], {word:span.quote, total:layer.value.count});
     LixityComponents.mount(host, html`<div class="analysis-evidence-heading">
-      <div class="analysis-evidence-heading-text">
-        <strong id="analysis-evidence-title">${option.textContent}</strong>
-        ${quoteCtx ? html`<span class="badge badge-neutral analysis-evidence-quote-context" data-quote-context=${quoteCtx}>${message("evidence_quote_" + quoteCtx)}</span>` : null}
-      </div>
+      <strong id="analysis-evidence-title">${option.textContent}</strong>
       <button type="button" class="ctl-dismiss analysis-evidence-close" aria-label=${message("evidence_close")} aria-keyshortcuts="Escape" onClick=${function() {close(true);}}>✕</button>
       </div>
       ${span || counted !== null ? html`<div class=${"analysis-evidence-selection" + (span && !matchSummary ? " analysis-evidence-has-quote" : "")}>
         ${span ? html`<blockquote aria-live=${card.pinned ? "polite" : "off"} aria-atomic="true">${markedQuote(span)}</blockquote>` : null}
         ${counted !== null && !matchSummary ? html`<div class="analysis-evidence-measure">
-          <span class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</span>
+          <strong class="analysis-evidence-scope">${message(span ? sentenceWords ? "evidence_sentence_scope" : "evidence_selected_scope" : "evidence_paragraph_scope")}</strong>
           <div class=${"analysis-evidence-count" + (sentenceWords ? " analysis-evidence-sentence-words" : "")}><strong class="analysis-evidence-number">${counted}</strong>${" "}<span class="analysis-evidence-unit">${unit}</span></div>
         </div>` : null}
       </div>` : null}
-      ${span ? html`<section class="analysis-evidence-explanation">
+      ${quoteCtx ? html`<span class="badge badge-neutral analysis-evidence-quote-context" data-quote-context=${quoteCtx}>${message("evidence_quote_" + quoteCtx)}</span>` : null}
+      ${span || countKnown ? html`<section class="analysis-evidence-explanation">
         <strong class="analysis-evidence-scope">${message("evidence_reason_heading")}</strong>
         ${matchSummary ? html`<p class="analysis-evidence-value">${matchSummary}</p>` : null}
-        <p>${span.quotation_marker ? uiFormat("evidence_quotation_marker", {marker:span.quotation_marker}) : reason}</p>
+        ${span && span.quotation_marker ? html`<p>${uiFormat("evidence_quotation_marker", {marker:span.quotation_marker})}</p>` : null}
+        <p>${reason}</p>
         ${sticky && sticky.ranges.length ? html`<p class="analysis-evidence-key-note">
           <mark class="analysis-evidence-contribution">${message("evidence_sticky_key")}</mark>
         </p>` : null}
-        ${key === "sticky" && (!sticky || sticky.ranges.length < sticky.count) ? html`<p class="analysis-evidence-warning">${message("evidence_sticky_unmapped")}</p>` : null}
+        ${span && key === "sticky" && (!sticky || sticky.ranges.length < sticky.count) ? html`<p class="analysis-evidence-warning">${message("evidence_sticky_unmapped")}</p>` : null}
         <p class="ctl-guidance analysis-evidence-review"><strong>${message("evidence_review_heading")}</strong>
           ${message("evidence_review_" + key)}</p>
       </section>` : null}

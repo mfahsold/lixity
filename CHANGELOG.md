@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Compare quoted-word share and mean sentence length in manuscript order.
+  Scene details show counted quote-block lengths and text measurements for
+  both halves with separate evidence labels.
+- Try a different story sequence with author-written scene intent cards.
+  The local rehearsal saves only on request and marks cards for review
+  after edits to the inspected text.
+
 - Add authenticated desktop-host loopback mode (`--_desktop-mode`, ephemeral
   `port=0`, stdin bootstrap secret, single-use `/_desktop/handshake` cookie
   exchange, host-only `/_desktop/nonce`, parent-process watchdog and
@@ -63,9 +70,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Put the next action and its reason together in analysis help, the overview,
   passage evidence and dossier suggestions. Use shared guidance styling,
   localized action labels and keyboard focus return.
-- Separate passage measurements and available overview reports in the manuscript
-  toolbar. Explain the comparison reference and show the paragraph value beside
-  its chapter median in the evidence card.
+- Give the manuscript a single analysis-overview entry and distinct actions for
+  counted passages, differing paragraphs and tense findings in all seven languages.
+  Use the same reachable passages for the deviation count and arrow buttons.
+  Offer to clear empty filters while keeping the measurement selected.
+- Keep explanations and main actions visible in passage cards and measurement
+  dialogs on narrow screens. Restore the reading position and focus after an
+  analysis visit. Save reader preferences across desktop port changes and keep
+  saved story rehearsal cards accessible when scene measurements are unavailable.
 - Exclude capitalized German nominal uses after selected article contractions
   such as “beim Lesen” from default present-tense cues.
 - Use the engine's quoted-word counts, sticky-sentence selection and echo groups

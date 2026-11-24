@@ -1340,12 +1340,30 @@ line-height: var(--line-compact);
 #register-targets table { min-width: 48rem; }
 #register-targets thead th, #register-targets td:nth-child(n+4) { white-space: nowrap; }
 .scene-overview { margin: .4rem 0 .9rem; max-height: 26rem; overflow: auto; }
-.scene-overview table { min-width: 36rem; }
+.scene-overview table { min-width: 27rem; }
 .scene-overview th { white-space: normal; }
 .scene-overview thead th { text-wrap: balance; }
 .scene-overview tbody th { top: auto; }
 .scene-overview a { color: var(--accent); text-underline-offset: .15em; }
 .scene-overview tbody th small { display: block; color: var(--muted); font-weight: normal; }
+.scene-track { display: grid; grid-template-columns: minmax(2rem, 1fr) auto; align-items: center; gap: var(--space-2); }
+.scene-track-bar { display: block; height: var(--space-2); background: var(--surface-hover); border-radius: var(--radius-sm); overflow: hidden; }
+.scene-track-bar i { display: block; height: 100%; background: var(--accent); }
+.scene-evidence { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-3); }
+.scene-evidence h3, .scene-evidence p { margin-block: var(--space-2); overflow-wrap: anywhere; }
+.scene-sample, .scene-voice-prompt { grid-column: 1 / -1; }
+.scene-block-counts { list-style: none; padding: 0; margin-block: var(--space-2); }
+.scene-block-counts li { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-1); border-bottom: 1px solid var(--line); }
+#scene-intent-order { padding-inline-start: var(--space-5); }
+.scene-intent-card { padding: var(--space-3); margin-block: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); overflow-wrap: anywhere; }
+.scene-intent-card p { margin-block: 0 var(--space-2); white-space: pre-wrap; }
+.scene-intent-card .row, #scene-rehearsal .row { flex-wrap: wrap; }
+#scene-intent-form fieldset { padding: 0; margin: var(--space-3) 0 0; border: 0; min-inline-size: 0; }
+.scene-intent-editor-unavailable { display: none; }
+.paragraph-filter-state:not(:has(> :not([hidden]))) { display: none; }
+.paragraph-filter-state { margin-block: var(--space-2); }
+.scene-intent-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-2); margin-block-end: var(--space-3); }
+.scene-intent-fields input, .scene-intent-fields textarea, .scene-intent-fields select { box-sizing: border-box; width: 100%; min-width: 0; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
 their off-screen rendering once they are open. A closed <details> must keep
 its natural summary height: the intrinsic placeholder would otherwise

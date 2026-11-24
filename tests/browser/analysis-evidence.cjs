@@ -1,4 +1,5 @@
 const {openAnalysisSettings, selectMetric} = require('./support/analysis-controls.cjs');
+const {openAnalysisSection} = require('./support/analysis-workflow.cjs');
 // Exact evidence highlights preserve prose nodes and expose the same explanation to pointer and keyboard users.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -76,6 +77,16 @@ german_text = '# Deutsche Nominalhinweise\\n\\nZUR Untersuchung geht sie nur.\\n
 german = analyze_document(german_text, CorpusConfig(language='de'), resolve_thresholds(project_config={}), include_evidence=True)
 result['german-nominal'] = render_dashboard(german.chapters, german.paragraphs, metrics=german.metrics,
     fingerprint=german.fingerprint, paragraph_evidence=german.evidence, title='Deutsche Nominalhinweise', controls=True,
+    labels={**get_language_profile('de').labels, **WORKSPACE_LABELS['de']}, language_key='de')
+reflow_text = '\\n\\n'.join('## Synthetisches Kapitel %d\\n\\n' % number + '\\n\\n'.join(
+    passage * repeats for repeats in (6, 8, 10)) for number, passage in enumerate((
+    'Am alten Tor wartet sie. ', 'Der Wind bewegt die Äste, obwohl im Garten kein Blatt mehr hängt. ',
+    '„Wartest du hier?“ Sie fragt. „Ich kann bleiben“, antwortet er. ', 'Die Tür wurde geöffnet. Regen fällt. '
+), 1))
+reflow = analyze_document(reflow_text, CorpusConfig(language='de', chapter_regex=r'(?m)^##\\s+'),
+    resolve_thresholds(project_config={}), include_evidence=True)
+result['reflow'] = render_dashboard(reflow.chapters, reflow.paragraphs, metrics=reflow.metrics,
+    fingerprint=reflow.fingerprint, paragraph_evidence=reflow.evidence, title='Synthetische Fundstellen', controls=True,
     labels={**get_language_profile('de').labels, **WORKSPACE_LABELS['de']}, language_key='de')
 print(json.dumps(result))
 `, {root});
@@ -231,10 +242,16 @@ async function localizedSentenceCards(browser) {
       const selection = await card.evaluate(node => {
         const quote = node.querySelector('blockquote').getBoundingClientRect();
         const count = node.querySelector('.analysis-evidence-measure').getBoundingClientRect();
-        return {quoteRight:quote.right, countLeft:count.left, offset:Math.abs(quote.top - count.top)};
+        return {quoteRight:quote.right, quoteBottom:quote.bottom, quoteLeft:quote.left,
+          countLeft:count.left, countTop:count.top, offset:Math.abs(quote.top - count.top)};
       });
-      assert.ok(selection.countLeft >= selection.quoteRight && selection.offset <= 1,
-        'the selected quote and localized count share a compact scope before the paragraph reference');
+      if (width === 320) {
+        assert.ok(selection.countTop >= selection.quoteBottom && selection.countLeft === selection.quoteLeft,
+          'the quote keeps its full width above the count on a narrow viewport');
+      } else {
+        assert.ok(selection.countLeft >= selection.quoteRight && selection.offset <= 1,
+          'the quote and its count share a row when there is room');
+      }
       if (locale === 'de' && width === 320 && count === 1) {
         assert.ok(await card.evaluate(node => node.getBoundingClientRect().height < 408),
           'a short sentence explanation leaves viewport room for reading');
@@ -258,6 +275,64 @@ async function localizedSentenceCards(browser) {
     }
     assert.deepEqual(errors, []); await page.close();
     console.log(`${locale}/${width}: native sentence counts and presentation passed`);
+  }
+}
+
+async function touchEvidenceReflow(browser) {
+  const receivesTouch = locator => locator.evaluate(node => {
+    const {left,top,width,height,bottom} = node.getBoundingClientRect();
+    return top >= 0 && bottom <= innerHeight && node.contains(document.elementFromPoint(left + width / 2, top + height / 2));
+  });
+  for (const height of [480, 320]) {
+    const page = await browser.newPage({viewport:{width:320,height}, hasTouch:true, reducedMotion:'reduce'});
+    try {
+      await page.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.reflow}));
+      await page.goto('http://localhost/');
+      await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+      await page.locator('#manuscript-analysis-toggle').tap();
+      await selectMetric(page, 'asl');
+      await marksEnabled(page, true);
+      const guide = page.locator('#reader-analysis-guide');
+      const guideTrigger = guide.locator('summary');
+      await guideTrigger.tap();
+      assert.ok(await guide.locator('.reader-settings-body').evaluate(node =>
+        getComputedStyle(node).position === 'static' && node.scrollHeight <= node.clientHeight + 1),
+      'Analysis help reflows without an inner scrolling pane');
+      await guide.locator('[data-analysis-guide-action="example"]').tap();
+      const card = page.locator('#analysis-evidence-card');
+      await card.waitFor({state:'visible'});
+      assert.ok(await card.evaluate(node => {
+        const quote = node.querySelector('blockquote').getBoundingClientRect();
+        const count = node.querySelector('.analysis-evidence-measure').getBoundingClientRect();
+        const {top,bottom} = node.getBoundingClientRect();
+        return top >= 0 && bottom <= innerHeight && quote.width > 200 && count.top >= quote.bottom && quote.top < bottom;
+      }), 'The short viewport shows the broad quotation before its count');
+      await page.keyboard.press('Escape');
+      assert.ok(await guideTrigger.evaluate(node => node === document.activeElement));
+
+      await page.locator('#workbench-overview-open').tap();
+      await openAnalysisSection(page, 'style', {touch:true});
+      await page.locator('#style-tab-heatmap').tap();
+      const trigger = page.locator('#heatmap [data-metric-feature="hd_d"]').first();
+      await trigger.tap();
+      const dialog = page.locator('#analysis-metric-context');
+      await dialog.waitFor({state:'visible'});
+      const close = dialog.locator('[data-metric-close]');
+      assert.equal(await close.count(), 1);
+      assert.ok(await dialog.locator('#metric-context-title').evaluate(node => node === document.activeElement));
+      const read = dialog.locator('#metric-context-read');
+      assert.ok(await receivesTouch(read), 'The visible main action can receive a touch on the opening viewport');
+      await dialog.locator('.modal-card').evaluate(node => { node.scrollTop = node.scrollHeight; });
+      await settle(page);
+      assert.ok(await receivesTouch(close), 'The single close control remains reachable after scrolling');
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({state:'hidden'});
+      assert.ok(await trigger.evaluate(node => node === document.activeElement));
+      await trigger.tap();
+      await read.tap();
+      await dialog.waitFor({state:'hidden'});
+      assert.ok(await page.locator('#chapters').isVisible());
+    } finally {await page.close();}
   }
 }
 
@@ -594,11 +669,16 @@ server.serve_forever()
         select.dataset.resetChanges = '0';
         select.addEventListener('change', () => { select.dataset.resetChanges = String(Number(select.dataset.resetChanges) + 1); });
       });
+      await openAnalysisSettings(page);
+      await page.locator('#filter-flags').check();
+      await page.keyboard.press('Escape');
       await page.locator('#paragraph-filter-reset').click();
-      assert.equal(await page.locator('#style-layer').getAttribute('data-reset-changes'), '1',
-        'Reset uses the same change event as the native metric selector');
+      assert.equal(await page.locator('#style-layer').getAttribute('data-reset-changes'), '0',
+        'Clearing filters does not fire a change on the chosen measurement');
+      assert.equal(await page.locator('#filter-flags').isChecked(), false);
       await page.reload(); await page.locator('#manuscript-analysis-toggle').click();
-      assert.equal(await page.locator('#style-layer').inputValue(), '', 'reset remains a deliberate None after reload');
+      assert.equal(await page.locator('#style-layer').inputValue(), 'asl', 'The chosen measurement survives clearing filters and reloading');
+      await selectMetric(page, '');
       await openAnalysisSettings(page);
       await page.locator('#manuscript-analysis-toggle').click();
       assert.equal(await page.locator('#reader-analysis-settings').isVisible(), false, 'Analysis Off hides the direct metric and switches');
@@ -697,6 +777,7 @@ async function metricPreferences(browser) {
     await nativeQuotationEvidence(browser);
     if (process.env.LIXITY_QUOTATION_ONLY) return;
     await touchArrivalAndCancellation(browser);
+    await touchEvidenceReflow(browser);
     await metricPreferences(browser);
     const proximity = await browser.newPage({viewport:{width:1440,height:950}, reducedMotion:'reduce'});
     await proximity.route('**/*', route => route.fulfill({contentType:'text/html',body:fixtures.native}));
@@ -738,7 +819,11 @@ async function metricPreferences(browser) {
         await page.screenshot({path:path.join(artifacts, `german-nominal-${width}.png`)});
         await selectMetric(page, 'function');
         await marksEnabled(page, true);
-        await page.waitForFunction(() => [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].some(range => range.toString() === 'ZUR'));
+        await page.locator('.ptext').last().scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => {
+          const words = [...(CSS.highlights?.get('lixity-analysis-evidence') || [])].map(range => range.toString());
+          return words.includes('ZUR') && words.includes('Zur');
+        });
         const words = await ranges(page);
         assert.ok(words.includes('ZUR') && words.includes('Zur'), 'The same contractions remain visible in the function-word measurement');
       } finally {await page.close();}

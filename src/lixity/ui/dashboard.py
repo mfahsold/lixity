@@ -96,7 +96,6 @@ from .manuscript_reader import (
     PARAGRAPH_COMPARISON_LAYERS,
     reading_controls,
     reading_metric_control,
-    reading_overview_control,
 )
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
@@ -112,6 +111,7 @@ from .narration import (
 from .project_overview import project_overview
 from .render_contracts import DashboardContent, DashboardOptions, DashboardRenderInput
 from .research_panel import render_research_panel
+from .scene_review import render_rehearsal
 from .settings import settings_form
 from .structural import style_structural
 
@@ -203,7 +203,7 @@ _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
     "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
-    "research-dossier-drafts.js", "research-revisions.js",
+    "research-dossier-drafts.js", "research-revisions.js", "project-overview.js",
     _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
 ))
 _REPORT_CSS_FILES = tuple(
@@ -495,6 +495,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     def action_enabled(action: str) -> bool:
         return not read_only and (allowed_actions is None or action in allowed_actions)
+
+    rehearsal_token = (options.scene_intents_token or manuscript_pdf_token) if (
+        can_edit and allowed_actions is not None and action_enabled("analysis-intents")
+    ) else ""
 
     speech_enabled = controls and allowed_actions is not None and (
         action_enabled("speech-plan") or action_enabled("speech-render"))
@@ -1096,20 +1100,22 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '<div id="workspace-analysis-body">'
         )
 
+    if not has_reading and not first_workspace:
+        parts.append(
+            '<div class="panel empty-analysis-state">'
+            '<div class="empty-state-icon" aria-hidden="true">📖</div>'
+            f"<h2>{L('analysis_empty_title')}</h2>"
+            f'<p class="ctl-note empty-state-note">{L("analysis_empty_desc")}</p>'
+            '<div class="row empty-actions">'
+            f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
+            f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
+            f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
+            "</div>"
+            "</div>"
+        )
+    if rehearsal_token and not has_chapters:
+        parts.append(render_rehearsal((), labels, project_token=rehearsal_token))
     if not has_reading:
-        if not first_workspace:
-            parts.append(
-                '<div class="panel empty-analysis-state">'
-                '<div class="empty-state-icon" aria-hidden="true">📖</div>'
-                f"<h2>{L('analysis_empty_title')}</h2>"
-                f'<p class="ctl-note empty-state-note">{L("analysis_empty_desc")}</p>'
-                '<div class="row empty-actions">'
-                f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
-                f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
-                f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
-                "</div>"
-                "</div>"
-            )
         parts.append("<div hidden>")
 
     metric_control = ""
@@ -1117,12 +1123,12 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'<div class="reader-outlier-navigation" role="group" aria-label="{L("legend_paragraph_comparison")}">'
         f'<button class="ctl" type="button" id="layer-prev" disabled '
         f'aria-label="{L("layer_previous")}" title="{L("layer_previous")}">↑</button>'
-        f'<output id="layer-position" aria-live="polite" aria-atomic="true" '
-        f'aria-label="{esc(label(labels, "layer_position").format(current=0, total=0), quote=True)}">0 / 0</output>'
+        '<output id="layer-position" aria-live="polite" aria-atomic="true"></output>'
         f'<button class="ctl" type="button" id="layer-next" disabled '
         f'aria-label="{L("layer_next")}" title="{L("layer_next")}">↓</button></div>'
     )
-    scenes_panel = render_scenes_panel(scenes, labels, language_key)
+    scenes_panel = render_scenes_panel(scenes, labels, language_key,
+                                      rehearsal_token=rehearsal_token if has_chapters else "")
     motifs_panel = render_motifs_panel(
         motifs, labels, custom_search=controls and allowed_actions is not None and action_enabled("motif-search"),
     )
@@ -1158,34 +1164,32 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         metric_control = reading_metric_control(
             labels, language_key, layer_data, available=available_layers,
             include_evidence=bool(paragraph_evidence), report=not controls,
-            overview_sections=workflow_sections,
         )
     overview_navigation = section_nav(active_sections, labels)
     outline_sections = ([("analysis-review", "review_title")] if has_chapters else []) + active_sections
     analysis_outline = analysis_outline_nav(outline_sections, labels)
 
     if has_reading and controls:
-        flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
+        flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags" aria-controls="chapters"/>', L("filter_flags"),
                                        extra_class="js-analysis-control")
         analysis_switches = (
             '<div class="reader-analysis-switches">'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" '
             f'data-help="{L("reading_help_counted")}"/> '
-            f'<span class="analysis-evidence-key">{L("legend_counted_text")}</span></label>'
+            f'<span class="analysis-evidence-key">{L("reader_counted_action")}</span></label>'
             '<div class="reader-comparison-controls">'
             f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked '
             f'data-help="{L("reading_help_comparison")}"/> '
-            f'<span class="analysis-comparison-key">{L("legend_paragraph_comparison")}</span></label>'
+            f'<span class="analysis-comparison-key">{L("reader_comparison_action")}</span></label>'
             f'{layer_navigation}'
             '</div>'
             f'{flag_checkbox}'
-            f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
             '</div>'
         ) if paragraphs else ""
         analysis_controls = (
             '<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
             f'aria-label="{L("reading_analysis")}">'
-            f'{metric_control}{reading_overview_control(workflow_sections, labels)}{analysis_switches}</div>'
+            f'{metric_control}{analysis_switches}</div>'
         ) if paragraphs or workflow_sections else ""
         parts.append(reading_controls(chapters, labels, reader_document, companion_controls=reader_controls,
                                       analysis_controls=analysis_controls, overview_navigation=overview_navigation))
@@ -1249,12 +1253,13 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             else:
                 reason_text = L("review_passage_unflagged" if tense_available else "no_tense")
             passage_action = L("review_flagged_passage_action" if candidates else "review_open_start_action")
+            review_tense = ' data-review-tense="1"' if candidates else ""
             parts.append(
                 '<article class="review-route ctl-guidance">'
                 f'<p class="ctl-note" id="review-passage-reason">{reason_text}</p>'
                 f'<a class="ctl primary" href="#p-{first_index}" '
                 'aria-describedby="review-passage-reason" '
-                f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
+                f'data-review-passage="1"{review_tense} data-line="{first.start_line}" data-target="p-{first_index}">'
                 f'{passage_action}</a></article>'
             )
         compare_target = (
@@ -1358,9 +1363,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags"),
                                     extra_class="js-analysis-control"))
         if paragraphs:
-            parts.append(
-                f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>{L("paragraph_filter_reset")}</button>'
-            )
             parts.append(metric_control)
     parts.append('<span class="legend">')
     parts.append(f'<strong>{L("reading_tense_flag")}</strong>')
@@ -1383,6 +1385,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'<p class="ctl-note toolbar-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
     )
     parts.append("</div>")
+    if paragraphs:
+        parts.append(
+            '<div class="row paragraph-filter-state">'
+            + status_banner("paragraph-filter-empty", L("paragraph_filter_empty"), hidden=True)
+            + status_banner("paragraph-filter-suspended", L("paragraph_filter_suspended"), hidden=True)
+            + f'<button type="button" class="ctl ctl-sm js-analysis-control" id="paragraph-filter-reset" hidden>'
+            f'{L("paragraph_filter_reset")}</button></div>'
+        )
 
     parts.append(
         f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
@@ -1392,6 +1402,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
     )
     parts.append(f'<p class="ctl-note" id="layer-language-unavailable" role="status" hidden>{L("layer_language_unavailable")}</p>')
+    parts.append(f'<p class="ctl-note" id="layer-comparison-unavailable" hidden>{L("layer_comparison_inline_only")}</p>')
     parts.append('<div class="layer-legend-group" id="layer-evidence-legend">'
                  f'<strong class="analysis-evidence-swatch">{L("legend_counted_text")}</strong>'
                  '<p class="ctl-note" id="analysis-evidence-instruction"></p>'
@@ -2032,6 +2043,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     scripts = _JS_FILES if controls else _REPORT_JS_FILES
     if can_edit:
         scripts += ("revision-measurements.js",)
+    if rehearsal_token:
+        scripts += ("scene-rehearsal.js",)
     if not controls and (motifs_panel or (paragraph_evidence and (has_pacing or showing))):
         scripts += (_PASSAGE_NAVIGATION_SCRIPT,)
     diagram_library = ""

@@ -178,7 +178,11 @@ The archive audit reads the project explicitly named in its request.
   Optional `flag_min_severity` accepts the discrete levels 1, 2 or 3.
   Omission or null uses the built-in threshold.
 - `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
-- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks` (with `cohesion_drop` / `cohesion_similarity`), and corpus-level `pacing_plateaus`.
+- `lixity_scenes`: Measured scene units in manuscript order with sentence and
+  quotation counts, quotation-block length classes, descriptive within-scene
+  changes and support, entry/exit cues, `implicit_breaks` and `pacing_plateaus`.
+  The tool reads text, independently of the project's author-intent records.
+  [Scene measurements](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
 - `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), `indirect_speech` (`indirect_speech`, `indirect_speech_per_1000`), `voice_separation` (dialogue vs. narrative prose), and `character_interactions` (`pairs`, `turn_dominance`).
 - `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
@@ -749,7 +753,8 @@ deterministic proxies, with the following scope and availability rules.
   (`"dialogue"|"question"|"reflection"|"action"|"unknown"`), `exit_hook_score`,
   `asl_shift` (`float | null`), `dialogue_shift` (`float | null`),
   `scene_dynamic` (`"accelerating"|"decelerating"|"dialogue_surge"|"steady"|"insufficient_length"`
-  for `< 120` words), `filter_per_1000`, `sensory_per_1000`, and
+  for `< 120` words or fewer than two counted sentences), `filter_per_1000`,
+  `sensory_per_1000`, and
   `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`),
   `scenes.pacing_plateaus` (`[{start_id, end_id, scene_count, mean_asl, reason}]`
   with `reason` `"low_exit_hooks"` or `"flat_pacing"`), `scenes.implicit_breaks`
@@ -1284,6 +1289,43 @@ settings or review state returns 409, invalid input 400. Unreadable state never
 becomes an empty success. Writes change only project-local author review state,
 never manuscript text or Research records. `enabled_actions=["analysis-review"]`
 is an explicit native save capability; static reading sites omit private state.
+
+#### Author intent endpoints
+
+**Unreleased.** Native editable workspaces advertise `analysis_intents` in the
+API index. The selected view uses `GET /api/analysis-intents?project_token=...`,
+with its `body[data-manuscript-project-token]` selection token. A read returns
+`lixity-analysis-intents/1` with `source_sha256`, `analysis_sha256`,
+`intents_sha256` and `cards`. A card includes `id`, `scene_id`, `scene_title`,
+`kind`, `intent`, `hypothesis`, `voice`, `review_status` (`current` or `stale`)
+and `scene_available`. Availability tells whether the ID occurs in the current
+scene report. It gives no assurance that a stale card still refers to the same
+scene. Cards carry the author's text and last selected source and analysis identities.
+
+`POST /api/analysis-intents` requires a flat JSON object with `project_token`,
+`expected_source_sha256`, `expected_analysis_sha256`,
+`expected_intents_sha256` and one explicit `action`.
+
+| Action | Additional fields | Effect |
+| --- | --- | --- |
+| `save` | `scene_id`, `kind`, `intent`, optional `hypothesis`, `voice` and `id` | Save a new card or update an existing one. Explicitly selecting a current measured scene rebinds the card to the current analysis. |
+| `delete` | `id` | Remove the selected current manuscript's card. |
+| `save_order` | `ids` | Save a permutation containing each card for the selected manuscript once. Measured scene rows retain source order. |
+
+Kinds are `question`, `delayed_answer`, `turning_point`, `reveal` and
+`resolution`. The text limit is 600 characters each for `intent` and
+`hypothesis` and 160 for `voice`. IDs are opaque 32-character lowercase
+hexadecimal strings. The existing origin, host and selected-view guards apply.
+Obsolete source, settings or state returns 409. Invalid or unreadable input
+returns 400. On success the updated view uses the same response schema.
+
+Explicit writes update `.lixity/analysis-intents.json` with the independent
+`lixity-analysis-intents-state/1` schema. The project file is bounded to
+1,000 cards and 4 MiB. Writes check the displayed source, effective settings
+and state before atomic replacement. A read projects only the selected
+manuscript's cards and writes no data. Manuscript bytes, research records and
+reading exports are outside this state operation. Include the project file in
+private backups. [Author workflow](WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent)
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
@@ -1907,6 +1949,17 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
+Unreleased additive v1 fields report `quote_block_limits`
+(`short_max_words`, `long_min_words`) and `within_scene_limits` (`min_words`,
+`min_sentences`, `asl_delta_words`, `quote_delta_pp`). Each measured item
+also exposes `quote_blocks` (`short`, `medium`, `long`, `words`,
+`unresolved_ranges`) and `within_scene`. When the sample meets the floor,
+`within_scene.first` and `within_scene.second` include `words`, `sentences`
+and `quote_words`. Otherwise `within_scene` and both signed differences are
+`null`. `asl_shift` is measured in words per sentence and `dialogue_shift`
+in percentage points. The `scene_dynamic` wire values retain their existing
+selection rules for compatibility. Display the measured differences with
+their units and label the [evidence level](LOCALIZATION.md#evidence-levels-for-analysis-claims).
 Opt-in `scene_analysis.planned` lists assigned IDs that may lack measurable text.
 Only explicitly listed missing IDs appear in additive `planned_items` with
 `id`, `chapter`, `scene`, `group`, `state: "planned"`; there are no fabricated

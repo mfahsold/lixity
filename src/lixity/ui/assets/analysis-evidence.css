@@ -38,6 +38,7 @@
   text-decoration-thickness: 2px;
 }
 .analysis-evidence-card {
+  container: passage-evidence / inline-size;
   position: fixed;
   z-index: var(--z-popover, 220);
   box-sizing: border-box;
@@ -59,7 +60,6 @@
 /* A quick explanation separates the counted span from its paragraph reference. */
 .analysis-evidence-heading, .analysis-evidence-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .analysis-evidence-heading { position: sticky; top: 0; z-index: 1; margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3)) var(--space-2); padding: var(--space-2) var(--space-3); background: color-mix(in srgb, var(--analysis-evidence-color, var(--accent)) 10%, var(--surface)); border-bottom: 1px solid var(--line); border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
-.analysis-evidence-heading-text { min-inline-size: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); }
 .analysis-evidence-card p { margin: var(--space-1) 0; font: inherit; }
 .analysis-evidence-selection { padding-block: var(--space-1) var(--space-2); }
 .analysis-evidence-has-quote { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
@@ -75,7 +75,7 @@
 .analysis-evidence-explanation { padding-block: var(--space-1) var(--space-2); }
 .analysis-evidence-card .analysis-evidence-review { margin-block: var(--space-2) 0; padding: var(--space-1) var(--space-2); }
 .analysis-evidence-review > strong { display: block; }
-.analysis-evidence-quote-context { --status-neutral-fg: var(--fg); max-inline-size: 100%; white-space: normal; overflow-wrap: anywhere; }
+.analysis-evidence-quote-context { --status-neutral-fg: var(--fg); max-inline-size: 100%; margin-block-end: var(--space-2); white-space: normal; overflow-wrap: anywhere; }
 .analysis-evidence-card .analysis-evidence-key-note { color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-key-note mark { padding: .1em .35em; }
 .analysis-evidence-paragraph { padding-block: var(--space-2); border-block: 1px solid var(--line); }
@@ -89,9 +89,9 @@
 .analysis-evidence-card .analysis-evidence-unavailable { margin-block: var(--space-2) 0; color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-card .analysis-evidence-warning { padding: var(--space-2) var(--space-3); border-inline-start: 2px solid var(--line-strong); background: var(--bg-subtle); color: var(--fg-secondary); font-size: var(--text-note); }
 .analysis-evidence-actions { padding-block-start: var(--space-2); }
-.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 auto; white-space: nowrap; }
+.analysis-evidence-actions .ctl { display: flex; align-items: center; justify-content: center; gap: var(--space-1); flex: 1 1 auto; }
 .analysis-evidence-edit-row { display: flex; padding-block-start: var(--space-2); }
-.analysis-evidence-edit-row .ctl { width: 100%; justify-content: center; white-space: nowrap; }
+.analysis-evidence-edit-row .ctl { width: 100%; justify-content: center; }
 .analysis-evidence-progress { flex: 0 0 auto; color: var(--muted); font-size: var(--text-note); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .analysis-evidence-guide, .analysis-evidence-all-values { color: var(--muted); font-size: var(--text-note); }
 .analysis-evidence-guide summary, .analysis-evidence-all-values summary { cursor: pointer; min-height: 2.75rem; padding-block: var(--space-2); box-sizing: border-box; }
@@ -104,6 +104,12 @@
 @media (max-width: 420px) {
   .analysis-evidence-card:not(:has(.analysis-evidence-contribution)) { max-height: min(30rem, 82dvh); }
   .analysis-evidence-heading { padding-block: var(--space-1); }
+}
+@container passage-evidence (max-width: 19rem) {
+  .analysis-evidence-has-quote, .analysis-evidence-comparison .metric-context-comparison { grid-template-columns: minmax(0, 1fr); }
+  .analysis-evidence-has-quote { gap: var(--space-1); }
+  .analysis-evidence-measure { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); text-align: start; }
+  .analysis-evidence-measure .analysis-evidence-scope, .analysis-evidence-count { white-space: normal; }
   .analysis-evidence-actions .analysis-evidence-navigation-label { display: none; }
 }
 @media (forced-colors: active) {

@@ -82,6 +82,7 @@ class DashboardOptions:
     identity_check: Mapping[str, Any] | None = None
     author_setting_enabled: bool = False
     manuscript_pdf_token: str = ""
+    scene_intents_token: str = ""
     research_context_token: str = ""
     external_diagram_library: bool = False
     publication: Mapping[str, Any] | None = None

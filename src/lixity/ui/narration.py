@@ -8,7 +8,6 @@ from typing import Any
 
 from ..dialogue import LONG_TURN_MIN_WORDS, SHORT_TURN_MAX_WORDS
 from ..diversity import MIN_TOKENS_LD
-from ..format import num as format_num
 from ..format import pct as format_pct
 from ..models import CorpusMetrics
 from ..motifs import MAX_DISPLAY_OCCURRENCES
@@ -37,28 +36,31 @@ from .components import (
     status_banner,
     table_wrap_start,
 )
+from .scene_review import render_rehearsal, render_scene_evidence, scene_claim, scene_track
 
 
 def render_scenes_panel(
     scenes: Mapping[str, Any] | None, labels: Mapping[str, str] | None,
     language_key: str = "en",
+    *,
+    rehearsal_token: str = "",
 ) -> str:
     """Show scene observations, sample support and author-defined comparisons."""
-    if not scenes:
-        return ""
+    scenes = scenes or {}
+    items = scenes.get("items") or []
+    rehearsal = render_rehearsal(items, labels, project_token=rehearsal_token) if rehearsal_token else ""
     if scenes.get("error"):
         return (panel_start("scenes", labels, "panel_scenes") +
                 f'<p role="status">{esc(label(labels, "scene_error_summary"))}</p>'
                 f'<details><summary>{esc(label(labels, "scene_error_details"))}</summary>'
-                f'<p>{esc(scenes["error"])}</p></details></section>')
-    items = scenes.get("items")
-    if items is None:
+                f'<p>{esc(scenes["error"])}</p></details>{rehearsal}</section>')
+    if "items" not in scenes and not rehearsal:
         return ""
     if not items and not scenes.get("planned_items"):
         return (panel_start("scenes", labels, "panel_scenes")
-                + panel_guide(esc(label(labels, "scene_no_measurements"))) + "</section>")
+                + panel_guide(esc(label(labels, "scene_no_measurements"))) + rehearsal + "</section>")
 
-    _L, _N, _ = panel_formatters(labels, language_key)
+    _L, _N, _P = panel_formatters(labels, language_key)
 
     def L(key: str) -> str:
         return esc(label(labels, key).replace("{min_tokens}", str(MIN_TOKENS_LD))) if key == "scene_support" else _L(key)
@@ -67,15 +69,13 @@ def render_scenes_panel(
         return "—" if value is None else _N(value, 2)
 
     parts = [panel_start("scenes", labels, "panel_scenes"),
-             f'<p class="hint">{L("scene_guidance")}</p>',
-             f'<p class="hint">{L("scene_support")}</p>']
+             panel_guide(L("scene_tracks_help"))]
     if items and scenes.get("scenes_are_chapters"):
         parts.append(f'<p class="ctl-note">{L("pacing_units_note")}</p>')
     # Keep comparisons visible, with one reversible catalogue for the detailed
     # tables rather than a second full list of scene summaries in the overview.
     asl_unit = esc(FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])["asl"])
-    dialog_key = next(label_key for field, label_key, _unit in FEATURES if field == "dialog_pct")
-    has_hooks = any("entry_hook_type" in item or "exit_hook_type" in item for item in scenes["items"])
+    asl_limit = max((item["features"].get("asl") or 0.0 for item in items), default=0.0) or 1.0
 
     def _hook_text(hook_type: Any) -> str:
         key = f"hook_type_{hook_type}" if hook_type in {"dialogue", "action", "reflection", "question", "unknown"} else "hook_type_unknown"
@@ -84,6 +84,7 @@ def render_scenes_panel(
     def _hook_label(hook_type: Any) -> str:
         return esc(_hook_text(hook_type))
 
+    technical_notes: list[str] = []
     hook_dist = scenes.get("hook_distribution")
     if isinstance(hook_dist, Mapping) and (hook_dist.get("entry") or hook_dist.get("exit")):
         entry_parts = [f"{_hook_label(k)}: {int(v)}" for k, v in (hook_dist.get("entry") or {}).items() if v]
@@ -94,7 +95,7 @@ def render_scenes_panel(
         if exit_parts:
             summary_bits.append(f'{L("scene_exit_hook")}: {", ".join(exit_parts)}')
         if summary_bits:
-            parts.append(f'<p class="hint">{" · ".join(summary_bits)}</p>')
+            technical_notes.append(f'<p class="ctl-note">{" · ".join(summary_bits)}</p>')
 
     plateaus = scenes.get("pacing_plateaus") or []
     if plateaus:
@@ -106,84 +107,30 @@ def render_scenes_panel(
                 f'{esc(str(plateau.get("start_id", "")))}–{esc(str(plateau.get("end_id", "")))} '
                 f'({int(plateau.get("scene_count", 0))}, {N(plateau.get("mean_asl"))} {asl_unit}, {L(reason_key)})'
             )
-        parts.append(
-            f'<p class="hint scene-plateaus-warning" role="status">'
+        technical_notes.append(
+            f'<p class="ctl-note">'
             f'<strong>{L("scene_pacing_plateaus")}:</strong> {" · ".join(plateau_bits)}</p>'
         )
 
-    has_dynamics = any("scene_dynamic" in item for item in scenes["items"])
-    has_showing_rates = any(
-        "filter_per_1000" in item or "sensory_per_1000" in item
-        for item in scenes["items"]
-    )
-
-    if scenes["items"]:
-        hook_headers = (
-            f'<th scope="col">{L("scene_entry_hook")}</th>'
-            f'<th scope="col">{L("scene_exit_hook")}</th>'
-            if has_hooks
-            else ""
-        )
-        dynamic_header = f'<th scope="col">{L("scene_dynamic")}</th>' if has_dynamics else ""
-        showing_headers = (
-            f'<th scope="col" class="num">{L("scene_filter_per_1000")}</th>'
-            f'<th scope="col" class="num">{L("scene_sensory_per_1000")}</th>'
-            if has_showing_rates
-            else ""
-        )
+    if items:
         parts.append(
             table_wrap_start(label(labels, "panel_scenes"), extra_class="scene-overview")
-            + '<thead><tr>'
-            f'<th scope="col">{L("panel_scenes")}</th><th scope="col" class="num">{L("words")}</th>'
-            f'<th scope="col" class="num">{L("sentences")}</th>'
-            f'<th scope="col" class="num">{asl_unit}</th><th scope="col" class="num">{L(dialog_key)}</th>'
-            f'{hook_headers}{dynamic_header}{showing_headers}</tr></thead><tbody>'
+            + f'<thead><tr><th scope="col">{L("scene_unit")}</th>'
+            f'<th scope="col">{L("scene_quote_share")} {scene_claim(labels, 0)}</th>'
+            f'<th scope="col">{L("scene_mean_words")} {scene_claim(labels, 0)}</th>'
+            '</tr></thead><tbody>'
         )
-    for item in scenes["items"]:
-        group_raw = item["group"] or label(labels, "scene_unassigned")
-        group_badge = badge(group_raw, variant="register" if item["group"] else "neutral")
-        pov_chars = item.get("pov_characters") or []
-        pov_badge = (
-            " " + badge(f'{label(labels, "scene_pov")}: {", ".join(str(c) for c in pov_chars)}')
-            if pov_chars
-            else ""
-        )
+    for item in items:
         dialog = item["features"].get("dialog_pct")
-        dialog_text = "—" if dialog is None else f"{format_num(dialog, language_key, 1)} %"
-        target = f'scene-metrics-{item["chapter"]}-{item["scene"]}'
-        hook_cells = ""
-        if has_hooks:
-            entry_t = item.get("entry_hook_type")
-            exit_t = item.get("exit_hook_type")
-            exit_score = item.get("exit_hook_score")
-            entry_cell = badge(_hook_text(entry_t)) if entry_t else "—"
-            if exit_t:
-                score_txt = f" · {int(exit_score)}/3" if exit_score is not None else ""
-                exit_cell = badge(f"{_hook_text(exit_t)}{score_txt}")
-            else:
-                exit_cell = "—"
-            hook_cells = f"<td>{entry_cell}</td><td>{exit_cell}</td>"
-        dynamic_cell = ""
-        if has_dynamics:
-            dyn_raw = item.get("scene_dynamic")
-            if dyn_raw in {"accelerating", "decelerating", "dialogue_surge", "steady", "insufficient_length"}:
-                dynamic_cell = f'<td>{badge(label(labels, "scene_dynamic_" + dyn_raw))}</td>'
-            else:
-                dynamic_cell = "<td>—</td>"
-        showing_cells = ""
-        if has_showing_rates:
-            showing_cells = (
-                f'<td class="num">{N(item.get("filter_per_1000"))}</td>'
-                f'<td class="num">{N(item.get("sensory_per_1000"))}</td>'
-            )
+        asl = item["features"].get("asl") if item["sentences"] else None
+        target = f'scene-evidence-{item["chapter"]}-{item["scene"]}'
         parts.append(
-            f'<tr><th scope="row"><a href="#{esc(target)}" data-jump="#{esc(target)}">'
+            f'<tr data-scene-row="{esc(item["id"])}"><th scope="row"><a href="#{esc(target)}" data-jump="#{esc(target)}">'
             f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]}'
-            f'</a> {group_badge}{pov_badge}</th>'
-            f'<td class="num">{item["words"]}</td><td class="num">{item["sentences"]}</td>'
-            f'<td class="num">{N(item["features"].get("asl"))}</td><td class="num">{dialog_text}</td>{hook_cells}{dynamic_cell}{showing_cells}</tr>'
+            f'</a></th><td class="num">{scene_track(dialog, 100, "—" if dialog is None else _P(dialog))}</td>'
+            f'<td class="num">{scene_track(asl, asl_limit, N(asl))}</td></tr>'
         )
-    if scenes["items"]:
+    if items:
         parts.append('</tbody></table></div>')
         parts.append(details_start(f'{L("scene_measurements")} ({len(scenes["items"])})',
                                    extra_class="scene-measurements"))
@@ -195,14 +142,27 @@ def render_scenes_panel(
         for field, _label_key, _unit in FEATURES
     )
     has_baseline = any(scenes["baselines"].get(item["group"]) for item in scenes["items"])
-    for item in scenes["items"]:
+    for item in items:
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
         parts.append(f'<details class="scene-detail" data-scene="{esc(item["id"])}"><summary>'
                      f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]} · {group}'
                      f' · {L("words")}: {item["words"]} · {L("sentences")}: {item["sentences"]}'
                      '</summary>')
+        parts.append(render_scene_evidence(item, scenes, labels, language_key))
         parts.append(f'<p><a class="ctl-link" href="#ch-{item["chapter"]}" data-jump="#ch-{item["chapter"]}">'
                      f'{L("scene_containing_chapter")}: {esc(item["chapter_title"])}→</a></p>')
+        metadata = [
+            f'{L("scene_" + side + "_hook")}: {_hook_label(item[side + "_hook_type"])}'
+            for side in ("entry", "exit") if item.get(side + "_hook_type")
+        ]
+        metadata.extend(
+            f'{L("scene_" + key)}: {N(item[key])}'
+            for key in ("filter_per_1000", "sensory_per_1000") if item.get(key) is not None
+        )
+        if item.get("pov_characters"):
+            metadata.append(f'{L("scene_pov")}: {esc(", ".join(item["pov_characters"]))}')
+        if metadata:
+            parts.append(f'<p class="ctl-note">{L("scene_cue_reading")}: {" · ".join(metadata)}</p>')
         header = (f'<th>{L("panel_scenes")}</th><th>{L("scene_value")}</th>'
                   f'<th>{L("scene_se")}</th>')
         if has_targets:
@@ -236,8 +196,14 @@ def render_scenes_panel(
                 row += f'<td>{N(reference.get("median"))} <small class="text-muted">(n={reference.get("n", 0)})</small></td>'
             parts.append(row + "</tr>")
         parts.append('</tbody></table></div></details>')
-    if scenes["items"]:
+    if items:
         parts.append('</details>')
+    if rehearsal:
+        parts.append(rehearsal)
+    if items:
+        parts.append(details_start(L("scene_methods"))
+                     + f'<p>{L("scene_guidance")}</p><p>{L("scene_support")}</p>'
+                     + "".join(technical_notes) + '</details>')
     if scenes.get("planned_items"):
         parts.append(f'<details class="scene-planned"><summary>{L("scene_planned")} '
                      f'({len(scenes["planned_items"])})</summary><p>{L("scene_planned_note")}</p><ul>')

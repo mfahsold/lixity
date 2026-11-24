@@ -10,6 +10,8 @@
   }
   var trigger = null, chapterKey = null, selectedFeature = null, returnFocus = true;
   var body = document.getElementById("metric-context-values");
+  var scrollport = dialog.querySelector(".modal-card");
+  var title = document.getElementById("metric-context-title");
   var read = document.getElementById("metric-context-read");
   var reference = document.getElementById("metric-context-reference-link");
   var details = document.getElementById("metric-context-details");
@@ -51,8 +53,8 @@
       button.setAttribute("aria-pressed", String(key === feature));
       button.addEventListener("click", function() {
         select(key);
-        dialog.querySelector(".modal-body").scrollTop = 0;
-        document.getElementById("metric-context-title").focus({preventScroll:true});
+        scrollport.scrollTop = 0;
+        title.focus({preventScroll:true});
       });
       name.appendChild(button); row.appendChild(name);
       cell(row, "td", measurement(values.value, item.unit));
@@ -82,12 +84,11 @@
       }).format(Number(element.dataset.loading)) + ". " + data.labels.poles;
     select(feature);
     dialog.showModal();
-    dialog.querySelector("[data-metric-close]").focus({preventScroll:true});
+    scrollport.scrollTop = 0;
+    title.focus({preventScroll:true});
     return true;
   }
-  dialog.querySelectorAll("[data-metric-close]").forEach(function(button) {
-    button.addEventListener("click", function() { dialog.close(); });
-  });
+  dialog.querySelector("[data-metric-close]").addEventListener("click", function() { dialog.close(); });
   dialog.addEventListener("close", function() {
     if (returnFocus && trigger && trigger.isConnected) trigger.focus({preventScroll:true});
   });

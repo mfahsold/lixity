@@ -2300,8 +2300,8 @@ then read the passage to decide what the difference means in context.
    **Compare chapters** for the chapter matrix or style measurements, or
    **Explore patterns** for sentence rhythm. Choose a comparison within the
    supplied text rather than treating its internal reference as a population norm.
-3. Return to a passage and open its measurement explanation. **Counted text**
-   exposes the words or sentences behind the value; **Paragraph comparison**
+3. Return to a passage and open its measurement explanation. **Underline counted passages**
+   exposes the words or sentences behind the value. **Mark differing paragraphs**
    describes a separate comparison with the chapter. Read both in context.
 4. Check the [formula](METHODS.md), [language coverage](LOCALIZATION.md) and
    [interpretation limits](STABILITY.md) before drawing a conclusion. An unknown
@@ -2372,8 +2372,8 @@ record claims and decisions, and link them to manuscript passages. The
 
 1. Open or import a manuscript, confirm its language and read a chapter with analysis
    off. The import preview writes nothing until you confirm the destination.
-2. Turn analysis on for one question. Use **Counted text** to inspect the original
-   words or sentences; **Paragraph comparison** independently compares the paragraph
+2. Turn analysis on for one question. Use **Underline counted passages** to inspect the original
+   words or sentences. **Mark differing paragraphs** compares the paragraph
    with its chapter. Return to the unmarked passage before deciding what to change.
 3. Open a linked dossier beside the manuscript. Follow its retained source passages,
    claims and decisions; distinguish an exact earlier link from the current record.
@@ -2429,8 +2429,8 @@ Happy path for an author or lector (no technical setup beyond the local app):
 
 1. Read with **Analysis Off**. Use the chapter selector, text search (`Enter` /
    `Shift+Enter`) or **Back to passage** to stay oriented.
-2. Turn **Analysis On** for exactly one question. Inspect **Counted text** or the
-   **Paragraph comparison**, then return to the unmarked passage before deciding.
+2. Turn **Analysis On** for exactly one question. Use **Underline counted passages** or
+   **Mark differing paragraphs**, then return to the unmarked passage before deciding.
 3. In **Analysis overview**, choose one task: **Review passages**
    (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
    **Explore patterns** (**Muster erkunden**). These unreleased native entrypoints
@@ -2483,11 +2483,10 @@ passage tool. The inspector and dossier work with Analysis On or Off.
 
 The first explicit **Analysis On** selects **Sentence length**
 unless you have already saved a metric choice.
-Use **Inspect passages** to choose what to inspect in the text. **Chapter &
-manuscript** lists the reports currently available in the overview. Choose a
-report and press **Open in overview**. When a passage measurement has a related
-report, Lixity suggests it in this picker. **Back to passage** restores your
-reading position and selected measurement.
+Use **Inspect passages** to choose what to inspect in the text. Open **Analysis
+overview** to compare chapters or find manuscript-wide patterns. **Back to passage**
+restores your reading position and selected measurement. Changing the measurement in
+the reader keeps your place in the text.
 
 **Analysis help** highlights the next step for the current state. Turn on
 analysis, choose a measurement or inspect the measurement at the current
@@ -2499,23 +2498,28 @@ In the overview, read the reason beside the first suggested passage. The
 button identifies whether it opens a tense flag or the manuscript start.
 Choose a question to reach its available reports and their measurement guides.
 
-**Counted text** and **Paragraph comparison** are
-independent switches. **Counted text** initially follows the selected measure's
-inline-evidence availability and remembers your choice for each measure.
-**Paragraph comparison** starts on and is a shared choice across measures.
+**Underline counted passages** asks what went into the selected value. Its initial
+state follows inline-evidence availability and your choice is remembered per measure.
+**Mark differing paragraphs** asks how a paragraph differs from a typical paragraph in
+that chapter. It starts on and is shared across measures. Measures with no paragraph
+comparison explain that in the visible legend.
 For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
 violet underlines identify counted words, patterns, quoted speech or sentences.
 Hover a mark for its explanation; a short stationary tap opens it on touch
 screens. Escape closes it. Analysis Off and **None** hide both kinds of indicator;
-unchecking either switch hides only its own marks and key. The selected metric and
-the switch preferences persist in the browser, including deliberate **None** and
-disabled switches. Turning Analysis on again preserves those choices.
+unchecking either switch hides its own marks and key. The selected measure and
+switch preferences persist, including deliberate **None** and disabled switches.
+The desktop app also keeps them when it starts on a different local port.
 
-While a measurement overlay is active, separate tense-pattern badges are hidden
-in the text. Tense findings remain available in the analysis overview and passage
-inspector, subject to the configured severity threshold.
+The deviation count and arrow buttons use the paragraphs reachable under the active
+filters. When a search or filter has no matching passages, use the adjacent clear
+action to keep the measurement and see more text. Text search covers the whole
+manuscript. Clearing the search resumes the active tense filter. **Chapters with tense
+findings** keeps the rest of each matching chapter available for context. **Review tense
+findings** opens the cues for a specific passage, subject to the configured severity
+threshold.
 
 ### Explore a passage
 
@@ -2528,11 +2532,12 @@ action reveals the stacked tool heading; close or Escape returns to that passage
 and its control. Desktop tools occupy adjacent space; the reader toolbar compacts
 to the available width when the context panel is open.
 
-The visible keys distinguish violet **Counted text** underlines from
-**Paragraph comparison**. Notable paragraphs have a raw-value marker with a
+The visible keys explain violet underlines and the marks for differing paragraphs.
+Notable paragraphs have a raw-value marker with a
 down/up arrow and a blue/orange edge for below/above the chapter median; the prose
 background receives only a subtle edge wash. Click the marker to see the paragraph
-value and the typical measured value in that chapter in the same units. The
+value and the typical measured value in that chapter in the same units. The evidence
+card shows what was marked, why, and what you can review in context. The chapter
 chapter matrix uses the manuscript as its reference. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
@@ -2613,9 +2618,39 @@ finding or the opening paragraph.
 CLI `profile --help` gives the same source-lines → counted-text workflow;
 default outputs and JSON contracts are unchanged.
 
+### Compare scene evidence and rehearse an intent
+
+**Unreleased.** Open **Analysis overview → Explore patterns → Scenes & style
+registers**. Read down the two tracks in manuscript order. One shows the share
+of counted words within recognized quotations or marked speech. The other shows
+mean words per sentence. Each track has its own unit and scale. If there are no
+scene dividers, the rows use chapters as their units.
+
+Open a scene's detail to see how many quotation blocks are short, medium or
+long and how the two halves compare. Check the counted words, sentences and
+any unresolved quotation ranges before interpreting a change. Two scenes can
+have the same share with very different block lengths. **Who has the floor
+here?** is a question to take back to the text. Any voice entered in a card is
+the author's own reading. [How the measurements work](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+Open **Story rehearsal** in the scene panel to add a card. Choose a
+scene and a beat such as **Question**, **Delayed answer** or **Revelation**.
+Write what that beat should disclose and, optionally, which voice it belongs
+to and what effect you want to investigate. Save to retain the card with the
+project. Move cards up or down to try a different order, then either reset it
+or explicitly save it. The measurement rows keep the manuscript's order.
+
+After a change to the source or analysis, a saved card can show that it needs
+review. Open the current scene, select it in the card and save again to confirm
+the current anchor. If the scene is missing, its earlier label remains in the
+card for orientation. You can still review the saved cards if the scene measurements
+are temporarily unavailable. If the manuscript has no chapters, open **Story rehearsal**
+from the reader. The saved state belongs to the project and stays local.
+[Storage and update contract](AGENTS.md#author-intent-endpoints)
+
 ### Save review decisions
 
-Open **Analysis overview → Review passages → Flagged passages** in the local
+Open **Analysis overview → Review passages → Tense findings** in the local
 app. Expand a finding's explanation to see the configured present and past
 marker counts and the criteria for a mix or a switch. Use **Show in manuscript**
 to read the passage in context. Chapter, severity and decision filters narrow
@@ -8050,8 +8085,9 @@ Documented research directions, **not** current product features:
 - Worked examples that walk one chapter from KPI → heatmap → paragraph →
   marker, suitable as a tutorial on the project page.
 - Glossary of every passport key for non-statisticians (beyond `llms.txt`).
-- Exportable “method card” (estimator + citation + guard) per metric for
-  peer review / replication packages.
+- Exportable method cards for every metric in replication packages. The
+  [scene method cards](#scene-evidence-and-dramaturgical-rehearsal) are documented
+  here.
 
 ## 5. Exploratory style dimensions
 
@@ -8819,11 +8855,14 @@ they do not estimate literary quality or a reader's experienced immersion.
   - `adverbial_tags` (int), `adverbial_tag_pct` (float), and
     `adverbial_tag_available` (bool) at corpus level and per `chapters[]` entry,
     counting speech-attribution tags accompanied by manner adverbs.
-- **Deep scene dynamics (`scenes.py`):** `scene_report()` extends each
-  `items[]` entry with `asl_shift` (`float | null`), `dialogue_shift`
-  (`float | null`), `scene_dynamic` (`"accelerating"`, `"decelerating"`,
-  `"dialogue_surge"`, `"steady"`, or `"insufficient_length"` when `< 120`
-  words), `filter_per_1000`, and `sensory_per_1000`. Corpus-level
+- **Within-scene changes (`scenes.py`):** `scene_report()` keeps `asl_shift`
+  and `dialogue_shift` (`float | null`) and the `scene_dynamic` wire values
+  `"accelerating"`, `"decelerating"`, `"dialogue_surge"`, `"steady"`, and
+  `"insufficient_length"`. The interface describes the measured changes in
+  words per sentence and percentage points. See the
+  [method cards](#scene-evidence-and-dramaturgical-rehearsal) for the minimum
+  sample and the count fields that support the displayed comparisons. The
+  scene report also includes `filter_per_1000` and `sensory_per_1000`. Corpus-level
   `pacing_plateaus` lists `[{start_id, end_id, scene_count, mean_asl, reason}]`
   where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
   `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
@@ -8837,8 +8876,9 @@ they do not estimate literary quality or a reader's experienced immersion.
   2-paragraph windows inside the scene, and `cue_type` is `"time"`, `"place"`,
   `"character"`, `"cohesion_drop"` (when both windows have `>= 10` content words
   and `cohesion_similarity <= 0.05`), or `+`-joined combinations (e.g.
-  `"time+cohesion_drop"`). Purely descriptive shift markers inspired by
-  computational scene-segmentation work (Gurung & Lapata, Chiron).
+  `"time+cohesion_drop"`). Descriptive shift markers relate to the distinct
+  scene-segmentation task studied by [Zehe et al. (2021)](https://aclanthology.org/2021.eacl-main.276/)
+  and [Zehe et al. (2025)](https://aclanthology.org/2025.naacl-long.500/).
 - **Character voice separation & interaction matrix (`dialogue.py`, `characters.py`):**
   `character_voice_profiles()` (and `presence_report()["character_voices"]`)
   computes `{min_turns: 3, narrator: {words, asl, question_excl_rate,
@@ -8886,12 +8926,92 @@ they do not estimate literary quality or a reader's experienced immersion.
   `asl_cv`, `dialogue_ratio`, `mattr`, `flags_count`, and `chapter_deltas`.
   Exposed via `lixity diff` and the read-only `revision_diff` MCP tool.
 
-Literature context for dramaturgical & computational narratology heuristics:
-- Li et al. (2026) — narrative flattening and sentence-length dispersion.
-- Michel et al. (EMNLP 2024) — character voice separation in literary dialogue.
-- Gurung & Lapata — Chiron scene segmentation and implicit narrative shifts.
-- GermAnProse (LaTeCH-CLfL 2026) & CHR (2024/2025) — computational narratology,
-  speech representation, and indirect speech / *Konjunktiv I* cues.
+### Scene evidence and dramaturgical rehearsal
+
+The scene panel keeps measured text in manuscript order and identifies each
+claim using the [evidence ladder](LOCALIZATION.md#evidence-levels-for-analysis-claims).
+An explicit divider defines a scene unit. In its absence, the panel identifies
+the chapter used as the unit. Counts use the configured word regex and the
+shared quotation projection. The method cards below state how to reproduce
+the two tracks and their details.
+
+| Level and measure | Formula and scope | Guard and interpretation |
+| --- | --- | --- |
+| L0 · Quoted-word share | `100 × recognized quoted words / counted words` for the complete unit. The same token membership is used for `features.dialog_pct` and the block detail. | An empty denominator gives an unavailable share. Zero recognized words in a non-empty unit describes the output of the configured recognizer. The track has a fixed 0–100% scale. |
+| L0 · Words per sentence | `counted sentence words / counted sentences`, the scene's `features.asl`. Both tracks follow manuscript order. | A missing sentence count makes the mean unavailable. The track uses a shared panel scale in words per sentence. The measurement describes text length. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
+| L1 · Within-scene change | Split the counted sentences at `floor(n / 2)` in manuscript order. Each half retains `words`, `sentences` and `quote_words` in `within_scene`. Changes are second minus first and are displayed to two decimal places in words per sentence (`asl_shift`) and percentage points (`dialogue_shift`). | A unit needs at least 120 words and two counted sentences. `within_scene_limits` reports the guard and the descriptive cutoffs for the compatibility class (2.5 words per sentence, 15 percentage points). The signed differences describe the two halves. Scene-level standard errors are separate from these descriptive half differences. |
+| L2 · Quotation-block lengths | Count positive word lengths of the unioned recognized quotation ranges using the same word membership. `quote_blocks.short` counts lengths ≤ `short_max_words`, `long` counts lengths ≥ `long_min_words`, and `medium` counts lengths strictly between them. `words` totals the counted quoted words. | `quote_block_limits` reports the configured cutoffs, 12 and 80 words by default. `unresolved_ranges` counts unresolved ranges separately. Nested or overlapping recognized marks share a block. Any longer narrative or acoustic unit would need a separate annotation. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
+| L3 · Author intent | An authored card can place a question, delayed answer, turn, revelation or resolution against the text. The author supplies any voice note and effect hypothesis. The card sequence can be rehearsed independently of the measured text. | It is an explicit act of revision planning. **Who has the floor here?** is a reading question. The quote analysis supplies no speaker identity. [Bakhtin, Discourse in the Novel](https://utpress.utexas.edu/9780292715349/) |
+
+For example, two units can each have 96 recognized quoted words among 192
+counted words. With the default cutoffs, twelve 8-word blocks and one 96-word
+block both produce 50% quoted words. Their L2 distributions differ. Reporting
+clauses can interrupt a block, and a quotation can represent a letter or a
+cited expression. Fictional elapsed time requires evidence about depicted
+events. Questions about the relationship between voices require reading their
+context. [Genette (1980), *Narrative Discourse*](https://utpdistribution.com/9780801410994/narrative-discourse/) ·
+[Bakhtin (1981), *The Dialogic Imagination*](https://utpress.utexas.edu/9780292715349/)
+
+The order of disclosure matters as a reading question. Fish considers
+interpretation as it unfolds, Iser describes a shifting viewpoint, and Jauss
+places expectations in the context of prior reading and history. For Lixity,
+this motivates showing measures in manuscript order, and letting authors
+revisit an intent after revision with the outcome already in mind. Displaying
+counts, scope and cutoffs makes the construction of the observations visible.
+[Fish (1970), *New Literary History* 2(1), 123–162](https://doi.org/10.2307/468593) ·
+[Iser (1978), *The Act of Reading*](https://www.press.jhu.edu/books/title/2456/act-reading) ·
+[Jauss (1970), *New Literary History* 2(1), 7–37](https://www.jstor.org/stable/468585) ·
+[Drucker (2011), *Digital Humanities Quarterly* 5(1)](https://dhq-static.digitalhumanities.org/pdf/000091.pdf)
+
+Structural-affect and narratological work motivates rehearsing different
+orders of disclosure. Hoeken and van Vliet report suspense among readers who
+knew the outcome of the story in their experiment. Gerrig's three experiments
+recorded disruptions in verifying facts that readers already knew. These
+findings remain L4 study evidence. The rehearsal provides an L3 author
+hypothesis about the sequence. Reader effects and literary quality are outside
+the scene measurements.
+[Brewer & Lichtenstein (1982), *Journal of Pragmatics* 6(5–6), 473–486](https://doi.org/10.1016/0378-2166%2882%2990021-2) ·
+[Sternberg (1990), *Poetics Today* 11(4), 901–948](https://www.jstor.org/stable/1773082) ·
+[Sternberg (1992), *Poetics Today* 13(3), 463–541](https://www.jstor.org/stable/1772872) ·
+[Gerrig (1989), *Journal of Memory and Language* 28(6), 633–648](https://doi.org/10.1016/0749-596X%2889%2990001-6) ·
+[Hoeken & van Vliet (2000), *Poetics* 27(4), 277–286](https://research-portal.uu.nl/en/publications/suspense-curiosity-and-surprise-how-discourse-structure-influence/)
+
+Modern computational work targets different tasks. CHIRON evaluates rich
+character representations through tasks such as masked-character prediction.
+The scene-segmentation studies define and evaluate annotated narrative
+boundaries. Neither result validates these surface measurements as scene
+detectors or speaker attribution. [Gurung & Lapata (2024)](https://aclanthology.org/2024.findings-emnlp.499/) ·
+[Zehe et al. (2021)](https://aclanthology.org/2021.eacl-main.276/) ·
+[Zehe et al. (2025)](https://aclanthology.org/2025.naacl-long.500/)
+
+#### Exploratory author study proposal
+
+Recruit 8–12 authors for a within-subject usability study. Use three synthetic
+fixtures with predefined measurement changes, plus passages from chapter 26 of
+*Effi Briest* and chapter 35 of *Pride and Prejudice*. Include an equal-share
+pair with different block lengths, a signed within-scene change, and a fixture
+with insufficient support or unresolved quotation marks. Freeze the baseline
+scene panel at a named revision. Counterbalance condition order and passage
+assignment across authors. Record prior familiarity with the public passages
+and language proficiency. [Fontane, Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323) ·
+[Austen, Project Gutenberg #1342](https://www.gutenberg.org/ebooks/1342)
+
+| Question | Procedure and outcome |
+| --- | --- |
+| RQ1 · Locate a measured change | Compare the baseline scene panel with the two-track reading view on matched tasks. Record the first correctly identified passage or boundary, task time and number of text-specific revision questions. Synthetic fixtures supply exact target locations. For published passages, predefine permissible observations and record ambiguities. |
+| RQ2 · Formulate a revision question | Compare the scene review task with and without the intent card, holding measured evidence constant. Two raters independently code think-aloud records for a specific passage, a stated intent, and a question the author can check. Record counts, agreement and Cohen's κ per binary criterion when estimable, before adjudicating disagreements. |
+| RQ3 · Revisit an intent | After an assigned revision to a synthetic text, ask authors to find the held-over intent, explain its review state, and reopen the relevant passage. Compare previously reviewed and unreviewed states. Record recovery and interpretation accuracy, time and whether the author explicitly confirms after rereading. |
+
+Preregister the materials, assignment, hypotheses, rubric, exclusions and
+stopping rule before recruitment. Keep consent, recordings and identifiable
+notes outside the repository. Report task completion, missing results and
+within-author differences descriptively with the exact sample and limitations.
+The outcomes are about using the interface. They exclude reader affect,
+literary merit and prose quality. The existing nominal FDR estimates concern
+manuscript diagnostics and do not calibrate study outcomes. Research on
+foregrounding and engagement uses its own materials and observations.
+[Miall & Kuiken (1994), *Poetics* 22(5), 389–407](https://doi.org/10.1016/0304-422X%2894%2900011-5) ·
+[Busselle & Bilandzic (2009), *Media Psychology* 12(4)](https://doi.org/10.1080/15213260903287259)
 
 ## Manuscript evidence in dossier suggestions
 
@@ -9516,6 +9636,31 @@ chapters are separate metadata, not inferred first-person presence. There is no
 NER or coreference. Hook and repetition scores also locate surface patterns;
 deliberate calm endings and repeated motifs can be appropriate author choices.
 
+#### Scene evidence and author intent
+
+The scene tracks report recognized quotation-word share and mean words per
+sentence in manuscript order. Quotation marks may enclose a letter or a term.
+Indirect speech and other unmarked voices can lie outside the recognized
+ranges. The block distribution depends on the configured quotation and word
+rules and the reported short and long cutoffs. It describes textual length.
+The interface shows unresolved quotation ranges and unavailable measurements
+as such. A recognized count of zero leaves undetected speech possible. No
+fictional duration, speaking time, speaker identity or reader response follows
+from these measurements. [Scene method cards](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+The within-scene comparisons report signed differences between the two halves
+in words per sentence and percentage points. The sample floor is a display
+guard. It supplies no calibrated uncertainty for the shifts. The wire value
+`steady` means the legacy selection cutoffs were not crossed. A zero shift
+between means or shares can coexist with substantial variation inside each
+half. The measured scope may be a whole chapter when the text has no explicit
+scene divisions.
+
+An author intent records a human's question or hypothesis. A changed source
+or analysis context calls for reviewing the anchor. It provides no judgement
+of the hypothesis. Reordering cards changes the rehearsal only. Lixity's
+analysis claims follow the [evidence ladder](LOCALIZATION.md#evidence-levels-for-analysis-claims).
+
 ### Structural diagnostics
 
 These diagnostics preserve their declared numerical definitions; an exact
@@ -9661,9 +9806,9 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
   unquoted/free indirect speech. `adverbial_tags` relies on curated per-language
   manner-adverb and attribution-verb patterns; non-adverbial modifiers or
   adverbs separated from the attribution verb are not counted.
-- **Intra-scene dynamics & pacing plateaus:** scenes under `120` words report
-  `scene_dynamic: "insufficient_length"` with `null` shifts so short scenes
-  are not over-interpreted. `pacing_plateaus` (`"low_exit_hooks"` or
+- **Within-scene changes & pacing plateaus:** scenes under the sample floor
+  report `scene_dynamic: "insufficient_length"` with `null` shifts and no
+  per-half observations. `pacing_plateaus` (`"low_exit_hooks"` or
   `"flat_pacing"`) flags uniform runs across `>= 3` consecutive scenes as
   descriptive review prompts, not structural defects (deliberate meditative
   passages or epistolary sequences can legitimately exhibit steady pacing).
@@ -9770,15 +9915,18 @@ counting rules and limitations; [Research data model](research/DATA_MODEL.md)
 owns retained records and relations. The existing language resource packs own
 translations, not a second glossary service or a separate runtime term registry.
 
-The interface distinguishes **observation**, **interpretation**, **action** and
-**saved state**. A short familiar name is paired with an explanation of what is
-counted or changed, its scope/reference, and what cannot be inferred. Technical
-terms and stable command/JSON identifiers stay available for reproducibility.
+The interface distinguishes **observation**, **interpretation**, **action**,
+**saved state** and **author intent**. A short familiar name accompanies the
+scope and basis of each measurement or operation. Technical terms and stable
+command and JSON identifiers stay available for reproducibility.
 
 | Concept | DE / EN display direction | Meaning and excluded inference |
 | --- | --- | --- |
 | Counted pattern | Nomen-Endungen / Noun endings | Selected ending matches, not a grammatical noun classification or a nominal-style verdict. |
 | Quoted-text measurement | Text in Anführungszeichen / Quoted words | Recognized quoted spans in the manuscript; neither proof of dialogue nor research-source citations. |
+| Reader measurement switch | Gezählte Stellen unterstreichen / Underline counted passages | Marks the source text that entered the selected calculation. |
+| Reader comparison switch | Abweichende Absätze markieren / Mark differing paragraphs | Shows each marked paragraph's value and its chapter reference in the same unit. |
+| Reader tense action | Zeitformhinweise prüfen / Review tense findings | Opens the cues for a possible tense change. The chapter filter retains each matching chapter's surrounding text. |
 | Statistical comparison | Vergleiche innerhalb der Schwelle / Comparisons within the limit | Measurable chapter/feature cells inside the selected bound, not plot coherence or quality. Unavailable is not zero. |
 | Composite comparison | Signalgruppen im Vergleich / Signal-group comparison | Word-pattern cues versus quotation/short-sentence shares; not validated narrative distance or show/tell classification. |
 | Ending cues | Schlussmerkmale / Ending cues | Three closing-pattern checks, not suspense or chapter effectiveness. |
@@ -9793,6 +9941,29 @@ terms and stable command/JSON identifiers stay available for reproducibility.
 | Publication selection | Ausgewähltes Begleitmaterial / Selected background | Explicit dossier entries in a reading package; no generated synopsis or publication action is implied. |
 | Chapter display gate | Anzeigen nach abgeschlossenem Kapitel / Show after completing chapter | Display after chapter N is marked finished; zero means from the start. This is not access control or physical exclusion from the files. The separate export chapter cap controls package selection. |
 | Operation receipt | Download gestartet / Download started | A download was initiated; the application cannot establish that the recipient saved the file. |
+
+### Evidence levels for analysis claims
+
+The claim ladder is a binding copy and display rule for analysis claims in the
+interface. Its levels identify the kind of evidence required. They carry no
+meaning as scores, confidence grades or ranks. Use the exact metric and scope
+in the label or its immediate explanation. Keep the level and its name visible
+on the measurement track, detail, or author-intent section. A tooltip or color
+alone is insufficient. Use the existing translation packs in all supported
+interface languages. [Formulas, guards and sources](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+
+| Level | Evidence | Allowed DE / EN example | Limit |
+| --- | --- | --- | --- |
+| L0 · Measurement | Text matched by a stated rule. Show the observed count and the denominator for a share. | Anteil erkannter Zitatwörter / Share of recognized quoted words | A defined text property. Reader effects require separate evidence. |
+| L1 · Comparison | A derived difference with the comparison scope, units, applicable sample floors and available uncertainty. | Sätze werden kürzer, zweite Hälfte −2,5 Wörter pro Satz / Sentences are shorter in the second half, −2.5 words per sentence | This says how the measurement changes within this text. Do not infer speed, significance, or suspense. |
+| L2 · Distribution | Counts or a spread across stated classes with their limits. | Zwölf kurze Zitatblöcke / Twelve short quotation blocks | Block length is textual. Speaker identity, fictional duration and discourse function require other evidence. |
+| L3 · Author intent | A reading question, author-entered intent, voice note, or effect hypothesis. | Wem gehört hier das Wort? / Who has the floor here? | Keep the question open and label saved hypotheses as authored. A measurement cannot create an intent card. |
+| L4 · Reader response | Observations from an identified study with its sample, materials and conditions. | Readers in the cited experiment reported suspense even when they knew the ending. | Cite this in research documentation. Do not attach study outcomes to an individual passage as a prediction. |
+| L5 · Literary quality | Outside the product's evidence model. | — | No verdict, score, ranking or recommendation about literary quality. |
+
+For a review state, describe the operation or current evidence, for example
+**Erneut prüfen / Review again** after a source change. A state change says
+which source was reviewed. It establishes no new interpretation.
 
 ### Resource boundaries and editorial style
 
@@ -10116,7 +10287,11 @@ The archive audit reads the project explicitly named in its request.
   Optional `flag_min_severity` accepts the discrete levels 1, 2 or 3.
   Omission or null uses the built-in threshold.
 - `lixity_pacing`: Sentence-length rhythm, variation, `rhythm_profile` (`asl_cv`, `asl_iqr`, `length_entropy`, `normalized_entropy`, `bucket_shares`), sticky sentences, and narrative pacing (accepts optional `genre` corridor).
-- `lixity_scenes`: Scene entry/exit hook classification (`dialogue`, `question`, `reflection`, `action`, `unknown`), hook distributions, intra-scene dynamics (`asl_shift`, `dialogue_shift`, `scene_dynamic`, `filter_per_1000`, `sensory_per_1000`), `implicit_breaks` (with `cohesion_drop` / `cohesion_similarity`), and corpus-level `pacing_plateaus`.
+- `lixity_scenes`: Measured scene units in manuscript order with sentence and
+  quotation counts, quotation-block length classes, descriptive within-scene
+  changes and support, entry/exit cues, `implicit_breaks` and `pacing_plateaus`.
+  The tool reads text, independently of the project's author-intent records.
+  [Scene measurements](METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
 - `lixity_corridors`: List or evaluate optional non-prescriptive genre reference corridors (`crime_thriller`, `literary`, `romance`, `speculative`).
 - `lixity_dialogue`: Dialogue share, speaker cadence, dialogue tag density, adverbial tags (`adverbial_tags`, `adverbial_tag_pct`), `indirect_speech` (`indirect_speech`, `indirect_speech_per_1000`), `voice_separation` (dialogue vs. narrative prose), and `character_interactions` (`pairs`, `turn_dominance`).
 - `lixity_showing`: Showing-vs-telling heuristics, sensory density, and passive ratio.
@@ -10687,7 +10862,8 @@ deterministic proxies, with the following scope and availability rules.
   (`"dialogue"|"question"|"reflection"|"action"|"unknown"`), `exit_hook_score`,
   `asl_shift` (`float | null`), `dialogue_shift` (`float | null`),
   `scene_dynamic` (`"accelerating"|"decelerating"|"dialogue_surge"|"steady"|"insufficient_length"`
-  for `< 120` words), `filter_per_1000`, `sensory_per_1000`, and
+  for `< 120` words or fewer than two counted sentences), `filter_per_1000`,
+  `sensory_per_1000`, and
   `scenes.hook_distribution` (`{"entry": {...}, "exit": {...}}`),
   `scenes.pacing_plateaus` (`[{start_id, end_id, scene_count, mean_asl, reason}]`
   with `reason` `"low_exit_hooks"` or `"flat_pacing"`), `scenes.implicit_breaks`
@@ -11222,6 +11398,43 @@ settings or review state returns 409, invalid input 400. Unreadable state never
 becomes an empty success. Writes change only project-local author review state,
 never manuscript text or Research records. `enabled_actions=["analysis-review"]`
 is an explicit native save capability; static reading sites omit private state.
+
+#### Author intent endpoints
+
+**Unreleased.** Native editable workspaces advertise `analysis_intents` in the
+API index. The selected view uses `GET /api/analysis-intents?project_token=...`,
+with its `body[data-manuscript-project-token]` selection token. A read returns
+`lixity-analysis-intents/1` with `source_sha256`, `analysis_sha256`,
+`intents_sha256` and `cards`. A card includes `id`, `scene_id`, `scene_title`,
+`kind`, `intent`, `hypothesis`, `voice`, `review_status` (`current` or `stale`)
+and `scene_available`. Availability tells whether the ID occurs in the current
+scene report. It gives no assurance that a stale card still refers to the same
+scene. Cards carry the author's text and last selected source and analysis identities.
+
+`POST /api/analysis-intents` requires a flat JSON object with `project_token`,
+`expected_source_sha256`, `expected_analysis_sha256`,
+`expected_intents_sha256` and one explicit `action`.
+
+| Action | Additional fields | Effect |
+| --- | --- | --- |
+| `save` | `scene_id`, `kind`, `intent`, optional `hypothesis`, `voice` and `id` | Save a new card or update an existing one. Explicitly selecting a current measured scene rebinds the card to the current analysis. |
+| `delete` | `id` | Remove the selected current manuscript's card. |
+| `save_order` | `ids` | Save a permutation containing each card for the selected manuscript once. Measured scene rows retain source order. |
+
+Kinds are `question`, `delayed_answer`, `turning_point`, `reveal` and
+`resolution`. The text limit is 600 characters each for `intent` and
+`hypothesis` and 160 for `voice`. IDs are opaque 32-character lowercase
+hexadecimal strings. The existing origin, host and selected-view guards apply.
+Obsolete source, settings or state returns 409. Invalid or unreadable input
+returns 400. On success the updated view uses the same response schema.
+
+Explicit writes update `.lixity/analysis-intents.json` with the independent
+`lixity-analysis-intents-state/1` schema. The project file is bounded to
+1,000 cards and 4 MiB. Writes check the displayed source, effective settings
+and state before atomic replacement. A read projects only the selected
+manuscript's cards and writes no data. Manuscript bytes, research records and
+reading exports are outside this state operation. Include the project file in
+private backups. [Author workflow](WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent)
 
 Browser API diagnostics report request metadata without copying response bodies
 to the console.
@@ -11845,6 +12058,17 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
+Unreleased additive v1 fields report `quote_block_limits`
+(`short_max_words`, `long_min_words`) and `within_scene_limits` (`min_words`,
+`min_sentences`, `asl_delta_words`, `quote_delta_pp`). Each measured item
+also exposes `quote_blocks` (`short`, `medium`, `long`, `words`,
+`unresolved_ranges`) and `within_scene`. When the sample meets the floor,
+`within_scene.first` and `within_scene.second` include `words`, `sentences`
+and `quote_words`. Otherwise `within_scene` and both signed differences are
+`null`. `asl_shift` is measured in words per sentence and `dialogue_shift`
+in percentage points. The `scene_dynamic` wire values retain their existing
+selection rules for compatibility. Display the measured differences with
+their units and label the [evidence level](LOCALIZATION.md#evidence-levels-for-analysis-claims).
 Opt-in `scene_analysis.planned` lists assigned IDs that may lack measurable text.
 Only explicitly listed missing IDs appear in additive `planned_items` with
 `id`, `chapter`, `scene`, `group`, `state: "planned"`; there are no fabricated

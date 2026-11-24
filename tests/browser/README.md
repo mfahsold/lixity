@@ -568,10 +568,14 @@ Screenshots stay under `/tmp/lixity-analysis-overview-*`.
 
 The analysis-navigation suite checks section selection at the page bottom,
 hidden targets, keyboard paragraph/chapter focus, nested disclosure reveal and
-hidden Style-tab routes. Normal/reduced-motion journeys preserve exact passage
-position, suspended Values and unrelated toolbar focus. Seven desktop/mobile
-locales check link spacing and horizontal arrow-key reachability without undoing
-the vertical content jump. Synthetic screenshots stay under
+hidden Style-tab routes. Its combined desktop keyboard and narrow touch
+journey checks measurement changes, reachable difference counts, filtered
+chapter jumps, manuscript-order navigation and the return from a suggested
+tense finding to its visible passage control. An empty tense filter has an
+action that preserves the selected measurement. Normal/reduced-motion
+journeys preserve the passage position, suspended Values and unrelated toolbar
+focus. Seven desktop/mobile locales check the spacing and keyboard access of
+the overview controls. Synthetic screenshots stay under
 `/tmp/lixity-analysis-navigation-*`; browsing performs no writes.
 
 The analysis-narration suite retains all 17 synthetic dialogue chapters in

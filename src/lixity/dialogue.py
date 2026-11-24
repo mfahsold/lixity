@@ -47,8 +47,7 @@ from .sentences import split_prose_sentences
 # words sits inside quotation marks.
 DIALOGUE_PARAGRAPH_SHARE = DEFAULT_DIALOGUE_PARAGRAPH_SHARE
 
-# Turn-length cadence thresholds (words per recognized quoted span):
-# rapid back-and-forth exchange (stichomythia proxy) vs. extended speech/monologue.
+# Shared length thresholds in counted words per recognized quoted span.
 SHORT_TURN_MAX_WORDS = DEFAULT_SHORT_TURN_MAX_WORDS
 LONG_TURN_MIN_WORDS = DEFAULT_LONG_TURN_MIN_WORDS
 

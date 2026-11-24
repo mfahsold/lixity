@@ -123,8 +123,8 @@ with tempfile.TemporaryDirectory() as directory:
         await page.locator('#layer-only').check();
         await page.locator('#paragraph-filter-reset').click();
         assert.equal(await page.locator('#filter-flags').isChecked(),false);
-        assert.equal(await page.locator('#layer-only').isChecked(),false);
-        assert.equal(await page.locator('#style-layer').inputValue(),'');
+        assert.equal(await page.locator('#layer-only').isChecked(),true);
+        assert.equal(await page.locator('#style-layer').inputValue(),'asl');
       }
       await page.close();
     }

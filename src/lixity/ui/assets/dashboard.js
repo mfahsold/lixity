@@ -1,16 +1,32 @@
-function syncParagraphReset() {
-  if (!paragraphReset) return;
-  var active = document.body.classList.contains("only-flags") ||
-    document.body.classList.contains("layer-only") ||
-    Boolean(layer && layer.value);
-  paragraphReset.hidden = !active;
+function tenseScopeEnabled() {
+  var classes = document.body.classList;
+  return classes.contains("only-flags") &&
+    (!classes.contains("manuscript-reading") || classes.contains("workbench-analysis"));
+}
+function tenseScopeActive() {
+  return tenseScopeEnabled() && !document.body.classList.contains("text-search-active");
+}
+
+// Results and direct drills follow the same visibility rules as the manuscript.
+// A folded chapter remains reachable because a drill can expand it.
+function passageBlocker(target) {
+  if (target.closest(".text-miss")) return "search";
+  var chapter = target.closest(".chapter");
+  if (chapter && tenseScopeActive() && !chapter.classList.contains("has-flags")) return "tense";
+  return null;
 }
 
 function setFilter(input, bodyClass, on) {
   if (!input) return;
   input.checked = on;
   document.body.classList.toggle(bodyClass, on);
-  syncParagraphReset();
+  if (bodyClass === "only-flags") syncPassageScope();
+}
+
+var clearManuscriptSearch;
+function revealPassageScope(target) {
+  if (clearManuscriptSearch && passageBlocker(target) === "search") clearManuscriptSearch(false);
+  if (passageBlocker(target) === "tense") setFilter(filter, "only-flags", false);
 }
 
 function selectAnalysisMetric(key) {
@@ -26,13 +42,6 @@ function activate(el) {
   if (el.hasAttribute("data-metric-feature") && window.LixityMetricContext &&
       window.LixityMetricContext.open(el)) return;
   // drill-down: carry the context filters on the way to the deeper level
-  if (el.hasAttribute("data-review-passage")) {
-    var clearSearch = document.getElementById("text-search-clear");
-    var searchInput = document.getElementById("text-search");
-    var resetFilters = document.getElementById("paragraph-filter-reset");
-    if (clearSearch && searchInput && searchInput.value) clearSearch.click();
-    if (resetFilters) resetFilters.click();
-  }
   if (el.getAttribute("data-only") && layerOnly) setFilter(layerOnly, "layer-only", true);
   if (el.getAttribute("data-flags")) setFilter(document.getElementById("filter-flags"), "only-flags", true);
   if (el.matches("td.z[data-chapter]")) { jumpToChapter(el); return; }
@@ -41,12 +50,6 @@ function activate(el) {
   if (el.hasAttribute("data-layer")) selectAnalysisMetric(key);
   var jump = el.getAttribute("data-jump");
   var target = jump ? document.querySelector(jump) : null;
-  if (target && document.body.classList.contains("only-flags") && !el.getAttribute("data-flags")) {
-    var targetChapter = target.closest(".chapter");
-    if (targetChapter && !targetChapter.classList.contains("has-flags")) {
-      setFilter(document.getElementById("filter-flags"), "only-flags", false);
-    }
-  }
   if (target && key && target.closest("#chapters")) rememberPassageLocation(target);
   if (target) scrollAndFlash(target, {analysisVisible: el.hasAttribute("data-layer") ? true : undefined});
 }
@@ -63,26 +66,33 @@ function jumpToLine(row) {
       if (line >= start && line <= end) { panel = panels[i]; break; }
     }
   }
+  var explicitTenseReview = row.hasAttribute("data-review-tense");
   var fromFlag = Boolean(
-    row.hasAttribute("data-flags") ||
+    explicitTenseReview || row.hasAttribute("data-flags") ||
     row.closest("#flags, [data-flags]")
   );
   var dock = fromFlag && document.getElementById("workspace-context-panel");
-  // A dock stacked above the manuscript would open offscreen after the jump.
-  // The paragraph's own tense action can open it with an explicit scroll and focus.
-  var inspectFlag = fromFlag && (!dock || getComputedStyle(dock).position === "sticky");
+  // A requested review opens the explanation even when it is stacked above the text.
+  // A table drill in that layout leaves the explanation available at the passage.
+  var inspectFlag = fromFlag && (explicitTenseReview || !dock || getComputedStyle(dock).position === "sticky");
   var options = {
     analysisVisible: fromFlag ? true : undefined,
-    contextTool: fromFlag ? (inspectFlag ? "analysis" : "none") : undefined
+    contextTool: fromFlag ? (inspectFlag && !explicitTenseReview ? "analysis" : "none") : undefined,
+    behavior: explicitTenseReview ? "instant" : undefined
   };
   if (panel) {
+    // A standalone report restores open blocks when clearing a search.
+    // Resolve that scope before opening the requested passage.
+    if (!window.LixityReader) revealPassageScope(panel);
     var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
     if (chip) toggleParagraph(chip, true, true);
+    if (row.hasAttribute("data-review-passage")) rememberPassageLocation(panel);
     scrollAndFlash(panel, options);
     if (inspectFlag && window.LixityReader && window.LixityReader.inspectPassage) {
-      window.LixityReader.inspectPassage(panel);
+      window.LixityReader.inspectPassage(panel, null, explicitTenseReview ?
+        panel.querySelector("[data-reader-flag]") || panel : null);
     }
-    if (row.hasAttribute("data-review-passage")) {
+    if (row.hasAttribute("data-review-passage") && (!explicitTenseReview || !window.LixityReader)) {
       panel.tabIndex = -1;
       panel.focus({preventScroll: true});
     }
@@ -151,9 +161,10 @@ document.addEventListener("keydown", function (event) {
 });
 var filter = document.getElementById("filter-flags");
 if (filter) {
-  filter.addEventListener("change", function () {
-    document.body.classList.toggle("only-flags", filter.checked);
-    syncParagraphReset();
+  filter.addEventListener("change", function() {
+    var update = function() { setFilter(filter, "only-flags", filter.checked); };
+    if (window.LixityReader) window.LixityReader.retain(update);
+    else update();
   });
 }
 // --- Manuscript search -------------------------------------------------
@@ -227,8 +238,12 @@ if (filter) {
       chapter.classList.toggle("text-miss", miss);
     });
     document.body.classList.toggle("text-search-active", Boolean(query));
-    if (prev) prev.hidden = !query;
-    if (next) next.hidden = !query;
+    syncPassageScope();
+    [prev, next].forEach(function(button) {
+      if (!button) return;
+      button.hidden = !query;
+      button.disabled = !hits.length;
+    });
     if (clear) clear.hidden = !query;
     if (status) {
       if (!query) status.textContent = "";
@@ -287,7 +302,11 @@ if (filter) {
   }
   if (next) next.addEventListener("click", function () { navigate(1); });
   if (prev) prev.addEventListener("click", function () { navigate(-1); });
-  if (clear) clear.addEventListener("click", function () { clearTimeout(pending); pending = null; input.value = ""; apply(); input.focus(); });
+  clearManuscriptSearch = function(focus) {
+    clearTimeout(pending); pending = null; input.value = ""; apply();
+    if (focus) input.focus();
+  };
+  if (clear) clear.addEventListener("click", function() { clearManuscriptSearch(true); });
   window.addEventListener("keydown", function (e) {
     if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
       if (!e.defaultPrevented && input.getClientRects().length) {
@@ -308,10 +327,15 @@ if (filter) {
 })();
 
 var paragraphReset = document.getElementById("paragraph-filter-reset");
+var paragraphFilterEmpty = document.getElementById("paragraph-filter-empty");
+var paragraphFilterSuspended = document.getElementById("paragraph-filter-suspended");
 if (paragraphReset) paragraphReset.addEventListener("click", function() {
-  setFilter(filter, "only-flags", false);
-  setFilter(layerOnly, "layer-only", false);
-  selectAnalysisMetric("");
+  var clear = function() {
+    setFilter(filter, "only-flags", false);
+    if (filter) filter.focus({preventScroll: true});
+  };
+  if (window.LixityReader) window.LixityReader.retain(clear);
+  else clear();
 });
 // Do not advertise filters or chapter toggles in a static, uninitialized report.
 document.body.classList.add("has-js-dashboard-controls");
@@ -348,10 +372,28 @@ var layerNext = document.getElementById("layer-next");
 var layerPosition = document.getElementById("layer-position");
 var layerCount = document.getElementById("layer-legend-count");
 var comparisonToggle = document.getElementById("analysis-comparison-enabled");
-var layerOutliers = [];
+var comparisonCandidates = [], reachableOutliers = [];
 
-function outlierChips() {
-  return layerOutliers;
+function syncPassageScope() {
+  reachableOutliers = comparisonCandidates.filter(function(chip) {
+    return chip._panel && !passageBlocker(chip._panel);
+  });
+  var tenseEnabled = tenseScopeEnabled();
+  var searching = document.body.classList.contains("text-search-active");
+  if (paragraphReset) paragraphReset.hidden = !tenseEnabled;
+  if (paragraphFilterEmpty) paragraphFilterEmpty.hidden = !tenseScopeActive() ||
+    Boolean(document.querySelector("#chapters .chapter.has-flags"));
+  if (paragraphFilterSuspended) paragraphFilterSuspended.hidden = !tenseEnabled || !searching;
+  var option = selectedLayerOption();
+  if (layerCount) {
+    var comparable = Number(option?.dataset.comparable);
+    var label = !layer?.value || option?.dataset.inlineEvidence === "1" ? "" :
+      comparable ? uiFormat("layer_coverage", {
+        notable: reachableOutliers.length, comparable: comparable, total: layerLegend.dataset.profiled
+      }) : uiLabel("layer_unavailable");
+    if (layerCount.textContent !== label) layerCount.textContent = label;
+  }
+  syncOutlierNavigation();
 }
 
 function currentOutlierPassage() {
@@ -359,7 +401,7 @@ function currentOutlierPassage() {
   var node = selection && !selection.isCollapsed && selection.focusNode;
   var element = node && (node.nodeType === 1 ? node : node.parentElement);
   var selected = element && element.closest("#chapters .ptext");
-  if (selected) return selected;
+  if (selected && !passageBlocker(selected)) return selected;
   var focused = document.activeElement && document.activeElement.closest("#chapters .ptext");
   if (focused) {
     var bounds = focused.getBoundingClientRect();
@@ -378,45 +420,39 @@ function currentOutlierPassage() {
 }
 
 function syncOutlierNavigation() {
-  var chips = outlierChips(), panel = chips.length ? currentOutlierPassage() : null;
+  var chips = reachableOutliers, panel = chips.length && layerPosition ? currentOutlierPassage() : null;
   var position = panel ? chips.findIndex(function(chip) { return chip.dataset.target === panel.id; }) + 1 : 0;
   if (layerPosition) {
-    var text = position + " / " + chips.length;
+    var text = uiFormat(position ? "layer_position" : "layer_position_pending", {current: position, total: chips.length});
     if (layerPosition.textContent !== text) layerPosition.textContent = text;
-    if (UI_LABELS) {
-      var description = uiFormat("layer_position", {current: position, total: chips.length});
-      if (layerPosition.getAttribute("aria-label") !== description) {
-        layerPosition.setAttribute("aria-label", description);
-        layerPosition.title = description;
-      }
-    }
+    if (layerPosition.getAttribute("aria-label") !== text) layerPosition.setAttribute("aria-label", text);
   }
   var option = selectedLayerOption();
-  var inlineOnly = Boolean(option && option.dataset.inlineEvidence === "1" && !chips.length);
-  var layerNav = layerPosition && layerPosition.closest(".layer-nav");
-  if (layerNav) layerNav.hidden = !layer || !layer.value || inlineOnly;
-  var disabled = !chips.length || !layer || !layer.value || Boolean(comparisonToggle && !comparisonToggle.checked);
+  var comparing = Boolean(layer?.value) && option?.dataset.inlineEvidence !== "1" &&
+    option?.dataset.available !== "0" && (!comparisonToggle || comparisonToggle.checked);
+  var layerNav = layerPosition && layerPosition.closest(".layer-nav, .reader-outlier-navigation");
+  if (layerNav) layerNav.hidden = !comparing;
+  var disabled = !chips.length || !comparing;
   if (layerPrevious) layerPrevious.disabled = disabled;
   if (layerNext) layerNext.disabled = disabled;
 }
 
 function stepOutlier(direction) {
-  var chips = outlierChips();
+  var chips = reachableOutliers;
   if (!chips.length) return;
   var panel = currentOutlierPassage();
   var candidates = direction < 0 ? chips.slice().reverse() : chips;
   var chip = panel && candidates.find(function(candidate) {
-    var target = document.getElementById(candidate.dataset.target);
-    return target && Boolean(panel.compareDocumentPosition(target) & (direction < 0 ? 2 : 4));
+    return Boolean(panel.compareDocumentPosition(candidate._panel) & (direction < 0 ? 2 : 4));
   });
   chip = chip || candidates[0];
-  var target = document.getElementById(chip.dataset.target);
+  var target = chip._panel;
   // A selection supplies the first origin, then the new passage owns later steps.
   var selection = window.getSelection();
   if (selection && !selection.isCollapsed) selection.removeAllRanges();
   toggleParagraph(chip, true, true);
   rememberPassageLocation(target);
-  scrollAndFlash(target || chip, {analysisVisible: true});
+  scrollAndFlash(target, {analysisVisible: true});
   syncOutlierNavigation();
 }
 
@@ -468,22 +504,25 @@ function syncEvidenceLegend() {
   var legend = document.getElementById("layer-evidence-legend");
   var toggle = document.getElementById("analysis-evidence-enabled");
   var selectedOption = selectedLayerOption();
+  var selected = Boolean(layer?.value);
   var unavailable = Boolean(selectedOption && selectedOption.dataset.available === "0");
   var note = document.getElementById("layer-language-unavailable");
   if (note) note.hidden = !unavailable;
-  if (toggle) toggle.disabled = unavailable;
+  if (toggle) toggle.disabled = !selected || unavailable;
   if (legend) legend.hidden = unavailable || !toggle || !toggle.checked;
   var inlineOnly = Boolean(selectedOption && selectedOption.dataset.inlineEvidence === "1");
+  var comparisonUnavailable = document.getElementById("layer-comparison-unavailable");
+  if (comparisonUnavailable) comparisonUnavailable.hidden = !inlineOnly || unavailable;
   var comparison = document.getElementById("layer-comparison-legend");
   if (comparison) comparison.hidden = unavailable || inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
   var comparisonControls = comparisonToggle && comparisonToggle.closest(".reader-comparison-controls");
-  if (comparisonControls) comparisonControls.hidden = unavailable || inlineOnly;
+  if (comparisonControls) comparisonControls.hidden = !selected || unavailable || inlineOnly;
   var instruction = document.getElementById("analysis-evidence-instruction");
   if (instruction && layer) instruction.textContent = uiLabel(
     layer.value === "sticky" ? "evidence_sticky_instruction" : "evidence_open_instruction"
   );
-  if (layerLegend) layerLegend.hidden = !layer || !layer.value ||
-    (!unavailable && Boolean(legend && legend.hidden && comparison && comparison.hidden));
+  if (layerLegend) layerLegend.hidden = !selected ||
+    (!unavailable && !inlineOnly && Boolean(legend && legend.hidden && comparison && comparison.hidden));
 }
 
 var allChips = null;
@@ -495,7 +534,6 @@ function applyLayer() {
   var comparisonMissing = comparing ? uiLabel("comparison_missing_mark") : "";
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
-  syncParagraphReset();
   if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
   var nextOutliers = [];
   allChips.forEach(function (chip) {
@@ -542,7 +580,7 @@ function applyLayer() {
       }
     }
   });
-  layerOutliers = nextOutliers;
+  comparisonCandidates = nextOutliers;
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
@@ -560,22 +598,12 @@ function applyLayer() {
         var evidenceHint = document.getElementById("layer-evidence-hint");
         if (evidenceHint) evidenceHint.textContent = uiFormat(key === "asl" ? "legend_counted_sentences_hint" : "legend_counted_text_hint", {metric: option.textContent});
         var comparable = Number(option.dataset.comparable);
-        var count = outlierChips().length;
-        if (layerCount) {
-          if (option.dataset.inlineEvidence === "1") {
-            layerCount.textContent = "";
-          } else {
-            layerCount.textContent = comparable ? uiFormat("layer_coverage", {
-              notable: count, comparable: comparable, total: layerLegend.dataset.profiled
-            }) : uiLabel("layer_unavailable");
-          }
-        }
         if (layerOnly) layerOnly.disabled = comparable === 0 || !comparing;
         if (comparable === 0 || !comparing) setFilter(layerOnly, "layer-only", false);
       }
     }
   }
-  syncOutlierNavigation();
+  syncPassageScope();
   syncEvidenceLegend();
   document.dispatchEvent(new CustomEvent("lixity:analysis-layer-change"));
 }
@@ -587,7 +615,6 @@ if (comparisonToggle) comparisonToggle.addEventListener("change", applyLayer);
 if (layerOnly) {
   layerOnly.addEventListener("change", function () {
     document.body.classList.toggle("layer-only", layerOnly.checked);
-    syncParagraphReset();
   });
 }
 if (layerPrevious) layerPrevious.addEventListener("click", function() { stepOutlier(-1); });
@@ -633,7 +660,7 @@ document.addEventListener("lixity:workbench-change", function() {
     var chip = paragraphChips[panel.id];
     paintLayerAction(panel, chip && layer ? chipLayers(chip)[layer.value] : null);
   });
-  syncOutlierNavigation();
+  syncPassageScope();
 });
 function jsonApi(url, options, responseType) {
   return window.LixityComponents.jsonApi(url, options, responseType);

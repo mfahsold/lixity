@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from ..analysis_intents import has_retained_scene_intents, scene_intent_context
 from ..characters import presence_report, resolve_character_settings
 from ..config import (
     load_project_config,
@@ -209,6 +210,23 @@ def build_server_dashboard(
     ]
 
     reports = supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis"))
+    scenes = reports.get("scenes") or {}
+    intent_context = scene_intent_context(manuscript_source_sha256, scenes, config) if manuscript_readable else None
+    enabled_actions: tuple[str, ...] = NATIVE_UI_ACTIONS
+    rehearsal = (
+        intent_context is not None and source_input is not None and token_root is not None
+        and (bool(intent_context.scenes) or has_retained_scene_intents(token_root, Path(source_input).resolve()))
+    )
+    if rehearsal:
+        enabled_actions = (*enabled_actions, "analysis-intents")
+    selected_token = manuscript_pdf_token(
+        source_input,
+        project_root=project_root,
+        language=language,
+        title=title,
+        thresholds=resolved_thresholds,
+        config_bytes=project_config_bytes,
+    ) if manuscript_readable else ""
     html_doc = render_analysis(
         analysis,
         resolved,
@@ -232,7 +250,7 @@ def build_server_dashboard(
             api_base=api_base,
             manuscript_name=manuscript_name,
             current_language=language,
-            enabled_actions=NATIVE_UI_ACTIONS,
+            enabled_actions=enabled_actions,
             nda_project_name=doc_title
             if source_input
             else title
@@ -255,16 +273,8 @@ def build_server_dashboard(
             register_settings=settings,
             project_token=settings_token,
             manuscript_source_sha256=manuscript_source_sha256,
-            manuscript_pdf_token=manuscript_pdf_token(
-                source_input,
-                project_root=project_root,
-                language=language,
-                title=title,
-                thresholds=resolved_thresholds,
-                config_bytes=project_config_bytes,
-            )
-            if manuscript_readable and not is_empty
-            else "",
+            manuscript_pdf_token=selected_token if not is_empty else "",
+            scene_intents_token=selected_token if rehearsal else "",
             research_context_token=research_context_token(research_root or project_root),
             external_diagram_library=True,
         ),
@@ -287,5 +297,6 @@ def build_server_dashboard(
         "manuscript_source_sha256": manuscript_source_sha256,
         "project_settings_token": settings_token,
         "corpus_config": config,
+        "scene_intent_context": intent_context,
     }
     return html_doc, info

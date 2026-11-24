@@ -6,6 +6,14 @@ it does not reserve a schema version or define an API. For available tasks, use
 the [research manual](USAGE.md#find-a-task); for related proposals, use the
 [design-history index](README.md#design-history).
 
+The [dramaturgical rehearsal](../METHODS.md#scene-evidence-and-dramaturgical-rehearsal)
+lets authors place and reorder hypotheses about what the manuscript discloses.
+It records the author's intent about a beat in the text. The knowledge-horizon
+proposal concerns explicit assertions about individual characters and when
+they learn a fact in the story. Any eventual knowledge relation must preserve
+this distinction and the author-entered requirement in the
+[evidence ladder](../LOCALIZATION.md#evidence-levels-for-analysis-claims).
+
 <a id="1-problem"></a>
 ## Problem
 
