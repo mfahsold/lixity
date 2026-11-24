@@ -82,7 +82,7 @@ def reading_metric_control(
         unit = "" if inline else escape(units[LAYER_FEATURES[key]])
         capability = ' data-available="0"' if unavailable else ""
         inline_attr = ' data-inline-evidence="1"' if inline else ""
-        comparable = 0 if inline else len(comparisons.get(key, {}))
+        comparable = 0 if inline else sum(cell.z is not None for cell in comparisons.get(key, {}).values())
         return (f'<option value="{key}" data-hint="{hint}" data-unit="{unit}" '
                 f'data-comparable="{comparable}" data-reference="measure-{key}"'
                 f'{capability}{inline_attr}>{title}</option>')

@@ -16,7 +16,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 from types import MappingProxyType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from .diversity import MIN_TOKENS_LD
 from .format import num as format_num
@@ -273,6 +273,7 @@ PARAGRAPH_LAYER_Z_CUTOFF = 1.5
 PARAGRAPH_LAYER_Z_DECIMALS = 2
 REFERENCE_BAND_SIGMA = 2.0
 MIN_PARAGRAPH_LAYER_WORDS = 5
+MIN_PARAGRAPH_LAYER_COUNT = 3
 
 # Dimensions to extract from the feature correlation matrix.
 N_DIMENSIONS = 3
@@ -2298,74 +2299,89 @@ def lexical_structural_diagnostics(
     return result
 
 
-def _layer_stats_with_reference(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float, float]]:
-    """Return each comparable paragraph's value, raw score and chapter median."""
-    field_name = LAYER_PARAGRAPH_ATTR.get(layer, LAYER_FEATURES.get(layer))
-    if field_name is None:
-        return {}
-    min_words = 1 if field_name in ("asl", "dialogue_pct") else MIN_PARAGRAPH_LAYER_WORDS
-    by_chapter: dict[int, list[tuple[int, float]]] = {}
-    for idx, p in enumerate(paragraphs):
-        if getattr(p, "words", 0) < min_words:
-            continue
-        value = getattr(p, field_name, None)
-        if not isinstance(value, int | float):
-            continue
-        by_chapter.setdefault(p.chapter_num, []).append((idx, float(value)))
-    stats: dict[int, tuple[float, float, float]] = {}
-    for pairs in by_chapter.values():
-        if len(pairs) < 3:
-            continue
-        obs = [v for _, v in pairs]
-        centre = median(obs)
-        spread = mad(obs, centre)
-        if spread > 0.0:
-            for idx, value in pairs:
-                stats[idx] = (value, robust_z(value, centre, spread), centre)
-        elif any(v != centre for v in obs):
-            fallback_sigma = sn_estimator(obs)
-            if fallback_sigma <= 0.0:
-                fallback_sigma = qn_estimator(obs)
-            if fallback_sigma > 0.0 and math.isfinite(fallback_sigma):
-                for idx, value in pairs:
-                    stats[idx] = (value, (value - centre) / fallback_sigma, centre)
-    return stats
-
-
-def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:
-    """Return each comparable paragraph's value and within-chapter robust z-score."""
-    return {index: (value, score) for index, (value, score, _) in _layer_stats_with_reference(paragraphs, layer).items()}
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ParagraphLayerCell:
-    """A measured paragraph value and its rounded chapter-local comparison."""
+    """A paragraph measurement and any chapter-local comparison it supports."""
 
     value: float
-    z: float
-    notable: bool
-    raw_z: float
-    chapter_median: float
+    z: float | None = None
+    notable: bool = False
+    raw_z: float | None = None
+    chapter_median: float | None = None
+    reason: Literal["short_paragraph", "too_few_paragraphs", "zero_spread"] | None = None
 
 
 ParagraphLayerData = dict[str, dict[int, ParagraphLayerCell]]
 
 
+def _measured_paragraph_layer_cells(paragraphs: Sequence[Any], layer: str) -> dict[int, ParagraphLayerCell]:
+    """Retain measured values even when chapter-local deviations are unavailable."""
+    field_name = LAYER_PARAGRAPH_ATTR.get(layer, LAYER_FEATURES.get(layer))
+    if field_name is None:
+        return {}
+    min_words = 1 if field_name in ("asl", "dialogue_pct") else MIN_PARAGRAPH_LAYER_WORDS
+    cells: dict[int, ParagraphLayerCell] = {}
+    by_chapter: dict[int, list[tuple[int, float]]] = {}
+    for index, paragraph in enumerate(paragraphs):
+        words = getattr(paragraph, "words", 0)
+        value = getattr(paragraph, field_name, None)
+        if words <= 0 or not isinstance(value, int | float) or not math.isfinite(value):
+            continue
+        if words < min_words:
+            cells[index] = ParagraphLayerCell(float(value), reason="short_paragraph")
+            continue
+        by_chapter.setdefault(paragraph.chapter_num, []).append((index, float(value)))
+    for pairs in by_chapter.values():
+        if len(pairs) < MIN_PARAGRAPH_LAYER_COUNT:
+            cells.update(
+                (index, ParagraphLayerCell(value, reason="too_few_paragraphs"))
+                for index, value in pairs
+            )
+            continue
+        obs = [v for _, v in pairs]
+        centre = median(obs)
+        spread = mad(obs, centre)
+        fallback_sigma = 0.0
+        if spread == 0.0 and any(v != centre for v in obs):
+            fallback_sigma = sn_estimator(obs)
+            if fallback_sigma <= 0.0:
+                fallback_sigma = qn_estimator(obs)
+        if spread <= 0.0 and (fallback_sigma <= 0.0 or not math.isfinite(fallback_sigma)):
+            cells.update(
+                (index, ParagraphLayerCell(value, chapter_median=centre, reason="zero_spread"))
+                for index, value in pairs
+            )
+            continue
+        for index, value in pairs:
+            raw_z = robust_z(value, centre, spread) if spread > 0.0 else (value - centre) / fallback_sigma
+            z = round(raw_z, PARAGRAPH_LAYER_Z_DECIMALS)
+            cells[index] = ParagraphLayerCell(value, z, abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF, raw_z, centre)
+    return cells
+
+
+def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:
+    """Return each comparable paragraph's value and within-chapter robust z-score."""
+    return {
+        index: (cell.value, cell.raw_z)
+        for index, cell in _measured_paragraph_layer_cells(paragraphs, layer).items()
+        if cell.raw_z is not None
+    }
+
+
 def paragraph_layer_cells(paragraphs: Sequence[Any], layer: str) -> dict[int, ParagraphLayerCell]:
     """Prepare comparable cells; absent cells represent unavailable comparisons."""
-    cells: dict[int, ParagraphLayerCell] = {}
-    for index, (value, score, chapter_median) in _layer_stats_with_reference(paragraphs, layer).items():
-        z = round(score, PARAGRAPH_LAYER_Z_DECIMALS)
-        cells[index] = ParagraphLayerCell(value, z, abs(z) >= PARAGRAPH_LAYER_Z_CUTOFF, score, chapter_median)
-    return cells
+    return {
+        index: cell for index, cell in _measured_paragraph_layer_cells(paragraphs, layer).items()
+        if cell.z is not None
+    }
 
 
 def prepare_paragraph_layers(
     paragraphs: Sequence[Any], *, available_layers: frozenset[str] | None = None,
 ) -> ParagraphLayerData:
-    """Prepare every statistical paragraph layer at the analysis boundary."""
+    """Prepare paragraph measurements and comparisons at the analysis boundary."""
     return {
-        layer: paragraph_layer_cells(paragraphs, layer) for layer in LAYER_FEATURES
+        layer: _measured_paragraph_layer_cells(paragraphs, layer) for layer in LAYER_FEATURES
         if available_layers is None or layer in available_layers
     }
 
@@ -2406,7 +2422,7 @@ def paragraph_layer_projection(
         "layer": layer, "feature": feature, "unit": unit,
         "comparison": {
             "reference_scope": "all_measurable_paragraphs_within_each_chapter",
-            "method": "median_mad_robust_z", "minimum_paragraphs": 3,
+            "method": "median_mad_robust_z", "minimum_paragraphs": MIN_PARAGRAPH_LAYER_COUNT,
             "requires_nonzero_mad": True, "z_decimals": PARAGRAPH_LAYER_Z_DECIMALS,
             "notable_abs_z": PARAGRAPH_LAYER_Z_CUTOFF,
         },

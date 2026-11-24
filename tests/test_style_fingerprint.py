@@ -545,24 +545,27 @@ class TestFingerprintDashboard(unittest.TestCase):
         chips = re.findall(r"data-target=\"p-(\d+)\" data-layers='([^']+)'", rendered)
         self.assertTrue(chips)
         prepared = prepare_paragraph_layers(paragraphs)
-        expected = {(key, index) for key, cells in prepared.items() for index in cells}
+        expected = {(key, index) for key, cells in prepared.items() if key != "dialogue" for index in cells}
         seen: set[tuple[str, int]] = set()
         for index, raw in chips:
             payload = json.loads(html_module.unescape(raw))
             paragraph_index = int(index)
             for key, info in payload.items():
                 cell = prepared[key][paragraph_index]
-                typical_value = format_num(cell.chapter_median, "de", 1)
-                bounded_z = min(Z_COLOR_LIMIT, max(-Z_COLOR_LIMIT, cell.z))
-                position = round(50.0 * (1.0 + bounded_z / Z_COLOR_LIMIT), 1)
-                self.assertEqual(info[0], z_color(cell.raw_z))
-                self.assertEqual(info[2], cell.z)
+                seen.add((key, paragraph_index))
+                typical_value = format_num(cell.chapter_median, "de", 1) if cell.chapter_median is not None else None
+                if cell.z is None:
+                    self.assertEqual(info, [format_num(cell.value, "de", 1), cell.reason, typical_value])
+                    continue
                 self.assertEqual(info[3], format_num(cell.value, "de", 1))
                 self.assertIs(info[4], cell.notable)
-                self.assertEqual(info[5], position)
                 self.assertEqual(info[6], typical_value)
-                self.assertIn(str(paragraphs[paragraph_index].start_line), info[1])
-                seen.add((key, paragraph_index))
+                bounded_z = min(Z_COLOR_LIMIT, max(-Z_COLOR_LIMIT, cell.z))
+                position = round(50.0 * (1.0 + bounded_z / Z_COLOR_LIMIT), 1)
+                self.assertIsNone(info[1])
+                self.assertEqual(info[0], z_color(cell.raw_z))
+                self.assertEqual(info[2], cell.z)
+                self.assertEqual(info[5], position)
         self.assertEqual(seen, expected)
 
     def test_unavailable_paragraph_layer_has_no_invented_measurement_range(self):

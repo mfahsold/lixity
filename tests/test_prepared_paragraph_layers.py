@@ -23,19 +23,30 @@ def test_prepared_cells_round_before_notability_and_keep_chapters_independent():
     assert (cells[9].value, cells[9].z, cells[9].notable) == (104.22, 1.5, True)
 
 
-def test_prepared_cells_leave_unavailable_comparisons_absent():
+def test_prepared_cells_keep_values_and_reasons_when_comparisons_are_unavailable():
     paragraphs = [
         SimpleNamespace(words=words, chapter_num=chapter, filter_density=value)
         for chapter, words, value in [
             (1, 5, 0), (1, 5, 1), (1, 5, 2), (1, 4, 10),
             (2, 5, 0), (2, 5, 0), (2, 5, 0),
-            (3, 5, 0), (3, 5, 1),
+            (3, 5, 0), (3, 5, 1), (3, 0, 0),
         ]
     ]
     cells = style_fingerprint.paragraph_layer_cells(paragraphs, "filter")
     assert set(cells) == {0, 1, 2}
     assert cells[0].value == 0
     assert cells[1].z == 0
+    measurements = style_fingerprint.prepare_paragraph_layers(
+        paragraphs, available_layers=frozenset({"filter"}),
+    )["filter"]
+    assert set(measurements) == set(range(9))
+    assert (measurements[3].value, measurements[3].reason) == (10, "short_paragraph")
+    assert (measurements[4].value, measurements[4].reason) == (0, "zero_spread")
+    assert (measurements[7].value, measurements[7].reason) == (0, "too_few_paragraphs")
+    assert measurements[4].chapter_median == 0
+    assert measurements[3].chapter_median is None and measurements[7].chapter_median is None
+    assert all(cell.z is None and cell.raw_z is None and not cell.notable
+               for index, cell in measurements.items() if index >= 3)
 
 
 def test_analysis_prepares_every_layer_and_keeps_zero_distinct_from_unavailable():
@@ -49,7 +60,31 @@ def test_analysis_prepares_every_layer_and_keeps_zero_distinct_from_unavailable(
     assert set(analysis.paragraph_layers["asl"]) == {0, 1, 2}
     assert analysis.paragraph_layers["asl"][1].z == 0
     assert analysis.paragraph_layers["asl"][1].notable is False
-    assert analysis.paragraph_layers["dialogue"] == {}
+    dialogue = analysis.paragraph_layers["dialogue"]
+    assert len(dialogue) == 3
+    assert all(cell.value == 0 and cell.z is None and cell.reason == "zero_spread"
+               for cell in dialogue.values())
+
+
+def test_sparse_german_pattern_keeps_measured_hits_and_chapter_median():
+    text = (
+        "## Anfang\n\nDie Straße lag still und dunkel.\n\n"
+        "Eine Lampe hing über der Straße.\n\n"
+        "Die Tür fiel hinter dem Fahrer zu.\n\n"
+        "Mara legte ihre Tasche vor dem Haus ab.\n\n"
+        "Ich spüre die Müdigkeit. Ich merke den Morgen und ich fühle die Sonne.\n"
+    )
+    analysis = analyze_document(
+        text, CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+"),
+        FingerprintThresholds(), include_evidence=True,
+    )
+    cells = analysis.paragraph_layers["filter"]
+    assert [cell.value for cell in cells.values()] == [0, 0, 0, 0, 230.8]
+    assert all(cell.chapter_median == 0 and cell.z is None and cell.reason == "zero_spread"
+               for cell in cells.values())
+    assert analysis.evidence is not None
+    assert analysis.evidence[4]["layers"]["filter"]["count"] == 3
+    assert style_fingerprint.layer_stats(analysis.paragraphs, "filter") == {}
 
 
 def test_rounded_cutoff_preserves_positive_and_negative_boundary_ties():

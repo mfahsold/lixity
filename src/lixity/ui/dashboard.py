@@ -21,10 +21,7 @@ from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..site import docs_url
 from ..status import FEATURE_LAYERS, FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
-    FEATURE_UNITS,
     FEATURES,
-    LAYER_FEATURES,
-    LAYER_PARAGRAPH_ATTR,
     MIN_COMPARABLE_WORDS,
     PARAGRAPH_LAYER_Z_CUTOFF,
     Z_COLOR_LIMIT,
@@ -214,6 +211,7 @@ _REPORT_CSS_FILES = tuple(
 )
 
 # Curated publications reuse the shared renderers without dormant workspace controls.
+_PUBLICATION_CSS_FILES = tuple(name for name in _REPORT_CSS_FILES if name != "analysis-evidence.css")
 _PUBLICATION_JS_FILES = tuple(
     name for name in _JS_FILES if name not in {
         "register-settings.js", "site-publication-settings.js", "analysis-scope.js",
@@ -586,17 +584,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     layer_data = data.paragraph_layers
     available_layers = data.paragraph_available_layers
 
-    def _layer_text(key: str, value: float) -> str:
-        field = LAYER_FEATURES[key]
-        units = FEATURE_UNITS.get(language_key, FEATURE_UNITS["en"])
-        return f"{label(labels, 'layer_' + key)}: {N(value, 1)} {units[field]}"
-
     def measured(key: str) -> bool:
         return available_layers is None or key in available_layers
-
-    def _layer_tip(key: str, value: float, z: float) -> str:
-        direction = label(labels, "layer_above" if z > 0 else "layer_below" if z < 0 else "layer_at")
-        return f"{_layer_text(key, value)} · {direction}"
 
     meta_bits: list[str] = []
     if chapters and total_words > 0:
@@ -1217,20 +1206,24 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     layer_legend = "".join(legend_parts)
 
     if has_reading and controls:
-        flag_checkbox = checkbox_field('<input type="checkbox" id="filter-flags" aria-controls="chapters"/>', L("filter_flags"),
-                                       extra_class="js-analysis-control")
         analysis_switches = (
             '<div class="reader-analysis-switches">'
+            '<div class="reader-analysis-option">'
             f'<label class="reader-evidence-toggle"><input type="checkbox" id="analysis-evidence-enabled" '
-            f'data-help="{L("reading_help_counted")}"/> '
+            'aria-describedby="reader-counted-help"/> '
             f'<span class="analysis-evidence-key">{L("reader_counted_action")}</span></label>'
-            '<div class="reader-comparison-controls">'
+            f'<p class="ctl-note" id="reader-counted-help">{L("reading_help_counted")}</p></div>'
+            '<div class="reader-analysis-option reader-comparison-controls">'
             f'<label class="reader-comparison-toggle"><input type="checkbox" id="analysis-comparison-enabled" checked '
-            f'data-help="{L("reading_help_comparison")}"/> '
+            'aria-describedby="reader-comparison-help"/> '
             f'<span class="analysis-comparison-key">{L("reader_comparison_action")}</span></label>'
-            '</div>'
-            f'{flag_checkbox}'
-            '</div>'
+            f'<p class="ctl-note" id="reader-comparison-help">{L("reading_help_comparison")}</p></div>'
+            '<div class="reader-analysis-option">'
+            + checkbox_field('<input type="checkbox" id="filter-flags" aria-controls="chapters" '
+                             'aria-describedby="reader-tense-filter-help"/>', L("filter_flags"),
+                             extra_class="js-analysis-control")
+            + f'<p class="ctl-note" id="reader-tense-filter-help">{L("reading_help_tense_filter")}</p></div></div>'
+            '<p class="ctl-note reader-analysis-question" id="reader-analysis-question" hidden></p>'
         ) if paragraphs else ""
         analysis_controls = (
             '<div class="reader-analysis-controls" id="reader-analysis-settings" role="group" '
@@ -1462,6 +1455,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     main_start = len(parts)
     profile_markup: dict[int, str] = {}
     chapter_markup: dict[int, str] = {}
+    first_heading = next((block.start_line for block in reader_document or () if block.is_chapter), None)
+    implicit = (chapters[0] if reader_document is not None and chapters
+                and (first_heading is None or chapters[0].start_line < first_heading) else None)
+    implicit_strip = ""
     parts.append('<main id="chapters" role="main" tabindex="-1">')
     for chapter in chapters:
         chapter_start = len(parts)
@@ -1491,7 +1488,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append("</div>")
 
         if chapter_paras:
-            parts.append('<div class="strip">')
+            strip_start = len(parts)
+            parts.extend(('<p class="ctl-note chapter-comparison-status" hidden></p>', ""))
+            chapter_gaps: dict[str, str | None] = {}
             for idx, p in chapter_paras:
                 sev = f" sev-{p.severity}" if p.severity >= flag_min_severity else ""
                 width = max(1.0, p.words / scale * 100.0)
@@ -1505,28 +1504,37 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 layer_payload: dict[str, list[Any]] = {}
                 for key in PARAGRAPH_COMPARISON_LAYERS:
                     info = layer_data.get(key, {}).get(idx)
-                    if info is not None:
-                        value, z = info.value, info.z
-                        colour = z_color(info.raw_z)
-                        # Marker position uses the same SSOT scale as the colour;
-                        # shipping it avoids duplicating Z_COLOR_LIMIT in JS.
-                        position = max(0.0, min(100.0, 50.0 + z / Z_COLOR_LIMIT * 50.0))
-                        description = _layer_tip(key, value, z)
-                        layer_payload[key] = [colour, f"{line_label(labels, p)} · {description}",
-                                              round(z, 2), N(value, 1), info.notable, round(position, 1),
-                                              N(info.chapter_median, 1)]
+                    if info is None:
+                        continue
+                    value, z = info.value, info.z
+                    reference = N(info.chapter_median, 1) if info.chapter_median is not None else None
+                    if z is None:
+                        if key not in chapter_gaps or chapter_gaps[key] == "short_paragraph":
+                            chapter_gaps[key] = info.reason
+                        # The selector already carries the label and unit for measured-only rows.
+                        layer_payload[key] = [N(value, 1), info.reason, reference]
+                        continue
+                    chapter_gaps[key] = None
+                    # Use the same scale and reference as the evidence card.
+                    colour = z_color(info.raw_z if info.raw_z is not None else z)
+                    position = max(0.0, min(100.0, 50.0 + z / Z_COLOR_LIMIT * 50.0))
+                    layer_payload[key] = [colour, None, z, N(value, 1), info.notable, round(position, 1), reference]
                 layer_attr = (
-                    f" data-layers='{attr_json(layer_payload)}'"
+                    f" data-layers='{attr_json(layer_payload, single_quoted=True)}'"
                     if layer_payload
                     else ""
                 )
                 parts.append(
                     f'<button class="chip {tense_class(p.dominant)}{sev}" '
                     f'style="flex:{width:.2f} 0 auto" data-target="p-{idx}"{layer_attr} '
-                    f'data-tip-base="{esc(tooltip, quote=True)}" '
                     f'title="{esc(tooltip)}" aria-label="{esc(tooltip)}" aria-expanded="false"></button>'
                 )
+            gaps = {key: "too_few_paragraphs" if reason == "short_paragraph" else reason
+                    for key, reason in chapter_gaps.items() if reason is not None}
+            parts[strip_start + 1] = f"<div class=\"strip\" data-comparison-gaps='{attr_json(gaps, single_quoted=True)}'>"
             parts.append("</div>")
+            if chapter is implicit:
+                implicit_strip = "".join(parts[strip_start:])
 
             chapter_markup[chapter.start_line] = "".join(parts[chapter_start:])
             for idx, p in chapter_paras:
@@ -1574,11 +1582,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
                 if paragraph_evidence is not None and idx in paragraph_evidence:
                     paragraph_content[f"p-{idx}"].append(paragraph_evidence[idx])
-                    paragraph_content[f"p-{idx}"].append({
-                        key: _layer_text(key, getattr(p, LAYER_PARAGRAPH_ATTR[key]))
-                        if p.words > 0 and measured(key) else None
-                        for key in PARAGRAPH_COMPARISON_LAYERS
-                    })
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(
@@ -1604,8 +1607,6 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if reader_document is not None:
         parts[main_start:] = ['<main id="chapters" role="main" tabindex="-1">']
         section_open = False
-        first_heading = next((block.start_line for block in reader_document if block.is_chapter), None)
-        implicit = chapters[0] if chapters and (first_heading is None or chapters[0].start_line < first_heading) else None
         for block in reader_document:
             if block.is_chapter:
                 if section_open:
@@ -1622,7 +1623,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             if not section_open:
                 if implicit:
                     parts.append(f'<section class="chapter reader-preface" id="ch-{implicit.num}" data-start="{implicit.start_line}" data-end="{implicit.end_line}">'
-                                 '<span id="reader-preface"></span>')
+                                 '<span id="reader-preface"></span>' + implicit_strip)
                 else:
                     parts.append('<section class="chapter reader-preface" id="reader-preface">')
                 section_open = True

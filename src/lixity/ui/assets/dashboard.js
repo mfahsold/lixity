@@ -376,8 +376,28 @@ function chipLayers(chip) {
   if (!chip._layers) {
     var raw = chip.getAttribute("data-layers");
     try { chip._layers = raw ? JSON.parse(raw) : {}; } catch (err) { chip._layers = {}; }
+    Object.entries(chip._layers).forEach(function(entry) {
+      var row = entry[1];
+      if (row.length === 3) chip._layers[entry[0]] = [null, row[1], null, row[0], false, null, row[2]];
+    });
   }
   return chip._layers;
+}
+
+function layerValueText(info, option) {
+  return option.textContent + ": " + info[3] + " " + option.dataset.unit;
+}
+
+function layerDirection(score) {
+  return uiLabel(score < 0 ? "layer_below" : score > 0 ? "layer_above" : "layer_at");
+}
+
+function layerChipDescription(panel, info, option) {
+  var lines = panel && panel.dataset.start;
+  if (lines && panel.dataset.end !== lines) lines += "–" + panel.dataset.end;
+  var text = info ? layerValueText(info, option) : uiLabel("comparison_missing_mark");
+  if (Number.isFinite(info?.[2])) text += " · " + layerDirection(info[2]);
+  return lines ? uiLabel("line") + " " + lines + " · " + text : text;
 }
 
 var layerOnly = document.getElementById("layer-only");
@@ -448,7 +468,7 @@ function syncOutlierNavigation() {
   }
   var option = selectedLayerOption();
   var comparing = Boolean(layer?.value) && option?.dataset.inlineEvidence !== "1" &&
-    option?.dataset.available !== "0" && (!comparisonToggle || comparisonToggle.checked);
+    Number(option?.dataset.comparable) > 0 && (!comparisonToggle || comparisonToggle.checked);
   var layerNav = layerPosition && layerPosition.closest(".layer-nav, .reader-outlier-navigation");
   if (layerNav) layerNav.hidden = !comparing;
   var disabled = !chips.length || !comparing;
@@ -481,11 +501,13 @@ function paintLayerAction(panel, info) {
   var shown = document.body.classList.contains("workbench-analysis") && !document.body.classList.contains("workbench-overview") &&
     !document.body.classList.contains("reader-focus") && (!comparisonToggle || comparisonToggle.checked);
   var notable = Boolean(shown && info && info[4] === true);
+  var option = selectedLayerOption();
+  var description = notable ? layerChipDescription(panel, info, option) : "";
   if (!actions._metricBase) actions._metricBase = {label: actions.getAttribute("aria-label"), help: actions.dataset.help};
   if (notable) {
-    var fullLabel = info[1] + " · " + actions._metricBase.label;
+    var fullLabel = description + " · " + actions._metricBase.label;
     if (actions.getAttribute("aria-label") !== fullLabel) actions.setAttribute("aria-label", fullLabel);
-    actions.dataset.help = info[1] + " · " + actions._metricBase.help;
+    actions.dataset.help = description + " · " + actions._metricBase.help;
     actions.dataset.layerSymbol = info[2] < 0 ? "↓" : "↑";
   } else if (actions.dataset.layerSymbol) {
     actions.setAttribute("aria-label", actions._metricBase.label);
@@ -509,12 +531,12 @@ function paintLayerAction(panel, info) {
   if (marker) {
     marker.hidden = !notable;
     if (notable) {
-      var unit = selectedLayerOption()?.dataset.unit;
+      var unit = option?.dataset.unit;
       var text = actions.dataset.layerSymbol + " " + info[3] + (unit ? " " + unit : "");
       if (marker.textContent !== text) marker.textContent = text;
-      var aria = info[1] + ". " + uiLabel("evidence_inspect");
+      var aria = description + ". " + uiLabel("evidence_inspect");
       if (marker.getAttribute("aria-label") !== aria) marker.setAttribute("aria-label", aria);
-      if (marker.title !== info[1]) marker.title = info[1];
+      if (marker.title !== description) marker.title = description;
     }
   }
 }
@@ -536,6 +558,12 @@ function syncEvidenceLegend() {
   if (comparison) comparison.hidden = unavailable || inlineOnly || Boolean(comparisonToggle && !comparisonToggle.checked);
   var comparisonControls = comparisonToggle && comparisonToggle.closest(".reader-comparison-controls");
   if (comparisonControls) comparisonControls.hidden = !selected || unavailable || inlineOnly;
+  var question = document.getElementById("reader-analysis-question");
+  if (question) {
+    var prompt = selected && !unavailable ? uiLabel("evidence_review_" + layer.value) : "";
+    question.textContent = prompt;
+    question.hidden = !prompt;
+  }
   var instruction = document.getElementById("analysis-evidence-instruction");
   if (instruction && layer) instruction.textContent = uiLabel(
     layer.value === "sticky" ? "evidence_sticky_instruction" : "evidence_open_instruction"
@@ -544,47 +572,55 @@ function syncEvidenceLegend() {
     (!unavailable && !inlineOnly && Boolean(legend && legend.hidden && comparison && comparison.hidden));
 }
 
-var allChips = null;
+var allChips = null, comparisonStrips = null;
 function applyLayer() {
   var key = layer ? layer.value : "";
   var option = selectedLayerOption();
   var comparing = !!key && option?.dataset.available !== "0" && option?.dataset.inlineEvidence !== "1" &&
     (!comparisonToggle || comparisonToggle.checked);
-  var comparisonMissing = comparing ? uiLabel("comparison_missing_mark") : "";
   document.body.classList.toggle("layer-on", !!key);
   document.body.classList.toggle("comparison-on", comparing);
-  if (!allChips) allChips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  if (!allChips) {
+    allChips = Array.from(document.querySelectorAll("#chapters .chip"), function(chip) {
+      chip._baseDescription = chip.getAttribute("aria-label");
+      return chip;
+    });
+    comparisonStrips = Array.from(document.querySelectorAll("#chapters [data-comparison-gaps]"), function(strip) {
+      return {strip: strip, status: strip.previousElementSibling, gaps: JSON.parse(strip.dataset.comparisonGaps)};
+    });
+  }
+  comparisonStrips.forEach(function(chapter) {
+    var gap = comparing && chapter.gaps[key];
+    chapter.strip.classList.toggle("comparison-gap", Boolean(gap));
+    chapter.status.hidden = !gap;
+    if (gap) chapter.status.textContent = uiLabel("paragraph_comparison_chapter_unavailable") + " " +
+      uiLabel("paragraph_comparison_" + gap);
+  });
   var nextOutliers = [];
   allChips.forEach(function (chip) {
     var info = key ? chipLayers(chip)[key] : null;
     var panel = chip._panel || (chip._panel = document.getElementById(chip.dataset.target));
     var notable = Boolean(info && info[4] === true);
-    chip.classList.toggle("layer-unavailable", comparing && !info);
-    if (info && comparing) {
+    var scored = comparing && Number.isFinite(info?.[2]);
+    chip.classList.toggle("layer-unavailable", comparing && !scored);
+    if (scored) {
       chip.style.setProperty("--layer-color", info[0]);
       chip.classList.add("has-layer");
-      chip.setAttribute("data-tip", info[1]);
-      chip.removeAttribute("title");
       chip.classList.toggle("outlier", notable);
-      chip.setAttribute("aria-label", info[1]);
       if (notable) nextOutliers.push(chip);
-    } else if (chip.classList.contains("has-layer") || chip.classList.contains("outlier") || chip.hasAttribute("data-tip") || !chip.hasAttribute("title")) {
+    } else if (chip.classList.contains("has-layer")) {
       chip.style.removeProperty("--layer-color");
-      chip.classList.remove("has-layer");
-      chip.classList.remove("outlier");
-      if (!comparing) {
-        chip.removeAttribute("data-tip");
-        var base = chip.getAttribute("data-tip-base");
-        if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
-      }
+      chip.classList.remove("has-layer", "outlier");
     }
-    if (comparing && !info) {
-      var lines = panel && panel.dataset.start;
-      if (lines && panel.dataset.end !== lines) lines += "–" + panel.dataset.end;
-      var missing = lines ? uiLabel("line") + " " + lines + " · " + comparisonMissing : comparisonMissing;
-      chip.setAttribute("data-tip", missing);
+    if (comparing) {
+      var description = layerChipDescription(panel, info, option);
+      chip.setAttribute("data-tip", description);
       chip.removeAttribute("title");
-      chip.setAttribute("aria-label", missing);
+      chip.setAttribute("aria-label", description);
+    } else if (chip.hasAttribute("data-tip") || !chip.hasAttribute("title")) {
+      chip.removeAttribute("data-tip");
+      var base = chip._baseDescription;
+      if (base) { chip.setAttribute("title", base); chip.setAttribute("aria-label", base); }
     }
     if (panel) {
       if (notable) {

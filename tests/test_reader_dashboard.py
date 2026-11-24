@@ -1,5 +1,9 @@
 """The browser projection covers structure without extending analysis coverage."""
 
+import json
+import re
+from html import unescape
+
 from lixity import api
 from lixity.ui.render_contracts import DashboardContent, DashboardOptions
 
@@ -8,7 +12,7 @@ def test_generic_reader_marks_unknown_layers_without_a_false_zero_or_comparison(
     from lixity.server.views import build_server_dashboard
 
     manuscript = tmp_path / 'draft.md'
-    manuscript.write_text('Mara saw the gate. "Wait here." Mara waited.\n', encoding='utf-8')
+    manuscript.write_text('## Gate\n\nMara saw the gate. "Wait here." Mara waited.\n', encoding='utf-8')
     page, _ = build_server_dashboard(str(manuscript), language='generic')
     select = page.split('id="style-layer"', 1)[1].split('</select>', 1)[0]
     assert 'value="filter"' in select
@@ -16,7 +20,9 @@ def test_generic_reader_marks_unknown_layers_without_a_false_zero_or_comparison(
     assert 'data-reference="measure-dialogue" data-available="0"' not in select
     assert 'data-reference="measure-echo" data-available="0"' not in select
     assert 'id="layer-language-unavailable"' in page
-    assert 'filter":null' in page
+    layer_rows = re.findall(r"data-layers='([^']+)'", page)
+    assert layer_rows
+    assert all("filter" not in json.loads(unescape(row)) for row in layer_rows)
 def test_dashboard_retains_source_structure_outside_profiles():
     source = '# Voyage\n\nPreface only.\n\n## Departure\n\nA quiet garden.\n\n> Quotation only.\n\n[^n]: Note only.\n\n## Anmerkungen und Literaturverzeichnis\n\nAppendix only.\n'
     page = api.dashboard(source)
@@ -61,6 +67,7 @@ def test_implicit_chapter_keeps_public_chapter_target():
     assert 'id="reader-preface"' in page
     assert '<option value="ch-1" data-chapter-number="1">' in page
     assert page.count('id="p-0"') == 1
+    assert re.search(r"data-target=\"p-0\" data-layers='[^']+\"asl\":", page)
 
 
 def test_opening_prose_has_its_own_reader_chapter_and_picker_target():

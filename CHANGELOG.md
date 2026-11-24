@@ -51,6 +51,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Explain why a chapter lacks paragraph comparisons while keeping measured
+  values and passage navigation available. Keep the deviation arrows scoped
+  to reachable paragraphs across the manuscript.
 - In the manuscript, keep the current measurement and passage review at hand.
   Put marking and filter choices in one disclosure. Keep empty-search feedback
   and Clear reachable at large text sizes.

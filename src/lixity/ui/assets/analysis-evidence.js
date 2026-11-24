@@ -268,7 +268,7 @@
     var spans = valueAllowed && layer ? layer.spans : [], span = spans[card.index];
     var chip = paragraphChips[record.panel.id], info = chip && chipLayers(chip)[select.value];
     var option = (select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null) || (select.value ? select.querySelector('option[value="' + select.value + '"]') : null) || {textContent: "", dataset: {}};
-    var content = paragraphContent[record.panel.id], summaries = content[4];
+    var content = paragraphContent[record.panel.id];
     var key = select.value;
     var metricGuide = document.body.dataset.metricGuide;
     var sticky = span && span.sticky;
@@ -276,8 +276,7 @@
     var echo = key === "echo" && span && Number.isSafeInteger(layer.value.count);
     var sameWordSpans = echo && span.echoGroup !== null
       ? spans.filter(function(item) { return item.echoGroup === span.echoGroup; }) : [];
-    var hasMetricSummary = Boolean(valueAllowed && summaries && typeof summaries[key] === "string");
-    var summary = hasMetricSummary ? summaries[key] : "";
+    var summary = valueAllowed && info ? layerValueText(info, option) : "";
     var allParagraphValues = !stale && content[2] && content[2] !== summary ? content[2] : "";
     var canEditPassage = Boolean(!stale && window.LixityManuscriptEditor && typeof window.LixityManuscriptEditor.openAtLine === "function" &&
       record.panel.dataset.start && Number(record.panel.dataset.start) > 0);
@@ -293,8 +292,13 @@
       layer && layer.value.kind === "sentence" ? "evidence_sentence_unit" : "evidence_match_unit";
     var unit = counted === 1 ? message(unitKey === "words" ? "words_one" : unitKey + "_one") : message(unitKey);
     var comparison = valueAllowed && info && Number.isFinite(info[2]) ? info : null;
-    var comparisonValues = comparison && typeof comparison[6] === "string";
+    var comparisonGap = valueAllowed && info && info[1];
+    var comparisonValues = valueAllowed && info && typeof info[6] === "string";
     var comparisonUnit = option.dataset.unit ? " " + option.dataset.unit : "";
+    var valuePair = comparisonValues ? html`<dl class="metric-context-comparison">
+      <div><dt>${message("evidence_paragraph_scope")}</dt><dd>${info[3] + comparisonUnit}</dd></div>
+      <div><dt>${message("comparison_chapter_typical")}</dt><dd>${info[6] + comparisonUnit}</dd></div>
+    </dl>` : null;
     var zFmt = zFormatters[lang] || (zFormatters[lang] = new Intl.NumberFormat(lang, {
       minimumFractionDigits:2, maximumFractionDigits:2, signDisplay:"always"
     }));
@@ -334,7 +338,7 @@
         <p class="ctl-guidance analysis-evidence-review"><strong>${message("evidence_review_heading")}</strong>
           ${message("evidence_review_" + key)}</p>
       </section>` : null}
-      ${summary || share || comparison || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
+      ${summary || share || comparison || comparisonGap || allParagraphValues ? html`<section class="analysis-evidence-paragraph">
         ${summary && !comparisonValues ? html`<strong class="analysis-evidence-scope">${message("evidence_paragraph_scope")}</strong>
         <p class="analysis-evidence-value">${summary}</p>` : null}
         ${share ? html`<p class="ctl-note">${share}</p>` : null}
@@ -342,15 +346,13 @@
           <strong class="analysis-evidence-scope">${message("legend_paragraph_comparison")}</strong>
           <div class="analysis-evidence-comparison-label">
             <b aria-hidden="true">${comparison[2] < 0 ? "↓" : comparison[2] > 0 ? "↑" : "="}</b>
-            ${message(comparison[2] < 0 ? "layer_below" : comparison[2] > 0 ? "layer_above" : "layer_at")}
+            ${layerDirection(comparison[2])}
           </div>
-          ${comparisonValues ? html`<dl class="metric-context-comparison">
-            <div><dt>${message("evidence_paragraph_scope")}</dt><dd>${comparison[3] + comparisonUnit}</dd></div>
-            <div><dt>${message("comparison_chapter_typical")}</dt><dd>${comparison[6] + comparisonUnit}</dd></div>
-          </dl>` : null}
-          ${marker !== null ? html`<div class="analysis-evidence-scale" role="img" aria-label=${comparison[1]}
+          ${valuePair}
+          ${marker !== null ? html`<div class="analysis-evidence-scale" role="img" aria-label=${layerChipDescription(record.panel, comparison, option)}
             style=${{"--evidence-comparison-position":marker + "%"}}><span></span></div>` : null}
-        </div>` : null}
+        </div>` : valuePair}
+        ${comparisonGap ? html`<p class="analysis-evidence-unavailable">${message("paragraph_comparison_" + comparisonGap)}</p>` : null}
         ${allParagraphValues ? html`<details class="analysis-evidence-all-values" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("evidence_all_values")}</summary>
           <p class="analysis-evidence-value">${allParagraphValues}</p></details>` : null}
       </section>` : null}
@@ -371,7 +373,7 @@
       ${metricGuide ? html`<p class="ctl-note"><a href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("analysis_coverage")}</summary>
         ${comparison ? html`<p class="analysis-evidence-comparison-score">${uiFormat("evidence_comparison_z", {value:z})}</p>` : null}
-        ${valueAllowed && !comparison && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
+        ${valueAllowed && !comparison && !comparisonGap && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
         ${countKnown ? html`<p>${uiCountFormat("evidence_coverage", layer.value.count, {mapped:layer.value.mapped_count})}</p>` : null}
         ${key === "sticky" ? html`<p>${message("evidence_reason_function")}</p>` : null}
         <p>${option.dataset.hint || ""}</p><p>${message("evidence_limit")}</p></details>`);

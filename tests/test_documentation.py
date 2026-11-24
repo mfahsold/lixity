@@ -23,6 +23,7 @@ class TestDocumentation(unittest.TestCase):
             _CSS_FILES,
             _JS_FILES,
             _PASSAGE_NAVIGATION_SCRIPT,
+            _PUBLICATION_CSS_FILES,
             _PUBLICATION_JS_FILES,
             _REPORT_CSS_FILES,
             _REPORT_JS_FILES,
@@ -32,11 +33,11 @@ class TestDocumentation(unittest.TestCase):
         reports = {
             "demo/report.html": (_CSS_FILES, _JS_FILES),
             "demo/reader/index.html": (
-                (*_REPORT_CSS_FILES, "speech-player.css"),
+                (*_PUBLICATION_CSS_FILES, "speech-player.css"),
                 (*_PUBLICATION_JS_FILES, "speech-player.js", "reader-audio.js"),
             ),
             "demo/reader/analysis.html": (_REPORT_CSS_FILES, ()),
-            "demo/companion/index.html": (_REPORT_CSS_FILES, _PUBLICATION_JS_FILES),
+            "demo/companion/index.html": (_PUBLICATION_CSS_FILES, _PUBLICATION_JS_FILES),
             "examples/effi-briest.html": (_REPORT_CSS_FILES, _REPORT_JS_FILES),
             "examples/pride-and-prejudice.html": (_REPORT_CSS_FILES, _REPORT_JS_FILES),
         }

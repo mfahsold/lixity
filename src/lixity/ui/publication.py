@@ -14,7 +14,7 @@ from .components import (
     product_details,
     script_json,
 )
-from .dashboard import _PUBLICATION_JS_FILES, _REPORT_CSS_FILES, DIAGRAM_LIBRARY_FILE, _bundle
+from .dashboard import _PUBLICATION_CSS_FILES, _PUBLICATION_JS_FILES, DIAGRAM_LIBRARY_FILE, _bundle
 from .manuscript_document import ReaderBlock, reader_block_html
 
 
@@ -65,6 +65,7 @@ def render_publication(
         publication.get("introduction", ""),
         *(entry["body"] for entry in publication.get("entries", ())),
     ))
+    styles = _PUBLICATION_CSS_FILES + (("speech-player.css",) if audio else ())
     progress = [
         '<section class="publication-progress-controls" aria-labelledby="publication-progress-title">',
         f'<h2 id="publication-progress-title">{L("publication_progress")}</h2>',
@@ -86,7 +87,7 @@ def render_publication(
         '<!DOCTYPE html>', f'<html lang="{esc(language)}"><head><meta charset="utf-8"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         f'<link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}"/>', f'<title>{title} · Lixity</title>',
-        f'<style>{_bundle(_REPORT_CSS_FILES + (("speech-player.css",) if audio else ()))}</style></head>',
+        f'<style>{_bundle(styles)}</style></head>',
         '<body class="lixity-report publication-site manuscript-reading" data-read-only="true" '
         f'data-ui-labels="{attr_json(ui_labels)}">',
         f'<a class="skip-link" href="#publication-context">{L("publication_context")}</a>',

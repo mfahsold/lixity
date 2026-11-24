@@ -499,6 +499,13 @@ other fixed minimum establishes inferential validity; no general n≥3 MAD ceili
 is assumed. Paragraph marks, chapter bands, deviation flags and FDR have different
 reference populations/rules and must not be treated as one decision threshold.
 
+Paragraph comparisons use a chapter-local reference. Short paragraphs, fewer
+than three eligible paragraphs or a zero scale can leave the comparison
+unknown even when the value is measured. Many zero pattern counts can yield
+a zero scale even after the Sn and Qn fallbacks.
+Measured values remain available for passage review.
+[Paragraph comparison method](METHODS.md#9-paragraph-layers-within-chapter-colouring)
+
 Style axes now use PCA of standardized tied midranks on one common complete
 chapter set, with ridge shrinkage $(1-\lambda)C + \lambda I$ when $n \le p$ or
 $\lambda_{\min} \le 10^{-6}\lambda_{\max}$ and regularized Mahalanobis distances

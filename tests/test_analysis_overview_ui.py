@@ -214,9 +214,11 @@ class TestAnalysisOverview(unittest.TestCase):
         comparison = controls.inputs["analysis-comparison-enabled"]
         self.assertNotIn("checked", evidence)
         self.assertIn("checked", comparison)
-        for attributes in (evidence, comparison):
+        for attributes, help_id in ((evidence, "reader-counted-help"), (comparison, "reader-comparison-help"),
+                                    (controls.inputs["filter-flags"], "reader-tense-filter-help")):
             self.assertEqual(attributes["type"], "checkbox")
-            self.assertTrue(attributes.get("data-help"))
+            self.assertEqual(attributes.get("aria-describedby"), help_id)
+            self.assertIn(f'id="{help_id}"', html)
 
     def test_comparison_labels_describe_the_visible_effect(self):
         html = self.render()

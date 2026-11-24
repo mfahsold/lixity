@@ -754,8 +754,14 @@ attribution or historical-accuracy judgment.
 
 ## 9. Paragraph layers (within-chapter colouring)
 
-Each chapter is its own reference: robust $z$ of the paragraph value against
-that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs).
+Each chapter supplies its own reference from at least three eligible
+paragraphs. The comparison subtracts the chapter's median and divides by
+the chapter scale. The scale is $1.4826 \cdot \mathrm{MAD}$ when MAD is
+positive. For varying values with zero MAD, the comparison tries Sn and
+then Qn as defined in the [robust scale table](#4c-structural-diagnostics-structural_diagnostics).
+When the scale remains zero, as it can for constant or heavily tied values,
+the paragraph measurement remains available and its comparison score is
+unknown. Fewer than three eligible paragraphs also leave the score unknown.
 `layer_stats()` requires at least five words per paragraph for the function-word
 share and pattern rates. Sentence length and quoted-word share need at least
 one word. Color shows the direction and magnitude of the chapter-local score.

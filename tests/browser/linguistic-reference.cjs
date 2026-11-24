@@ -82,7 +82,7 @@ with tempfile.TemporaryDirectory(prefix='lixity-literary-cli-') as directory:
             assert source.read_bytes() == original
             result[language + '-' + form] = {'html':html, 'paragraphs':paragraphs, 'reports':reports,
                 'labels':{key: labels[key] for key in ('evidence_next', 'evidence_paragraph_scope',
-                    'evidence_sentence_scope', 'evidence_comparison_missing')}}
+                    'evidence_sentence_scope', 'paragraph_comparison_too_few_paragraphs')}}
     for scope, text in (
         ('preamble', '# Titel\\n\\nVor dem Kapitel.\\n\\n## Kapitel\\n\\nSie geht heim.'),
         ('blockquote', '## Kapitel\\n\\n> Vor dem Absatz.\\n\\nSie geht heim.'),
@@ -218,7 +218,8 @@ async function waitForRanges(page, id, expected) {
 }
 async function checkComparison(card, fixture) {
   assert.equal(await card.locator('.analysis-evidence-paragraph > .analysis-evidence-scope').textContent(), fixture.labels.evidence_paragraph_scope);
-  assert.equal(await card.locator('.analysis-evidence-unavailable').textContent(), fixture.labels.evidence_comparison_missing);
+  assert.equal(await card.locator('.analysis-evidence-unavailable').textContent(), fixture.labels.paragraph_comparison_too_few_paragraphs);
+  assert.equal(await card.locator('.analysis-evidence-unavailable').isVisible(), true);
   assert.equal(await card.locator('.analysis-evidence-comparison').count(), 0);
   assert.equal(await card.locator('.analysis-evidence-scale').count(), 0, 'unknown comparison has no zero marker');
   assert.equal(await card.locator('.analysis-evidence-warning').count(), 0, 'valid mapped text has no degradation warning');

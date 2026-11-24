@@ -1,4 +1,4 @@
-const {openAnalysisSettings, selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
+const {closeAnalysisSettings, openAnalysisSettings, selectMetric, setAnalysisOption} = require('./support/analysis-controls.cjs');
 // Metric and comparison controls preserve canonical prose and source anchors.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -10,10 +10,14 @@ const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-metric-overlays-'));
 const generated = pythonFixture(`
 import json
-from lixity.language import get_language_profile
+from lixity.language import get_language_profile, resolve_language
+from lixity.models import CorpusConfig
+from lixity.pipeline import analyze_document
 from lixity.workspace_labels import WORKSPACE_LABELS
-from lixity.style_fingerprint import LAYER_PARAGRAPH_ATTR, PARAGRAPH_LAYER_Z_CUTOFF, layer_stats, z_color
+from lixity.style_fingerprint import FingerprintThresholds, LAYER_PARAGRAPH_ATTR, PARAGRAPH_LAYER_Z_CUTOFF, layer_stats, z_color
+from lixity.ui.dashboard import render_analysis
 from lixity.ui.manuscript_reader import PARAGRAPH_COMPARISON_LAYERS
+from lixity.ui.render_contracts import DashboardOptions
 from dashboard_fixtures import full_dashboard
 reading_html = full_dashboard()
 full_dashboard.__globals__['SAMPLE'] = '## Measured paragraphs\\n\\n' + '\\n\\n'.join(
@@ -58,8 +62,30 @@ def paint_values(*args, **kwargs):
     return original(*args, **{**kwargs, 'labels': {**get_language_profile('en').labels, **WORKSPACE_LABELS['en']}, 'language_key': 'en'})
 full_dashboard.__globals__['render_dashboard'] = paint_values
 paint_html = full_dashboard()
+sparse_text = '\\n\\n'.join((
+    '## Wenige Treffer',
+    'Der rote Wagen steht vor der Tür.',
+    'Die Laterne flackert am alten Bahnsteig. Regen fällt.',
+    'Im Treppenhaus hallen die Schritte über mehrere Stockwerke.',
+    'Kalter Wind fegt durch die Fenster. Die hohe Tür fällt zu.',
+    'Ich spüre den kalten Wind. Ich sehe den roten Wagen.',
+    '## Verteilte Treffer',
+    'Der rote Wagen steht vor der Tür.',
+    'Ich sehe den roten Wagen.',
+    'Ich spüre den Wind und höre den Regen.',
+    'Ich sehe den roten Wagen. Ich höre den Regen. Ich spüre den Wind.',
+    'Ich sehe den Wagen, höre den Regen, spüre den Wind und merke den Frost.',
+))
+sparse_config = CorpusConfig(language='de')
+sparse_thresholds = FingerprintThresholds()
+sparse = analyze_document(sparse_text, sparse_config, sparse_thresholds, include_evidence=True)
+assert [row.filter_density for row in sparse.paragraphs[:5]] == [0, 0, 0, 0, 100]
+assert set(layer_stats(sparse.paragraphs, 'filter')) == set(range(5, 10))
+sparse_html = render_analysis(sparse, resolve_language(sparse_config), title='Synthetic sparse chapter',
+    flag_min_severity=sparse_thresholds.flag_min_severity, options=DashboardOptions(controls=True))
 print(json.dumps({'locales': fixtures, 'extra': extra, 'large_value_html': large_value_html, 'reading_html': reading_html,
-                  'paint_html': paint_html, 'palette': [z_color(z) for z in (-2.5, -1.75, -1, -.5, 0, .5, 1, 1.75, 2.5)]}))
+                  'paint_html': paint_html, 'sparse_html': sparse_html,
+                  'palette': [z_color(z) for z in (-2.5, -1.75, -1, -.5, 0, .5, 1, 1.75, 2.5)]}))
 `, {root});
 const fixtures = generated.locales;
 async function frames(page) {
@@ -193,12 +219,12 @@ async function comparisonRegression(browser, width, name, check, html = fixtures
     await page.route('**/*', route => {
       if (route.request().method() !== 'GET') writes.push(route.request().url());
       const url = new URL(route.request().url());
-      if (url.origin !== 'http://lixity.test') return route.abort();
+      if (url.origin !== 'http://localhost') return route.abort();
       return route.fulfill(url.pathname.startsWith('/api/')
         ? {json: {ok: true, locked: true, records: [], candidates: []}}
         : {contentType: 'text/html', body: html});
     });
-    await page.goto('http://lixity.test/');
+    await page.goto('http://localhost/');
     await page.locator('#tab-view-analysis').click();
     const original = await identity(page);
     await page.locator('#manuscript-analysis-toggle').click();
@@ -284,18 +310,23 @@ async function verifyComparisonRegressions(browser) {
       const chip = page.locator('.chip[data-target="' + fixtures.en.expected.asl[0] + '"]');
       const unavailableChip = page.locator('.chip[data-target="p-7"]');
       const metric = await chip.getAttribute('data-tip');
-      const base = await chip.getAttribute('data-tip-base');
-      assert.ok(metric && base && metric !== base, 'The fixture distinguishes metric and tense descriptions');
-      assert.match(await unavailableChip.getAttribute('aria-label'), /Comparison unavailable/);
-      assert.equal(await unavailableChip.evaluate(node => getComputedStyle(node).borderTopStyle), 'dashed',
-        'A missing comparison has its own visible pattern instead of inheriting tense color');
+      assert.ok(metric);
+      assert.ok((await unavailableChip.getAttribute('aria-label')).includes(fixtures.en.labels.layer_asl),
+        'An unscored chip still describes the selected measurement');
+      assert.equal(await unavailableChip.evaluate(node => node.classList.contains('has-layer')), false,
+        'An unscored chip does not imply a statistical comparison');
+      assert.equal(await unavailableChip.evaluate(node => getComputedStyle(node).borderTopStyle), 'solid',
+        'One chapter explanation replaces repeated missing-comparison markers');
       await setAnalysisOption(page, 'analysis-comparison-enabled', false);
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('body').evaluate(node => node.classList.contains('comparison-on')), false);
+      const base = await chip.getAttribute('title');
+      assert.ok(base && base !== metric && base.includes(fixtures.en.labels.reading_tense_flag),
+        'Comparison-off changes the chip from a reading metric to a tense description');
       assert.equal(await chip.getAttribute('aria-label'), base, 'Comparison-off chips describe their displayed tense colors');
       assert.equal(await chip.getAttribute('title'), base);
       assert.equal(await chip.getAttribute('data-tip'), null);
-      assert.equal(await unavailableChip.getAttribute('aria-label'), await unavailableChip.getAttribute('data-tip-base'),
+      assert.equal(await unavailableChip.getAttribute('aria-label'), await unavailableChip.getAttribute('title'),
         'Turning comparison off restores the independent tense description');
       await page.locator('#workbench-overview-back').click();
       await setAnalysisOption(page, 'analysis-comparison-enabled', true);
@@ -352,6 +383,67 @@ async function verifyComparisonRegressions(browser) {
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true);
       assert.equal(await page.locator('#chapters .chapter-head .meta').first().isVisible(), true);
     }),
+    ...[1440, 320].map(width => comparisonRegression(browser, width, `comparison-sparse-chapter-${width}`, async page => {
+      if (width === 320) await page.setViewportSize({width, height: 480});
+      await page.emulateMedia({colorScheme: 'dark'});
+      await selectMetric(page, 'filter');
+      const chapter = page.locator('#ch-1');
+      const status = chapter.locator('.chapter-comparison-status');
+      const labels = fixtures.de.labels;
+      const question = page.locator('#reader-analysis-question');
+      await openAnalysisSettings(page);
+      for (const [control, help] of [
+        ['analysis-evidence-enabled', 'reading_help_counted'],
+        ['analysis-comparison-enabled', 'reading_help_comparison'],
+        ['filter-flags', 'reading_help_tense_filter'],
+      ]) {
+        const option = page.locator('.reader-analysis-option').filter({has: page.locator('#' + control)});
+        const description = option.locator('#' + await option.locator('#' + control).getAttribute('aria-describedby'));
+        assert.equal(await description.isVisible(), true);
+        assert.equal(await description.textContent(), labels[help]);
+      }
+      assert.equal(await question.isVisible(), true);
+      assert.equal(await question.textContent(), labels.evidence_review_filter);
+      await closeAnalysisSettings(page);
+      await status.waitFor({state: 'visible'});
+      assert.equal(await page.locator('.chapter-comparison-status:visible').count(), 1);
+      assert.ok((await status.textContent()).includes(labels.paragraph_comparison_zero_spread));
+      assert.equal(await chapter.locator('.chip.has-layer').count(), 0);
+      assert.equal(await page.locator('#ch-2 .chip.has-layer').count(), 5);
+      assert.match(await chapter.locator('.chip[data-target="p-0"]').getAttribute('data-tip'), /\b0,0\b/);
+      const chip = chapter.locator('.chip[data-target="p-4"]');
+      assert.match(await chip.getAttribute('data-tip'), /\b100,0\b/);
+      assert.ok(!(await chip.getAttribute('data-tip')).includes(labels.comparison_missing_mark));
+      await chip.scrollIntoViewIfNeeded(); await frames(page);
+      await chip.press('Enter');
+      const paragraph = page.locator('#p-4');
+      await paragraph.locator('.reader-paragraph-actions').click();
+      await page.locator('#manuscript-context-menu [data-reader-action="values"]').click();
+      await page.locator('#reader-inspector-body [data-reader-action="evidence"]').click();
+      const card = page.locator('#analysis-evidence-card');
+      await card.waitFor({state: 'visible'});
+      assert.equal(await card.locator('.analysis-evidence-number').textContent(), '1');
+      assert.match(await card.locator('.analysis-evidence-paragraph').textContent(), /\b100,0\b/);
+      const reason = card.locator('.analysis-evidence-unavailable');
+      assert.equal(await reason.isVisible(), true);
+      assert.ok((await reason.textContent()).includes(labels.paragraph_comparison_zero_spread));
+      assert.equal(await card.locator('.analysis-evidence-scale').count(), 0);
+      await reason.scrollIntoViewIfNeeded();
+      assert.equal(await reason.evaluate(node => {
+        const box = node.getBoundingClientRect(), card = node.closest('[role="dialog"]').getBoundingClientRect();
+        return box.top >= Math.max(0, card.top) && box.bottom <= Math.min(innerHeight, card.bottom) + 1;
+      }), true, 'The reason is readable inside the card at both viewport sizes');
+      await card.screenshot({path: path.join(artifacts, `comparison-sparse-card-${width}.png`)});
+      await page.keyboard.press('Escape');
+      await selectMetric(page, 'asl');
+      assert.equal(await status.isVisible(), false);
+      assert.equal(await chapter.locator('.chip.has-layer').count(), 5);
+      await openAnalysisSettings(page);
+      assert.equal(await question.isVisible(), true);
+      assert.equal(await question.textContent(), labels.evidence_review_asl);
+      await closeAnalysisSettings(page);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    }, generated.sparse_html)),
   ]);
   const failed = checks.filter(check => check.status === 'rejected').map(check => check.reason);
   if (failed.length) throw new AggregateError(failed, 'Paragraph comparison regressions failed');
@@ -526,6 +618,6 @@ async function verifyComparisonRegressions(browser) {
         : fixtures.en.labels.layer_coverage.replace('{notable}', '0').replace('{comparable}', String(fixture.comparable)).replace('{total}', String(fixture.total)));
       await page.close();
     }
-    console.log('Metric overlays: seven locales, desktop/short touch mobile, themes/motion, all seven metrics, exact prose/anchors, 200% text and large-value clicks, Focus, coverage, clear and Analysis states passed. ' + artifacts);
+    console.log('Metric overlays: seven locales, desktop/short touch mobile, themes/motion, all seven metrics, exact prose/anchors, 200% text and large-value clicks, sparse chapter measurements, Focus, coverage, clear and Analysis states passed. ' + artifacts);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

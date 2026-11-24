@@ -366,12 +366,19 @@ In the overview, read the reason beside the first suggested passage. The
 button identifies whether it opens a tense flag or the manuscript start.
 Choose a question to reach its available reports and their measurement guides.
 
-Open **Reading marks** to choose how the text is marked and to filter chapters
-by tense findings. **Underline counted passages** asks what went into the selected value. Its initial
-state follows inline-evidence availability and your choice is remembered per measure.
-**Mark differing paragraphs** asks how a paragraph differs from a typical paragraph in
-that chapter. It starts on and is shared across measures. Measures with no paragraph
-comparison explain that in the visible legend.
+Open **Reading marks** to choose which marks appear in the text and which
+chapters stay visible. Each option explains its purpose. **Underline counted
+passages** shows which words or sentences were counted for the selected
+measurement. Its initial state follows inline-evidence availability and your
+choice is remembered per measure. **Mark differing paragraphs** highlights
+paragraphs whose values differ markedly from the typical value in that chapter.
+It starts on and is shared across measures. For measurements limited to
+counted passages, the visible legend points to the **Analysis overview** for
+chapter comparisons.
+If a chapter has too few eligible paragraphs or too many tied values to
+calculate a comparison, the chapter strip explains why once. The strip keeps
+its paragraph links, and **Paragraph details** and **Explain measurement** still
+show available measurements. A measured zero remains a value.
 For sentence length, every recognized sentence with words is counted,
 so enabling counted text can underline almost the whole manuscript; this does not
 mean that those sentences are unusually long or require editing. With counted text enabled,
@@ -382,11 +389,13 @@ unchecking either switch hides its own marks and key. The selected measure and
 switch preferences persist, including deliberate **None** and disabled switches.
 The desktop app also keeps them when it starts on a different local port.
 
-The deviation count and arrow buttons use the paragraphs reachable under the active
-filters. When a search or filter has no matching passages, use the adjacent clear
+The deviation count and arrow buttons use the paragraphs reachable across the
+manuscript under the active filters. Each deviation is measured within its
+own chapter. When a search or filter has no matching passages, use the adjacent clear
 action to keep the measurement and see more text. Text search covers the whole
-manuscript. Clearing the search resumes the active tense filter. **Chapters with tense
-findings** keeps the rest of each matching chapter available for context. **Review tense
+manuscript. Clearing the search resumes the active tense filter. **Chapters with
+tense findings** works independently of the selected measurement. It keeps the
+rest of each matching chapter available for context. **Review tense
 findings** opens the cues for a specific passage, subject to the configured severity
 threshold.
 
@@ -407,7 +416,7 @@ down/up arrow and a blue/orange edge for below/above the chapter median; the pro
 background receives only a subtle edge wash. Click the marker to see the paragraph
 value and the typical measured value in that chapter in the same units. The evidence
 card shows what was marked, why, and what you can review in context. The chapter
-chapter matrix uses the manuscript as its reference. **Read these
+matrix uses the manuscript as its reference. **Read these
 marks** keeps the comparison method and counting guidance collapsed until opened.
 A marked sentence's word count and its paragraph's average are different
 quantities.

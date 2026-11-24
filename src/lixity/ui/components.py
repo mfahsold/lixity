@@ -99,9 +99,12 @@ def script_json(value: Any, *, ensure_ascii: bool = False) -> str:
     )
 
 
-def attr_json(value: Any, *, sort_keys: bool = False) -> str:
+def attr_json(value: Any, *, sort_keys: bool = False, single_quoted: bool = False) -> str:
     """Encode JSON safely for an HTML attribute value."""
-    return esc(json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=sort_keys), quote=True)
+    data = json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=sort_keys)
+    if single_quoted:
+        return esc(data, quote=False).replace("'", "&#x27;")
+    return esc(data, quote=True)
 
 
 def help_badge(help_text: str, aria_label: str) -> str:

@@ -1419,7 +1419,7 @@ font-size: var(--text-small);
 result list is the manuscript filtered down to what was searched for. */
 .ptext.text-miss, .chapter.text-miss { display: none; }
 mark.text-hit { background: var(--accent-light); color: inherit; padding: 0 .05em; border-radius: .15rem; }
-body.text-search-active .chapter .strip { display: none; }
+body.text-search-active .chapter :is(.strip, .chapter-comparison-status) { display: none; }
 .legend { display: inline-flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: var(--text-small); }
 .swatch { display: inline-block; width: .6rem; height: .6rem; border-radius: var(--radius-xs); margin-right: .3rem; vertical-align: -1px; }
 .totop { margin-left: auto; font-size: var(--text-small); color: var(--muted); text-decoration: none; &:hover { color: var(--fg); } }
@@ -1463,7 +1463,8 @@ overflow-wrap: anywhere;
 body:not(.has-js-dashboard-controls) :is(.chapter-toggle, .text-search-group, .js-analysis-control,
 .toolbar > .metric-layer-control) { display: none; }
 .chapter.collapsed .chapter-toggle::before { transform: rotate(-90deg); }
-.chapter.collapsed > .strip, .chapter.collapsed > .ptext { display: none; }
+.chapter.collapsed > :is(.strip, .chapter-comparison-status, .ptext) { display: none; }
+.chapter-comparison-status { margin-block: var(--space-2) 0; }
 .strip { display: flex; gap: 2px; margin: .65rem 0 0; overflow-x: auto; padding: 5px 2px; }
 .chip {
 border: 0;
@@ -1520,6 +1521,7 @@ box-shadow: none;
 &.outlier { box-shadow: 0 0 0 2px var(--fg); }
 }
 body.comparison-on .chip.layer-unavailable { background: none; border: 1px dashed var(--line-strong); box-shadow: none; }
+body.comparison-on .strip.comparison-gap .chip { background: var(--neutral); border-style: solid; }
 .chapter.flash, .ptext.flash, .panel.flash, section.flash,
 .ctl.flash, .research-timeline li.flash > .research-card { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
 mark.text-hit.flash { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
@@ -4352,17 +4354,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
   box-sizing: border-box;
 }
 .reader-analysis-switches {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: .45rem .65rem;
-  min-width: 0;
+  gap: var(--space-3);
 }
-.reader-comparison-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  min-width: 0;
+.reader-analysis-option {
+  flex: 1 1 13rem;
+  min-inline-size: 0;
+}
+.reader-analysis-option .ctl-note, .reader-analysis-question {
+  margin-block: var(--space-1) 0;
+  overflow-wrap: anywhere;
 }
 .reader-analysis-controls .form-checkbox {
   display: inline-flex;
@@ -4527,7 +4529,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chip.sev-1 { displa
 }
 .manuscript-reading .chapter-head .meta,
 .manuscript-reading .chapter-toggle,
-.manuscript-reading .strip { display: none; }
+.manuscript-reading :is(.strip, .chapter-comparison-status) { display: none; }
 .manuscript-reading .chapter.collapsed .ptext:not(.text-miss) { display: grid; }
 .manuscript-reading .ptext,
 .manuscript-reading .ptext.open {
@@ -4668,6 +4670,7 @@ button.ctl.analysis-toggle[aria-pressed="true"] { color: var(--accent); border-c
 @keyframes reader-passage-arrival { from { opacity: .25; } 18%, 70% { opacity: 1; } to { opacity: 0; } }
 
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus):not(.manuscript-writing):is(:not(.layer-on), .comparison-on) .strip { display: flex; margin: .6rem 0 1.25rem; }
+.manuscript-reading.workbench-analysis.comparison-on:not(.workbench-overview, .reader-focus, .manuscript-writing, .text-search-active) .chapter:not(.collapsed) > .chapter-comparison-status:not([hidden]) { display: block; }
 .manuscript-reading.workbench-analysis:not(.workbench-overview):not(.reader-focus) .chapter-head .meta { display: block; margin-top: .4rem; font-size: var(--text-note); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }

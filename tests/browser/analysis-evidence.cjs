@@ -871,7 +871,10 @@ async function metricPreferences(browser) {
           'the numeric z score remains in the analysis details');
         assert.equal(await score.isVisible(), false, 'the technical score stays hidden until requested');
         assert.match(await card.locator('.analysis-evidence-comparison-label').textContent(), index === 0 ? /below the chapter median/ : /above the chapter median/);
-        assert.equal(await card.locator('.analysis-evidence-scale').getAttribute('aria-label'), info[1], 'bounded visual scale retains the full paragraph reference explanation');
+        const tooltip = await page.locator(`.chip[data-target="${await target.getAttribute('id')}"]`).getAttribute('data-tip');
+        assert.match(tooltip, /^l\. \d+.*Sentence length: .*words per sentence · (below|above) the chapter median$/);
+        assert.equal(await card.locator('.analysis-evidence-scale').getAttribute('aria-label'), tooltip,
+          'the scale and chapter strip announce the same localized measurement and reference');
         assert.equal(await card.locator('.analysis-evidence-scale').evaluate(node => node.style.getPropertyValue('--evidence-comparison-position')),
           info[5] + '%', 'marker uses the position prepared with the chapter comparison');
         assert.equal(await card.locator('.analysis-evidence-scale').evaluate(node => {
