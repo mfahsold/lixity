@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lixity"
 dynamic = ["version"]
-description = "Local manuscript workspace for close reading, traceable research and linguistic analysis. Compare chapters, inspect passages and share curated reading copies. Browser app, CLI and Python API."
+description = "A local workspace for writing and revising manuscripts. Read the passages behind a measurement, keep research by the text and share the chapters you choose."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"

@@ -7,20 +7,20 @@ For a session with your own manuscript, follow the
 
 ## 1. Installation
 
-The [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#cli-current-release)
-covers the isolated install and how to check or update it.
+Choose the published browser app and CLI or find the desktop test installer for
+your computer. [Installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
 
 ## 2. Starting the workbench
 
-[Running the server](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#running-the-server)
-covers starting the app, opening projects through one local port and finding the
-active installation.
+Open a desktop test build from your application menu. To start the published
+browser app, follow the local service instructions.
+[Start Lixity](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#use-the-interactive-workspace)
 
 ## 3. Opening a manuscript
 
-Use **Open Project** for an existing project. Use **Analyze a manuscript** to
-preview and copy a file into a new project. Check the language and destination
-before importing. [Open or import?](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#open-or-import)
+Connect an existing project folder, copy a manuscript file into a new project
+or start from a blank page.
+[Choose your starting point](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#choose-your-starting-point)
 
 ## 4. The three main workspaces
 

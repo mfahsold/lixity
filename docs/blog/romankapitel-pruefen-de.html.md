@@ -58,6 +58,6 @@ Die öffentliche Demo enthält sechs erfundene englische Hafenkapitel und verkn�
 
 [Die Lixity-Demo öffnen](../demo/report.html) [Deutschsprachiger Einstieg](../guides/first-look-de.html) [Methoden und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
-Über **Schreiben** kannst du in der lokalen App Text bearbeiten, Änderungen rückgängig machen und Entwürfe wiederherstellen. Lixity speichert automatisch in der Projektdatei. Die öffentliche Demo ist schreibgeschützt. [Zur Schreibanleitung (Englisch)](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased)
+Über **Schreiben** kannst du in der lokalen App Text bearbeiten, Änderungen rückgängig machen und Entwürfe wiederherstellen. Lixity speichert automatisch in der Projektdatei. Die öffentliche Demo ist schreibgeschützt. [Zur Schreibanleitung (Englisch)](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
 
 [Alle Leitfäden](../index-de.html#guides)[Artikel](index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

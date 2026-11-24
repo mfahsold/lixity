@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Install Lixity: local manuscript analysis</title>
-<meta name="description" content="Install Lixity on Windows, macOS or Linux from PyPI with uv, open a manuscript and create a local dashboard report. Built-in analysis needs no account or cloud service."/>
+<title>Install Lixity and open your manuscript</title>
+<meta name="description" content="Install Lixity on macOS, Windows or Linux. Start with the published browser app and CLI, or find and verify a desktop test installer."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/installation.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="Install Lixity: local manuscript analysis"/>
-<meta property="og:description" content="Install Lixity on Windows, macOS or Linux from PyPI with uv, open a manuscript and create a local dashboard report. Built-in analysis needs no account or cloud service."/>
+<meta property="og:title" content="Install Lixity and open your manuscript"/>
+<meta property="og:description" content="Install Lixity on macOS, Windows or Linux. Start with the published browser app and CLI, or find and verify a desktop test installer."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/guides/installation.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
@@ -18,8 +18,8 @@
 <meta property="og:image:height" content="1926"/>
 <meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Install Lixity: local manuscript analysis"/>
-<meta name="twitter:description" content="Install Lixity on Windows, macOS or Linux from PyPI with uv, open a manuscript and create a local dashboard report. Built-in analysis needs no account or cloud service."/>
+<meta name="twitter:title" content="Install Lixity and open your manuscript"/>
+<meta name="twitter:description" content="Install Lixity on macOS, Windows or Linux. Start with the published browser app and CLI, or find and verify a desktop test installer."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
 <link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
@@ -29,8 +29,8 @@
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Install Lixity: local manuscript analysis",
-  "description": "Install Lixity on Windows, macOS or Linux from PyPI with uv, open a manuscript and create a local dashboard report. Built-in analysis needs no account or cloud service.",
+  "headline": "Install Lixity and open your manuscript",
+  "description": "Install Lixity on macOS, Windows or Linux. Start with the published browser app and CLI, or find and verify a desktop test installer.",
   "url": "https://mfahsold.github.io/lixity/guides/installation.html",
   "inLanguage": "en",
   "author": {
@@ -75,7 +75,7 @@
     {
       "@type": "ListItem",
       "position": 3,
-      "name": "Install Lixity and open a manuscript locally",
+      "name": "Install Lixity and open your manuscript",
       "item": "https://mfahsold.github.io/lixity/guides/installation.html"
     }
   ]
@@ -91,15 +91,15 @@
 </div></header>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
-<h1>Install Lixity and open a manuscript locally</h1>
-<p>Open your first manuscript with the <a href="#install">published browser app and CLI</a> or follow the <a href="#desktop">desktop instructions</a> for a test installer you received. Lixity works locally without an account. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">installation manual</a> covers updates, optional tools and troubleshooting.</p>
+<h1>Install Lixity and open your manuscript</h1>
+<p>Start with the <a href="#install">published browser app and CLI</a> or <a href="#desktop">try a desktop build</a>. Built-in analysis runs locally without a Lixity account. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">installation manual</a> for updates, optional tools and troubleshooting.</p>
 <p class="updated">Updated <time datetime="2026-11-24">24 November 2026</time></p>
 
 <h2 id="desktop">Desktop downloads</h2>
 <!-- desktop-downloads:start -->
 <p class="notice-box">Desktop installers are in testing. You can start today with the <a href="#install">published local browser app</a>.</p>
 <!-- desktop-downloads:end -->
-<p>A desktop installer includes Python and starts the local engine when you open Lixity. You can use the app straight from your system’s application launcher. The <a href="https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build">test build instructions</a> explain how to obtain and verify a test installer.</p>
+<p>A desktop installer includes Python. Open Lixity from your application menu to start the bundled local engine. <a href="https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build">Find and verify a desktop test installer</a>.</p>
 <nav class="install-platforms" aria-label="Desktop installation by operating system">
 <a class="ctl" href="#macos">macOS</a>
 <a class="ctl" href="#windows">Windows</a>
@@ -134,7 +134,7 @@
 <p class="notice-box">This source guide describes <strong>v0.9.1</strong>. Its changes are listed in the source <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md">release notes</a>. The regular install uses the package published on <a href="https://pypi.org/project/lixity/">PyPI</a>. Check <code>lixity --version</code> and <a href="https://github.com/mfahsold/lixity/releases/latest">Latest on GitHub</a> for the published version. Historical 1.x and 3.x tags predate the version reset.</p>
 
 <h2 id="requirements">What does the published browser app need?</h2>
-<p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on <a href="https://pypi.org/project/lixity/">PyPI</a>; every release also ships a pinned wheel with checksums on <a href="https://github.com/mfahsold/lixity/releases">GitHub Releases</a>, and released versions are archived on Zenodo for citation (concept DOI <a href="https://doi.org/10.5281/zenodo.23390297">10.5281/zenodo.23390297</a>). Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
+<p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It supplies managed Python 3.12 and installs Lixity from <a href="https://pypi.org/project/lixity/">PyPI</a>. You can also find the current wheel and its checksums on <a href="https://github.com/mfahsold/lixity/releases/latest">GitHub Releases</a>. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
 <div class="notice-box"><strong>License:</strong> Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing guide</a>.</div>
 
 <h2 id="install">Install the published browser app</h2>

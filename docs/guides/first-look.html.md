@@ -32,7 +32,7 @@ In the same list, choose **Compare chapters 1 and 2** to see the average words p
 
 1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
 
-2. Choose its **… → Paragraph details → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**. Use **Counted text** to see the marks in the prose.
+2. Choose its **… → Paragraph details → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**.
 
 3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
 
@@ -42,7 +42,7 @@ You have completed the first check when you can explain the contrast in the text
 
 **More controls, marks and chapter comparisons**
 
-Turn on **Analysis** and choose a **Measure**. **Counted text** underlines the words or sentences Lixity counted. **Paragraph comparison** uses a separate marker to show how a paragraph compares with its chapter. Open a mark or choose **Paragraph details → Explain measurement** with the keyboard. Escape closes the card. **How it’s measured** opens the full method.
+Turn on **Analysis** and choose what to inspect. **Text matches** opens counted words or sentences. Under **Reading marks**, choose **Underline counted passages** for marks in the prose or **Mark differing paragraphs** for comparisons within a chapter. Escape closes the evidence card. **How it’s measured** opens the full method.
 
 For a full-manuscript view, open **Analysis overview**. In the development demo, it starts at **Manuscript measurements**. Choose **Review passages**, **Compare chapters** or **Explore patterns** to go deeper. **Back to passage** restores your reading position.
 

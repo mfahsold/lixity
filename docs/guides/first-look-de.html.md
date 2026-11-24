@@ -46,7 +46,7 @@ Die Demo startet in derselben Manuskriptansicht wie die lokale App. Öffne in de
 
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 
-2. Beim Absatz **… → Paragraph details → Explain measurement** öffnen. Die Karte zählt „A board moved.“ als drei Wörter. Unter **Why this is marked** steht der Grund für die Markierung. **What to check while reading** gibt eine Lesefrage. **Counted text** blendet die gezählten Stellen im Text ein.
+2. Beim Absatz **… → Paragraph details → Explain measurement** öffnen. Die Karte zählt „A board moved.“ als drei Wörter. Unter **Why this is marked** steht der Grund für die Markierung. **What to check while reading** gibt eine Lesefrage.
 
 3. Über **opening chapter** in der Aufgabenkarte die Hafenbeschreibung im ersten Kapitel vergleichen. Was ändert sich beim Lesen, nicht nur in der Zahl?
 
@@ -58,7 +58,7 @@ Unter **Try the draft examples** führt die Demo zu weiteren bewusst eingebauten
 
 In der Entwicklungsdemo öffnet **Analysis overview** zunächst **Manuscript measurements**. Wähle **Review passages**, **Compare chapters** oder **Explore patterns**, um ins Detail zu gehen. Mit **Back to passage** liest du an derselben Stelle weiter.
 
-Im Satzrhythmus führt eine Längengruppe zu einem gezählten Satz. Unter **Motifs & repetition** kannst du zwischen den Fundstellen einer Wortfolge wechseln. **Paragraph comparison** zeigt separat, wie ein Absatz im Vergleich zu seinem Kapitel abschneidet. **How it’s measured** öffnet die Erklärung zur jeweiligen Messung.
+Mit **Fundstellen** (**Text matches** in der englischen Demo) öffnest du gezählte Wörter oder Sätze. Unter **Lesemarken** kannst du die gezählten Stellen unterstreichen oder vom Kapitel abweichende Absätze markieren. **How it’s measured** erklärt die jeweilige Messung.
 
 <a id="studiomonitor"></a>
 

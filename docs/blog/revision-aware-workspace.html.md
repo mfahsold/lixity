@@ -62,6 +62,6 @@ In the local app, write a short change and wait for **Saved locally**. Close wri
 
 The released reading workflow can already be explored without an account or manuscript upload. The demo uses a fictional harbour manuscript with linked research notes.
 
-[Explore the read-only Lixity workspace](../demo/report.html) [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased) [Source code](https://github.com/mfahsold/lixity)
+[Explore the read-only Lixity workspace](../demo/report.html) [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript) [Source code](https://github.com/mfahsold/lixity)
 
 [All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

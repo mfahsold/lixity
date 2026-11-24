@@ -58,6 +58,6 @@ The public demo contains six invented English harbour chapters with linked case 
 
 [Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
-Use **Write** in the local app to edit with undo, local autosave and draft recovery. The public demo is read-only. [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript-unreleased)
+Use **Write** in the local app to edit with undo, local autosave and draft recovery. The public demo is read-only. [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
 
 [All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

@@ -89,25 +89,25 @@ continue and initialize Research if it is still absent.
 The labels below follow the current source and the demo. The published package
 can show older labels. [Check your installed version](INSTALLATION.md#cli-current-release)
 
-1. Read a paragraph in **Manuscript**. Turn on **Analysis**, open **Measure**,
-   and choose **Sentence length**. **Analysis help (?)** explains the selected
-   measure and can open the count for the passage in view.
-2. Use **Counted text** to display the exact words or sentences where the
-   measurement can show a source span. Open a mark directly or use the
-   paragraph menu **… → Paragraph details → Explain measurement**. The menu also
-   works with **Analysis** off and turns analysis on when you choose **Explain
-   measurement**.
+1. Read a paragraph in **Manuscript**. Turn on **Analysis** and choose
+   **Sentence length** under **Inspect passages**. **Analysis help (?)** explains
+   the measurement.
+2. Choose **Text matches** to open a counted sentence. Use the arrows in the
+   card to continue through the matches in your current reading scope. To
+   mark them throughout the visible prose, open **Reading marks** and choose
+   **Underline counted passages**. To inspect the paragraph you are already
+   reading, use **… → Paragraph details → Explain measurement**.
 3. Read **Why this is marked** and **What to check while reading**. For sentence
    length, “A board moved.” counts as three words. In **Sticky sentences**, the
    card highlights the contributing function words and shows the rule and the
    count. Ask whether the sentence's connections are clear when you read it
    within its paragraph. Use **How it’s measured** for the full method.
 
-**Paragraph comparison** is a separate display. It compares a paragraph
-measurement with that chapter when a comparison is available. A measured
-zero means the rule found no matches. An unavailable comparison can reflect a
-short sample. When a result has no verified source span, **What is counted**
-shows the evidence card's coverage.
+**Mark differing paragraphs** compares a paragraph's measurement with its
+chapter. The comparison needs enough eligible paragraphs and enough variation.
+When the comparison scale is unavailable, **Matches in this chapter** opens
+the counted passages that can still be located. For a word pattern, a measured
+zero means the rule counted no matches.
 [Counted text and paragraph comparison](WORKSPACE.md#counted-text-and-paragraph-comparison)
 
 Open **Analysis overview** to compare chapters or explore patterns.

@@ -36,6 +36,7 @@ let origin;
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
 const demoSecondQuote = 'Fresh scratches crossed the lock';
+const germanHeadline = require('../../docs/locales/de.json').headline;
 
 function manuscriptReviewItem(page, quote = demoQuote) {
   return page.locator('#research-manuscript-review .manuscript-link-review-item')
@@ -1463,7 +1464,7 @@ async function checkSandboxQuotationPairs(page) {
             await expect(picker.locator('nav')).toBeVisible();
             await picker.locator('a[hreflang=de]').click();
             await expect(page).toHaveURL(origin + '/lixity/index-de.html');
-            await expect(page.locator('h1')).toHaveText(/Überarbeite dein Manuskript\.\s*Behalte die Recherche im Blick\./);
+            await expect(page.locator('h1')).toHaveText(germanHeadline, {useInnerText: true});
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
             await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');

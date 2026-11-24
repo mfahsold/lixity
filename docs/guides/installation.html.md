@@ -1,6 +1,6 @@
-# Install Lixity and open a manuscript locally
+# Install Lixity and open your manuscript
 
-Open your first manuscript with the [published browser app and CLI](#install) or follow the [desktop instructions](#desktop) for a test installer you received. Lixity works locally without an account. The [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) covers updates, optional tools and troubleshooting.
+Start with the [published browser app and CLI](#install) or [try a desktop build](#desktop). Built-in analysis runs locally without a Lixity account. See the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for updates, optional tools and troubleshooting.
 
 Updated 24 November 2026
 
@@ -10,7 +10,7 @@ Updated 24 November 2026
 
 Desktop installers are in testing. You can start today with the [published local browser app](#install).
 
-A desktop installer includes Python and starts the local engine when you open Lixity. You can use the app straight from your system’s application launcher. The [test build instructions](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build) explain how to obtain and verify a test installer.
+A desktop installer includes Python. Open Lixity from your application menu to start the bundled local engine. [Find and verify a desktop test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
 
 <a id="macos"></a>
 
@@ -60,7 +60,7 @@ This source guide describes **v0.9.1**. Its changes are listed in the source [re
 
 ## What does the published browser app need?
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on [PyPI](https://pypi.org/project/lixity/); every release also ships a pinned wheel with checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases), and released versions are archived on Zenodo for citation (concept DOI [10.5281/zenodo.23390297](https://doi.org/10.5281/zenodo.23390297)). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It supplies managed Python 3.12 and installs Lixity from [PyPI](https://pypi.org/project/lixity/). You can also find the current wheel and its checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
 
 **License:**
 
