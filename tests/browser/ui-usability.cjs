@@ -57,13 +57,15 @@ server.serve_forever()
     const overview=page.locator('#scenes .scene-overview');
     await expect(overview.locator('tbody tr')).toHaveCount(2);
     await overview.screenshot({path:path.join(artifacts,`scenes-${width}.png`)});
-    const numericCells=await overview.locator('tbody td.num').evaluateAll(cells=>cells.map(cell=>{
+    for (const row of await overview.locator('tbody tr').all()) {
+      await expect(row.locator('td.num .scene-track')).toHaveCount(2);
+    }
+    const trackValues=await overview.locator('tbody .scene-track > span:last-child').evaluateAll(values=>values.map(cell=>{
       const range=document.createRange();range.selectNodeContents(cell);
       return {text:cell.textContent,lines:new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size};
     }));
-    assert.equal(numericCells.length,12,'Both scenes expose six numeric values');
-    assert.ok(numericCells.every(cell=>cell.lines===1),
-      'Scene numbers and their units remain on one line: '+JSON.stringify(numericCells));
+    assert.ok(trackValues.every(value=>value.lines===1),
+      'The scene track values and their units remain on one line: '+JSON.stringify(trackValues));
     if(width===320) {
       await overview.focus();await page.keyboard.press('ArrowRight');
       await expect.poll(()=>overview.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
