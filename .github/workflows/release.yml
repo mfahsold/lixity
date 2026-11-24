@@ -13,7 +13,71 @@ permissions:
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 jobs:
+  preflight:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      desktop_run_id: ${{ steps.desktop.outputs.run_id }}
+      desktop_artifact_id: ${{ steps.desktop.outputs.artifact_id }}
+      desktop_qualification_digest: ${{ steps.desktop.outputs.qualification_digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Identify the tagged source and release state
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/release_channels.py inspect --root . --tag "$RELEASE_TAG" \
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT"
+      - name: Verify release notes before running the release checks
+        if: steps.release_state.outputs.state != 'published'
+        run: python scripts/check_release.py --source-only --require-release-notes --tag "$RELEASE_TAG"
+      - name: Identify the signed desktop bundle for this tag
+        id: desktop
+        if: steps.release_state.outputs.state != 'published' && vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DESKTOP_RUN_ID: ${{ vars.DESKTOP_RELEASE_RUN_ID }}
+          DESKTOP_QUALIFICATION: ${{ vars.DESKTOP_RELEASE_QUALIFICATION }}
+        run: |
+          [[ "$DESKTOP_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Set DESKTOP_RELEASE_RUN_ID."; exit 1; }
+          printf '%s\n' "$DESKTOP_QUALIFICATION" |
+            jq -es --arg tag "$RELEASE_TAG" --arg sha "$GITHUB_SHA" \
+              'length == 1 and (.[0] | .tag == $tag and .source_sha == $sha)' >/dev/null || {
+              echo "::error::DESKTOP_RELEASE_QUALIFICATION must match the tag and source commit."
+              exit 1
+            }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DESKTOP_RUN_ID" |
+            jq -e --arg sha "$GITHUB_SHA" '
+              .path == ".github/workflows/desktop-release.yml" and
+              .event == "workflow_dispatch" and .conclusion == "success" and
+              .head_branch == "main" and .head_sha == $sha' >/dev/null || {
+              echo "::error::Choose a successful desktop workflow run on main for this source commit."
+              exit 1
+            }
+          artifact_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DESKTOP_RUN_ID/artifacts?name=lixity-desktop-release-bundle" |
+            jq -er '.artifacts | map(select(.name == "lixity-desktop-release-bundle" and .expired == false)) |
+              if length == 1 then .[0] else empty end |
+              select(.digest | strings | test("^sha256:[0-9a-f]{64}$")) | .id | numbers')" || {
+            echo "::error::The selected run must retain one unexpired signed desktop release bundle with its SHA-256 digest."
+            exit 1
+          }
+          qualification_digest="$(printf '%s' "$DESKTOP_QUALIFICATION" | sha256sum | cut -d ' ' -f1)"
+          printf 'run_id=%s\nartifact_id=%s\nqualification_digest=%s\n' \
+            "$DESKTOP_RUN_ID" "$artifact_id" "$qualification_digest" >> "$GITHUB_OUTPUT"
+
   source_checks:
+    needs: preflight
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -22,12 +86,14 @@ jobs:
       stage_candidate: true
 
   browser_checks:
+    needs: preflight
     if: github.event_name == 'push'
     permissions:
       contents: read
     uses: ./.github/workflows/browser.yml
 
   native_checks:
+    needs: preflight
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -36,13 +102,14 @@ jobs:
       scope: full
 
   dependency_checks:
+    needs: preflight
     if: github.event_name == 'push'
     permissions:
       contents: read
     uses: ./.github/workflows/dependencies.yml
 
   publish:
-    needs: [source_checks, browser_checks, native_checks, dependency_checks]
+    needs: [preflight, source_checks, browser_checks, native_checks, dependency_checks]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -56,7 +123,6 @@ jobs:
       cancel-in-progress: false
     env:
       GH_TOKEN: ${{ github.token }}
-      DESKTOP_RELEASE_TAG: ${{ vars.DESKTOP_RELEASE_TAG }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -73,10 +139,8 @@ jobs:
       - name: Recover immutable published artifacts on a rerun
         if: steps.release_state.outputs.state == 'published'
         run: |
-          args=()
-          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop); fi
           python scripts/release_channels.py recover --root . --tag "$RELEASE_TAG" \
-            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
+            --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist
       - name: Fetch the verified release candidate from this run
         if: steps.release_state.outputs.state != 'published'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -102,22 +166,24 @@ jobs:
         with:
           subject-checksums: dist/SHA256SUMS
           sbom-path: .release-candidate/lixity-release.cdx.json
+      - name: Fetch the signed desktop bundle identified by preflight
+        if: steps.release_state.outputs.state != 'published' && needs.preflight.outputs.desktop_artifact_id != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.preflight.outputs.desktop_run_id }}
+          artifact-ids: ${{ needs.preflight.outputs.desktop_artifact_id }}
+          path: ${{ runner.temp }}/desktop-candidate-archive
+          skip-decompress: true
       - name: Stage qualified desktop assets from the reviewed candidate
-        if: steps.release_state.outputs.state != 'published' && vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG
+        if: steps.release_state.outputs.state != 'published' && needs.preflight.outputs.desktop_artifact_id != ''
         env:
-          DESKTOP_RUN_ID: ${{ vars.DESKTOP_RELEASE_RUN_ID }}
           DESKTOP_QUALIFICATION: ${{ vars.DESKTOP_RELEASE_QUALIFICATION }}
+          DESKTOP_QUALIFICATION_DIGEST: ${{ needs.preflight.outputs.desktop_qualification_digest }}
         run: |
-          [[ "$DESKTOP_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Set DESKTOP_RELEASE_RUN_ID."; exit 1; }
-          test -n "$DESKTOP_QUALIFICATION" || { echo "::error::Set DESKTOP_RELEASE_QUALIFICATION."; exit 1; }
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$DESKTOP_RUN_ID" |
-            jq -e --arg sha "$GITHUB_SHA" '
-              .path == ".github/workflows/desktop-release.yml" and
-              .event == "workflow_dispatch" and .conclusion == "success" and
-              .head_branch == "main" and .head_sha == $sha' >/dev/null
-          gh run download "$DESKTOP_RUN_ID" --repo "$GITHUB_REPOSITORY" \
-            --name lixity-desktop-release-bundle --dir "$RUNNER_TEMP/desktop-candidate"
-          printf '%s\n' "$DESKTOP_QUALIFICATION" > "$RUNNER_TEMP/desktop-qualification.json"
+          python -m zipfile -e "$RUNNER_TEMP/desktop-candidate-archive/"* "$RUNNER_TEMP/desktop-candidate"
+          printf '%s' "$DESKTOP_QUALIFICATION" > "$RUNNER_TEMP/desktop-qualification.json"
+          printf '%s  %s\n' "$DESKTOP_QUALIFICATION_DIGEST" "$RUNNER_TEMP/desktop-qualification.json" | sha256sum --check -
           python scripts/release_channels.py stage-desktop --root . --tag "$RELEASE_TAG" \
             --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" \
             --artifacts-dir "$RUNNER_TEMP/desktop-candidate" \
@@ -147,15 +213,16 @@ jobs:
         if: steps.release_state.outputs.state != 'published'
         run: |
           args=()
-          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop --desktop-dist dist-desktop); fi
+          if [[ -n "$DESKTOP_ARTIFACT_ID" ]]; then args+=(--require-desktop --desktop-dist dist-desktop); fi
           python scripts/release_channels.py verify-draft --root . --tag "$RELEASE_TAG" \
             --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+        env:
+          DESKTOP_ARTIFACT_ID: ${{ needs.preflight.outputs.desktop_artifact_id }}
       - name: Verify the immutable GitHub publication
         run: |
           args=()
-          if [[ "$DESKTOP_RELEASE_TAG" == "$RELEASE_TAG" ]]; then args+=(--require-desktop); fi
-          if [[ -d dist-desktop ]]; then args+=(--desktop-dist dist-desktop); fi
+          if [[ -d dist-desktop ]]; then args+=(--require-desktop --desktop-dist dist-desktop); fi
           python scripts/release_channels.py verify-github --root . --tag "$RELEASE_TAG" \
             --expected-commit "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --dist dist "${args[@]}"
       - name: Stage the same verified artifacts for the PyPI job
@@ -256,3 +323,4 @@ jobs:
     uses: ./.github/workflows/pages.yml
     with:
       source_ref: ${{ github.sha }}
+      release_tag: ${{ github.ref_name }}

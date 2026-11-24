@@ -90,6 +90,39 @@ def test_valid_release_and_deterministic_checksums(release_script, release_tree)
     release_script.validate(root, dist, "v0.3.0")
 
 
+def test_release_note_preflight_requires_reviewed_notes_for_the_tag(release_script, release_tree):
+    root, _, _ = release_tree
+    tag = "v0.3.0"
+    notes = root / "docs" / "releases" / f"{tag}.md"
+    notes.parent.mkdir(parents=True)
+    with pytest.raises(ValueError, match=r"missing release notes for v0\.3\.0"):
+        release_script.verify_release_notes(root, tag)
+    for text in ("  \n", "Pending release.\n", "- Release validation (pending)\n"):
+        notes.write_text(text)
+        with pytest.raises(ValueError, match="pending placeholders"):
+            release_script.verify_release_notes(root, tag)
+    notes.write_text("# Lixity v0.3.0\n\nReviewed release notes.\n")
+    release_script.verify_release_notes(root, tag)
+
+
+@pytest.mark.parametrize("stale_path", ["Cargo.toml", "Cargo.lock", "src-tauri/tauri.conf.json"])
+def test_desktop_source_preflight_checks_each_installer_version_pin(release_script, release_tree, stale_path):
+    root, _, _ = release_tree
+    desktop = root / "desktop"
+    (desktop / "src-tauri").mkdir(parents=True)
+    sources = {
+        "Cargo.toml": '[workspace.package]\nversion = "0.3.0"\n',
+        "Cargo.lock": '[[package]]\nname = "lixity-desktop"\nversion = "0.3.0"\n',
+        "src-tauri/tauri.conf.json": '{"version": "0.3.0"}\n',
+    }
+    for path, text in sources.items():
+        (desktop / path).write_text(text)
+    release_script.verify_desktop_version(root, "0.3.0")
+    (desktop / stale_path).write_text(sources[stale_path].replace("0.3.0", "0.2.0"))
+    with pytest.raises(ValueError, match=r"version '0\.2\.0' does not match source version 0\.3\.0"):
+        release_script.verify_desktop_version(root, "0.3.0")
+
+
 @pytest.mark.parametrize("mutation", ["missing", "malformed", "incomplete", "duplicate",
                                      "path", "wrong hash", "tampered artifact"])
 def test_declared_checksums_fail_closed_without_rewriting_evidence(
@@ -237,8 +270,13 @@ def test_source_preflight_does_not_touch_artifacts(
     assert sentinel.read_text() == "preserve me"
 
 
-@pytest.mark.parametrize("tag", [None, "v0.0.0", "v0.3.0"])
-def test_release_make_rejects_bad_tag_before_starting_heavy_checks(tmp_path, tag):
+@pytest.mark.parametrize(("tag", "notes", "expected"), [
+    (None, None, "Set RELEASE_TAG"),
+    ("v0.0.0", None, "does not match source version"),
+    ("v0.3.0", None, "missing release notes"),
+    ("v0.3.0", "Pending release.\n", "pending placeholders"),
+])
+def test_release_make_rejects_unusable_input_before_starting_heavy_checks(tmp_path, tag, notes, expected):
     make = shutil.which("make")
     if make is None:
         pytest.skip("GNU make is optional on this platform")
@@ -249,6 +287,10 @@ def test_release_make_rejects_bad_tag_before_starting_heavy_checks(tmp_path, tag
     version = tmp_path / "src/lixity/_version.py"
     version.parent.mkdir(parents=True)
     version.write_text('__version__ = "0.3.0"\n')
+    if notes:
+        release_notes = tmp_path / "docs/releases/v0.3.0.md"
+        release_notes.parent.mkdir(parents=True)
+        release_notes.write_text(notes)
     probe = tmp_path / "probe.mk"
     probe.write_text(
         "lint typecheck test docs-generated-check audit:\n"
@@ -262,8 +304,6 @@ def test_release_make_rejects_bad_tag_before_starting_heavy_checks(tmp_path, tag
     assert result.returncode != 0
     output = result.stdout + result.stderr
     assert "HEAVY_CHECK_STARTED" not in output
-    expected = ("Set RELEASE_TAG" if tag is None else "Missing release notes"
-                if tag == "v0.3.0" else "does not match source version")
     assert expected in output
 
 

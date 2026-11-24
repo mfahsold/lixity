@@ -38,6 +38,45 @@ def source_version(root: Path, tag: str | None = None) -> str:
     return version
 
 
+def verify_release_notes(root: Path, tag: str) -> None:
+    """Require the release notes for the matching source version to be reviewed."""
+    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag):
+        raise ValueError("release notes require a stable vX.Y.Z tag")
+    notes = root / "docs" / "releases" / f"{tag}.md"
+    if not notes.is_file():
+        raise ValueError(f"missing release notes for {tag}")
+    text = notes.read_text(encoding="utf-8")
+    if not text.strip() or "(pending)" in text or "Pending release." in text:
+        raise ValueError(f"release notes for {tag} still contain pending placeholders")
+
+
+def verify_desktop_version(root: Path, version: str) -> None:
+    """Check the version used by the Rust workspace and native installer builds."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+
+    desktop = root / "desktop"
+    config = tomllib.loads((desktop / "Cargo.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((desktop / "Cargo.lock").read_text(encoding="utf-8"))
+    tauri = json.loads((desktop / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
+    workspace = config.get("workspace")
+    package = workspace.get("package") if isinstance(workspace, dict) else None
+    locked_packages = lock.get("package")
+    if not isinstance(locked_packages, list):
+        raise ValueError("desktop/Cargo.lock does not declare a package list")
+    versions = {
+        "desktop/Cargo.toml": package.get("version") if isinstance(package, dict) else None,
+        "desktop/Cargo.lock": next((item.get("version") for item in locked_packages
+                                    if isinstance(item, dict) and item.get("name") == "lixity-desktop"), None),
+        "desktop/src-tauri/tauri.conf.json": tauri.get("version") if isinstance(tauri, dict) else None,
+    }
+    for path, actual in versions.items():
+        if actual != version:
+            raise ValueError(f"{path} version {actual!r} does not match source version {version}")
+
+
 def check_metadata(contents: bytes, version: str) -> None:
     metadata = Parser().parsestr(contents.decode("utf-8"))
     if metadata.get_all("Name") != ["lixity"] or metadata.get_all("Version") != [version]:
@@ -330,16 +369,27 @@ def main() -> None:
                         help="Save pip's smoke-install report outside dist (requires --build --smoke)")
     parser.add_argument("--source-only", action="store_true",
                         help="Check source/tag identity without building or reading artifacts")
+    parser.add_argument("--require-release-notes", action="store_true",
+                        help="Check matching release notes for pending placeholders (requires --source-only)")
+    parser.add_argument("--desktop-version", action="store_true",
+                        help="Check native installer version pins (requires --source-only)")
     args = parser.parse_args()
     if args.source_only and (args.build or args.smoke):
         parser.error("--source-only cannot build or smoke-test artifacts")
+    if (args.require_release_notes or args.desktop_version) and not args.source_only:
+        parser.error("--require-release-notes and --desktop-version require --source-only")
     if args.install_report is not None and not (args.build and args.smoke):
         parser.error("--install-report requires --build --smoke")
     root = Path(__file__).resolve().parents[1]
     dist = args.dist.absolute()
     try:
         if args.source_only:
-            print(f"release source verified: {source_version(root, args.tag)}")
+            version = source_version(root, args.tag)
+            if args.require_release_notes:
+                verify_release_notes(root, f"v{version}")
+            if args.desktop_version:
+                verify_desktop_version(root, version)
+            print(f"release source verified: {version}")
             return
         if args.build:
             build(root, dist, args.tag, smoke_wheel=args.smoke, install_report=args.install_report)

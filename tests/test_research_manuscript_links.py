@@ -1437,3 +1437,37 @@ def test_reconcile_manuscript_links_accepts_new_quote_in_single_batch_commit(man
     assert after["links"][0]["anchor_state"] == "resolved"
     assert after["links"][0]["anchor"]["quote"] == "The room closed at midnight."
 
+
+def test_research_gaps_excludes_retracted_manuscript_links_from_anchored_claims(manuscript_archive):
+    project, manuscript, claim, dossier = manuscript_archive
+    other = api.create_claim(
+        project, title="Visitor", statement="A visitor arrived.", dossier_id=dossier
+    )["claim_id"]
+    first_link = save_link(manuscript_archive)
+    save_link((project, manuscript, other, dossier), selection=selection("reading room"))
+
+    before = api.research_gaps(project)
+    assert before["schema_version"] == "research-gaps-local/1"
+    assert before["summary"]["total_claims"] == 2
+    assert before["summary"]["unanchored_claims"] == 0
+    assert before["unanchored_claims"] == []
+
+    snapshot = Repository(project).snapshot()
+    api.retract_manuscript_link(
+        project,
+        manuscript,
+        first_link["link_id"],
+        expected_revision=1,
+        reason="Retracted during gap audit",
+        expected_project_id=snapshot.project.id,
+        expected_snapshot=snapshot.digest,
+    )
+
+    after = api.research_gaps(project)
+    assert after["schema_version"] == "research-gaps-local/1"
+    assert after["summary"]["unanchored_claims"] == 1
+    assert [entry["claim_id"] for entry in after["unanchored_claims"]] == [claim]
+    assert first_link["link_id"] not in [row["link_id"] for row in api.list_manuscript_links(project)["links"]]
+    history = api.list_manuscript_links(project, include_retracted=True)["links"]
+    retracted_row = next(row for row in history if row["link_id"] == first_link["link_id"])
+    assert retracted_row["state"] == "retracted"

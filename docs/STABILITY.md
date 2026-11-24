@@ -509,7 +509,7 @@ Measured values remain available for passage review.
 Style axes now use PCA of standardized tied midranks on one common complete
 chapter set, with ridge shrinkage $(1-\lambda)C + \lambda I$ when $n \le p$ or
 $\lambda_{\min} \le 10^{-6}\lambda_{\max}$ and regularized Mahalanobis distances
-($D_M$) per complete chapter. **Unreleased:** the distance now uses the same
+($D_M$) per complete chapter. **Since v0.9.1:** the distance uses the same
 standardized midrank rows as the covariance. Earlier builds could instead use
 noise-adjusted z* cells, yielding an incoherent distance; historical values must
 be recomputed. Synthetic tests check a closed-form collinear solution, the

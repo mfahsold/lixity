@@ -1389,10 +1389,11 @@ def _cmd_analysis_report(
             plateaus = scene_report.get("pacing_plateaus", [])
             if plateaus:
                 for p in plateaus:
+                    mean_asl = "—" if p["mean_asl"] is None else num(p["mean_asl"], resolved.key, 2)
                     print(safe_text(
                         f"  {labels['scene_pacing_plateaus']} · {p['start_id']}–{p['end_id']} · "
                         f"{whole(p['scene_count'])} · {labels['scene_mean_words']}: "
-                        f"{num(p['mean_asl'], resolved.key, 2)} · {labels['scene_plateau_' + p['reason']]}"
+                        f"{mean_asl} · {labels['scene_plateau_' + p['reason']]}"
                     ))
             planned_items = scene_report.get("planned_items", [])
             if planned_items:

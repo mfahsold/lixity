@@ -221,14 +221,25 @@ print(json.dumps(api.ingest(project, source, source_id=sys.argv[2], allow_retent
       await expect(page.locator('#research-comparison-source')).toHaveAttribute('data-source-version', refreshed.source_version_id);
       await expect(page.locator('#research-grounding-results')).toContainText(refreshed.source_version_id);
       await page.screenshot({path:path.join(artifacts, `comparison-${width}.png`)});
-      // Malformed/unavailable measurements must never become measured zeroes.
+      // Cross-language or unavailable measurements must never become measured zeroes.
       await page.route('**/api/research-compare', async route => {
         const response = await route.fetch(), json = await response.json();
-        json.summary = {jaccard_similarity:null, overlap_coefficient:null,
-          shared_types:null, source_content_words:null, manuscript_content_words:null};
+        json.schema_version = 'research-comparison-local/2';
+        json.meta = Object.assign({}, json.meta, {
+          source_language: 'de', manuscript_language: 'en', lexical_comparable: false,
+        });
+        json.comparison_limits = ['cross_language_lexical_comparison'];
+        json.summary = Object.assign({}, json.summary, {
+          jaccard_similarity: null, overlap_coefficient: null,
+          shared_types: null, source_exclusive_types: null, manuscript_exclusive_types: null,
+        });
+        json.lexical_overlap = {top_shared_terms: [], top_source_exclusive: []};
+        json.keyness = {source_key_terms: [], manuscript_key_terms: []};
+        json.chapter_grounding = [];
         await route.fulfill({response,json});
       });
       await page.locator('#r-ground-btn').click();
+      await expect(page.locator('#research-grounding-results .research-comparison-warning')).toBeVisible();
       const details = page.locator('#research-grounding-results > .research-card > details');
       await details.locator(':scope > summary').click();
       await expect(details.locator('[role=status]')).toBeVisible();
@@ -236,7 +247,7 @@ print(json.dumps(api.ingest(project, source, source_id=sys.argv[2], allow_retent
       await expect(details.locator('[data-comparison-version]')).toContainText(refreshed.source_version_id);
       const values = await details.locator('.grounding-kpi-val').allTextContents();
       assert.equal(values.length, 4);
-      assert.ok(values.every(value => !/[0-9]|NaN/.test(value)), 'Missing comparison measurements remain unknown');
+      assert.ok(values.slice(0, 3).every(value => !/[0-9]|NaN/.test(value)), 'Cross-language similarity KPIs remain unknown');
       await page.unroute('**/api/research-compare');
       await page.locator('#research-tool-close').click();
       await page.locator('[data-rtab=claims]').click();

@@ -6,7 +6,116 @@ from itertools import pairwise
 
 import pytest
 
+from lixity.math_core import (
+    adjusted_boxplot_fences,
+    binomial_se_percent,
+    huber_location,
+    poisson_se_per_mille,
+    ratio_or_zero,
+    robust_z,
+    significance_z,
+)
 from lixity.style_fingerprint import dunning_g2, lag1_autocorrelation
+
+
+@pytest.mark.parametrize(("numerator", "denominator", "scale"), [
+    (1e-308, 1e308, 1e308),
+    (1.0, 1e-320, 1e-20),
+    (math.ulp(0.0), 2.0, 4.0),
+    (-math.nextafter(math.inf, 0.0), 0.5, 0.5),
+    (1.0, 10**500, 1e308),
+], ids=["underflow", "overflow", "subnormal", "float-max", "long-denominator"])
+def test_scaled_ratio_retains_representable_result(numerator, denominator, scale):
+    with localcontext() as context:
+        context.prec = 100
+        expected = Decimal(numerator) * Decimal(scale) / Decimal(denominator)
+    assert ratio_or_zero(numerator, denominator, scale=scale) == float(expected)
+
+
+@pytest.mark.parametrize(("pct", "count"), [
+    (0.0, 10**163),
+    (100.0, 10**16),
+    (100.0, 10**308),
+    (100.0, 10**324),
+    (50.0, 10**500),
+    (math.ulp(0.0), 100),
+    (math.nextafter(100.0, 0.0), 100),
+], ids=["lower-tail", "upper-tail", "float-limit", "subnormal-tail", "long-count", "tiny-share", "near-one"])
+def test_jeffreys_standard_error_preserves_small_positive_tails(pct, count):
+    with localcontext() as context:
+        context.prec = 600
+        probability = Decimal.from_float(pct) / 100
+        if pct == 0.0:
+            probability = Decimal("0.5") / (count + 1)
+        elif pct == 100.0:
+            probability = (Decimal(count) + Decimal("0.5")) / (count + 1)
+        expected = (probability * (1 - probability) / count).sqrt() * 100
+    assert binomial_se_percent(pct, count) == pytest.approx(float(expected), rel=2e-15, abs=0)
+
+
+def test_poisson_standard_error_preserves_representable_density_with_long_denominator():
+    words = 10**320
+    with localcontext() as context:
+        context.prec = 100
+        expected = Decimal("0.5").sqrt() * 1000 / words
+    assert poisson_se_per_mille(0, words) == pytest.approx(float(expected), rel=1e-15, abs=0)
+
+
+def test_standardized_scores_preserve_ratios_at_subnormal_scales():
+    unit = math.ulp(0.0)
+    with localcontext() as context:
+        context.prec = 100
+        spacing = Decimal.from_float(unit)
+        expected_significance = spacing / (spacing**2 + spacing**2).sqrt()
+        expected_robust = spacing / (Decimal("1.4826") * spacing)
+    assert significance_z(unit, 0.0, unit, unit) == pytest.approx(float(expected_significance), rel=1e-15)
+    assert robust_z(unit, 0.0, unit) == pytest.approx(float(expected_robust), rel=1e-15)
+
+
+@pytest.mark.parametrize("direction", [1, -1])
+def test_adjusted_boxplot_retains_finite_fence_when_iqr_overflows(direction):
+    sample = sorted(direction * value * 1e307 for value in (-17, -17, -15, -7, -1, 4, 5, 10, 11, 11, 14))
+    with localcontext() as context:
+        context.prec = 100
+        values = list(map(Decimal.from_float, sample))
+        centre = values[5]
+        q1 = (values[2] + values[3]) / 2
+        q3 = (values[7] + values[8]) / 2
+        kernels = sorted(
+            (high + low - 2 * centre) / (high - low) if high != low else Decimal(0)
+            for low in values[:6] for high in values[5:]
+        )
+        skew = (kernels[17] + kernels[18]) / 2
+        adjustment = Decimal("1.5") * (-4 * abs(skew)).exp() * (q3 - q1)
+        expected = q3 + adjustment if direction == 1 else q1 - adjustment
+    lower, upper = adjusted_boxplot_fences(sample)
+    assert (upper if direction == 1 else lower) == pytest.approx(float(expected), rel=2e-15, abs=0)
+
+
+@pytest.mark.parametrize("sample", [
+    [1e308, 1.1e308, 1.2e308],
+    [8e307, 9e307, 1e308, 1.15e308, 1.65e308],
+    [-1e308, -1e308, 1.1e308, 1.7e308],
+])
+def test_huber_location_matches_clipped_score_root_at_finite_extremes(sample):
+    from statistics import median
+
+    with localcontext() as context:
+        context.prec = 100
+        values = list(map(Decimal.from_float, sample))
+        centre = median(values)
+        cutoff = Decimal("1.345") * Decimal("1.4826") * median(abs(value - centre) for value in values)
+        lo, hi = min(values), max(values)
+        # Solve the Huber score equation, independently of reweighting.
+        for _ in range(120):
+            trial = (lo + hi) / 2
+            score = sum(max(-cutoff, min(cutoff, value - trial)) for value in values)
+            if score > 0:
+                lo = trial
+            else:
+                hi = trial
+        expected = (lo + hi) / 2
+    assert huber_location(sample, tol=1e-12, max_iter=200) == pytest.approx(float(expected), rel=2e-12, abs=0)
 
 
 def decimal_lag1(values):

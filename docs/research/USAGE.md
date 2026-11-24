@@ -851,6 +851,10 @@ explicit links by claim ID and the linked claim revision's pinned dossier ID,
 from the same archive snapshot as the claim list. A changed snapshot or failed
 read makes the count unavailable. Zero means no matching active saved link in
 that snapshot; it does not establish that the claim is unused in the manuscript.
+Retracting a link (`state: "retracted"`) removes it from active quote counts and
+causes `research-gaps` (`lixity_research_gaps`) to report the claim under
+`unanchored_claims` if no other active, non-withdrawn link remains, while the
+retracted link revision stays inspectable in history (`--include-retracted`).
 Newer claim/dossier revisions do not silently change an older link's association.
 Counts include links pinned to other saved versions of the same logical dossier;
 the reader marks that version difference explicitly.
@@ -2085,10 +2089,23 @@ both a manuscript path and `--language` needs no project configuration read.
 The Python API keeps its English default unless `language` is supplied. Check
 the returned `manuscript_language`, `lexical_comparable` and comparison limits.
 
-Cross-language comparisons retain numbers but set `meta.lexical_comparable: false`
-and `cross_language_lexical_comparison` in `comparison_limits`; do not read lexical
-scores as comparable coverage. Guiraud/register contrasts depend on length,
-language and discourse mode. Matching a source is not a writing-quality objective.
+Cross-language comparisons (`schema_version: "research-comparison-local/2"`)
+keep per-side raw counts (`source_tokens`, `source_content_words`,
+`manuscript_tokens`, `manuscript_content_words`, `source_vocabulary_types`,
+`manuscript_vocabulary_types`, per-chapter `words` and `content_words`, and
+per-side `register_contrast` measurements), set `meta.lexical_comparable: false`
+and `cross_language_lexical_comparison` in `comparison_limits`, and return
+`null` / `[]` for cross-corpus lexical overlap and similarity
+(`shared_types`, `source_exclusive_types`, `manuscript_exclusive_types`,
+`jaccard_similarity`, `overlap_coefficient`, `top_shared_terms`,
+`top_source_exclusive`), Dunning $G^2$ keyness lists (`source_key_terms`,
+`manuscript_key_terms`), `register_contrast[*].delta`, and per-chapter
+`overlap_types`, `overlap_tokens`, `grounding_density`, `top_terms`, and
+`key_terms_present`. The Markdown renderer displays `–` for those unavailable
+cells alongside the limitation notice. Historical `research-comparison-local/1`
+outputs remain valid in saved exports, while live comparisons emit `/2`.
+Guiraud/register contrasts depend on length, language and discourse mode.
+Matching a source is not a writing-quality objective.
 
 ## Storage, lifecycle and recovery
 

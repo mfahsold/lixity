@@ -14,7 +14,12 @@ APP_BUNDLE="$1"
 OUT_DMG="$2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_GUIDE="$SCRIPT_DIR/../packaging/macos/install-guide.html"
-INSTALL_GUIDE_NAME="Start Here - Hier starten.html"
+INSTALL_GUIDE_NAME="Start Here.html"
+
+VOLUME_NAME="Lixity Test Build"
+if [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
+    VOLUME_NAME="Lixity"
+fi
 
 # On older macOS versions, diskutil can create an image from a disk but
 # cannot package a directory with a named volume.
@@ -75,9 +80,9 @@ rm -f "$OUT_DMG"
 
 echo "[3/4] Creating compressed UDZO DMG at $OUT_DMG..."
 if [ "$USE_DISKUTIL" -eq 1 ]; then
-    diskutil image create from --format UDZO --volumeName Lixity "$STAGE_DIR" "$OUT_DMG"
+    diskutil image create from --format UDZO --volumeName "$VOLUME_NAME" "$STAGE_DIR" "$OUT_DMG"
 else
-    hdiutil create -volname Lixity -srcfolder "$STAGE_DIR" -format UDZO \
+    hdiutil create -volname "$VOLUME_NAME" -srcfolder "$STAGE_DIR" -format UDZO \
         -imagekey zlib-level=9 "$OUT_DMG"
 fi
 
@@ -114,6 +119,7 @@ if [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; t
     xcrun stapler validate "$VERIFY_MNT/Lixity.app"
 fi
 cmp "$INSTALL_GUIDE" "$VERIFY_MNT/$INSTALL_GUIDE_NAME"
+test "$(readlink "$VERIFY_MNT/Applications")" = /Applications
 if [ $# -eq 3 ]; then
     "$3" "$SCRIPT_DIR/smoke_desktop_runtime.py" "$VERIFY_MNT/Lixity.app/Contents/Resources/runtime"
 fi

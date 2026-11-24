@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Lixity",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "identifier": "io.github.mfahsold.Lixity",
   "build": {
     "frontendDist": "./placeholder-dist"
@@ -31,14 +31,19 @@
     },
     "fileAssociations": [
       {
-        "ext": ["md", "markdown"],
+        "ext": [
+          "md",
+          "markdown"
+        ],
         "name": "Markdown Manuscript",
         "description": "Markdown manuscript file",
         "mimeType": "text/markdown",
         "role": "Editor"
       },
       {
-        "ext": ["toml"],
+        "ext": [
+          "toml"
+        ],
         "name": "Lixity Project Configuration",
         "description": "Lixity project configuration (lixity.toml)",
         "mimeType": "application/toml",
@@ -70,18 +75,32 @@
       "nsis": {
         "installMode": "currentUser",
         "displayLanguageSelector": true,
-        "languages": ["German", "English", "French", "Spanish", "Italian", "Portuguese", "Dutch"],
+        "languages": [
+          "German",
+          "English",
+          "French",
+          "Spanish",
+          "Italian",
+          "Portuguese",
+          "Dutch"
+        ],
         "installerHooks": "../packaging/windows/nsis-hooks.nsh"
       },
       "wix": {
-        "language": ["de-DE", "en-US"],
+        "language": [
+          "de-DE",
+          "en-US"
+        ],
         "upgradeCode": "8A4C72D1-6E93-4F2B-9A0C-3D1E5B7C9F42"
       }
     },
     "linux": {
       "deb": {
         "section": "editors",
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ],
         "desktopTemplate": "../packaging/linux/lixity.desktop.in",
         "files": {
           "/usr/share/metainfo/io.github.mfahsold.Lixity.metainfo.xml": "../packaging/linux/io.github.mfahsold.Lixity.metainfo.xml"

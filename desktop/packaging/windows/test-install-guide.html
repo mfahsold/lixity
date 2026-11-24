@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start Here · Windows Test Build</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      color: CanvasText;
+      background: Canvas;
+    }
+    body {
+      max-inline-size: 40rem;
+      margin: 0 auto;
+      padding: clamp(1rem, 6vw, 3rem);
+      font: 1rem/1.55 system-ui, sans-serif;
+    }
+    h1, h2 { line-height: 1.2; }
+    pre { white-space: pre-wrap; }
+    code { overflow-wrap: anywhere; }
+    li + li { margin-block-start: .5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Lixity for Windows</h1>
+    <p>Unsigned test build for Windows x64.</p>
+
+    <section>
+      <h2>Check the download</h2>
+      <ol>
+        <li>Extract the archive and keep the installer and
+        <code>SHA256SUMS-x86_64-pc-windows-msvc.txt</code> from the same
+        workflow run together.</li>
+        <li>Choose the <code>_x64-setup.exe</code> for per-user setup, or the
+        <code>_x64_en-US.msi</code> or <code>_x64_de-DE.msi</code> for Windows
+        Installer with the corresponding language.</li>
+        <li>Open PowerShell in the extracted folder. Replace the example
+        filename with the exact name you chose. Compare the full result
+        with that file's entry in the checksum list.</li>
+      </ol>
+      <pre><code>Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'</code></pre>
+      <p>Windows may block an unsigned installer. If the hash differs or
+      Windows blocks the file, stop and contact the maintainer with the
+      filename, workflow run and exact Windows message.
+      <a href="https://learn.microsoft.com/en-us/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/">Microsoft Defender SmartScreen</a></p>
+    </section>
+
+    <section>
+      <h2>Install and open the example</h2>
+      <ol>
+        <li>Close any running copy of Lixity and open the verified installer.
+        Setup needs internet access if Windows is missing the Microsoft
+        WebView2 Runtime.</li>
+        <li>Open <strong>Lixity</strong> from the Start menu and choose
+        <strong>Try the example offline</strong> before testing your own
+        project.</li>
+        <li>For help with startup, use <strong>Tools → Open Logs Folder</strong>
+        once the app opens. The installation guide includes WebView2 help
+        and the published browser and CLI setup.</li>
+      </ol>
+      <p><a href="https://mfahsold.github.io/lixity/guides/installation.html#windows">Lixity installation guide for Windows</a></p>
+    </section>
+  </main>
+</body>
+</html>

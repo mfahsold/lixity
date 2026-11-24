@@ -103,6 +103,8 @@ def hd_d_stats(
             probability = -math.expm1(log_absence)
         presence.append(type_count * probability)
     return math.fsum(presence) / HD_D_DRAW_SIZE, 0.0
+
+
 def _mtld_pass(
     seq: Sequence[str],
     threshold: float,
@@ -150,6 +152,8 @@ def mtld(tokens: list[str], threshold: float = DEFAULT_MTLD_THRESHOLD) -> float 
     if fwd <= 0.0 or bwd <= 0.0:
         return None
     return (n / fwd + n / bwd) / 2.0
+
+
 def mattr(tokens: list[str], window: int = DEFAULT_MATTR_WINDOW) -> float | None:
     """
     MATTR: moving-average type-token ratio (Covington & McFall 2010).
@@ -215,6 +219,8 @@ def yules_k(tokens: list[str]) -> float:
     counts = Counter(tokens)
     m2 = sum(c * c for c in counts.values())
     return 10000.0 * (m2 - n) / (n * (n - 1))
+
+
 def maas_a2(n_tokens: int, v_types: int) -> float | None:
     """Maas a² = (log10 N − log10 V) / (log10 N)² (Maas 1972).
 
@@ -230,5 +236,9 @@ def maas_a2(n_tokens: int, v_types: int) -> float | None:
     if n_tokens < MIN_TOKENS_LD or v_types <= 0:
         return None
     log_n = math.log10(n_tokens)
+    gap = n_tokens - v_types
+    if gap <= v_types:
+        # Take the log of the ratio without subtracting nearly equal logs.
+        return math.log1p(gap / v_types) / (math.log(10.0) * log_n**2)
     log_v = math.log10(v_types)
     return (log_n - log_v) / (log_n**2)

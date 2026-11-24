@@ -8,6 +8,7 @@ aggregation, hook heuristics and the CLI/API surface.
 import os
 import sys
 import unittest
+from decimal import Decimal, localcontext
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -217,6 +218,31 @@ class TestReportSurface(unittest.TestCase):
 
 
 class TestBurstiness(unittest.TestCase):
+    def test_extreme_scales_match_independent_decimal_moments(self) -> None:
+        cases = (
+            [4, 12, 25, 8, 30],
+            [1e308, 5e307, 2e307],
+            [1e-310, 2e-310, 4e-310],
+            [10**400, 2 * 10**400, 0.5, 10**399],
+        )
+        for values in cases:
+            with self.subTest(values=values), localcontext() as context:
+                context.prec = 80
+                n = Decimal(len(values))
+                decimal_values = [Decimal(value) for value in values]
+                total = sum(decimal_values)
+                squares = sum(value**2 for value in decimal_values)
+                r = ((n * squares / total**2 - 1) * n / (n - 1)).sqrt()
+                expected = (r - 1) / (1 + (1 - 2 / n.sqrt()) * r)
+                actual = burstiness(values)
+                assert actual is not None
+                self.assertAlmostEqual(actual, float(expected), places=14)
+
+    def test_invalid_observations_raise_instead_of_returning_a_signal(self) -> None:
+        for value in (-1, float("nan"), float("inf"), float("-inf")):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "finite nonnegative"):
+                burstiness([3, value])
+
     def test_finite_sample_burstiness_bounds_and_rhythm_profile(self):
         self.assertIsNone(burstiness([]))
         self.assertIsNone(burstiness([5]))

@@ -32,7 +32,7 @@ install-dev: ## Create .venv and install with dev extras
 	"$(VPY)" -m lixity.cli --version
 
 test: ## Run the full test suite (warnings as errors, slowest cases reported)
-	PYTHONPATH=src "$(VPY)" -m pytest $(PYTEST_FLAGS) --durations=15 $(PYTEST_ARGS)
+	PYTHONPATH="$(CURDIR)/src" "$(VPY)" -m pytest $(PYTEST_FLAGS) --durations=15 $(PYTEST_ARGS)
 
 browser-tools: ## Install isolated versioned Playwright, Chromium and axe-core
 	npm install --prefix "$(BROWSER_TOOLS_DIR)" playwright@$(PLAYWRIGHT_VERSION) axe-core@$(AXE_CORE_VERSION)
@@ -68,8 +68,7 @@ build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 
 release-check: ## Validate the tag first, then test once, check generated docs, audit and verify artifacts
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
-	$(VPY) scripts/check_release.py --source-only --tag "$(RELEASE_TAG)"
-	@test -s "docs/releases/$(RELEASE_TAG).md" || (echo "Missing release notes: docs/releases/$(RELEASE_TAG).md"; exit 1)
+	$(VPY) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
 	$(MAKE) check docs-generated-check audit
 	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
 

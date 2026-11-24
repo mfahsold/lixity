@@ -5,7 +5,11 @@ on:
   workflow_call:
     inputs:
       source_ref:
-        description: Verified release ref to publish
+        description: Verified release commit SHA to publish
+        required: true
+        type: string
+      release_tag:
+        description: Published release tag requesting this deployment
         required: true
         type: string
 permissions:
@@ -20,12 +24,14 @@ jobs:
     timeout-minutes: 10
     outputs:
       artifact_name: ${{ steps.metadata.outputs.artifact_name }}
+      pages_base_url: ${{ steps.pages.outputs.base_url }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           ref: ${{ inputs.source_ref || github.sha }}
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+        id: pages
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
@@ -66,13 +72,75 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Protect newer Pages deployments from release retries
+        if: inputs.release_tag != ''
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ inputs.source_ref }}
+          PAGES_BASE_URL: ${{ needs.build.outputs.pages_base_url }}
+        run: |
+          latest_tag="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" | jq -er '.tag_name | strings | select(length > 0)')"
+          if [[ "$latest_tag" != "$RELEASE_TAG" ]]; then
+            printf 'Pages deployment skipped for %s because the latest release is %s.\n' \
+              "$RELEASE_TAG" "$latest_tag" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ "$PAGES_BASE_URL" != https://* || ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Pages URL or release source identity is invalid."
+            exit 1
+          fi
+
+          site="${PAGES_BASE_URL%/}/"
+          metadata="$RUNNER_TEMP/lixity-live-deployment.json"
+          probe="?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          read_status() {
+            env -u GH_TOKEN -u GITHUB_TOKEN curl --disable --silent --show-error --proto '=https' --max-time 20 \
+              --header 'Cache-Control: no-cache' --write-out '%{http_code}' "$@"
+          }
+          metadata_status="$(read_status --output "$metadata" "${site}deployment.json${probe}")"
+          case "$metadata_status" in
+            200)
+              live_sha="$(jq -ers 'select(length == 1) | .[0] | select(.schema_version == 1) |
+                .source_sha | strings | select(test("^[0-9a-f]{40}$"))' "$metadata")" || {
+                echo "::error::Live Pages deployment identity is invalid."
+                exit 1
+              }
+              if [[ "$live_sha" != "$RELEASE_SHA" ]]; then
+                relationship="$(gh api "repos/$GITHUB_REPOSITORY/compare/$live_sha...$RELEASE_SHA?per_page=1" |
+                  jq -er --arg base "$live_sha" '
+                    if .status == "ahead" and .merge_base_commit.sha == $base then .status
+                    elif .status == "behind" or .status == "diverged" then .status
+                    else error("GitHub could not confirm Pages source ancestry") end')"
+                if [[ "$relationship" != ahead ]]; then
+                  printf 'Pages deployment skipped to preserve live source %s.\n' \
+                    "$live_sha" >> "$GITHUB_STEP_SUMMARY"
+                  exit 0
+                fi
+              fi
+              ;;
+            404)
+              if [[ "$(read_status --output /dev/null "${site}${probe}")" != 404 ]]; then
+                echo "::error::The existing Pages site does not expose its deployment identity."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Could not read the live Pages deployment identity (HTTP $metadata_status)."
+              exit 1
+              ;;
+          esac
+          printf 'allow=true\n' >> "$GITHUB_OUTPUT"
       - id: deployment
+        if: inputs.release_tag == '' || steps.guard.outputs.allow == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
         with:
           artifact_name: ${{ needs.build.outputs.artifact_name }}

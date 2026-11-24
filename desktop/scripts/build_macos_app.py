@@ -17,7 +17,12 @@ from typing import Any
 from build_runtime_bundle import host_target_triple
 from macos_app_update import update_installed_app
 from smoke_desktop_runtime import verify_bundle
-from verify_desktop_artifacts import sha256_file, verify_container_magic
+from verify_desktop_artifacts import (
+    DesktopArtifact,
+    desktop_checksums,
+    sha256_file,
+    verify_container_magic,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DESKTOP = ROOT / "desktop"
@@ -176,7 +181,14 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
             env=env,
         )
         verify_container_magic(image, "macos-dmg")
-        report["disk_image"] = {"path": str(image), "sha256": sha256_file(image)}
+        artifact = DesktopArtifact(target, "macos-dmg", image.name, image.stat().st_size, sha256_file(image))
+        checksums = output / f"SHA256SUMS-{target}.txt"
+        checksums.write_bytes(desktop_checksums((artifact,)))
+        report["disk_image"] = {
+            "path": str(image),
+            "sha256": artifact.sha256,
+            "checksums": str(checksums),
+        }
     return report
 
 

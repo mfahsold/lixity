@@ -1154,6 +1154,7 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 200)
                 cmp_res = json.loads(body)
                 self.assertTrue(cmp_res["ok"])
+                self.assertEqual(cmp_res["schema_version"], "research-comparison-local/2")
                 self.assertIn("jaccard_similarity", cmp_res["summary"])
 
                 # 10. Create Claim

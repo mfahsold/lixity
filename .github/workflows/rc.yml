@@ -10,7 +10,19 @@ concurrency:
   group: rc-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify the prepared release notes before qualification
+        run: python scripts/check_release.py --source-only --require-release-notes
+
   source_checks:
+    needs: preflight
     permissions:
       contents: read
     uses: ./.github/workflows/tests.yml
@@ -18,11 +30,13 @@ jobs:
       stage_candidate: true
 
   browser_checks:
+    needs: preflight
     permissions:
       contents: read
     uses: ./.github/workflows/browser.yml
 
   native_checks:
+    needs: preflight
     permissions:
       contents: read
     uses: ./.github/workflows/research-platforms.yml
@@ -30,6 +44,7 @@ jobs:
       scope: full
 
   dependency_checks:
+    needs: preflight
     permissions:
       contents: read
     uses: ./.github/workflows/dependencies.yml

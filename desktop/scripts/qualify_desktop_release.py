@@ -10,13 +10,12 @@ from typing import Any
 
 from .verify_desktop_artifacts import (
     DESKTOP_CHECKSUMS,
-    PUBLIC_INSTALLER_FORMATS,
     PUBLIC_INSTALLER_MANIFESTS,
     PUBLIC_RELEASE_TAG,
     DesktopArtifact,
     desktop_checksums,
     load_verified_artifacts,
-    public_installer_filename_pattern,
+    verify_public_installer_inventory,
 )
 
 QUALIFICATION_FILE = "desktop-qualification.json"
@@ -61,12 +60,7 @@ def load_candidate_artifacts(artifacts_dir: Path, *, tag: str) -> tuple[DesktopA
     for name in sorted(PUBLIC_INSTALLER_MANIFESTS | {DESKTOP_CHECKSUMS}):
         _require_regular_file(artifacts_dir / name)
     artifacts = load_verified_artifacts(artifacts_dir)
-    if {(item.target, item.kind) for item in artifacts} != PUBLIC_INSTALLER_FORMATS:
-        raise ValueError("A desktop release requires all supported public installer formats")
-    filename_pattern = public_installer_filename_pattern(tag)
-    for item in artifacts:
-        if not filename_pattern.fullmatch(item.filename):
-            raise ValueError(f"Installer filename does not match {tag}: {item.filename}")
+    verify_public_installer_inventory(artifacts, tag=tag)
     if (artifacts_dir / DESKTOP_CHECKSUMS).read_bytes() != desktop_checksums(artifacts):
         raise ValueError("Combined desktop checksums differ from the verified installer inventory")
     return artifacts

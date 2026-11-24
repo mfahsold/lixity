@@ -105,6 +105,16 @@ class MaasTests(unittest.TestCase):
                 expected = float((ln_n - Decimal(v).ln()) * Decimal(10).ln() / ln_n**2)
                 self.assertAlmostEqual(maas_a2(n, v), expected, places=14)
 
+    def test_near_unique_large_counts_remain_positive(self) -> None:
+        for n, v in ((10**16, 10**16 - 1), (10**40, 10**40 - 10)):
+            with self.subTest(tokens=n, types=v), localcontext() as context:
+                context.prec = 100
+                ln_n = Decimal(n).ln()
+                expected = float((ln_n - Decimal(v).ln()) * Decimal(10).ln() / ln_n**2)
+                actual = maas_a2(n, v)
+                assert actual is not None
+                self.assertAlmostEqual(actual / expected, 1.0, places=14)
+
 
 class MATTRTests(unittest.TestCase):
     def test_invalid_windows_raise_value_error_even_for_empty_input(self) -> None:

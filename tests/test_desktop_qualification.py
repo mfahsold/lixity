@@ -114,3 +114,46 @@ def test_candidate_rejects_incomplete_matrix_and_mixed_versions(candidate):
     (candidate / "desktop-artifacts-x86_64-apple-darwin.json").unlink()
     with pytest.raises(ValueError, match="exactly the four public targets"):
         qualification.load_candidate_artifacts(candidate, tag=TAG)
+
+
+@pytest.mark.parametrize("extra_locale", (False, True))
+def test_candidate_requires_exact_msi_locales(candidate, extra_locale):
+    path = candidate / "desktop-artifacts-x86_64-pc-windows-msvc.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    german = next(item for item in manifest["artifacts"] if item["filename"].endswith("_de-DE.msi"))
+    if extra_locale:
+        french_name = german["filename"].replace("_de-DE.msi", "_fr-FR.msi")
+        (candidate / french_name).write_bytes((candidate / german["filename"]).read_bytes())
+        manifest["artifacts"].append({**german, "filename": french_name, "relative_path": f"msi/{french_name}"})
+        message = r"unexpected Lixity_0\.10\.0_x64_fr-FR\.msi"
+    else:
+        manifest["artifacts"].remove(german)
+        (candidate / german["filename"]).unlink()
+        message = r"missing Lixity_0\.10\.0_x64_de-DE\.msi"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    (candidate / verifier.DESKTOP_CHECKSUMS).write_bytes(
+        verifier.desktop_checksums(verifier.load_verified_artifacts(candidate)),
+    )
+
+    with pytest.raises(ValueError, match=message):
+        qualification.qualification_template(candidate, tag=TAG, source_sha=SOURCE)
+
+
+def test_candidate_binds_each_installer_filename_to_its_target(candidate):
+    arm_path = candidate / "desktop-artifacts-aarch64-apple-darwin.json"
+    intel_path = candidate / "desktop-artifacts-x86_64-apple-darwin.json"
+    arm = json.loads(arm_path.read_text(encoding="utf-8"))
+    intel = json.loads(intel_path.read_text(encoding="utf-8"))
+    arm["artifacts"], intel["artifacts"] = intel["artifacts"], arm["artifacts"]
+    arm_path.write_text(json.dumps(arm), encoding="utf-8")
+    intel_path.write_text(json.dumps(intel), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"target or kind differs: Lixity_0\.10\.0_aarch64\.dmg"):
+        qualification.load_candidate_artifacts(candidate, tag=TAG)
+
+
+def test_flattened_artifacts_reject_unlisted_mixed_case_installer(candidate):
+    (candidate / "unlisted.EXE").write_bytes(b"MZ".ljust(512, b"\0"))
+
+    with pytest.raises(ValueError, match=r"Unexpected installer without a manifest entry: unlisted\.EXE"):
+        verifier.load_verified_artifacts(candidate)

@@ -38,7 +38,7 @@ def test_release_reuses_source_browser_and_native_checks_for_tag_pushes():
         gate = job(source, job_name)
         assert "if: github.event_name == 'push'" in gate
         assert f"uses: ./.github/workflows/{filename}" in gate
-        assert "needs:" not in gate
+        assert "needs: preflight" in gate
         assert "continue-on-error" not in gate
         assert re.search(r"(?m)^      contents: read$", gate)
         called = workflow(filename)
@@ -46,7 +46,7 @@ def test_release_reuses_source_browser_and_native_checks_for_tag_pushes():
         assert re.search(r"(?m)^  workflow_call:\s*$", called)
         assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", called)
     published = job(source, "publish")
-    assert f"needs: [{', '.join(RELEASE_GATES)}]" in published
+    assert f"needs: [preflight, {', '.join(RELEASE_GATES)}]" in published
     assert "if: github.event_name == 'push'" in published
     assert "always()" not in published and "continue-on-error" not in published
     assert re.search(r"(?m)^\s+ref: \$\{\{ github\.sha \}\}\s*$", published)
@@ -103,7 +103,7 @@ def test_native_gate_requests_full_scope_and_blocks_publication_on_failure():
     source = workflow("release.yml")
     native = job(source, "native_checks")
     assert "scope: full" in native
-    assert "needs:" not in native
+    assert "needs: preflight" in native
     publish = job(source, "publish")
     assert "native_checks" in re.search(r"needs: \[(.*?)\]", publish).group(1)
     assert "always()" not in publish and "!cancelled()" not in publish
@@ -150,11 +150,18 @@ def test_publication_permissions_and_serialization_are_job_scoped():
 
 def test_desktop_publication_qualifies_exact_run_before_the_combined_draft():
     release = workflow("release.yml")
+    preflight = job(release, "preflight")
     publish = job(release, "publish")
-    assert "vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG" in publish
-    assert '.head_branch == "main" and .head_sha == $sha' in publish
-    assert '.path == ".github/workflows/desktop-release.yml"' in publish
-    assert "lixity-desktop-release-bundle" in publish
+    assert "vars.DESKTOP_RELEASE_TAG == env.RELEASE_TAG" in preflight
+    assert '.tag == $tag and .source_sha == $sha' in preflight
+    assert '.head_branch == "main" and .head_sha == $sha' in preflight
+    assert '.path == ".github/workflows/desktop-release.yml"' in preflight
+    assert '.name == "lixity-desktop-release-bundle" and .expired == false' in preflight
+    assert "qualification_digest=" in preflight
+    assert "artifact-ids: ${{ needs.preflight.outputs.desktop_artifact_id }}" in publish
+    assert "run-id: ${{ needs.preflight.outputs.desktop_run_id }}" in publish
+    assert "DESKTOP_QUALIFICATION_DIGEST: ${{ needs.preflight.outputs.desktop_qualification_digest }}" in publish
+    assert "| sha256sum --check -" in publish
     stage = publish.index("scripts/release_channels.py stage-desktop")
     draft = publish.index("Create draft release with artifacts")
     verify = publish.index("scripts/release_channels.py verify-draft")
@@ -165,6 +172,31 @@ def test_desktop_publication_qualifies_exact_run_before_the_combined_draft():
     pypi = job(release, "pypi")
     assert "--dist dist --python-only" in pypi
     assert "dist-desktop" not in pypi
+
+
+def test_release_preflight_preserves_immutable_recovery():
+    release = workflow("release.yml")
+    preflight = job(release, "preflight")
+    assert "if: github.event_name == 'push'" in preflight
+    assert "--source-only --require-release-notes --tag" in preflight
+    assert "if: steps.release_state.outputs.state != 'published'" in preflight
+    assert "contents: write" not in preflight and "id-token: write" not in preflight
+    publish = job(release, "publish")
+    recover = publish.split("- name: Recover immutable published artifacts on a rerun", 1)[1].split("- name:", 1)[0]
+    assert "if: steps.release_state.outputs.state == 'published'" in recover
+    assert "DESKTOP_RELEASE_" not in recover and "--require-desktop" not in recover
+
+
+def test_only_fully_signed_main_desktop_builds_supply_release_bundle():
+    desktop = workflow("desktop-release.yml")
+    assert "--source-only --desktop-version" in job(desktop, "preflight")
+    build = job(desktop, "build-installers")
+    assert "needs: preflight" in build
+    assert "rustc -vV" in build and '"$host_target" != "$EXPECTED_TARGET"' in build
+    combine = job(desktop, "combine-checksums")
+    assert "--require-public-inventory" in combine
+    assert "github.ref == 'refs/heads/main' && inputs.notarize_macos && inputs.sign_windows" in combine
+    assert "&& 'lixity-desktop-release-bundle' || 'lixity-desktop-test-bundle'" in combine
 
 
 def test_browser_release_gate_uses_the_shared_full_suite_command():
@@ -189,10 +221,11 @@ def test_source_gate_runs_wheel_smoke_on_each_python_matrix_version():
 def test_release_candidate_workflow_qualifies_source_browser_and_native_before_tagging():
     source = workflow("rc.yml")
     assert "workflow_dispatch:" in source
+    assert "--source-only --require-release-notes" in job(source, "preflight")
     for job_name, filename in RELEASE_GATES.items():
         gate = job(source, job_name)
         assert f"uses: ./.github/workflows/{filename}" in gate
-        assert "needs:" not in gate
+        assert "needs: preflight" in gate
     assert "scope: full" in job(source, "native_checks")
     ready = job(source, "ready")
     assert f"needs: [{', '.join(RELEASE_GATES)}]" in ready

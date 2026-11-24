@@ -95,9 +95,17 @@ The two scope explanations are separate; a missing profile is not missing prose.
 v0.7.2 corrects internal straight (`'`) and curly (`’`) apostrophes in the French,
 Spanish, Italian, Portuguese and Dutch default word patterns. These orthographic
 tokens follow the existing profile convention, not grammatical clitic analysis.
-First-person starter matching recognizes both forms while preserving the exact
-original starter for diversity and entropy. Recompute affected token counts,
-derived measurements and first-person start rates before comparing older outputs.
+First-person starter matching (`first_person_start_rate` in `analyzer.py`)
+extracts each sentence's first `word_regex` token match (lowercased; sentences
+without a word-token match are excluded from the denominator), checks both the
+full token and its pre-apostrophe stem (`first.replace("’", "'").split("'", 1)[0]`,
+e.g. `j'aime -> j`, `i'm -> i`) against the language profile's
+`first_person_starters`, and reports `100 × matching_sentences / token_bearing_sentences`
+(`0.0` when no sentence contains a word token, or for `generic` which has an
+empty starter set). Sentence-start Shannon entropy (`start_entropy`) retains the
+exact unstemmed lowercased starter frequencies over the same denominator.
+Recompute affected token counts, derived measurements and first-person start
+rates before comparing older outputs.
 
 Chapter labels remain available for navigation; changing a title does not
 change its prose readability. For even sentence counts, `median_sl_exact`
@@ -232,8 +240,14 @@ for narrative style.
 The $z^*$ denominator is evaluated with a scaled Euclidean norm (`math.hypot`)
 to avoid overflow and underflow from squaring extreme finite spread/SE values.
 Finite operands whose difference overflows are divided before subtraction;
-overflowing finite spread/SE norms are evaluated in normalized units. Ordinary
-finite arithmetic and cutoff-neighbor behavior retain their existing path.
+overflowing or subnormal spread/SE norms are evaluated in normalized units.
+The raw robust score also preserves the scale factor when its intermediate
+numerator is subnormal.
+The binomial SE calculation retains the small Jeffreys tail at both percentage
+endpoints and keeps the count divisor outside the square root of the
+endpoint adjustment. Scaled ratios, including Poisson standard errors, use
+exact division when an intermediate quotient or a count conversion would
+lose a representable result.
 This preserves the formula and zero-spread rule; it does not calibrate the
 underlying normal-tail probabilities.
 
@@ -274,8 +288,11 @@ dimensions and FDR calculations.
   m = measured cells and P the two-sided normal tail (`erfc`). At the
   default 2.5 this is ≈ 1.24 % of $m$ under a standard-normal null. It is
   a model reference, not a measured count of false findings in the manuscript.
-- Injectability: CLI `--z-mild/--z-strong/--fdr-q/--fdr-method/--dim-threshold/--flag-min-severity`
-  on `style`, `dashboard`, `build`; API kwargs of the same names; the
+- Injectability: CLI `--preset {balanced,developmental,line_editing,conservative_by}`
+  (on `analyze`, `profile`, `style`, `dashboard`, `pdf`, `build`) and explicit
+  `--z-mild/--z-strong/--fdr-q/--fdr-method/--dim-threshold/--flag-min-severity`
+  overrides on `style`, `dashboard`, `build`; API kwargs of the same names (plus
+  `CorpusConfig.apply_preset()`); the
   control-server settings form applies `z_mild`, `z_strong`, `fdr_q`,
   `flag_min_severity`, `dim_score_threshold` to the current server session.
   It preserves the existing `fdr_method`; configure that through the CLI,
@@ -445,7 +462,7 @@ limits are listed below.
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
 | `changepoints` | exact unpruned dynamic programming on global-SD-standardized series for guarded cost $n\ln\max(\sigma^2, 10^{-9})$ and mBIC-inspired default penalty $3\ln n$ | singleton segment cost is zero before the penalty. Longer segments use the variance floor, including flat segments. Anchored centred moments use $O(n^2)$ time and $O(n)$ storage. Features with missing chapters or $n<3$ appear in `segmentation_unavailable`. Complete series use 0-based indices of the first chapter after a break |
-| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$, continuity correction, and Hamed & Rao (1998) autocorrelation variance correction for $n \ge 8$ ($\mathrm{Var}(S)\cdot n/n^*$ over significant detrended midrank lags $|\rho_k|>1.96/\sqrt{n}$); $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
+| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$, continuity correction, and Hamed & Rao (1998) autocorrelation variance correction for $n \ge 8$ ($\mathrm{Var}(S)\cdot n/n^*$ over significant lags $|\rho_k|>1.96/\sqrt{n}$ of midranks after detrending by the Theil–Sen median pairwise slope); $\tau=S/\binom n2$ is tau-a | uses the available observations in chapter order; $n<3$ → unavailable; partial series are listed in `trend_incomplete`, with observed and missing chapter IDs in `baseline_diagnostics.features`; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
 | `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | the chapter sequence is split before dropping unavailable values; both original halves need $\ge2$ observations or the feature is listed in `distribution_unavailable`; computed but partial comparisons appear in `distribution_incomplete`. Coverage is in `baseline_diagnostics.features`. $D=0$ → $p=1$; $p$ is not calibrated for tied/fitted distributions |
@@ -453,6 +470,14 @@ limits are listed below.
 | `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
 | `shifted_features` | feature names selected by Benjamini–Hochberg FDR (`q = fdr_q`) across early/late KS $p$-values | summary list |
 | `cooccurrence` *(token-level)* | content-word graph (window 2; single-character tokens excluded); approximate discrete exponent $\hat\alpha=1+n/\sum\ln(k_i/(k_{\min}-0.5))$ and fitted-CDF comparison | estimator follows Clauset–Shalizi–Newman Eq. 3.7; current truncated continuous CDF and ordinary KS $p$ do not establish discrete power-law goodness of fit; ≥50 content tokens, ≥5 positive nonconstant degrees |
+
+The direct structural sample functions reject nonfinite observations.
+Changepoints require a finite penalty, and Spearman correlation requires
+equal-length pairs and stays within $[-1,1]$. Extreme finite changepoint
+penalties use a rescaled objective, and extreme-scale Mann–Kendall inputs
+use exact residual arithmetic for the Hamed–Rao ranks. Hill log ratios
+remain in range when an intermediate ratio would overflow. These arithmetic
+guards preserve the estimators and their exploratory interpretation.
 | `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only (single-character tokens excluded); signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
 
 The legacy Python name `pelt_changepoints` is retained, but the implementation
@@ -567,7 +592,7 @@ rank space:
    per complete chapter (`mahalanobis_distances`, `top_deviants(..., metric="mahalanobis")`).
    Here $r_c$ is the standardized midrank row and $\mu_k$ is an eigenvalue
    of the regularized matrix.
-   **Unreleased correction:** the vector in this distance is the same centered,
+   **Since v0.9.1:** the vector in this distance is the same centered,
    standardized midrank row used to construct C. Chapter z* cells are never
    substituted. `dimension_diagnostics.mahalanobis_space` identifies the space
    as `standardized_midranks`; earlier builds could mix coordinates when z*
@@ -631,9 +656,11 @@ author-lab source supports the narrower aggregation claim. See
 
 The 100-token floor is a local short-text policy, not a universal reliability
 threshold. Maas is defined for a one-type text: $N=100$, $V=1$ gives $a^2=0.5$.
-Only a nonpositive type count or an input below the token floor is unavailable;
-repetition alone is not a missing measurement. Guiraud $R=V/\sqrt{N}$ remains
+The direct API rejects negative or inconsistent counts. A zero type count or
+an input below the token floor returns `null`. Guiraud $R=V/\sqrt{N}$ remains
 length-dependent and does not make arbitrary texts directly comparable.
+When $N$ and $V$ are close, the direct Maas calculation evaluates the
+logarithm of the ratio with `log1p` to keep the difference resolvable.
 
 For $N$ tokens, type counts $f_t$, and draw size $d=42$, the implemented
 expectation is
@@ -779,10 +806,13 @@ Explicitly configured empty cue patterns count zero. If counted contributions
 cannot map back to the displayed text, the count remains available and only the
 mapped contributions yield highlights.
 
-The **Signal-group comparison** (command `showing`) standardizes each raw signal
+The **Signal-group comparison** (command `showing`, `showing.py`) standardizes each raw signal
 against the manuscript's chapter median/MAD, then averages each group with equal
-feature weights: four word-pattern cues versus quoted-word and short-sentence
-shares. The displayed difference is second group minus first. Zero spread uses
+within-group feature weights: `tell_z` averages the four word-pattern densities
+(`filter_density`, `modal_density`, `passive_density`, `nominalization_density`,
+weight `1/4` each) and `show_z` averages the two share cues (`dialog_pct`,
+`staccato_pct`, weight `1/2` each). The displayed difference is
+`balance = show_z - tell_z` (second group minus first). Zero spread uses
 the population standard deviation when available. This fallback translates and
 normalizes finite offsets before computing the deviation to avoid intermediate
 overflow or underflow; the median-centred population-deviation formula is unchanged.
@@ -1003,11 +1033,11 @@ the start of a scope can produce different totals for these two measurements.
 Classification and character attribution require additional evidence beyond
 punctuation.
 
-**`[Unreleased]` (prosody, segmentation, tense, dialogue & scene guards):**
+**Since v0.9.1 (prosody, segmentation, tense, dialogue & scene guards):**
 - **Syllables (`syllables.py`):** `count_it()` strips silent `u` in `que/qui/gue/gui` and merges rising `[iu]` + vowel diphthongs; `count_de()` applies `DE_CLEAN` with an empty-word guard and normalizes `qu -> k`; `count_fr()` adds exceptions for `-ment` mute-verb forms (`FR_MENT_MUTE_VERBS`), `souvent` (`FR_NON_MUTE_ENT`), and `-éC+ent` endings (`FR_PENULTIMATE_E_ACUTE_ENT`); `count_en()` preserves `-Cle(d|s)` syllabic `l` endings (`table`/`bottled`/`handles`).
 - **Sentences (`sentences.py`):** protects spaced multi-part abbreviations (`z. B.`, `d. h.`, `u. a.`, `o. ä.`, `p. ex.`, `d. w. z.`), accented single-letter initials (`É. Zola`), ellipses, and post-quote lowercase dialogue tags (`"Hello." she said`).
 - **Tense spans (`tense.py`):** German `_german_perfect_spans()` extends the bounded clause window to `_PERFECT_MAX_CLAUSE_WORDS = 12` tokens and supports subordinate clause-final backward scans (`..., weil er das Buch gelesen hat`); English `_english_perfect_spans()` consumes `have/has/had + VBN` (regular `-ed` or `_EN_IRREGULAR_PARTICIPLES`) as a single past cue without double-counting the auxiliary.
-- **Dialogue, indirect speech, scenes & characters (`dialogue.py`, `scenes.py`, `characters.py`):** Romance dialogue defaults (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`); `find_dialogue_tag_spans()` clamps tag searches at sentence terminators (`.`, `!`, `?`) and adjacent quote boundaries; German indirect-speech Konjunktiv II requires a curated reporting/cognitive verb + comma before the pronoun; French non-manner `-ment` nouns are excluded from `adverbial_tags`; unconfigured `scenes.py` character cues guard against German sentence-internal capitalized nouns; and `characters.py` supports optional `case_sensitive` matching.
+- **Dialogue, indirect speech, scenes & characters (`dialogue.py`, `scenes.py`, `characters.py`):** Romance dialogue defaults (`fr`, `es`, `it`, `pt`) recognize line-initial dialogue dashes (`^[—–]`); `find_dialogue_tag_spans()` clamps tag searches at sentence terminators (`.`, `!`, `?`) and adjacent quote boundaries; German indirect-speech cues cover reporting/cognitive verbs with `dass`/`daß`/`ob`, third-person pronoun + *Konjunktiv I*, and reporting/cognitive verb + comma + pronoun + *Konjunktiv II*; French non-manner `-ment` nouns are excluded from `adverbial_tags`; unconfigured `scenes.py` character cues guard against German sentence-internal capitalized nouns; and `characters.py` supports optional `case_sensitive` matching.
 
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
@@ -1095,8 +1125,8 @@ correct.
 
 | Surface | Hook |
 | :--- | :--- |
-| CLI | `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`, `--dim-threshold`, `--flag-min-severity` (see USAGE) |
-| API | `api.fingerprint(..., z_mild=…, fdr_q=…, fdr_method=…, …)` |
+| CLI | `--preset {balanced,developmental,line_editing,conservative_by}`, `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`, `--dim-threshold`, `--flag-min-severity` (explicit flags override `--preset`; see USAGE) |
+| API | `api.fingerprint(..., z_mild=…, fdr_q=…, fdr_method=…, …)`, `CorpusConfig.apply_preset(...)` |
 | Control UI | Settings group → POST `/api/settings` → `lixity.server.LixityServerHandler` |
 | Embedders | `build_dashboard_html(..., z_mild=…, z_strong=…, fdr_q=…, flag_min_severity=…, dim_score_threshold=…)` |
 | Config file | Explicit project root: `lixity.toml` or `[tool.lixity]` in `pyproject.toml` |
@@ -1221,8 +1251,10 @@ they do not estimate literary quality or a reader's experienced immersion.
   Shannon entropy (`length_entropy`, `normalized_entropy`), and finite-sample
   Goh–Barabási `burstiness()` (Kim & Jo 2016):
   $B_n = \frac{\sqrt{n}(r - 1)}{(\sqrt{n} - 2)r + \sqrt{n}}$ clamped to $[-1, 1]$,
-  using sample SD $s$ and $r = s / \bar{x}$ (returning `null` for $n < 2$ or
-  $\bar{x} \le 0$).
+  using sample SD $s$ and $r = s / \bar{x}$. The direct API requires finite
+  nonnegative observations and returns `null` for fewer than two observations
+  or an all-zero sample. The implementation scales a positive sample by its
+  maximum before forming the ratio to keep squared deviations in range.
   Rolling sentence length uses w=N for fewer than six sentences, otherwise
   `w=min(15,max(3,N//3))`. Sliding means are rounded to one decimal and, when
   longer than twelve points, averaged into twelve contiguous index bins.
@@ -1298,9 +1330,14 @@ they do not estimate literary quality or a reader's experienced immersion.
   rounded to 4 decimals), plus corpus-level `pov_summary`
   (`{declared_figures, pov_coverage_chapters, chapters_without_declared_pov}`).
 - **Optional genre reference corridors (`corridors.py`):** `GENRE_CORRIDORS`
-  defines descriptive orientation bands for `crime_thriller`, `literary`,
-  `romance`, and `speculative` over `asl`, `dialogue_pct`, `staccato_pct`, and
-  `avg_scene_words`. `evaluate_genre_corridor` sets `non_prescriptive: true` and
+  (inspectable at runtime via `lixity.corridors.list_genre_corridors()`)
+  defines descriptive orientation bands over `asl`, `dialogue_pct`,
+  `staccato_pct`, and `avg_scene_words`:
+  - `crime_thriller` (*Crime / Thriller*): `asl` `10.0–16.0`, `dialogue_pct` `25.0–50.0`, `staccato_pct` `15.0–35.0`, `avg_scene_words` `800.0–2200.0`
+  - `literary` (*Literary Fiction*): `asl` `14.0–24.0`, `dialogue_pct` `15.0–40.0`, `staccato_pct` `8.0–25.0`, `avg_scene_words` `1200.0–3500.0`
+  - `romance` (*Romance*): `asl` `11.0–18.0`, `dialogue_pct` `30.0–55.0`, `staccato_pct` `12.0–30.0`, `avg_scene_words` `1000.0–2800.0`
+  - `speculative` (*Speculative / Sci-Fi / Fantasy*): `asl` `13.0–20.0`, `dialogue_pct` `20.0–45.0`, `staccato_pct` `10.0–28.0`, `avg_scene_words` `1200.0–3200.0`
+  `evaluate_genre_corridor` sets `non_prescriptive: true` and
   reports each metric's `{observed, low, high, position}` where `position` is
   `"below"`, `"within"`, `"above"`, or `"unavailable"`.
 - **Paragraph inline evidence layers (`paragraph_evidence.py`):** each
@@ -1325,10 +1362,18 @@ they do not estimate literary quality or a reader's experienced immersion.
     `{available, dialogue_words, narrative_words, dialogue_asl, narrative_asl,
     asl_delta, dialogue_question_excl_pct, narrative_question_excl_pct,
     cosine_similarity, separation_label}` where `separation_label` is
-    `"distinct"`, `"moderate"`, `"blended"`, or `"unavailable"`.
+    `"unavailable"` when `dialogue_words == 0` or `narrative_words == 0`,
+    `"distinct"` when `cosine_similarity < 0.45` or (`asl_delta` is available
+    with `|asl_delta| >= 6.0` and `cosine_similarity < 0.65`), `"moderate"`
+    when `cosine_similarity < 0.72`, and `"blended"` otherwise (fixed heuristic
+    cutoffs, not calibrated probabilities).
   - `adverbial_tags` (int), `adverbial_tag_pct` (float), and
     `adverbial_tag_available` (bool) at corpus level and per `chapters[]` entry,
-    counting speech-attribution tags accompanied by manner adverbs.
+    counting speech-attribution tags accompanied by manner adverbs. The
+    per-language regex patterns and non-manner exclusion sets
+    (`_MANNER_ADVERB_PATTERNS`, `_NON_MANNER_ADVERBS` in `dialogue.py`) are
+    curated language-profile implementation details (`en`, `de`, `fr`, `es`,
+    `it`, `pt`, `nl`; unavailable for `generic`).
 - **Within-scene changes (`scenes.py`):** `scene_report()` keeps `asl_shift`
   and `dialogue_shift` (`float | null`) and the `scene_dynamic` wire values
   `"accelerating"`, `"decelerating"`, `"dialogue_surge"`, `"steady"`, and
@@ -1336,10 +1381,17 @@ they do not estimate literary quality or a reader's experienced immersion.
   words per sentence and percentage points. See the
   [method cards](#scene-evidence-and-dramaturgical-rehearsal) for the minimum
   sample and the count fields that support the displayed comparisons. The
-  scene report also includes `filter_per_1000` and `sensory_per_1000`. Corpus-level
+  scene report also includes `filter_per_1000` and `sensory_per_1000`. In
+  `scene_report()`, a word-bearing scene unit with `sentences == 0` reports
+  `features.asl = null` (with target position `"unavailable"` and exclusion from
+  group baselines), while `CorpusMetrics.asl` and `ChapterMetrics.asl` retain
+  their numeric `0.0` schema-2 sentinel. When `_include_draft_evidence=True`,
+  `source_sha256` (`scene_source_sha256` in dossier drafts) hashes the scene's
+  normalized prose projection (`scene.text`), not raw manuscript bytes. Corpus-level
   `pacing_plateaus` lists `[{start_id, end_id, scene_count, mean_asl, reason}]`
   where `reason` is `"low_exit_hooks"` (`>= 3` consecutive scenes with
-  `exit_hook_score <= 1`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
+  `exit_hook_score <= 1`; `mean_asl` is `null` if no scene in the plateau has a
+  measured `features.asl`) or `"flat_pacing"` (`>= 3` `"steady"` scenes of
   `>= 120` words with ASL spread `<= 1.5`).
 - **Implicit scene breaks & lexical cohesion drops (`scenes.py`):** `scene_report()`
   exposes top-level `implicit_breaks`: `[{chapter, scene, paragraph_index,
@@ -1350,7 +1402,13 @@ they do not estimate literary quality or a reader's experienced immersion.
   2-paragraph windows inside the scene, and `cue_type` is `"time"`, `"place"`,
   `"character"`, `"cohesion_drop"` (when both windows have `>= 10` content words
   and `cohesion_similarity <= 0.05`), or `+`-joined combinations (e.g.
-  `"time+cohesion_drop"`). Descriptive shift markers relate to the distinct
+  `"time+cohesion_drop"`). An implicit `"character"` cue compares disjoint sets
+  of recurring capitalized tokens (appearing in `>= 2` paragraphs of the chapter
+  outside `_NON_NAME_CAPS` and German article predecessors, or configured
+  character names; disabled for unconfigured German prose) between the previous
+  paragraph and the opening 60 characters of the current paragraph — it is a
+  surface token heuristic, not NER or narrative POV. Descriptive shift markers
+  relate to the distinct
   scene-segmentation task studied by [Zehe et al. (2021)](https://aclanthology.org/2021.eacl-main.276/)
   and [Zehe et al. (2025)](https://aclanthology.org/2025.naacl-long.500/).
 - **Character voice separation & interaction matrix (`dialogue.py`, `characters.py`):**
@@ -1389,8 +1447,10 @@ they do not estimate literary quality or a reader's experienced immersion.
   `DialogueChapter` expose `indirect_speech`, `indirect_speech_per_1000`, and
   `indirect_speech_available`. Matches non-quoted reporting/reflection verbs
   followed by complementizers across all seven supported languages (`en`, `de`,
-  `fr`, `es`, `it`, `pt`, `nl`) plus German *Konjunktiv I* speech forms
-  (GermAnProse, LaTeCH-CLfL 2026; CHR 2024/2025).
+  `fr`, `es`, `it`, `pt`, `nl`) plus German third-person *Konjunktiv I* and
+  reporting-verb-attributed *Konjunktiv II* speech forms (`_INDIRECT_SPEECH_PATTERNS`
+  in `dialogue.py`, curated per-language implementation detail; GermAnProse,
+  LaTeCH-CLfL 2026; CHR 2024/2025).
 - **Enriched revision diff (`manuscript_editing.py`, `cli.py`, `mcp.py`):**
   `analyze_manuscript_snapshot()`, `ManuscriptStore.analyze_snapshot()`,
   `timeline()`, `delta()` (`schema_version: "lixity-timeline/1"`), and
@@ -1412,7 +1472,7 @@ the two tracks and their details.
 | Level and measure | Formula and scope | Guard and interpretation |
 | --- | --- | --- |
 | L0 · Quoted-word share | `100 × recognized quoted words / counted words` for the complete unit. The same token membership is used for `features.dialog_pct` and the block detail. | An empty denominator gives an unavailable share. Zero recognized words in a non-empty unit describes the output of the configured recognizer. The track has a fixed 0–100% scale. |
-| L0 · Words per sentence | `counted sentence words / counted sentences`, the scene's `features.asl`. Both tracks follow manuscript order. | A missing sentence count makes the mean unavailable. The track uses a shared panel scale in words per sentence. The measurement describes text length. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
+| L0 · Words per sentence | `counted sentence words / counted sentences`, the scene's `features.asl`. Both tracks follow manuscript order. | A zero sentence count in a word-bearing scene unit sets `features.asl` to `null` (target position `"unavailable"`, omitted from register baselines; `CorpusMetrics.asl` and `ChapterMetrics.asl` keep their numeric `0.0` schema-2 sentinel). The track uses a shared panel scale in words per sentence. The measurement describes text length. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
 | L1 · Within-scene change | Split the counted sentences at `floor(n / 2)` in manuscript order. Each half retains `words`, `sentences` and `quote_words` in `within_scene`. Changes are second minus first and are displayed to two decimal places in words per sentence (`asl_shift`) and percentage points (`dialogue_shift`). | A unit needs at least 120 words and two counted sentences. `within_scene_limits` reports the guard and the descriptive cutoffs for the compatibility class (2.5 words per sentence, 15 percentage points). The signed differences describe the two halves. Scene-level standard errors are separate from these descriptive half differences. |
 | L2 · Quotation-block lengths | Count positive word lengths of the unioned recognized quotation ranges using the same word membership. `quote_blocks.short` counts lengths ≤ `short_max_words`, `long` counts lengths ≥ `long_min_words`, and `medium` counts lengths strictly between them. `words` totals the counted quoted words. | `quote_block_limits` reports the configured cutoffs, 12 and 80 words by default. `unresolved_ranges` counts unresolved ranges separately. Nested or overlapping recognized marks share a block. Any longer narrative or acoustic unit would need a separate annotation. [Genette, Duration, pp. 86–88](https://utpdistribution.com/9780801410994/narrative-discourse/) |
 | L3 · Author intent | An authored card can place a question, delayed answer, turn, revelation or resolution against the text. The author supplies any voice note and effect hypothesis. The card sequence can be rehearsed independently of the measured text. | It is an explicit act of revision planning. **Who has the floor here?** is a reading question. The quote analysis supplies no speaker identity. [Bakhtin, Discourse in the Novel](https://utpress.utexas.edu/9780292715349/) |

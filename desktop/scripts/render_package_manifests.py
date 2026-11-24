@@ -20,6 +20,7 @@ from verify_desktop_artifacts import (
     DesktopArtifact,
     desktop_checksums,
     load_verified_artifacts,
+    verify_public_installer_inventory,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -98,8 +99,11 @@ def render_all(
     out_dir: Path,
     *,
     packaging_dir: Path = PACKAGING,
+    require_public_inventory: bool = False,
 ) -> dict[str, object]:
     artifacts = load_verified_artifacts(artifacts_dir)
+    if require_public_inventory:
+        verify_public_installer_inventory(artifacts, tag=f"v{version}")
     inventory: dict[tuple[str, str], list[DesktopArtifact]] = {}
     for artifact in artifacts:
         inventory.setdefault((artifact.target, artifact.kind), []).append(artifact)
@@ -152,13 +156,20 @@ def main(argv: list[str] | None = None) -> int:
         required=True,
         help="Destination directory for rendered homebrew/ and winget/ manifests",
     )
+    parser.add_argument(
+        "--require-public-inventory", action="store_true",
+        help="Require all exact public installer filenames, targets and variants before rendering",
+    )
     args = parser.parse_args(argv)
     version = args.version.lstrip("v")
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise SystemExit(f"Version must be X.Y.Z, got: {args.version!r}")
 
     try:
-        summary = render_all(version, args.artifacts_dir.resolve(), args.out_dir.resolve())
+        summary = render_all(
+            version, args.artifacts_dir.resolve(), args.out_dir.resolve(),
+            require_public_inventory=args.require_public_inventory,
+        )
     except (OSError, ValueError) as error:
         raise SystemExit(f"Could not render desktop release manifests: {error}") from None
     print(json.dumps(summary, indent=2))

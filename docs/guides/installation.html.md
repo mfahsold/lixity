@@ -12,6 +12,8 @@ Desktop installers are in testing. For the current public release, [install the 
 
 The desktop app includes Python. Open Lixity from your application menu to start the bundled local engine.
 
+For a test build, sign in to GitHub and keep the installer and checksum list from the same workflow run.
+
 <a id="macos"></a>
 
 ### macOS
@@ -20,11 +22,11 @@ Desktop builds require macOS 12 or later.
 
 1. In the Apple menu, open **About This Mac**. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.
 
-2. Open the DMG in Finder, then drag **Lixity.app** onto **Applications**. The **Start Here – Hier starten** file inside the image explains the steps offline.
+2. Open the DMG in Finder, then drag **Lixity.app** onto **Applications**. Open the **Start Here** guide inside the image for offline instructions.
 
 3. After the copy completes, eject the disk image and open **Applications → Lixity**. Open the app there again for later sessions.
 
-See the [macOS installation notes](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg) for test builds and the location of the desktop log.
+For a test build, [verify the download before opening the DMG](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg). The notes also cover first-launch alerts and the desktop log.
 
 <a id="windows"></a>
 
@@ -32,19 +34,25 @@ See the [macOS installation notes](https://github.com/mfahsold/lixity/blob/main/
 
 1. Check **Settings → System → About → System type**. The current desktop builds target x64 PCs.
 
-2. Open the setup `.exe` to install for your account. Use the `.msi` when your organisation's deployment process calls for it.
+2. For a test build, extract `desktop-installers-x86_64-pc-windows-msvc` from the workflow run. Open **Start Here - Windows.html** if present. Compare the installer's SHA-256 with `SHA256SUMS-x86_64-pc-windows-msvc.txt` from the same archive.
 
-3. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
+3. Open the setup `.exe` to install for your account. The MSI is available in English and German for deployment testing.
 
-If setup cannot download the runtime, see [Microsoft’s WebView2 installation options](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#online-only-deployment).
+4. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
+
+Windows may flag an unsigned test build as an unknown publisher or unrecognized app. If system policy blocks installation, use the [published browser app and CLI](#install). See the [Windows verification and installation steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test) and [Microsoft’s WebView2 installation options](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
 
 <a id="linux"></a>
 
 ### Linux
 
-The current desktop builds target x86-64 and use WebKitGTK 4.1 and GTK 3. On Debian or Ubuntu, open the `.deb` with your package installer, then start **Lixity** from the applications menu.
+1. Check that `uname -m` reports `x86_64`. The desktop host uses WebKitGTK 4.1 and GTK 3.
 
-To run the `.AppImage` from its folder, allow it to execute in the file's properties and open it. If it reports a FUSE error, follow the [AppImage instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
+2. For a test build, extract `desktop-installers-x86_64-unknown-linux-gnu` from the workflow run. Open **Start Here - Linux.html** if present. In the extracted folder, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`.
+
+3. On Debian or Ubuntu, open the verified `.deb` with your package installer and start **Lixity** from the applications menu. To run the verified `.AppImage` from its folder, allow it to execute in the file's properties and open it.
+
+For an AppImage FUSE error, follow the [instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html). See the [Linux verification and installation steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test) for the Terminal commands.
 
 <a id="desktop-first-launch"></a>
 
@@ -52,9 +60,9 @@ To run the `.AppImage` from its folder, allow it to execute in the file's proper
 
 Choose **Open a project folder**, **Import a manuscript**, or **Start writing** in the welcome window. Choose **Try the example offline** to preview the bundled English manuscript. Confirm to save an editable local copy. New projects use `~/Lixity` by default, and the form shows the destination before saving.
 
-If the workspace cannot start, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. The [first-session guide](first-look.html) walks through reading your first finding.
+For a test build, use a separate account or test machine and explore the example first. If the workspace cannot start, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. See the [platform log locations](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs) if no window opens. The [first-session guide](first-look.html) walks through reading your first finding.
 
-This source guide describes **v0.9.1**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
+This source guide describes **v0.9.2**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.2.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
 <a id="requirements"></a>
 

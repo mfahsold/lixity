@@ -18,7 +18,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin
 
-from desktop.scripts.verify_desktop_artifacts import DesktopArtifact
+from desktop.scripts.verify_desktop_artifacts import DesktopArtifact, public_installer_inventory
 from scripts import desktop_downloads
 from scripts.stage_pages import stage
 
@@ -32,8 +32,7 @@ class TestDesktopDownloads(unittest.TestCase):
         tag = "v0.10.0"
         base = desktop_downloads.RELEASES
         artifacts = []
-        for index, ((target, kind), (_, suffix)) in enumerate(desktop_downloads.INSTALLERS.items()):
-            name = f"Lixity_{tag[1:]}_{index}{suffix}"
+        for name, (target, kind) in public_installer_inventory(tag).items():
             artifacts.append(DesktopArtifact(target, kind, name, 2048, hashlib.sha256(name.encode()).hexdigest()))
         checksums = "".join(f"{asset.sha256}  {asset.filename}\n" for asset in artifacts).encode("ascii")
 
@@ -64,8 +63,19 @@ class TestDesktopDownloads(unittest.TestCase):
         ]}
         with self.assertRaisesRegex(ValueError, "Invalid or duplicate desktop installer"):
             desktop_downloads.validate_catalog(catalog_with_old_installer)
-        with self.assertRaisesRegex(ValueError, "qualified installer formats"):
-            desktop_downloads.record_catalog(release, artifacts[:-1], checksums, qualification)
+        without_one_msi = [asset for asset in artifacts if not asset.filename.endswith("de-DE.msi")]
+        self.assertEqual(len(without_one_msi), len(artifacts) - 1)
+        with self.assertRaisesRegex(ValueError, "qualified installer variants"):
+            desktop_downloads.record_catalog(release, without_one_msi, checksums, qualification)
+        swapped_architecture = {**catalog, "installers": [
+            {**entry, "target": "x86_64-apple-darwin"}
+            if entry["target"] == "aarch64-apple-darwin" else entry for entry in catalog["installers"]
+        ]}
+        with self.assertRaisesRegex(ValueError, "Invalid or duplicate desktop installer"):
+            desktop_downloads.validate_catalog(swapped_architecture)
+        with self.assertRaisesRegex(ValueError, "duplicate public release asset"):
+            duplicate = {**release, "assets": [*release["assets"], checksum_asset]}
+            desktop_downloads.record_catalog(duplicate, artifacts, checksums, qualification)
         with self.assertRaisesRegex(ValueError, "public stable"):
             desktop_downloads.record_catalog({**release, "prerelease": True}, artifacts, checksums, qualification)
         with self.assertRaisesRegex(ValueError, "published checksum list"):
@@ -179,6 +189,98 @@ class TestPagesWorkflow(unittest.TestCase):
         self.assertIsNotNone(concurrency)
         self.assertIn("cancel-in-progress: false", concurrency.group(1))
         self.assertIn("ref: ${{ inputs.source_ref || github.sha }}", source)
+        self.assertIn("if: inputs.release_tag != ''", source)
+        self.assertIn("if: inputs.release_tag == '' || steps.guard.outputs.allow == 'true'", source)
+
+    @unittest.skipUnless(shutil.which("jq"), "Workflow boundary requires the Pages runner's jq")
+    def test_release_deployment_guard_keeps_newer_pages_and_allows_pending_release(self):
+        live, proposed = "a" * 40, "b" * 40
+        metadata = json.dumps({"schema_version": 1, "source_sha": live})
+        cases = (
+            ("superseded tag", {"TEST_LATEST": "v0.9.3"}, 0, False, ["latest"]),
+            ("deployed release ancestor", {}, 0, True, ["latest", "metadata", "compare"]),
+            ("same-source retry", {"TEST_METADATA": metadata.replace(live, proposed)},
+             0, True, ["latest", "metadata"]),
+            ("same latest tag behind deployed main", {"TEST_RELATIONSHIP": "behind"},
+             0, False, ["latest", "metadata", "compare"]),
+            ("divergent deployed source", {"TEST_RELATIONSHIP": "diverged"},
+             0, False, ["latest", "metadata", "compare"]),
+            ("first deployment", {"TEST_META_STATUS": "404", "TEST_ROOT_STATUS": "404"},
+             0, True, ["latest", "metadata", "root"]),
+            ("existing site missing metadata", {"TEST_META_STATUS": "404"},
+             1, False, ["latest", "metadata", "root"]),
+            ("invalid metadata", {"TEST_METADATA": "{}"}, 1, False, ["latest", "metadata"]),
+            ("unavailable metadata", {"TEST_META_STATUS": "503"}, 1, False, ["latest", "metadata"]),
+            ("unverified ancestry", {"TEST_MERGE_BASE": proposed}, 1, False, ["latest", "metadata", "compare"]),
+        )
+        script = pages_workflow_script("Protect newer Pages deployments from release retries")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gh = root / "gh"
+            gh.write_text(textwrap.dedent("""\
+                #!/usr/bin/env bash
+                case "$2" in
+                  repos/example/synthetic/releases/latest)
+                    echo latest >> "$TEST_REQUESTS"
+                    printf '{"tag_name":"%s"}\\n' "$TEST_LATEST" ;;
+                  "repos/example/synthetic/compare/$TEST_LIVE...$RELEASE_SHA?per_page=1")
+                    echo compare >> "$TEST_REQUESTS"
+                    printf '{"status":"%s","merge_base_commit":{"sha":"%s"}}\\n' \\
+                      "$TEST_RELATIONSHIP" "$TEST_MERGE_BASE" ;;
+                  *) exit 9 ;;
+                esac
+                """), encoding="utf-8", newline="\n")
+            curl = root / "curl"
+            curl.write_text(textwrap.dedent("""\
+                #!/usr/bin/env bash
+                [[ -z "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]] || exit 8
+                while (($#)); do
+                  case "$1" in
+                    --output) destination="$2"; shift ;;
+                    https://*) url="$1" ;;
+                  esac
+                  shift
+                done
+                case "$url" in
+                  https://example.test/site/deployment.json\\?run=100-2)
+                    echo metadata >> "$TEST_REQUESTS"
+                    printf '%s' "$TEST_METADATA" > "$destination"
+                    printf '%s' "$TEST_META_STATUS" ;;
+                  https://example.test/site/\\?run=100-2)
+                    echo root >> "$TEST_REQUESTS"
+                    printf '%s' "$TEST_ROOT_STATUS" ;;
+                  *) exit 9 ;;
+                esac
+                """), encoding="utf-8", newline="\n")
+            gh.chmod(0o700)
+            curl.chmod(0o700)
+            outputs, summary, requests = (root / name for name in ("outputs", "summary", "requests"))
+            env = {**os.environ, "PATH": os.pathsep.join((directory, os.environ.get("PATH", ""))),
+                   "RUNNER_TEMP": directory, "GITHUB_OUTPUT": str(outputs), "GITHUB_STEP_SUMMARY": str(summary),
+                   "GITHUB_REPOSITORY": "example/synthetic", "GITHUB_RUN_ID": "100", "GITHUB_RUN_ATTEMPT": "2",
+                   "GH_TOKEN": "synthetic-gh-token", "GITHUB_TOKEN": "synthetic-github-token",
+                   "RELEASE_TAG": "v0.9.2", "RELEASE_SHA": proposed,
+                   "PAGES_BASE_URL": "https://example.test/site/", "TEST_REQUESTS": str(requests),
+                   "TEST_LATEST": "v0.9.2", "TEST_LIVE": live, "TEST_METADATA": metadata,
+                   "TEST_META_STATUS": "200", "TEST_ROOT_STATUS": "200", "TEST_RELATIONSHIP": "ahead",
+                   "TEST_MERGE_BASE": live}
+            for name, overrides, code, allow, expected_requests in cases:
+                with self.subTest(name=name):
+                    outputs.unlink(missing_ok=True)
+                    summary.unlink(missing_ok=True)
+                    requests.unlink(missing_ok=True)
+                    result = subprocess.run(  # noqa: S603 - reviewed workflow step, synthetic API responses
+                        [BASH, "-e", "-o", "pipefail", "-c", script], cwd=root, timeout=10,
+                        env={**env, **overrides}, text=True, capture_output=True, check=False,
+                    )
+                    self.assertEqual(result.returncode == 0, code == 0, result.stdout + result.stderr)
+                    self.assertEqual(requests.read_text().splitlines(), expected_requests)
+                    if allow:
+                        self.assertEqual(outputs.read_text(), "allow=true\n")
+                    else:
+                        self.assertFalse(outputs.exists())
+                        if code == 0:
+                            self.assertIn("Pages deployment skipped", summary.read_text())
 
 
 class PageHead(HTMLParser):

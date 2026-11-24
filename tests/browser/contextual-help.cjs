@@ -496,29 +496,40 @@ async function settingsGeometry(page, locale, width) {
       assert.equal(await group.getAttribute('role'), 'group');
       const options = group.locator('#reader-analysis-options');
       assert.equal(await options.evaluate(node => node.open), false, 'Optional marks start collapsed');
-      for (const selector of ['#style-layer', '#analysis-evidence-enabled', '#analysis-comparison-enabled']) {
+      for (const [selector, descriptionId, descriptionKey] of [
+        ['#style-layer', null, null],
+        ['#analysis-evidence-enabled', 'reader-counted-help', 'reading_help_counted'],
+        ['#analysis-comparison-enabled', 'reader-comparison-help', 'reading_help_comparison'],
+      ]) {
         const control = page.locator(selector);
-        if (selector !== '#style-layer' && !await options.evaluate(node => node.open)) {
-          await options.locator(':scope > summary').press('Enter');
+        const summary = options.locator(':scope > summary');
+        if (descriptionId && !await options.evaluate(node => node.open)) {
+          await summary.press('Enter');
         }
-        assert.equal(await control.evaluate(node => node.closest('details')?.id || ''), selector === '#style-layer' ? '' : 'reader-analysis-options');
+        assert.equal(await control.evaluate(node => node.closest('details')?.id || ''), descriptionId ? 'reader-analysis-options' : '');
         await expect(control).toBeVisible();
-        const help = await control.getAttribute('data-help');
+        const help = descriptionKey ? fixtures[locale].labels[descriptionKey] : await control.getAttribute('data-help');
         assert.ok(help && help.trim(), 'Each analysis choice explains its effect before activation');
-        const initialValue = selector === '#style-layer' ? await control.inputValue() : await control.isChecked();
+        const initialValue = descriptionId ? await control.isChecked() : await control.inputValue();
         await control.press('Tab');
         await page.keyboard.press('Shift+Tab');
         await expect(control).toBeFocused();
-        await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'false');
-        await expect(page.locator('#lixity-tooltip .tooltip-copy')).toHaveText(help);
         await expect(control).toHaveAccessibleDescription(help);
-        if (selector === '#style-layer') {
+        const tooltip = page.locator('#lixity-tooltip');
+        if (descriptionId) {
+          const description = options.locator('#' + descriptionId);
+          await expect(control).toHaveAttribute('aria-describedby', descriptionId);
+          await expect(description).toBeVisible();
+          await expect(description).toHaveText(help);
+        } else {
+          await expect(tooltip).toHaveAttribute('aria-hidden', 'false');
+          await expect(tooltip.locator('.tooltip-copy')).toHaveText(help);
           await expect(control).toHaveAccessibleName(fixtures[locale].labels.analysis_measure);
-          await expect(page.locator('#lixity-tooltip .tooltip-heading')).toHaveText(fixtures[locale].labels.analysis_measure);
+          await expect(tooltip.locator('.tooltip-heading')).toHaveText(fixtures[locale].labels.analysis_measure);
+          await page.keyboard.press('Escape');
         }
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#lixity-tooltip')).toHaveAttribute('aria-hidden', 'true');
-        assert.equal(selector === '#style-layer' ? await control.inputValue() : await control.isChecked(), initialValue,
+        await expect(tooltip).toHaveAttribute('aria-hidden', 'true');
+        assert.equal(descriptionId ? await control.isChecked() : await control.inputValue(), initialValue,
           'Reading and dismissing help preserves the selected analysis choice');
         const geometry = await control.evaluate(node => {
           const bounds = (node.closest('label') || node).getBoundingClientRect();
@@ -526,13 +537,16 @@ async function settingsGeometry(page, locale, width) {
         });
         assert.ok(geometry.left >= 0 && geometry.right <= width,
           `Direct localized analysis controls stay inside the viewport: ${JSON.stringify({locale, width, height, selector, geometry})}`);
-        if (selector !== '#style-layer') {
-          const checked = await control.isChecked();
+        if (descriptionId) {
           await control.focus(); await page.keyboard.press('Space');
-          assert.equal(await control.isChecked(), !checked, 'Keyboard toggles the independently selected analysis decoration');
+          assert.equal(await control.isChecked(), !initialValue, 'Keyboard toggles the independently selected analysis decoration');
           await expect(control).toBeFocused();
           await page.keyboard.press('Space');
-          assert.equal(await control.isChecked(), checked);
+          assert.equal(await control.isChecked(), initialValue);
+          await page.keyboard.press('Escape');
+          await expect(summary).toBeFocused();
+          assert.equal(await options.evaluate(node => node.open), false, 'Escape closes the analysis options');
+          assert.equal(await control.isChecked(), initialValue, 'Closing analysis options preserves the selected choice');
         }
       }
     }

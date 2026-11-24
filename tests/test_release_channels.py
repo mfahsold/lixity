@@ -73,20 +73,20 @@ def metadata(dist):
 @pytest.fixture
 def desktop_candidate(tmp_path):
     bundle = tmp_path / "installer-workflow"
-    version = TAG[1:]
     magic = {
-        "macos-dmg": ("dmg", ".dmg", b"x\x01"),
-        "windows-msi": ("msi", ".msi", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"),
-        "windows-nsis": ("nsis", ".exe", b"MZ"),
-        "linux-deb": ("deb", ".deb", b"!<arch>\n"),
-        "linux-appimage": ("appimage", ".AppImage", b"\x7fELF"),
+        "macos-dmg": ("dmg", b"x\x01"),
+        "windows-msi": ("msi", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"),
+        "windows-nsis": ("nsis", b"MZ"),
+        "linux-deb": ("deb", b"!<arch>\n"),
+        "linux-appimage": ("appimage", b"\x7fELF"),
     }
-    for target in sorted({target for target, _ in desktop.PUBLIC_INSTALLER_FORMATS}):
+    installers = desktop.public_installer_inventory(TAG)
+    for target in sorted({target for target, _ in installers.values()}):
         base = tmp_path / target
-        for index, (owner, kind) in enumerate(sorted(desktop.PUBLIC_INSTALLER_FORMATS)):
+        for filename, (owner, kind) in installers.items():
             if owner == target:
-                directory, suffix, prefix = magic[kind]
-                path = base / directory / f"Lixity_{version}_{index}{suffix}"
+                directory, prefix = magic[kind]
+                path = base / directory / filename
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(prefix.ljust(512, b"\0"))
         assert desktop.main([str(base), "--target", target, "--out-dir", str(bundle),
@@ -167,7 +167,7 @@ def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
         channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)
     assert not staged.exists()
     review.write_text(json.dumps(receipt))
-    assert channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)["installer_count"] == 6
+    assert channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)["installer_count"] == 7
     assert calls[-1][1] == {"desktop": True}
     assert channels.QUALIFICATION_FILE not in calls[-1][0]
 
@@ -191,6 +191,56 @@ def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
     review_asset["digest"] = "sha256:" + "0" * 64
     with pytest.raises(ValueError, match=r"digest differs for desktop-qualification\.json"):
         channels.verify_github(root, TAG, SHA, REPO, dist, client, desktop_dist=staged)
+
+
+def test_catalog_records_attested_public_installer_bytes_atomically(
+    channels, candidate, desktop_candidate, monkeypatch, tmp_path, capsys,
+):
+    root, dist = candidate
+    installers, review = desktop_candidate
+    fake_git(monkeypatch, channels)
+    calls = []
+    monkeypatch.setattr(channels, "verify_attestations",
+                        lambda paths, *args, **flags: calls.append(({p.name for p in paths}, flags)))
+    staged = tmp_path / "staged-desktop"
+    channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)
+    base = f"https://github.com/{REPO}/releases"
+    monkeypatch.setattr(channels.desktop_downloads, "RELEASES", base)
+    release = {**metadata(dist), "prerelease": False, "html_url": f"{base}/tag/{TAG}"}
+    release["assets"].extend(metadata(staged)["assets"])
+    client, opener = client_for(channels, dist, release=release)
+    for path in staged.iterdir():
+        opener.values[f"{base}/download/{TAG}/{path.name}"] = path.read_bytes()
+    output = tmp_path / "catalog.json"
+    output.write_text("previous catalog")
+
+    missing = next(asset for asset in release["assets"] if asset["name"].endswith("de-DE.msi"))
+    release["assets"].remove(missing)
+    with pytest.raises(ValueError, match=r"asset set is incomplete.*de-DE\.msi"):
+        channels.record_desktop_catalog(root, TAG, SHA, REPO, output, client)
+    assert output.read_text() == "previous catalog"
+    assert len(opener.requests) == 2  # Tag identity and release metadata only.
+    release["assets"].append(missing)
+
+    url = missing["browser_download_url"]
+    original = opener.values[url]
+    opener.values[url] = b"\0" * len(original)
+    with pytest.raises(ValueError, match=r"GitHub release digest differs.*de-DE\.msi"):
+        channels.record_desktop_catalog(root, TAG, SHA, REPO, output, client)
+    assert output.read_text() == "previous catalog"
+    opener.values[url] = original
+
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    monkeypatch.setattr(sys, "argv", ["release_channels", "record-desktop-catalog", "--root", str(root),
+                                    "--tag", TAG, "--expected-commit", SHA, "--repo", REPO,
+                                    "--catalog-output", str(output)])
+    capsys.readouterr()
+    channels.main()
+    assert json.loads(capsys.readouterr().out)["installer_count"] == 7
+    catalog = json.loads(output.read_bytes())
+    assert catalog["tag"] == TAG
+    assert {entry["filename"] for entry in catalog["installers"]} == desktop.public_installer_inventory(TAG).keys()
+    assert calls[-1] == ({path.name for path in staged.iterdir()} - {channels.QUALIFICATION_FILE}, {"desktop": True})
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
@@ -336,6 +386,40 @@ def test_pypi_mismatch_is_never_silently_skipped(channels, candidate, monkeypatc
     with pytest.raises(ValueError, match="PyPI"):
         channels.stage_pypi(source, TAG, SHA, REPO, dist, upload, client)
     assert not upload.exists()
+
+
+@pytest.mark.parametrize("failure", ["interrupted", "wrong_bytes"])
+def test_pypi_staging_keeps_previous_directory_intact_until_both_copies_verify(
+    channels, candidate, monkeypatch, tmp_path, failure,
+):
+    source, dist = candidate
+    fake_git(monkeypatch, channels)
+    client, _ = client_for(channels, dist, pypi={"info": {"version": TAG[1:]}, "urls": []})
+    monkeypatch.setattr(channels, "verify_attestations", lambda *args: None)
+    upload = tmp_path / "upload"
+    upload.mkdir()
+    copyfile = channels.shutil.copyfile
+
+    def break_second_copy(src, dst):
+        copyfile(src, dst)
+        if src.name.endswith(".tar.gz"):
+            if failure == "interrupted":
+                raise OSError("synthetic copy interruption")
+            dst.write_bytes(b"wrong distribution bytes")
+
+    monkeypatch.setattr(channels.shutil, "copyfile", break_second_copy)
+    expected = (OSError, "copy interruption") if failure == "interrupted" else (ValueError, "Staged PyPI distribution")
+    with pytest.raises(expected[0], match=expected[1]):
+        channels.stage_pypi(source, TAG, SHA, REPO, dist, upload, client)
+    assert list(upload.iterdir()) == []
+    assert not list(tmp_path.glob(".lixity-pypi-*"))
+
+    monkeypatch.setattr(channels.shutil, "copyfile", copyfile)
+    result = channels.stage_pypi(source, TAG, SHA, REPO, dist, upload, client)
+    assert result == {"state": "pending", "upload_count": 2}
+    assert {path.name: path.read_bytes() for path in upload.iterdir()} == {
+        path.name: path.read_bytes() for path in dist.iterdir() if path.name != "SHA256SUMS"
+    }
 
 
 def test_attestation_policy_pins_repository_workflow_source_tag_and_hosted_runner(channels, candidate, monkeypatch):
@@ -574,7 +658,8 @@ def test_resolve_gh_binary_and_github_subprocess_env(channels, monkeypatch, tmp_
 
 
 def _doctor_subprocess(channels, monkeypatch, *, flags="--source-digest --signer-digest --cert-identity --deny-self-hosted-runners",
-                       auth_code=0, auth_out="Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n"):
+                       auth_code=0, auth_out="Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n",
+                       signing_lists=None):
     def fake_run(argv, **kwargs):
         name = Path(argv[0]).name
         if name == "gh":
@@ -584,6 +669,14 @@ def _doctor_subprocess(channels, monkeypatch, *, flags="--source-digest --signer
                 return subprocess.CompletedProcess(argv, 0, flags, "")
             if argv[1:] == ["auth", "status"]:
                 return subprocess.CompletedProcess(argv, auth_code, auth_out, "")
+            if signing_lists is not None:
+                for kind, command in (
+                    ("secret", ["secret", "list", "--app", "actions"]),
+                    ("variable", ["variable", "list"]),
+                ):
+                    if argv[1:] == [*command, "--repo", REPO, "--json", "name"]:
+                        code, rows = signing_lists[kind]
+                        return subprocess.CompletedProcess(argv, code, json.dumps(rows), "private diagnostic")
         if name == "git":
             if argv[1:] == ["rev-parse", "HEAD"]:
                 return subprocess.CompletedProcess(argv, 0, SHA + "\n", "")
@@ -624,6 +717,40 @@ def test_doctor_reports_git_gh_and_channel_readiness(channels, candidate, monkey
     assert report["git"]["prunable_worktrees"] == 1
     assert report["github_state"] == "missing"
     assert report["pypi_missing"] == ["lixity-0.3.0-py3-none-any.whl", "lixity-0.3.0.tar.gz"]
+
+
+def test_doctor_desktop_signing_reports_only_required_names(channels, candidate, monkeypatch):
+    source, dist = candidate
+    _doctor_subprocess(channels, monkeypatch, signing_lists={
+        "secret": (0, [{"name": "APPLE_NOTARY_KEY_ID"}, {"name": "OTHER_SECRET"}]),
+        "variable": (0, [{"name": name, "value": "private value"} for name in channels.AZURE_FIELDS]),
+    })
+    client, _ = client_for(channels, dist)
+    report = channels.doctor(source, REPO, client, desktop_signing=True)["desktop_signing"]
+    assert report == {
+        "macos": {"missing_secrets": [
+            "APPLE_DEVELOPER_ID_P12_BASE64", "APPLE_DEVELOPER_ID_P12_PASSWORD",
+            "APPLE_NOTARY_ISSUER_ID", "APPLE_NOTARY_KEY_P8_BASE64",
+        ]},
+        "windows": {
+            "missing_secrets": ["AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_TENANT_ID"],
+            "missing_variables": [],
+        },
+    }
+
+
+@pytest.mark.parametrize("secret_response", [(1, []), (0, [{}])])
+def test_doctor_desktop_signing_keeps_failed_queries_unknown(channels, candidate, monkeypatch, secret_response):
+    source, dist = candidate
+    _doctor_subprocess(channels, monkeypatch, signing_lists={
+        "secret": secret_response,
+        "variable": (0, []),
+    })
+    client, _ = client_for(channels, dist)
+    report = channels.doctor(source, REPO, client, desktop_signing=True)["desktop_signing"]
+    assert report["macos"]["missing_secrets"] is None
+    assert report["windows"]["missing_secrets"] is None
+    assert report["windows"]["missing_variables"] == sorted(channels.AZURE_FIELDS)
 
 
 def test_doctor_rejects_old_gh_and_pending_release_notes(channels, candidate, monkeypatch):
@@ -800,12 +927,19 @@ def test_verify_release_can_omit_pypi_and_live_pages(channels, candidate, monkey
     assert {request.host for request in opener.requests} == {"api.github.com"}
 
 
-def test_verify_zenodo_command_needs_no_checkout_or_other_channel(channels, monkeypatch, capsys):
+def zenodo_search_url(channels):
+    base = f"https://github.com/{REPO}"
     query = channels.urllib.parse.urlencode({
-        "q": f'metadata.related_identifiers.identifier:"https://github.com/{REPO}/tree/{TAG}"',
-        "size": 1,
+        "q": (f'metadata.related_identifiers.identifier:("{base}" OR "{base}/tree/{TAG}" '
+              f'OR "{base}/releases/tag/{TAG}") AND metadata.version:("{TAG}" OR "{TAG[1:]}")'),
+        "size": 10,
+        "all_versions": 1,
     })
-    url = f"https://zenodo.org/api/records?{query}"
+    return f"https://zenodo.org/api/records?{query}"
+
+
+def test_verify_zenodo_command_needs_no_checkout_or_other_channel(channels, monkeypatch, capsys):
+    url = zenodo_search_url(channels)
     opener = Responses({url: {"hits": {"hits": []}}})
     client = channels.HttpClient(opener=opener)
     monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
@@ -820,24 +954,34 @@ def test_verify_zenodo_command_needs_no_checkout_or_other_channel(channels, monk
 
 
 def test_zenodo_status_classifies_minted_pending_and_unknown(channels):
-    query = channels.urllib.parse.urlencode({
-        "q": f'metadata.related_identifiers.identifier:"https://github.com/{REPO}/tree/{TAG}"',
-        "size": 1,
-    })
-    url = f"https://zenodo.org/api/records?{query}"
-    minted = {"hits": {"hits": [{"doi": "10.5281/zenodo.12345", "links": {"self_html": "https://zenodo.org/records/12345"}}]}}
-    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: minted}))) == {
+    url = zenodo_search_url(channels)
+
+    def result(*hits):
+        return channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: {"hits": {"hits": hits}}})))
+
+    record = {
+        "doi": "10.5281/zenodo.12345",
+        "links": {"self_html": "https://zenodo.org/records/12345"},
+        "metadata": {"version": TAG, "related_identifiers": [{"identifier": f"https://github.com/{REPO}"}]},
+    }
+    other_release = {**record, "metadata": {**record["metadata"], "version": "v0.8.0"}}
+    other_project = {**record, "metadata": {**record["metadata"], "related_identifiers": [
+        {"identifier": "https://github.com/example/different-project"},
+    ]}}
+    assert result(other_release, other_project, record) == {
         "zenodo_status": "minted",
         "zenodo_doi": "10.5281/zenodo.12345",
         "zenodo_url": "https://zenodo.org/records/12345",
     }
-    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: {"hits": {"hits": []}}}))) == {
+    assert result(other_release, other_project) == result() == {
         "zenodo_status": "pending",
         "zenodo_doi": None,
         "zenodo_url": None,
     }
     error = urllib.error.HTTPError(url, 503, "down", {}, io.BytesIO())
-    assert channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: error}))) == {
+    assert result(record, {**record, "doi": "10.5281/zenodo.54321"}) == result({}) == (
+        channels.zenodo_status(REPO, TAG, channels.HttpClient(opener=Responses({url: error})))
+    ) == {
         "zenodo_status": "unknown",
         "zenodo_doi": None,
         "zenodo_url": None,

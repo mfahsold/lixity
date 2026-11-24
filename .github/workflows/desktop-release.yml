@@ -19,12 +19,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Check desktop installer version pins before starting the build matrix
+        run: python scripts/check_release.py --source-only --desktop-version
+
   rust-supply-chain:
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Verify Rust crate licenses (AGPL-3.0 compatible), advisories and sources
@@ -36,6 +52,7 @@ jobs:
           command-arguments: ""
 
   build-installers:
+    needs: preflight
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     env:
@@ -63,7 +80,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Verify the native runner matches the installer target
+        shell: bash
+        env:
+          EXPECTED_TARGET: ${{ matrix.target }}
+        run: |
+          host_target="$(rustc -vV | tr -d '\r' | sed -n 's/^host: //p')"
+          if [[ "$host_target" != "$EXPECTED_TARGET" ]]; then
+            echo "::error::Rust host target '$host_target' does not match '$EXPECTED_TARGET'."
+            exit 1
+          fi
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
@@ -215,6 +244,16 @@ jobs:
             --out-dir build/installers \
             --copy-to build/installers
 
+      - name: Include the offline guide in test archives
+        if: >-
+          (runner.os == 'Windows' && !inputs.sign_windows) ||
+          (runner.os == 'Linux' && (!inputs.sign_windows || !inputs.notarize_macos))
+        shell: bash
+        run: |
+          platform="$(printf '%s' "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+          cp "desktop/packaging/$platform/test-install-guide.html" \
+            "desktop/build/installers/Start Here - $RUNNER_OS.html"
+
       - name: Upload per-platform verified installers
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -234,6 +273,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
@@ -253,7 +293,8 @@ jobs:
           python desktop/scripts/render_package_manifests.py \
             --version "$VERSION" \
             --artifacts-dir dist-desktop \
-            --out-dir dist-desktop/manifests
+            --out-dir dist-desktop/manifests \
+            --require-public-inventory
           cat dist-desktop/SHA256SUMS-desktop.txt
 
       - name: Generate build provenance attestation for desktop installers
@@ -271,7 +312,9 @@ jobs:
       - name: Upload combined desktop installer bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: lixity-desktop-release-bundle
+          name: >-
+            ${{ github.ref == 'refs/heads/main' && inputs.notarize_macos && inputs.sign_windows
+                && 'lixity-desktop-release-bundle' || 'lixity-desktop-test-bundle' }}
           path: dist-desktop/*
           if-no-files-found: error
           retention-days: 30

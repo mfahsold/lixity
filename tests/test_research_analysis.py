@@ -222,7 +222,7 @@ class TestResearchAnalysis(unittest.TestCase):
         )
 
         res = api.compare_source(self.project, source["source_id"], manuscript_file)
-        self.assertEqual(res["schema_version"], "research-comparison-local/1")
+        self.assertEqual(res["schema_version"], "research-comparison-local/2")
         self.assertEqual(res["provenance"]["source_id"], source["source_id"])
         self.assertGreater(res["summary"]["jaccard_similarity"], 0.0)
         self.assertGreater(res["summary"]["shared_types"], 0)
@@ -264,14 +264,99 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertEqual(len(result["chapter_grounding"]), 1)
 
     def test_compare_marks_cross_language_lexical_limits(self):
-        self.file.write_text("## Quelle\n\nDas Haus steht.\n", encoding="utf-8")
-        source = self.ingest(language="de")
-        result = api.compare_source(
-            self.project, source["source_id"], "## Chapter\n\nThe house stands.\n", language="en"
+        from lixity.cli import main
+
+        self.file.write_text(
+            "## Quelle\n\nDas Haus steht in Aurora Borealis. " * 4 + "\n", encoding="utf-8"
         )
+        source_de = self.ingest(language="de")
+        manuscript_en = "## Chapter\n\nThe house stands in Aurora Borealis. " * 4 + "\n"
+        result = api.compare_source(
+            self.project, source_de["source_id"], manuscript_en, language="en"
+        )
+        self.assertEqual(result["schema_version"], "research-comparison-local/2")
         self.assertFalse(result["meta"]["lexical_comparable"])
         self.assertIn("cross_language_lexical_comparison", result["comparison_limits"])
-        self.assertIsInstance(result["summary"]["jaccard_similarity"], float)
+        summary = result["summary"]
+        for raw_key in (
+            "source_tokens",
+            "source_content_words",
+            "manuscript_tokens",
+            "manuscript_content_words",
+            "source_vocabulary_types",
+            "manuscript_vocabulary_types",
+        ):
+            self.assertIsInstance(summary[raw_key], int)
+            self.assertGreater(summary[raw_key], 0)
+        for cross_key in (
+            "shared_types",
+            "source_exclusive_types",
+            "manuscript_exclusive_types",
+            "jaccard_similarity",
+            "overlap_coefficient",
+        ):
+            self.assertIsNone(summary[cross_key], cross_key)
+        self.assertEqual(
+            result["lexical_overlap"],
+            {"top_shared_terms": [], "top_source_exclusive": []},
+        )
+        self.assertEqual(
+            result["keyness"],
+            {"source_key_terms": [], "manuscript_key_terms": []},
+        )
+        for feature, entry in result["register_contrast"].items():
+            self.assertIsInstance(entry["source"], float, feature)
+            self.assertIsInstance(entry["manuscript"], float, feature)
+            self.assertIsNone(entry["delta"], feature)
+        self.assertEqual(len(result["chapter_grounding"]), 1)
+        ch = result["chapter_grounding"][0]
+        self.assertGreater(ch["words"], 0)
+        self.assertGreater(ch["content_words"], 0)
+        self.assertIsNone(ch["overlap_types"])
+        self.assertIsNone(ch["overlap_tokens"])
+        self.assertIsNone(ch["grounding_density"])
+        self.assertEqual(ch["top_terms"], [])
+        self.assertEqual(ch["key_terms_present"], [])
+
+        md_report = api.compare_source(
+            self.project, source_de["source_id"], manuscript_en, language="en", format="md"
+        )
+        self.assertIn("No (cross-language)", md_report)
+        self.assertIn("cross_language_lexical_comparison", md_report)
+        self.assertIn("| **Jaccard Similarity** | – | – | – |", md_report)
+        self.assertIn("| **Overlap Coefficient** | – | – | – |", md_report)
+
+        # Same-language control returns numeric overlap and deltas.
+        same_de = api.compare_source(
+            self.project, source_de["source_id"], "## Kapitel\n\nDas Haus steht in Aurora.\n", language="de"
+        )
+        self.assertTrue(same_de["meta"]["lexical_comparable"])
+        self.assertIsInstance(same_de["summary"]["jaccard_similarity"], float)
+        self.assertIsInstance(same_de["register_contrast"]["asl"]["delta"], float)
+        self.assertIsInstance(same_de["chapter_grounding"][0]["grounding_density"], float)
+
+        # CLI de->en and en->de both enforce the /2 null contract.
+        ms_file = self.root / "cross_ms.md"
+        ms_file.write_text(manuscript_en, encoding="utf-8")
+        source_en_doc = self.root / "source_en.md"
+        source_en_doc.write_text("## Source\n\nThe house stands in Aurora.\n", encoding="utf-8")
+        source_en = api.ingest(self.project, source_en_doc, language="en", allow_retention=True)
+        for src_id, ms_lang in ((source_de["source_id"], "en"), (source_en["source_id"], "de")):
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                code = main([
+                    "research", "compare",
+                    "--project", str(self.project),
+                    "--source-id", src_id,
+                    "--manuscript", str(ms_file),
+                    "--language", ms_lang,
+                ])
+            self.assertEqual(code, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["schema_version"], "research-comparison-local/2")
+            self.assertFalse(payload["meta"]["lexical_comparable"])
+            self.assertIsNone(payload["summary"]["jaccard_similarity"])
+            self.assertIsNone(payload["chapter_grounding"][0]["grounding_density"])
 
     def test_comparison_uses_shared_prose_scope_for_all_measurements(self):
         decorations = (
@@ -335,7 +420,7 @@ class TestResearchAnalysis(unittest.TestCase):
             ])
         self.assertEqual(code, 0)
         data = json.loads(stdout.getvalue())
-        self.assertEqual(data["schema_version"], "research-comparison-local/1")
+        self.assertEqual(data["schema_version"], "research-comparison-local/2")
 
         # Test markdown format via API
         md_text = api.compare_source(self.project, source["source_id"], ms_file, format="md")

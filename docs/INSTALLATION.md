@@ -15,7 +15,7 @@ Lixity is **open source under AGPL-3.0-or-later** and may be used for commercial
 writing. A separate written commercial license covers closed-source integrations.
 [Licensing](LICENSING.md)
 
-> **Version scope:** this source documentation describes the prepared **v0.9.1**. Verify packages at
+> **Version scope:** this source documentation describes the prepared **v0.9.2**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -29,7 +29,7 @@ writing. A separate written commercial license covers closed-source integrations
 
 | Task | Section |
 | --- | --- |
-| Install or open the desktop app | [Check download availability](guides/installation.html#desktop) · [macOS](#macos-desktop-dmg) · [Windows](guides/installation.html#windows) · [Linux](guides/installation.html#linux) |
+| Install or open the desktop app | [Check download availability](guides/installation.html#desktop) · [macOS](#macos-desktop-dmg) · [Windows](#windows-desktop-test) · [Linux](#linux-desktop-test) |
 | Install the published browser app and CLI | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
 | Start with a manuscript | [First result](#first-useful-result) |
 | Update or uninstall | [Desktop test builds](#update-a-desktop-test-build) · [CLI and browser app](#update-the-cli-and-browser-app) |
@@ -91,6 +91,10 @@ and the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-se
 Clean-machine checks must cover installation, upgrade, rollback and preservation
 of project data. OS signing and notarization remain release gates.
 
+For GitHub Actions test builds, sign in to GitHub and choose the archive for
+your platform from the intended run. For a test kit supplied by the maintainer,
+keep the installers, start guide and checksum list together.
+
 <a id="macos-desktop-dmg"></a>
 
 #### Install a macOS test build from a disk image
@@ -99,18 +103,35 @@ Use the disk image supplied for your Mac. Build artifact names use `aarch64`
 for Apple Silicon and `x64` or `x86_64` for Intel. The app includes the local
 engine and Python runtime, so you can install and launch it from Finder.
 
+Before opening the DMG, confirm the build source and keep the checksum file
+from the same build in the same folder. In Terminal, run the appropriate
+command from that folder and check for `OK`.
+
+```sh
+# Apple Silicon
+shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt
+# Intel
+shasum -a 256 -c SHA256SUMS-x86_64-apple-darwin.txt
+```
+
+For a clean-profile test, use a separate macOS account and copy the app to
+a folder in that account. Close any running copy of Lixity before opening
+the test build.
+
 1. Double-click the `.dmg` in Finder. Drag **Lixity.app** onto the
    **Applications** shortcut in the disk image window and wait for the copy
-   to finish.
+   to finish. Ad hoc images mount as **Lixity Test Build** and include
+   **Start Here.html**.
 2. Eject the disk image in Finder. Open **Applications → Lixity**. This is
    where you open the app on later visits. Lixity starts its bundled local
    engine and opens its own window.
 3. Choose how to begin in the welcome window. The [first-session guide](ONBOARDING.md)
    covers existing work, new manuscripts and the bundled offline example.
 
-Local development builds use ad-hoc signing. Apple Developer ID signing and
-notarization are release gates for public distribution. If macOS blocks a
-test build, check the source and checksum with the maintainer.
+Local development builds use ad hoc signing. Gatekeeper may block them at
+first launch. Use Apple's guidance for the exact alert and confirm the copy
+with the maintainer. The published browser app and CLI are available while
+public desktop builds await Developer ID signing and notarization.
 [Apple's macOS app alerts](https://support.apple.com/en-us/102445)
 
 #### Open a local macOS development build
@@ -128,15 +149,95 @@ If the app is already running, send it a file-open request with
 starts its own engine. To manage the browser workspace, use
 [the service commands](#running-the-server).
 
+<a id="windows-desktop-test"></a>
+
+#### Install a Windows x64 test build
+
+Check **Settings → System → About → System type** for an x64 system.
+For an Actions download, extract `desktop-installers-x86_64-pc-windows-msvc` from the
+[selected workflow run](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
+Open `Start Here - Windows.html` if the archive includes it.
+Use `Lixity_VERSION_x64-setup.exe` for a per-user test. Use the English
+`Lixity_VERSION_x64_en-US.msi` or German `Lixity_VERSION_x64_de-DE.msi`
+when testing an MSI deployment.
+
+In PowerShell, change to the extracted folder and calculate SHA-256 for the
+installer you plan to run. Replace `VERSION` with the filename's version
+and use the MSI filename when applicable. Compare the returned hash with
+the entry for that file in the same run's `SHA256SUMS-x86_64-pc-windows-msvc.txt`.
+
+```powershell
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'
+```
+
+Windows can show an unknown publisher or an unrecognized app alert for a
+test build without a publisher signature. Keep the system's protection
+settings in place. If policy blocks the installer, record the exact alert
+and use the [published browser app and CLI](#cli-current-release) on that
+machine.
+[Microsoft SmartScreen guidance](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation)
+
+Run the verified EXE in a clean Windows test account or use a test VM
+for MSI deployment. Launch **Lixity** from the Start menu. Setup can
+download the Microsoft Edge WebView2 Runtime if the machine lacks it.
+A first install that needs the bootstrapper
+requires internet access. Microsoft provides a standalone installer for
+offline setups.
+[Microsoft WebView2 distribution](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
+
+<a id="linux-desktop-test"></a>
+
+#### Install a Linux x86-64 test build
+
+Check that `uname -m` reports `x86_64`. For an Actions download, extract
+`desktop-installers-x86_64-unknown-linux-gnu` from the
+[selected workflow run](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
+Open `Start Here - Linux.html` if the archive includes it.
+Run the following in the extracted folder. Keep the installer files and
+checksum list together and check that both files report `OK`.
+
+```sh
+sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
+```
+
+- **Debian or Ubuntu.** In a test system or VM, open the verified
+  `Lixity_VERSION_amd64.deb` with your package installer or run
+  `sudo apt install ./Lixity_VERSION_amd64.deb` with the actual filename.
+  This is a system package installation. APT can resolve
+  the WebKitGTK 4.1 and GTK 3 dependencies from configured repositories.
+  Start **Lixity** from the applications menu.
+  [Ubuntu package installation](https://ubuntu.com/server/docs/tutorial/managing-software/#installing-a-deb-file)
+- **AppImage.** Keep `Lixity_VERSION_amd64.AppImage` in your test folder.
+  Allow it to execute in the file's properties or run
+  `chmod u+x ./Lixity_VERSION_amd64.AppImage` with the actual filename.
+  Open it from that folder. If it reports a FUSE error, use the instructions
+  for your distribution. The published browser app and CLI are available
+  when the host lacks the required libraries.
+  [AppImage FUSE troubleshooting](https://docs.appimage.org/user-guide/troubleshooting/fuse.html)
+
+#### Check the first desktop session
+
+Choose **Try the example offline** in a test account or VM and save an
+editable copy in a new folder. Open a passage and inspect one finding.
+Report the OS version, installer filename and SHA-256 with any failure.
+Keep the installer used for an upgrade or rollback test.
+[First session](ONBOARDING.md) · [Desktop updates and rollback](#update-a-desktop-test-build)
+
 #### Find the desktop logs
 
 In the desktop app, choose **Tools → Open Logs Folder**. Use the same action
 in the startup error dialog if the workspace could not open. To inspect optional
 extensions, use **Tools → System Status & Extensions**. If the window does
-not open on macOS, choose **Go → Go to Folder** in Finder and enter
-`~/Library/Application Support/lixity/service`. The desktop engine writes
-diagnostics to `desktop-sidecar.log`. A quiet session can leave this file
-empty. The separately installed browser service uses
+not open, check the folder for your platform.
+
+| Platform | Desktop log folder |
+| --- | --- |
+| macOS | `~/Library/Application Support/lixity/service` |
+| Windows | `%LOCALAPPDATA%\lixity\service` |
+| Linux | `$XDG_STATE_HOME/lixity/service` or `~/.local/state/lixity/service` |
+
+The desktop engine writes diagnostics to `desktop-sidecar.log`. A quiet
+session can leave this file empty. The separately installed browser service uses
 [its own per-port log](#logs). Review log details before sharing.
 
 ### Install uv if it is not available
@@ -177,7 +278,7 @@ lixity service start --open
 
 Use the [published release notes](https://github.com/mfahsold/lixity/releases/latest)
 for changes and compatibility of the installed release. The
-[development notes](releases/v0.9.1.md) describe this source version.
+[development notes](releases/v0.9.2.md) describe this source version.
 `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 

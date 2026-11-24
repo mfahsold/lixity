@@ -206,7 +206,7 @@ The archive audit reads the project explicitly named in its request.
   Read `measured_cells` before interpreting `consistency`, the share of scored
   cells below the cutoff. An empty series retains the reference's `1.0`
   convention. This selection is a threshold filter.
-- `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews.
+- `lixity_research_gaps`: Read-only audit of the explicitly selected local research `project`, reporting unsupported, disputed, unanchored and unplaced claims and pending decision reviews (`research-gaps-local/1`). A claim counts as anchored only when the latest snapshot revision of at least one `ManuscriptClaimLink` referencing it has `state: "active"` and is neither withdrawn nor purged (retracted links do not anchor a claim).
 
 ### Audio status and local ZONOS3 synthesis
 
@@ -553,7 +553,7 @@ add interpretation rather than a new calibrated test.
 
 `dimension_diagnostics` explains support and availability. Use `dimensions[].flagged`,
 not rounded scores, for cutoff status; unavailable positions are not zero.
-**Since v0.9.0:** `dimension_diagnostics.mahalanobis_space` is
+**Since v0.9.1:** `dimension_diagnostics.mahalanobis_space` is
 `standardized_midranks`. Covariance and distance rows now use that same space,
 independently of populated z* fields. Recompute old mixed-space distances.
 `shrinkage_lambda` describes ridge regularization; `dimensions[].variance` and
@@ -722,8 +722,14 @@ deterministic proxies, with the following scope and availability rules.
   corpus-level `voice_separation` (`{available, dialogue_words,
   narrative_words, dialogue_asl, narrative_asl, asl_delta,
   dialogue_question_excl_pct, narrative_question_excl_pct, cosine_similarity,
-  separation_label}` where `separation_label` is `"distinct" | "moderate" |
-  "blended" | "unavailable"`). Unclosed or unrecognized quotations remain
+  separation_label}` where `separation_label` is `"unavailable"` when either
+  dialogue or narrative words are zero, `"distinct"` when
+  `cosine_similarity < 0.45` or (`|asl_delta| ≥ 6.0` and
+  `cosine_similarity < 0.65`), `"moderate"` when `cosine_similarity < 0.72`,
+  and `"blended"` otherwise). Curated speech-attribution, manner-adverb, and
+  indirect-speech pattern inventories in `dialogue.py` are language-profile
+  implementation details (`en`, `de`, `fr`, `es`, `it`, `pt`, `nl`; unavailable
+  for `generic`). Unclosed or unrecognized quotations remain
   uncounted.
 - `characters`: whole-word, case-insensitive matching of curated names or
   alias patterns (`{"Matthias|Matze": "Matthias"}`); `mentions`,
@@ -771,7 +777,8 @@ deterministic proxies, with the following scope and availability rules.
   `sticky_sentences`, `sticky_sentence_pct`, `mean_glue_pct`, `sticky_available`,
   and `sticky_items` (top 50 by `glue_pct`, controlled by `CorpusConfig.sticky_glue_pct=45.0`
   and `sticky_min_words=8`). Optional `genre_corridor` (via `--genre` / `genre=`
-  or `CorpusConfig.genre_corridor`) reports `{genre, label, non_prescriptive: true,
+  or `CorpusConfig.genre_corridor`; bounds inspectable via
+  `lixity.corridors.list_genre_corridors()`) reports `{genre, label, non_prescriptive: true,
   scope, metrics: {asl, dialogue_pct, staccato_pct, avg_scene_words} -> {observed,
   low, high, position}}`. `fastest_chapter`/`slowest_chapter` use the
   lowest/highest ASL.
@@ -799,8 +806,10 @@ deterministic proxies, with the following scope and availability rules.
   lower-level `lixity.motifs.motif_report` arguments, not CLI/config options.
   Repetition is a **signal**, not a verdict.
 
-- `showing`: telling signals (filter/modal/passive/nominalisation densities)
-  vs. showing signals (dialogue, staccato) as robust z against the book's own
+- `showing`: telling signals (`filter_density`, `modal_density`,
+  `passive_density`, `nominalization_density`, equal weight `1/4` each in
+  `tell_z`) vs. showing signals (`dialog_pct`, `staccato_pct`, equal weight
+  `1/2` each in `show_z`) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
   standard deviation is used when nonzero. Fewer than three sufficiently long
@@ -824,7 +833,7 @@ deterministic proxies, with the following scope and availability rules.
   (`kind: "word"`, `{start, end, count: 1}` for non-function words `len >= 4`
   repeated `>= 2` times in the same paragraph), and `indirect_speech`
   (`kind: "pattern"`, reporting/reflection verbs + complementizers and German
-  *Konjunktiv I* speech forms). `sticky`, `dialogue_tag`, and `indirect_speech`
+  *Konjunktiv I* / clause-attributed *Konjunktiv II* speech forms). `sticky`, `dialogue_tag`, and `indirect_speech`
   report `status: "unavailable", reason: "language_unavailable"` when the
   language lacks the required lexicon.
 

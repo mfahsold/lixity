@@ -63,9 +63,10 @@ and investigate reported bugs before changing behavior.
 
 ## Working conventions
 
-- Technical documentation, comments and docstrings in English; preserve
-  localized resources in their languages. Localization priority: German,
-  then English, then the other five interface languages.
+- Write all project documentation, status reports, milestone plans, QA
+  protocols, code comments and docstrings in English. Preserve localized
+  product resources in their intended languages. Prioritize German and
+  English when reviewing interface copy, followed by the other five languages.
 - English is the default analysis language; language detection is explicit
   (`--language auto`), never a silent default. Keep mathematical identifiers
   language-neutral and label heuristics as such, not as validated values.

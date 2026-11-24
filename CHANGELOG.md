@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-24
+
 ### Added
 
 - Compare quoted-word share and mean sentence length in manuscript order.
@@ -39,7 +41,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   test for Rust IPC and external links in the system WebView.
 - Verify the bundled runtime inside the read-only mounted macOS disk image in
   local development builds and both desktop installer workflows.
-- Include a bilingual offline installation guide in the macOS disk image.
+- Include an English offline installation guide in the macOS disk image.
+  Label ad hoc images as test builds and write a companion checksum file for
+  locally built DMGs.
+- Add English offline setup guides beside the verified Windows and Linux test
+  installers in GitHub Actions artifacts.
 - Offer an offline manuscript example on the desktop welcome screen. Preview
   the bundled text before creating an editable local project.
 - Document the desktop download, installation and first-launch steps together.
@@ -52,12 +58,25 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   publication on exact installer bytes, hosted build attestations and a
   per-installer qualification receipt. Verify the combined GitHub draft while
   keeping PyPI's distribution set independent.
+- Report missing GitHub signing settings by name before starting a desktop
+  release build. Report unavailable configuration listings as unknown.
 - Explain how to update the desktop and CLI installations through their
   original installation channels.
 - Support verified local replacement of an installed macOS test build from
   a clean checkout, with a retained rollback copy.
 
 ### Fixed
+
+- Check release notes and signed desktop build identity before the full CI
+  matrix. Verify all seven installer variants, including both Windows MSI
+  languages, before qualification or catalog updates. Generate the catalog from
+  the attested immutable release and stage PyPI uploads atomically.
+- Verify the version-specific Zenodo DOI when the record links to the GitHub
+  repository root.
+- Skip automatic Pages deployments when a release rerun would replace a newer
+  site or a deployment from a different source history.
+- Keep subprocess tests on the selected checkout when they change their
+  working directory to a temporary project.
 
 - Use one native recent-project list for the desktop welcome window and system
   menu. Keep each menu action bound to the displayed project.
@@ -88,8 +107,37 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Explain the exploratory selection limits in the comparison report and name
   the separate BH setting used by trend and manuscript-half summaries. Correct
   the documented guarded segment objective and the two sentence-length bin roles.
+- Align the v0.9.1 release labels for standardized-midrank Mahalanobis distances
+  across `AGENTS.md`, `METHODS.md`, and `STABILITY.md`, clarify editorial preset
+  calibration wording in `USAGE.md`, and document `voice_separation` cutoffs,
+  `showing` group weights, `first_person_start_rate` denominators, `--preset`
+  threshold injection, and `GENRE_CORRIDORS` bounds.
+- Exclude retracted manuscript claim links (`state: "retracted"`) from anchored
+  claims in `research_gaps()` (`research-gaps-local/1`) so claims with no
+  remaining active link are reported under `unanchored_claims`.
+- Report `features.asl` and plateau `mean_asl` as `null` (`"unavailable"` in
+  target comparisons and `—` in UI/CLI) for word-bearing scene units with zero
+  counted sentences in `scene_report()`, without changing the `analyze` schema-2
+  numeric sentinels on `CorpusMetrics` or `ChapterMetrics`.
+- Suppress non-comparable cross-language lexical overlap, Dunning $G^2$ keyness,
+  register delta, and chapter grounding density numbers in
+  `compare_source_to_manuscript()` (`null` / `[]`, rendered as `–` in Markdown).
+- Stabilize direct statistical calculations at extreme scales. Retain small
+  Jeffreys tails and valid scaled ratios, and reject invalid structural samples.
+  Verify robust estimates, rhythm, rank trends and lexical diversity against
+  independent exact and high-precision reference calculations.
 - Retry normal eject of the verified macOS disk image when a system process
   briefly holds it open.
+
+### Changed
+
+- Bump cross-corpus source–manuscript comparison payloads to
+  `schema_version: "research-comparison-local/2"`: cross-language comparisons
+  preserve per-side token/vocabulary counts and per-side register values while
+  returning `null` / `[]` for cross-corpus similarity, shared/exclusive terms,
+  keyness lists, register deltas, and chapter grounding densities. Historical
+  `research-comparison-local/1` payloads remain valid in saved artifacts; re-run
+  comparisons to obtain `/2` outputs.
 
 - Keep analysis controls visible when scrolling or pausing in the manuscript
   and analysis overview.
@@ -4644,7 +4692,8 @@ The tagged candidate stopped before publication at the hosted macOS PDF check.
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/mfahsold/lixity/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.1
 [0.9.0]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/mfahsold/lixity/compare/v0.8.1...v0.8.2

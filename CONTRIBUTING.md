@@ -316,7 +316,10 @@ operation.
    the reviewed SHA with `git rev-parse 'vX.Y.Z^{commit}'` before pushing the
    tag, then verify the dereferenced remote tag and the release run's SHA.
 3. **Follow tag publication.**
-   The tag workflow (`release.yml`) first requires reusable full source (`tests.yml`
+   The tag workflow (`release.yml`) checks the release notes, tag identity and
+   any selected signed desktop bundle before starting the full source, browser
+   and platform checks. The candidate workflow checks the same release notes.
+   A new release requires reusable full source (`tests.yml`
    across Python 3.10 and 3.12, including isolated wheel build + smoke),
    4-shard Chromium browser (`browser.yml`) and full native
    (`research-platforms.yml` with `scope: full` on `windows-latest` and `macos-latest`)
@@ -333,7 +336,11 @@ operation.
    of an already published tag, `scripts/release_channels.py recover` retrieves and
    verifies the immutable GitHub assets instead of rebuilding.
    After GitHub publication and a successful or intentionally skipped PyPI
-   step, the release pipeline deploys Pages from that exact tag.
+   step, the release pipeline considers Pages from that exact tag. The
+   serialized Pages job checks whether the tag is still the latest published
+   release and whether its commit can advance the live deployment. A rerun
+   skips deployment when the live site already includes newer or diverged work.
+   Manual Pages deployments retain their separate review procedure.
 4. **Verify each channel and perform any authorized local rollout.**
    Run `make release-verify RELEASE_TAG=vX.Y.Z` from the exact tagged checkout
    to check the GitHub Release and attestations, PyPI archive bytes, live Pages
@@ -367,11 +374,14 @@ the exact release commit on `main`. Set `DESKTOP_RELEASE_TAG`,
 `DESKTOP_RELEASE_RUN_ID` and `DESKTOP_RELEASE_QUALIFICATION` before pushing
 the tag. The first variable selects the tag, the second identifies the
 completed run, and the third contains its reviewed qualification JSON.
-Missing or mismatched installer evidence stops the selected release before
-publication. The workflow verifies the hosted desktop build attestations and
+The signed run produces `lixity-desktop-release-bundle`. Unsigned runs produce
+`lixity-desktop-test-bundle`. The preflight checks the completed signed run and
+its exact source SHA. The workflow verifies the hosted desktop build attestations and
 uploads the qualified files to the same draft as the Python package. It
 verifies the draft and the immutable release against those bytes. PyPI receives
-the wheel and sdist from the separate Python directory.
+the wheel and sdist from the separate Python directory. Already published tags
+recover their immutable files even after the desktop handoff configuration changes
+or the original build artifact expires.
 [Desktop qualification and catalog procedure](desktop/README.md#public-desktop-downloads)
 
 If a tag-triggered run fails, check the workflow, the remote tag target, the
@@ -398,6 +408,8 @@ Every tagged release is distributed and archived automatically:
 Zenodo processing is asynchronous and outside the Actions result. Check the
 specific release independently with
 `.venv/bin/python scripts/release_channels.py verify-zenodo --repo mfahsold/lixity --tag vX.Y.Z`.
+The check matches the requested version and repository in the public record,
+including records whose citation metadata links to the repository root.
 Confirm the DOI before reporting archival complete. Investigate a
 missing record in Zenodo's GitHub integration release/error view rather than
 republishing an immutable tag. When both metadata files exist,

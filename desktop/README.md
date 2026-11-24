@@ -71,10 +71,12 @@ Extract the ZIP and open its folder. The installer files,
 `SHA256SUMS-TARGET.txt` and `desktop-artifacts-TARGET.json` sit together. The
 filenames contain the version of the selected run in place of `VERSION`.
 Verify the checksum from that folder before opening the installer.
+New Windows and Linux test archives also include a platform-specific
+**Start Here** HTML guide for offline setup.
 
-- On macOS, run `shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt` or use
-  `SHA256SUMS-x86_64-apple-darwin.txt` on Intel. Open the disk image and drag
-  **Lixity.app** to **Applications**. [macOS test build instructions](../docs/INSTALLATION.md#macos-desktop-dmg)
+- On macOS, verify the matching SHA-256 file before opening the disk image.
+  Ad hoc images mount as **Lixity Test Build**, with **Start Here.html** inside.
+  [macOS test build instructions](../docs/INSTALLATION.md#macos-desktop-dmg)
 - On Windows, run `Get-FileHash -Algorithm SHA256 -LiteralPath .\Lixity_VERSION_x64-setup.exe`
   in PowerShell with the extracted installer filename. Compare the hash with
   that filename's entry in `SHA256SUMS-x86_64-pc-windows-msvc.txt`. Open the
@@ -82,6 +84,7 @@ Verify the checksum from that folder before opening the installer.
 - On Linux, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`. Open the
   verified `.deb` with your package installer on a Debian-based distribution.
   For the AppImage, give the file execute permission and launch it.
+  [Linux test build instructions](../docs/guides/installation.html#linux)
 
 Actions archives are temporary development builds. Public stable installers
 are listed in the installation guide after release qualification. The same
@@ -109,9 +112,10 @@ dependencies. Add `--dmg` to build a disk image with the same packager as CI.
 It mounts the image read-only, verifies the embedded signature and starts a
 synthetic authenticated workspace from the embedded runtime. The smoke imports
 a synthetic manuscript from the welcome screen into a temporary user directory.
-The disk image includes the offline **Start Here – Hier starten** guide for Finder.
-The final JSON
-also includes the image path and SHA-256. The packager uses `diskutil image`
+The disk image mounts as **Lixity Test Build** and includes **Start Here.html**
+for Finder. The output directory contains the DMG and its companion
+`SHA256SUMS-TARGET.txt`. The final JSON reports both paths and the image's
+SHA-256. The packager uses `diskutil image`
 where it supports building from a folder. It uses `hdiutil` on older macOS
 versions. Quit any running copy before launching the reported bundle in Finder
 or with `open "/path/to/Lixity.app"`. To open a particular project, append
@@ -188,6 +192,19 @@ The [installation guide](../docs/guides/installation.html#desktop) reads
 installers and Python archives for the same commit. Prepare a new version
 following the [release procedure](../CONTRIBUTING.md#preparing-a-release).
 
+Before requesting a signed candidate build, check which repository-level
+signing settings are present. Run this read-only command from the checkout
+with an authenticated GitHub CLI:
+
+```sh
+python scripts/release_channels.py doctor --root . --repo mfahsold/lixity --desktop-signing
+```
+
+Read `desktop_signing` in the report. Empty lists mean the required names are
+present. A `null` list means GitHub could not confirm that category. The check
+reads names only. A signed candidate run verifies whether the configured
+credentials are usable.
+
 #### Configure macOS signing
 
 Set these credentials in GitHub Actions secrets before dispatching
@@ -224,7 +241,8 @@ before it records installer checksums.
 
 1. Dispatch the desktop build with `notarize_macos=true` and
    `sign_windows=true` at the reviewed release commit on `main`. Download the
-   combined artifact from that exact successful run.
+   combined signed artifact from that exact successful run. Test runs publish
+   their combined output as `lixity-desktop-test-bundle`.
    Set `release_tag`, `release_sha` and `desktop_run` to the prepared version,
    full commit SHA and GitHub Actions run ID.
 
@@ -262,22 +280,29 @@ before it records installer checksums.
    installer bytes, validates the combined draft and verifies the immutable
    release after publication.
 
-5. From the tagged checkout, verify the immutable release and record the
-   public catalog from the published bytes. Use a new download directory.
+5. From the tagged checkout, record a reviewed copy of the public catalog
+   from the immutable release. The catalog command checks the remote tag,
+   downloads the desktop assets, and verifies GitHub digests, the qualification
+   receipt and hosted build attestations before writing the output.
 
 ```sh
-make release-verify RELEASE_TAG="$release_tag" RELEASE_VERIFY_ARGS=--require-desktop
-gh release download "$release_tag" --dir desktop-published
-gh api "repos/mfahsold/lixity/releases/tags/$release_tag" > desktop-release.json
-python -m scripts.desktop_downloads --release-info desktop-release.json \
-  --artifacts-dir desktop-published --source-sha "$release_sha"
+catalog_dir=$(mktemp -d)
+python scripts/release_channels.py record-desktop-catalog --root . \
+  --tag "$release_tag" --expected-commit "$release_sha" --repo mfahsold/lixity \
+  --catalog-output "$catalog_dir/desktop-downloads.json"
+```
+
+Copy that file to `docs/desktop-downloads.json` in the publishing checkout.
+Review the diff together with the generated installation guide.
+
+```sh
+cp "$catalog_dir/desktop-downloads.json" docs/desktop-downloads.json
 make docs-sync
 make docs-check
 ```
 
-The catalog tool compares the installers, checksum list and qualification
-receipt with the immutable GitHub assets. Review the catalog and generated
-installation guide together from the publishing branch. Follow the
+Verify the published catalog and installation guide from the Pages publishing
+commit after deploying that checkout. Follow the
 [Pages publication procedure](../CONTRIBUTING.md#publish-and-verify-pages).
 
 ### Update delivery

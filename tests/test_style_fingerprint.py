@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import unittest
+from decimal import Decimal, localcontext
 from fractions import Fraction
 from statistics import median
 
@@ -82,6 +83,48 @@ DIMENSION_SAMPLE = (
 
 
 class TestRobustStatistics(unittest.TestCase):
+    def test_direct_structural_statistics_reject_nonfinite_samples(self):
+        from lixity.style_fingerprint import (
+            cliff_delta,
+            hill_estimator,
+            lag1_autocorrelation,
+            mann_kendall,
+            pelt_changepoints,
+            runs_above_median_z,
+            spearman_rho,
+        )
+
+        for value in (math.nan, math.inf, -math.inf):
+            series = [0.0, 1.0, value, 2.0, 3.0, 4.0, 5.0, 6.0]
+            for measure in (hill_estimator, lag1_autocorrelation, mann_kendall, pelt_changepoints, runs_above_median_z):
+                with self.subTest(measure=measure.__name__, value=value), self.assertRaisesRegex(ValueError, "finite"):
+                    measure(series)
+            reference = [float(index) for index in range(len(series))]
+            for compare in (cliff_delta, spearman_rho):
+                with self.subTest(compare=compare.__name__, value=value), self.assertRaisesRegex(ValueError, "finite"):
+                    compare(reference, series)
+
+    def test_spearman_rejects_unpaired_samples_before_short_sample_guard(self):
+        from lixity.style_fingerprint import spearman_rho
+
+        with self.assertRaisesRegex(ValueError, "equal lengths"):
+            spearman_rho([1.0], [1.0, 2.0, 3.0])
+
+    def test_perfect_spearman_ranks_stay_inside_correlation_bounds(self):
+        from lixity.style_fingerprint import spearman_rho
+
+        series = [float(index) for index in range(17)]
+        self.assertEqual(spearman_rho(series, series), 1.0)
+        self.assertEqual(spearman_rho(series, series[::-1]), -1.0)
+
+    def test_finite_range_integer_samples_can_require_scaled_differences(self):
+        from lixity.style_fingerprint import lag1_autocorrelation, pelt_changepoints
+
+        extreme = 10**308
+        series: list[float] = [extreme, extreme, -extreme, -extreme]
+        self.assertEqual(lag1_autocorrelation(series), 0.25)
+        self.assertEqual(pelt_changepoints(series), [2])
+
     def test_nonfinite_measurements_are_rejected_before_scoring(self):
         text = "\n\n".join(
             f"## Chapter {number}\n\n" + "A synthetic door stays closed. " * 30
@@ -1194,6 +1237,22 @@ class TestPELT(unittest.TestCase):
         # Very high penalty → no changepoints
         self.assertEqual(pelt_changepoints(series, penalty=1e6), [])
 
+    def test_extreme_finite_penalty_does_not_overflow_segment_costs(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        # For this standardized series the segment cost differences are small,
+        # so the penalty alone orders partitions with distinct segment counts.
+        series = [0.0, 1.0, 2.0, 3.0]
+        self.assertEqual(pelt_changepoints(series, penalty=-1e308), [1, 2, 3])
+        self.assertEqual(pelt_changepoints(series, penalty=1e308), [])
+
+    def test_rejects_nonfinite_penalties(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        for penalty in (math.nan, math.inf, -math.inf):
+            with self.subTest(penalty=penalty), self.assertRaisesRegex(ValueError, "penalty must be finite"):
+                pelt_changepoints([1.0, 2.0, 3.0], penalty=penalty)
+
     def test_deterministic(self):
         from lixity.style_fingerprint import pelt_changepoints
 
@@ -1256,6 +1315,24 @@ class TestMannKendall(unittest.TestCase):
 
         data = [2.0, 3.0, 1.0, 5.0, 4.0]
         self.assertEqual(mann_kendall(data), mann_kendall(data))
+
+    def test_hamed_rao_matches_rational_variance_with_and_without_rescaling(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        # Pair counting gives S=17 and tie groups of 3, 2 and 3 give variance 57.
+        # The median pairwise slope is 13/42. Its residual ranks in time order
+        # are (5, 3, 7, 1, 8, 2, 6, 4), with only lags 1 and 2 over the cutoff.
+        first_lag, second_lag = Fraction(-155, 168), Fraction(61, 84)
+        corrected_variance = 57 * (1 + Fraction(2, 8 * 7 * 6) * (
+            7 * 6 * 5 * first_lag + 6 * 5 * 4 * second_lag
+        ))
+        expected_p = math.erfc(16 / math.sqrt(2 * corrected_variance))
+        for scale in (1.0, math.ulp(0.0), 1e308):
+            with self.subTest(scale=scale):
+                result = mann_kendall([scale * value for value in (-1, -1, 0, -1, 1, 0, 1, 1)])
+                assert result is not None
+                self.assertEqual(result[:2], (17 / 28, 17.0))
+                self.assertAlmostEqual(result[2], expected_p, places=15)
 
     def test_matches_naive_quadratic_formula_across_ties_and_random_series(self):
         import random
@@ -1354,7 +1431,7 @@ class TestWassersteinKS(unittest.TestCase):
 
         for compare in (ks_2sample, wasserstein_1d):
             for value in (math.nan, math.inf, -math.inf):
-                for x, y in (([value], [0.0]), ([0.0], [value])):
+                for x, y in (([value], [0.0]), ([0.0], [value]), ([value], []), ([], [value])):
                     with self.subTest(compare=compare.__name__, value=value, x=x), self.assertRaisesRegex(ValueError, "finite"):
                         compare(x, y)
     """Wasserstein distance and KS two-sample test."""
@@ -1465,6 +1542,20 @@ class TestHillEstimator(unittest.TestCase):
         data = [float(i) for i in range(1, 51)]
         self.assertIsNotNone(hill_estimator(data, k=5))
         self.assertIsNone(hill_estimator(data, k=1))  # k < 2
+
+    def test_matches_decimal_quotients_at_extreme_scales_and_near_ties(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        for threshold, largest in ((1e-308, 1e308), (0.9, math.nextafter(0.9, math.inf))):
+            with self.subTest(threshold=threshold, largest=largest), localcontext() as context:
+                context.prec = 90
+                # With two equal upper observations, their average log ratio
+                # is simply the log of either upper observation / threshold.
+                ratio = Decimal.from_float(largest) / Decimal.from_float(threshold)
+                expected = float(Decimal(1) / ratio.ln())
+                measured = hill_estimator([0.0, 0.0, threshold, largest, largest])
+                assert measured is not None
+                self.assertTrue(math.isclose(measured, expected, rel_tol=1e-14))
 
     def test_negative_values_return_none(self):
         from lixity.style_fingerprint import hill_estimator

@@ -33,17 +33,45 @@ features and the changelog for work on the current branch.
 [Releases](https://github.com/mfahsold/lixity/releases) ·
 [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)
 
+## Implementation and release status
+
+| Area | Available or verified | Next evidence |
+| --- | --- | --- |
+| Installation | The published Python package serves the local browser app and CLI. Native test installers cover Apple Silicon, Intel macOS, Windows x64 and Linux x64. | Verify signed packages on clean systems, then generate the public download catalog from the verified release. [Desktop distribution](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#remaining-work-before-distribution) |
+| Close reading and revision | The shared workspace links findings to passages, supports draft and saved comparisons, and recovers interrupted editing sessions. Synthetic tests cover the browser workflow and the German and English passage return in macOS WKWebView at standard and compact sizes. | Observe authors and editors completing the same task. Check input methods, assistive technology and the other native WebViews. [Editing workflow](WORKSPACE.md#write-a-manuscript) |
+| Research and project recovery | Dossiers retain source and manuscript evidence. Project bundles restore the selected saved text, configuration and archived research. | Exercise a fresh-profile restore and verify saved content hashes and retained evidence. Exercise draft recovery in the original workspace. [Project backup](PROJECT_BACKUP.md) |
+| Large projects | The editor reuses measurements for unchanged chapters. Local tests and benchmarks distinguish initial reading, evidence loading, snapshot calculation and archive search. | Measure the complete workflows with the same inputs across the desktop platforms. [Desktop and large-project priorities](RUST_EVALUATION_RFC.md#desktop-and-large-project-priorities) |
+
 ## What should come next
 
-These priorities describe evidence to gather for future release decisions.
+### First public desktop release
+
+Prepare one version and source commit. Verify the signed candidate for the
+four desktop targets, then complete fresh installation, upgrade and rollback
+for the seven installer files. Qualify the exact file hashes before publishing.
+Verify the published install links and first-run instructions in the seven
+interface languages. [Installer qualification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#review-and-publish-one-candidate)
+
+### Author and editor pilot
+
+Use the same synthetic project for the first launch, a passage review and a
+saved change. Ask participants to follow a finding, explain what was measured,
+and return to the text. Include a recoverable edit and a dossier with a pinned
+source. Capture completion, friction and accessibility observations. Run native
+checks for the platform-specific interactions separately from the browser suite.
+[Workspace manual](WORKSPACE.md) · [Test selection](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#select-the-checks-for-your-change)
+
+### Next performance and revision improvements
+
+Compare candidate improvements on the same input, source revision and platform
+before changing the underlying implementation. Keep project preservation and
+traceable evidence in the acceptance checks.
 
 | Priority | What to verify |
 | --- | --- |
-| Recoverable revision | Edit, undo, compare saved and draft text and recover from an external change. Check real IME, dead keys, screen readers and interrupted saves. Ask authors where deliberate named checkpoints would help. |
-| Findings that lead back to the text | Ask someone to open a measurement, explain why the passage appeared and return to it without help. Include short and multilingual manuscripts. |
-| Research you can pick up again | After an edit, distinguish unchanged, moved and ambiguous links. Open a saved dossier PDF and verify its passages and pinned source quotations. |
-| Desktop installation as the normal entry point | Install, update and roll back on macOS, Windows and Linux. Check signing, open an existing project and verify that it can still be edited and exported. The download guide promotes public installers once the target matrix qualifies. [Desktop installer targets](INSTALLATION.md#packaging-direction) |
-| A project you can restore | Restore a project in a fresh directory. Verify the inventory, content hashes and retained evidence links. [Project backup](PROJECT_BACKUP.md) |
+| Large-project reading | Compare launch to first readable passage, evidence latency, scroll frame times and memory. Start with the existing live-reader workload on each desktop WebView. |
+| Revision workflow | Verify interrupted saves, undo and edits from multiple windows. Gather examples where a named revision checkpoint would help during real work. |
+| Archive search | Measure validated archive reads and index queries separately. Preserve exact citations and detection of changed or unavailable sources. |
 
 The previous product assessment records earlier writing and architecture proposals.
 [Archived product assessment](https://github.com/mfahsold/lixity/blob/d78968750b99ec27e8bfbae195c60bad7ff45fc0/docs/PRODUCT.md)

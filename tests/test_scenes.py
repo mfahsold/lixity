@@ -537,6 +537,64 @@ class SceneContracts(unittest.TestCase):
             data = json.loads(out.read_text(encoding="utf-8"))
             self.assertEqual(data["scenes"]["items"][0]["scene_title"], "Chapter 1")
 
+    def test_word_bearing_sentenceless_scene_marks_asl_and_plateau_unavailable(self):
+        from lixity.corridors import evaluate_genre_corridor
+        from lixity.language import LANGUAGE_PROFILES
+        from lixity.models import CorpusConfig
+        from lixity.scenes import _detect_pacing_plateaus
+        from lixity.ui.narration import render_scenes_panel
+
+        text = (
+            "## One\n\nAlpha beta gamma delta.\n\n"
+            "## Two\n\nEpsilon zeta eta theta. Iota kappa lambda mu.\n\n"
+            "## Three\n\nNu xi omicron pi. Rho sigma tau upsilon.\n"
+        )
+        config = CorpusConfig(language="en")
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        sentenceless = metrics.chapters[0].model_copy(update={"sentences": 0, "asl": 0.0})
+        premeasured = [sentenceless, metrics.chapters[1], metrics.chapters[2]]
+        settings = {
+            "assignments": {"1:1": "group_a", "2:1": "group_a", "3:1": "group_a"},
+            "groups": {"group_a": {"targets": {"asl": [3.0, 10.0]}}},
+        }
+        report = scene_report(text, config, settings, _premeasured_chapters=premeasured)
+        first = report["items"][0]
+        self.assertGreater(first["words"], 0)
+        self.assertEqual(first["sentences"], 0)
+        self.assertIsNone(first["features"]["asl"])
+        self.assertIsNone(first["features"]["sentence_cv"])
+        self.assertEqual(first["targets"]["asl"]["position"], "unavailable")
+        # Baseline excludes the sentenceless scene and uses only the two measured chapters.
+        self.assertEqual(report["baselines"]["group_a"]["asl"]["n"], 2)
+        self.assertEqual(report["baselines"]["group_a"]["asl"]["median"], 4.0)
+
+        corridor = evaluate_genre_corridor(
+            "literary",
+            {
+                "asl": first["features"]["asl"],
+                "dialogue_pct": first["features"]["dialog_pct"],
+                "staccato_pct": first["features"]["staccato_pct"],
+                "avg_scene_words": float(first["words"]),
+            },
+        )
+        self.assertEqual(corridor["metrics"]["asl"]["position"], "unavailable")
+        self.assertIsNone(corridor["metrics"]["asl"]["observed"])
+
+        all_sentenceless = [
+            ch.model_copy(update={"sentences": 0, "asl": 0.0}) for ch in metrics.chapters
+        ]
+        plateau_report = scene_report(text, config, _premeasured_chapters=all_sentenceless)
+        plateaus = _detect_pacing_plateaus(plateau_report["items"])
+        self.assertEqual(len(plateaus), 1)
+        self.assertEqual(plateaus[0]["reason"], "low_exit_hooks")
+        self.assertIsNone(plateaus[0]["mean_asl"])
+
+        labels = LANGUAGE_PROFILES["en"].labels
+        html = render_scenes_panel(plateau_report, labels, "en")
+        self.assertIn("— words per sentence", html)
+        detail_first = html.split('data-scene="1:1"', 1)[1].split("</details>", 1)[0]
+        self.assertIn("<td>—</td>", detail_first)
+
 
 if __name__ == "__main__":
     unittest.main()

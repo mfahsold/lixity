@@ -20,18 +20,21 @@ else:
 
 ARTIFACT_SCHEMA = "lixity-desktop-artifacts/1"
 DESKTOP_CHECKSUMS = "SHA256SUMS-desktop.txt"
-PUBLIC_INSTALLER_FORMATS = frozenset({
-    ("aarch64-apple-darwin", "macos-dmg"),
-    ("x86_64-apple-darwin", "macos-dmg"),
-    ("x86_64-pc-windows-msvc", "windows-nsis"),
-    ("x86_64-pc-windows-msvc", "windows-msi"),
-    ("x86_64-unknown-linux-gnu", "linux-deb"),
-    ("x86_64-unknown-linux-gnu", "linux-appimage"),
-})
+_PUBLIC_INSTALLER_SUFFIXES = {
+    ("aarch64-apple-darwin", "macos-dmg"): ("_aarch64.dmg",),
+    ("x86_64-apple-darwin", "macos-dmg"): ("_x64.dmg",),
+    ("x86_64-pc-windows-msvc", "windows-nsis"): ("_x64-setup.exe",),
+    ("x86_64-pc-windows-msvc", "windows-msi"): ("_x64_de-DE.msi", "_x64_en-US.msi"),
+    ("x86_64-unknown-linux-gnu", "linux-deb"): ("_amd64.deb",),
+    ("x86_64-unknown-linux-gnu", "linux-appimage"): ("_amd64.AppImage",),
+}
+PUBLIC_INSTALLER_FORMATS = frozenset(_PUBLIC_INSTALLER_SUFFIXES)
 PUBLIC_INSTALLER_MANIFESTS = frozenset(
     f"desktop-artifacts-{target}.json" for target, _ in PUBLIC_INSTALLER_FORMATS
 )
 PUBLIC_RELEASE_TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
+_ARTIFACT_TARGET = re.compile(r"[a-z0-9_]+(?:-[a-z0-9_]+)+")
+_ARTIFACT_FILENAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9 .+_-]{0,254}")
 # Map Tauri's top-level bundle output subdirectories to (suffix, artifact kind).
 # Scanning only depth-1 entries under these known directories avoids descending
 # into unpacked app trees (e.g. macos/Lixity.app or appimage/Lixity.AppDir).
@@ -65,6 +68,41 @@ def public_installer_filename_pattern(tag: str) -> re.Pattern[str]:
     return re.compile(rf"Lixity[_-]{re.escape(tag[1:])}[_-][A-Za-z0-9_.-]+")
 
 
+def public_installer_inventory(tag: str) -> dict[str, tuple[str, str]]:
+    """Return every public installer filename and its expected target and kind."""
+    if not PUBLIC_RELEASE_TAG.fullmatch(tag):
+        raise ValueError("Expected a stable desktop release tag such as v0.10.0")
+    return {
+        f"Lixity_{tag[1:]}{suffix}": variant
+        for variant, suffixes in _PUBLIC_INSTALLER_SUFFIXES.items()
+        for suffix in suffixes
+    }
+
+
+def verify_public_installer_inventory(artifacts: tuple[DesktopArtifact, ...], *, tag: str) -> None:
+    """Require the exact public installer matrix for a stable version."""
+    expected = public_installer_inventory(tag)
+    actual = {item.filename: (item.target, item.kind) for item in artifacts}
+    if len(actual) != len(artifacts):
+        raise ValueError("Duplicate public desktop installer filenames")
+    filename_pattern = public_installer_filename_pattern(tag)
+    wrong_versions = sorted(name for name in actual if not filename_pattern.fullmatch(name))
+    if wrong_versions:
+        raise ValueError(f"Installer filename does not match {tag}: {', '.join(wrong_versions)}")
+    missing = sorted(expected.keys() - actual.keys())
+    unexpected = sorted(actual.keys() - expected.keys())
+    if missing or unexpected:
+        details = []
+        if missing:
+            details.append(f"missing {', '.join(missing)}")
+        if unexpected:
+            details.append(f"unexpected {', '.join(unexpected)}")
+        raise ValueError(f"Public desktop installer matrix differs for {tag}: {'. '.join(details)}")
+    mismatched = sorted(name for name in expected if expected[name] != actual[name])
+    if mismatched:
+        raise ValueError(f"Public desktop installer target or kind differs: {', '.join(mismatched)}")
+
+
 def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
     """Read the per-target inventory independently of the installer bytes."""
     manifests = sorted(directory.glob("desktop-artifacts-*.json"))
@@ -74,11 +112,13 @@ def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
     artifacts: list[DesktopArtifact] = []
     seen: set[str] = set()
     for manifest in manifests:
+        if manifest.is_symlink() or not manifest.is_file():
+            raise ValueError(f"Missing regular desktop artifact manifest: {manifest.name}")
         payload = json.loads(manifest.read_text(encoding="utf-8"))
         if not isinstance(payload, dict) or payload.get("schema_version") != ARTIFACT_SCHEMA:
             raise ValueError(f"Invalid desktop artifact schema in {manifest.name}")
         target = payload.get("target")
-        if (not isinstance(target, str) or not re.fullmatch(r"[a-z0-9_]+(?:-[a-z0-9_]+)+", target)
+        if (not isinstance(target, str) or not _ARTIFACT_TARGET.fullmatch(target)
                 or manifest.name != f"desktop-artifacts-{target}.json"):
             raise ValueError(f"Invalid desktop target in {manifest.name}")
         entries = payload.get("artifacts")
@@ -89,7 +129,7 @@ def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
                 raise ValueError(f"Invalid artifact entry in {manifest.name}")
             filename, kind, size, digest = (entry.get(key) for key in ("filename", "kind", "bytes", "sha256"))
             if (
-                not isinstance(filename, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .+_-]{0,254}", filename)
+                not isinstance(filename, str) or not _ARTIFACT_FILENAME.fullmatch(filename)
                 or not isinstance(kind, str) or kind not in _INSTALLER_LAYOUTS
                 or type(size) is not int or size < 512
                 or not isinstance(digest, str) or not re.fullmatch(r"[a-fA-F0-9]{64}", digest)
@@ -108,10 +148,10 @@ def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
 def load_verified_artifacts(directory: Path) -> tuple[DesktopArtifact, ...]:
     """Recheck the flattened installer files after collecting CI artifacts."""
     artifacts = read_artifact_manifests(directory)
-    suffixes = tuple(suffix for suffix, _ in INSTALLER_SUBDIRS.values())
+    suffixes = tuple(suffix.casefold() for suffix, _ in INSTALLER_SUBDIRS.values())
     expected = {artifact.filename for artifact in artifacts}
     for path in directory.iterdir():
-        if path.name.endswith(suffixes) and path.name not in expected:
+        if path.name.casefold().endswith(suffixes) and path.name not in expected:
             raise ValueError(f"Unexpected installer without a manifest entry: {path.name}")
     for artifact in artifacts:
         path = directory / artifact.filename
@@ -164,6 +204,7 @@ def collect_artifacts(bundle_dir: Path, *, windows_signtool: Path | None = None)
         raise FileNotFoundError(f"Bundle directory does not exist: {bundle_dir}")
 
     files: list[tuple[Path, str]] = []
+    seen: set[str] = set()
     for subdir_name, (suffix, kind) in sorted(INSTALLER_SUBDIRS.items()):
         subdir = bundle_dir / subdir_name
         if not subdir.is_dir():
@@ -173,6 +214,12 @@ def collect_artifacts(bundle_dir: Path, *, windows_signtool: Path | None = None)
                 continue
             if not path.name.endswith(suffix):
                 continue
+            if not _ARTIFACT_FILENAME.fullmatch(path.name):
+                raise ValueError(f"Invalid desktop installer filename: {path.name}")
+            key = path.name.casefold()
+            if key in seen:
+                raise ValueError(f"Duplicate desktop installer filename: {path.name}")
+            seen.add(key)
             verify_container_magic(path, kind)
             if windows_signtool is not None and kind.startswith("windows-"):
                 verify_signature(windows_signtool, path)
@@ -225,6 +272,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Require timestamped Windows installer signatures using this SDK SignTool executable",
     )
     args = parser.parse_args(argv)
+    if not _ARTIFACT_TARGET.fullmatch(args.target):
+        parser.error("Expected a desktop artifact target triple")
 
     bundle_dir = args.bundle_dir.resolve()
     artifacts = collect_artifacts(bundle_dir, windows_signtool=args.windows_signtool)

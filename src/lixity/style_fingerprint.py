@@ -12,9 +12,11 @@ or calibrated inference for ordered literary chapters.
 
 import math
 from collections import Counter
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from itertools import pairwise
+from sys import float_info
 from types import MappingProxyType
 from typing import Any, ClassVar, Literal
 
@@ -447,11 +449,24 @@ def fdr_rejects(
     return benjamini_hochberg(cells, q=q)
 
 
+def _all_finite(values: Iterable[float]) -> bool:
+    try:
+        return all(math.isfinite(value) for value in values)
+    except OverflowError:
+        return False
+
+
+def _require_finite_samples(*samples: Sequence[float]) -> None:
+    if not _all_finite(value for sample in samples for value in sample):
+        raise ValueError("samples must contain only finite values")
+
+
 def cliff_delta(x: list[float], y: list[float]) -> float:
     """
     Cliff's delta: P(X>Y) - P(X<Y) over all pairs (ties count 0).
     Ordinal effect size for one chapter vs. the rest of the house style.
     """
+    _require_finite_samples(x, y)
     if not x or not y:
         return 0.0
     wins = losses = 0
@@ -497,16 +512,17 @@ def effect_label(delta: float) -> str:
 
 
 def lag1_autocorrelation(values: list[float]) -> float | None:
-    """Lag-1 sample ACF; None when n < 3 or zero variance.
+    """Lag-1 sample ACF of a finite series; None when n < 3 or zero variance.
 
     Translation and common scaling cancel in the ratio. Anchor before scaling
     so representable variation at large offsets survives centering.
     """
+    _require_finite_samples(values)
     n = len(values)
     if n < 3:
         return None
     shifted = [value - values[0] for value in values]
-    if any(not math.isfinite(value) for value in shifted):
+    if not _all_finite(shifted):
         # Opposite finite extremes can overflow their unscaled difference.
         scale = max(abs(value) for value in values)
         shifted = [value / scale - values[0] / scale for value in values]
@@ -522,9 +538,10 @@ def lag1_autocorrelation(values: list[float]) -> float | None:
 
 def runs_above_median_z(values: list[float]) -> float | None:
     """
-    Wald-Wolfowitz runs z for above/below-median signs (ties to the right).
+    Wald-Wolfowitz runs z for a finite series (median ties to the right).
     None when n < 8 or one side is empty (no power).
     """
+    _require_finite_samples(values)
     n = len(values)
     if n < 8:
         return None
@@ -542,7 +559,7 @@ def runs_above_median_z(values: list[float]) -> float | None:
     return (runs - mu) / math.sqrt(var)
 
 
-def _midranks(values: list[float]) -> list[float]:
+def _midranks(values: Sequence[float | Fraction]) -> list[float]:
     """Return one-based average ranks, preserving observation order."""
     n = len(values)
     order = sorted(range(n), key=lambda i: (values[i], i))
@@ -560,11 +577,14 @@ def _midranks(values: list[float]) -> list[float]:
 
 
 def spearman_rho(x: list[float], y: list[float]) -> float:
-    """Spearman rank correlation of two paired samples (average ranks on ties).
+    """Spearman rank correlation of two finite paired samples (average ranks on ties).
 
     Fewer than three pairs return 0.0: the redundancy caller treats an
     unmeasurable correlation as "no redundancy" (see docs/METHODS.md §5).
     """
+    if len(x) != len(y):
+        raise ValueError("paired samples must have equal lengths")
+    _require_finite_samples(x, y)
     n = len(x)
     if n < 3:
         return 0.0
@@ -577,7 +597,7 @@ def spearman_rho(x: list[float], y: list[float]) -> float:
     vy = math.sqrt(sum((b - my) ** 2 for b in ry))
     if vx == 0.0 or vy == 0.0:
         return 0.0
-    return cov / (vx * vy)
+    return max(-1.0, min(1.0, cov / (vx * vy)))
 
 
 # ---------------------------------------------------------------------------
@@ -603,6 +623,9 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     - Constant series → ``[]`` (when ``penalty >= 0``), else ``[1, ..., n-1]``
     - ``penalty=None`` → mBIC-inspired default ``3·ln(n)``
     """
+    _require_finite_samples(values)
+    if penalty is not None and not _all_finite((penalty,)):
+        raise ValueError("changepoint penalty must be finite")
     n = len(values)
     if n < 3:
         return []
@@ -614,23 +637,27 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     if all(v == first for v in values[1:]):
         return [] if penalty >= 0.0 else list(range(1, n))
 
+    # A positive scale preserves the minimizer and keeps extreme finite
+    # penalties from overflowing when accumulated over multiple segments.
+    cost_multiplier = 1.0
+    if abs(penalty) >= float_info.max / (2 * n):
+        cost_multiplier = 1.0 / abs(penalty)
+        penalty = math.copysign(1.0, penalty)
+
     # Standardize by global SD (when finite and > 0) for scale- and
     # translation-invariance across sub-unit and large-variance metrics.
-    if all(math.isfinite(v) for v in values):
-        diffs = [v - first for v in values]
-        if any(not math.isfinite(d) for d in diffs):
-            exponent = math.frexp(max(abs(v) for v in values))[1]
-            anchor = math.ldexp(first, -exponent)
-            diffs = [math.ldexp(v, -exponent) - anchor for v in values]
-        # Power-of-two scaling preserves the relative differences while
-        # keeping the mean and squared deviations in a representable range.
-        exponent = math.frexp(max(abs(d) for d in diffs))[1]
-        normalized = [math.ldexp(d, -exponent) for d in diffs]
-        d_mean = math.fsum(normalized) / n
-        global_sd = math.sqrt(math.fsum((d - d_mean) ** 2 for d in normalized) / n)
-        scaled = [(d - d_mean) / global_sd for d in normalized]
-    else:
-        scaled = list(values)
+    diffs = [v - first for v in values]
+    if not _all_finite(diffs):
+        exponent = math.frexp(max(abs(v) for v in values))[1]
+        anchor = math.ldexp(first, -exponent)
+        diffs = [math.ldexp(v, -exponent) - anchor for v in values]
+    # Power-of-two scaling preserves the relative differences while
+    # keeping the mean and squared deviations in a representable range.
+    exponent = math.frexp(max(abs(d) for d in diffs))[1]
+    normalized = [math.ldexp(d, -exponent) for d in diffs]
+    d_mean = math.fsum(normalized) / n
+    global_sd = math.sqrt(math.fsum((d - d_mean) ** 2 for d in normalized) / n)
+    scaled = [(d - d_mean) / global_sd for d in normalized]
 
     math_log = math.log
     # opt[j] = minimum cost of segmenting scaled[0:j]
@@ -643,22 +670,15 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
         anchor = scaled[j - 1]
         mean = 0.0
         m2 = 0.0
-        single_cost = opt[j - 1] + penalty
-        if math.isfinite(anchor) and math.isfinite(single_cost):
-            best_cost = single_cost
-            best_t = j - 1
-            start_t = j - 2
-        else:
-            best_cost = math.inf
-            best_t = 0
-            start_t = j - 1
-        for t in range(start_t, -1, -1):
+        best_cost = opt[j - 1] + penalty
+        best_t = j - 1
+        for t in range(j - 2, -1, -1):
             count = j - t
             shifted = scaled[t] - anchor
             delta = shifted - mean
             mean += delta / count
             m2 += delta * (shifted - mean)
-            segment_cost = count * math_log(max(m2 / count, 1e-9))
+            segment_cost = count * math_log(max(m2 / count, 1e-9)) * cost_multiplier
             cost = opt[t] + segment_cost + penalty
             # Prefer the earliest predecessor for exactly equal objectives.
             if cost < best_cost or (cost == best_cost and t < best_t):
@@ -682,7 +702,7 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
 def mann_kendall(
     values: list[float],
 ) -> tuple[float, float, float] | None:
-    """Mann-Kendall monotonic trend test (non-parametric).
+    """Mann-Kendall monotonic trend test on a finite series (non-parametric).
 
     Returns ``(tau, S, p_value)`` or ``None`` when ``n < 3``.
 
@@ -694,6 +714,7 @@ def mann_kendall(
     - ``n < 3``  → ``None``
     - Constant   → ``(0.0, 0.0, 1.0)``
     """
+    _require_finite_samples(values)
     n = len(values)
     if n < 3:
         return None
@@ -740,8 +761,14 @@ def mann_kendall(
 
     # Hamed & Rao (1998) variance correction for autocorrelated series (n >= 8)
     if n >= 8:
+        rank_inputs: Sequence[float | Fraction] = values
+        lo, hi = unique_vals[0], unique_vals[-1]
+        if max(abs(lo), abs(hi)) >= float_info.max / (2 * n) or hi - lo < float_info.min * n:
+            # Exact residuals retain order when slope arithmetic can overflow
+            # or lose distinctions in the subnormal range.
+            rank_inputs = [Fraction(value) for value in values]
         slopes = [
-            (values[j] - values[i]) / (j - i)
+            (rank_inputs[j] - rank_inputs[i]) / (j - i)
             for i in range(n - 1)
             for j in range(i + 1, n)
         ]
@@ -750,8 +777,8 @@ def mann_kendall(
         if m_slopes % 2 == 1:
             beta = slopes[m_slopes // 2]
         else:
-            beta = 0.5 * (slopes[m_slopes // 2 - 1] + slopes[m_slopes // 2])
-        detrended = [values[i] - beta * i for i in range(n)]
+            beta = (slopes[m_slopes // 2 - 1] + slopes[m_slopes // 2]) / 2
+        detrended = [value - beta * i for i, value in enumerate(rank_inputs)]
         ranks = _midranks(detrended)
         mean_r = 0.5 * (n + 1.0)
         d = [r - mean_r for r in ranks]
@@ -787,6 +814,7 @@ def wasserstein_1d(x: list[float], y: list[float]) -> float:
     and unequal sample sizes. Sorting is followed by one linear merge.
     Returns 0.0 when either sample is empty.
     """
+    _require_finite_samples(x, y)
     if not x or not y:
         return 0.0
     steps = _empirical_cdf_steps(x, y)
@@ -808,9 +836,7 @@ def wasserstein_1d(x: list[float], y: list[float]) -> float:
 def _empirical_cdf_steps(
     x: list[float], y: list[float]
 ) -> Iterator[tuple[float, float, float]]:
-    """Yield each distinct knot and both right-continuous empirical CDFs."""
-    if any(not math.isfinite(value) for sample in (x, y) for value in sample):
-        raise ValueError("empirical samples must contain only finite values")
+    """Yield right-continuous CDF pairs at each distinct finite sample knot."""
     sx, sy = sorted(x), sorted(y)
     na, nb = len(sx), len(sy)
     i = j = 0
@@ -829,6 +855,7 @@ def ks_2sample(x: list[float], y: list[float]) -> tuple[float, float]:
     Returns ``(D, p_value)`` where D is the maximum absolute CDF difference.
     Returns ``(0.0, 1.0)`` when either sample is empty.
     """
+    _require_finite_samples(x, y)
     if not x or not y:
         return (0.0, 1.0)
     na, nb = len(x), len(y)
@@ -915,13 +942,14 @@ def dunning_g2(obs_a: int, obs_b: int, total_a: int, total_b: int) -> float:
 def hill_estimator(values: list[float], k: int | None = None) -> float | None:
     """Hill estimator for the tail index (power-law exponent) alpha-hat.
 
-    Uses the *k* largest observations.  ``k=None`` defaults to ``floor(sqrt(n))``.
+    Uses the *k* largest finite observations. ``k=None`` defaults to ``floor(sqrt(n))``.
     Returns ``None`` when fewer than 5 observations or ``k < 2``, or when
     the k-th order statistic is non-positive (log undefined).
 
     The Hill estimator is alpha = [1/k * sum ln(x_(n-i+1) / x_(n-k))]^-1
     where x_(.) are order statistics.
     """
+    _require_finite_samples(values)
     n = len(values)
     if n < 5:
         return None
@@ -936,11 +964,13 @@ def hill_estimator(values: list[float], k: int | None = None) -> float | None:
     if threshold <= 0.0:
         return None
 
-    log_sum = 0.0
-    for i in range(n - k, n):
-        if sorted_vals[i] <= 0.0:
-            return None
-        log_sum += math.log(sorted_vals[i] / threshold)
+    log_ratios = []
+    for value in sorted_vals[n - k:]:
+        relative = (value - threshold) / threshold
+        # Preserve near ties and avoid overflow when the ratio is immense.
+        log_ratios.append(math.log1p(relative) if math.isfinite(relative)
+                          else math.log(value) - math.log(threshold))
+    log_sum = math.fsum(log_ratios)
 
     if log_sum <= 0.0:
         return None

@@ -266,7 +266,7 @@ def _detect_pacing_plateaus(items: Sequence[Mapping[str, Any]]) -> list[dict[str
 
     def _emit(run: Sequence[Mapping[str, Any]], reason: str) -> None:
         asls = [float(item["features"]["asl"]) for item in run if item["features"].get("asl") is not None]
-        mean_asl = round(sum(asls) / len(asls), 2) if asls else 0.0
+        mean_asl = round(sum(asls) / len(asls), 2) if asls else None
         plateaus.append({
             "start_id": run[0]["id"],
             "end_id": run[-1]["id"],
@@ -445,6 +445,8 @@ def scene_report(
             if not scene_heading:
                 scene_heading = title if not scene_breaks else f"{title} · {index}"
             features = {field: getattr(measured, field) for field, _, _ in FEATURES}
+            if measured.sentences == 0:
+                features["asl"] = None
             if measured.sentences < 2:
                 features["sentence_cv"] = None
             errors = {field: se for field, se in measured.style_se.items()

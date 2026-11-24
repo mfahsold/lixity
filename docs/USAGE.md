@@ -1497,7 +1497,7 @@ Authors and editors can insert curated starter register templates with one click
 
 #### Editorial threshold presets
 
-Under **Project → Settings → Detection thresholds**, choose from four pre-calibrated editorial profiles or keep individual custom values:
+Under **Project → Settings → Detection thresholds**, choose from four configurable editorial preset bundles (heuristic starting defaults; statistical error-rate calibration is not established) or keep individual custom values:
 - **Balanced review (`balanced`, default)**: `|z*| ≥ 2.5`, `z_strong = 3.5`, Benjamini–Hochberg `q = 0.05`, paragraph severity floor ≥ 2.
 - **Developmental editing (`developmental`)**: `|z*| ≥ 3.0`, `z_strong = 4.0`, `q = 0.02`, severity floor 3 (focuses on macro-structural chapter shifts and severe tense friction).
 - **Line editing (`line_editing`)**: `|z*| ≥ 2.0`, `z_strong = 3.0`, `q = 0.10`, severity floor ≥ 1 (fine pass surfacing subtle chapter deviations and all paragraph tense notes).

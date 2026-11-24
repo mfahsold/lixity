@@ -82,12 +82,16 @@ before profiling a different native boundary.
   `17.1 ms` and `35.6 ms`, and warm search using `Snapshot.lifecycle`
   without scanning non-source records took `1.18 ms`, `2.84 ms` and
   `11.07 ms` (with the SQLite FTS query and connection under `1 ms`).
-  In the book-scale recovery test, reusing unchanged chapter projections and
-  combining chapter token, sentence and quotation counts lowered consecutive
-  `ManuscriptStore.save()` latency from `495.9 ms` to `69.7 ms` on *Effi Briest*
-  (measurement portion `508.1 → 50.4 ms`) and from `638.2 ms` to `112.3 ms` on
-  *Pride and Prejudice* (measurement portion `639.1 → 79.4 ms`), while keeping
-  snapshot JSON digests identical.
+  In an alternating macOS ARM64 comparison of `d54a55cb` and `dafe419c`, five
+  fresh processes per version and manuscript each saved two edits to the
+  final chapter. Median first-save time fell from `1058.3 ms` to `445.6 ms`
+  on *Effi Briest* and from `1371.8 ms` to `572.1 ms` on *Pride and Prejudice*.
+  Median second-save time fell from `516.7 ms` to `55.5 ms` and from `692.5 ms`
+  to `79.3 ms`, respectively. Snapshot calculation timed inside the second
+  save fell from `505.6 ms` to `44.4 ms` and from `678.8 ms` to `66.2 ms`.
+  Each comparison preserved the snapshot JSON digests, revision hashes and
+  idempotent retry results. Use the same input and save sequence to compare
+  future changes.
   [Research storage](research/DATA_MODEL.md) · [SQLite WAL](https://www.sqlite.org/wal.html)
 - **Computation candidates.** Profile the shared chapter and paragraph
   measurements after removing equivalent sentence and quotation preparation

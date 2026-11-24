@@ -260,6 +260,14 @@ def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files
     checksums = (out / "SHA256SUMS-x86_64-test.txt").read_text(encoding="utf-8").splitlines()
     assert len(checksums) == 5
 
+    # The per-target producer rejects inputs it could not later verify.
+    invalid_target = subprocess.run(  # noqa: S603 - fixed repository verification script
+        [sys.executable, str(script), str(bundle), "--target", "X86_64-test"],
+        capture_output=True, text=True, check=False,
+    )
+    assert invalid_target.returncode == 2
+    assert "Expected a desktop artifact target triple" in invalid_target.stderr
+
     # Corrupt PE header must fail verification cleanly.
     (bundle / "nsis" / "Lixity_0.9.1_x64-setup.exe").write_bytes(b"NOPE" + b"\x00" * 1024)
     bad = subprocess.run(  # noqa: S603 - fixed repository verification script
@@ -325,6 +333,14 @@ def test_package_manifests_use_verified_installer_names_and_bytes(tmp_path):
     expected = "".join(f"{entry['sha256']}  {entry['filename']}\n"
                        for entry in sorted(metadata, key=lambda item: item["filename"]))
     assert checksums.read_bytes() == expected.encode()
+
+    # A combined CI bundle must cover all current public variants before writing output.
+    strict_output = tmp_path / "strict-manifests"
+    strict_command = [*render_command, "--out-dir", str(strict_output), "--require-public-inventory"]
+    incomplete = subprocess.run(strict_command, check=False, capture_output=True, text=True)  # noqa: S603
+    assert incomplete.returncode != 0
+    assert "Installer filename does not match" in incomplete.stderr
+    assert not strict_output.exists()
 
     # Preserve size and magic bytes while changing the copied installer's digest.
     (release_bundle / "Windows User.exe").write_bytes(b"MZ" + b"\x01" * 1024)

@@ -44,6 +44,14 @@ launcher. The guide shows whether public installers or test builds are
 available for your computer.
 [Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
 
+**Desktop testing.** Sign in to GitHub and get the installer archive and
+its checksum list from the same Actions run. The platform guides explain
+verification, installation and first launch. Check the bundled offline example in a
+separate account or test machine before opening a working project.
+[macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos)
+· [Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows)
+· [Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
+
 **Browser app and CLI.** Use the published package for terminal workflows or
 when a desktop installer is unavailable. Install
 [uv](https://docs.astral.sh/uv/getting-started/installation/) and run this on
@@ -105,14 +113,14 @@ make check
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.9.1**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.9.2**, in the pre-1.0 **0.x** line.
 > Historical 1.x and 3.x tags predate the numbering reset. Use the release
 > identified as current on GitHub.
 
 The published package comes from the verified tag. The read-only demo and
 desktop test builds can show changes from the development checkout.
 [Latest GitHub release](https://github.com/mfahsold/lixity/releases/latest) ·
-[v0.9.1 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md) ·
+[v0.9.2 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.2.md) ·
 [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)
 
 Lixity is licensed under **AGPL-3.0-or-later**. You can write and sell your

@@ -27,6 +27,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from functools import partial
 from hashlib import sha256
 from itertools import pairwise
@@ -78,20 +79,27 @@ def burstiness(values: Sequence[int | float]) -> float | None:
 
     Uses sample SD ``s`` and ``r = s / mean`` with upper bound ``sqrt(n)``:
     ``B_n = (sqrt(n) * (r - 1)) / ((sqrt(n) - 2) * r + sqrt(n))``.
-    Returns ``None`` when fewer than 2 observations exist or the mean is <= 0.
+    Inputs must be finite and nonnegative. Returns ``None`` when fewer than
+    two observations exist or all are zero.
     """
+    if any(value < 0 or (not isinstance(value, int) and not math.isfinite(value)) for value in values):
+        raise ValueError("Burstiness requires finite nonnegative observations")
     n = len(values)
-    if n < 2:
+    scale = max(values, default=0)
+    if n < 2 or not scale:
         return None
-    mean_val = sum(values) / n
-    if mean_val <= 0.0:
-        return None
-    sample_var = sum((v - mean_val) ** 2 for v in values) / (n - 1)
+    # The coefficient of variation is scale invariant. Normalization keeps
+    # the mean and squared deviations in range at either float extreme.
+    try:
+        scaled = [value / scale for value in values]
+    except OverflowError:
+        # A float divided by an arbitrary-size int can overflow on conversion.
+        scaled = [float(Fraction(value) / scale) for value in values]
+    mean_val = math.fsum(scaled) / n
+    sample_var = math.fsum((value - mean_val) ** 2 for value in scaled) / (n - 1)
     r = math.sqrt(sample_var) / mean_val
     root_n = math.sqrt(n)
     denom = (root_n - 2.0) * r + root_n
-    if denom == 0.0:
-        return 0.0
     b = root_n * (r - 1.0) / denom
     return max(-1.0, min(1.0, b))
 

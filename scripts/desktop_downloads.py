@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import sys
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -16,7 +17,7 @@ from desktop.scripts.qualify_desktop_release import QUALIFICATION_FILE, load_qua
 from desktop.scripts.verify_desktop_artifacts import (
     DESKTOP_CHECKSUMS,
     PUBLIC_RELEASE_TAG,
-    public_installer_filename_pattern,
+    public_installer_inventory,
 )
 
 if TYPE_CHECKING:
@@ -33,19 +34,19 @@ TAG = PUBLIC_RELEASE_TAG
 SHA256 = re.compile(r"[0-9a-f]{64}")
 DOWNLOAD_BLOCK = re.compile(r"(<!-- desktop-downloads:start -->\n).*?(\n<!-- desktop-downloads:end -->)", re.S)
 
-# The approved public formats. Runtime build targets can be broader.
-INSTALLERS = {
-    ("aarch64-apple-darwin", "macos-dmg"): ("macOS · Apple Silicon", ".dmg"),
-    ("x86_64-apple-darwin", "macos-dmg"): ("macOS · Intel", ".dmg"),
-    ("x86_64-pc-windows-msvc", "windows-nsis"): ("Windows · x64 · setup", ".exe"),
-    ("x86_64-pc-windows-msvc", "windows-msi"): ("Windows · x64 · MSI", ".msi"),
-    ("x86_64-unknown-linux-gnu", "linux-deb"): ("Linux · x64 · Debian package", ".deb"),
-    ("x86_64-unknown-linux-gnu", "linux-appimage"): ("Linux · x64 · AppImage", ".AppImage"),
+INSTALLER_LABELS = {
+    ("aarch64-apple-darwin", "macos-dmg"): "macOS · Apple Silicon",
+    ("x86_64-apple-darwin", "macos-dmg"): "macOS · Intel",
+    ("x86_64-pc-windows-msvc", "windows-nsis"): "Windows · x64 · setup",
+    ("x86_64-pc-windows-msvc", "windows-msi"): "Windows · x64 · MSI",
+    ("x86_64-unknown-linux-gnu", "linux-deb"): "Linux · x64 · Debian package",
+    ("x86_64-unknown-linux-gnu", "linux-appimage"): "Linux · x64 · AppImage",
 }
 
 
 def validate_catalog(catalog: dict[str, Any]) -> None:
-    if set(catalog) != {"schema_version", "tag", "installers"} or catalog["schema_version"] != SCHEMA:
+    if (not isinstance(catalog, dict) or set(catalog) != {"schema_version", "tag", "installers"}
+            or catalog["schema_version"] != SCHEMA):
         raise ValueError("Invalid desktop download catalog")
     tag, installers = catalog["tag"], catalog["installers"]
     if not isinstance(installers, list):
@@ -54,24 +55,21 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         return
     if not isinstance(tag, str) or not TAG.fullmatch(tag):
         raise ValueError("Expected a stable desktop release tag")
-    filename_pattern = public_installer_filename_pattern(tag)
-    pairs: set[tuple[str, str]] = set()
+    expected = public_installer_inventory(tag)
     names: set[str] = set()
     for asset in installers:
         if (not isinstance(asset, dict) or set(asset) != {"target", "kind", "filename", "bytes", "sha256"}
                 or any(not isinstance(asset[key], str) for key in ("target", "kind", "filename", "sha256"))):
             raise ValueError("Invalid desktop installer entry")
         pair = (asset["target"], asset["kind"])
-        variant = INSTALLERS.get(pair)
         filename = asset["filename"]
-        if (variant is None or not filename_pattern.fullmatch(filename) or not filename.endswith(variant[1])
-                or filename in names or type(asset["bytes"]) is not int or asset["bytes"] <= 0
+        if (expected.get(filename) != pair or filename in names
+                or type(asset["bytes"]) is not int or asset["bytes"] <= 0
                 or not SHA256.fullmatch(asset["sha256"])):
             raise ValueError(f"Invalid or duplicate desktop installer: {filename}")
-        pairs.add(pair)
         names.add(filename)
-    if pairs != INSTALLERS.keys():
-        raise ValueError("A public desktop catalog requires all qualified installer formats")
+    if names != expected.keys():
+        raise ValueError("A public desktop catalog requires all qualified installer variants")
 
 
 def record_catalog(
@@ -85,7 +83,15 @@ def record_catalog(
             or release.get("immutable") is not True
             or not release.get("published_at")):
         raise ValueError("Expected a public stable Lixity GitHub release")
-    public = {entry["name"]: entry for entry in release["assets"]}
+    entries = release.get("assets")
+    if not isinstance(entries, list):
+        raise ValueError("Expected a public release asset list")
+    public = {}
+    for entry in entries:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if not isinstance(name, str) or name in public:
+            raise ValueError("Invalid or duplicate public release asset")
+        public[name] = entry
 
     def verify_asset(name: str, size: int, digest: str) -> None:
         asset = public.get(name, {})
@@ -110,6 +116,14 @@ def record_catalog(
     return catalog
 
 
+def write_catalog(catalog: dict[str, Any], output: Path) -> None:
+    validate_catalog(catalog)
+    with tempfile.TemporaryDirectory(prefix=".lixity-desktop-catalog-", dir=output.parent) as scratch:
+        staged = Path(scratch) / CATALOG.name
+        staged.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+        staged.replace(output)
+
+
 def render(catalog: dict[str, Any]) -> str:
     validate_catalog(catalog)
     tag = catalog["tag"]
@@ -118,11 +132,11 @@ def render(catalog: dict[str, Any]) -> str:
                 '<a href="#install">install the local browser app and CLI</a>. '
                 f'<a href="{TEST_BUILDS}">Get a desktop test installer</a>.</p>')
     installers = sorted(catalog["installers"], key=lambda asset: (
-        INSTALLERS[(asset["target"], asset["kind"])][0], asset["filename"],
+        INSTALLER_LABELS[(asset["target"], asset["kind"])], asset["filename"],
     ))
     links = []
     for asset in installers:
-        label = INSTALLERS[(asset["target"], asset["kind"])][0]
+        label = INSTALLER_LABELS[(asset["target"], asset["kind"])]
         filename = asset["filename"]
         size = asset["bytes"] / (1024 * 1024)
         links.append(f'<li><a href="{RELEASES}/download/{tag}/{filename}">{label} '
@@ -162,9 +176,9 @@ def main() -> None:
                                              source_sha=args.source_sha)
         catalog = record_catalog(release, artifacts, (args.artifacts_dir / CHECKSUMS).read_bytes(),
                                  qualification.read_bytes())
+        write_catalog(catalog, args.output)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.error(str(exc))
-    args.output.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

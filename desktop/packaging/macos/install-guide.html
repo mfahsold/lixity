@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Start Here – Hier starten · Lixity</title>
+  <title>Start Here · Lixity</title>
   <style>
-    :root { color-scheme: light dark; }
+    :root {
+      color-scheme: light dark;
+      color: CanvasText;
+      background: Canvas;
+    }
     body {
       max-inline-size: 40rem;
       margin: 0 auto;
@@ -14,37 +18,39 @@
     }
     h1, h2, h3 { line-height: 1.2; }
     h1 { margin-block: 0 1rem; }
-    section + section {
-      border-block-start: 1px solid;
-      margin-block-start: 2rem;
-      padding-block-start: 1rem;
-    }
     li + li { margin-block-start: .5rem; }
   </style>
 </head>
 <body>
   <main>
     <h1>Lixity</h1>
-    <nav aria-label="Languages"><a href="#en" lang="en">English</a> · <a href="#de" lang="de">Deutsch</a></nav>
-
-    <section id="en" lang="en">
+    <section>
+      <h2>Check a test build</h2>
+      <p>If Finder shows <strong>Lixity Test Build</strong>, confirm where the
+      disk image came from and compare its SHA-256 with the checksum file
+      supplied with the same build. macOS may block the first launch of
+      a test build. For the exact alert, see
+      <a href="https://support.apple.com/en-us/102445">Apple’s app-opening guidance</a>.</p>
+    </section>
+    <section>
       <h2>Install Lixity</h2>
       <ol>
-        <li>In the disk image window, drag <strong>Lixity</strong> onto <strong>Applications</strong> and wait for the copy to finish.</li>
-        <li>In Finder, open <strong>Applications</strong> and double-click <strong>Lixity</strong>. You can then eject the disk image.</li>
+        <li>In the disk image window, drag <strong>Lixity</strong> onto
+        <strong>Applications</strong> and wait for the copy to finish.</li>
+        <li>Eject the disk image. Open <strong>Applications</strong> in Finder
+        and double-click <strong>Lixity</strong>.</li>
       </ol>
       <h3>Start with a manuscript</h3>
-      <p>At the welcome screen, open a project folder, import a manuscript, or start writing. Choose <strong>Try the example offline</strong> to preview the bundled English manuscript before saving a local copy.</p>
+      <p>Choose <strong>Try the example offline</strong> to preview the bundled
+      manuscript. You can also open a project folder or import a manuscript.</p>
     </section>
-
-    <section id="de" lang="de">
-      <h2>Lixity installieren</h2>
-      <ol>
-        <li>Ziehe im Fenster des Disk-Images <strong>Lixity</strong> auf <strong>Programme</strong> und warte, bis der Kopiervorgang abgeschlossen ist.</li>
-        <li>Öffne im Finder <strong>Programme</strong> und klicke doppelt auf <strong>Lixity</strong>. Danach kannst du das Disk-Image auswerfen.</li>
-      </ol>
-      <h3>Mit einem Manuskript beginnen</h3>
-      <p>Auf der Startseite kannst du einen Projektordner öffnen, ein Manuskript importieren oder mit dem Schreiben beginnen. Mit <strong>Beispiel offline ausprobieren</strong> siehst du das englische Beispielmanuskript in der Vorschau und kannst eine lokale Kopie speichern.</p>
+    <section>
+      <h2>Find help</h2>
+      <p>If the app opens, choose <strong>Tools → Open Logs Folder</strong> to
+      inspect the startup log. The installation guide includes log locations
+      and the published browser and CLI setup for cases where the app cannot
+      open.</p>
+      <p><a href="https://mfahsold.github.io/lixity/guides/installation.html">Lixity installation guide</a></p>
     </section>
   </main>
 </body>

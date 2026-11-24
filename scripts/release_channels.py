@@ -29,11 +29,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from desktop.scripts.qualify_desktop_release import QUALIFICATION_FILE, load_qualified_artifacts
 from desktop.scripts.verify_desktop_artifacts import (
     DESKTOP_CHECKSUMS,
-    INSTALLER_SUBDIRS,
     PUBLIC_INSTALLER_MANIFESTS,
-    public_installer_filename_pattern,
+    public_installer_inventory,
     sha256_file,
 )
+from desktop.scripts.windows_artifact_signing import AZURE_CREDENTIALS, AZURE_FIELDS
+from scripts import desktop_downloads
 
 JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
@@ -86,7 +87,13 @@ _BASE_HOSTS = frozenset({
     "api.github.com", "github.com", "pypi.org", "files.pythonhosted.org", "zenodo.org",
 })
 DESKTOP_METADATA = PUBLIC_INSTALLER_MANIFESTS | {DESKTOP_CHECKSUMS, QUALIFICATION_FILE}
-DESKTOP_SUFFIXES = tuple(suffix for suffix, _ in INSTALLER_SUBDIRS.values())
+_APPLE_SIGNING_SECRETS = {
+    "APPLE_DEVELOPER_ID_P12_BASE64",
+    "APPLE_DEVELOPER_ID_P12_PASSWORD",
+    "APPLE_NOTARY_KEY_P8_BASE64",
+    "APPLE_NOTARY_KEY_ID",
+    "APPLE_NOTARY_ISSUER_ID",
+}
 
 
 def resolve_gh_binary():
@@ -298,13 +305,11 @@ def assets(release, repo, tag, *, draft=False, require_desktop=False):
         raise ValueError("The qualified desktop installer set requires a stable release")
     if not desktop and len(actual) != len(python_names):
         raise ValueError("GitHub release must contain exactly the wheel, sdist and SHA256SUMS")
-    installer_pattern = public_installer_filename_pattern(tag) if desktop else None
+    required = python_names | (DESKTOP_METADATA | public_installer_inventory(tag).keys() if desktop else set())
     result = {}
     for asset in actual:
         name = asset.get("name") if isinstance(asset, dict) else None
-        if not isinstance(name, str) or (name not in python_names and not (
-                desktop and (name in DESKTOP_METADATA or (
-                    installer_pattern.fullmatch(name) and name.endswith(DESKTOP_SUFFIXES))))):
+        if not isinstance(name, str) or name not in required:
             raise ValueError("GitHub release has an unexpected asset")
         digest = asset.get("digest")
         if name in result or asset.get("state") != "uploaded":
@@ -322,9 +327,8 @@ def assets(release, repo, tag, *, draft=False, require_desktop=False):
         if url != expected_url and not (draft and isinstance(url, str) and draft_pattern.fullmatch(url)):
             raise ValueError("GitHub release asset URL differs from the selected release")
         result[name] = asset
-    required = python_names | (DESKTOP_METADATA if desktop else set())
     if not required <= result.keys():
-        raise ValueError("GitHub release asset set is incomplete")
+        raise ValueError("GitHub release asset set is incomplete: " + ", ".join(sorted(required - result.keys())))
     return result
 
 
@@ -394,11 +398,37 @@ def _verify_desktop_files(directory, expected, tag, repo, expected_commit):
         raise ValueError("Desktop installer directory must be a regular directory")
     for name, asset in expected.items():
         _verify_asset_file(directory / name, asset)
-    names = _qualified_desktop_names(directory, directory / QUALIFICATION_FILE, tag, expected_commit)
+    installers = load_qualified_artifacts(directory, directory / QUALIFICATION_FILE, tag=tag,
+                                         source_sha=expected_commit)
+    names = DESKTOP_METADATA | {asset.filename for asset in installers}
     if names != expected.keys():
         raise ValueError("Desktop release listings and qualified files differ")
     verify_attestations([directory / name for name in sorted(names - {QUALIFICATION_FILE})],
                         repo, tag, expected_commit, desktop=True)
+    return installers
+
+
+def _download_desktop_files(directory, expected, tag, repo, expected_commit, client):
+    for name, asset in sorted(expected.items()):
+        client.download(asset["browser_download_url"], directory / name, asset["size"])
+    return _verify_desktop_files(directory, expected, tag, repo, expected_commit)
+
+
+def record_desktop_catalog(root, tag, expected_commit, repo, output, client):
+    """Record the installer links from a verified immutable desktop release."""
+    identities(root, tag, expected_commit, repo, client)
+    release = release_metadata(repo, tag, client)
+    published(release)
+    expected = assets(release, repo, tag, require_desktop=True)
+    desktop = {name: expected[name] for name in DESKTOP_METADATA | public_installer_inventory(tag).keys()}
+    with tempfile.TemporaryDirectory(prefix="lixity-desktop-readback-") as scratch:
+        directory = Path(scratch)
+        installers = _download_desktop_files(directory, desktop, tag, repo, expected_commit, client)
+        catalog = desktop_downloads.record_catalog(release, installers, (directory / DESKTOP_CHECKSUMS).read_bytes(),
+                                                   (directory / QUALIFICATION_FILE).read_bytes())
+        desktop_downloads.write_catalog(catalog, output)
+    return {"state": "catalog-recorded", "tag": tag, "source_sha": expected_commit,
+            "installer_count": len(installers)}
 
 
 def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False,
@@ -418,10 +448,7 @@ def verify_files(root, dist, tag, repo, expected_commit, release, *, draft=False
             raise ValueError("Desktop draft verification requires the staged installer directory")
         else:
             with tempfile.TemporaryDirectory(prefix="lixity-desktop-readback-") as scratch:
-                fresh = Path(scratch)
-                for name, asset in sorted(desktop_assets.items()):
-                    client.download(asset["browser_download_url"], fresh / name, asset["size"])
-                _verify_desktop_files(fresh, desktop_assets, tag, repo, expected_commit)
+                _download_desktop_files(Path(scratch), desktop_assets, tag, repo, expected_commit, client)
     return {name: asset["digest"].removeprefix("sha256:") for name, asset in expected.items()}
 
 
@@ -502,13 +529,21 @@ def _pypi_release_files(dist, tag, client):
 
 
 def stage_pypi(root, tag, expected_commit, repo, dist, upload, client):
-    verify_github(root, tag, expected_commit, repo, dist, client, python_only=True)
+    github = verify_github(root, tag, expected_commit, repo, dist, client, include_digests=True, python_only=True)
     published_files = _pypi_release_files(dist, tag, client)
     missing = sorted(_pypi_filenames(tag) - published_files.keys())
     empty_destination(upload)
-    upload.mkdir(exist_ok=True)
-    for name in missing:
-        shutil.copyfile(dist / name, upload / name)
+    with tempfile.TemporaryDirectory(prefix=".lixity-pypi-", dir=upload.parent) as scratch:
+        fresh = Path(scratch) / "upload"
+        fresh.mkdir()
+        for name in missing:
+            target = fresh / name
+            shutil.copyfile(dist / name, target)
+            if sha256_file(target) != github["digests"][name]:
+                raise ValueError(f"Staged PyPI distribution differs from the verified GitHub asset for {name}")
+        if upload.exists():
+            upload.rmdir()
+        os.replace(fresh, upload)
     return {"upload_count": len(missing), "state": "pending" if missing else "complete"}
 
 
@@ -556,7 +591,35 @@ def _parse_worktrees(porcelain):
     return entries
 
 
-def doctor(root, repo, client, *, tag=None, unset_env_tokens=False):
+def _desktop_signing_status(run_cmd, gh_bin, repo):
+    def list_names(command):
+        result = run_cmd([gh_bin, *command, "--repo", repo, "--json", "name"])
+        if result is None or result.returncode != 0:
+            return None
+        try:
+            rows = json.loads(result.stdout)
+        except (TypeError, ValueError):
+            return None
+        if not isinstance(rows, list) or any(
+            not isinstance(row, dict) or not isinstance(row.get("name"), str) for row in rows
+        ):
+            return None
+        return {row["name"] for row in rows}
+
+    secrets = list_names(["secret", "list", "--app", "actions"])
+    variables = list_names(["variable", "list"])
+    return {
+        "macos": {
+            "missing_secrets": sorted(_APPLE_SIGNING_SECRETS - secrets) if secrets is not None else None,
+        },
+        "windows": {
+            "missing_secrets": sorted(set(AZURE_CREDENTIALS) - secrets) if secrets is not None else None,
+            "missing_variables": sorted(AZURE_FIELDS.keys() - variables) if variables is not None else None,
+        },
+    }
+
+
+def doctor(root, repo, client, *, tag=None, unset_env_tokens=False, desktop_signing=False):
     """Inspect local Git/worktree state, gh CLI readiness and optional release channels."""
     if not REPOSITORY.fullmatch(repo):
         raise ValueError("repository must be owner/name")
@@ -610,14 +673,11 @@ def doctor(root, repo, client, *, tag=None, unset_env_tokens=False):
             "prunable_worktrees": sum(1 for item in worktrees if item.get("prunable")),
         },
     }
+    if desktop_signing:
+        report["desktop_signing"] = _desktop_signing_status(run_cmd, gh_bin, repo)
     if tag is not None:
         version = check_release.source_version(root, tag)
-        notes = root / "docs" / "releases" / f"{tag}.md"
-        if not notes.is_file():
-            raise ValueError(f"missing release notes for {tag}")
-        notes_text = notes.read_text(encoding="utf-8")
-        if not notes_text.strip() or "(pending)" in notes_text or "Pending release." in notes_text:
-            raise ValueError(f"release notes for {tag} still contain pending placeholders")
+        check_release.verify_release_notes(root, tag)
         release = release_metadata(repo, tag, client, include_drafts=True)
         github_state = "missing" if release is None else "draft" if release["draft"] else "published"
         pypi_value = client.json(f"https://pypi.org/pypi/lixity/{version}/json", missing=True)
@@ -702,20 +762,38 @@ def zenodo_status(repo, tag, client):
         raise ValueError("repository must be owner/name")
     if not RELEASE_TAG.fullmatch(tag):
         raise ValueError("release tag must have the form vX.Y.Z")
+    repository = f"https://github.com/{repo}"
+    identifiers = (repository, f"{repository}/tree/{tag}", f"{repository}/releases/tag/{tag}")
+    related = " OR ".join(f'"{identifier}"' for identifier in identifiers)
     query = urllib.parse.urlencode({
-        "q": f'metadata.related_identifiers.identifier:"https://github.com/{repo}/tree/{tag}"',
-        "size": 1,
+        "q": f'metadata.related_identifiers.identifier:({related}) AND metadata.version:("{tag}" OR "{tag[1:]}")',
+        "size": 10,
+        "all_versions": 1,
     })
+    unknown = {"zenodo_status": "unknown", "zenodo_doi": None, "zenodo_url": None}
     try:
         payload = client.json(f"https://zenodo.org/api/records?{query}")
     except ValueError:
-        return {"zenodo_status": "unknown", "zenodo_doi": None, "zenodo_url": None}
+        return unknown
     hits = payload.get("hits", {}).get("hits") if isinstance(payload.get("hits"), dict) else None
     if not isinstance(hits, list):
-        return {"zenodo_status": "unknown", "zenodo_doi": None, "zenodo_url": None}
-    if not hits:
-        return {"zenodo_status": "pending", "zenodo_doi": None, "zenodo_url": None}
-    record = hits[0] if isinstance(hits[0], dict) else {}
+        return unknown
+    matches = []
+    for hit in hits:
+        metadata = hit.get("metadata") if isinstance(hit, dict) else None
+        relations = metadata.get("related_identifiers") if isinstance(metadata, dict) else None
+        if not isinstance(relations, list):
+            return unknown
+        if metadata.get("version") in (tag, tag[1:]) and any(
+            isinstance(item, dict) and isinstance(item.get("identifier"), str)
+            and item["identifier"].rstrip("/") in identifiers for item in relations
+        ):
+            matches.append(hit)
+    if not matches:
+        return {**unknown, "zenodo_status": "pending"}
+    if len(matches) != 1:
+        return unknown
+    record = matches[0]
     doi = record.get("doi") if isinstance(record.get("doi"), str) else None
     links = record.get("links") if isinstance(record.get("links"), dict) else {}
     self_html = links.get("self_html") if isinstance(links.get("self_html"), str) else None
@@ -765,7 +843,7 @@ def main():
         "command",
         choices=("inspect", "recover", "verify-github", "verify-draft", "stage-pypi",
                  "verify-pypi", "doctor", "verify-pages", "verify-zenodo", "verify-release",
-                 "stage-desktop"),
+                 "stage-desktop", "record-desktop-catalog"),
     )
     parser.add_argument("--root", type=Path, help="Source checkout for local verification")
     parser.add_argument("--tag")
@@ -774,9 +852,12 @@ def main():
     parser.add_argument("--dist", type=Path, default=Path("dist"))
     parser.add_argument("--desktop-dist", type=Path, help="Separate directory for the reviewed desktop asset set")
     parser.add_argument("--require-desktop", action="store_true", help="Reject a Python-only release")
+    parser.add_argument("--desktop-signing", action="store_true",
+                        help="Report missing repository-level desktop signing names with doctor")
     parser.add_argument("--python-only", action="store_true", help="Recover only the artifacts required by PyPI")
     parser.add_argument("--artifacts-dir", type=Path, help="Unpacked desktop release workflow bundle")
     parser.add_argument("--qualification", type=Path, help="Reviewed desktop qualification receipt")
+    parser.add_argument("--catalog-output", type=Path, help="Write the reviewed desktop download catalog here")
     parser.add_argument("--upload", type=Path, default=Path("upload"))
     parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
     parser.add_argument("--use-keyring", action="store_true",
@@ -801,10 +882,14 @@ def main():
         parser.error("--skip-pypi and --skip-pages apply only to verify-release")
     if args.command == "stage-desktop" and not (args.artifacts_dir and args.qualification and args.desktop_dist):
         parser.error("stage-desktop requires --artifacts-dir, --qualification and --desktop-dist")
+    if (args.command == "record-desktop-catalog") != bool(args.catalog_output):
+        parser.error("--catalog-output is required for record-desktop-catalog and applies only to that command")
     if args.desktop_dist and args.command not in {"stage-desktop", "verify-draft", "verify-github"}:
         parser.error("--desktop-dist applies to staging or checking GitHub desktop assets")
     if args.require_desktop and args.command not in {"recover", "verify-draft", "verify-github", "verify-release"}:
         parser.error("--require-desktop applies to GitHub release verification")
+    if args.desktop_signing and args.command != "doctor":
+        parser.error("--desktop-signing applies only to doctor")
     if args.python_only and (args.command != "recover" or args.require_desktop):
         parser.error("--python-only is only for Python artifact recovery")
     if args.use_keyring:
@@ -817,7 +902,10 @@ def main():
             pages_hosts = (_normalize_pages_base(args.base_url)[1],)
         client = HttpClient(token=token, extra_hosts=pages_hosts)
         if args.command == "doctor":
-            result = doctor(args.root, args.repo, client, tag=args.tag, unset_env_tokens=args.use_keyring)
+            result = doctor(
+                args.root, args.repo, client, tag=args.tag, unset_env_tokens=args.use_keyring,
+                desktop_signing=args.desktop_signing,
+            )
         elif args.command == "verify-pages":
             result = verify_pages(args.root, args.tag, args.expected_commit, client, base_url=args.base_url)
         elif args.command == "verify-zenodo":
@@ -838,6 +926,8 @@ def main():
                                  python_only=args.python_only)
             elif args.command == "stage-desktop":
                 result = stage_desktop(*common, args.artifacts_dir, args.qualification, args.desktop_dist)
+            elif args.command == "record-desktop-catalog":
+                result = record_desktop_catalog(*common, args.catalog_output, client)
             elif args.command == "stage-pypi":
                 result = stage_pypi(*common, args.dist, args.upload, client)
             elif args.command == "verify-pypi":

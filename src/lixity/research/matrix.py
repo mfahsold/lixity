@@ -333,10 +333,15 @@ def research_gaps(project: str | Path) -> dict[str, Any]:
         for record in snapshot.records.values()
         if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
     }
+    # snapshot.records holds the latest accepted revision per record ID.
     anchored_claim_ids = {
         record.claim_ref.id
         for record in snapshot.records.values()
-        if isinstance(record, ManuscriptClaimLink) and record.id not in withdrawn_or_purged
+        if (
+            isinstance(record, ManuscriptClaimLink)
+            and record.state == "active"
+            and record.id not in withdrawn_or_purged
+        )
     }
 
     unsupported_claims: list[dict[str, Any]] = []

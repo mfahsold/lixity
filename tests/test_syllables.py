@@ -261,4 +261,3 @@ def test_generic_non_latin_script_withholds_flesch_while_preserving_lix():
     md = ReportFormatter.format_markdown_report(metrics, language_key="en")
     assert "| **Flesch Reading Ease** | **–** |" in md
     assert "| **LIX (readability index)** | **25.0** |" in md
-

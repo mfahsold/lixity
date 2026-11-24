@@ -100,6 +100,7 @@
 <p class="notice-box">Desktop installers are in testing. For the current public release, <a href="#install">install the local browser app and CLI</a>. <a href="https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build">Get a desktop test installer</a>.</p>
 <!-- desktop-downloads:end -->
 <p>The desktop app includes Python. Open Lixity from your application menu to start the bundled local engine.</p>
+<p>For a test build, sign in to GitHub and keep the installer and checksum list from the same workflow run.</p>
 <nav class="install-platforms" aria-label="Desktop installation by operating system">
 <a class="ctl" href="#macos">macOS</a>
 <a class="ctl" href="#windows">Windows</a>
@@ -110,28 +111,33 @@
 <p>Desktop builds require macOS 12 or later.</p>
 <ol>
 <li>In the Apple menu, open <strong>About This Mac</strong>. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.</li>
-<li>Open the DMG in Finder, then drag <strong>Lixity.app</strong> onto <strong>Applications</strong>. The <strong>Start Here – Hier starten</strong> file inside the image explains the steps offline.</li>
+<li>Open the DMG in Finder, then drag <strong>Lixity.app</strong> onto <strong>Applications</strong>. Open the <strong>Start Here</strong> guide inside the image for offline instructions.</li>
 <li>After the copy completes, eject the disk image and open <strong>Applications → Lixity</strong>. Open the app there again for later sessions.</li>
 </ol>
-<p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">macOS installation notes</a> for test builds and the location of the desktop log.</p>
+<p>For a test build, <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">verify the download before opening the DMG</a>. The notes also cover first-launch alerts and the desktop log.</p>
 
 <h3 id="windows">Windows</h3>
 <ol>
 <li>Check <strong>Settings → System → About → System type</strong>. The current desktop builds target x64 PCs.</li>
-<li>Open the setup <code>.exe</code> to install for your account. Use the <code>.msi</code> when your organisation's deployment process calls for it.</li>
+<li>For a test build, extract <code>desktop-installers-x86_64-pc-windows-msvc</code> from the workflow run. Open <strong>Start Here - Windows.html</strong> if present. Compare the installer's SHA-256 with <code>SHA256SUMS-x86_64-pc-windows-msvc.txt</code> from the same archive.</li>
+<li>Open the setup <code>.exe</code> to install for your account. The MSI is available in English and German for deployment testing.</li>
 <li>Open <strong>Lixity</strong> from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.</li>
 </ol>
-<p>If setup cannot download the runtime, see <a href="https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#online-only-deployment">Microsoft’s WebView2 installation options</a>.</p>
+<p>Windows may flag an unsigned test build as an unknown publisher or unrecognized app. If system policy blocks installation, use the <a href="#install">published browser app and CLI</a>. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test">Windows verification and installation steps</a> and <a href="https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution">Microsoft’s WebView2 installation options</a>.</p>
 
 <h3 id="linux">Linux</h3>
-<p>The current desktop builds target x86-64 and use WebKitGTK 4.1 and GTK 3. On Debian or Ubuntu, open the <code>.deb</code> with your package installer, then start <strong>Lixity</strong> from the applications menu.</p>
-<p>To run the <code>.AppImage</code> from its folder, allow it to execute in the file's properties and open it. If it reports a FUSE error, follow the <a href="https://docs.appimage.org/user-guide/troubleshooting/fuse.html">AppImage instructions for your distribution</a>.</p>
+<ol>
+<li>Check that <code>uname -m</code> reports <code>x86_64</code>. The desktop host uses WebKitGTK 4.1 and GTK 3.</li>
+<li>For a test build, extract <code>desktop-installers-x86_64-unknown-linux-gnu</code> from the workflow run. Open <strong>Start Here - Linux.html</strong> if present. In the extracted folder, run <code>sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt</code>.</li>
+<li>On Debian or Ubuntu, open the verified <code>.deb</code> with your package installer and start <strong>Lixity</strong> from the applications menu. To run the verified <code>.AppImage</code> from its folder, allow it to execute in the file's properties and open it.</li>
+</ol>
+<p>For an AppImage FUSE error, follow the <a href="https://docs.appimage.org/user-guide/troubleshooting/fuse.html">instructions for your distribution</a>. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test">Linux verification and installation steps</a> for the Terminal commands.</p>
 
 <h3 id="desktop-first-launch">First launch</h3>
 <p>Choose <strong>Open a project folder</strong>, <strong>Import a manuscript</strong>, or <strong>Start writing</strong> in the welcome window. Choose <strong>Try the example offline</strong> to preview the bundled English manuscript. Confirm to save an editable local copy. New projects use <code>~/Lixity</code> by default, and the form shows the destination before saving.</p>
-<p>If the workspace cannot start, the error dialog can open the log folder. After the app opens, use <strong>Tools → Open Logs Folder</strong>. The <a href="first-look.html">first-session guide</a> walks through reading your first finding.</p>
+<p>For a test build, use a separate account or test machine and explore the example first. If the workspace cannot start, the error dialog can open the log folder. After the app opens, use <strong>Tools → Open Logs Folder</strong>. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs">platform log locations</a> if no window opens. The <a href="first-look.html">first-session guide</a> walks through reading your first finding.</p>
 
-<p class="notice-box">This source guide describes <strong>v0.9.1</strong>. Its changes are listed in the source <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md">release notes</a>. The browser and CLI installation uses the package published on <a href="https://pypi.org/project/lixity/">PyPI</a>. Check <code>lixity --version</code> and <a href="https://github.com/mfahsold/lixity/releases/latest">Latest on GitHub</a> for the published version. Historical 1.x and 3.x tags predate the version reset.</p>
+<p class="notice-box">This source guide describes <strong>v0.9.2</strong>. Its changes are listed in the source <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.2.md">release notes</a>. The browser and CLI installation uses the package published on <a href="https://pypi.org/project/lixity/">PyPI</a>. Check <code>lixity --version</code> and <a href="https://github.com/mfahsold/lixity/releases/latest">Latest on GitHub</a> for the published version. Historical 1.x and 3.x tags predate the version reset.</p>
 
 <h2 id="requirements">What does the published browser app need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It supplies managed Python 3.12 and installs Lixity from <a href="https://pypi.org/project/lixity/">PyPI</a>. You can also find the current wheel and its checksums on <a href="https://github.com/mfahsold/lixity/releases/latest">GitHub Releases</a>. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start Here · Lixity for Linux</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      color: CanvasText;
+      background: Canvas;
+    }
+    body {
+      max-inline-size: 40rem;
+      margin: 0 auto;
+      padding: clamp(1rem, 6vw, 3rem);
+      font: 1rem/1.55 system-ui, sans-serif;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { margin-block: 0 1rem; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Lixity Linux Test Build</h1>
+    <p>This archive contains the installers for 64-bit x86 Linux. Run
+    <code>uname -m</code> to check that your system reports <code>x86_64</code>.</p>
+
+    <section>
+      <h2>Verify the download</h2>
+      <p>Extract the GitHub Actions archive. Keep both installers and their
+      checksum file together and run the following command from that folder.</p>
+      <pre><code>sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt</code></pre>
+      <p>Proceed once the installer you intend to use reports <code>OK</code>.</p>
+    </section>
+
+    <section>
+      <h2>Choose one installer</h2>
+      <p>Close any running Lixity window. Use the exact downloaded filename
+      in place of the example name containing <code>VERSION</code>. For a
+      clean-install test, use a fresh Linux virtual machine.</p>
+      <h3>Debian package</h3>
+      <p>On a Debian-based desktop such as Ubuntu, your package manager can
+      install the <code>.deb</code> and resolve its system dependencies,
+      including WebKitGTK 4.1.</p>
+      <pre><code>sudo apt install ./Lixity_VERSION_amd64.deb</code></pre>
+      <p>After installation, open <strong>Lixity</strong> from your applications menu.</p>
+
+      <h3>AppImage</h3>
+      <p>Make the <code>.AppImage</code> executable and launch it from the
+      folder where you want to keep it.</p>
+      <pre><code>chmod u+x ./Lixity_VERSION_amd64.AppImage
+./Lixity_VERSION_amd64.AppImage</code></pre>
+      <p>If launch reports that FUSE is missing, check your distribution's
+      FUSE 2 compatibility package. For Ubuntu 22.04 it is <code>libfuse2</code>.
+      For Ubuntu 24.04 it is <code>libfuse2t64</code>. On a supported Debian-based
+      system, the Debian package is another way to start Lixity.
+      <a href="https://docs.appimage.org/user-guide/troubleshooting/fuse.html">AppImage FUSE instructions</a></p>
+    </section>
+
+    <section>
+      <h2>Start with a manuscript</h2>
+      <p>Choose <strong>Try the example offline</strong> to preview the bundled
+      manuscript. You can also open a separate project folder or import a test
+      manuscript. Choose <strong>Tools → Open Logs Folder</strong> to inspect
+      startup logs once the app opens.</p>
+      <p><a href="https://mfahsold.github.io/lixity/guides/installation.html#linux">Lixity installation guide</a></p>
+    </section>
+  </main>
+</body>
+</html>

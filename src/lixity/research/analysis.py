@@ -334,91 +334,82 @@ def compare_source_to_manuscript(
 
     source_vocab = set(source_counter.keys())
     ms_vocab = set(ms_counter.keys())
-    shared_vocab = source_vocab & ms_vocab
-    source_exclusive = source_vocab - ms_vocab
-    ms_exclusive = ms_vocab - source_vocab
-    union_vocab = source_vocab | ms_vocab
+    comparable = source_resolved.key == ms_resolved.key
 
-    jaccard = (len(shared_vocab) / len(union_vocab)) if union_vocab else 0.0
-    min_vocab_len = min(len(source_vocab), len(ms_vocab))
-    overlap_coef = (len(shared_vocab) / min_vocab_len) if min_vocab_len > 0 else 0.0
+    shared_vocab = (source_vocab & ms_vocab) if comparable else set()
+    source_exclusive = (source_vocab - ms_vocab) if comparable else set()
+    ms_exclusive = (ms_vocab - source_vocab) if comparable else set()
+    union_vocab = (source_vocab | ms_vocab) if comparable else set()
 
-    # Top shared and exclusive terms
-    top_shared = [
-        {
-            "word": w,
-            "source_count": source_counter[w],
-            "manuscript_count": ms_counter[w],
-            "total_count": source_counter[w] + ms_counter[w],
-        }
-        for w in sorted(shared_vocab, key=lambda w: (-(source_counter[w] + ms_counter[w]), w))[:top_n]
-    ]
-
-    top_source_exclusive = [
-        {"word": w, "count": source_counter[w]}
-        for w in sorted(source_exclusive, key=lambda w: (-source_counter[w], w))[:top_n]
-    ]
-
-    # Keyness Differential (Dunning G²)
-    total_s = sum(source_counter.values())
-    total_m = sum(ms_counter.values())
+    jaccard: float | None = None
+    overlap_coef: float | None = None
+    top_shared: list[dict[str, Any]] = []
+    top_source_exclusive: list[dict[str, Any]] = []
     source_key_terms: list[dict[str, Any]] = []
     ms_key_terms: list[dict[str, Any]] = []
 
-    if total_s >= 10 and total_m >= 10:
-        scored: list[tuple[str, float, int, int]] = []
-        for word in union_vocab:
-            g2 = dunning_g2(source_counter[word], ms_counter[word], total_s, total_m)
-            if g2 != 0.0:
-                scored.append((word, g2, source_counter[word], ms_counter[word]))
+    if comparable:
+        jaccard = round((len(shared_vocab) / len(union_vocab)) if union_vocab else 0.0, 4)
+        min_vocab_len = min(len(source_vocab), len(ms_vocab))
+        overlap_coef = round((len(shared_vocab) / min_vocab_len) if min_vocab_len > 0 else 0.0, 4)
 
-        # Sort by signed g2: positive = over-represented in source
-        scored_pos = [item for item in scored if item[1] > 0]
-        scored_pos.sort(key=lambda item: (-item[1], item[0]))
-        source_key_terms = [
-            {"word": w, "g2": round(g2, 3), "source_count": sc, "manuscript_count": mc}
-            for w, g2, sc, mc in scored_pos[:top_n]
+        # Top shared and exclusive terms
+        top_shared = [
+            {
+                "word": w,
+                "source_count": source_counter[w],
+                "manuscript_count": ms_counter[w],
+                "total_count": source_counter[w] + ms_counter[w],
+            }
+            for w in sorted(shared_vocab, key=lambda w: (-(source_counter[w] + ms_counter[w]), w))[:top_n]
         ]
 
-        scored_neg = [item for item in scored if item[1] < 0]
-        scored_neg.sort(key=lambda item: (item[1], item[0]))
-        ms_key_terms = [
-            {"word": w, "g2": round(g2, 3), "source_count": sc, "manuscript_count": mc}
-            for w, g2, sc, mc in scored_neg[:top_n]
+        top_source_exclusive = [
+            {"word": w, "count": source_counter[w]}
+            for w in sorted(source_exclusive, key=lambda w: (-source_counter[w], w))[:top_n]
         ]
+
+        # Keyness Differential (Dunning G²)
+        total_s = sum(source_counter.values())
+        total_m = sum(ms_counter.values())
+
+        if total_s >= 10 and total_m >= 10:
+            scored: list[tuple[str, float, int, int]] = []
+            for word in union_vocab:
+                g2 = dunning_g2(source_counter[word], ms_counter[word], total_s, total_m)
+                if g2 != 0.0:
+                    scored.append((word, g2, source_counter[word], ms_counter[word]))
+
+            # Sort by signed g2: positive = over-represented in source
+            scored_pos = [item for item in scored if item[1] > 0]
+            scored_pos.sort(key=lambda item: (-item[1], item[0]))
+            source_key_terms = [
+                {"word": w, "g2": round(g2, 3), "source_count": sc, "manuscript_count": mc}
+                for w, g2, sc, mc in scored_pos[:top_n]
+            ]
+
+            scored_neg = [item for item in scored if item[1] < 0]
+            scored_neg.sort(key=lambda item: (item[1], item[0]))
+            ms_key_terms = [
+                {"word": w, "g2": round(g2, 3), "source_count": sc, "manuscript_count": mc}
+                for w, g2, sc, mc in scored_neg[:top_n]
+            ]
+
+    def _register_entry(source_val: float, ms_val: float) -> dict[str, float | None]:
+        return {
+            "source": round(source_val, 2),
+            "manuscript": round(ms_val, 2),
+            "delta": round(ms_val - source_val, 2) if comparable else None,
+        }
 
     # Register & stylistic contrast
     register_contrast = {
-        "asl": {
-            "source": round(source_metrics.asl, 2),
-            "manuscript": round(ms_metrics.asl, 2),
-            "delta": round(ms_metrics.asl - source_metrics.asl, 2),
-        },
-        "dialogue_pct": {
-            "source": round(source_metrics.dialog_ratio, 2),
-            "manuscript": round(ms_metrics.dialog_ratio, 2),
-            "delta": round(ms_metrics.dialog_ratio - source_metrics.dialog_ratio, 2),
-        },
-        "guiraud_r": {
-            "source": round(source_metrics.guiraud_r, 2),
-            "manuscript": round(ms_metrics.guiraud_r, 2),
-            "delta": round(ms_metrics.guiraud_r - source_metrics.guiraud_r, 2),
-        },
-        "yules_k": {
-            "source": round(source_metrics.yules_k, 2),
-            "manuscript": round(ms_metrics.yules_k, 2),
-            "delta": round(ms_metrics.yules_k - source_metrics.yules_k, 2),
-        },
-        "staccato_pct": {
-            "source": round(source_metrics.staccato_pct, 2),
-            "manuscript": round(ms_metrics.staccato_pct, 2),
-            "delta": round(ms_metrics.staccato_pct - source_metrics.staccato_pct, 2),
-        },
-        "kaskade_pct": {
-            "source": round(source_metrics.kaskade_pct, 2),
-            "manuscript": round(ms_metrics.kaskade_pct, 2),
-            "delta": round(ms_metrics.kaskade_pct - source_metrics.kaskade_pct, 2),
-        },
+        "asl": _register_entry(source_metrics.asl, ms_metrics.asl),
+        "dialogue_pct": _register_entry(source_metrics.dialog_ratio, ms_metrics.dialog_ratio),
+        "guiraud_r": _register_entry(source_metrics.guiraud_r, ms_metrics.guiraud_r),
+        "yules_k": _register_entry(source_metrics.yules_k, ms_metrics.yules_k),
+        "staccato_pct": _register_entry(source_metrics.staccato_pct, ms_metrics.staccato_pct),
+        "kaskade_pct": _register_entry(source_metrics.kaskade_pct, ms_metrics.kaskade_pct),
     }
 
     # Chapter Grounding / Evidence Trace
@@ -432,18 +423,28 @@ def compare_source_to_manuscript(
         clean_body = prose_text(ch_body, _front_matter=False)
         ch_tokens = [w.lower() for w in ms_word_re.findall(clean_body)]
         ch_content = [w for w in ch_tokens if len(w) > 1 and w not in ms_blacklist]
-        ch_counter = Counter(ch_content)
-
-        ch_overlap = {w: ch_counter[w] for w in ch_counter if w in source_vocab}
-        overlap_tokens = sum(ch_overlap.values())
-        overlap_types = len(ch_overlap)
-        grounding_density = round((overlap_tokens / len(ch_tokens) * 1000.0), 2) if ch_tokens else 0.0
-
-        top_ch_terms = [
-            {"word": w, "count": ch_overlap[w]}
-            for w in sorted(ch_overlap, key=lambda w: (-ch_overlap[w], w))[:5]
-        ]
-        present_keys = [w for w in sorted(ch_overlap, key=lambda w: (-ch_overlap[w], w)) if w in source_key_set]
+        if comparable:
+            ch_counter = Counter(ch_content)
+            ch_overlap = {w: ch_counter[w] for w in ch_counter if w in source_vocab}
+            overlap_tokens_count = sum(ch_overlap.values())
+            overlap_tokens: int | None = overlap_tokens_count
+            overlap_types: int | None = len(ch_overlap)
+            grounding_density: float | None = (
+                round((overlap_tokens_count / len(ch_tokens) * 1000.0), 2) if ch_tokens else 0.0
+            )
+            top_ch_terms = [
+                {"word": w, "count": ch_overlap[w]}
+                for w in sorted(ch_overlap, key=lambda w: (-ch_overlap[w], w))[:5]
+            ]
+            present_keys = [
+                w for w in sorted(ch_overlap, key=lambda w: (-ch_overlap[w], w)) if w in source_key_set
+            ]
+        else:
+            overlap_types = None
+            overlap_tokens = None
+            grounding_density = None
+            top_ch_terms = []
+            present_keys = []
 
         chapter_grounding.append(
             {
@@ -460,16 +461,16 @@ def compare_source_to_manuscript(
         )
 
     result: dict[str, Any] = {
-        "schema_version": "research-comparison-local/1",
+        "schema_version": "research-comparison-local/2",
         "meta": {
             "tool": "lixity",
             "version": __version__,
             "source_language": source_resolved.key,
             "manuscript_language": ms_resolved.key,
-            "lexical_comparable": source_resolved.key == ms_resolved.key,
+            "lexical_comparable": comparable,
         },
         "comparison_limits": (
-            [] if source_resolved.key == ms_resolved.key else ["cross_language_lexical_comparison"]
+            [] if comparable else ["cross_language_lexical_comparison"]
         ),
         "provenance": {
             "project_id": snapshot.project.id,
@@ -486,11 +487,11 @@ def compare_source_to_manuscript(
             "manuscript_content_words": len(ms_content),
             "source_vocabulary_types": len(source_vocab),
             "manuscript_vocabulary_types": len(ms_vocab),
-            "shared_types": len(shared_vocab),
-            "source_exclusive_types": len(source_exclusive),
-            "manuscript_exclusive_types": len(ms_exclusive),
-            "jaccard_similarity": round(jaccard, 4),
-            "overlap_coefficient": round(overlap_coef, 4),
+            "shared_types": len(shared_vocab) if comparable else None,
+            "source_exclusive_types": len(source_exclusive) if comparable else None,
+            "manuscript_exclusive_types": len(ms_exclusive) if comparable else None,
+            "jaccard_similarity": jaccard,
+            "overlap_coefficient": overlap_coef,
         },
         "lexical_overlap": {
             "top_shared_terms": top_shared,
@@ -526,6 +527,13 @@ def format_compare_markdown(data: dict[str, Any]) -> str:
         lines.append(f"- **Limitations:** {', '.join(data['comparison_limits'])}")
     lines.append("")
 
+    shared_types = summary.get("shared_types")
+    shared_str = f"{shared_types:,} shared" if shared_types is not None else "–"
+    jaccard_val = summary.get("jaccard_similarity")
+    jaccard_str = f"{jaccard_val:.4f}" if jaccard_val is not None else "–"
+    overlap_val = summary.get("overlap_coefficient")
+    overlap_str = f"{overlap_val:.4f}" if overlap_val is not None else "–"
+
     lines.extend([
         "## Summary Metrics",
         "",
@@ -533,9 +541,9 @@ def format_compare_markdown(data: dict[str, Any]) -> str:
         "| :--- | :--- | :--- | :--- |",
         f"| **Total Tokens** | {summary.get('source_tokens', 0):,} | {summary.get('manuscript_tokens', 0):,} | – |",
         f"| **Content Words** | {summary.get('source_content_words', 0):,} | {summary.get('manuscript_content_words', 0):,} | – |",
-        f"| **Vocabulary Types** | {summary.get('source_vocabulary_types', 0):,} | {summary.get('manuscript_vocabulary_types', 0):,} | {summary.get('shared_types', 0):,} shared |",
-        f"| **Jaccard Similarity** | – | – | {summary.get('jaccard_similarity', 0.0):.4f} |",
-        f"| **Overlap Coefficient** | – | – | {summary.get('overlap_coefficient', 0.0):.4f} |",
+        f"| **Vocabulary Types** | {summary.get('source_vocabulary_types', 0):,} | {summary.get('manuscript_vocabulary_types', 0):,} | {shared_str} |",
+        f"| **Jaccard Similarity** | – | – | {jaccard_str} |",
+        f"| **Overlap Coefficient** | – | – | {overlap_str} |",
         "",
     ])
 
@@ -558,7 +566,13 @@ def format_compare_markdown(data: dict[str, Any]) -> str:
         for k, lbl in labels.items():
             if k in reg:
                 item = reg[k]
-                lines.append(f"| **{lbl}** | {item.get('source', 0.0)} | {item.get('manuscript', 0.0)} | {item.get('delta', 0.0):+g} |")
+                src_v = item.get("source")
+                ms_v = item.get("manuscript")
+                delta_v = item.get("delta")
+                src_s = "–" if src_v is None else str(src_v)
+                ms_s = "–" if ms_v is None else str(ms_v)
+                delta_s = "–" if delta_v is None else f"{delta_v:+g}"
+                lines.append(f"| **{lbl}** | {src_s} | {ms_s} | {delta_s} |")
         lines.append("")
 
     keyness = data.get("keyness", {})
@@ -606,11 +620,19 @@ def format_compare_markdown(data: dict[str, Any]) -> str:
             "| :--- | :--- | :--- | :--- | :--- | :--- |",
         ])
         for ch in chapters:
-            key_terms = ", ".join(ch.get("key_terms_present", [])) or "–"
+            key_terms = ", ".join(ch.get("key_terms_present") or []) or "–"
+            ov_types = ch.get("overlap_types")
+            ov_tokens = ch.get("overlap_tokens")
+            overlap_str = (
+                f"{ov_types} ({ov_tokens} tok)"
+                if ov_types is not None and ov_tokens is not None
+                else "–"
+            )
+            density = ch.get("grounding_density")
+            density_str = f"{density:.1f}‰" if density is not None else "–"
             lines.append(
                 f"| {ch.get('chapter', 1)} | {ch.get('title', 'Chapter')} | {ch.get('words', 0):,} | "
-                f"{ch.get('overlap_types', 0)} ({ch.get('overlap_tokens', 0)} tok) | "
-                f"{ch.get('grounding_density', 0.0):.1f}‰ | {key_terms} |"
+                f"{overlap_str} | {density_str} | {key_terms} |"
             )
         lines.append("")
 

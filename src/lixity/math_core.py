@@ -22,6 +22,8 @@ from __future__ import annotations
 import math
 import statistics
 from collections.abc import Sequence
+from fractions import Fraction
+from sys import float_info
 
 #: Normal-consistent MAD factor (Rousseeuw & Croux 1993).
 MAD_TO_SIGMA = 1.4826
@@ -78,7 +80,10 @@ def _standardized_difference(
     difference = value - centre
     if math.isinf(difference) and math.isfinite(value) and math.isfinite(centre):
         return factor * value / denominator - factor * centre / denominator
-    return factor * difference / denominator
+    scaled = factor * difference
+    if factor != 1.0 and 0.0 < abs(scaled) < float_info.min:
+        return ratio_or_zero(difference, denominator, scale=factor)
+    return scaled / denominator
 
 
 def robust_z(value: float, centre: float, spread: float) -> float:
@@ -93,9 +98,9 @@ def significance_z(value: float, centre: float, sigma: float, se: float) -> floa
     if not all(math.isfinite(x) for x in (value, centre, sigma, se)) or sigma < 0.0 or se < 0.0:
         raise ValueError("Scoring requires finite values and nonnegative finite spreads")
     denominator = math.hypot(sigma, se)
-    if math.isinf(denominator):
-        scale = max(abs(sigma), abs(se))
-        return _standardized_difference(value, centre, scale) / math.hypot(sigma / scale, se / scale)
+    if math.isinf(denominator) or 0.0 < denominator < float_info.min:
+        scale = max(sigma, se)
+        return _standardized_difference(value, centre, scale, 1.0 / math.hypot(sigma / scale, se / scale))
     return _standardized_difference(value, centre, denominator) if denominator > 0.0 else 0.0
 
 
@@ -104,9 +109,27 @@ def normal_two_sided_p(z: float) -> float:
     return math.erfc(abs(z) / math.sqrt(2.0))
 
 
+def _exact_scaled_ratio(numerator: float, denominator: float, scale: float) -> float:
+    return float(Fraction(numerator) * Fraction(scale) / Fraction(denominator))
+
+
 def ratio_or_zero(numerator: float, denominator: float, *, scale: float = 1.0) -> float:
     """Totalize a ratio: ``numerator / denominator * scale``, 0.0 on zero divisor."""
-    return (numerator / denominator * scale) if denominator else 0.0
+    if not denominator:
+        return 0.0
+    try:
+        ratio = numerator / denominator
+    except OverflowError:
+        return _exact_scaled_ratio(numerator, denominator, scale)
+    if ((math.isinf(ratio) or (numerator and abs(ratio) < float_info.min))
+            and all(isinstance(value, int) or math.isfinite(value) for value in (numerator, denominator, scale))):
+        # Keep the scale factor in the exact ratio when the division alone
+        # would overflow, underflow or round prematurely to a subnormal.
+        try:
+            return _exact_scaled_ratio(numerator, denominator, scale)
+        except OverflowError:
+            pass
+    return ratio * scale
 
 
 def percent(part: float, whole: float) -> float:
@@ -141,12 +164,18 @@ def binomial_se_percent(pct: float, n: int) -> float:
     """
     if n <= 0:
         return 0.0
-    p = pct / 100.0
-    if p <= 0.0:
-        p = 0.5 / (n + 1.0)
-    elif p >= 1.0:
-        p = (n + 0.5) / (n + 1.0)
-    return math.sqrt(max(p * (1.0 - p), 0.0) / n) * 100.0
+    if pct <= 0.0 or pct >= 100.0:
+        # The small tail is the same at both endpoints. Subtracting the
+        # rounded upper endpoint from one can erase it. Pulling n out
+        # of the square root keeps the final correction representable.
+        tail = 1 / (2 * (n + 1))
+        factor = 100.0 * math.sqrt(0.5 * (n / (n + 1)) * (1.0 - tail))
+        return ratio_or_zero(factor, n)
+    numerator = math.sqrt(pct * (100.0 - pct))
+    if n > float_info.max:
+        power = (n.bit_length() - 1) // 2
+        return math.ldexp(numerator / math.sqrt(n / (1 << (2 * power))), -power)
+    return numerator / math.sqrt(n)
 
 
 def poisson_se_per_mille(count: float, words: int) -> float:
@@ -158,7 +187,7 @@ def poisson_se_per_mille(count: float, words: int) -> float:
     if words <= 0:
         return 0.0
     effective = 0.5 if count == 0 else max(count, 0.0)
-    return math.sqrt(effective) * 1000.0 / words
+    return ratio_or_zero(math.sqrt(effective) * 1000.0, words)
 
 
 #: Small-sample MAD consistency factors b_n (Croux & Rousseeuw 1992).
@@ -251,12 +280,22 @@ def adjusted_boxplot_fences(values: Sequence[float]) -> tuple[float, float]:
     iqr = q3 - q1
     mc = medcouple(ordered)
     if mc >= 0.0:
-        lower = q1 - 1.5 * math.exp(-4.0 * mc) * iqr
-        upper = q3 + 1.5 * math.exp(3.0 * mc) * iqr
+        lower_factor = -1.5 * math.exp(-4.0 * mc)
+        upper_factor = 1.5 * math.exp(3.0 * mc)
     else:
-        lower = q1 - 1.5 * math.exp(-3.0 * mc) * iqr
-        upper = q3 + 1.5 * math.exp(4.0 * mc) * iqr
-    return lower, upper
+        lower_factor = -1.5 * math.exp(-3.0 * mc)
+        upper_factor = 1.5 * math.exp(4.0 * mc)
+    lower_offset = lower_factor * iqr
+    upper_offset = upper_factor * iqr
+    if (math.isinf(lower_offset) or math.isinf(upper_offset)) and math.isfinite(q1) and math.isfinite(q3):
+        half_iqr = q3 * 0.5 - q1 * 0.5
+        return 2.0 * (q1 * 0.5 + lower_factor * half_iqr), 2.0 * (q3 * 0.5 + upper_factor * half_iqr)
+    return q1 + lower_offset, q3 + upper_offset
+
+
+def _huber_weight(value: float, centre: float, scale: float, k: float) -> float:
+    residual = abs(_standardized_difference(value, centre, scale))
+    return 1.0 if residual <= k else k / residual
 
 
 def huber_location(
@@ -275,17 +314,26 @@ def huber_location(
     scale = robust_scale(values, mu)
     if scale == 0.0:
         return mu
+    if math.isinf(scale) and all(math.isfinite(value) for value in values):
+        # A finite sample can yield an unrepresentable MAD scale. Working
+        # at a quarter of the original units makes the scale representable.
+        return 4.0 * huber_location([value * 0.25 for value in values], k=k, tol=tol, max_iter=max_iter)
     for _ in range(max_iter):
         weighted_sum = 0.0
         weight_total = 0.0
         for value in values:
-            r = abs(value - mu) / scale
-            weight = 1.0 if r <= k else k / r
+            weight = _huber_weight(value, mu, scale, k)
             weighted_sum += weight * value
             weight_total += weight
         if weight_total == 0.0:
             break
         mu_new = weighted_sum / weight_total
+        if not math.isfinite(mu_new) and k > 0.0 and all(math.isfinite(value) for value in values):
+            # The convex weighted mean is finite even when its total is not.
+            # Accumulate exactly on this path to retain cancelled contributions.
+            exact_weights = [Fraction(_huber_weight(value, mu, scale, k)) for value in values]
+            total = sum(weight * Fraction(value) for weight, value in zip(exact_weights, values, strict=True))
+            mu_new = float(total / sum(exact_weights))
         if abs(mu_new - mu) <= tol * max(1.0, abs(mu)):
             mu = mu_new
             break
