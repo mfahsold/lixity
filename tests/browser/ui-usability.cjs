@@ -188,6 +188,7 @@ server.serve_forever()
         release();await accepted;
         await expect(page.locator('#'+button)).toBeEnabled();
         assert.equal(reads,1,'Pending form submits exactly once');
+        await expect(page.locator('#'+body)).toBeFocused();
         await expect(page.locator('#'+title)).toHaveValue('New unsaved synthetic '+tab);
         await expect(page.locator('#'+body)).toHaveValue('A newer unsaved synthetic draft.');
         const status=page.locator('#'+button+'-status');
@@ -199,12 +200,14 @@ server.serve_forever()
       }finally{cleaning=true;release();await page.unroute(url);}
       await page.route(url,route=>route.fulfill({status:400,json:{ok:false,message:'Synthetic rejected <img src=x onerror=alert(1)> draft'}}));
       try {
-        await page.locator('#'+button).click();
+        await page.locator('#'+button).focus();
+        await page.keyboard.press('Space');
         await expect(page.locator('#'+button+'-status')).toHaveClass(/\berr\b/);
         await expect(page.locator('#'+title)).toHaveValue('New unsaved synthetic '+tab);
         await expect(page.locator('#'+body)).toHaveValue('A newer unsaved synthetic draft.');
         assert.equal(await page.locator('#'+button+'-status img').count(),0,'Error text is inert');
         await expect(page.locator('#'+button)).toBeEnabled();
+        await expect(page.locator('#'+button)).toBeFocused();
       }finally{await page.unroute(url);}
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
       await page.screenshot({path:path.join(artifacts,`${tab}-${width}.png`)});

@@ -28,8 +28,9 @@
 
   var statusDialog = null;
   var statusBody = null;
-  var statusFooter = null;
   var updateStatusEl = null;
+  var updateButton = null;
+  var checkingForUpdates = false;
 
   function ensureSystemStatusDialog() {
     if (statusDialog && document.body.contains(statusDialog)) return statusDialog;
@@ -44,7 +45,8 @@
       '    <h2 id="desktop-env-heading">' + escapeHtml(label("desktop_env_title", "System Status & Optional Extensions")) + "</h2>" +
       '    <button type="button" class="modal-close" data-close-desktop-env aria-label="' + escapeHtml(label("close", "Close")) + '">✕</button>' +
       "  </div>" +
-      '  <div class="modal-body" data-desktop-env-body></div>' +
+      '  <div class="modal-body"><div data-desktop-env-body></div>' +
+      '    <div data-desktop-update-status role="status"></div></div>' +
       '  <div class="modal-footer" data-desktop-env-footer></div>' +
       "</div>";
     dialog.addEventListener("click", function (event) {
@@ -53,7 +55,32 @@
     document.body.appendChild(dialog);
     statusDialog = dialog;
     statusBody = dialog.querySelector("[data-desktop-env-body]");
-    statusFooter = dialog.querySelector("[data-desktop-env-footer]");
+    updateStatusEl = dialog.querySelector("[data-desktop-update-status]");
+    var footer = dialog.querySelector("[data-desktop-env-footer]");
+    if (window.lixityDesktop && typeof window.lixityDesktop.checkForUpdates === "function") {
+      updateButton = document.createElement("button");
+      updateButton.type = "button";
+      updateButton.className = "ctl";
+      updateButton.textContent = label("desktop_env_check_updates", "Check for Updates…");
+      updateButton.addEventListener("click", checkForUpdates);
+      footer.appendChild(updateButton);
+    }
+    if (window.lixityDesktop && typeof window.lixityDesktop.openLogsFolder === "function") {
+      var logs = document.createElement("button");
+      logs.type = "button";
+      logs.className = "ctl";
+      logs.textContent = label("desktop_env_open_logs", "Open Logs Folder");
+      logs.addEventListener("click", function () {
+        window.lixityDesktop.openLogsFolder().catch(function () {});
+      });
+      footer.appendChild(logs);
+    }
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "ctl primary";
+    close.textContent = label("close", "Close");
+    close.addEventListener("click", function () { dialog.close(); });
+    footer.appendChild(close);
     return dialog;
   }
 
@@ -65,10 +92,8 @@
     return '<span class="ctl-status ' + cls + '">' + escapeHtml(text) + "</span>";
   }
 
-  async function renderSystemStatus(bodyEl, footerEl) {
+  async function renderSystemStatus(bodyEl) {
     bodyEl.innerHTML = '<p class="ctl-status loading">' + escapeHtml(label("desktop_env_loading", "Checking local environment…")) + "</p>";
-    footerEl.innerHTML = "";
-    updateStatusEl = null;
 
     var res;
     try {
@@ -111,74 +136,62 @@
       escapeHtml(app.python || "") + " · " + escapeHtml((app.platform || "") + " / " + (app.machine || "")) +
       (app.desktop_mode ? " · Desktop" : " · Local Browser") + "</p>" +
       '<p class="ctl-note">' + escapeHtml(label("desktop_env_note", "Core manuscript analysis runs offline without optional extensions. External tools stay separate from the core app.")) + "</p>" +
-      '<ul class="desktop-env-list">' + listHtml + "</ul>" +
-      workerHtml +
-      '<div data-desktop-update-status role="status" aria-live="polite"></div>';
-    updateStatusEl = bodyEl.querySelector("[data-desktop-update-status]");
-
-    if (window.lixityDesktop && typeof window.lixityDesktop.checkForUpdates === "function") {
-      var updBtn = document.createElement("button");
-      updBtn.type = "button";
-      updBtn.className = "ctl";
-      updBtn.textContent = label("desktop_env_check_updates", "Check for Updates…");
-      updBtn.addEventListener("click", function () { checkForUpdates(); });
-      footerEl.appendChild(updBtn);
-    }
-    if (window.lixityDesktop && typeof window.lixityDesktop.openLogsFolder === "function") {
-      var logBtn = document.createElement("button");
-      logBtn.type = "button";
-      logBtn.className = "ctl";
-      logBtn.textContent = label("desktop_env_open_logs", "Open Logs Folder");
-      logBtn.addEventListener("click", function () {
-        window.lixityDesktop.openLogsFolder().catch(function () {});
-      });
-      footerEl.appendChild(logBtn);
-    }
-    var closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "ctl primary";
-    closeBtn.textContent = label("close", "Close");
-    closeBtn.addEventListener("click", function () {
-      if (statusDialog) statusDialog.close();
-    });
-    footerEl.appendChild(closeBtn);
+      '<ul class="desktop-env-list">' + listHtml + "</ul>" + workerHtml;
   }
 
   async function openSystemStatus() {
     var dialog = ensureSystemStatusDialog();
     if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
-    if (statusBody && statusFooter) await renderSystemStatus(statusBody, statusFooter);
+    await renderSystemStatus(statusBody);
   }
 
   async function checkForUpdates() {
-    await openSystemStatus();
+    if (checkingForUpdates) return;
+    if (!ensureSystemStatusDialog().open) void openSystemStatus();
     var statusEl = updateStatusEl;
-    if (!statusEl) return;
-    if (!window.lixityDesktop || typeof window.lixityDesktop.checkForUpdates !== "function") {
+    var desktop = window.lixityDesktop;
+    if (typeof desktop?.checkForUpdates !== "function") {
       statusEl.innerHTML = '<p class="ctl-note">' + escapeHtml(label("desktop_env_updates_desktop_only", "Release checks are available in the Lixity Desktop app.")) + "</p>";
       return;
     }
-    statusEl.innerHTML = '<p class="ctl-status loading">' + escapeHtml(label("desktop_env_checking_updates", "Checking GitHub Releases…")) + "</p>";
+    checkingForUpdates = true;
+    window.LixityComponents.setButtonPending(updateButton, true);
+    statusEl.innerHTML = '<p class="ctl-status loading">' + escapeHtml(label("desktop_env_checking_updates", "Checking desktop downloads…")) + "</p>";
+    var failure = label("desktop_env_update_failed", "Could not check desktop downloads. Try again later.");
     try {
-      var result = await window.lixityDesktop.checkForUpdates();
-      var summary = result.update_available
-        ? label("desktop_env_update_available", "Newer release available") + ": " + result.latest_tag
-        : label("desktop_env_up_to_date", "Up to date") + " (" + result.latest_tag + ")";
-      statusEl.innerHTML =
-        '<p class="ctl-status ' + (result.update_available ? "warn" : "ok") + '">' + escapeHtml(summary) + "</p>" +
-        '<p class="ctl-note">' + escapeHtml(result.note || "") + "</p>";
-      if (result.release_url && window.lixityDesktop.openExternalUrl) {
+      var result = await desktop.checkForUpdates();
+      var messages = {
+        no_public_installer: label("desktop_env_no_public_installer", "Desktop installers are not publicly available yet."),
+        no_matching_installer: label("desktop_env_no_matching_installer", "There is no published desktop installer for this system."),
+        current: label("desktop_env_up_to_date", "The installed desktop version is current."),
+        available: label("desktop_env_update_available", "A newer desktop installer is available."),
+        installed_ahead: label("desktop_env_installed_ahead", "This installation is newer than the public desktop package.")
+      };
+      if (!Object.hasOwn(messages, result.status)) throw new Error("Unknown desktop update result");
+      var versions = label("desktop_env_installed_version", "Installed") + " " + result.current_version;
+      if (result.latest_tag) versions += " · " + label("desktop_env_published_version", "Published") + " " + result.latest_tag;
+      statusEl.innerHTML = '<p class="ctl-status ' + (result.status === "current" ? "ok" : "") + '">' +
+        escapeHtml(messages[result.status]) + '</p><p class="ctl-note">' + escapeHtml(versions) + "</p>";
+      if (result.status === "available" && result.guide_url && desktop.openExternalUrl) {
         var linkBtn = document.createElement("button");
         linkBtn.type = "button";
         linkBtn.className = "ctl ctl-sm";
-        linkBtn.textContent = label("desktop_env_open_release", "Open release notes");
+        linkBtn.textContent = label("desktop_env_open_downloads", "Open desktop downloads");
         linkBtn.addEventListener("click", function () {
-          window.lixityDesktop.openExternalUrl(result.release_url).catch(function () {});
+          desktop.openExternalUrl(result.guide_url).catch(function () {
+            var error = document.createElement("p");
+            error.className = "ctl-status err";
+            error.textContent = label("desktop_env_open_downloads_failed", "Could not open desktop downloads.");
+            statusEl.appendChild(error);
+          });
         });
         statusEl.appendChild(linkBtn);
       }
-    } catch (error) {
-      statusEl.innerHTML = '<p class="ctl-status err">' + escapeHtml(String(error)) + "</p>";
+    } catch (_) {
+      statusEl.innerHTML = '<p class="ctl-status err">' + escapeHtml(failure) + "</p>";
+    } finally {
+      checkingForUpdates = false;
+      window.LixityComponents.setButtonPending(updateButton, false);
     }
   }
 
@@ -320,25 +333,25 @@
     if (window.lixityDesktop.platform) {
       document.documentElement.dataset.desktopPlatform = String(window.lixityDesktop.platform);
     }
-
-    // Intercept target="_blank" external links so WKWebView / WebKitGTK route them
-    // reliably to the OS default browser via the audited https/mailto allowlist.
-    document.addEventListener("click", function (event) {
-      var anchor = event.target && event.target.closest ? event.target.closest("a[href]") : null;
-      if (!anchor) return;
-      var href = anchor.getAttribute("href") || "";
-      if (!/^(https:\/\/|mailto:)/i.test(href)) return;
-      if (anchor.target === "_blank" || /^mailto:/i.test(href)) {
-        event.preventDefault();
-        if (typeof window.lixityDesktop.openExternalUrl === "function") {
-          window.lixityDesktop.openExternalUrl(href).catch(function () {});
-        }
-      }
-    });
+    var projectTitle = document.querySelector(".workspace-shell .project-header h1");
+    if (projectTitle && typeof window.lixityDesktop.setWorkspaceTitle === "function") {
+      window.lixityDesktop.setWorkspaceTitle(projectTitle.textContent.trim()).catch(function () {});
+    }
 
     var root = document.documentElement;
     var initialTheme = root.dataset.theme;
     var lastTheme = initialTheme;
+    window.addEventListener("lixity:desktop-theme", function (event) {
+      var theme = event.detail;
+      if (theme === "dark" || theme === "light") {
+        lastTheme = theme;
+        window.LixityComponents.applyTheme(theme);
+      } else if (theme === null) {
+        lastTheme = undefined;
+        delete root.dataset.theme;
+        try { localStorage.removeItem("lixity-theme"); } catch (_) { /* Keep the OS theme. */ }
+      }
+    });
     // Persist the theme across ephemeral ports and let Rust apply native zoom.
     if (typeof window.lixityDesktop.getPreferences === "function") {
       window.lixityDesktop.getPreferences().then(function (prefs) {

@@ -10,7 +10,9 @@
 /* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f2f4fa, #0c1017);
+  --bg-light: #f2f4fa;
+  --bg-dark: #0c1017;
+  --bg: light-dark(var(--bg-light), var(--bg-dark));
   --surface: light-dark(#ffffff, #121822);
   --fg: light-dark(#19263d, #eef2f8);
   --fg-secondary: light-dark(#465570, #9ba7b8);
@@ -91,6 +93,9 @@
   --line-reading: 1.7;
   --line-manuscript: 1.8;
   --measure-reading: 72ch;
+  --control-size: 2.5rem;
+  --control-compact-size: 2rem;
+  --control-touch-size: max(44px, 2.75rem);
   --space-1: .25rem;
   --space-2: .5rem;
   --space-3: .75rem;

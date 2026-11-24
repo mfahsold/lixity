@@ -1,0 +1,31 @@
+[[permission]]
+identifier = "allow-desktop-bridge"
+description = "Allow the Lixity commands exposed by the desktop workspace bridge."
+commands.allow = [
+    "audio_capture_calibrate",
+    "audio_capture_cancel_recording",
+    "audio_capture_list_devices",
+    "audio_capture_record_take",
+    "audio_capture_start_recording",
+    "audio_capture_status",
+    "audio_capture_stop_recording",
+    "check_for_updates",
+    "clear_recent_projects",
+    "get_preferences",
+    "list_recent_projects",
+    "open_external_url",
+    "open_logs_folder",
+    "open_project_window",
+    "pick_import_file",
+    "pick_project_directory",
+    "read_sample_manuscript",
+    "record_recent_project",
+    "remove_recent_project",
+    "reveal_in_file_manager",
+    "save_blob",
+    "save_export_stream",
+    "set_dirty_state",
+    "set_preference",
+    "set_workspace_title",
+    "take_open_path",
+]

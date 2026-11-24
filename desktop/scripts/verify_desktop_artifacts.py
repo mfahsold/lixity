@@ -6,8 +6,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,74 @@ INSTALLER_SUBDIRS: dict[str, tuple[str, str]] = {
     "rpm": (".rpm", "linux-rpm"),
     "appimage": (".AppImage", "linux-appimage"),
 }
+_INSTALLER_LAYOUTS = {kind: (directory, suffix) for directory, (suffix, kind) in INSTALLER_SUBDIRS.items()}
+
+
+@dataclass(frozen=True)
+class DesktopArtifact:
+    target: str
+    kind: str
+    filename: str
+    size: int
+    sha256: str
+
+
+def read_artifact_manifests(directory: Path) -> tuple[DesktopArtifact, ...]:
+    """Read the per-target inventory independently of the installer bytes."""
+    manifests = sorted(directory.glob("desktop-artifacts-*.json"))
+    if not manifests:
+        raise FileNotFoundError(f"No desktop artifact manifests found in {directory}")
+
+    artifacts: list[DesktopArtifact] = []
+    seen: set[str] = set()
+    for manifest in manifests:
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or payload.get("schema_version") != ARTIFACT_SCHEMA:
+            raise ValueError(f"Invalid desktop artifact schema in {manifest.name}")
+        target = payload.get("target")
+        if (not isinstance(target, str) or not re.fullmatch(r"[a-z0-9_]+(?:-[a-z0-9_]+)+", target)
+                or manifest.name != f"desktop-artifacts-{target}.json"):
+            raise ValueError(f"Invalid desktop target in {manifest.name}")
+        entries = payload.get("artifacts")
+        if not isinstance(entries, list) or not entries:
+            raise ValueError(f"No artifact entries in {manifest.name}")
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise ValueError(f"Invalid artifact entry in {manifest.name}")
+            filename, kind, size, digest = (entry.get(key) for key in ("filename", "kind", "bytes", "sha256"))
+            if (
+                not isinstance(filename, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .+_-]{0,254}", filename)
+                or not isinstance(kind, str) or kind not in _INSTALLER_LAYOUTS
+                or type(size) is not int or size < 512
+                or not isinstance(digest, str) or not re.fullmatch(r"[a-fA-F0-9]{64}", digest)
+            ):
+                raise ValueError(f"Invalid artifact metadata in {manifest.name}")
+            folder, suffix = _INSTALLER_LAYOUTS[kind]
+            if not filename.endswith(suffix) or entry.get("relative_path") != f"{folder}/{filename}":
+                raise ValueError(f"Invalid installer path for {filename} in {manifest.name}")
+            if filename.casefold() in seen:
+                raise ValueError(f"Duplicate desktop installer filename: {filename}")
+            seen.add(filename.casefold())
+            artifacts.append(DesktopArtifact(target, kind, filename, size, digest.lower()))
+    return tuple(sorted(artifacts, key=lambda artifact: artifact.filename))
+
+
+def load_verified_artifacts(directory: Path) -> tuple[DesktopArtifact, ...]:
+    """Recheck the flattened installer files after collecting CI artifacts."""
+    artifacts = read_artifact_manifests(directory)
+    suffixes = tuple(suffix for suffix, _ in INSTALLER_SUBDIRS.values())
+    expected = {artifact.filename for artifact in artifacts}
+    for path in directory.iterdir():
+        if path.name.endswith(suffixes) and path.name not in expected:
+            raise ValueError(f"Unexpected installer without a manifest entry: {path.name}")
+    for artifact in artifacts:
+        path = directory / artifact.filename
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Missing regular installer file: {artifact.filename}")
+        verify_container_magic(path, artifact.kind)
+        if path.stat().st_size != artifact.size or sha256_file(path) != artifact.sha256:
+            raise ValueError(f"Size or SHA-256 differs for {artifact.filename}")
+    return artifacts
 
 
 def sha256_file(path: Path) -> str:

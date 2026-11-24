@@ -238,6 +238,7 @@ class ProjectRoutesMixin(ResponseMixin):
                     self.source_input, language=lang, title=title, thresholds=thresholds,
                     controls=True, api_base=self.api_base, exports_dir=self.exports_dir, debug=self.debug,
                     project_root=root, research_root=self.get_research_root(),
+                    project_create_base=self.project_create_base,
                     identity_settings_override={**changes, **{key: value for key, value in self.project_open_overrides.items()
                                                               if key in ("tense_model", "tense_scope")}},
                     project_config_bytes=prepared.content if prepared else None,
@@ -330,17 +331,33 @@ class ProjectRoutesMixin(ResponseMixin):
                 return
 
         folder_input = str(payload.get("path") or "").strip()
+        use_desktop_default = not folder_input and bool(self.project_create_base)
         if folder_input:
-            target_path = Path(folder_input).expanduser().resolve()
+            target_path = Path(folder_input)
         else:
             slug = re.sub(r"[^\w\-]+", "-", title.lower()).strip("-") or "new-project"
-            base_dir = Path(self.workspace_root).resolve() if self.workspace_root else Path.cwd()
-            target_path = base_dir / slug
+            target_path = Path(self.project_create_base or self.workspace_root or Path.cwd()) / slug
 
         try:
-            target_path.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            self._json({"ok": False, "message": f"Failed to create directory {target_path}: {exc}"}, 500)
+            # Resolve a selected path, but do not follow a link on a derived name.
+            target_path = (target_path.expanduser().resolve() if folder_input
+                           else target_path.parent.resolve() / target_path.name)
+            # Desktop automatic names share one parent. Claim the new folder
+            # before writing so a repeated title never opens an older draft.
+            target_path.mkdir(parents=True, exist_ok=not use_desktop_default)
+        except FileExistsError as exc:
+            if use_desktop_default:
+                self._error("A folder or file already uses this project name. Choose another title or folder.",
+                            409, error_code="project-folder-exists")
+            else:
+                self._error(f"Failed to create directory {target_path}: {exc}", 500)
+            return
+        except (OSError, RuntimeError, ValueError) as exc:
+            if use_desktop_default:
+                self._error("The default project folder could not be created. Choose another destination or"
+                            " check write permissions.", 500, error_code="project-folder-unavailable")
+            else:
+                self._error(f"Failed to create directory {target_path}: {exc}", 500)
             return
 
         template_key = str(payload.get("template") or "minimal").strip().lower()
@@ -510,6 +527,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 exports_dir=exports_dir,
                 project_root=ws_root,
                 research_root=ws_root,
+                project_create_base=self.project_create_base,
                 identity_settings_override={key: value for key, value in overrides.items()
                                             if key in ("tense_model", "tense_scope")},
                 strict_source=True,

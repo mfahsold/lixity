@@ -34,10 +34,7 @@
 .research-pane-navigation > .ctl {
   flex: 0 0 auto;
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .35rem;
+  gap: var(--space-1);
 }
 .pane-ribbon[data-ribbon-compact="true"] .pane-ribbon-label,
 .research-pane-navigation[data-ribbon-compact="true"] .pane-ribbon-label {
@@ -45,8 +42,7 @@
 }
 .pane-ribbon[data-ribbon-compact="true"] > .ctl,
 .research-pane-navigation[data-ribbon-compact="true"] > .ctl {
-  min-inline-size: 2.25rem;
-  padding-inline: .55rem;
+  min-inline-size: var(--control-block-size);
 }
 .pane-ribbon[data-ribbon-wrap="true"],
 .research-pane-navigation[data-ribbon-wrap="true"] {
@@ -66,8 +62,6 @@
 #r-manuscript-draft-preview > h6, .research-draft-reason > h6 { font-size: var(--text-control); }
 .research-draft-reason :is(p, figure, blockquote) { margin: 0; }
 .research-draft-reason figcaption { margin-block: var(--space-2) var(--space-1); }
-.pane-ribbon .ctl-icon,
-.research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; padding-inline: 0; }
 .pane-ribbon > .ctl[aria-current="location"],
 .research-pane-navigation > .ctl[aria-current="location"] {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));

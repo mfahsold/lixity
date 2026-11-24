@@ -1,8 +1,9 @@
 //! Local window geometry persistence (never stores manuscript text or project paths).
 
+use crate::desktop_state::StateFile;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
+
+static GEOMETRY: StateFile = StateFile::new("window-state.json", "window geometry");
 
 pub const DEFAULT_WIDTH: f64 = 1340.0;
 pub const DEFAULT_HEIGHT: f64 = 880.0;
@@ -66,37 +67,12 @@ impl WindowGeometry {
     }
 }
 
-fn state_file_path() -> Option<PathBuf> {
-    let base = dirs::data_local_dir().or_else(dirs::config_dir)?;
-    let dir = base.join("lixity").join("desktop");
-    fs::create_dir_all(&dir).ok()?;
-    Some(dir.join("window-state.json"))
-}
-
 pub fn load_window_geometry() -> WindowGeometry {
-    let Some(path) = state_file_path() else {
-        return WindowGeometry::default();
-    };
-    let Ok(raw) = fs::read_to_string(path) else {
-        return WindowGeometry::default();
-    };
-    serde_json::from_str::<WindowGeometry>(&raw)
-        .map(WindowGeometry::sanitized)
-        .unwrap_or_default()
+    GEOMETRY.read::<WindowGeometry>().sanitized()
 }
 
 pub fn save_window_geometry(geometry: WindowGeometry) {
-    let Some(dest) = state_file_path() else {
-        return;
-    };
-    let clean = geometry.sanitized();
-    let Ok(serialized) = serde_json::to_string_pretty(&clean) else {
-        return;
-    };
-    let tmp = dest.with_extension("json.tmp");
-    if fs::write(&tmp, serialized).is_ok() {
-        let _ = fs::rename(&tmp, &dest);
-    }
+    let _ = GEOMETRY.write(&geometry.sanitized());
 }
 
 #[cfg(test)]

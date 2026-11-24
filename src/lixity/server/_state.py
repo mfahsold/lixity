@@ -69,6 +69,7 @@ class WorkspaceState:
     api_base: ClassVar[str] = "/api"
     source_input: ClassVar[str | None] = None
     workspace_root: ClassVar[str] = os.getcwd()
+    project_create_base: ClassVar[str] = ""
     exports_dir: ClassVar[str] = os.path.join(workspace_root, "exports")
     research_dir: ClassVar[str | None] = None
     language: ClassVar[str] = "en"
@@ -138,6 +139,7 @@ class WorkspaceState:
                         debug=cls.debug,
                         project_root=cls.get_author_project_root(),
                         research_root=cls.get_research_root(),
+                        project_create_base=cls.project_create_base,
                         strict_source=strict_source,
                         identity_settings_override={key: value for key, value in cls.project_open_overrides.items()
                                                     if key in ("tense_model", "tense_scope")},

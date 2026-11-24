@@ -221,6 +221,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .guide h1 { font-size: var(--text-display); }
 .guide > h1 { margin-block: var(--space-3) var(--space-4); }
 .guide h2 { margin-block-start: calc(2 * var(--panel-padding)); }
+.install-platforms { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .guide :is(p, li), .blog-index > :is(h2, ul, .notice-box) { max-inline-size: var(--measure-reading); }
 .guide li { margin-block-end: var(--space-2); }
 .guide code, .guide a { overflow-wrap: anywhere; }

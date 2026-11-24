@@ -7,6 +7,7 @@
 
 use base64::Engine;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::Sample;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
@@ -471,9 +472,52 @@ fn build_capture_stream(
     device: &cpal::Device,
     params: CaptureStreamParams,
 ) -> Result<cpal::Stream, String> {
+    if params.channels == 0 {
+        return Err("Microphone configuration has no input channels".to_string());
+    }
+    use cpal::SampleFormat::*;
+    match params.sample_format {
+        I8 => build_pcm_stream::<i8>(device, params),
+        I16 => build_pcm_stream::<i16>(device, params),
+        I32 => build_pcm_stream::<i32>(device, params),
+        I64 => build_pcm_stream::<i64>(device, params),
+        U8 => build_pcm_stream::<u8>(device, params),
+        U16 => build_pcm_stream::<u16>(device, params),
+        U32 => build_pcm_stream::<u32>(device, params),
+        U64 => build_pcm_stream::<u64>(device, params),
+        F32 => build_pcm_stream::<f32>(device, params),
+        F64 => build_pcm_stream::<f64>(device, params),
+        other => Err(format!("Unsupported microphone sample format: {other:?}")),
+    }
+}
+
+fn append_first_channel<T: Sample>(
+    output: &mut Vec<f32>,
+    input: &[T],
+    channels: usize,
+    limit: usize,
+) where
+    f32: cpal::FromSample<T>,
+{
+    let remaining = limit.saturating_sub(output.len());
+    output.extend(
+        input
+            .iter()
+            .step_by(channels)
+            .take(remaining)
+            .map(|&sample| f32::from_sample(sample)),
+    );
+}
+
+fn build_pcm_stream<T: cpal::SizedSample>(
+    device: &cpal::Device,
+    params: CaptureStreamParams,
+) -> Result<cpal::Stream, String>
+where
+    f32: cpal::FromSample<T>,
+{
     let CaptureStreamParams {
         channels,
-        sample_format,
         config,
         max_samples,
         captured,
@@ -481,77 +525,49 @@ fn build_capture_stream(
         peak_bits,
         rms_bits,
         stream_err,
+        ..
     } = params;
-    let err_fn = move |err: cpal::StreamError| {
-        if let Ok(mut guard) = stream_err.lock() {
-            *guard = Some(err.to_string());
-        }
-    };
-    let stream = match sample_format {
-        cpal::SampleFormat::F32 => device.build_input_stream(
+    device
+        .build_input_stream(
             &config,
-            move |data: &[f32], _| {
+            move |data: &[T], _| {
                 if let Ok(mut out) = captured.lock() {
-                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
-                    for frame in data.chunks(channels) {
-                        if out.len() >= max_samples {
-                            auto_stopped.store(true, Ordering::Relaxed);
-                            break;
-                        }
-                        let s = frame[0];
-                        out.push(s);
-                        mono.push(s);
+                    let start = out.len();
+                    append_first_channel(&mut out, data, channels, max_samples);
+                    update_live_levels(&out[start..], &peak_bits, &rms_bits);
+                    if out.len() == max_samples {
+                        auto_stopped.store(true, Ordering::Relaxed);
                     }
-                    update_live_levels(&mono, &peak_bits, &rms_bits);
                 }
             },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_input_stream(
-            &config,
-            move |data: &[i16], _| {
-                if let Ok(mut out) = captured.lock() {
-                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
-                    for frame in data.chunks(channels) {
-                        if out.len() >= max_samples {
-                            auto_stopped.store(true, Ordering::Relaxed);
-                            break;
-                        }
-                        let s = frame[0] as f32 / 32768.0;
-                        out.push(s);
-                        mono.push(s);
-                    }
-                    update_live_levels(&mono, &peak_bits, &rms_bits);
+            move |err: cpal::StreamError| {
+                if let Ok(mut guard) = stream_err.lock() {
+                    *guard = Some(err.to_string());
                 }
             },
-            err_fn,
             None,
-        ),
-        cpal::SampleFormat::U16 => device.build_input_stream(
-            &config,
-            move |data: &[u16], _| {
-                if let Ok(mut out) = captured.lock() {
-                    let mut mono = Vec::with_capacity(data.len() / channels.max(1));
-                    for frame in data.chunks(channels) {
-                        if out.len() >= max_samples {
-                            auto_stopped.store(true, Ordering::Relaxed);
-                            break;
-                        }
-                        let s = (frame[0] as f32 - 32768.0) / 32768.0;
-                        out.push(s);
-                        mono.push(s);
-                    }
-                    update_live_levels(&mono, &peak_bits, &rms_bits);
-                }
-            },
-            err_fn,
-            None,
-        ),
-        other => return Err(format!("Unsupported microphone sample format: {other:?}")),
+        )
+        .map_err(|e| format!("Unable to open microphone stream: {e}"))
+}
+
+fn finish_capture(
+    stream: cpal::Stream,
+    captured: &Mutex<Vec<f32>>,
+    stream_err: &Mutex<Option<String>>,
+    sample_rate: u32,
+) -> CaptureResult {
+    drop(stream);
+    let failure = stream_err
+        .lock()
+        .map_err(|_| "Audio capture error state poisoned".to_string())?
+        .take();
+    if let Some(err) = failure {
+        return Err(format!("Microphone capture error: {err}"));
     }
-    .map_err(|e| format!("Unable to open microphone stream: {e}"))?;
-    Ok(stream)
+    let mut samples = captured
+        .lock()
+        .map_err(|_| "Audio capture buffer poisoned".to_string())?;
+    Ok((std::mem::take(&mut *samples), sample_rate))
 }
 
 fn run_capture_loop(
@@ -633,20 +649,7 @@ fn run_capture_loop(
         }
         thread::sleep(Duration::from_millis(25));
     }
-    drop(stream);
-
-    let failure = stream_err
-        .lock()
-        .map_err(|_| "Audio capture error state poisoned".to_string())?
-        .take();
-    if let Some(err) = failure {
-        return Err(format!("Microphone capture error: {err}"));
-    }
-    let samples = captured
-        .lock()
-        .map(|g| g.clone())
-        .map_err(|_| "Audio capture buffer poisoned".to_string())?;
-    Ok((samples, sample_rate))
+    finish_capture(stream, &captured, &stream_err, sample_rate)
 }
 
 fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(Vec<f32>, u32), String> {
@@ -690,16 +693,7 @@ fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(
         .play()
         .map_err(|e| format!("Failed starting microphone stream: {e}"))?;
     thread::sleep(Duration::from_secs_f32(duration_seconds));
-    drop(stream);
-
-    if let Some(err) = stream_err.lock().ok().and_then(|g| g.clone()) {
-        return Err(format!("Microphone capture error: {err}"));
-    }
-    let samples = captured
-        .lock()
-        .map(|g| g.clone())
-        .map_err(|_| "Audio capture buffer poisoned".to_string())?;
-    Ok((samples, sample_rate))
+    finish_capture(stream, &captured, &stream_err, sample_rate)
 }
 
 fn finalize_wav_take(raw: &[f32], rate: u32, filename: &str) -> Result<RecordedTakeResult, String> {
@@ -751,6 +745,17 @@ pub fn record_wav_take(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn capture_keeps_only_the_first_channel_and_stops_at_the_sample_limit() {
+        let mut samples = Vec::new();
+        append_first_channel(&mut samples, &[0.25_f32, 1.0, -0.25, 1.0], 2, 5);
+        append_first_channel(&mut samples, &[16_384_i16, i16::MAX], 2, 5);
+        append_first_channel(&mut samples, &[16_384_u16, u16::MAX], 2, 5);
+        append_first_channel(&mut samples, &[1_i32 << 30, i32::MAX, 0, 0], 2, 5);
+        append_first_channel(&mut samples, &[1.0_f32, 1.0], 2, 5);
+        assert_eq!(samples, [0.25, -0.25, 0.5, -0.5, 0.5]);
+    }
 
     #[test]
     fn calibration_verdict_matches_lixity_band() {

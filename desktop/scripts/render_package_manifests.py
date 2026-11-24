@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Render Homebrew Cask and WinGet release manifests from verified desktop checksums.
+"""Render release checksums and package-manager manifests from verified installers.
 
-Reads `SHA256SUMS-desktop.txt` (or per-target `SHA256SUMS-*.txt` files) from a
-desktop release bundle directory, injects verified SHA-256 digests into the
-maintained templates under `desktop/packaging/`, verifies that zero `@...@`
-placeholders remain, and writes LF-normalized manifests ready for tap/PR upload.
+Reads the per-target artifact inventory and rechecks the installer files in the
+combined CI bundle. Uses the verified names and digests in the maintained
+Homebrew Cask and WinGet templates under `desktop/packaging/`.
 """
 
 from __future__ import annotations
@@ -14,34 +13,22 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote
+
+from verify_desktop_artifacts import DesktopArtifact, load_verified_artifacts
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGING = ROOT / "desktop" / "packaging"
-CHECKSUM_LINE = re.compile(r"^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$")
 PLACEHOLDER_RE = re.compile(r"@[A-Z0-9_]+@")
+MACOS_ARM64 = "aarch64-apple-darwin"
+MACOS_X64 = "x86_64-apple-darwin"
+WINDOWS_X64 = "x86_64-pc-windows-msvc"
 
 
-def load_checksums(artifacts_dir: Path) -> dict[str, str]:
-    """Load filename -> lowercase sha256 map from SHA256SUMS files."""
-    combined = artifacts_dir / "SHA256SUMS-desktop.txt"
-    sources = [combined] if combined.is_file() else sorted(artifacts_dir.glob("SHA256SUMS-*.txt"))
-    if not sources:
-        raise FileNotFoundError(f"No SHA256SUMS files found in {artifacts_dir}")
-
-    digests: dict[str, str] = {}
-    for src in sources:
-        for raw_line in src.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line:
-                continue
-            match = CHECKSUM_LINE.match(line)
-            if not match:
-                raise ValueError(f"Malformed checksum line in {src.name}: {raw_line!r}")
-            digest, filename = match.group(1).lower(), Path(match.group(2)).name
-            if filename in digests and digests[filename] != digest:
-                raise ValueError(f"Conflicting SHA-256 entries for {filename}")
-            digests[filename] = digest
-    return digests
+def _one(artifacts: list[DesktopArtifact], description: str) -> DesktopArtifact:
+    if len(artifacts) != 1:
+        raise ValueError(f"Expected one {description} installer, found {len(artifacts)}")
+    return artifacts[0]
 
 
 def _assert_no_placeholders(rendered: str, label: str) -> None:
@@ -50,56 +37,42 @@ def _assert_no_placeholders(rendered: str, label: str) -> None:
         raise ValueError(f"Unreplaced template placeholders in {label}: {', '.join(leftover)}")
 
 
-def render_homebrew_cask(version: str, digests: dict[str, str], template_path: Path) -> str:
-    arm_name = f"Lixity_{version}_aarch64.dmg"
-    x64_name = f"Lixity_{version}_x64.dmg"
-    arm_sha = digests.get(arm_name)
-    x64_sha = digests.get(x64_name)
-    if not arm_sha:
-        raise ValueError(f"Missing required macOS ARM64 checksum for {arm_name}")
-
-    template = template_path.read_text(encoding="utf-8")
-    if x64_sha:
-        rendered = (
-            template.replace("@VERSION@", version)
-            .replace("@SHA256_ARM64@", arm_sha)
-            .replace("@SHA256_X64@", x64_sha)
-        )
-    else:
-        # Clean ARM64-only cask when no Intel macOS DMG was built in this run.
-        rendered = template.replace('  arch arm: "aarch64", intel: "x64"\n\n', "")
-        rendered = rendered.replace(
-            '  sha256 arm:   "@SHA256_ARM64@",\n         intel: "@SHA256_X64@"',
-            f'  sha256 "{arm_sha}"',
-        )
-        rendered = rendered.replace("Lixity_#{version}_#{arch}.dmg", "Lixity_#{version}_aarch64.dmg")
-        rendered = rendered.replace(
-            '  depends_on macos: ">= :monterey"',
-            '  depends_on arch: :arm64\n  depends_on macos: ">= :monterey"',
-        )
-        rendered = rendered.replace("@VERSION@", version)
-
+def render_homebrew_cask(
+    version: str, arm: DesktopArtifact, intel: DesktopArtifact | None, template_path: Path,
+) -> str:
+    asset = quote(arm.filename)
+    checksums = f'  sha256 "{arm.sha256}"'
+    arch = ""
+    arch_dependency = "  depends_on arch: :arm64\n"
+    if intel is not None:
+        arch = f'  arch arm: "{asset}", intel: "{quote(intel.filename)}"\n\n'
+        asset = "#{arch}"
+        checksums = f'  sha256 arm:   "{arm.sha256}",\n         intel: "{intel.sha256}"'
+        arch_dependency = ""
+    rendered = (
+        template_path.read_text(encoding="utf-8")
+        .replace("@VERSION@", version)
+        .replace("@ARCH_DECLARATION@", arch)
+        .replace("@CHECKSUMS@", checksums)
+        .replace("@ASSET@", asset)
+        .replace("@ARCH_DEPENDENCY@", arch_dependency)
+    )
     _assert_no_placeholders(rendered, "homebrew/lixity.rb")
     return rendered
 
 
 def render_winget_manifests(
     version: str,
-    digests: dict[str, str],
+    nsis: DesktopArtifact,
+    msi: DesktopArtifact,
     winget_dir: Path,
 ) -> dict[str, str]:
-    nsis_name = f"Lixity_{version}_x64-setup.exe"
-    msi_name = f"Lixity_{version}_x64_en-US.msi"
-    nsis_sha = digests.get(nsis_name)
-    msi_sha = digests.get(msi_name)
-    if not nsis_sha or not msi_sha:
-        missing = [name for name, val in ((nsis_name, nsis_sha), (msi_name, msi_sha)) if not val]
-        raise ValueError(f"Missing required Windows checksum(s): {', '.join(missing)}")
-
     replacements = {
         "@VERSION@": version,
-        "@SHA256_NSIS_X64@": nsis_sha.upper(),
-        "@SHA256_MSI_X64@": msi_sha.upper(),
+        "@ASSET_NSIS_X64@": quote(nsis.filename),
+        "@ASSET_MSI_X64@": quote(msi.filename),
+        "@SHA256_NSIS_X64@": nsis.sha256.upper(),
+        "@SHA256_MSI_X64@": msi.sha256.upper(),
     }
     outputs: dict[str, str] = {}
     for tmpl in sorted(winget_dir.glob("*.yaml.in")):
@@ -121,19 +94,35 @@ def render_all(
     *,
     packaging_dir: Path = PACKAGING,
 ) -> dict[str, object]:
-    digests = load_checksums(artifacts_dir)
-    written: list[str] = []
+    artifacts = load_verified_artifacts(artifacts_dir)
+    inventory: dict[tuple[str, str], list[DesktopArtifact]] = {}
+    for artifact in artifacts:
+        inventory.setdefault((artifact.target, artifact.kind), []).append(artifact)
+    arm = _one(inventory.get((MACOS_ARM64, "macos-dmg"), []), "macOS ARM64")
+    intel_choices = inventory.get((MACOS_X64, "macos-dmg"), [])
+    intel = _one(intel_choices, "macOS Intel") if intel_choices else None
+    nsis = _one(inventory.get((WINDOWS_X64, "windows-nsis"), []), "Windows x64 NSIS")
+    # WiX builds include the locale suffix. WinGet uses the English installer.
+    msi = _one([
+        package for package in inventory.get((WINDOWS_X64, "windows-msi"), [])
+        if package.filename.lower().endswith("_en-us.msi")
+    ], "Windows x64 MSI en-US")
+    cask_text = render_homebrew_cask(version, arm, intel, packaging_dir / "homebrew" / "lixity.rb.in")
+    winget_files = render_winget_manifests(version, nsis, msi, packaging_dir / "winget")
+    (artifacts_dir / "SHA256SUMS-desktop.txt").write_text(
+        "".join(f"{artifact.sha256}  {artifact.filename}\n" for artifact in artifacts),
+        encoding="utf-8", newline="\n",
+    )
 
     hb_dir = out_dir / "homebrew"
     hb_dir.mkdir(parents=True, exist_ok=True)
-    cask_text = render_homebrew_cask(version, digests, packaging_dir / "homebrew" / "lixity.rb.in")
     cask_out = hb_dir / "lixity.rb"
     cask_out.write_text(cask_text, encoding="utf-8", newline="\n")
-    written.append(cask_out.relative_to(out_dir).as_posix())
+    written = [cask_out.relative_to(out_dir).as_posix()]
 
     wg_dir = out_dir / "winget"
     wg_dir.mkdir(parents=True, exist_ok=True)
-    for filename, content in render_winget_manifests(version, digests, packaging_dir / "winget").items():
+    for filename, content in winget_files.items():
         target = wg_dir / filename
         target.write_text(content, encoding="utf-8", newline="\n")
         written.append(target.relative_to(out_dir).as_posix())
@@ -141,7 +130,7 @@ def render_all(
     return {
         "schema_version": "lixity-package-manifests/1",
         "version": version,
-        "macos_intel_included": f"Lixity_{version}_x64.dmg" in digests,
+        "macos_intel_included": intel is not None,
         "files": written,
     }
 
@@ -153,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         "--artifacts-dir",
         type=Path,
         required=True,
-        help="Directory containing SHA256SUMS-desktop.txt or SHA256SUMS-*.txt",
+        help="Directory containing flat installers and per-target manifests; receives SHA256SUMS-desktop.txt",
     )
     parser.add_argument(
         "--out-dir",
@@ -166,7 +155,10 @@ def main(argv: list[str] | None = None) -> int:
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise SystemExit(f"Version must be X.Y.Z, got: {args.version!r}")
 
-    summary = render_all(version, args.artifacts_dir.resolve(), args.out_dir.resolve())
+    try:
+        summary = render_all(version, args.artifacts_dir.resolve(), args.out_dir.resolve())
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"Could not render desktop release manifests: {error}") from None
     print(json.dumps(summary, indent=2))
     return 0
 

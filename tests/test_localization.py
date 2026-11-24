@@ -222,8 +222,13 @@ class TestLocalization(unittest.TestCase):
                 self.assertIn(labels["license_notice"], rendered)
                 self.assertIn(labels["license_sales_notice"], rendered)
                 self.assertIn(labels["license_terms"], rendered)
+                self.assertIn(labels["license_text"], rendered)
+                self.assertIn(labels["license_contact"], rendered)
                 self.assertIn('href="https://github.com/mfahsold/lixity/blob/main/LICENSE"', rendered)
-                self.assertIn('href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License"', rendered)
+                self.assertIn(
+                    'href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md'
+                    '#when-to-talk-to-the-maintainer"', rendered,
+                )
                 self.assertIn("&lt;img", rendered)
                 self.assertNotIn("<img", rendered)
 

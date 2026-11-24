@@ -68,11 +68,39 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       await page.waitForURL('**/#license-terms');
       assert.ok(page.url().endsWith('#license-terms'));
       assert.equal(await page.locator('.license-links a').count(), 2);
+      if (width === 1440) {
+        const host = 'https://github.com/mfahsold/lixity/blob/main/';
+        await page.context().route(host + '**', route => route.fulfill({body: 'Public licensing destination'}));
+        for (const [name, target] of [
+          [/Full AGPL license/, host + 'LICENSE'],
+          [/Request a commercial license/, host + 'docs/LICENSING.md#when-to-talk-to-the-maintainer'],
+        ]) {
+          const opened = page.waitForEvent('popup');
+          await page.locator('.license-links').getByRole('link', {name}).press('Enter');
+          const external = await opened;
+          await external.waitForURL(target);
+          await external.close();
+        }
+      }
       await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});
       if (width === 1440) {
         const sidebar = await page.locator('.workspace-shell').boundingBox();
         const work = await page.locator('.view-pane.active').boundingBox();
         assert.ok(sidebar.x + sidebar.width <= work.x, 'Desktop project navigation sits beside the workspace');
+        const navigationToggle = page.locator('#workspace-navigation-toggle');
+        for (const collapsed of [false, true]) {
+          assert.equal(await navigationToggle.getAttribute('aria-expanded'), String(!collapsed));
+          const header = await navigationToggle.evaluate(button => {
+            const rail = button.parentElement.getBoundingClientRect();
+            const icon = button.getBoundingClientRect();
+            const brand = button.nextElementSibling.getBoundingClientRect();
+            return {inOrder: icon.right <= brand.left, inRail: brand.right <= rail.right + 1,
+              centreDifference: Math.abs(icon.y + icon.height / 2 - brand.y - brand.height / 2)};
+          });
+          assert.ok(header.inOrder && header.inRail && header.centreDifference <= 1,
+            'Navigation toggle and product label align in the open and collapsed sidebar');
+          await navigationToggle.click();
+        }
         await page.locator('#tab-view-analysis').focus();
         await page.keyboard.press('ArrowDown');
         assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true');
@@ -88,6 +116,22 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.ok(Math.abs(await page.evaluate(() => window.scrollY) - readingPosition) < 2, 'Returning to the manuscript restores the reading position');
       }
       await page.locator('#tab-view-project').click();
+      if (width === 320 || width === 1440) {
+        const start = page.locator('#view-pane-project .pane-ribbon > .ctl-icon');
+        const buttonGeometry = await start.evaluate(button => {
+          const target = button.getBoundingClientRect();
+          const icon = button.querySelector('svg').getBoundingClientRect();
+          return {
+            width: target.width, height: target.height,
+            horizontalOffset: icon.x + icon.width / 2 - target.x - target.width / 2,
+            verticalOffset: icon.y + icon.height / 2 - target.y - target.height / 2,
+          };
+        });
+        assert.ok(buttonGeometry.width >= 44 && buttonGeometry.height >= 44,
+          `Project ribbon icon has a 44px square touch target at ${width}px: ${JSON.stringify(buttonGeometry)}`);
+        assert.ok(Math.abs(buttonGeometry.horizontalOffset) < 1 && Math.abs(buttonGeometry.verticalOffset) < 1,
+          `Project ribbon icon is centred at ${width}px: ${JSON.stringify(buttonGeometry)}`);
+      }
       assert.equal(await page.locator('#nda-manager, #nda-table, #nda-passphrase').count(), 0);
       assert.equal(await page.locator('#nda-draft-form').count(), 0, 'No implicit NDA capability in an embedding fixture');
       await page.locator('#tab-view-analysis').click();

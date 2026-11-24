@@ -28,9 +28,51 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Record teleprompter takes through the Rust microphone in the desktop app.
   The interface shows the native 30-second recording limit. The desktop host
   binds active recordings to the window that started them.
+- Add a local macOS app build and verification command and a synthetic smoke
+  test for Rust IPC and external links in the system WebView.
+- Verify the bundled runtime inside the read-only mounted macOS disk image in
+  local development builds and both desktop installer workflows.
+- Include a bilingual offline installation guide in the macOS disk image.
+- Offer an offline manuscript example on the desktop welcome screen. Preview
+  the bundled text before creating an editable local project.
+- Document the desktop download, installation and first-launch steps together.
+  Generate public download links from verified GitHub Release assets.
+- Explain how to update the desktop and CLI installations through their
+  original installation channels.
 
 ### Fixed
 
+- Guide the first workspace in all seven interface languages with distinct
+  actions for opening a project folder, importing a file and starting a draft.
+  Show the desktop project destination before saving and remember newly created
+  projects. Use a folder under `~/Lixity` for automatic desktop destinations,
+  independent of the directory from which the desktop app was launched.
+- Keep the desktop window responsive while checking audio jobs before the last
+  workspace closes. Preserve the confirmation for unsaved work and explain
+  when the engine's audio status is unavailable.
+- Save desktop settings, recent projects and window geometry through shared
+  atomic persistence and serialize concurrent updates from workspace windows.
+- Use the supported `diskutil image` commands for macOS disk image packaging
+  when directory input is available.
+- Bound Rust desktop startup and clean up the engine process when its readiness
+  check fails. On Linux, tie the engine lifetime to the host process, so the
+  engine can keep serving after the startup thread exits.
+- Explain desktop startup failures in all seven interface languages and offer
+  to open the log folder. Use verified installer manifests to generate Homebrew,
+  WinGet and checksum files from the bundled assets.
+- Connect the macOS title bar to the workspace theme, show the active project in
+  the native window title, and provide native window, fullscreen and Help menus.
+- Align shared toolbar buttons, give touch icon actions larger hit targets and
+  keep button geometry and keyboard focus stable while an action runs.
+- Offer a desktop update only for a newer published version. Show the installed
+  version and desktop availability using the verified installer catalog. Explain
+  missing platform builds and connectivity failures in the interface language.
+- Open external links from the desktop window through the Rust host and grant
+  the loopback workspace explicit access to the registered native commands.
+- Link to the full AGPL text and readable commercial licensing instructions.
+  Apply the same self-publishing guidance in all seven interface languages.
+- Process native microphone input in one path across host-supported PCM
+  formats and avoid copying each input block or the finished take.
 - Open the analysis overview at measured manuscript values, with a direct
   route back to the analysis sections from tables and charts. Keep the toolbar
   compact on narrow screens and explain unavailable style comparisons.

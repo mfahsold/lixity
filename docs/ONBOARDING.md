@@ -2,10 +2,14 @@
 
 [Documentation map](README.md) · [Install Lixity](INSTALLATION.md) · [Workspace manual](WORKSPACE.md)
 
-Start by reading one passage. Choose a measurement, check what Lixity counted,
+Open Lixity and choose a project, a manuscript file, or a blank manuscript.
+Once your text is open, read one passage, check what a measurement counted,
 and decide whether the difference matters to the scene.
-Practice in the read-only [Warehouse 4 demo](demo/report.html) with the
-[illustrated walkthrough](guides/first-look.html), or open your own project below.
+
+For a desktop test build, follow the [steps for your operating system](guides/installation.html#desktop).
+Lixity starts its bundled local engine when you open the app.
+For the CLI-installed browser app, follow
+[Start the browser workspace](#use-the-interactive-workspace).
 
 <a id="the-journey-at-a-glance"></a>
 <a id="see-a-finished-example-first"></a>
@@ -13,19 +17,26 @@ Practice in the read-only [Warehouse 4 demo](demo/report.html) with the
 
 | Your starting point | Action |
 | --- | --- |
-| A folder where you already work | Choose **Project actions → Open Project** to reconnect its manuscript and research. |
-| A file to copy into a new project | Choose **Analyze a manuscript** on the welcome screen, or **Project actions → New Project → Import manuscript**. |
-| A blank manuscript | Choose **Project actions → New Project → Start new manuscript**. |
+| A folder where you already work | Choose **Open a project folder**, select the folder containing your manuscript, and confirm in the form. From an open workspace, use **Project actions → Open Project**. |
+| A file to copy into a new project | Choose **Import a manuscript** on the welcome screen, or **Project actions → New Project → Import manuscript**. Lixity previews a Word, Markdown, or plain-text file before copying it. |
+| A new manuscript | Choose **Start writing**, enter a title and manuscript language, and create the project. From an open workspace, use **Project actions → New Project → Start new manuscript**. |
+| An example to explore first | In the desktop app, choose **Try the example offline** to preview the bundled English manuscript. Confirm to save an editable copy. The browser workspace links to the [read-only Warehouse 4 demo](demo/report.html) and its [illustrated walkthrough](guides/first-look.html). |
 | A linguistic question about an existing text | Follow the [text-analysis workflow](USAGE.md#linguistic-text-analysis) to record scope, settings and reproducible outputs. |
 | Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
 
+In the desktop app, new and imported manuscripts use a new folder under
+`~/Lixity` by default. Check the proposed folder in the form. You can enter
+a different folder before creating the project. The published browser app can
+show the welcome actions as **Open Project** and **Analyze a manuscript**.
+
 ## Session checklist
 
-1. Open or create the project and confirm its path and analysis language.
-2. Read a paragraph in **Manuscript** and inspect one [measurement](#read-and-explore).
-3. To revise the passage locally, choose **Write**. Check for **Saved locally**,
+1. Open or create the project and confirm its folder and manuscript language.
+2. To write or revise a passage, choose **Write**. Check for **Saved locally**,
    then choose **Close writing** to return to the reader.
    [Writing and recovery](WORKSPACE.md#write-a-manuscript)
+3. When there is text to explore, read a paragraph in **Manuscript** and inspect
+   one [measurement](#read-and-explore).
 
 ## Start with a manuscript
 
@@ -41,6 +52,8 @@ English is the default. For automatic language detection, choose
 [Language support](LOCALIZATION.md) · [Command reference](USAGE.md#which-command-for-which-question)
 
 ## Use the interactive workspace
+
+Start the CLI-installed browser workspace with this command.
 
 ```sh
 lixity service start --open
@@ -59,7 +72,7 @@ open the service's root address in a new tab and choose **Open Project** there.
 Tabs with the same `/w/…/` address share a view. Reopen projects from the service
 root after restarting. [Service management](USAGE.md#lixity-service)
 
-**Analyze a manuscript** opens a preview of one Markdown (`.md`, `.markdown`),
+**Import a manuscript** opens a preview of one Markdown (`.md`, `.markdown`),
 plain-text (`.txt`), or Word (`.docx`) file. The preview estimates words and
 chapters. Check the destination and choose the analysis language before
 confirming. Confirmation creates a new local project with a manuscript copy and
@@ -219,8 +232,11 @@ archive for later restoration.
 ## Check your first session and return later
 
 Check that the active project and analysis language match your manuscript.
-Use [service management](INSTALLATION.md#running-the-server) to close, reopen or
-update the local app. The project stays in its folder between sessions.
+The project stays in its folder between sessions. To reopen it in the desktop
+app, launch **Applications → Lixity** on macOS and choose it under
+**File → Recent Projects**. If you moved the folder, use **Open Project** and
+select its new location. To close, reopen or update the browser app, use
+[service management](INSTALLATION.md#running-the-server).
 
 Choose a [project backup](PROJECT_BACKUP.md) to copy saved manuscripts and
 retained research together. For a research-only archive or a Zotero library,

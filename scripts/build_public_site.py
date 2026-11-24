@@ -104,7 +104,12 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
 
 
 def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
-    """Render all localized homepages; return changed or stale page names."""
+    """Render localized homepages and public download links."""
+    try:
+        from desktop_downloads import build as build_downloads
+    except ModuleNotFoundError:
+        from scripts.desktop_downloads import build as build_downloads
+
     base = ROOT if root is None else root
     stale: list[str] = []
     for name, text in render_pages(base).items():
@@ -114,7 +119,7 @@ def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
             stale.append(name)
             if not check_only:
                 target.write_text(text, encoding="utf-8")
-    return stale
+    return stale + build_downloads(check_only=check_only, root=base)
 
 
 def main() -> int:

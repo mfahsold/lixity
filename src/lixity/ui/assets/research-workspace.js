@@ -830,7 +830,7 @@ document.addEventListener("click", async function (event) {
 
   var ingestBtn = event.target.closest("#r-ingest-btn");
   if (ingestBtn) {
-    if (ingestBtn.dataset.pending === "true") return;
+    if (ingestBtn.disabled) return;
     var retCheck = document.getElementById("r-ingest-retention");
     var originEl = document.getElementById("r-ingest-origin-url");
     var titleEl = document.getElementById("r-ingest-title");
@@ -871,10 +871,8 @@ document.addEventListener("click", async function (event) {
       tags: (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t) {return t.trim();}).filter(Boolean) : [],
       allow_retention: true
     };
-    ingestBtn.dataset.pending = "true";
-    ingestBtn.disabled = true;
-    ingestBtn.classList.add("busy");
-    ingestBtn.setAttribute("aria-busy", "true");
+    var setButtonPending = window.LixityComponents.setButtonPending;
+    setButtonPending(ingestBtn, true);
     researchFormStatus(ingestBtn, uiLabel(file ? "research_ingesting_reading" : "research_ingesting_extracting"), "loading");
     try {
       var content = file ? await readResearchSourceFile(file, isPdf) : enteredText;
@@ -913,10 +911,7 @@ document.addEventListener("click", async function (event) {
           uiLabel("research_file_read_failed") : (error && error.message || uiLabel("research_status_unavailable")), "err");
       }
     } finally {
-      ingestBtn.dataset.pending = "false";
-      ingestBtn.disabled = false;
-      ingestBtn.classList.remove("busy");
-      ingestBtn.removeAttribute("aria-busy");
+      setButtonPending(ingestBtn, false);
     }
     return;
   }
@@ -932,7 +927,7 @@ document.addEventListener("click", async function (event) {
 
   var dosBtn = event.target.closest("#r-dos-create-btn");
   if (dosBtn) {
-    if (dosBtn.dataset.pending === "true") return;
+    if (dosBtn.disabled) return;
     var dTitle = document.getElementById("r-dos-title");
     var dTags = document.getElementById("r-dos-tags");
     var dEids = document.getElementById("r-dos-eids");
@@ -1014,7 +1009,7 @@ document.addEventListener("click", async function (event) {
 
   var claimBtn = event.target.closest("#r-claim-create-btn");
   if (claimBtn) {
-    if (claimBtn.dataset.pending === "true") return;
+    if (claimBtn.disabled) return;
     var cTitle = document.getElementById("r-claim-title");
     var cConf = document.getElementById("r-claim-confidence");
     var cTags = document.getElementById("r-claim-tags");
@@ -1139,7 +1134,7 @@ document.addEventListener("click", async function (event) {
 
   var decBtn = event.target.closest("#r-decision-create-btn");
   if (decBtn) {
-    if (decBtn.dataset.pending === "true") return;
+    if (decBtn.disabled) return;
     var decTitle = document.getElementById("r-decision-title");
     var decClaim = document.getElementById("r-decision-claim-select");
     var decRat = document.getElementById("r-decision-rationale");

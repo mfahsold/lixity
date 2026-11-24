@@ -95,6 +95,7 @@ class DashboardOptions:
     dossier_drafts: object = None
     corpus_config: CorpusConfig | None = None
     project_overview_enabled: bool = False
+    project_create_base: str = ""
 
 
 @dataclass(frozen=True)

@@ -1351,9 +1351,9 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
   var selectionRevision = ["project-open", "project-create", "load"].includes(action) ? ++projectSelectionRevision : null;
   var savingSettings = action === "settings";
   var status = document.getElementById(savingSettings ? "settings-save-status" : "ctl-status");
-  var setStatus = window.LixityComponents.setStatus;
-  setStatus(status, savingSettings ? uiLabel("settings_applying") : "…", "loading");
-  if (button) { button.disabled = true; button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
+  var {setStatus, setButtonPending} = window.LixityComponents;
+  setStatus(status, uiLabel(savingSettings ? "settings_applying" : "editor_loading"), "loading");
+  setButtonPending(button, true);
   var t0 = performance.now();
   var url = API + "/" + action;
   try {
@@ -1388,7 +1388,7 @@ async function runAction(action, payload, button, canReload, acceptResponse) {
     setStatus(status, savingSettings ? uiLabel("settings_connection_failed") : String(err), false, {prefix: !savingSettings});
     return { ok: false, message: String(err) };
   } finally {
-    if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
+    setButtonPending(button, false);
   }
 }
 function corpusNumber(text, decimalShift) {
@@ -1526,7 +1526,7 @@ async function submitSettings() {
 }
 document.querySelectorAll("[data-action]").forEach(function (btn) {
   btn.addEventListener("click", function () {
-    if (btn.dataset.payload === "settings") return;
+    if (btn.disabled || btn.dataset.payload === "settings") return;
     var payload = {};
     if (btn.dataset.payload === "format") {
       payload.format = document.getElementById("fmt").value;
@@ -1539,20 +1539,19 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
       }
       var file = input.files[0];
       if (!supportedManuscriptFile(file)) { manuscriptFileError(); return; }
-      btn.disabled = true;
-      btn.classList.add("busy");
-      btn.setAttribute("aria-busy", "true");
+      var {setStatus, setButtonPending} = window.LixityComponents;
+      setButtonPending(btn, true);
+      setStatus("ctl-status", uiLabel("research_ingesting_reading"), "loading");
       var reader = new FileReader();
       reader.onload = function () {
         runAction("load", { name: file.name, content: reader.result }, btn);
       };
-      reader.onerror = function () {
+      reader.onerror = reader.onabort = function () {
         manuscriptFileError("manuscript_read_failed");
-        btn.disabled = false;
-        btn.classList.remove("busy");
-        btn.removeAttribute("aria-busy");
+        setButtonPending(btn, false);
       };
-      reader.readAsText(file);
+      try { reader.readAsText(file); }
+      catch (_) { reader.onerror(); }
       return;
     }
     runAction(btn.dataset.action, payload, btn);

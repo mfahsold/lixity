@@ -54,8 +54,8 @@ Tours: [English](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 
 ## Install and start
 
-Install [uv](https://docs.astral.sh/uv/) and run these commands on Windows,
-macOS or Linux.
+The published build runs locally in your browser on Windows, macOS and Linux.
+Install [uv](https://docs.astral.sh/uv/) and run these commands.
 
 ```bash
 uv tool install --python 3.12 --managed-python lixity
@@ -81,8 +81,20 @@ chosen folder. Tabs with the same `/w/…/` URL share that view.
 
 `lixity service status` reports the running address. For updates and restarts,
 use the [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
-The install command uses the package published on [PyPI](https://pypi.org/project/lixity/).
-The demo follows the development checkout.
+
+The Rust desktop app is in testing for macOS, Windows and Linux. It opens the
+same workspace with native menus and file dialogs, and includes an example you
+can try offline. Find the steps for your system in the
+[desktop installation guide](https://mfahsold.github.io/lixity/guides/installation.html#desktop).
+Use the [desktop maintainer guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
+to build and verify a test installer.
+
+Update through the same channel you used to install. For the
+[PyPI package](https://pypi.org/project/lixity/), use `uv tool upgrade lixity`
+and restart the local service. In a desktop test build, use **Help → Check for
+Updates** to review published desktop availability and follow the
+[desktop update steps](https://mfahsold.github.io/lixity/guides/installation.html#desktop-updates).
+The online demo follows the development checkout.
 
 [Open your first project](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) ·
 [Start with a project path or use a custom port](https://mfahsold.github.io/lixity/guides/installation.html#existing-project) ·

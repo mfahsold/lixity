@@ -367,9 +367,9 @@ def license_terms(labels: Mapping[str, str] | None) -> str:
         f'<p>{esc(label(labels, "license_sales_notice"))}</p>'
         '<div class="license-links">'
         '<a href="https://github.com/mfahsold/lixity/blob/main/LICENSE" '
-        f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_terms"))}</a>'
-        '<a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License">'
-        f'{esc(label(labels, "license_contact"))}</a>'
+        f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_text"))}</a>'
+        '<a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer" '
+        f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_contact"))}</a>'
         '</div></aside>'
     )
 

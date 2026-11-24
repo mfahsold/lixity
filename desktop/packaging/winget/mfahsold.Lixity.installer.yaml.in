@@ -14,11 +14,11 @@ FileExtensions:
 Installers:
   - Architecture: x64
     InstallerType: nullsoft
-    InstallerUrl: https://github.com/mfahsold/lixity/releases/download/v@VERSION@/Lixity_@VERSION@_x64-setup.exe
+    InstallerUrl: https://github.com/mfahsold/lixity/releases/download/v@VERSION@/@ASSET_NSIS_X64@
     InstallerSha256: @SHA256_NSIS_X64@
   - Architecture: x64
     InstallerType: wix
-    InstallerUrl: https://github.com/mfahsold/lixity/releases/download/v@VERSION@/Lixity_@VERSION@_x64_en-US.msi
+    InstallerUrl: https://github.com/mfahsold/lixity/releases/download/v@VERSION@/@ASSET_MSI_X64@
     InstallerSha256: @SHA256_MSI_X64@
 ManifestType: installer
 ManifestVersion: 1.6.0

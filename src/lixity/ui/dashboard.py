@@ -599,7 +599,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
 
     has_chapters = bool(chapters) and total_words > 0
     has_reading = has_chapters or bool(reader_document)
-    default_view = "analysis" if has_reading or (read_only and not research_context_token) else "research"
+    first_workspace = can_edit and not has_reading and not show_project_overview and not research_context_token
+    default_view = "analysis" if has_reading or first_workspace or (read_only and not research_context_token) else "research"
     read_only_note = f'<span class="site-read-only-notice" role="note">{L("site_read_only")}</span>' if read_only else ""
     body_class = "lixity-workspace" if controls else "lixity-report"
     if controls and has_reading:
@@ -630,11 +631,11 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'data-dossier-pdf-capable="{str(can_edit and allowed_actions is not None and action_enabled("research-dossier-pdf")).lower()}" '
         f'data-dossier-media-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-media")).lower()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
-        f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
+        f'<a class="skip-link" href="#{"welcome-hero" if first_workspace else "chapters"}">{L("skip_main")}</a>',
         *((read_only_note,) if read_only and not controls else ()),
         '<div class="page">',
         *(('<div class="workspace-shell"><div class="workspace-shell-header">',
-           f'<button type="button" class="ctl workspace-navigation-toggle" id="workspace-navigation-toggle" '
+           f'<button type="button" class="ctl ctl-icon workspace-navigation-toggle" id="workspace-navigation-toggle" '
            f'aria-label="{L("navigation_collapse")}" aria-controls="workspace-navigation-content" aria-expanded="true" '
            f'title="{L("navigation_collapse")}">'
            f'{ui_icon("panel-left", size=20)}</button>',
@@ -665,7 +666,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append(project_header(title, labels, language_name, engine_name, compact=True, meta=project_meta))
         parts.append(
             '<details class="workspace-actions" id="project-actions" data-requires-write'
-            + ("" if has_reading else " open") + ">"
+            + ("" if has_reading or first_workspace else " open") + ">"
         )
         parts.append(f'<summary title="{L("project_actions")}" data-help="{L("project_actions_help")}">{L("project_actions")}</summary>')
         parts.append(
@@ -736,35 +737,37 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     if controls or not chapters:
         parts.append(
             '<section class="welcome-hero" id="welcome-hero"'
-            + (" hidden" if chapters else "")
-            + " data-requires-write>"
+            + (" hidden" if has_reading else "")
+            + ' data-requires-write tabindex="-1" aria-labelledby="welcome-title">'
         )
-        if controls:
+        if controls and has_reading:
             parts.append(
                 f'  <button type="button" class="ctl welcome-dismiss" id="welcome-dismiss" aria-controls="welcome-hero">{L("welcome_dismiss")}</button>'
             )
         parts.append('  <div class="welcome-inner">')
-        parts.append(f'    <div class="welcome-badge">Lixity {L("workspace")}</div>')
-        parts.append(f'    <h2 class="welcome-title">{L("welcome_title")}</h2>')
+        parts.append(f'    <h2 class="welcome-title" id="welcome-title">{L("welcome_title")}</h2>')
         parts.append(f'    <p class="welcome-desc">{L("welcome_desc")}</p>')
         if controls:
-            parts.append('    <div class="welcome-actions">')
+            parts.append('    <ul class="welcome-actions">')
+            for button_id, caption, description in (
+                ("hero-btn-new-project", "welcome_import_action", "welcome_import_help"),
+                ("hero-btn-open-project", "welcome_open_action", "welcome_open_help"),
+                ("hero-btn-write", "welcome_write_action", "welcome_write_help"),
+            ):
+                guide_id = f"{button_id}-help"
+                parts.append(
+                    '<li class="welcome-option">'
+                    f'<button type="button" class="ctl" id="{button_id}" '
+                    f'aria-describedby="{guide_id}">{L(caption)}</button>'
+                    f'<p class="ctl-note" id="{guide_id}">{L(description)}</p></li>'
+                )
             parts.append(
-                f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">{L("welcome_import_action")}</button>'
+                '    <li class="welcome-option" id="welcome-sample" hidden>'
+                '<button type="button" class="ctl" id="hero-btn-example" '
+                f'aria-describedby="welcome-sample-help">{L("welcome_sample_action")}</button>'
+                f'<p class="ctl-note" id="welcome-sample-help">{L("welcome_sample_help")}</p></li>'
             )
-            parts.append(
-                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">{L("open_project")}</button>'
-            )
-            parts.append(
-                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>'
-            )
-            parts.append("    </div>")
-            # Every entry point follows the same synthetic project across views.
-            parts.append(
-                '    <p class="welcome-example"><a href='
-                f'"{docs_url("demo/report.html")}" target="_blank" rel="noopener">'
-                f"{L('welcome_example')} ↗</a></p>"
-            )
+            parts.append('    </ul>')
             parts.append(
                 '    <section id="welcome-project-recent" class="recent-projects-panel" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">'
             )
@@ -788,35 +791,15 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 '      <p class="ctl-status" data-recent-project-status role="status" hidden></p>'
             )
             parts.append("    </section>")
-        parts.append('    <div class="onboarding-guide">')
-        parts.append(
-            f'      <div class="og-header"><h3>{L("welcome_quickstart")}</h3><p>{L("welcome_local")}</p></div>'
-        )
-        parts.append('      <div class="og-steps">')
-        for step, title_key, desc_key in (
-            (1, "welcome_manuscript", "welcome_manuscript_desc"),
-            (2, "welcome_config", "welcome_config_desc"),
-            (3, "welcome_research", "welcome_research_desc"),
-        ):
             parts.append(
-                f'<div class="og-step"><div class="og-step-num">{step}</div>'
-                f'<div class="og-step-body"><strong>{L(title_key)}</strong>'
-                f"<p>{L(desc_key)}</p></div></div>"
+                '    <p class="welcome-example"><a href='
+                f'"{docs_url("demo/report.html")}" target="_blank" rel="noopener noreferrer">'
+                f"{L('welcome_example')}</a></p>"
             )
-        parts.append("      </div>")
-        parts.append("    </div>")
         parts.append(
-            f'    <details class="welcome-more"><summary>{L("welcome_more")}</summary><div class="welcome-features">'
+            f'    <details class="welcome-more"><summary>{L("welcome_quickstart")}</summary>'
+            f'<p class="ctl-note">{L("welcome_research_desc")}</p></details>'
         )
-        for title_key, desc_key in (
-            ("welcome_fdr", "welcome_fdr_desc"),
-            ("welcome_style", "welcome_style_desc"),
-            ("welcome_research_feature", "welcome_research_feature_desc"),
-        ):
-            parts.append(
-                f'      <div class="wf-item"><strong>{L(title_key)}</strong><span>{L(desc_key)}</span></div>'
-            )
-        parts.append("    </div></details>")
         parts.append("  </div>")
         parts.append("</section>")
 
@@ -1021,7 +1004,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
 
         parts.append("</div>")
-        parts.append(render_project_modals(labels, language_key, language_options, current_language=current_language))
+        parts.append(render_project_modals(
+            labels, language_key, language_options, current_language=current_language,
+            project_create_base=options.project_create_base,
+        ))
 
         # --- PANE 3: MANUSCRIPT & ANALYSIS ---
         parts.append(
@@ -1105,18 +1091,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         )
 
     if not has_reading:
-        parts.append(
-            '<div class="panel empty-analysis-state">'
-            '<div class="empty-state-icon" aria-hidden="true">📖</div>'
-            f"<h2>{L('analysis_empty_title')}</h2>"
-            f'<p class="ctl-note empty-state-note">{L("analysis_empty_desc")}</p>'
-            '<div class="row empty-actions">'
-            f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
-            f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
-            f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
-            "</div>"
-            "</div>"
-        )
+        if not first_workspace:
+            parts.append(
+                '<div class="panel empty-analysis-state">'
+                '<div class="empty-state-icon" aria-hidden="true">📖</div>'
+                f"<h2>{L('analysis_empty_title')}</h2>"
+                f'<p class="ctl-note empty-state-note">{L("analysis_empty_desc")}</p>'
+                '<div class="row empty-actions">'
+                f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
+                f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
+                f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
+                "</div>"
+                "</div>"
+            )
         parts.append("<div hidden>")
 
     metric_control = ""

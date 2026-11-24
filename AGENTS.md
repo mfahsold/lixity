@@ -45,7 +45,8 @@ and investigate reported bugs before changing behavior.
 | Verify UI behavior | `make browser` or `make browser-changed`. Inspect rendered desktop and mobile states using the [agent geometry checks](AGENT_PROFILE.md#prevent-ui-clipping-and-layout-collisions) and [browser instructions](tests/browser/README.md). |
 | Update documentation and shared UI | `make docs-check`. For UI assets or published guides, regenerate screenshots before examples. Use the [generation and preview procedure](CONTRIBUTING.md#updating-documentation-and-pages). |
 | Change GitHub workflows | `make workflow-check` with `actionlint`. See [CI and release gates](CONTRIBUTING.md#preparing-a-release). |
-| Inspect or roll out the local app | Use one managed port for project views. Follow the [checkout or packaged rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service). |
+| Inspect or roll out the local browser app | Use one managed port for project views. Follow the [checkout or packaged rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service). |
+| Build or verify the Rust desktop host | Follow the [desktop maintainer guide](desktop/README.md). Use a synthetic project for native app checks. |
 | Publish documentation or a release | Follow the [Pages and Wiki procedures](CONTRIBUTING.md#updating-documentation-and-pages) or [release procedure](CONTRIBUTING.md#preparing-a-release). These are separately authorized operations. |
 
 ## Data boundaries

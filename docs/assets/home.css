@@ -50,9 +50,8 @@
 .home-principle p { line-height: var(--line-body); margin-block-end: 0; }
 .home-principle h2 { margin-bottom: .75rem; }
 .home-start { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; }
-.install-command { padding: 1.25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
-.install-command pre { padding: 0; border: 0; background: none; font-size: var(--text-body); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--accent); }
-.install-command p { font-size: var(--text-small); color: var(--muted); }
+.install-release { padding: 1.25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.install-release p { margin-block-start: 0; font-size: var(--text-small); color: var(--muted); }
 #languages { border-top: 1px solid var(--line); }
 #languages > p { max-width: 70ch; }
 .language-list { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 1rem 0; font-size: var(--text-subhead); }

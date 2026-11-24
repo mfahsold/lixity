@@ -13,17 +13,19 @@ use crate::menu::build_app_menu;
 use crate::preferences::{load_preferences, update_preference, DesktopPreferences, DEFAULT_ZOOM};
 use crate::recent::{clear_recent, list_recent, record_recent, remove_recent, RecentProject};
 use crate::security::{
-    bridge_init_script, handshake_url, is_allowed_app_url, is_allowed_external_url,
-    is_valid_workspace_path,
+    bridge_init_script, handshake_url, is_allowed_external_url, is_valid_workspace_path,
+    route_webview_navigation,
 };
 use crate::sidecar::{sidecar_log_dir, PythonSidecar};
 use crate::updater::{check_latest_release, UpdateCheckResult};
+use crate::window_chrome::{preferred_theme, workspace_title};
 use crate::window_state::{load_window_geometry, DEFAULT_HEIGHT, DEFAULT_WIDTH, MIN_HEIGHT, MIN_WIDTH};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::webview::NewWindowResponse;
+use tauri::{AppHandle, Manager, State, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
 
@@ -41,6 +43,13 @@ pub struct DesktopState {
 #[derive(Debug, Serialize)]
 pub struct PickedPath {
     pub path: String,
+}
+
+#[derive(Serialize)]
+pub struct SampleManuscript {
+    filename: &'static str,
+    language: &'static str,
+    content: &'static str,
 }
 
 pub struct WindowLaunchSpec<'a> {
@@ -109,6 +118,15 @@ pub async fn pick_import_file(
 }
 
 #[tauri::command]
+pub fn read_sample_manuscript() -> SampleManuscript {
+    SampleManuscript {
+        filename: "first-look.md",
+        language: "en",
+        content: include_str!("../../../samples/first-look.md"),
+    }
+}
+
+#[tauri::command]
 pub async fn save_blob(
     app: AppHandle,
     state: State<'_, DesktopState>,
@@ -173,30 +191,28 @@ pub fn spawn_desktop_window(
         Some(fixed) => fixed.to_string(),
         None => format!("project-{}", WINDOW_COUNTER.fetch_add(1, Ordering::Relaxed)),
     };
-    let safe_title: String = spec.title.trim().chars().take(120).collect();
-    let window_title = if safe_title.is_empty() || safe_title == "Lixity" {
-        "Lixity".to_string()
-    } else {
-        format!("{safe_title} — Lixity")
-    };
-    let opener_app = app.clone();
+    let navigation_app = app.clone();
+    let popup_app = app.clone();
     let init_script = bridge_init_script(std::env::consts::OS, spec.app_version);
     let port = spec.port;
 
     let mut builder = WebviewWindowBuilder::new(app, label, WebviewUrl::External(target))
-        .title(window_title)
+        .title(workspace_title(spec.title))
         .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
         .initialization_script(&init_script)
-        .on_navigation(move |nav_url| {
-            if is_allowed_app_url(nav_url, port) {
-                true
+        .on_navigation(move |url| keep_in_webview(&navigation_app, url, port))
+        .on_new_window(move |url, _| {
+            if keep_in_webview(&popup_app, &url, port) {
+                NewWindowResponse::Allow
             } else {
-                if is_allowed_external_url(nav_url.as_str()).is_ok() {
-                    let _ = opener_app.opener().open_url(nav_url.as_str(), None::<&str>);
-                }
-                false
+                NewWindowResponse::Deny
             }
         });
+
+    #[cfg(target_os = "macos")]
+    {
+        builder = crate::window_chrome::native_title_bar(builder).visible(false);
+    }
 
     if is_main {
         let geom = load_window_geometry();
@@ -218,7 +234,19 @@ pub fn spawn_desktop_window(
     if (prefs.zoom - DEFAULT_ZOOM).abs() > f64::EPSILON {
         let _ = window.set_zoom(prefs.zoom);
     }
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(theme) = window.theme() {
+            let _ = window.set_background_color(crate::window_chrome::backdrop(theme));
+        }
+        window.show().map_err(|e| format!("Failed showing desktop window: {e}"))?;
+    }
     Ok(window)
+}
+
+#[tauri::command]
+pub fn set_workspace_title(window: WebviewWindow, project: String) -> Result<(), String> {
+    window.set_title(&workspace_title(&project)).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -258,12 +286,21 @@ pub fn open_logs_folder(app: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed opening logs folder: {e}"))
 }
 
+fn open_system_url(app: &AppHandle, url: &Url) -> Result<(), String> {
+    app.opener()
+        .open_url(url.as_str(), None::<&str>)
+        .map_err(|e| format!("Failed opening external URL: {e}"))
+}
+
+fn keep_in_webview(app: &AppHandle, url: &Url, port: u16) -> bool {
+    route_webview_navigation(url, port, |external| {
+        let _ = open_system_url(app, external);
+    })
+}
+
 #[tauri::command]
 pub fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
-    let validated = is_allowed_external_url(&url)?;
-    app.opener()
-        .open_url(validated.as_str(), None::<&str>)
-        .map_err(|e| format!("Failed opening external URL: {e}"))
+    open_system_url(&app, &is_allowed_external_url(&url)?)
 }
 
 #[tauri::command]
@@ -343,6 +380,13 @@ pub fn set_preference(
         for window in app.webview_windows().values() {
             if window.label() != "splashscreen" {
                 let _ = window.set_zoom(updated.zoom);
+            }
+        }
+    } else if key == "theme" {
+        app.set_theme(preferred_theme(updated.theme.as_deref()));
+        for window in app.webview_windows().values() {
+            if window.label() != "splashscreen" {
+                crate::dispatch_desktop_event(window, "lixity:desktop-theme", &updated.theme);
             }
         }
     }

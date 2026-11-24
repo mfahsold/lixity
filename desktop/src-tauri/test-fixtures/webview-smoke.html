@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Desktop WebView smoke test</title>
+<a id="new-window" href="https://example.org/license" target="_blank" rel="noopener noreferrer">License</a>
+<a id="same-window" href="https://example.org/contact">Contact</a>
+<script nonce="ipc-smoke">
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const bridge = window.lixityDesktop;
+    if (await bridge.getPreferences() !== "Rust IPC reached") throw new Error("IPC response missing");
+    await bridge.setWorkspaceTitle(" A synthetic project ");
+    const sample = await bridge.readSampleManuscript();
+    if (sample.language !== "en" || !sample.content.includes("# The Crate at Warehouse 4")) {
+      throw new Error("Bundled sample missing");
+    }
+    await bridge.openExternalUrl("https://example.org/");
+    const rejected = await bridge.openExternalUrl("file:///synthetic").then(
+      () => false,
+      error => String(error).includes("Only https:// and mailto:")
+    );
+    if (!rejected) throw new Error("Unsupported URL was accepted");
+    await fetch("/bridge-ok");
+    document.getElementById("new-window").click();
+    setTimeout(() => document.getElementById("same-window").click(), 250);
+  } catch (error) {
+    await fetch("/bridge-failed");
+  }
+});
+</script>

@@ -1,17 +1,14 @@
 cask "lixity" do
-  arch arm: "aarch64", intel: "x64"
+@ARCH_DECLARATION@  version "@VERSION@"
+@CHECKSUMS@
 
-  version "@VERSION@"
-  sha256 arm:   "@SHA256_ARM64@",
-         intel: "@SHA256_X64@"
-
-  url "https://github.com/mfahsold/lixity/releases/download/v#{version}/Lixity_#{version}_#{arch}.dmg",
+  url "https://github.com/mfahsold/lixity/releases/download/v#{version}/@ASSET@",
       verified: "github.com/mfahsold/lixity/"
   name "Lixity"
   desc "Offline manuscript analysis, close reading and traceable research workspace"
   homepage "https://mfahsold.github.io/lixity/"
 
-  depends_on macos: ">= :monterey"
+@ARCH_DEPENDENCY@  depends_on macos: ">= :monterey"
 
   app "Lixity.app"
 

@@ -43,7 +43,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-11-20",
+  "dateModified": "2026-11-24",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/installation.html",
   "image": {
@@ -92,17 +92,52 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
 <h1>Install Lixity and open a manuscript locally</h1>
-<p>This short guide covers the ordinary application setup. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">installation manual</a> owns advanced environments, optional workers, service lifecycle and troubleshooting. Use the <a href="https://github.com/mfahsold/lixity/blob/main/docs/README.md">documentation map</a> to find other tasks.</p>
-<p>Open your manuscript in a browser workspace running on your computer to explore sentence rhythm, vocabulary and style. The local app works without an account or a manuscript upload.</p>
-<p class="updated">Updated <time datetime="2026-11-20">20 November 2026</time></p>
+<p>Find the right installer for your computer and open your first manuscript. Lixity works locally without an account. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">installation manual</a> for optional tools and troubleshooting.</p>
+<p class="updated">Updated <time datetime="2026-11-24">24 November 2026</time></p>
+
+<h2 id="desktop">Desktop downloads</h2>
+<!-- desktop-downloads:start -->
+<p class="notice-box">Desktop installers are in testing. You can start today with the <a href="#install">published local browser app</a>.</p>
+<!-- desktop-downloads:end -->
+<p>Already have a desktop test installer? Follow the steps for your computer.</p>
+<nav class="install-platforms" aria-label="Desktop installation by operating system">
+<a class="ctl" href="#macos">macOS</a>
+<a class="ctl" href="#windows">Windows</a>
+<a class="ctl" href="#linux">Linux</a>
+</nav>
+
+<h3 id="macos">macOS</h3>
+<p>Desktop builds require macOS 12 or later.</p>
+<ol>
+<li>In the Apple menu, open <strong>About This Mac</strong>. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.</li>
+<li>Open the DMG, then drag <strong>Lixity</strong> onto <strong>Applications</strong>. The <strong>Start Here – Hier starten</strong> file inside the image explains the steps offline.</li>
+<li>Open <strong>Lixity</strong> from <strong>Applications</strong>. Eject the disk image after the copy completes.</li>
+</ol>
+<p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">macOS installation notes</a> for test builds and the location of the desktop log.</p>
+
+<h3 id="windows">Windows</h3>
+<ol>
+<li>Check <strong>Settings → System → About → System type</strong>. The current desktop builds target x64 PCs.</li>
+<li>Open the setup <code>.exe</code> to install for your account. Use the <code>.msi</code> when your organisation's deployment process calls for it.</li>
+<li>Open <strong>Lixity</strong> from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.</li>
+</ol>
+<p>If setup cannot download the runtime, see <a href="https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution#online-only-deployment">Microsoft’s WebView2 installation options</a>.</p>
+
+<h3 id="linux">Linux</h3>
+<p>The current desktop builds target x86-64. On Debian or Ubuntu, open the <code>.deb</code> with your package installer. It needs WebKitGTK 4.1 and GTK 3. After installation, open <strong>Lixity</strong> from the applications menu.</p>
+<p>To run the <code>.AppImage</code> from its folder, allow it to execute in the file's properties and open it. If it reports a FUSE error, follow the <a href="https://docs.appimage.org/user-guide/troubleshooting/fuse.html">AppImage instructions for your distribution</a>.</p>
+
+<h3 id="desktop-first-launch">First launch</h3>
+<p>Choose <strong>Open a project folder</strong>, <strong>Import a manuscript</strong>, or <strong>Start writing</strong> in the welcome window. Choose <strong>Try the example offline</strong> to preview the bundled English manuscript. Confirm to save an editable local copy. New projects use <code>~/Lixity</code> by default, and the form shows the destination before saving.</p>
+<p>If the workspace cannot start, the error dialog can open the log folder. After the app opens, use <strong>Tools → Open Logs Folder</strong>. The <a href="first-look.html">first-session guide</a> walks through reading your first finding.</p>
 
 <p class="notice-box">This source guide describes <strong>v0.9.1</strong>. Its changes are listed in the source <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.1.md">release notes</a>. The regular install uses the package published on <a href="https://pypi.org/project/lixity/">PyPI</a>. Check <code>lixity --version</code> and <a href="https://github.com/mfahsold/lixity/releases/latest">Latest on GitHub</a> for the published version. Historical 1.x and 3.x tags predate the version reset.</p>
 
-<h2 id="requirements">What do I need?</h2>
+<h2 id="requirements">What does the published browser app need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published package and supplies managed Python 3.12; no Git or separate Python install is needed. Lixity is on <a href="https://pypi.org/project/lixity/">PyPI</a>; every release also ships a pinned wheel with checksums on <a href="https://github.com/mfahsold/lixity/releases">GitHub Releases</a>, and released versions are archived on Zenodo for citation (concept DOI <a href="https://doi.org/10.5281/zenodo.23390297">10.5281/zenodo.23390297</a>). Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
 <div class="notice-box"><strong>License:</strong> Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing guide</a>.</div>
 
-<h2 id="install">Install Lixity</h2>
+<h2 id="install">Install the published browser app</h2>
 <details><summary>uv is not installed yet</summary>
 <p>First check <code>uv --version</code>. Windows with WinGet:</p>
 <pre><code>winget install --id=astral-sh.uv -e</code></pre>
@@ -174,6 +209,16 @@ lixity service stop</code></pre>
 </ul>
 
 <h2 id="updates">Update or remove Lixity</h2>
+<h3 id="desktop-updates">Update a desktop build</h3>
+<p>In Lixity, choose <strong>Help → Check for Updates</strong> to review published desktop availability for your system. Quit Lixity before replacing a test build, then open the replacement and check that your project opens. Keep the earlier installer if you are testing an upgrade.</p>
+<ul>
+<li><strong>macOS.</strong> Open the new DMG and replace <strong>Lixity</strong> in <strong>Applications</strong>.</li>
+<li><strong>Windows.</strong> Run the new installer of the same type you previously used.</li>
+<li><strong>Linux.</strong> Upgrade the Debian package with your package manager, or replace the AppImage file and keep it executable.</li>
+</ul>
+<p>See the <a href="#desktop">desktop download section</a> for available installers and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#update-a-desktop-test-build">desktop update guide</a> for verification and rollback. Keep manuscript and research folders in their current locations during an app update.</p>
+
+<h3 id="browser-updates">Update the browser and CLI build</h3>
 <p>For a PyPI installation, stop each managed instance before upgrading:</p>
 <pre><code>lixity service stop
 uv tool upgrade lixity

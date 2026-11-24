@@ -44,12 +44,29 @@ def _language_author_row(
     )
 
 
+def _project_destination(
+    prefix: str, L: Callable[[str], str], project_create_base: str
+) -> str:
+    note_id = f"{prefix}-proj-path-help"
+    note = L("wizard_folder_note")
+    if project_create_base:
+        note = L("wizard_folder_note_desktop").format(folder=f"<code>{esc(project_create_base)}</code>")
+    return (
+        '<div class="form-group project-destination">'
+        f'<label for="{prefix}-proj-path" class="form-label">{L("wizard_project_folder")}</label>'
+        f'<input class="ctl full-width" id="{prefix}-proj-path" '
+        f'placeholder="{L("wizard_auto_folder")}" aria-describedby="{note_id}"/>'
+        f'<span class="ctl-note wizard-hint" id="{note_id}">{note}</span></div>'
+    )
+
+
 def render_project_modals(
     labels: Mapping[str, str] | None = None,
     language_key: str = "generic",
     language_options: Sequence[Any] | None = None,
     *,
     current_language: str | None = None,
+    project_create_base: str = "",
 ) -> str:
     """Renders the project wizard and research revision modal dialogs."""
 
@@ -195,13 +212,9 @@ def render_project_modals(
         f'          <input class="ctl full-width" id="import-proj-title" required placeholder="{L("wizard_import_title_hint")}"/>',
         '        </div>',
         _language_author_row("import", L, labels, lang_options_html),
+        _project_destination("import", L, project_create_base),
         '<details class="research-details" id="import-project-options">',
         f'<summary>{L("optional_details")}</summary>',
-        '          <div class="form-group">',
-        f'            <label for="import-proj-path" class="form-label">{L("wizard_project_folder")}</label>',
-        f'            <input class="ctl full-width" id="import-proj-path" placeholder="{L("wizard_auto_folder")}"/>',
-        f'            <span class="ctl-note wizard-hint">{L("wizard_folder_note")}</span>',
-        '          </div>',
         '        <div class="form-group">',
         checkbox_field('<input type="checkbox" id="import-proj-research"/>', f'<span>{L("wizard_enable_research")}</span>'),
         '        </div>',
@@ -224,6 +237,7 @@ def render_project_modals(
         f'          <input class="ctl full-width" id="new-proj-title" required placeholder="{L("wizard_title_example")}"/>',
         '        </div>',
         _language_author_row("new", L, labels, lang_options_html),
+        _project_destination("new", L, project_create_base),
         '        <div class="form-group">',
         f'          <span class="form-label">{L("wizard_template_heading")}</span>',
         '          <div class="template-grid">',
@@ -245,11 +259,6 @@ def render_project_modals(
         '          </div>',
         '        </div>',
         '        <div class="wizard-options-section">',
-        '          <div class="form-group">',
-        f'            <label for="new-proj-path" class="form-label">{L("wizard_target_folder")}</label>',
-        f'            <input class="ctl full-width" id="new-proj-path" placeholder="{L("wizard_subfolder")}"/>',
-        f'            <span class="ctl-note wizard-hint">{L("wizard_folder_note")}</span>',
-        '          </div>',
         '          <div class="form-group">',
         checkbox_field('<input type="checkbox" id="new-proj-research"/>', f'<span>{L("wizard_enable_research")}</span>'),
         f'            <p class="ctl-note" id="new-proj-research-required" hidden>{L("wizard_research_required")}</p>',

@@ -21,8 +21,10 @@ import shutil
 from pathlib import Path
 
 try:
+    import desktop_downloads
     from build_public_site import LANGUAGES, page_path
 except ModuleNotFoundError:
+    from scripts import desktop_downloads
     from scripts.build_public_site import LANGUAGES, page_path
 
 #: Approved files inside ``docs/``, keyed by their path relative to it.
@@ -44,6 +46,7 @@ DOCS_ROOT_FILES = {
     "manifest.webmanifest",
     "llms.txt",
     "llms-full.txt",
+    desktop_downloads.CATALOG.name,
     "README.md",
     "WORKSPACE.md",
     "PRODUCT.md",
@@ -221,6 +224,8 @@ def stage(source: Path, output: Path) -> int:
             raise ValueError(f"Symlink in documentation source: {relative}")
         if not path.is_file():
             continue
+        if relative.as_posix() == desktop_downloads.CATALOG.name:
+            desktop_downloads.validate_catalog(json.loads(path.read_text(encoding="utf-8")))
         approved = relative.as_posix() in DOCS_ROOT_FILES or (
             len(relative.parts) > 1
             and not any(part.startswith(".") for part in relative.parts)

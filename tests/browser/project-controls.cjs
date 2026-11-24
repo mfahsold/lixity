@@ -516,14 +516,22 @@ async function restoreFileReads(page) {
       response = {ok: false, message: 'Synthetic duplicate filename', reload: false};
       let releaseLoad;
       pendingLoad = new Promise(resolve => {releaseLoad = resolve;});
-      await Promise.all([page.waitForRequest(request => request.url().endsWith('/api/load')), loadButton.click()]);
+      const buttonGeometry = () => loadButton.evaluate(node => {
+        const {paddingInlineStart, paddingInlineEnd} = getComputedStyle(node);
+        return [node.getBoundingClientRect().width, paddingInlineStart, paddingInlineEnd];
+      });
+      const idleGeometry = await buttonGeometry();
+      await loadButton.focus();
+      await Promise.all([page.waitForRequest(request => request.url().endsWith('/api/load')), page.keyboard.press('Enter')]);
       assert.equal(await loadButton.isDisabled(), true, 'The load action cannot be submitted twice while running');
       assert.equal(await loadButton.getAttribute('aria-busy'), 'true');
+      assert.deepEqual(await buttonGeometry(), idleGeometry, 'The pending state keeps the button width and padding');
       assert.deepEqual(submissions.at(-1), {name: hostileFilename, content: syntheticContent}, 'The existing load contract preserves the selected filename and decoded text');
       releaseLoad();
       pendingLoad = null;
       await page.waitForFunction(() => document.querySelector('#ctl-status').textContent.includes('Synthetic duplicate filename'));
       assert.equal(await loadButton.isDisabled(), false, 'A failed load can be retried');
+      assert.equal(await loadButton.evaluate(button => button === document.activeElement), true, 'Keyboard focus returns to retry');
       assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), hostileFilename);
       response = {ok: true, message: 'Synthetic manuscript loaded', reload: false};
       await Promise.all([page.waitForResponse(result => result.url().endsWith('/api/load')), loadButton.click()]);
@@ -558,16 +566,30 @@ async function restoreFileReads(page) {
     await page.locator('#ms-file').setInputFiles({name: 'reading-a.md', mimeType: 'text/markdown', buffer: Buffer.from(syntheticContent)});
     await holdFileReadCompletions(page);
     const beforeRead = submissions.length;
-    await page.locator('[data-action="load"]').click();
-    assert.equal(await page.locator('[data-action="load"]').getAttribute('aria-busy'), 'true', 'The load action is busy while reading the file');
+    const readButton = page.locator('[data-action="load"]');
+    await readButton.focus();
+    await page.keyboard.press('Space');
+    assert.equal(await readButton.getAttribute('aria-busy'), 'true', 'The load action is busy while reading the file');
+    assert.equal(await page.locator('#ctl-status').textContent(), fixtures.en.labels.research_ingesting_reading);
     await page.locator('#ms-file').setInputFiles({name: 'reading-b.md', mimeType: 'text/markdown', buffer: Buffer.from('## New selection\n\nB content.\n')});
     assert.equal(await page.locator('[data-action="load"]').isDisabled(), true, 'A new selection cannot unlock an in-flight read');
+    assert.equal(await page.locator('#ctl-status').textContent(), fixtures.en.labels.research_ingesting_reading);
     assert.equal(submissions.length, beforeRead);
     await releaseFileRead(page, 0);
     await page.waitForFunction(() => document.querySelector('#ctl-status').textContent.includes('Synthetic manuscript loaded'));
     assert.equal(submissions.length, beforeRead + 1);
     assert.deepEqual(submissions.at(-1), {name: 'reading-a.md', content: syntheticContent});
-    assert.equal(await page.locator('[data-action="load"]').isDisabled(), false);
+    assert.equal(await readButton.isDisabled(), false);
+    assert.equal(await readButton.evaluate(button => button === document.activeElement), true, 'Focus survives reading and submission');
+    await restoreFileReads(page);
+    await page.evaluate(() => {
+      FileReader.prototype.readAsText = function () { this.dispatchEvent(new ProgressEvent('abort')); };
+    });
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#ctl-status').textContent(), fixtures.en.labels.manuscript_read_failed);
+    assert.equal(submissions.length, beforeRead + 1, 'Aborting a read does not load another file');
+    assert.equal(await readButton.isDisabled(), false, 'The load action is available after a read abort');
+    assert.equal(await readButton.evaluate(button => button === document.activeElement), true);
     await restoreFileReads(page);
 
     await page.setViewportSize({width: 320, height: 900});

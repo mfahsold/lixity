@@ -303,6 +303,13 @@ the lifecycle writer lock; unreadable/changing state remains unknown. Start uses
 new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
+
+The development desktop app owns an authenticated loopback runtime on an
+OS-assigned port. Its native menus and installer are verified separately
+from the managed browser service. For automation, use the installed CLI or
+MCP server with an explicit project, or use the managed browser listener.
+[Desktop host boundary](ARCHITECTURE.md#desktop-host-boundary)
+
 `doctor --json` uses `lixity-doctor/1` with `installation`, `service`, `schemas`,
 `issues` and `ok`. Each issue has a `code` and `severity`. It reports
 imported/distribution/service versions and installation

@@ -30,6 +30,7 @@
   var _cachedLabelsRaw = null;
   var _cachedLabelsMap = {};
   var jumpBarParts = new WeakMap();
+  var pendingButtonFocus = new WeakSet();
   function notifySavedExport(outcome) {
     if (outcome?.saved && outcome.path) {
       window.LixityDesktopBridge?.notifySavedExport?.(outcome);
@@ -142,6 +143,22 @@
         el.textContent = text ? (prefix + text) : "";
       }
       return el;
+    },
+    setButtonPending: function (button, pending) {
+      if (!button) return;
+      if (pending) {
+        if (document.activeElement === button) pendingButtonFocus.add(button);
+        button.setAttribute("aria-busy", "true");
+        button.disabled = true;
+        return;
+      }
+      button.removeAttribute("aria-busy");
+      button.disabled = false;
+      // Disabling the focused button can send focus to the document. Leave
+      // any newer target alone when the author continues elsewhere.
+      if (pendingButtonFocus.delete(button) && document.activeElement === document.body && button.getClientRects().length) {
+        button.focus({ preventScroll: true });
+      }
     },
     isDesktop: function () {
       return Boolean(window.lixityDesktop && window.lixityDesktop.version >= 1);

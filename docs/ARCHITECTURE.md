@@ -45,21 +45,48 @@ and deferred work. The [product direction](PRODUCT.md) links observed workflows
 to their evidence and availability.
 
 Python implements the shared engine, CLI and local HTTP server. JavaScript and
-CSS implement the browser interface. **Unreleased (`desktop/`):** a
-cross-platform Rust / Tauri v2 desktop host wraps an isolated
-`python-build-standalone` 3.12 runtime over an authenticated ephemeral loopback
-transport (`--_desktop-mode`, stdin bootstrap secret, single-use
-`/_desktop/handshake` cookie exchange, and a minimal frozen `window.lixityDesktop`
-bridge for native dialogs, atomic/streaming exports, 7-language OS menus,
-drag-and-drop opening, window geometry persistence and cross-platform
-`cpal`+`hound` audio capture). All analysis, editing, rendering and research
-storage stay in the single canonical Python/UI path — never a second engine or
-renderer. The [installation guide](INSTALLATION.md#packaging-direction) owns
-supported packaging and runtime status. Any future native analysis extension
-requires measured benefit, deterministic parity, explicit unknowns, and
-preserved public contracts and project data. The [Rust evaluation RFC](RUST_EVALUATION_RFC.md)
-records the prior analysis-engine protocol and experiments. Compatibility
-changes follow the [reviewed migration process](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+CSS implement the shared workspace interface. Analysis, rendering, editing
+transactions, revisions and research storage use these entry points in every
+host. Compatibility changes follow the reviewed migration process.
+[Contributor procedures](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
+
+## Desktop host boundary
+
+The unreleased Rust/Tauri host starts and supervises one bundled Python 3.12
+process bound to an OS-selected port on `127.0.0.1`. It delivers a per-launch
+secret and initial nonce through stdin. The WebView exchanges a single-use
+nonce at `/_desktop/handshake` for an HttpOnly session cookie. Additional
+windows share the process and origin, with independent workspace views when
+they open separate projects. The managed browser service has its own lifecycle
+and port. [Installation and distribution status](INSTALLATION.md#packaging-direction)
+
+Rust validates the bounded readiness message and stops the child if startup
+fails. The bundled runtime watches the lifetime of the host process. Windows
+also uses a Job Object for cleanup. The startup thread can finish after the
+engine becomes ready while the workspace stays open.
+
+Rust owns the native window lifecycle, file and save dialogs, export destination
+writes, and microphone capture. The server still owns project selection,
+validated writes and export bytes. A small `window.lixityDesktop` bridge exposes
+specific commands under the Tauri workspace capability. The host confines
+WebView navigation to the exact bound loopback origin and delegates allowed
+external HTTPS and mail links to the OS. Native editor close protection uses
+the shared editor's dirty state. The final workspace checks queued audio off
+the event loop and rechecks local edits and recording state before closing.
+The workspace supplies the current project name to Rust for the native title.
+On macOS, the title bar uses the shared background tokens and keeps the system
+window controls and title-bar gestures. The Window and Help menus register with
+AppKit. Windows and Linux use their platform window decorations.
+A common Rust store serializes updates to
+each desktop preferences, recent projects or geometry file and replaces it
+after staging the complete JSON. These files keep their paths and schemas.
+Analysis panels and editing behavior continue
+to use the shared UI and require verification in the actual host WebViews.
+[Desktop implementation and verification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
+
+For any prospective native analysis kernel, measure the complete pipeline with
+the native boundary in place and preserve numerical results, source identity
+and public contracts. [Rust analysis evaluation](RUST_EVALUATION_RFC.md)
 
 ## Layers
 
@@ -76,7 +103,7 @@ changes follow the [reviewed migration process](https://github.com/mfahsold/lixi
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
 | `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit identity/publication defaults or duplicate writers |
 | `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
-| `desktop/src-tauri` *(unreleased)* | Cross-platform Rust/Tauri v2 desktop host, isolated Python 3.12 sidecar supervision, native dialogs/menus/exports and `cpal`+`hound` audio capture | Second analysis engine, duplicate renderer, background network telemetry or modifying user manuscripts |
+| `desktop/src-tauri` *(unreleased)* | Native windows and OS integrations, bundled runtime supervision and authenticated bridge | Analysis and rendering, manuscript mutations, research storage or background network telemetry |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
 `lixity.math_core` is the single mathematical vocabulary of the analysis core

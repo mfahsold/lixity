@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 MAX_WORKSPACES = 16
 _SELECTIONS = frozenset({'project-open', 'project-create', 'load'})
 _STATE = (
-    'source_input', 'workspace_root', 'exports_dir', 'research_dir', 'language',
+    'source_input', 'workspace_root', 'project_create_base', 'exports_dir', 'research_dir', 'language',
     'title', 'title_custom', 'thresholds', 'project_open_overrides', 'debug',
 )
 

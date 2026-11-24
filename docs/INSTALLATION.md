@@ -9,6 +9,9 @@ integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
+If you received a macOS desktop test build, follow the
+[disk image instructions](#macos-desktop-dmg).
+
 > **Version scope:** this source documentation describes the prepared **v0.9.1**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
@@ -24,8 +27,9 @@ network access. No manuscript upload, account or API key is required.
 | Task | Section |
 | --- | --- |
 | Install the application | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
+| Install or open a macOS desktop test build | [Disk image instructions](#macos-desktop-dmg) |
 | Start with a manuscript | [First result](#first-useful-result) |
-| Update or uninstall | [Updates and removal](#updates-and-removal) |
+| Update or uninstall | [Desktop test builds](#update-a-desktop-test-build) · [CLI and browser app](#update-the-cli-and-browser-app) |
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
 | Start automatically after login | [Optional login startup](#optional-startup-at-login) |
 | Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
@@ -72,6 +76,7 @@ The desktop host runs its own loopback engine. Manuscript folders and retained
 research archives live outside the installed app. Python 3.12 is the bundled
 desktop baseline. The 0.9.1 Python package supports Python 3.10 and later.
 Optional speech and OCR workers remain separate from the core desktop application.
+[Desktop installation by operating system](guides/installation.html#desktop)
 
 The shared analysis core remains in Python (`src/lixity/`); Rust currently
 implements the native desktop host rather than a second analysis engine. See
@@ -79,6 +84,53 @@ implements the native desktop host rather than a second analysis engine. See
 and the [architecture evolution criteria](ARCHITECTURE.md#evolution-without-a-second-product-path).
 Clean-machine checks must cover installation, upgrade, rollback and preservation
 of project data. OS signing and notarization remain release gates.
+
+<a id="macos-desktop-dmg"></a>
+
+#### Install a macOS test build from a disk image
+
+Use the disk image supplied for your Mac. Build artifact names use `aarch64`
+for Apple Silicon and `x64` or `x86_64` for Intel.
+
+1. Double-click the `.dmg` in Finder. Drag **Lixity.app** onto the
+   **Applications** shortcut in the disk image window and wait for the copy
+   to finish.
+2. Eject the disk image in Finder. Open **Applications → Lixity**. This is
+   where you open the app on later visits. Lixity starts its bundled local
+   engine and opens its own window.
+3. Choose how to begin in the welcome window. The [first-session guide](ONBOARDING.md)
+   covers existing work, new manuscripts and the bundled offline example.
+
+Local development builds use ad-hoc signing. Apple Developer ID signing and
+notarization are release gates for public distribution. If macOS blocks a
+test build, check the source and checksum with the maintainer.
+[Apple's macOS app alerts](https://support.apple.com/en-us/102445)
+
+#### Open a local macOS development build
+
+The [desktop maintainer guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
+shows how to build and verify `Lixity.app`. Start that app with a project:
+
+```sh
+open -a "/path/to/Lixity.app" --args "/path/to/project/lixity.toml"
+```
+
+You can also open the app from Finder and choose **Open a project folder**.
+If the app is already running, send it a file-open request with
+`open -a "/path/to/Lixity.app" "/path/to/project/lixity.toml"`. The desktop app
+starts its own engine. To manage the browser workspace, use
+[the service commands](#running-the-server).
+
+#### Find the desktop logs
+
+In the desktop app, choose **Tools → Open Logs Folder**. Use the same action
+in the startup error dialog if the workspace could not open. To inspect optional
+extensions, use **Tools → System Status & Extensions**. If the window does
+not open on macOS, choose **Go → Go to Folder** in Finder and enter
+`~/Library/Application Support/lixity/service`. The desktop engine writes
+diagnostics to `desktop-sidecar.log`. A quiet session can leave this file
+empty. The separately installed browser service uses
+[its own per-port log](#logs). Review log details before sharing.
 
 ### Install uv if it is not available
 
@@ -130,12 +182,16 @@ it does not certify linguistic accuracy or source truth.
 
 ## First useful result
 
-Use **Open Project** to reconnect an existing folder. Choose **Analyze a
-manuscript** to preview an import into a new folder. To keep multiple projects
-open, start from the same app address in a new tab for each one. Tabs with the
-same workspace URL share its selected project. Reopen projects from the home
-address after a service restart. [First-session walkthrough](ONBOARDING.md)
-· [Service management](#running-the-server)
+Use **Open a project folder** to reconnect an existing folder. Choose **Import
+a manuscript** to preview copying a file into a new local project. The
+[first-session guide](ONBOARDING.md) also covers writing from scratch and
+trying the read-only example. The published browser app can show the welcome
+actions as **Open Project** and **Analyze a manuscript**.
+
+In the desktop app, reopen a project with **File → Recent Projects**. In the
+browser app, start from the same app address in a new tab for each project.
+Tabs with the same workspace URL share its selected project. Reopen a project
+from the home address after a service restart. [Service management](#running-the-server)
 
 For an initial result in your terminal, run:
 
@@ -511,6 +567,47 @@ establish parity.
 
 ### Updates and removal
 
+The desktop app includes its own Python runtime. Update the whole desktop
+bundle through its installation channel. Use the existing Python tool manager
+for a separately installed CLI and browser app. Review project compatibility
+and back up before a release that changes the project or research format.
+[Research compatibility limits](research/USAGE.md#limits)
+
+#### Update a desktop test build
+
+Open **Help → Check for Updates…** to check the public desktop channel when you
+are online. Installation is a separate manual step. Public desktop installers
+are still in qualification. For a development build, use the exact verified
+artifact supplied for testing. Development builds can share a version string,
+so check the artifact name and SHA-256 to identify the candidate.
+[Desktop downloads and platform instructions](guides/installation.html#desktop)
+
+Save any open drafts and finish or deliberately cancel recordings and audio
+jobs. Quit Lixity before replacing the application. Keep your manuscripts,
+research archives and application settings during a normal update.
+
+| Installed package | Update route |
+| --- | --- |
+| macOS disk image | Open the verified DMG for your Mac, drag the new app to **Applications** and confirm replacement. Eject the image and start Lixity from **Applications**. |
+| Windows installer | Run the verified installer for the same architecture. Use the same setup type and scope as before. Let your administrator or deployment manager update a managed MSI installation. |
+| Linux `.deb` | Open the verified newer package with the system package installer. Use the package manager for an installation from a managed repository. |
+| Linux AppImage | Make the verified new file executable and launch it. Update any launcher or shortcut that still points to the previous file. |
+
+Reopen a project and confirm that the manuscript and expected settings are
+available. If you need to roll back, quit Lixity and use the earlier verified
+installer or bundle from the same channel. For a project-format change, use
+the release-specific rollback procedure and a compatible backup.
+[Check startup diagnostics](#find-the-desktop-logs)
+
+When an installation is owned by an external package manager, use its normal
+update command. Lixity currently provides templates for future Homebrew and
+WinGet distribution.
+[Homebrew upgrade](https://docs.brew.sh/Manpage#upgrade-options-installed_formulainstalled_cask-)
+· [WinGet upgrade](https://learn.microsoft.com/en-us/windows/package-manager/winget/upgrade)
+· [Debian package management](https://www.debian.org/doc/manuals/debian-handbook/apt.en.html)
+
+#### Update the CLI and browser app
+
 Version 0.3.0 reset the product number to reflect development maturity before
 1.0 while retaining historical tags and features. For a pinned installation,
 choose the wheel under [CLI: current release](#cli-current-release), not the
@@ -545,7 +642,7 @@ date. A tool installed from a pinned wheel keeps that fixed URL — replace it
 with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
 of another installer's entrypoint. See the official
-[tool update reference](https://docs.astral.sh/uv/reference/cli/#uv-tool-install).
+[uv tool upgrade reference](https://docs.astral.sh/uv/concepts/tools/#upgrading-tools).
 See [startup project and port settings](#running-the-server) if you want a
 different startup project or run the service on a custom port.
 To roll back, choose and verify the intended older release wheel and its
@@ -904,11 +1001,13 @@ Unregister-ScheduledTask -TaskName "Lixity Dashboard" -Confirm:$false  # remove
 
 ### After a computer restart (quick reference)
 
-Run `lixity service start --open` again, or use your explicitly configured
-login-startup manager. Your project remains in its folder;
-reinstallation or reimport is unnecessary. Reapply any OCR environment settings,
-which are not saved in project settings. Start Zotero for new captures;
-retained evidence stays readable while it is closed.
+For the browser app, run `lixity service restart --open` to reuse the recorded
+launch settings or `lixity service start --open` for a fresh workspace. If you
+configured a separate login-startup manager, use that manager. For a macOS
+development build, open `Lixity.app` from Finder and select a recent project.
+Your project remains in its folder. Reapply any OCR environment settings.
+Start Zotero for new captures. Retained evidence stays readable while it is
+closed.
 
 ## Python API: project environment
 
@@ -982,6 +1081,8 @@ External links and public-site analytics remain separate from offline reading.
 
 | Symptom | Action |
 | --- | --- |
+| The Mac opens the disk image again | Eject it in Finder and open **Applications → Lixity**. [Copy the app first](#macos-desktop-dmg). |
+| The desktop window does not start | Open the copy in **Applications** and check [the desktop log](#find-the-desktop-logs). For a macOS security alert, check the test build's source and checksum. [Apple's macOS app alerts](https://support.apple.com/en-us/102445) |
 | `uv` not found | Install uv and reopen the terminal. Git is needed only for source installs. |
 | `lixity` not found | Use `uv tool update-shell`, or the chosen venv's executable directly. |
 | `externally-managed-environment` | Use `uv tool` or a venv; do not use `--break-system-packages`. |

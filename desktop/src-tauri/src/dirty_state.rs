@@ -1,19 +1,43 @@
-//! Per-window dirty state and confirmed-close registry for the native CloseRequested guard.
+//! Per-window editor and close-request state for the native close guard.
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
-#[derive(Clone, Copy, PartialEq)]
+/// Identity of one close attempt, independent of a reusable window label.
+#[derive(Clone)]
+pub(crate) struct CloseAttempt(Arc<()>);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AudioJobStatus {
+    Idle,
+    Active,
+    Unavailable,
+}
+
+pub(crate) enum CloseRequest {
+    Evaluate(CloseAttempt, Option<AudioJobStatus>),
+    Authorized,
+    KeepOpen,
+}
+
+#[derive(Clone, Copy)]
 enum CloseDecision {
     Pending,
+    AudioChecked(AudioJobStatus),
     Confirmed,
+    Closing,
+}
+
+struct WindowCloseRequest {
+    attempt: CloseAttempt,
+    decision: CloseDecision,
 }
 
 #[derive(Default)]
 pub struct DirtyRegistry {
     windows: Mutex<HashMap<String, bool>>,
-    close_decisions: Mutex<HashMap<String, CloseDecision>>,
+    close_requests: Mutex<HashMap<String, WindowCloseRequest>>,
 }
 
 impl DirtyRegistry {
@@ -23,51 +47,103 @@ impl DirtyRegistry {
         }
     }
 
-    pub fn begin_close_confirmation(&self, window_label: &str) -> bool {
-        let Ok(mut decisions) = self.close_decisions.lock() else {
-            return false;
+    pub(crate) fn request_close(&self, window_label: &str) -> CloseRequest {
+        let Ok(mut requests) = self.close_requests.lock() else {
+            return CloseRequest::KeepOpen;
         };
-        let Entry::Vacant(entry) = decisions.entry(window_label.to_string()) else {
-            return false;
-        };
-        entry.insert(CloseDecision::Pending);
-        true
-    }
-
-    pub fn finish_close_confirmation(&self, window_label: &str, confirmed: bool) {
-        if let Ok(mut decisions) = self.close_decisions.lock() {
-            if confirmed {
-                if let Some(decision) = decisions.get_mut(window_label) {
-                    *decision = CloseDecision::Confirmed;
+        match requests.entry(window_label.to_string()) {
+            Entry::Vacant(entry) => {
+                let attempt = CloseAttempt(Arc::new(()));
+                entry.insert(WindowCloseRequest {
+                    attempt: attempt.clone(),
+                    decision: CloseDecision::Pending,
+                });
+                CloseRequest::Evaluate(attempt, None)
+            }
+            Entry::Occupied(mut entry) => {
+                let request = entry.get_mut();
+                match request.decision {
+                    CloseDecision::Pending | CloseDecision::Closing => CloseRequest::KeepOpen,
+                    CloseDecision::AudioChecked(status) => {
+                        request.decision = CloseDecision::Pending;
+                        CloseRequest::Evaluate(request.attempt.clone(), Some(status))
+                    }
+                    CloseDecision::Confirmed => {
+                        request.decision = CloseDecision::Closing;
+                        CloseRequest::Authorized
+                    }
                 }
-            } else {
-                decisions.remove(window_label);
             }
         }
     }
 
-    pub fn awaiting_close_confirmation(&self, window_label: &str) -> bool {
-        self.close_decisions
-            .lock()
-            .is_ok_and(|decisions| decisions.get(window_label) == Some(&CloseDecision::Pending))
+    pub(crate) fn audio_checked(
+        &self,
+        window_label: &str,
+        attempt: &CloseAttempt,
+        status: AudioJobStatus,
+    ) -> bool {
+        self.resolve_pending(window_label, attempt, CloseDecision::AudioChecked(status))
     }
 
-    pub fn take_force_closing(&self, window_label: &str) -> bool {
-        let Ok(mut decisions) = self.close_decisions.lock() else {
+    pub(crate) fn confirm_close(&self, window_label: &str, attempt: &CloseAttempt) -> bool {
+        self.resolve_pending(window_label, attempt, CloseDecision::Confirmed)
+    }
+
+    pub(crate) fn commit_close(&self, window_label: &str, attempt: &CloseAttempt) -> bool {
+        self.resolve_pending(window_label, attempt, CloseDecision::Closing)
+    }
+
+    fn resolve_pending(
+        &self,
+        window_label: &str,
+        attempt: &CloseAttempt,
+        decision: CloseDecision,
+    ) -> bool {
+        let Ok(mut requests) = self.close_requests.lock() else {
             return false;
         };
-        let confirmed = decisions.get(window_label) == Some(&CloseDecision::Confirmed);
-        if confirmed {
-            decisions.remove(window_label);
+        let Some(request) = requests.get_mut(window_label) else {
+            return false;
+        };
+        if !Arc::ptr_eq(&request.attempt.0, &attempt.0)
+            || !matches!(request.decision, CloseDecision::Pending)
+        {
+            return false;
         }
-        confirmed
+        request.decision = decision;
+        true
+    }
+
+    pub(crate) fn cancel_close(&self, window_label: &str, attempt: &CloseAttempt) {
+        if let Ok(mut requests) = self.close_requests.lock() {
+            if requests.get(window_label).is_some_and(|request| {
+                Arc::ptr_eq(&request.attempt.0, &attempt.0)
+                    && !matches!(request.decision, CloseDecision::Closing)
+            }) {
+                requests.remove(window_label);
+            }
+        }
+    }
+
+    pub(crate) fn is_closing(&self, window_label: &str) -> bool {
+        self.close_requests.lock().is_ok_and(|requests| {
+            requests.get(window_label).is_some_and(|request| {
+                matches!(
+                    request.decision,
+                    CloseDecision::Confirmed | CloseDecision::Closing
+                )
+            })
+        })
     }
 
     pub fn remove_window(&self, window_label: &str) {
         if let Ok(mut map) = self.windows.lock() {
             map.remove(window_label);
         }
-        self.finish_close_confirmation(window_label, false);
+        if let Ok(mut requests) = self.close_requests.lock() {
+            requests.remove(window_label);
+        }
     }
 
     pub fn is_window_dirty(&self, window_label: &str) -> bool {
@@ -91,6 +167,13 @@ impl DirtyRegistry {
 mod tests {
     use super::*;
 
+    fn request(reg: &DirtyRegistry, label: &str) -> CloseAttempt {
+        let CloseRequest::Evaluate(attempt, None) = reg.request_close(label) else {
+            panic!("expected a new close attempt");
+        };
+        attempt
+    }
+
     #[test]
     fn tracks_dirty_windows_and_one_shot_force_close() {
         let reg = DirtyRegistry::default();
@@ -99,20 +182,55 @@ mod tests {
         assert!(reg.is_window_dirty("main"));
         assert!(reg.any_dirty());
 
-        assert!(reg.begin_close_confirmation("main"));
-        assert!(reg.awaiting_close_confirmation("main"));
-        assert!(!reg.begin_close_confirmation("main"));
-        assert!(!reg.take_force_closing("main"));
-        reg.finish_close_confirmation("main", false);
-        assert!(!reg.awaiting_close_confirmation("main"));
-        assert!(reg.begin_close_confirmation("main"));
-        reg.finish_close_confirmation("main", true);
-        assert!(!reg.awaiting_close_confirmation("main"));
-        assert!(reg.take_force_closing("main"));
-        assert!(!reg.take_force_closing("main"));
+        let first = request(&reg, "main");
+        assert!(matches!(reg.request_close("main"), CloseRequest::KeepOpen));
+        assert!(!reg.is_closing("main"));
+        reg.cancel_close("main", &first);
+
+        let retry = request(&reg, "main");
+        assert!(reg.confirm_close("main", &retry));
+        assert!(reg.is_closing("main"));
+        assert!(matches!(
+            reg.request_close("main"),
+            CloseRequest::Authorized
+        ));
+        assert!(matches!(reg.request_close("main"), CloseRequest::KeepOpen));
 
         reg.remove_window("main");
         assert!(!reg.is_window_dirty("main"));
         assert!(!reg.any_dirty());
+    }
+
+    #[test]
+    fn resumed_audio_check_carries_its_result_once() {
+        let reg = DirtyRegistry::default();
+        let attempt = request(&reg, "main");
+        assert!(matches!(reg.request_close("main"), CloseRequest::KeepOpen));
+        assert!(reg.audio_checked("main", &attempt, AudioJobStatus::Unavailable));
+
+        let CloseRequest::Evaluate(resumed, Some(AudioJobStatus::Unavailable)) =
+            reg.request_close("main")
+        else {
+            panic!("expected the unavailable audio status");
+        };
+        assert!(matches!(reg.request_close("main"), CloseRequest::KeepOpen));
+        reg.cancel_close("main", &resumed);
+        request(&reg, "main");
+    }
+
+    #[test]
+    fn old_callbacks_cannot_resolve_or_cancel_a_reopened_window() {
+        let reg = DirtyRegistry::default();
+        let old = request(&reg, "main");
+        assert!(reg.commit_close("main", &old));
+        assert!(reg.is_closing("main"));
+        assert!(!reg.is_closing("project-1"));
+        reg.remove_window("main");
+
+        let fresh = request(&reg, "main");
+        reg.cancel_close("main", &old);
+        assert!(!reg.audio_checked("main", &old, AudioJobStatus::Idle));
+        assert!(!reg.confirm_close("main", &old));
+        assert!(reg.confirm_close("main", &fresh));
     }
 }

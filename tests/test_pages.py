@@ -18,11 +18,77 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urljoin
 
+from desktop.scripts.verify_desktop_artifacts import DesktopArtifact
+from scripts import desktop_downloads
 from scripts.stage_pages import stage
 
 SITE = "https://mfahsold.github.io/lixity/"
 BASH = shutil.which("bash")
 GIT = shutil.which("git")
+
+
+class TestDesktopDownloads(unittest.TestCase):
+    def test_catalog_uses_only_verified_public_asset_bytes(self):
+        tag = "v0.10.0"
+        base = desktop_downloads.RELEASES
+        artifacts = []
+        for index, ((target, kind), (_, suffix)) in enumerate(desktop_downloads.INSTALLERS.items()):
+            name = f"Lixity_{tag[1:]}_{index}{suffix}"
+            artifacts.append(DesktopArtifact(target, kind, name, 2048, hashlib.sha256(name.encode()).hexdigest()))
+        checksums = "".join(f"{asset.sha256}  {asset.filename}\n" for asset in artifacts).encode("ascii")
+
+        def published_asset(name, size, digest):
+            return {"name": name, "size": size, "digest": f"sha256:{digest}", "state": "uploaded",
+                    "browser_download_url": f"{base}/download/{tag}/{name}"}
+
+        checksum_asset = published_asset(desktop_downloads.CHECKSUMS, len(checksums),
+                                         hashlib.sha256(checksums).hexdigest())
+        release = {"tag_name": tag, "html_url": f"{base}/tag/{tag}", "draft": False, "prerelease": False,
+                   "published_at": "2026-01-01T00:00:00Z", "assets": [
+                       *(published_asset(asset.filename, asset.size, asset.sha256) for asset in artifacts),
+                       checksum_asset,
+                   ]}
+        catalog = desktop_downloads.record_catalog(release, artifacts, checksums)
+        rendered = desktop_downloads.render(catalog)
+        for asset in artifacts:
+            self.assertIn(f'href="{base}/download/{tag}/{asset.filename}"', rendered)
+        self.assertIn(f'href="{base}/download/{tag}/{desktop_downloads.CHECKSUMS}"', rendered)
+        with self.assertRaisesRegex(ValueError, "qualified installer formats"):
+            desktop_downloads.record_catalog(release, artifacts[:-1], checksums)
+        with self.assertRaisesRegex(ValueError, "public stable"):
+            desktop_downloads.record_catalog({**release, "prerelease": True}, artifacts, checksums)
+        with self.assertRaisesRegex(ValueError, "published checksum list"):
+            desktop_downloads.record_catalog(release, artifacts, checksums + checksums)
+        checksum_asset["digest"] = "sha256:" + "0" * 64
+        with self.assertRaisesRegex(ValueError, "Public release asset differs"):
+            desktop_downloads.record_catalog(release, artifacts, checksums)
+
+    def test_empty_catalog_and_platform_anchors_are_rendered_without_native_downloads(self):
+        catalog = {"schema_version": desktop_downloads.SCHEMA, "tag": None, "installers": []}
+        rendered = desktop_downloads.render(catalog)
+        self.assertIn('href="#install"', rendered)
+        self.assertNotIn("/download/", rendered)
+        guide = (desktop_downloads.ROOT / desktop_downloads.GUIDE).read_text(encoding="utf-8")
+        for anchor in ("macos", "windows", "linux"):
+            self.assertIn(f'href="#{anchor}"', guide)
+            self.assertIn(f'id="{anchor}"', guide)
+
+    def test_only_the_validated_desktop_catalog_is_published(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "docs"
+            source.mkdir()
+            path = source / desktop_downloads.CATALOG.name
+            expected = (desktop_downloads.ROOT / desktop_downloads.CATALOG).read_bytes()
+            path.write_bytes(expected)
+            (source / "desktop-downloads-local.json").write_bytes(expected)
+            output = Path(directory) / "public"
+            stage(source, output)
+            self.assertEqual((output / path.name).read_bytes(), expected)
+            self.assertFalse((output / "desktop-downloads-local.json").exists())
+
+            path.write_text('{"schema_version": "unknown"}', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Invalid desktop download catalog"):
+                stage(source, Path(directory) / "invalid")
 
 
 def pages_workflow_script(name):

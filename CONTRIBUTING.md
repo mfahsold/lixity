@@ -64,6 +64,7 @@ after loading a change.
 | --- | --- |
 | Source | Run the affected test first, then `make check` for pinned Ruff, `mypy --strict` and the full pytest suite with warnings as errors. |
 | UI behavior | Use `make browser` for the fast group or `make browser-changed` to select suites from modified paths. Run `make browser-full` on the final source before a release affecting rendered output. See [browser prerequisites and coverage](tests/browser/README.md). |
+| Rust desktop host | Follow the [desktop maintainer guide](desktop/README.md) for locked Cargo tests, Clippy, bundled runtime checks and the macOS WebView smoke test. |
 | Documentation | Follow [generation and preview](#updating-documentation-and-pages), then run `make docs-check` for a standalone docs pass. When also running `make check`, add `make docs-generated-check` to cover the generators without repeating the Python docs tests. |
 | GitHub workflows | Run `make workflow-check` with `actionlint` installed. Override `ACTIONLINT` to use an explicit executable. |
 | Packaging | Run `make build` or add an isolated install smoke test with `.venv/bin/python scripts/check_release.py --build --smoke`. |
@@ -349,6 +350,13 @@ Repository-level immutable releases are enabled, so published assets and tags
 remain fixed. Prepare and review release notes before tagging. Corrected code or
 artifacts belong in a new patch release, preserving the earlier checksums and
 provenance.
+
+The desktop build workflow produces qualification artifacts. The current
+tag workflow verifies and ships the Python package. The first public desktop
+release requires qualification of the native installers and a reviewed extension
+of draft and public release verification before the release becomes immutable.
+Follow the [desktop maintainer guide](desktop/README.md#public-desktop-downloads)
+to record the exact published installer set for Pages.
 
 If a tag-triggered run fails, check the workflow, the remote tag target, the
 GitHub release and PyPI publication status before deciding how to recover.

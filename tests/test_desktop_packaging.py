@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import json
+import re
 import struct
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 from lixity import __version__
 from lixity.pipeline import analyze_document, resolve_document_config
@@ -111,11 +117,8 @@ def test_desktop_metadata_versions_and_targets_align_with_package():
     cargo_toml = (DESKTOP / "Cargo.toml").read_text(encoding="utf-8")
     assert f'version = "{__version__}"' in cargo_toml
 
-    # Splash screen exists and has zero Tauri IPC capability access.
+    # Splash screen is bundled with the host.
     assert (src_tauri / "placeholder-dist" / "splash.html").is_file()
-    capability = json.loads((src_tauri / "capabilities" / "desktop-core.json").read_text(encoding="utf-8"))
-    assert "splashscreen" not in capability["windows"]
-    assert capability["windows"] == ["main", "project-*"]
 
     # macOS DMG packager script exists.
     assert (DESKTOP / "scripts" / "package_macos_dmg.sh").is_file()
@@ -131,6 +134,42 @@ def test_desktop_metadata_versions_and_targets_align_with_package():
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
     }
+
+
+def test_loopback_workspace_capability_covers_only_the_registered_bridge():
+    host = DESKTOP / "src-tauri"
+    capability = json.loads((host / "capabilities" / "desktop-core.json").read_text(encoding="utf-8"))
+    assert capability["windows"] == ["main", "project-*"]
+    assert capability["local"] is False
+    assert capability["remote"]["urls"] == ["http://127.0.0.1:*"]
+
+    permission, = tomllib.loads((host / "permissions" / "workspace.toml").read_text(encoding="utf-8"))["permission"]
+    assert capability["permissions"] == [
+        permission["identifier"], "core:event:default", "core:window:allow-close",
+    ]
+    bridge = (host / "src" / "security.rs").read_text(encoding="utf-8")
+    frontend = set(re.findall(r'\binvoke\("([a-z_]+)"', bridge))
+    rust = (host / "src" / "lib.rs").read_text(encoding="utf-8")
+    handler = rust.split("tauri::generate_handler![", 1)[1].split("])", 1)[0]
+    registered = {entry.strip().removeprefix("commands::") for entry in handler.split(",") if entry.strip()}
+    assert set(permission["commands"]["allow"]) == frontend == registered
+
+
+def test_desktop_runtime_smoke_rejects_python_outside_the_bundle(tmp_path):
+    bundle = tmp_path / "runtime"
+    bundle.mkdir()
+    (bundle / "runtime-bundle-manifest.json").write_text(
+        json.dumps({"python_relpath": sys.executable}), encoding="utf-8",
+    )
+    result = subprocess.run(  # noqa: S603 - fixed repository verification script
+        [sys.executable, str(DESKTOP / "scripts" / "smoke_desktop_runtime.py"), str(bundle)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode != 0
+    assert "Bundled Python executable resolves outside the runtime directory" in result.stderr
 
 
 def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files(tmp_path):
@@ -206,6 +245,79 @@ def test_verify_desktop_artifacts_validates_installers_and_rejects_corrupt_files
     assert bad.returncode != 0
 
 
+def test_package_manifests_use_verified_installer_names_and_bytes(tmp_path):
+    scripts = DESKTOP / "scripts"
+    release_bundle = tmp_path / "release-bundle"
+    output = tmp_path / "manifests"
+    dmg = b"\x00" * 1024 + b"koly" + b"\x00" * 508
+    msi = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 1024
+    installers = {
+        "aarch64-apple-darwin": {"dmg/Apple Silicon.dmg": dmg},
+        "x86_64-apple-darwin": {"dmg/Intel Mac.dmg": b"\x01" + dmg[1:]},
+        "x86_64-pc-windows-msvc": {
+            "nsis/Windows User.exe": b"MZ" + b"\x00" * 1024,
+            "msi/Windows Installer_en-US.msi": msi,
+            "msi/Windows Installer_de-DE.msi": msi,
+        },
+        "x86_64-unknown-linux-gnu": {"deb/Ubuntu-amd64.deb": b"!<arch>\n" + b"\x00" * 1024},
+    }
+    metadata = []
+    for target, files in installers.items():
+        bundle = tmp_path / target
+        for relative_path, content in files.items():
+            installer = bundle / relative_path
+            installer.parent.mkdir(parents=True, exist_ok=True)
+            installer.write_bytes(content)
+        staged = subprocess.run(  # noqa: S603 - fixed repository verification script
+            [sys.executable, str(scripts / "verify_desktop_artifacts.py"), str(bundle), "--target", target,
+             "--out-dir", str(release_bundle), "--copy-to", str(release_bundle)],
+            check=True, capture_output=True, text=True,
+        )
+        metadata.extend(json.loads(staged.stdout)["artifacts"])
+
+    render_command = [sys.executable, str(scripts / "render_package_manifests.py"), "--version", __version__,
+                      "--artifacts-dir", str(release_bundle), "--out-dir", str(output)]
+    rendered = subprocess.run(render_command, check=True, capture_output=True, text=True)  # noqa: S603
+    summary = json.loads(rendered.stdout)
+    assert summary["macos_intel_included"] is True
+    assert len(summary["files"]) == 5
+    for filename in summary["files"]:
+        assert re.search(r"@[A-Z0-9_]+@", (output / filename).read_text(encoding="utf-8")) is None
+    digests = {entry["filename"]: entry["sha256"] for entry in metadata}
+    cask = (output / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
+    assert f'version "{__version__}"' in cask
+    assert 'arch arm: "Apple%20Silicon.dmg", intel: "Intel%20Mac.dmg"' in cask
+    assert '/releases/download/v#{version}/#{arch}"' in cask
+    assert digests["Apple Silicon.dmg"] in cask and digests["Intel Mac.dmg"] in cask
+    windows = (output / "winget" / "mfahsold.Lixity.installer.yaml").read_text(encoding="utf-8")
+    assert f"/releases/download/v{__version__}/Windows%20User.exe" in windows
+    assert f"/releases/download/v{__version__}/Windows%20Installer_en-US.msi" in windows
+    assert digests["Windows User.exe"].upper() in windows
+    assert digests["Windows Installer_en-US.msi"].upper() in windows
+    assert "de-DE.msi" not in windows
+    checksums = release_bundle / "SHA256SUMS-desktop.txt"
+    expected = "".join(f"{entry['sha256']}  {entry['filename']}\n"
+                       for entry in sorted(metadata, key=lambda item: item["filename"]))
+    assert checksums.read_bytes() == expected.encode()
+
+    # Preserve size and magic bytes while changing the copied installer's digest.
+    (release_bundle / "Windows User.exe").write_bytes(b"MZ" + b"\x01" * 1024)
+    rejected = subprocess.run(render_command, check=False, capture_output=True, text=True)  # noqa: S603
+    assert rejected.returncode != 0
+    assert "Size or SHA-256 differs for Windows User.exe" in rejected.stderr
+    assert checksums.read_bytes() == expected.encode()
+
+    (release_bundle / "Windows User.exe").write_bytes(installers["x86_64-pc-windows-msvc"]["nsis/Windows User.exe"])
+    (release_bundle / "desktop-artifacts-x86_64-apple-darwin.json").unlink()
+    (release_bundle / "Intel Mac.dmg").unlink()
+    arm_only = subprocess.run(render_command, check=True, capture_output=True, text=True)  # noqa: S603
+    assert json.loads(arm_only.stdout)["macos_intel_included"] is False
+    cask_arm = (output / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
+    assert 'depends_on arch: :arm64' in cask_arm
+    assert '/releases/download/v#{version}/Apple%20Silicon.dmg"' in cask_arm
+    assert digests["Apple Silicon.dmg"] in cask_arm
+
+
 def test_desktop_bridge_is_native_only_and_excluded_from_read_only_exports(tmp_path):
     manuscript = tmp_path / "draft.md"
     manuscript.write_text("# Chapter 1\n\nA short test sentence.\n", encoding="utf-8")
@@ -272,80 +384,3 @@ def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
     assert not (win_py / "Scripts" / "pip.exe").exists()
     assert not (win_py / "DLLs" / "tcl86t.dll").exists()
     assert not (win_py / "tcl").exists()
-
-
-def test_render_package_manifests_emits_homebrew_and_winget_without_placeholders(tmp_path):
-    script = DESKTOP / "scripts" / "render_package_manifests.py"
-    artifacts = tmp_path / "dist-desktop"
-    artifacts.mkdir()
-    arm_sha = "a" * 64
-    x64_sha = "b" * 64
-    nsis_sha = "c" * 64
-    msi_sha = "d" * 64
-    (artifacts / "SHA256SUMS-desktop.txt").write_text(
-        f"{arm_sha}  Lixity_0.10.0_aarch64.dmg\n"
-        f"{x64_sha}  Lixity_0.10.0_x64.dmg\n"
-        f"{nsis_sha}  Lixity_0.10.0_x64-setup.exe\n"
-        f"{msi_sha}  Lixity_0.10.0_x64_en-US.msi\n",
-        encoding="utf-8",
-    )
-
-    out = tmp_path / "manifests"
-    res = subprocess.run(  # noqa: S603 - fixed repository script
-        [
-            sys.executable,
-            str(script),
-            "--version",
-            "0.10.0",
-            "--artifacts-dir",
-            str(artifacts),
-            "--out-dir",
-            str(out),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert res.returncode == 0, res.stdout + res.stderr
-    summary = json.loads(res.stdout)
-    assert summary["macos_intel_included"] is True
-    assert len(summary["files"]) == 5
-
-    cask = (out / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
-    assert 'version "0.10.0"' in cask
-    assert arm_sha in cask and x64_sha in cask
-    assert "@" not in cask
-
-    wg_inst = (out / "winget" / "mfahsold.Lixity.installer.yaml").read_text(encoding="utf-8")
-    assert "PackageVersion: 0.10.0" in wg_inst
-    assert nsis_sha.upper() in wg_inst and msi_sha.upper() in wg_inst
-    assert "@" not in wg_inst
-
-    # Also verify clean ARM64-only fallback when Intel macOS DMG is absent.
-    (artifacts / "SHA256SUMS-desktop.txt").write_text(
-        f"{arm_sha}  Lixity_0.10.0_aarch64.dmg\n"
-        f"{nsis_sha}  Lixity_0.10.0_x64-setup.exe\n"
-        f"{msi_sha}  Lixity_0.10.0_x64_en-US.msi\n",
-        encoding="utf-8",
-    )
-    out_arm = tmp_path / "manifests-arm"
-    res_arm = subprocess.run(  # noqa: S603 - fixed repository script
-        [
-            sys.executable,
-            str(script),
-            "--version",
-            "0.10.0",
-            "--artifacts-dir",
-            str(artifacts),
-            "--out-dir",
-            str(out_arm),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert res_arm.returncode == 0, res_arm.stdout + res_arm.stderr
-    cask_arm = (out_arm / "homebrew" / "lixity.rb").read_text(encoding="utf-8")
-    assert "depends_on arch: :arm64" in cask_arm
-    assert arm_sha in cask_arm
-    assert "@" not in cask_arm

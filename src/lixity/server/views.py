@@ -86,6 +86,8 @@ def build_server_dashboard(
     identity_settings_override: Mapping[str, Any] | None = None,
     project_config_bytes: bytes | None = None,
     strict_source: bool = False,
+    *,
+    project_create_base: str = "",
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -240,6 +242,7 @@ def build_server_dashboard(
             identity_check=identity_check,
             author_setting_enabled=bool(source_input or project_root is not None),
             project_overview_enabled=bool(source_input or project_root is not None),
+            project_create_base=project_create_base,
             publication=publication_values,
             publication_error=publication_error,
             site_publications=identity_settings.get("site_publications", {}),

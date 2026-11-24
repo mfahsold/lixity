@@ -1,11 +1,6 @@
 name: desktop-release
 on:
   workflow_dispatch:
-    inputs:
-      target_version:
-        description: Version label for artifact archive naming (defaults to source version)
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -122,7 +117,7 @@ jobs:
             esac
             bash scripts/package_macos_dmg.sh \
               target/release/bundle/macos/Lixity.app \
-              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg"
+              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg" python
           fi
           mkdir -p build/installers
           python scripts/verify_desktop_artifacts.py \
@@ -159,16 +154,15 @@ jobs:
           path: dist-desktop
           merge-multiple: true
 
-      - name: Combine SHA256SUMS-desktop.txt and render Homebrew/WinGet manifests
+      - name: Verify installer bytes and render desktop release manifests
         shell: bash
         run: |
-          cat dist-desktop/SHA256SUMS-*.txt | sort -k2 > dist-desktop/SHA256SUMS-desktop.txt
-          cat dist-desktop/SHA256SUMS-desktop.txt
           VERSION="$(python -c 'import json; print(json.load(open("desktop/src-tauri/tauri.conf.json"))["version"])')"
           python desktop/scripts/render_package_manifests.py \
             --version "$VERSION" \
             --artifacts-dir dist-desktop \
             --out-dir dist-desktop/manifests
+          cat dist-desktop/SHA256SUMS-desktop.txt
 
       - name: Generate build provenance attestation for desktop installers
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -179,6 +173,7 @@ jobs:
             dist-desktop/*.msi
             dist-desktop/*.deb
             dist-desktop/*.AppImage
+            dist-desktop/desktop-artifacts-*.json
             dist-desktop/SHA256SUMS-desktop.txt
 
       - name: Upload combined release-ready desktop installer bundle

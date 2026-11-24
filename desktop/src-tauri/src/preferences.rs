@@ -1,8 +1,9 @@
 //! Persistent desktop display preferences (never retains manuscript or research content).
 
+use crate::desktop_state::StateFile;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
+
+static PREFERENCES: StateFile = StateFile::new("preferences.json", "desktop preferences");
 
 pub const MIN_ZOOM: f64 = 0.8;
 pub const MAX_ZOOM: f64 = 1.6;
@@ -127,37 +128,19 @@ impl DesktopPreferences {
     }
 }
 
-fn state_file_path() -> Result<PathBuf, String> {
-    let base = dirs::data_local_dir()
-        .or_else(dirs::config_dir)
-        .ok_or_else(|| "Unable to resolve local application state directory".to_string())?;
-    let dir = base.join("lixity").join("desktop");
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed creating desktop state dir: {e}"))?;
-    Ok(dir.join("preferences.json"))
-}
-
 pub fn load_preferences() -> DesktopPreferences {
-    let Ok(path) = state_file_path() else {
-        return DesktopPreferences::default();
-    };
-    let Ok(raw) = fs::read_to_string(path) else {
-        return DesktopPreferences::default();
-    };
-    serde_json::from_str::<DesktopPreferences>(&raw)
-        .map(DesktopPreferences::sanitized)
-        .unwrap_or_default()
+    PREFERENCES.read::<DesktopPreferences>().sanitized()
 }
 
-pub fn update_preference(key: &str, value: serde_json::Value) -> Result<DesktopPreferences, String> {
-    let mut prefs = load_preferences();
-    prefs.apply_update(key, value)?;
-    let clean = prefs.sanitized();
-    let dest = state_file_path()?;
-    let serialized = serde_json::to_string_pretty(&clean).map_err(|e| e.to_string())?;
-    let tmp = dest.with_extension("json.tmp");
-    fs::write(&tmp, serialized).map_err(|e| format!("Failed writing desktop preferences: {e}"))?;
-    fs::rename(&tmp, &dest).map_err(|e| format!("Failed replacing desktop preferences: {e}"))?;
-    Ok(clean)
+pub fn update_preference(
+    key: &str,
+    value: serde_json::Value,
+) -> Result<DesktopPreferences, String> {
+    PREFERENCES.update(|prefs: DesktopPreferences| {
+        let mut prefs = prefs.sanitized();
+        prefs.apply_update(key, value)?;
+        Ok(prefs)
+    })
 }
 
 #[cfg(test)]

@@ -27,6 +27,7 @@ from lixity.workspace_labels import WORKSPACE_LABELS
 #: Class attributes covered by the state guards and the handler factory.
 HANDLER_STATE = (
     "workspace_root",
+    "project_create_base",
     "source_input",
     "exports_dir",
     "research_dir",
@@ -122,6 +123,7 @@ def make_handler(
     handler = type("SyntheticHandler", (LixityServerHandler,), {})
     defaults: dict[str, Any] = {
         "workspace_root": root,
+        "project_create_base": "",
         "source_input": str(source_input) if source_input is not None else None,
         "exports_dir": str(Path(root) / "exports"),
         "research_dir": str(research_dir) if research_dir is not None else None,

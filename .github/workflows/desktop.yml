@@ -132,7 +132,7 @@ jobs:
             esac
             bash scripts/package_macos_dmg.sh \
               target/release/bundle/macos/Lixity.app \
-              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg"
+              "target/release/bundle/dmg/Lixity_${VERSION}_${DMG_ARCH}.dmg" python
           fi
           mkdir -p build/installers
           python scripts/verify_desktop_artifacts.py \

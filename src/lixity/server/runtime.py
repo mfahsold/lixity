@@ -12,6 +12,7 @@ import time
 import webbrowser
 from collections.abc import Callable, Mapping
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 from socketserver import TCPServer
 from typing import Any
 
@@ -108,6 +109,7 @@ def run_server(
     LixityServerHandler.debug = is_debug
     LixityServerHandler.source_input = source_input
     LixityServerHandler.workspace_root = workspace_root
+    LixityServerHandler.project_create_base = str(Path.home() / "Lixity") if desktop_session is not None else ""
     LixityServerHandler.exports_dir = exports_dir
     LixityServerHandler.research_dir = research_dir
     LixityServerHandler.language = language

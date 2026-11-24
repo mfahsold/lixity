@@ -213,8 +213,8 @@ function researchDetailsControl(kind, id) {
 function researchRevisionActions(kind, id) {
   var attrs = ' data-record-id="' + escapeHtml(id) + '"';
   return '<div class="research-record-actions">' +
-    (!window.LixitySite.readOnly ? '<button type="button" class="ctl" data-research-revise="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_edit")) + '</button>' : '') +
-    '<button type="button" class="ctl" data-research-history="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_history")) + '</button>' +
+    (!window.LixitySite.readOnly ? '<button type="button" class="ctl ctl-compact" data-research-revise="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_edit")) + '</button>' : '') +
+    '<button type="button" class="ctl ctl-compact" data-research-history="' + kind + '"' + attrs + '>' + escapeHtml(uiLabel("research_revision_history")) + '</button>' +
     '</div>';
 }
 

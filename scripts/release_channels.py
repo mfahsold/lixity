@@ -33,6 +33,8 @@ DEFAULT_PAGES_URL = "https://mfahsold.github.io/lixity/"
 PAGES_VERIFY_FILES = (
     *(page_path(language) for language in LANGUAGES),
     *(f"guides/metrics/{language}.html" for language in LANGUAGES),
+    "guides/installation.html",
+    "desktop-downloads.json",
     "llms.txt",
     "sandbox/index.html",
     "demo/manifest.json",

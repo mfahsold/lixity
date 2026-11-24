@@ -30,9 +30,9 @@ function selectManuscriptFiles(files) {
   manuscriptInput.files = transfer.files;
   if (!valid) { manuscriptFileError(); return; }
   document.getElementById("manuscript-file-name").textContent = manuscriptFile.name;
-  if (manuscriptButton && !manuscriptButton.hasAttribute("aria-busy")) manuscriptButton.disabled = false;
-  var status = document.getElementById("ctl-status");
-  if (status) { status.className = "ctl-status"; status.textContent = ""; }
+  if (manuscriptButton && manuscriptButton.hasAttribute("aria-busy")) return;
+  if (manuscriptButton) manuscriptButton.disabled = false;
+  window.LixityComponents.setStatus("ctl-status", "");
 }
 
 function switchModalTab(targetPaneId) {
@@ -42,13 +42,27 @@ function switchModalTab(targetPaneId) {
   dialog.querySelectorAll(".modal-tab-btn[data-tab-target]").forEach(function (btn) {
     var isTarget = btn.dataset.tabTarget === targetPaneId;
     btn.classList.toggle("active", isTarget);
-    btn.setAttribute("aria-selected", isTarget ? "true" : "false");
+    btn.setAttribute("aria-selected", String(isTarget));
   });
   dialog.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
     var active = pane.id === targetPaneId;
     pane.classList.toggle("active", active);
-    pane.style.display = active ? "flex" : "none";
+    pane.hidden = !active;
   });
+}
+
+function showProjectCreate(startWriting) {
+  var modal = document.getElementById("modal-project-create");
+  if (!modal || modal.open || typeof modal.showModal !== "function") return;
+  // Discard responses from import attempts made before this opening.
+  importedFileRead++;
+  var feedback = document.getElementById("import-project-status");
+  if (feedback) { feedback.textContent = ""; feedback.hidden = true; }
+  switchModalTab(startWriting ? "tab-pane-scratch" : "tab-pane-import");
+  modal.showModal();
+  var first = document.getElementById(startWriting ? "new-proj-title" : "import-dropzone");
+  if (first) first.focus();
+  return modal;
 }
 
 function updateImportLanguagePreview() {
@@ -70,6 +84,16 @@ function docxConversionNote(item) {
   return position + " · " + description;
 }
 
+function resetImportPreview(submitBtn) {
+  importedFileContent = "";
+  if (submitBtn) submitBtn.disabled = true;
+  var previewBox = document.getElementById("import-preview-box");
+  if (previewBox) previewBox.style.display = "none";
+  var lossEl = document.getElementById("import-fpc-loss");
+  if (lossEl) { lossEl.replaceChildren(); lossEl.hidden = true; }
+  return lossEl;
+}
+
 function processImportedFiles(files) {
   if (!files || !files.length) return;
   var submitBtn = document.getElementById("btn-submit-import-project");
@@ -81,12 +105,7 @@ function processImportedFiles(files) {
   var fileInput = document.getElementById("import-file-input");
   if (fileInput) fileInput.value = "";
   var read = ++importedFileRead;
-  importedFileContent = "";
-  if (submitBtn) submitBtn.disabled = true;
-  var previewBox = document.getElementById("import-preview-box");
-  if (previewBox) previewBox.style.display = "none";
-  var lossEl = document.getElementById("import-fpc-loss");
-  if (lossEl) { lossEl.replaceChildren(); lossEl.hidden = true; }
+  var lossEl = resetImportPreview(submitBtn);
   var feedback = document.getElementById("import-project-status");
   if (!valid) {
     if (feedback) {
@@ -245,6 +264,35 @@ function processImportedFiles(files) {
   reader.readAsText(file);
 }
 
+var welcomeSample = document.getElementById("welcome-sample");
+if (welcomeSample && window.lixityDesktop && typeof window.lixityDesktop.readSampleManuscript === "function") {
+  welcomeSample.hidden = false;
+  document.getElementById("hero-btn-example").addEventListener("click", async function () {
+    var submitBtn = document.getElementById("btn-submit-import-project");
+    if (submitBtn.hasAttribute("aria-busy")) return;
+    var modal = showProjectCreate(false);
+    if (!modal) return;
+    document.getElementById("form-project-import").reset();
+    resetImportPreview(submitBtn);
+    var read = importedFileRead;
+    var feedback = document.getElementById("import-project-status");
+    feedback.className = "ctl-status project-form-status loading";
+    feedback.textContent = uiLabel("research_ingesting_reading");
+    feedback.hidden = false;
+    try {
+      var sample = await window.lixityDesktop.readSampleManuscript();
+      if (!modal.open || read !== importedFileRead) return;
+      if (!sample || !sample.content) throw new TypeError("Missing sample manuscript");
+      document.getElementById("import-proj-lang").value = sample.language;
+      processImportedFiles([new File([sample.content], sample.filename)]);
+    } catch (_) {
+      if (!modal.open || read !== importedFileRead) return;
+      feedback.className = "ctl-status project-form-status err";
+      feedback.textContent = uiLabel("welcome_sample_error");
+    }
+  });
+}
+
 document.addEventListener("click", function (event) {
   var manuscriptDrop = event.target.closest("#manuscript-dropzone");
   if (manuscriptDrop && event.target !== manuscriptInput) {
@@ -257,15 +305,9 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  var newBtn = event.target.closest("#btn-modal-new-project, #hero-btn-new-project, #analysis-empty-import");
+  var newBtn = event.target.closest("#btn-modal-new-project, #hero-btn-new-project, #hero-btn-write, #analysis-empty-import");
   if (newBtn) {
-    var modalNew = document.getElementById("modal-project-create");
-    if (modalNew && typeof modalNew.showModal === "function") {
-      switchModalTab("tab-pane-import");
-      modalNew.showModal();
-      var dropzone = document.getElementById("import-dropzone");
-      if (dropzone) dropzone.focus();
-    }
+    showProjectCreate(newBtn.id === "hero-btn-write");
     return;
   }
 
@@ -289,9 +331,9 @@ document.addEventListener("click", function (event) {
     }
     return;
   }
-  var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project, #hero-btn-browse-project");
+  var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project");
   if (openBtn) {
-    openExistingProject(null, openBtn.id === "hero-btn-browse-project");
+    openExistingProject(null, openBtn.id === "hero-btn-open-project");
     return;
   }
 
@@ -306,13 +348,7 @@ document.addEventListener("click", function (event) {
   if (switchToImportBtn) {
     var modalOpen = document.getElementById("modal-project-open");
     if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
-    var modalNew = document.getElementById("modal-project-create");
-    if (modalNew && typeof modalNew.showModal === "function") {
-      switchModalTab("tab-pane-import");
-      modalNew.showModal();
-      var dropzone = document.getElementById("import-dropzone");
-      if (dropzone) dropzone.focus();
-    }
+    showProjectCreate(false);
     return;
   }
 
@@ -545,6 +581,8 @@ function projectPathMessage(data) {
     case "ambiguous-manuscript": return uiLabel("wizard_path_ambiguous_manuscript");
     case "configured-manuscript-missing": return uiLabel("wizard_path_configured_manuscript_missing");
     case "manuscript-missing": return uiLabel("wizard_path_manuscript_missing");
+    case "project-folder-exists": return uiLabel("wizard_project_folder_exists");
+    case "project-folder-unavailable": return uiLabel("wizard_project_folder_unavailable");
     default: return "";
   }
 }
@@ -558,16 +596,16 @@ async function submitProjectForm(form, action, payload, button) {
   }
   var result = await runAction(action, payload, button);
   if (result && result.ok) {
-    if (action === "project-open" && payload && payload.path) {
-      var openedPath = typeof result.manuscript === "string" && result.manuscript ? result.manuscript :
-        typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : payload.path;
+    var projectFolder = action === "project-create" ? result.path : result.workspace_root;
+    var openedPath = result.manuscript || projectFolder || payload.path;
+    if (typeof openedPath === "string" && openedPath) {
       addRecentProject(openedPath);
       renderRecentProjects();
       if (window.lixityDesktop && typeof window.lixityDesktop.recordRecentProject === "function") {
         window.lixityDesktop.recordRecentProject(
-          typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : openedPath,
-          typeof result.title === "string" ? result.title : null,
-          typeof result.language === "string" ? result.language : null
+          typeof projectFolder === "string" && projectFolder ? projectFolder : openedPath,
+          result.title || payload.title || null,
+          result.language || payload.language || null
         ).catch(function () {});
       }
     }
@@ -777,10 +815,10 @@ if (openChooser) {
         if (picked && typeof picked.path === "string" && picked.path.trim()) {
           selectOpenPath(picked.path.trim());
         }
+        return;
       } catch (error) {
         LixityLog.error("desktop pickProjectDirectory error:", error);
       }
-      return;
     }
     if (!openChooser.hidden) {
       closeOpenChooser(chooseButton);

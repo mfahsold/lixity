@@ -111,6 +111,12 @@ Use the [affected checks](CONTRIBUTING.md#select-the-checks-for-your-change),
 inspect the final diff, and report what passed or remains unverified. Document
 intentional public behavior changes in the existing maintained entry points.
 
+For desktop issues, record which surface you exercised. `lixity doctor` can
+verify the managed browser service. Browser tests with a mocked bridge cover
+UI behavior, while the [desktop checks](desktop/README.md) exercise the Rust
+host, its bundled runtime and the real WebView separately. Use synthetic
+projects for native verification.
+
 ## Record durable project lessons
 
 Treat `/remember` as an explicit request to capture a confirmed decision or

@@ -26,10 +26,26 @@ pub fn is_allowed_app_url(candidate: &Url, exact_port: u16) -> bool {
 /// External links opened in the user's system browser are restricted to https/mailto.
 pub fn is_allowed_external_url(raw: &str) -> Result<Url, String> {
     let parsed = Url::parse(raw).map_err(|_| "Invalid external URL".to_string())?;
-    match parsed.scheme() {
-        "https" | "mailto" => Ok(parsed),
-        _ => Err("Only https:// and mailto: external links are allowed".to_string()),
+    if supported_external_scheme(&parsed) {
+        Ok(parsed)
+    } else {
+        Err("Only https:// and mailto: external links are allowed".to_string())
     }
+}
+
+fn supported_external_scheme(url: &Url) -> bool {
+    matches!(url.scheme(), "https" | "mailto")
+}
+
+/// Keep the launched origin in the workspace and forward supported external URLs.
+pub fn route_webview_navigation(url: &Url, port: u16, open_external: impl FnOnce(&Url)) -> bool {
+    if is_allowed_app_url(url, port) {
+        return true;
+    }
+    if supported_external_scheme(url) {
+        open_external(url);
+    }
+    false
 }
 
 /// Validate a relative workspace URL ("/" or "/w/<32 lowercase hex>/").
@@ -93,6 +109,9 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
     pickImportFile: function (kind) {{
       return invoke("pick_import_file", {{ kind: kind || "manuscript" }});
     }},
+    readSampleManuscript: function () {{
+      return invoke("read_sample_manuscript");
+    }},
     saveBlob: async function (blob, filename) {{
       const payloadBase64 = await blobToBase64(blob);
       return invoke("save_blob", {{
@@ -125,6 +144,9 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
       return invoke("set_dirty_state", {{
         unsavedEditor: Boolean(state && state.unsavedEditor)
       }});
+    }},
+    setWorkspaceTitle: function (project) {{
+      return invoke("set_workspace_title", {{ project: project }});
     }},
     recentProjects: function () {{
       return invoke("list_recent_projects");
@@ -201,6 +223,7 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tauri::ipc::Origin;
 
     #[test]
     fn allows_only_exact_loopback_port() {
@@ -213,6 +236,38 @@ mod tests {
 
         let external = Url::parse("https://example.org/").unwrap();
         assert!(!is_allowed_app_url(&external, 54321));
+    }
+
+    #[test]
+    fn desktop_bridge_requires_the_loopback_workspace_capability() {
+        let mut context = crate::desktop_context();
+        let authority = context.runtime_authority_mut();
+        let loopback = Origin::Remote {
+            url: Url::parse("http://127.0.0.1:54321/w/0123456789abcdef0123456789abcdef/").unwrap(),
+        };
+        let foreign = Origin::Remote {
+            url: Url::parse("https://example.org/").unwrap(),
+        };
+
+        for command in ["open_external_url", "get_preferences", "save_export_stream", "set_workspace_title"] {
+            for window in ["main", "project-1"] {
+                assert!(authority
+                    .resolve_access(command, window, window, &loopback)
+                    .is_some());
+                assert!(authority
+                    .resolve_access(command, window, window, &foreign)
+                    .is_none());
+                assert!(authority
+                    .resolve_access(command, window, window, &Origin::Local)
+                    .is_none());
+            }
+            assert!(authority
+                .resolve_access(command, "splashscreen", "splashscreen", &loopback)
+                .is_none());
+        }
+        assert!(authority
+            .resolve_access("plugin:opener|open_url", "main", "main", &loopback)
+            .is_none());
     }
 
     #[test]

@@ -15,6 +15,8 @@ pub struct MenuLabels {
     pub menu_file: String,
     pub menu_edit: String,
     pub menu_view: String,
+    #[cfg(target_os = "macos")]
+    pub menu_window: String,
     pub menu_tools: String,
     pub menu_help: String,
     pub item_new_window: String,
@@ -43,8 +45,21 @@ pub struct MenuLabels {
     pub item_open_logs: String,
     pub item_check_updates: String,
     pub item_documentation: String,
+    #[cfg(target_os = "macos")]
+    pub item_about: String,
+    #[cfg(target_os = "macos")]
+    pub item_hide: String,
+    #[cfg(target_os = "macos")]
+    pub item_fullscreen: String,
+    #[cfg(target_os = "macos")]
+    pub item_minimize: String,
     pub close_guard_title: String,
     pub close_guard_body: String,
+    pub close_guard_audio_unavailable: String,
+    pub startup_runtime_missing: String,
+    pub startup_runtime_failed: String,
+    pub startup_window_failed: String,
+    pub startup_logs_unavailable: String,
 }
 
 pub fn labels_for_locale(locale: &str) -> MenuLabels {
@@ -120,9 +135,12 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
                 .accelerator("CmdOrCtrl+Shift+E")
                 .build(app)?,
         )
-        .separator()
-        .item(&PredefinedMenuItem::quit(app, Some(&l.item_quit))?)
-        .build()?;
+        .separator();
+    #[cfg(target_os = "macos")]
+    let file_menu = file_menu.item(&PredefinedMenuItem::close_window(app, Some(&l.close_guard_title))?);
+    #[cfg(not(target_os = "macos"))]
+    let file_menu = file_menu.item(&PredefinedMenuItem::quit(app, Some(&l.item_quit))?);
+    let file_menu = file_menu.build()?;
 
     let edit_menu = SubmenuBuilder::new(app, &l.menu_edit)
         .item(&PredefinedMenuItem::undo(app, Some(&l.item_undo))?)
@@ -181,8 +199,12 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
             &MenuItemBuilder::with_id("view-zoom-reset", &l.item_zoom_reset)
                 .accelerator("CmdOrCtrl+0")
                 .build(app)?,
-        )
-        .build()?;
+        );
+    #[cfg(target_os = "macos")]
+    let view_menu = view_menu
+        .separator()
+        .item(&PredefinedMenuItem::fullscreen(app, Some(&l.item_fullscreen))?);
+    let view_menu = view_menu.build()?;
 
     let tools_menu = SubmenuBuilder::new(app, &l.menu_tools)
         .item(&MenuItemBuilder::with_id("tools-system-status", &l.item_system_status).build(app)?)
@@ -195,9 +217,31 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
         .item(&MenuItemBuilder::with_id("help-check-updates", &l.item_check_updates).build(app)?)
         .build()?;
 
-    MenuBuilder::new(app)
-        .items(&[&file_menu, &edit_menu, &view_menu, &tools_menu, &help_menu])
-        .build()
+    let menu = MenuBuilder::new(app);
+    #[cfg(target_os = "macos")]
+    let (menu, window_menu) = {
+        let app_menu = SubmenuBuilder::new(app, "Lixity")
+            .item(&PredefinedMenuItem::about(app, Some(&l.item_about), None)?)
+            .separator()
+            .item(&PredefinedMenuItem::hide(app, Some(&l.item_hide))?)
+            .separator()
+            .item(&PredefinedMenuItem::quit(app, Some(&l.item_quit))?)
+            .build()?;
+        let window_menu = SubmenuBuilder::new(app, &l.menu_window)
+            .item(&PredefinedMenuItem::minimize(app, Some(&l.item_minimize))?)
+            .build()?;
+        (menu.item(&app_menu), window_menu)
+    };
+    let menu = menu.items(&[&file_menu, &edit_menu, &view_menu, &tools_menu]);
+    #[cfg(target_os = "macos")]
+    let menu = menu.item(&window_menu);
+    let menu = menu.item(&help_menu).build()?;
+    #[cfg(target_os = "macos")]
+    {
+        window_menu.set_as_windows_menu_for_nsapp()?;
+        help_menu.set_as_help_menu_for_nsapp()?;
+    }
+    Ok(menu)
 }
 
 #[cfg(test)]

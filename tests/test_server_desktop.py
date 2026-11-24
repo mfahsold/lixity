@@ -9,7 +9,9 @@ import secrets
 import subprocess
 import sys
 import threading
-from contextlib import redirect_stderr
+from collections.abc import Iterator
+from contextlib import contextmanager, redirect_stderr
+from pathlib import Path
 
 import pytest
 
@@ -208,29 +210,27 @@ def test_parent_watchdog_triggers_shutdown_when_parent_gone(monkeypatch):
     thread.join(timeout=2.0)
 
 
-def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
+@contextmanager
+def _desktop_cli_server(
+    selector: str, cwd: Path, *, home: Path | None = None,
+) -> Iterator[tuple[int, str, str]]:
     secret, nonce = _fresh_tokens()
     bootstrap = json.dumps({"secret": secret, "handshake_nonce": nonce}) + "\n"
-    (tmp_path / "drafts").mkdir()
-    (tmp_path / "drafts/draft.md").write_text("## A synthetic chapter\n\nA heron waits at the gate.\n", encoding="utf-8")
-    (tmp_path / "manuscript.md").write_text("An earlier draft stays closed.\n", encoding="utf-8")
-    config = tmp_path / "lixity.toml"
-    config_body = 'manuscript = "drafts/draft.md"\n'
-    config.write_text(config_body, encoding="utf-8")
     with subprocess.Popen(  # noqa: S603 - explicit interpreter and synthetic project path
         [
             sys.executable,
             "-m",
             "lixity",
             "serve",
-            str(config),
+            selector,
             "--_desktop-mode",
             "--host",
             "127.0.0.1",
             "--port",
             "0",
         ],
-        cwd=str(tmp_path),
+        cwd=cwd,
+        env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)} if home is not None else None,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -251,29 +251,7 @@ def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
             assert isinstance(ready["port"], int) and ready["port"] > 0
             assert ready["version"] == __version__
 
-            port = ready["port"]
-            # Unauthenticated request must fail with 403.
-            denied = send(port, "/api/desktop/environment", timeout=5.0)
-            assert denied.status == 403
-
-            # Authenticated host-secret request succeeds.
-            allowed = send(
-                port,
-                "/api/desktop/environment",
-                headers={DESKTOP_SECRET_HEADER: secret},
-                timeout=5.0,
-            )
-            assert allowed.status == 200
-            assert allowed.json["app"]["desktop_mode"] is True
-            headers = {DESKTOP_SECRET_HEADER: secret}
-            landing = send(port, "/", headers=headers, timeout=5.0)
-            assert landing.status == 303
-            page = send(port, landing.headers["location"], headers=headers, timeout=5.0)
-            assert page.status == 200
-            assert b"A heron waits at the gate." in page.body
-            assert b"An earlier draft stays closed." not in page.body
-            assert b'id="analysis-outline-document"' in page.body
-            assert config.read_text(encoding="utf-8") == config_body
+            yield ready["port"], secret, nonce
         finally:
             proc.terminate()
             try:
@@ -281,3 +259,75 @@ def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait(timeout=5)
+
+
+def test_cli_serve_desktop_mode_end_to_end_subprocess(tmp_path):
+    (tmp_path / "drafts").mkdir()
+    (tmp_path / "drafts/draft.md").write_text("## A synthetic chapter\n\nA heron waits at the gate.\n", encoding="utf-8")
+    (tmp_path / "manuscript.md").write_text("An earlier draft stays closed.\n", encoding="utf-8")
+    config = tmp_path / "lixity.toml"
+    config_body = 'manuscript = "drafts/draft.md"\n'
+    config.write_text(config_body, encoding="utf-8")
+    with _desktop_cli_server(str(config), tmp_path) as (port, secret, _nonce):
+        # Unauthenticated request must fail with 403.
+        denied = send(port, "/api/desktop/environment", timeout=5.0)
+        assert denied.status == 403
+
+        # Authenticated host-secret request succeeds.
+        headers = {DESKTOP_SECRET_HEADER: secret}
+        allowed = send(port, "/api/desktop/environment", headers=headers, timeout=5.0)
+        assert allowed.status == 200
+        assert allowed.json["app"]["desktop_mode"] is True
+        landing = send(port, "/", headers=headers, timeout=5.0)
+        assert landing.status == 303
+        page = send(port, landing.headers["location"], headers=headers, timeout=5.0)
+        assert page.status == 200
+        assert b"A heron waits at the gate." in page.body
+        assert b"An earlier draft stays closed." not in page.body
+        assert b'id="analysis-outline-document"' in page.body
+        assert config.read_text(encoding="utf-8") == config_body
+
+
+def test_cli_desktop_default_project_folder_is_lazy_and_independent_of_workspace(tmp_path):
+    home = tmp_path / "author home"
+    unrelated = tmp_path / "launch directory"
+    home.mkdir()
+    unrelated.mkdir()
+    project_base = home.resolve() / "Lixity"
+    with _desktop_cli_server("--no-project", unrelated, home=home) as (port, _secret, nonce):
+        handshake = send(port, f"/_desktop/handshake?nonce={nonce}")
+        assert handshake.status == 303
+        headers = {"Cookie": handshake.headers["set-cookie"].split(";", 1)[0]}
+        landing = send(port, "/", headers=headers)
+        assert landing.status == 303
+        start_url = landing.headers["location"]
+        assert send(port, start_url, headers=headers).status == 200
+        assert not project_base.exists()
+
+        create = send(port, start_url + "api/project-create", headers=headers, payload={
+            "title": "A manuscript", "language": "en", "path": "",
+            "content": "## A chapter\n\nA heron waits at the gate.\n",
+        })
+        assert create.status == 200
+        project = project_base / "a-manuscript"
+        assert create.json["path"] == str(project)
+        manuscript = project / "manuscript.md"
+        original = manuscript.read_bytes()
+        assert b"A heron waits at the gate." in original
+        next_url = create.json["workspace_url"]
+
+        duplicate = send(port, next_url + "api/project-create", headers=headers, payload={
+            "title": "A manuscript", "language": "de", "content": "Another draft.",
+        })
+        assert duplicate.status == 409
+        assert duplicate.json["code"] == "project-folder-exists"
+        assert manuscript.read_bytes() == original
+
+        draft = send(port, next_url + "api/project-create", headers=headers, payload={
+            "title": "Another book", "language": "en", "template": "minimal",
+        })
+        assert draft.status == 200
+        assert draft.json["path"] == str(project_base / "another-book")
+        assert (project_base / "another-book/manuscript.md").is_file()
+        assert sorted(item.name for item in project_base.iterdir()) == ["a-manuscript", "another-book"]
+        assert not list(unrelated.iterdir())

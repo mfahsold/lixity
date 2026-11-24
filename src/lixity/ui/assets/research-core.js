@@ -138,12 +138,10 @@ function fieldSnapshot(identifiers) {
 }
 
 async function submitResearchForm(button, action, payload, fields, clearFields, complete, refresh) {
-  if (button.dataset.pending === "true") return;
+  if (button.disabled) return;
   var submitted = fieldSnapshot(fields), context = researchReadContext();
-  button.dataset.pending = "true";
-  button.disabled = true;
-  button.classList.add("busy");
-  button.setAttribute("aria-busy", "true");
+  var setButtonPending = window.LixityComponents.setButtonPending;
+  setButtonPending(button, true);
   researchFormStatus(button, uiLabel("form_saving"), "loading");
   try {
     var result = await researchApiPost(action, payload);
@@ -162,10 +160,7 @@ async function submitResearchForm(button, action, payload, fields, clearFields, 
     }
     return result;
   } finally {
-    button.dataset.pending = "false";
-    button.disabled = false;
-    button.classList.remove("busy");
-    button.removeAttribute("aria-busy");
+    setButtonPending(button, false);
   }
 }
 

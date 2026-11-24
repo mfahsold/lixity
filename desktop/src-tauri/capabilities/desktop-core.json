@@ -3,14 +3,15 @@
   "identifier": "desktop-core",
   "description": "Minimal Tauri v2 capability for Lixity windows. No generic filesystem or shell plugin permissions are granted to webview JS.",
   "windows": ["main", "project-*"],
+  "local": false,
   "remote": {
     "urls": [
       "http://127.0.0.1:*"
     ]
   },
   "permissions": [
+    "allow-desktop-bridge",
     "core:event:default",
-    "core:window:allow-set-title",
     "core:window:allow-close"
   ]
 }

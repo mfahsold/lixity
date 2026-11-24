@@ -5,7 +5,7 @@ design tokens and before the views (see _CSS_FILES). */
 /* Hidden state must survive shared display recipes in the app and Pages. */
 [hidden] { display: none !important; }
 /* Inline display:flex toggled by project-ui.js must still reveal initially hidden elements. */
-#import-preview-box[hidden][style*="flex"], .modal-tab-pane[hidden][style*="flex"] { display: flex !important; }
+#import-preview-box[hidden][style*="flex"] { display: flex !important; }
 .reader-setting-field { display: grid; gap: .3rem; }
 .reader-segmented { position: relative; display: flex; flex-wrap: wrap; gap: .25rem; }
 .reader-segmented > button.ctl { flex: 1 1 auto; }
@@ -237,38 +237,57 @@ input[type="file"].ctl { max-width: 100%; }
 .form-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; min-width: 0; width: 100%; }
 .form-row > * { min-width: 0; }
 .settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
-button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl { max-width: 100%; min-width: 0; font-family: inherit; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); cursor: pointer; transition: color .18s cubic-bezier(0.16, 1, 0.3, 1), border-color .18s cubic-bezier(0.16, 1, 0.3, 1), background-color .18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1); }
+:is(button, a, select, input, textarea).ctl {
+  --control-target: var(--control-size);
+  --control-block-size: max(var(--control-target), var(--control-pointer-min, 0px));
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--control-block-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: var(--text-control);
+  line-height: var(--line-control);
+  cursor: pointer;
+}
+:is(button, a, select).ctl:is(.ctl-sm, .ctl-compact) {
+  --control-target: var(--control-compact-size);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-small);
+}
+@media (pointer: coarse) {
+  :is(button, a, select, input).ctl { --control-pointer-min: var(--control-touch-size); }
+}
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 /* Field outlines identify editable values; ordinary actions use a quieter
 boundary until hover, focus, selection or an explicit primary/danger role. */
 :where(button, a).ctl { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; text-decoration: none; border-color: var(--line); }
+button.ctl.ctl-icon { flex: none; min-inline-size: var(--control-block-size); padding-inline: 0; }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
 a.chapter-link { color: var(--accent); text-decoration: underline; text-underline-offset: .15em; }
 a.chapter-link:hover { color: var(--accent-hover); }
 /* Hover feedback keeps the hit target stable, including at its edges when a
 dialog moves beneath a stationary pointer after showing a status message. */
-button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
+:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-button.ctl:where(:enabled):active, a.ctl:active { border-color: var(--accent); box-shadow: none; }
+:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
 button.ctl[aria-pressed="true"],
-.view-nav-tab.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); font-weight: var(--weight-strong); }
-button.ctl.busy { color: var(--muted); pointer-events: none; position: relative; padding-left: 1.6rem; }
-/* One spinner recipe for the three loading contexts: busy buttons, inline
-status lines and loading placeholders share size, colour and animation. */
-button.ctl.busy::before,
+.view-nav-tab.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+/* Progress lives beside the action so the button and its label stay in place. */
 .ctl-status.loading::before,
-.loading-spinner { content: ""; display: inline-block; width: .8rem; height: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: ctl-spin .7s linear infinite; flex-shrink: 0; }
-button.ctl.busy::before { position: absolute; left: .55rem; top: 50%; margin-top: -.4rem; }
+.loading-spinner { content: ""; display: inline-block; box-sizing: border-box; inline-size: .8rem; block-size: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; flex: none; }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-button.ctl.primary:enabled:hover, a.ctl.primary:hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: 0 3px 10px rgba(0, 0, 0, .14); }
-button.ctl.primary:enabled:active, a.ctl.primary:active { box-shadow: none; }
-button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
-button.ctl.ctl-compact, a.ctl.ctl-compact { min-height: 2rem; padding: .25rem .6rem; font-size: var(--text-small); }
+:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: 0 3px 10px rgba(0, 0, 0, .14); }
+:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):active { box-shadow: none; }
 .ctl-select { position: relative; display: grid; min-inline-size: 0; }
 /* Reserve the chevron space after the control-size variants set block padding. */
 .ctl-select > select.ctl {
@@ -337,19 +356,19 @@ positions, colour maps) stay inline; layout uses these classes. */
 /* Native details content does not participate in its host's flex gap. */
 details.settings-section[open] > :not(summary) { margin-block-start: var(--space-3); }
 .site-export-analysis-choices { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
-.ctl:disabled { opacity: .6; cursor: default; }
+.ctl:is(:disabled, [aria-disabled="true"]) { opacity: .6; cursor: default; }
 .ctl[aria-busy="true"] { cursor: wait; }
 :where(input, textarea, select).ctl[aria-invalid="true"] { border-color: var(--flag); }
 /* Tabs identify a view; primary buttons identify an action. Keep all local
 tablists on one recipe, with an inset focus ring inside the scrollport. */
 .style-tabs, .research-tabs.row, .modal-tabs { display: flex; flex-wrap: nowrap; gap: var(--space-1); min-width: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--line); padding: var(--space-1); margin: 0; scroll-padding-inline: var(--space-1); }
 .modal-tabs { flex: none; gap: var(--space-2); padding: var(--space-2) var(--space-4); }
-:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-height: 2.5rem; padding: .45rem .8rem; border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-block-size: var(--control-size); padding: var(--space-2) var(--space-3); border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover { background: var(--surface-raised); color: var(--fg); border-color: var(--line); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] { border-color: var(--line); border-bottom-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible { outline-offset: -3px; }
 @media (pointer: coarse) {
-:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close { min-width: 2.75rem; min-height: 2.75rem; }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
 }
 /* --- Native Modals & Template Cards ----------------------------------- */
 audio.media-player { width: 100%; max-width: 100%; }
@@ -364,7 +383,7 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
 .modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
-.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); width: 2.5rem; height: 2.5rem; flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
+.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); inline-size: var(--control-size); block-size: var(--control-size); flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
 .modal-close:hover { color: var(--fg); background: var(--neutral); }
 .modal-close:focus { outline: none; }
 .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -446,8 +465,7 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
 /* --- Icons & Motion ---------------------------------------------------- */
-.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
-.btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; }
 .lixity-icon-slot { display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle; line-height: 1; }
 
 /* Related passages share one navigation layout in the sticky manuscript toolbar. */
@@ -468,14 +486,13 @@ summary.ctl { font-family: var(--font); font-size: var(--text-control); line-hei
 .passage-jump-label { flex: 1 1 12rem; font-weight: var(--weight-semibold); min-width: 0; overflow-wrap: anywhere; }
 .passage-jump-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .passage-jump-actions > button.ctl {
-  --passage-jump-target: max(44px, 2.75rem);
-  min-inline-size: var(--passage-jump-target);
-  min-block-size: var(--passage-jump-target);
+  min-inline-size: var(--control-touch-size);
+  min-block-size: var(--control-touch-size);
 }
 @media (prefers-reduced-motion: no-preference) {
-  :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
-  :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
-  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade 160ms var(--ease); }
+  :is(button, a, select, input, textarea).ctl { transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  .ctl-status.loading::before, .loading-spinner { animation: ctl-spin .7s linear infinite; }
+  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade var(--dur-fast) var(--ease); }
 }
 @keyframes lixity-dialog-fade { from { opacity: .82; } to { opacity: 1; } }
 /* --- Markdown enhancements -------------------------------------------- */

@@ -20,12 +20,18 @@ with tempfile.TemporaryDirectory() as directory:
     record = api.get_record(p, 'decision', decision['decision_id'])
     fixtures = {}
     for language in ('en','de','fr','es','it','pt','nl'):
-        html, _ = build_server_dashboard(None, language=language, title='Synthetic project history')
+        html, _ = build_server_dashboard(None, language=language, title='Synthetic project history',
+                                         project_create_base='/synthetic/profile/Lixity')
         fixtures[language] = {'html': html, 'labels': WORKSPACE_LABELS[language]}
     print(json.dumps({'fixtures': fixtures, 'record': record,
                      'decisions': api.list_decisions(p), 'dossiers': api.list_dossiers(p)}))
 `);
 const recentKey = 'lixity:recent-projects';
+const sample = {
+  filename: 'first-look.md',
+  language: 'en',
+  content: fs.readFileSync(path.join(__dirname, '../../samples/first-look.md'), 'utf8'),
+};
 const hostile = '/synthetic/<img src=x onerror=alert(1)>/manuscript.md';
 const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wrong'}, hostile,
   ...Array.from({length: 12}, (_, index) => '/synthetic/project-' + index)];
@@ -34,19 +40,44 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
   const browser = await launchChromium();
   const errors = [];
   const opens = [];
+  const creates = [];
   const saves = [];
   let result = {ok: true, reload: false, message: 'Synthetic project opened'};
   let resultStatus = null;
-  async function open({language = 'en', saved = history, blocked = false, initialized = false} = {}) {
+  async function open({language = 'en', saved = history, blocked = false, initialized = false, desktop = false} = {}) {
     const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
-    await context.addInitScript(({saved, blocked, recentKey}) => {
+    await context.addInitScript(({saved, blocked, recentKey, desktop, sample}) => {
       if (!sessionStorage.getItem('synthetic-history-seeded')) {
         if (typeof saved === 'string') localStorage.setItem(recentKey, saved);
         else if (saved !== null) localStorage.setItem(recentKey, JSON.stringify(saved));
         sessionStorage.setItem('synthetic-history-seeded', '1');
       }
       if (blocked) Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Synthetic blocked storage', 'SecurityError'); }});
-    }, {saved, blocked, recentKey});
+      if (desktop) {
+        window.desktopRecentWrites = [];
+        window.desktopPreferenceWrites = [];
+        window.desktopUpdateChecks = 0;
+        window.desktopOpenedUrls = [];
+        window.lixityDesktop = {
+          version: 1,
+          platform: 'macos',
+          setWorkspaceTitle: async title => { window.desktopTitle = title; },
+          setPreference: async (...entry) => window.desktopPreferenceWrites.push(entry),
+          checkForUpdates: () => new Promise((resolve, reject) => {
+            ++window.desktopUpdateChecks;
+            window.resolveDesktopUpdate = resolve;
+            window.rejectDesktopUpdate = reject;
+          }),
+          openExternalUrl: async url => window.desktopOpenedUrls.push(url),
+          pickProjectDirectory: async () => { throw new Error('Synthetic picker failure'); },
+          recordRecentProject: async (...entry) => window.desktopRecentWrites.push(entry),
+          readSampleManuscript: () => new Promise((resolve, reject) => {
+            window.resolveSample = () => resolve(sample);
+            window.rejectSample = () => reject(new Error('Synthetic sample failure'));
+          }),
+        };
+      }
+    }, {saved, blocked, recentKey, desktop, sample});
     const page = await context.newPage();
     page.setDefaultTimeout(5000);
     page.on('pageerror', error => errors.push(error.message));
@@ -56,6 +87,11 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       if (url.pathname === '/api/project-open') {
         opens.push(request.postDataJSON());
         return route.fulfill({json: result, status: resultStatus || (result.ok ? 200 : 400)});
+      }
+      if (url.pathname === '/api/project-create') {
+        creates.push(request.postDataJSON());
+        return route.fulfill({json: {ok: true, path: '/synthetic/profile/Lixity/first-draft',
+          manuscript: '/synthetic/profile/Lixity/first-draft/manuscript.md'}});
       }
       if (url.pathname === '/api/project-paths') return route.fulfill({json: {
         ok: true, path: '/synthetic', parent: '/', truncated: false,
@@ -81,6 +117,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
   try {
     if (!process.argv.includes('--labels-only')) {
       const {context, page} = await open();
+      assert.ok(await page.locator('#hero-btn-example').isHidden(), 'The browser welcome uses the online example');
       assert.equal(await page.locator('#welcome-project-recent-list [data-recent-project-path]').count(), 8, 'Welcome shows a bounded, deduplicated recent list');
       assert.equal(await page.locator('#welcome-project-recent-list img').count(), 0);
       const before = opens.length;
@@ -88,7 +125,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       assert.equal(await page.locator('#open-proj-path').inputValue(), hostile);
       assert.equal(opens.length, before, 'Selecting history does not open a project');
       await page.locator('#modal-project-open [data-close-modal]').first().click();
-      await page.locator('#hero-btn-browse-project').click();
+      await page.locator('#hero-btn-open-project').click();
       assert.ok(await page.locator('#open-project-chooser').isVisible());
       await page.locator('[data-open-path-kind=manuscript]').click();
       assert.equal(await page.locator('#open-proj-path').inputValue(), hostile);
@@ -127,7 +164,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       for (const scenario of [{saved: '{broken'}, {saved: {path: '/not-an-array'}}, {blocked: true}]) {
         const check = await open(scenario);
         assert.ok(await check.page.locator('#welcome-project-recent').isHidden());
-        await check.page.locator('#hero-btn-browse-project').click();
+        await check.page.locator('#hero-btn-open-project').click();
         assert.ok(await check.page.locator('#open-project-chooser').isVisible(), 'Chooser remains usable without history');
         if (scenario.blocked) {
           await check.page.locator('[data-open-path-kind=manuscript]').click();
@@ -137,16 +174,129 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         }
         await check.context.close();
       }
+      const desktop = await open({desktop: true, saved: []});
+      try {
+        const page = desktop.page;
+        await page.locator('#hero-btn-open-project').click();
+        await page.locator('#open-project-chooser:not([hidden])').waitFor();
+        await page.keyboard.press('Escape');
+        await page.locator('#modal-project-open[open]').waitFor({state: 'hidden'});
+        await page.locator('#hero-btn-write').click();
+        await page.locator('#new-proj-title:focus').waitFor();
+        assert.equal(creates.length, 0, 'Opening the editor setup does not create a project');
+        assert.match(await page.locator('#new-proj-path-help').textContent(), /\/synthetic\/profile\/Lixity/);
+        await page.locator('#new-proj-title').fill('First draft');
+        await page.locator('#btn-submit-create-project').click();
+        await page.locator('#modal-project-create[open]').waitFor({state: 'hidden'});
+        assert.equal(creates[0].path, '', 'The backend resolves the displayed default');
+        assert.deepEqual(await page.evaluate(() => desktopRecentWrites), [
+          ['/synthetic/profile/Lixity/first-draft', 'First draft', 'en']
+        ]);
+      } finally { await desktop.context.close(); }
+
+      const {context: sampleContext, page: samplePage} = await open({desktop: true, saved: [], language: 'de'});
+      try {
+        await samplePage.waitForFunction(() => window.desktopTitle ===
+          document.querySelector('.workspace-shell .project-header h1').textContent.trim());
+        assert.equal(await samplePage.locator('html').getAttribute('data-desktop-platform'), 'macos');
+        await samplePage.evaluate(() => window.dispatchEvent(new CustomEvent('lixity:desktop-theme', {detail: 'dark'})));
+        await samplePage.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+        assert.deepEqual(await samplePage.evaluate(() => window.desktopPreferenceWrites), []);
+        await samplePage.evaluate(() => window.dispatchEvent(new CustomEvent('lixity:desktop-theme', {detail: null})));
+        await samplePage.waitForFunction(() => !document.documentElement.dataset.theme);
+        assert.equal(await samplePage.evaluate(() => desktopUpdateChecks), 0, 'Desktop startup makes no update check');
+        const updates = samplePage.locator('#modal-desktop-environment');
+        const updateAction = updates.getByRole('button', {name: data.fixtures.de.labels.desktop_env_check_updates});
+        const updateStatus = updates.getByRole('status');
+        const menuAction = () => samplePage.evaluate(() => window.dispatchEvent(new CustomEvent('lixity:desktop-menu', {detail: 'help-check-updates'})));
+        await menuAction();
+        await updateAction.waitFor();
+        assert.ok(await updateAction.isDisabled());
+        await menuAction();
+        assert.equal(await samplePage.evaluate(() => desktopUpdateChecks), 1, 'An in-flight check prevents duplicates');
+        const reply = (status, tag) => samplePage.evaluate(({status, tag}) => window.resolveDesktopUpdate({
+          status, latest_tag: tag, current_version: '0.9.1', guide_url: 'https://mfahsold.github.io/lixity/guides/installation.html#desktop',
+        }), {status, tag});
+        const downloadLink = updates.getByRole('button', {name: data.fixtures.de.labels.desktop_env_open_downloads});
+        await reply('no_public_installer', null);
+        await updateStatus.getByText(data.fixtures.de.labels.desktop_env_no_public_installer).waitFor();
+        assert.equal(await downloadLink.count(), 0);
+        await updateAction.press('Enter');
+        await reply('no_matching_installer', 'v0.10.0');
+        await updateStatus.getByText(data.fixtures.de.labels.desktop_env_no_matching_installer).waitFor();
+        assert.equal(await downloadLink.count(), 0);
+        await updateAction.press('Enter');
+        await reply('available', 'v0.10.0');
+        await updateStatus.getByText(data.fixtures.de.labels.desktop_env_update_available).waitFor();
+        await downloadLink.click();
+        assert.deepEqual(await samplePage.evaluate(() => desktopOpenedUrls), ['https://mfahsold.github.io/lixity/guides/installation.html#desktop']);
+        await updateAction.press('Enter');
+        await samplePage.evaluate(() => window.rejectDesktopUpdate(new Error('Synthetic unreachable catalog')));
+        await updateStatus.getByText(data.fixtures.de.labels.desktop_env_update_failed).waitFor();
+        assert.ok(await updateAction.isEnabled());
+        await samplePage.keyboard.press('Escape');
+        const preview = samplePage.locator('#import-preview-box');
+        const submit = samplePage.locator('#btn-submit-import-project');
+        const dialog = samplePage.locator('#modal-project-create');
+        const sampleButton = samplePage.getByRole('button', {name: data.fixtures.de.labels.welcome_sample_action});
+        const before = creates.length;
+        await sampleButton.press('Enter');
+        assert.ok(await submit.isDisabled());
+        await samplePage.keyboard.press('Escape');
+        await samplePage.evaluate(() => resolveSample());
+        await samplePage.locator('#hero-btn-new-project').click();
+        assert.ok(await preview.isHidden(), 'A sample response after cancelling cannot populate normal import');
+        await samplePage.keyboard.press('Escape');
+        assert.equal(creates.length, before, 'Opening and cancelling the sample makes no project');
+
+        await sampleButton.press('Enter');
+        await samplePage.evaluate(() => rejectSample());
+        await dialog.getByText(data.fixtures.de.labels.welcome_sample_error).waitFor();
+        assert.ok(await submit.isDisabled());
+        await samplePage.keyboard.press('Escape');
+
+        await sampleButton.press('Enter');
+        await samplePage.evaluate(() => resolveSample());
+        await preview.waitFor();
+        assert.equal(await samplePage.locator('#import-proj-title').inputValue(), 'The Crate at Warehouse 4');
+        assert.equal(await samplePage.locator('#import-proj-lang').inputValue(), sample.language);
+        assert.equal(await samplePage.locator('#import-fpc-filename').textContent(), sample.filename);
+        assert.equal(creates.length, before, 'The sample preview requires confirmation to create a copy');
+        await submit.click();
+        await samplePage.locator('#modal-project-create[open]').waitFor({state: 'hidden'});
+        assert.equal(creates.length, before + 1);
+        assert.equal(creates.at(-1).path, '', 'The sample uses the normal project location');
+        assert.equal(creates.at(-1).content, sample.content);
+        assert.equal(creates.at(-1).language, sample.language);
+      } finally { await sampleContext.close(); }
     }
     for (const language of ['en','de','fr','es','it','pt','nl']) {
-      const {context, page} = await open({language, saved: ['/synthetic/first', hostile], initialized: true});
+      const {context, page} = await open({language, saved: ['/synthetic/first', hostile], initialized: true, desktop: true});
       for (const width of [1440, 320]) {
         await page.setViewportSize({width, height: 1000});
         if (!process.argv.includes('--labels-only')) {
-          assert.ok(await page.locator('#hero-btn-browse-project').isVisible());
+          const hero = page.locator('#welcome-hero');
+          const labels = data.fixtures[language].labels;
+          assert.equal(await page.locator('#project-actions').getAttribute('open'), null);
+          assert.ok(await hero.getByRole('button', {name: labels.welcome_open_action}).isVisible());
+          assert.ok(await hero.getByRole('link', {name: labels.welcome_example}).isVisible());
+          const showSample = hero.getByRole('button', {name: labels.welcome_sample_action});
+          assert.ok(await showSample.isVisible());
+          assert.equal(await showSample.getAttribute('aria-describedby'), 'welcome-sample-help');
+          assert.equal(await hero.locator('#welcome-sample-help').textContent(), labels.welcome_sample_help);
+          const write = hero.getByRole('button', {name: labels.welcome_write_action});
+          await write.press('Enter');
+          await page.locator('#new-proj-title:focus').waitFor();
+          await page.keyboard.press('Escape');
+          const importButton = hero.getByRole('button', {name: labels.welcome_import_action});
+          await importButton.click();
+          await page.locator('#import-dropzone:focus').waitFor();
+          await page.keyboard.press('Escape');
+          assert.ok(await hero.evaluate(element => element.scrollWidth <= element.clientWidth));
           assert.equal(await page.locator('#welcome-project-recent-list [data-recent-project-path]').count(), 2);
           await page.screenshot({path: path.join(artifacts, `recent-${language}-${width}.png`)});
         }
+        await page.locator('#tab-view-research').click();
         await page.locator('[data-rtab=decisions]').click();
         await page.locator('[data-research-revise=decision]').click();
         await page.locator('#research-revision-field-rationale').waitFor();
@@ -177,6 +327,6 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       await context.close();
     }
     assert.deepEqual(errors, []);
-    console.log(`Recent projects and clear revision wording passed in seven locales at 1440/320. Screenshots: ${artifacts}`);
+    console.log(`Desktop sample, recent projects and clear revision wording passed in seven locales at 1440/320. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

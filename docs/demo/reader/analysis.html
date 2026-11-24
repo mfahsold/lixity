@@ -7,7 +7,9 @@
 <style>/* Canonical foundation shared by bundled dashboards and staged Pages. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f2f4fa, #0c1017);
+  --bg-light: #f2f4fa;
+  --bg-dark: #0c1017;
+  --bg: light-dark(var(--bg-light), var(--bg-dark));
   --surface: light-dark(#ffffff, #121822);
   --fg: light-dark(#19263d, #eef2f8);
   --fg-secondary: light-dark(#465570, #9ba7b8);
@@ -88,6 +90,9 @@
   --line-reading: 1.7;
   --line-manuscript: 1.8;
   --measure-reading: 72ch;
+  --control-size: 2.5rem;
+  --control-compact-size: 2rem;
+  --control-touch-size: max(44px, 2.75rem);
   --space-1: .25rem;
   --space-2: .5rem;
   --space-3: .75rem;
@@ -145,7 +150,7 @@ design tokens and before the views (see _CSS_FILES). */
 /* Hidden state must survive shared display recipes in the app and Pages. */
 [hidden] { display: none !important; }
 /* Inline display:flex toggled by project-ui.js must still reveal initially hidden elements. */
-#import-preview-box[hidden][style*="flex"], .modal-tab-pane[hidden][style*="flex"] { display: flex !important; }
+#import-preview-box[hidden][style*="flex"] { display: flex !important; }
 .reader-setting-field { display: grid; gap: .3rem; }
 .reader-segmented { position: relative; display: flex; flex-wrap: wrap; gap: .25rem; }
 .reader-segmented > button.ctl { flex: 1 1 auto; }
@@ -377,38 +382,57 @@ input[type="file"].ctl { max-width: 100%; }
 .form-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; min-width: 0; width: 100%; }
 .form-row > * { min-width: 0; }
 .settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-3); }
-button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl { max-width: 100%; min-width: 0; font-family: inherit; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); cursor: pointer; transition: color .18s cubic-bezier(0.16, 1, 0.3, 1), border-color .18s cubic-bezier(0.16, 1, 0.3, 1), background-color .18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1); }
+:is(button, a, select, input, textarea).ctl {
+  --control-target: var(--control-size);
+  --control-block-size: max(var(--control-target), var(--control-pointer-min, 0px));
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  min-block-size: var(--control-block-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: var(--text-control);
+  line-height: var(--line-control);
+  cursor: pointer;
+}
+:is(button, a, select).ctl:is(.ctl-sm, .ctl-compact) {
+  --control-target: var(--control-compact-size);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-small);
+}
+@media (pointer: coarse) {
+  :is(button, a, select, input).ctl { --control-pointer-min: var(--control-touch-size); }
+}
 input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 /* Field outlines identify editable values; ordinary actions use a quieter
 boundary until hover, focus, selection or an explicit primary/danger role. */
 :where(button, a).ctl { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; text-decoration: none; border-color: var(--line); }
+button.ctl.ctl-icon { flex: none; min-inline-size: var(--control-block-size); padding-inline: 0; }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
 a.chapter-link { color: var(--accent); text-decoration: underline; text-underline-offset: .15em; }
 a.chapter-link:hover { color: var(--accent-hover); }
 /* Hover feedback keeps the hit target stable, including at its edges when a
 dialog moves beneath a stationary pointer after showing a status message. */
-button.ctl:where(:enabled):hover, a.ctl:hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
+:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):hover { border-color: var(--accent); color: var(--accent); background: var(--surface-hover); box-shadow: 0 2px 6px rgba(0, 0, 0, .06); }
 select.ctl:where(:enabled):hover { border-color: var(--accent); color: var(--accent); }
-button.ctl:where(:enabled):active, a.ctl:active { border-color: var(--accent); box-shadow: none; }
+:is(button, a).ctl:where(:not(:disabled, [aria-disabled="true"])):active { border-color: var(--accent); box-shadow: none; }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
 button.ctl.active,
 button.ctl[aria-pressed="true"],
-.view-nav-tab.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); font-weight: var(--weight-strong); }
-button.ctl.busy { color: var(--muted); pointer-events: none; position: relative; padding-left: 1.6rem; }
-/* One spinner recipe for the three loading contexts: busy buttons, inline
-status lines and loading placeholders share size, colour and animation. */
-button.ctl.busy::before,
+.view-nav-tab.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+/* Progress lives beside the action so the button and its label stay in place. */
 .ctl-status.loading::before,
-.loading-spinner { content: ""; display: inline-block; width: .8rem; height: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: ctl-spin .7s linear infinite; flex-shrink: 0; }
-button.ctl.busy::before { position: absolute; left: .55rem; top: 50%; margin-top: -.4rem; }
+.loading-spinner { content: ""; display: inline-block; box-sizing: border-box; inline-size: .8rem; block-size: .8rem; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; flex: none; }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-button.ctl.primary:enabled:hover, a.ctl.primary:hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: 0 3px 10px rgba(0, 0, 0, .14); }
-button.ctl.primary:enabled:active, a.ctl.primary:active { box-shadow: none; }
-button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
-button.ctl.ctl-compact, a.ctl.ctl-compact { min-height: 2rem; padding: .25rem .6rem; font-size: var(--text-small); }
+:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):hover { background: var(--action-hover); border-color: var(--action-hover); color: var(--on-action); box-shadow: 0 3px 10px rgba(0, 0, 0, .14); }
+:is(button, a).ctl.primary:where(:not(:disabled, [aria-disabled="true"])):active { box-shadow: none; }
 .ctl-select { position: relative; display: grid; min-inline-size: 0; }
 /* Reserve the chevron space after the control-size variants set block padding. */
 .ctl-select > select.ctl {
@@ -477,19 +501,19 @@ positions, colour maps) stay inline; layout uses these classes. */
 /* Native details content does not participate in its host's flex gap. */
 details.settings-section[open] > :not(summary) { margin-block-start: var(--space-3); }
 .site-export-analysis-choices { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
-.ctl:disabled { opacity: .6; cursor: default; }
+.ctl:is(:disabled, [aria-disabled="true"]) { opacity: .6; cursor: default; }
 .ctl[aria-busy="true"] { cursor: wait; }
 :where(input, textarea, select).ctl[aria-invalid="true"] { border-color: var(--flag); }
 /* Tabs identify a view; primary buttons identify an action. Keep all local
 tablists on one recipe, with an inset focus ring inside the scrollport. */
 .style-tabs, .research-tabs.row, .modal-tabs { display: flex; flex-wrap: nowrap; gap: var(--space-1); min-width: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--line); padding: var(--space-1); margin: 0; scroll-padding-inline: var(--space-1); }
 .modal-tabs { flex: none; gap: var(--space-2); padding: var(--space-2) var(--space-4); }
-:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-height: 2.5rem; padding: .45rem .8rem; border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-block-size: var(--control-size); padding: var(--space-2) var(--space-3); border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover { background: var(--surface-raised); color: var(--fg); border-color: var(--line); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] { border-color: var(--line); border-bottom-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible { outline-offset: -3px; }
 @media (pointer: coarse) {
-:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close { min-width: 2.75rem; min-height: 2.75rem; }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"], .modal-close { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
 }
 /* --- Native Modals & Template Cards ----------------------------------- */
 audio.media-player { width: 100%; max-width: 100%; }
@@ -504,7 +528,7 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
 .modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
-.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); width: 2.5rem; height: 2.5rem; flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
+.modal-close { background: transparent; border: 1px solid transparent; padding: 0; font-size: 1.15rem; cursor: pointer; color: var(--muted); border-radius: var(--radius-sm); inline-size: var(--control-size); block-size: var(--control-size); flex: none; display: inline-flex; align-items: center; justify-content: center; line-height: 1; transition: color .15s ease, background-color .15s ease; }
 .modal-close:hover { color: var(--fg); background: var(--neutral); }
 .modal-close:focus { outline: none; }
 .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -586,8 +610,7 @@ dialog.lixity-modal::backdrop { background: color-mix(in srgb, #070a12 50%, tran
 /* Native summaries used as commands follow the same type role as buttons. */
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
 /* --- Icons & Motion ---------------------------------------------------- */
-.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; transition: transform 160ms var(--ease); }
-.btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); }
+.lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; }
 .lixity-icon-slot { display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle; line-height: 1; }
 
 /* Related passages share one navigation layout in the sticky manuscript toolbar. */
@@ -608,14 +631,13 @@ summary.ctl { font-family: var(--font); font-size: var(--text-control); line-hei
 .passage-jump-label { flex: 1 1 12rem; font-weight: var(--weight-semibold); min-width: 0; overflow-wrap: anywhere; }
 .passage-jump-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .passage-jump-actions > button.ctl {
-  --passage-jump-target: max(44px, 2.75rem);
-  min-inline-size: var(--passage-jump-target);
-  min-block-size: var(--passage-jump-target);
+  min-inline-size: var(--control-touch-size);
+  min-block-size: var(--control-touch-size);
 }
 @media (prefers-reduced-motion: no-preference) {
-  :where(button, a, summary).ctl:where(:enabled):hover .lixity-icon { transform: scale(1.06); }
-  :where(button, a, summary).ctl:where(:enabled):active .lixity-icon { transform: scale(.95); }
-  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade 160ms var(--ease); }
+  :is(button, a, select, input, textarea).ctl { transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  .ctl-status.loading::before, .loading-spinner { animation: ctl-spin .7s linear infinite; }
+  dialog.lixity-modal[open], .command-palette-dialog[open] { animation: lixity-dialog-fade var(--dur-fast) var(--ease); }
 }
 @keyframes lixity-dialog-fade { from { opacity: .82; } to { opacity: 1; } }
 /* --- Markdown enhancements -------------------------------------------- */
@@ -1910,53 +1932,41 @@ display: flex; align-items: start; flex-wrap: wrap; gap: .5rem; overflow-wrap: a
 .workspace-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; justify-content: space-between; gap: var(--space-4) var(--space-5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-4); }
 .workspace-bar:not(:has(.manuscript-pdf)) { grid-template-columns: minmax(0, 1fr); }
 .welcome-hero {
-position: relative;
 border: 1px solid var(--line);
 border-radius: var(--radius-lg);
 background: var(--surface);
 border-top: 3px solid var(--accent);
-padding: 2.5rem 1.75rem;
-margin-bottom: 1.5rem;
-text-align: center;
-box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
-& .welcome-dismiss { position: absolute; inset-block-start: .7rem; inset-inline-end: .7rem; padding: .3rem .55rem; font-size: var(--text-micro); }
-& .welcome-inner { max-width: 42rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; }
-& .welcome-badge { font-size: var(--text-small); font-weight: var(--weight-strong); letter-spacing: .01em; color: var(--accent); background: var(--accent-light); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .25rem .75rem; margin-bottom: .9rem; }
-& .welcome-title { font-size: 1.85rem; font-weight: var(--weight-strong); margin: 0 0 .6rem; letter-spacing: -.025em; color: var(--fg); }
-& .welcome-example { margin: .35rem 0 0; font-size: var(--text-small); & a { color: var(--muted); text-decoration: underline; } }
-& .welcome-desc { color: var(--muted); font-size: var(--text-section-title); line-height: 1.55; margin: 0 0 1.5rem; max-width: 34rem; }
-& .welcome-actions { display: flex; gap: .85rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
-& .welcome-btn {
-padding: .65rem 1.4rem; font-size: var(--text-section-title); border-radius: var(--radius-sm);
-font-weight: 500; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease;
-&:hover { transform: translateY(-1px); }
+padding: var(--space-5);
+margin-block-end: var(--space-5);
+& .welcome-dismiss { display: flex; margin-inline-start: auto; margin-block-end: var(--space-3); }
+& .welcome-inner { max-width: 54rem; margin-inline: auto; }
+& .welcome-title { margin: 0 0 var(--space-2); font-size: var(--text-heading); line-height: var(--line-heading); color: var(--fg); }
+& .welcome-desc { margin: 0 0 var(--space-5); color: var(--muted); }
+& .welcome-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: var(--space-3);
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
-& .welcome-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1.25rem; width: 100%; border-top: 1px solid var(--line); padding-top: 1.5rem; text-align: left; }
-& .wf-item {
-display: flex; flex-direction: column; gap: .25rem;
-& strong { font-size: var(--text-small); color: var(--fg); }
-& span { font-size: var(--text-note); color: var(--muted); line-height: 1.35; }
+& .welcome-option {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    & > .ctl { white-space: normal; overflow-wrap: anywhere; text-align: start; }
+    & > p { margin: var(--space-2) 0 0; }
 }
+& #welcome-sample { grid-column: 1 / -1; }
+& .welcome-example {
+    margin: var(--space-4) 0 0;
+    font-size: var(--text-small);
+    & a { color: var(--accent); text-underline-offset: .15em; }
 }
-/* --- Onboarding & Project Guidance ----------------------------------- */
-.onboarding-guide {
-width: 100%; margin: 1.75rem 0 .5rem; background: var(--surface); border: 1px solid var(--line);
-border-radius: var(--radius); padding: 1.25rem 1.4rem; text-align: left;
-& .og-header {
-margin-bottom: 1rem;
-& h3 { font-size: var(--text-section-title); font-weight: var(--weight-semibold); margin: 0 0 .25rem; color: var(--fg); }
-& p { font-size: var(--text-small); color: var(--muted); margin: 0; }
+& .welcome-more { margin-block-start: var(--space-3); }
 }
-& .og-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-& .og-step {
-display: flex; gap: .65rem; align-items: flex-start;
-& .og-step-num { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--action-bg); color: var(--on-action); font-size: var(--text-micro); font-weight: var(--weight-strong); display: flex; align-items: center; justify-content: center; margin-top: .1rem; }
-& .og-step-body {
-& strong { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); margin-bottom: .2rem; }
-& p { font-size: var(--text-note); color: var(--muted); margin: 0; line-height: 1.35; }
-}
-}
-}
+.project-destination code { overflow-wrap: anywhere; }
 .project-structure-hint {
 display: flex; gap: .5rem; align-items: flex-start; background: rgba(74, 138, 212, 0.05);
 border: 1px solid rgba(74, 138, 212, 0.18); border-radius: var(--radius-sm); padding: .6rem .8rem;
@@ -1988,8 +1998,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 }
 }
 #open-project-chooser-status.err { color: var(--flag); }
-.research-record-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
-.research-record-actions .ctl { font-size: var(--text-note); padding: .3rem .55rem; }
+.research-record-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-block-start: var(--space-2); }
 .research-revision-meta, #research-revision-status { margin: var(--space-3) var(--space-4); overflow-wrap: anywhere; }
 .research-revision-updates { margin: 0 var(--space-4) var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-left: 3px solid var(--status-warning-border, #b7791f); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--text-small); }
 .research-revision-updates p { margin: 0 0 .3rem; }
@@ -2155,13 +2164,8 @@ line-height: inherit;
 .research-dossier-sections-expanded { width: 100%; display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 0.45rem; padding: 0.5rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px solid var(--line-subtle, var(--line)); border-radius: var(--radius-xs); max-height: 12rem; overflow-y: auto; }
 /* Interactive controls and paragraph chips have a larger touch target. */
 @media (pointer: coarse) {
-.chip { min-width: 44px; height: 44px; }
-.dim-ctl { min-width: 44px; min-height: 44px; }
-/* The compact control size is a pointer-density variant: on touch every
-control keeps the 44px minimum, including the size variants. */
-button.ctl, a.ctl, button.ctl.ctl-sm, button.ctl.ctl-compact, a.ctl.ctl-sm, a.ctl.ctl-compact,
-select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
-.badge-jump, .band-row, .row-link, .view-nav-tab { min-height: 2.75rem; }
+.chip, .dim-ctl { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
+.badge-jump, .band-row, .row-link, .view-nav-tab { min-block-size: var(--control-touch-size); }
 }
 /* Top Workspace View Navigation */
 /* Primary workspace navigation stays distinct from local content tabs. */
@@ -2198,6 +2202,7 @@ body.lixity-workspace:not(.manuscript-reading) .toolbar { background: var(--bg);
 #workspace-navigation-content { display: contents; }
 #workspace-navigation-content[hidden] { display: none; }
 .workspace-shell-header { display: flex; align-items: center; min-width: 0; }
+[data-desktop-platform="macos"] body.lixity-workspace { padding-block-start: var(--space-3); }
 .workspace-product-details { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; padding-top: var(--space-2); border-top: 1px solid var(--line); font-size: var(--text-micro); color: var(--muted); }
 .workspace-product-details .version-badge, .workspace-product-details .license-badge { border: 0; padding: 0; margin: 0; background: transparent; font: inherit; }
 .workspace-product-details .license-badge { text-underline-offset: .2em; }
@@ -2224,7 +2229,7 @@ selected destinations, display state and explicit primary save actions. */
 body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace > .page { max-width: 96rem; }
 .lixity-workspace .workspace-shell { position: fixed; inset: 0 auto 0 0; width: 15.5rem; z-index: 20; padding: 1.25rem 1rem; overflow-y: auto; overscroll-behavior: contain; align-content: start; gap: 1.5rem; background: var(--bg-subtle); border-right: 1px solid var(--line); }
-.has-workspace-navigation .workspace-shell-header { position: relative; min-height: 2.75rem; padding-left: 3.25rem; }
+.has-workspace-navigation .workspace-shell-header { min-block-size: var(--control-touch-size); gap: var(--space-2); }
 .lixity-workspace .workspace-shell .project-meta { overflow-wrap: anywhere; }
 .lixity-workspace .view-navigation { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; border: 0; overflow: visible; gap: .35rem; }
 .lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; min-height: 3rem; padding-inline: 1rem; }
@@ -2237,11 +2242,12 @@ body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 .lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; border-top: 1px solid var(--line); padding-top: .5rem; }
 .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
 .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
-.has-workspace-navigation .workspace-navigation-toggle { display: inline-flex; position: absolute; top: 0; left: 0; width: 2.75rem; height: 2.75rem; min-width: 2.75rem; padding: 0; align-items: center; justify-content: center; border-color: transparent; background: transparent; color: var(--fg-secondary); }
+.has-workspace-navigation .workspace-navigation-toggle { display: inline-flex; inline-size: var(--control-touch-size); block-size: var(--control-touch-size); padding: 0; border-color: transparent; background: transparent; color: var(--fg-secondary); }
 .has-workspace-navigation .workspace-navigation-toggle:hover { background: var(--neutral); border-color: var(--line); color: var(--fg); }
 body.lixity-workspace.navigation-collapsed { padding-left: 8rem; }
 .lixity-workspace.navigation-collapsed .workspace-shell { width: 7rem; padding: 1.25rem .5rem; }
-.navigation-collapsed.has-workspace-navigation .workspace-shell-header { padding-left: 2.75rem; }
+.navigation-collapsed.has-workspace-navigation .workspace-shell-header { gap: var(--space-1); }
+[data-desktop-platform="macos"] .lixity-workspace .workspace-shell { padding-block-start: var(--space-3); }
 }
 /* Empty Analysis State */
 .empty-analysis-state { text-align: center; padding: 3.5rem 1.5rem; margin: 1.5rem 0; background: var(--bg-subtle, rgba(0, 0, 0, 0.02)); border: 1px dashed var(--line); border-radius: var(--radius); }
@@ -3020,10 +3026,7 @@ div.pswp__img--placeholder,
 .research-pane-navigation > .ctl {
   flex: 0 0 auto;
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .35rem;
+  gap: var(--space-1);
 }
 .pane-ribbon[data-ribbon-compact="true"] .pane-ribbon-label,
 .research-pane-navigation[data-ribbon-compact="true"] .pane-ribbon-label {
@@ -3031,8 +3034,7 @@ div.pswp__img--placeholder,
 }
 .pane-ribbon[data-ribbon-compact="true"] > .ctl,
 .research-pane-navigation[data-ribbon-compact="true"] > .ctl {
-  min-inline-size: 2.25rem;
-  padding-inline: .55rem;
+  min-inline-size: var(--control-block-size);
 }
 .pane-ribbon[data-ribbon-wrap="true"],
 .research-pane-navigation[data-ribbon-wrap="true"] {
@@ -3052,8 +3054,6 @@ div.pswp__img--placeholder,
 #r-manuscript-draft-preview > h6, .research-draft-reason > h6 { font-size: var(--text-control); }
 .research-draft-reason :is(p, figure, blockquote) { margin: 0; }
 .research-draft-reason figcaption { margin-block: var(--space-2) var(--space-1); }
-.pane-ribbon .ctl-icon,
-.research-pane-navigation .ctl-icon { inline-size: 2.25rem; min-inline-size: 2.25rem; padding-inline: 0; }
 .pane-ribbon > .ctl[aria-current="location"],
 .research-pane-navigation > .ctl[aria-current="location"] {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));

@@ -2,29 +2,35 @@
 //!
 //! Starts the bundled relocatable `python-build-standalone` runtime on an
 //! OS-assigned loopback port (`127.0.0.1:0`), sends the per-launch secret and
-//! initial single-use handshake nonce over stdin (never CLI argv), waits for
-//! the structured readiness line, and guarantees crash-safe termination across
-//! Linux (`PR_SET_PDEATHSIG`), Windows (Job Objects), and macOS (parent watchdog).
+//! initial single-use handshake nonce over stdin (never CLI argv), and waits for
+//! the structured readiness line. The Python server watches the desktop
+//! process and Windows also ties the child's lifetime to a Job Object.
 
 use crate::security::{random_token_hex, DESKTOP_SECRET_HEADER};
+use crate::StartupFailure;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+use std::sync::{mpsc, Mutex};
+use std::thread;
 use std::time::Duration;
 use zeroize::Zeroizing;
 
 const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_READY_BYTES: usize = 4096;
+// Loading the project supplied at launch can include a full analysis before readiness.
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
+const LOOPBACK_HOST: &str = "127.0.0.1";
 
 #[derive(Debug, Deserialize)]
-pub struct ReadyEnvelope {
-    pub schema_version: String,
-    pub ready: bool,
-    pub host: String,
-    pub port: u16,
-    pub version: String,
+struct ReadyEnvelope {
+    schema_version: String,
+    ready: bool,
+    host: String,
+    port: u16,
+    version: String,
 }
 
 #[derive(Serialize)]
@@ -32,6 +38,91 @@ struct BootstrapPayload<'a> {
     secret: &'a str,
     handshake_nonce: &'a str,
     parent_pid: u32,
+}
+
+fn stop_child(child: &mut Child) {
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+fn read_ready_envelope(stdout: impl Read) -> Result<ReadyEnvelope, String> {
+    let mut reader = BufReader::new(stdout.take((MAX_READY_BYTES + 1) as u64));
+    let mut line = Vec::new();
+    let bytes = reader
+        .read_until(b'\n', &mut line)
+        .map_err(|error| format!("Failed reading Lixity readiness line: {error}"))?;
+    if bytes == 0 {
+        return Err("Lixity runtime exited before signaling readiness".to_string());
+    }
+    if bytes > MAX_READY_BYTES {
+        return Err("Lixity runtime readiness response exceeds the size limit".to_string());
+    }
+    if line.last() != Some(&b'\n') {
+        return Err("Incomplete readiness response from Lixity runtime".to_string());
+    }
+    let ready: ReadyEnvelope = serde_json::from_slice(&line)
+        .map_err(|_| "Malformed readiness envelope from Lixity runtime".to_string())?;
+    if !ready.ready
+        || ready.port == 0
+        || ready.schema_version != "lixity-desktop-ready/1"
+        || ready.host != LOOPBACK_HOST
+        || ready.version.trim().is_empty()
+    {
+        return Err("Unexpected readiness response from Lixity runtime".to_string());
+    }
+    Ok(ready)
+}
+
+fn bootstrap_child(
+    child: &mut Child,
+    payload: &BootstrapPayload<'_>,
+    timeout: Duration,
+) -> Result<ReadyEnvelope, String> {
+    // Close stdin after the bootstrap frame. Keep its serialized secrets out of diagnostics.
+    {
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| "Sidecar stdin pipe unavailable".to_string())?;
+        let line = Zeroizing::new(serde_json::to_string(payload).map_err(|e| e.to_string())?);
+        stdin
+            .write_all(line.as_bytes())
+            .and_then(|_| stdin.write_all(b"\n"))
+            .and_then(|_| stdin.flush())
+            .map_err(|e| format!("Failed writing desktop bootstrap payload: {e}"))?;
+    }
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Sidecar stdout pipe unavailable".to_string())?;
+    let (sender, receiver) = mpsc::sync_channel(1);
+    thread::Builder::new()
+        .name("lixity-runtime-ready".into())
+        .spawn(move || {
+            let _ = sender.send(read_ready_envelope(stdout));
+        })
+        .map_err(|e| format!("Failed starting Lixity readiness reader: {e}"))?;
+    match receiver.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            Err("Timed out waiting for Lixity runtime readiness".to_string())
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Err("Lixity runtime readiness reader stopped unexpectedly".to_string())
+        }
+    }
+}
+
+fn bootstrap_or_stop(
+    child: &mut Child,
+    payload: &BootstrapPayload<'_>,
+    timeout: Duration,
+) -> Result<ReadyEnvelope, String> {
+    let ready = bootstrap_child(child, payload, timeout);
+    if ready.is_err() {
+        stop_child(child);
+    }
+    ready
 }
 
 #[derive(Deserialize)]
@@ -42,7 +133,9 @@ struct NonceResponse {
 
 #[derive(Deserialize)]
 struct RuntimeOverview {
-    audio: Option<AudioOverview>,
+    ok: bool,
+    schema_version: String,
+    audio: AudioOverview,
 }
 
 #[derive(Deserialize)]
@@ -53,6 +146,17 @@ struct AudioOverview {
 #[derive(Deserialize)]
 struct AudioJob {
     state: String,
+}
+
+impl RuntimeOverview {
+    fn active_audio(&self) -> Option<bool> {
+        (self.ok && self.schema_version == "lixity-runtime-local/1").then(|| {
+            self.audio
+                .jobs
+                .iter()
+                .any(|job| matches!(job.state.as_str(), "pending" | "running"))
+        })
+    }
 }
 
 /// Owns a Windows Job Object handle stored as `usize` so `PythonSidecar` stays
@@ -109,7 +213,11 @@ pub fn log_desktop_event(level: &str, message: &str) {
 }
 
 fn open_sidecar_stderr() -> Stdio {
-    if std::env::var("LIXITY_DESKTOP_STDERR_INHERIT").ok().as_deref() == Some("1") {
+    if std::env::var("LIXITY_DESKTOP_STDERR_INHERIT")
+        .ok()
+        .as_deref()
+        == Some("1")
+    {
         return Stdio::inherit();
     }
     let Some(log_path) = sidecar_log_path() else {
@@ -181,11 +289,11 @@ impl PythonSidecar {
         )
     }
 
-    pub fn spawn(
+    pub(crate) fn spawn(
         resource_dir: Option<&Path>,
         startup_project: Option<&Path>,
-    ) -> Result<Self, String> {
-        let python = Self::resolve_python(resource_dir)?;
+    ) -> Result<Self, StartupFailure> {
+        let python = Self::resolve_python(resource_dir).map_err(|_| StartupFailure::RuntimeMissing)?;
         let secret = random_token_hex();
         let initial_nonce = random_token_hex();
 
@@ -199,7 +307,7 @@ impl PythonSidecar {
             .arg("serve")
             .arg("--_desktop-mode")
             .arg("--host")
-            .arg("127.0.0.1")
+            .arg(LOOPBACK_HOST)
             .arg("--port")
             .arg("0");
         if let Some(project) = startup_project {
@@ -219,64 +327,22 @@ impl PythonSidecar {
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
 
-        #[cfg(target_os = "linux")]
-        {
-            use std::os::unix::process::CommandExt;
-            unsafe {
-                cmd.pre_exec(|| {
-                    if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) != 0 {
-                        return Err(std::io::Error::last_os_error());
-                    }
-                    Ok(())
-                });
-            }
-        }
-
+        // Python watches the parent process identified in the bootstrap frame.
+        // Linux PR_SET_PDEATHSIG would also fire when this startup thread returns.
         let mut child = cmd
             .spawn()
-            .map_err(|e| format!("Failed to spawn Lixity runtime ({}): {e}", python.display()))?;
+            .map_err(|error| StartupFailure::RuntimeLaunch(error.kind()))?;
 
         #[cfg(target_os = "windows")]
         let job_guard = attach_kill_on_close_job(&child);
 
-        // Send bootstrap secret & single-use handshake nonce over stdin, then close stdin.
-        {
-            let mut stdin = child
-                .stdin
-                .take()
-                .ok_or_else(|| "Sidecar stdin pipe unavailable".to_string())?;
-            let payload = BootstrapPayload {
-                secret: &secret,
-                handshake_nonce: &initial_nonce,
-                parent_pid: std::process::id(),
-            };
-            let line = serde_json::to_string(&payload).map_err(|e| e.to_string())?;
-            stdin
-                .write_all(line.as_bytes())
-                .and_then(|_| stdin.write_all(b"\n"))
-                .and_then(|_| stdin.flush())
-                .map_err(|e| format!("Failed writing desktop bootstrap payload: {e}"))?;
-        }
-
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| "Sidecar stdout pipe unavailable".to_string())?;
-        let mut reader = BufReader::new(stdout);
-        let mut ready_line = String::new();
-        reader
-            .read_line(&mut ready_line)
-            .map_err(|e| format!("Failed reading Lixity readiness line: {e}"))?;
-        if ready_line.trim().is_empty() {
-            let _ = child.kill();
-            return Err("Lixity runtime exited before signaling readiness".to_string());
-        }
-        let ready: ReadyEnvelope = serde_json::from_str(&ready_line)
-            .map_err(|e| format!("Malformed readiness envelope from Lixity runtime: {e}"))?;
-        if !ready.ready || ready.port == 0 || ready.schema_version != "lixity-desktop-ready/1" {
-            let _ = child.kill();
-            return Err("Unexpected readiness response from Lixity runtime".to_string());
-        }
+        let payload = BootstrapPayload {
+            secret: &secret,
+            handshake_nonce: &initial_nonce,
+            parent_pid: std::process::id(),
+        };
+        let ready = bootstrap_or_stop(&mut child, &payload, STARTUP_TIMEOUT)
+            .map_err(|_| StartupFailure::RuntimeReadiness)?;
 
         Ok(Self {
             port: ready.port,
@@ -318,41 +384,30 @@ impl PythonSidecar {
         Ok(parsed.nonce)
     }
 
-    /// Query the local server for pending/running audio jobs before closing the app.
-    pub fn active_audio_jobs(&self) -> usize {
-        let Ok(client) = reqwest::blocking::Client::builder()
+    /// Inspect pending/running audio jobs. An unreadable runtime status is unknown.
+    pub(crate) fn has_active_audio_jobs(&self) -> Option<bool> {
+        let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(2))
+            .redirect(reqwest::redirect::Policy::none())
+            .no_proxy()
             .build()
-        else {
-            return 0;
-        };
+            .ok()?;
         let url = format!("http://127.0.0.1:{}/api/runtime", self.port);
-        let Ok(resp) = client
+        let response = client
             .get(url)
             .header(DESKTOP_SECRET_HEADER, self.secret())
             .send()
-        else {
-            return 0;
-        };
-        let Ok(overview) = resp.json::<RuntimeOverview>() else {
-            return 0;
-        };
-        overview
-            .audio
-            .map(|a| {
-                a.jobs
-                    .into_iter()
-                    .filter(|j| j.state == "pending" || j.state == "running")
-                    .count()
-            })
-            .unwrap_or(0)
+            .ok()?;
+        if !response.status().is_success() {
+            return None;
+        }
+        response.json::<RuntimeOverview>().ok()?.active_audio()
     }
 
     pub fn shutdown(&self) {
         if let Ok(mut guard) = self.child.lock() {
             if let Some(mut child) = guard.take() {
-                let _ = child.kill();
-                let _ = child.wait();
+                stop_child(&mut child);
             }
         }
     }
@@ -406,12 +461,134 @@ fn attach_kill_on_close_job(child: &Child) -> Option<WindowsJobGuard> {
 mod tests {
     use super::*;
 
+    const READY: &str = concat!(
+        r#"{"schema_version":"lixity-desktop-ready/1","ready":true,"#,
+        r#""host":"127.0.0.1","port":12345,"version":"0.9.1"}"#,
+        "\n"
+    );
+
+    #[test]
+    fn accepts_the_complete_loopback_readiness_frame() {
+        let ready = read_ready_envelope(READY.as_bytes()).unwrap();
+        assert_eq!(ready.port, 12345);
+        assert_eq!(ready.version, "0.9.1");
+    }
+
+    #[test]
+    fn rejects_incomplete_invalid_and_oversized_readiness_frames() {
+        for (frame, error) in [
+            (String::new(), "exited"),
+            ("not-json\n".to_string(), "Malformed"),
+            (READY.trim_end().to_string(), "Incomplete"),
+            (READY.replace("127.0.0.1", "0.0.0.0"), "Unexpected"),
+            (READY.replace("12345", "0"), "Unexpected"),
+            (READY.replace("true", "false"), "Unexpected"),
+            (READY.replace("ready/1", "ready/2"), "Unexpected"),
+            (READY.replace("0.9.1", ""), "Unexpected"),
+            (" ".repeat(MAX_READY_BYTES + 1), "size limit"),
+        ] {
+            assert!(read_ready_envelope(frame.as_bytes())
+                .unwrap_err()
+                .contains(error));
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn stops_and_reaps_a_child_that_never_becomes_ready() {
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", "IFS= read -r bootstrap; exec /bin/sleep 30"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let payload = BootstrapPayload {
+            secret: "fixture",
+            handshake_nonce: "fixture",
+            parent_pid: std::process::id(),
+        };
+        let error =
+            bootstrap_or_stop(&mut child, &payload, Duration::from_millis(100)).unwrap_err();
+        assert_eq!(error, "Timed out waiting for Lixity runtime readiness");
+        assert!(child.try_wait().unwrap().is_some());
+    }
+
     #[test]
     fn resolve_python_errors_cleanly_when_missing() {
         if std::env::var_os("LIXITY_DESKTOP_PYTHON").is_some() {
             return;
         }
-        let err = PythonSidecar::resolve_python(Some(Path::new("/nonexistent/lixity-res"))).unwrap_err();
+        let err =
+            PythonSidecar::resolve_python(Some(Path::new("/nonexistent/lixity-res"))).unwrap_err();
         assert!(err.contains("Bundled Lixity Python runtime not found"));
+        assert!(matches!(
+            PythonSidecar::spawn(Some(Path::new("/nonexistent/lixity-res")), None),
+            Err(StartupFailure::RuntimeMissing)
+        ));
+    }
+
+    #[test]
+    fn runtime_audio_status_distinguishes_unavailable_from_idle() {
+        let empty = r#"{"schema_version":"lixity-runtime-local/1","ok":true,"audio":{"jobs":[]}}"#;
+        for (code, body, expected) in [
+            (200, empty.to_string(), Some(false)),
+            (
+                200,
+                empty.replace("[]", r#"[{"state":"ready"}]"#),
+                Some(false),
+            ),
+            (
+                200,
+                empty.replace("[]", r#"[{"state":"pending"}]"#),
+                Some(true),
+            ),
+            (
+                200,
+                empty.replace("[]", r#"[{"state":"running"}]"#),
+                Some(true),
+            ),
+            (200, empty.replace("true", "false"), None),
+            (200, empty.replace("local/1", "local/2"), None),
+            (200, r#"{"ok":true}"#.to_string(), None),
+            (403, empty.to_string(), None),
+        ] {
+            let listener = std::net::TcpListener::bind((LOOPBACK_HOST, 0)).unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let fixture = thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut lines = BufReader::new(&mut stream).lines();
+                assert_eq!(lines.next().unwrap().unwrap(), "GET /api/runtime HTTP/1.1");
+                let headers = lines
+                    .map(Result::unwrap)
+                    .take_while(|line| !line.is_empty());
+                let expected = format!("{DESKTOP_SECRET_HEADER}: fixture");
+                let mut authenticated = false;
+                for header in headers {
+                    authenticated |= header.eq_ignore_ascii_case(&expected);
+                }
+                assert!(authenticated);
+                write!(
+                    stream,
+                    "HTTP/1.1 {code} Fixture\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .unwrap();
+            });
+
+            let sidecar = PythonSidecar {
+                port,
+                version: String::new(),
+                initial_nonce: Zeroizing::new(String::new()),
+                secret: Zeroizing::new("fixture".to_string()),
+                child: Mutex::new(None),
+                #[cfg(target_os = "windows")]
+                _job_guard: None,
+            };
+            assert_eq!(sidecar.has_active_audio_jobs(), expected);
+            fixture.join().unwrap();
+        }
     }
 }

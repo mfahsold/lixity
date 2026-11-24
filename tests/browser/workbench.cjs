@@ -41,9 +41,17 @@ async function createPage(browser, html, width, desktop = false) {
   if (desktop) await page.addInitScript(() => {
     window.desktopPreferenceWrites = [];
     window.desktopExportRequests = [];
+    window.desktopLinkCalls = [];
+    window.desktopUpdateResult = {current_version: '0.10.0', latest_tag: 'v0.9.1', update_available: false,
+      release_url: 'https://example.org/releases', note: 'Back up your archive.'};
     window.lixityDesktop = {
       version: 1,
+      openExternalUrl: async url => {
+        window.desktopLinkCalls.push(url);
+        throw new Error('Synthetic opener rejection');
+      },
       getPreferences: async () => ({theme: 'light'}),
+      checkForUpdates: async () => window.desktopUpdateResult,
       setPreference: async (key, value) => window.desktopPreferenceWrites.push([key, value]),
       saveExport: (spec, filename) => new Promise((resolve, reject) => {
         window.desktopExportRequests.push({spec, filename, resolve, reject});
@@ -93,6 +101,31 @@ async function documentState(page) {
       const manuscriptTab = page.locator('#tab-view-analysis');
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
       assert.deepEqual(await page.evaluate(() => desktopPreferenceWrites), []);
+      const footer = page.locator('#license-terms .license-links');
+      for (const [name, url, activate] of [
+        ['Full AGPL license', 'https://github.com/mfahsold/lixity/blob/main/LICENSE', link => link.press('Enter')],
+        ['Request a commercial license', 'https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer', link => link.click()],
+      ]) {
+        await page.context().route(url.split('#')[0], route => route.fulfill({body: name}));
+        const opened = page.waitForEvent('popup');
+        await activate(footer.getByRole('link', {name}));
+        const popup = await opened;
+        await popup.waitForURL(url);
+        await popup.close();
+      }
+      assert.deepEqual(await page.evaluate(() => desktopLinkCalls), [], 'Anchor navigation is handled by the host');
+      await sendMenu('help-check-updates');
+      const updateDialog = page.locator('#modal-desktop-environment');
+      const updateStatus = updateDialog.getByRole('status');
+      await expect(updateStatus).toContainText('Up to date (0.10.0)');
+      await expect(updateStatus).not.toContainText('Back up your archive.');
+      await page.evaluate(() => {
+        window.desktopUpdateResult = {...window.desktopUpdateResult, latest_tag: 'v0.11.0', update_available: true};
+      });
+      await updateDialog.getByRole('button', {name: 'Check for Updates…'}).click();
+      await expect(updateStatus).toContainText('Newer release available: v0.11.0');
+      await expect(updateStatus).toContainText('Back up your archive.');
+      await updateDialog.locator('[data-close-desktop-env]').click();
       await sendMenu('view-research');
       await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
       await sendMenu('view-analysis-overview');

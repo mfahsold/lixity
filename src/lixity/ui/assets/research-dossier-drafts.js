@@ -262,7 +262,7 @@ function openManualCharacterDossier() {
   composer.open = true;
   if (!Object.values(fields).some(function(value) { return value.length; }) &&
       (!geography || !geography.value || geography.value === "[]") &&
-      (!save || save.dataset.pending !== "true")) {
+      (!save || !save.disabled)) {
     var characterTag = uiLabel("research_tpl_character_tag");
     var preset = Array.from(composer.querySelectorAll("#r-dos-templates [data-template-tag]"))
       .find(function(button) { return button.dataset.templateTag === characterTag; });
