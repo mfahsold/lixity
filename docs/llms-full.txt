@@ -120,9 +120,10 @@ For a product introduction before reading the manuals, visit the
 The [browser sandbox](sandbox/index.html) lets you try the same questions
 with a short passage in German or English.
 
-Choose a task below. Use `lixity --version` and `lixity COMMAND --help` to check
-your installation. The [installation guide](INSTALLATION.md#cli-current-release)
-links the release notes for the documented version, and
+Choose a task below. In a desktop test build, **Tools → System Status &
+Extensions** shows the build and runtime details. For the published browser
+app and CLI, use `lixity --version` and `lixity COMMAND --help`. The
+[installation guide](INSTALLATION.md) covers both routes, and
 [the changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md) records work in progress.
 
 ## Start here

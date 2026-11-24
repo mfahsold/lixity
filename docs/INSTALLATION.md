@@ -1,16 +1,19 @@
 # Install, verify and update Lixity
 
-Lixity runs on your computer on Linux, macOS and Windows. It is
-**open source under AGPL-3.0-or-later**. Install the published package
-(`lixity` on [PyPI](https://pypi.org/project/lixity/)) or the pinned release
-wheel with the commands below. Any writing purpose is covered;
-a separate written commercial license exists only for closed-source
-integrations. See [licensing](LICENSING.md) before installation.
-Analysis runs offline; downloading Python, the package and dependencies requires
-network access. No manuscript upload, account or API key is required.
+Lixity runs locally on Linux, macOS and Windows. Choose the instructions for
+your installation.
 
-If you received a macOS desktop test build, follow the
-[disk image instructions](#macos-desktop-dmg).
+- **Desktop test build.** Use the supplied installer for your operating system.
+  The app includes Python and starts its own local engine when you open it.
+  [macOS disk image instructions](#macos-desktop-dmg) ·
+  [Windows and Linux instructions](guides/installation.html#desktop)
+- **Published browser app and CLI.** Install the package from PyPI or use a
+  verified release wheel. [Install and start](#cli-current-release)
+
+Built-in analysis runs offline without a manuscript upload, account or API key.
+Lixity is **open source under AGPL-3.0-or-later** and may be used for commercial
+writing. A separate written commercial license covers closed-source integrations.
+[Licensing](LICENSING.md)
 
 > **Version scope:** this source documentation describes the prepared **v0.9.1**. Verify packages at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
@@ -26,8 +29,8 @@ If you received a macOS desktop test build, follow the
 
 | Task | Section |
 | --- | --- |
-| Install the application | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
-| Install or open a macOS desktop test build | [Disk image instructions](#macos-desktop-dmg) |
+| Install the published browser app and CLI | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
+| Install or open a desktop test build | [macOS](#macos-desktop-dmg) · [Windows](guides/installation.html#windows) · [Linux](guides/installation.html#linux) |
 | Start with a manuscript | [First result](#first-useful-result) |
 | Update or uninstall | [Desktop test builds](#update-a-desktop-test-build) · [CLI and browser app](#update-the-cli-and-browser-app) |
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
@@ -61,8 +64,10 @@ environments are [separate advanced routes](#python-api-project-environment).
 ### Packaging direction
 
 The published **v0.9.1** release is a Python package with a local browser
-interface. The `uv` route above manages Python for you; published standalone
-desktop installers have not shipped on GitHub Releases yet.
+interface. GitHub Releases provides its wheel, source archive and checksums.
+The Pages desktop download catalog is empty while native installers undergo
+qualification. GitHub Actions builds platform-specific test artifacts.
+[Get a desktop test build](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build)
 
 The unreleased **Rust / Tauri v2 desktop host** in `desktop/` bundles an isolated
 `python-build-standalone` 3.12 runtime alongside the shared Python analysis
@@ -90,7 +95,8 @@ of project data. OS signing and notarization remain release gates.
 #### Install a macOS test build from a disk image
 
 Use the disk image supplied for your Mac. Build artifact names use `aarch64`
-for Apple Silicon and `x64` or `x86_64` for Intel.
+for Apple Silicon and `x64` or `x86_64` for Intel. The app includes the local
+engine and Python runtime, so you can install and launch it from Finder.
 
 1. Double-click the `.dmg` in Finder. Drag **Lixity.app** onto the
    **Applications** shortcut in the disk image window and wait for the copy
@@ -575,11 +581,10 @@ and back up before a release that changes the project or research format.
 
 #### Update a desktop test build
 
-Open **Help → Check for Updates…** to check the public desktop channel when you
-are online. Installation is a separate manual step. Public desktop installers
-are still in qualification. For a development build, use the exact verified
-artifact supplied for testing. Development builds can share a version string,
-so check the artifact name and SHA-256 to identify the candidate.
+For a desktop test build, use the verified installer supplied for that test.
+Test builds can share a version string, so check the source revision or the
+artifact's SHA-256. **Help → Check for Updates…** checks the public desktop
+channel when you are online. Installation is a separate manual step.
 [Desktop downloads and platform instructions](guides/installation.html#desktop)
 
 Save any open drafts and finish or deliberately cancel recordings and audio

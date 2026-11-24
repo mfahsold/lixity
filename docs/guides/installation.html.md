@@ -1,6 +1,6 @@
 # Install Lixity and open a manuscript locally
 
-Find the right installer for your computer and open your first manuscript. Lixity works locally without an account. See the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for optional tools and troubleshooting.
+Open your first manuscript with the [published browser app and CLI](#install) or follow the [desktop instructions](#desktop) for a test installer you received. Lixity works locally without an account. The [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) covers updates, optional tools and troubleshooting.
 
 Updated 24 November 2026
 
@@ -10,7 +10,7 @@ Updated 24 November 2026
 
 Desktop installers are in testing. You can start today with the [published local browser app](#install).
 
-Already have a desktop test installer? Follow the steps for your computer.
+A desktop installer includes Python and starts the local engine when you open Lixity. You can use the app straight from your system’s application launcher. The [test build instructions](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build) explain how to obtain and verify a test installer.
 
 <a id="macos"></a>
 
@@ -20,9 +20,9 @@ Desktop builds require macOS 12 or later.
 
 1. In the Apple menu, open **About This Mac**. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.
 
-2. Open the DMG, then drag **Lixity** onto **Applications**. The **Start Here – Hier starten** file inside the image explains the steps offline.
+2. Open the DMG in Finder, then drag **Lixity.app** onto **Applications**. The **Start Here – Hier starten** file inside the image explains the steps offline.
 
-3. Open **Lixity** from **Applications**. Eject the disk image after the copy completes.
+3. After the copy completes, eject the disk image and open **Applications → Lixity**. Open the app there again for later sessions.
 
 See the [macOS installation notes](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg) for test builds and the location of the desktop log.
 
@@ -42,7 +42,7 @@ If setup cannot download the runtime, see [Microsoft’s WebView2 installation o
 
 ### Linux
 
-The current desktop builds target x86-64. On Debian or Ubuntu, open the `.deb` with your package installer. It needs WebKitGTK 4.1 and GTK 3. After installation, open **Lixity** from the applications menu.
+The current desktop builds target x86-64 and use WebKitGTK 4.1 and GTK 3. On Debian or Ubuntu, open the `.deb` with your package installer, then start **Lixity** from the applications menu.
 
 To run the `.AppImage` from its folder, allow it to execute in the file's properties and open it. If it reports a FUSE error, follow the [AppImage instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
 

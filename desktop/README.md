@@ -48,6 +48,41 @@ path is the Python package and its local browser workspace.
 The runtime manifest also describes Windows and Linux ARM64. Those targets,
 RPM and Flatpak await installer qualification.
 
+## Download a test build
+
+Sign in to GitHub, open the desktop-release workflow and select a successful
+run for the commit you want to test. Under **Artifacts**, download the archive
+for your operating system and processor. The workflow keeps these test builds
+for 30 days. [Desktop release builds](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml)
+· [GitHub artifact download instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)
+
+| Platform | Workflow artifact | Installer files |
+| --- | --- | --- |
+| macOS Apple Silicon | `desktop-installers-aarch64-apple-darwin` | `Lixity_VERSION_aarch64.dmg` |
+| macOS Intel | `desktop-installers-x86_64-apple-darwin` | `Lixity_VERSION_x64.dmg` |
+| Windows x64 | `desktop-installers-x86_64-pc-windows-msvc` | `Lixity_VERSION_x64-setup.exe`, `Lixity_VERSION_x64_de-DE.msi` or `Lixity_VERSION_x64_en-US.msi` |
+| Linux x64 | `desktop-installers-x86_64-unknown-linux-gnu` | `Lixity_VERSION_amd64.deb` or `Lixity_VERSION_amd64.AppImage` |
+
+Extract the ZIP and open its folder. The installer files,
+`SHA256SUMS-TARGET.txt` and `desktop-artifacts-TARGET.json` sit together. The
+filenames contain the version of the selected run in place of `VERSION`.
+Verify the checksum from that folder before opening the installer.
+
+- On macOS, run `shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt` or use
+  `SHA256SUMS-x86_64-apple-darwin.txt` on Intel. Open the disk image and drag
+  **Lixity.app** to **Applications**. [macOS test build instructions](../docs/INSTALLATION.md#macos-desktop-dmg)
+- On Windows, run `Get-FileHash -Algorithm SHA256 -LiteralPath .\Lixity_VERSION_x64-setup.exe`
+  in PowerShell with the extracted installer filename. Compare the hash with
+  that filename's entry in `SHA256SUMS-x86_64-pc-windows-msvc.txt`. Open the
+  verified per-user setup executable or the MSI in your preferred installer language.
+- On Linux, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`. Open the
+  verified `.deb` with your package installer on a Debian-based distribution.
+  For the AppImage, give the file execute permission and launch it.
+
+Actions archives are temporary development builds. Public stable installers
+are listed in the installation guide after release qualification. The same
+guide links to the published browser package. [Installation guide](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+
 ## Local build and verification
 
 Use the checkout's development environment, Rust stable with Clippy,

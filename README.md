@@ -6,9 +6,10 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 
 Lixity is an open-source manuscript workspace with a shared Python analysis
-engine, CLI and local browser interface. It links measurements to manuscript
-passages, preserves the revisions behind research citations, and exports the
-reading or review copy the author selects. Built-in analysis runs offline.
+engine, CLI, local browser interface and Rust/Tauri desktop host. It links
+measurements to manuscript passages, preserves the revisions behind research
+citations, and exports the reading or review copy the author selects. Built-in
+analysis runs offline.
 
 [Product website](https://mfahsold.github.io/lixity/) ·
 [Read-only demo](https://mfahsold.github.io/lixity/demo/report.html) ·
@@ -20,6 +21,28 @@ reading or review copy the author selects. Built-in analysis runs offline.
 
 ## Install and start
 
+### Desktop test installers
+
+The desktop app bundles the analysis engine and opens in its own window. If
+you already have a test installer, follow the steps for your system. The app
+supplies its own Python runtime.
+
+| System | Test installer | Open Lixity |
+| --- | --- | --- |
+| macOS, Apple Silicon or Intel | `.dmg` | Drag **Lixity.app** to **Applications**, eject the disk image and open Lixity from **Applications**. |
+| Windows x64 | `.exe` or `.msi` | Run the installer and open **Lixity** in the Start menu. |
+| Linux x64, including Ubuntu | `.deb` or `.AppImage` | Install the `.deb` and open **Lixity** from the applications menu, or make the `.AppImage` executable and open it. |
+
+GitHub Actions builds these installers as time-limited test downloads. Sign in
+to GitHub and choose the artifact for your system from a successful run. The
+desktop download page lists installers that have cleared the public release
+checks.
+
+[Get a test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build) ·
+[Desktop installation by operating system](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+
+### Published browser app and CLI
+
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first.
 The published package works on macOS, Windows and Linux. This command installs
 Lixity in an isolated tool environment and lets uv supply Python 3.12. The
@@ -30,7 +53,7 @@ uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal and start the application.
+Open a new terminal and start the local browser app.
 
 ```bash
 lixity --version
@@ -43,11 +66,9 @@ Markdown, plain-text or Word file. One managed service can open several project
 views. Use `lixity service status` to check its address and `lixity doctor` to
 diagnose the installation.
 
-For an installed tool, run `uv tool upgrade lixity` and restart the service
-using the update procedure. The Rust/Tauri desktop host is available to build
-and test from the checkout. It bundles the same engine and workspace with a
-local Python runtime, OS menus and file dialogs. Public installer availability
-and native test-build instructions are documented separately.
+For an installed CLI or browser app, run `uv tool upgrade lixity` and restart
+the service using the update procedure. Desktop test builds use the desktop
+update procedure.
 
 [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) ·
 [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) ·
