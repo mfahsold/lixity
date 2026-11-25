@@ -1,14 +1,171 @@
 # Install, verify and update Lixity
 
-Lixity runs locally on Linux, macOS and Windows. Choose the instructions for
-your installation.
+## Download the desktop app
 
-- **Desktop app.** Start with the download guide to see which build is
-  available for your computer. The installer includes Python, and opening the
-  app starts its local engine. [Desktop downloads and setup](guides/installation.html#desktop)
-- **Browser app and CLI.** For terminal workflows or systems without a
-  published desktop installer, use PyPI or the verified release wheel.
-  [Install and start](#cli-current-release)
+1. Open [Desktop downloads](guides/installation.html#desktop) and pick the
+   archive for your operating system and processor. Test archives are hosted by
+   GitHub Actions and require a GitHub sign-in.
+2. Extract the ZIP. Use the [installer checker](guides/installation.html#installer-check)
+   to compare the extracted installer with the reviewed build's SHA-256 on
+   your computer. The archive also includes the checksums. Then follow your
+   platform's setup steps.
+   [macOS](#macos-desktop-dmg) · [Windows](#windows-desktop-test) · [Linux](#linux-desktop-test)
+3. Open **Lixity** and choose **Try the example offline** in the welcome window.
+   The app starts its bundled Python runtime. [First session](ONBOARDING.md)
+
+The checker confirms file integrity against the list. Publisher trust depends
+on the platform's signing checks. The download page shows the current desktop
+availability. Use the [published browser app and CLI](#cli-current-release) as
+an alternative.
+
+<a id="macos-desktop-dmg"></a>
+
+### Install a macOS test build from a disk image
+
+1. Open **Apple menu → About This Mac**. Choose **Apple Silicon** if it shows
+   an Apple chip, or **Intel** if it shows an Intel processor.
+   [macOS downloads](guides/installation.html#macos)
+2. Double-click the ZIP in Finder. Verify the extracted `.dmg` against the
+   companion SHA-256 list, then open the disk image. Drag **Lixity.app** onto the
+   **Applications** shortcut in the disk image window and wait for the copy
+   to finish. Ad hoc images mount as **Lixity Test Build** and include
+   **Start Here.html**.
+3. Eject the disk image in Finder, then open **Applications → Lixity**.
+   The [first-session guide](ONBOARDING.md) covers starting a manuscript and
+   opening the bundled example.
+
+Local development builds use ad hoc signing. Gatekeeper may block them at
+first launch. Use Apple's guidance for the exact alert and confirm the copy
+with the maintainer. If the app is blocked, use the
+[published browser app and CLI](#cli-current-release).
+[Apple's macOS app alerts](https://support.apple.com/en-us/102445)
+
+<details>
+<summary>Terminal checksum commands and clean-profile testing</summary>
+
+Run the matching command in the extracted archive folder and check for `OK`.
+Build artifact names use `aarch64` for Apple Silicon and `x64` or `x86_64` for Intel.
+
+```sh
+# Apple Silicon
+shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt
+# Intel
+shasum -a 256 -c SHA256SUMS-x86_64-apple-darwin.txt
+```
+
+For a clean-profile test, use a separate macOS account and copy the app to a
+folder in that account. Close any running copy of Lixity before opening the
+test build.
+
+</details>
+
+<a id="windows-desktop-test"></a>
+
+### Install a Windows x64 test build
+
+1. Open **Settings → System → About** and check that **System type** shows an
+   x64-based processor. [Windows download](guides/installation.html#windows)
+2. In File Explorer, right-click the ZIP and choose **Extract All**. Verify
+   the installer against the SHA-256 list, then open the file ending in
+   `-setup.exe` to install for your Windows account.
+3. Open **Lixity** from the Start menu. Setup can download the Microsoft Edge
+   WebView2 Runtime if the machine lacks it, which requires internet access.
+   [Microsoft WebView2 distribution](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
+
+Windows can show an unknown publisher or an unrecognized app alert for a
+test build without a publisher signature. Keep the system's protection
+settings in place. If policy blocks the installer, record the exact alert
+and use the [published browser app and CLI](#cli-current-release) on that
+machine.
+[Microsoft SmartScreen guidance](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation)
+
+<details>
+<summary>PowerShell checksum command and MSI deployment</summary>
+
+Open PowerShell in the extracted folder. Use the actual installer filename
+and compare its SHA-256 with the matching entry in
+`SHA256SUMS-x86_64-pc-windows-msvc.txt` from the same archive.
+
+```powershell
+Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'
+```
+
+Use the English `Lixity_VERSION_x64_en-US.msi` or German
+`Lixity_VERSION_x64_de-DE.msi` when testing MSI deployment. Run the verified
+EXE in a clean test account or use a test VM for MSI deployment.
+For offline setups, Microsoft provides a standalone WebView2 installer.
+[Microsoft WebView2 distribution](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
+
+</details>
+
+<a id="linux-desktop-test"></a>
+
+### Install a Linux x86-64 test build
+
+1. Choose the Linux x86-64 archive and extract it with your file manager.
+   Verify your chosen installer against the SHA-256 list in the folder.
+   [Linux download](guides/installation.html#linux)
+2. On Debian or Ubuntu, open the `.deb` in your graphical package installer
+   if available. Then open **Lixity** from the applications menu.
+3. For an AppImage, allow the file to run as a program in its properties.
+   Open the AppImage and keep it in that folder for later sessions.
+   [AppImage quickstart](https://docs.appimage.org/introduction/quickstart.html)
+
+<details>
+<summary>Terminal checksum and installation commands</summary>
+
+Check that `uname -m` reports `x86_64`. Run the checksum command from the
+extracted archive folder and check that both installer files report `OK`.
+
+```sh
+sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
+```
+
+In a test system or VM, run `sudo apt install ./Lixity_VERSION_amd64.deb`
+with the actual filename. APT can resolve the WebKitGTK 4.1, GTK 3 and ALSA
+dependencies declared by the package. If using the AppImage, you can allow
+execution with `chmod u+x ./Lixity_VERSION_amd64.AppImage` instead.
+[Ubuntu package installation](https://ubuntu.com/server/docs/tutorial/managing-software/#installing-a-deb-file)
+
+</details>
+
+Follow [AppImage FUSE troubleshooting](https://docs.appimage.org/user-guide/troubleshooting/fuse.html)
+if your distribution reports a FUSE error. The
+[published browser app and CLI](#cli-current-release) can run when the desktop
+host lacks the required libraries.
+
+If a Linux test build reports missing `libasound.so.2`, install the ALSA
+runtime through your package manager. Ubuntu 22.04 provides `libasound2`,
+and Ubuntu 24.04 provides `libasound2t64`.
+
+### Check the first desktop session
+
+Choose **Try the example offline** in a test account or VM. Review the preview,
+then confirm to save an editable copy in a new folder. Open a passage, inspect
+one finding and return to the passage. Save a small edit before checking an
+upgrade or rollback. Confirm the text, settings and any retained research
+after reopening the test project. Keep the installer, filename, SHA-256, OS
+version and any failure details with your test record.
+[First session](ONBOARDING.md) · [Desktop updates and rollback](#update-a-desktop-test-build)
+
+### Find the desktop logs
+
+In the desktop app, choose **Tools → Open Logs Folder**. Use the same action
+in the startup error dialog if the workspace could not open. To inspect optional
+extensions, use **Tools → System Status & Extensions**. If the window does
+not open, check the folder for your platform.
+
+| Platform | Desktop log folder |
+| --- | --- |
+| macOS | `~/Library/Application Support/lixity/service` |
+| Windows | `%LOCALAPPDATA%\lixity\service` |
+| Linux | `$XDG_STATE_HOME/lixity/service` or `~/.local/state/lixity/service` |
+
+The desktop engine writes diagnostics to `desktop-sidecar.log`. A quiet
+session can leave this file empty. The separately installed browser service uses
+[its own per-port log](#logs). Review log details before sharing.
+
+## Find your setup task
 
 Built-in analysis runs offline without a manuscript upload, account or API key.
 Lixity is **open source under AGPL-3.0-or-later** and may be used for commercial
@@ -22,14 +179,12 @@ writing. A separate written commercial license covers closed-source integrations
 > historical number does not mean a newer release. Product, JSON response and
 > archive schema versions are independent.
 
-## Find your setup task
-
 [All documentation](README.md) · [First session](ONBOARDING.md) ·
 [Workspace](WORKSPACE.md) · [CLI](USAGE.md) · [Audio](AUDIO.md)
 
 | Task | Section |
 | --- | --- |
-| Install or open the desktop app | [Check download availability](guides/installation.html#desktop) · [macOS](#macos-desktop-dmg) · [Windows](#windows-desktop-test) · [Linux](#linux-desktop-test) |
+| Install or open the desktop app | [Download](guides/installation.html#desktop) · [macOS](#macos-desktop-dmg) · [Windows](#windows-desktop-test) · [Linux](#linux-desktop-test) |
 | Install the published browser app and CLI | [Current release](#cli-current-release) · [uv prerequisites](#install-uv-if-it-is-not-available) |
 | Start with a manuscript | [First result](#first-useful-result) |
 | Update or uninstall | [Desktop test builds](#update-a-desktop-test-build) · [CLI and browser app](#update-the-cli-and-browser-app) |
@@ -71,7 +226,7 @@ the wheel, source archive and checksums. The desktop download guide reads the
 verified installer catalog and links to platform-specific GitHub Actions test
 builds while public installers undergo qualification.
 [Current release](https://github.com/mfahsold/lixity/releases/latest)
-[Get a desktop test build](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build)
+[Desktop downloads](guides/installation.html#desktop)
 
 The **Rust / Tauri v2 desktop host** in `desktop/` bundles an isolated
 `python-build-standalone` 3.12 runtime alongside the shared Python analysis
@@ -98,46 +253,7 @@ For GitHub Actions test builds, sign in to GitHub and choose the archive for
 your platform from the intended run. For a test kit supplied by the maintainer,
 keep the installers, start guide and checksum list together.
 
-<a id="macos-desktop-dmg"></a>
-
-#### Install a macOS test build from a disk image
-
-Use the disk image supplied for your Mac. Build artifact names use `aarch64`
-for Apple Silicon and `x64` or `x86_64` for Intel. The app includes the local
-engine and Python runtime, so you can install and launch it from Finder.
-
-Before opening the DMG, confirm the build source and keep the checksum file
-from the same build in the same folder. In Terminal, run the appropriate
-command from that folder and check for `OK`.
-
-```sh
-# Apple Silicon
-shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt
-# Intel
-shasum -a 256 -c SHA256SUMS-x86_64-apple-darwin.txt
-```
-
-For a clean-profile test, use a separate macOS account and copy the app to
-a folder in that account. Close any running copy of Lixity before opening
-the test build.
-
-1. Double-click the `.dmg` in Finder. Drag **Lixity.app** onto the
-   **Applications** shortcut in the disk image window and wait for the copy
-   to finish. Ad hoc images mount as **Lixity Test Build** and include
-   **Start Here.html**.
-2. Eject the disk image in Finder. Open **Applications → Lixity**. This is
-   where you open the app on later visits. Lixity starts its bundled local
-   engine and opens its own window.
-3. Choose how to begin in the welcome window. The [first-session guide](ONBOARDING.md)
-   covers existing work, new manuscripts and the bundled offline example.
-
-Local development builds use ad hoc signing. Gatekeeper may block them at
-first launch. Use Apple's guidance for the exact alert and confirm the copy
-with the maintainer. The published browser app and CLI are available while
-public desktop builds await Developer ID signing and notarization.
-[Apple's macOS app alerts](https://support.apple.com/en-us/102445)
-
-#### Open a local macOS development build
+### Open a local macOS development build
 
 The [desktop maintainer guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md)
 shows how to build and verify `Lixity.app`. Start that app with a project:
@@ -151,103 +267,6 @@ If the app is already running, send it a file-open request with
 `open -a "/path/to/Lixity.app" "/path/to/project/lixity.toml"`. The desktop app
 starts its own engine. To manage the browser workspace, use
 [the service commands](#running-the-server).
-
-<a id="windows-desktop-test"></a>
-
-#### Install a Windows x64 test build
-
-Check **Settings → System → About → System type** for an x64 system.
-For an Actions download, extract `desktop-installers-x86_64-pc-windows-msvc` from the
-[selected workflow run](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
-Open `Start Here - Windows.html` if the archive includes it.
-Use `Lixity_VERSION_x64-setup.exe` for a per-user test. Use the English
-`Lixity_VERSION_x64_en-US.msi` or German `Lixity_VERSION_x64_de-DE.msi`
-when testing an MSI deployment.
-
-In PowerShell, change to the extracted folder and calculate SHA-256 for the
-installer you plan to run. Replace `VERSION` with the filename's version
-and use the MSI filename when applicable. Compare the returned hash with
-the entry for that file in the same run's `SHA256SUMS-x86_64-pc-windows-msvc.txt`.
-
-```powershell
-Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'
-```
-
-Windows can show an unknown publisher or an unrecognized app alert for a
-test build without a publisher signature. Keep the system's protection
-settings in place. If policy blocks the installer, record the exact alert
-and use the [published browser app and CLI](#cli-current-release) on that
-machine.
-[Microsoft SmartScreen guidance](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation)
-
-Run the verified EXE in a clean Windows test account or use a test VM
-for MSI deployment. Launch **Lixity** from the Start menu. Setup can
-download the Microsoft Edge WebView2 Runtime if the machine lacks it.
-A first install that needs the bootstrapper
-requires internet access. Microsoft provides a standalone installer for
-offline setups.
-[Microsoft WebView2 distribution](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
-
-<a id="linux-desktop-test"></a>
-
-#### Install a Linux x86-64 test build
-
-Check that `uname -m` reports `x86_64`. For an Actions download, extract
-`desktop-installers-x86_64-unknown-linux-gnu` from the
-[selected workflow run](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
-Open `Start Here - Linux.html` if the archive includes it.
-Run the following in the extracted folder. Keep the installer files and
-checksum list together and check that both files report `OK`.
-
-```sh
-sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
-```
-
-- **Debian or Ubuntu.** In a test system or VM, open the verified
-  `Lixity_VERSION_amd64.deb` with your package installer or run
-  `sudo apt install ./Lixity_VERSION_amd64.deb` with the actual filename.
-  This is a system package installation. APT can resolve
-  the WebKitGTK 4.1, GTK 3 and ALSA dependencies declared by the package.
-  Start **Lixity** from the applications menu.
-  [Ubuntu package installation](https://ubuntu.com/server/docs/tutorial/managing-software/#installing-a-deb-file)
-- **AppImage.** Keep `Lixity_VERSION_amd64.AppImage` in your test folder.
-  Allow it to execute in the file's properties or run
-  `chmod u+x ./Lixity_VERSION_amd64.AppImage` with the actual filename.
-  Open it from that folder. If it reports a FUSE error, use the instructions
-  for your distribution. The published browser app and CLI are available
-  when the host lacks the required libraries.
-  [AppImage FUSE troubleshooting](https://docs.appimage.org/user-guide/troubleshooting/fuse.html)
-
-If a Linux test build reports missing `libasound.so.2`, install the ALSA
-runtime through your package manager. Ubuntu 22.04 provides `libasound2`,
-and Ubuntu 24.04 provides `libasound2t64`.
-
-#### Check the first desktop session
-
-Choose **Try the example offline** in a test account or VM. Review the preview,
-then confirm to save an editable copy in a new folder. Open a passage, inspect
-one finding and return to the passage. Save a small edit before checking an
-upgrade or rollback. Confirm the text, settings and any retained research
-after reopening the test project. Keep the installer, filename, SHA-256, OS
-version and any failure details with your test record.
-[First session](ONBOARDING.md) · [Desktop updates and rollback](#update-a-desktop-test-build)
-
-#### Find the desktop logs
-
-In the desktop app, choose **Tools → Open Logs Folder**. Use the same action
-in the startup error dialog if the workspace could not open. To inspect optional
-extensions, use **Tools → System Status & Extensions**. If the window does
-not open, check the folder for your platform.
-
-| Platform | Desktop log folder |
-| --- | --- |
-| macOS | `~/Library/Application Support/lixity/service` |
-| Windows | `%LOCALAPPDATA%\lixity\service` |
-| Linux | `$XDG_STATE_HOME/lixity/service` or `~/.local/state/lixity/service` |
-
-The desktop engine writes diagnostics to `desktop-sidecar.log`. A quiet
-session can leave this file empty. The separately installed browser service uses
-[its own per-port log](#logs). Review log details before sharing.
 
 ### Install uv if it is not available
 
@@ -266,36 +285,35 @@ brew install uv
 For Linux, macOS without Homebrew, or Windows without WinGet, use the
 [official uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
 Open a new terminal after installation and check `uv --version` before continuing.
-These install uv, not Lixity; the next command installs the application.
 
 ## CLI: current release
 
-These commands work in a terminal, including Windows PowerShell:
+Install Lixity and launch the browser app from the same terminal. Both
+commands work in Windows PowerShell, macOS and Linux.
 
 ```sh
 uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
+uv tool run lixity service start --open
 ```
 
-Open a new terminal, then verify and start the app:
+For later sessions, run the second command again. After installation,
+`uv tool run` uses the installed tool environment even if the `lixity`
+executable directory is missing from the terminal's PATH. You can check your
+version and the local service from that terminal as well.
 
 ```sh
-lixity --version
-lixity doctor
-lixity service start --open
+uv tool run lixity --version
+uv tool run lixity doctor
 ```
 
 Use the [published release notes](https://github.com/mfahsold/lixity/releases/latest)
 for changes and compatibility of the installed release. The
 [development notes](releases/v0.9.3.md) describe this source version.
-`uv tool update-shell` configures new terminals;
-it does not change the terminal already open.
 
-If `lixity` is not found, run `uv tool list` to confirm that Lixity is installed,
-then `uv tool update-shell` and open a new terminal. `uv tool dir --bin` reports
-the executable directory. Reinstalling the app does not repair an old terminal's
-PATH. Once the command resolves, `lixity doctor` checks the installation/service;
-it does not certify linguistic accuracy or source truth.
+To use direct `lixity` commands in future terminals, run `uv tool update-shell`
+and open a new terminal. `uv tool list` confirms which tools are installed.
+`uv tool dir --bin` shows the directory to add to PATH in a custom shell.
+[uv tool environments](https://docs.astral.sh/uv/concepts/tools/)
 
 ## First useful result
 
@@ -739,10 +757,10 @@ manager before replacing the installation. That version has no `service`
 command, and the new controller deliberately does not adopt its process.
 
 ```sh
-lixity service stop
+uv tool run lixity service stop
 uv tool upgrade lixity
-lixity --version
-lixity service restart --open
+uv tool run lixity --version
+uv tool run lixity service restart --open
 ```
 
 `uv tool upgrade lixity` selects the highest compatible, non-yanked version
@@ -760,12 +778,12 @@ before using that version. Reopen projects and verify the installed version and
 service after the restart; do not assume older code can read newer archives.
 
 Before updates or removal, stop each managed instance using its port, for example
-`lixity service stop --port 9000` for a custom-port instance. Before removal,
+`uv tool run lixity service stop --port 9000` for a custom-port instance. Before removal,
 disable any login-startup entry you configured under systemd, launchd or Task
 Scheduler. Then remove only Lixity:
 
 ```sh
-lixity service stop
+uv tool run lixity service stop
 uv tool uninstall lixity
 ```
 
@@ -1014,8 +1032,9 @@ Lixity. From a source checkout, `scripts/lixity-start.sh`,
 controller; they are compatibility entrypoints, not separate lifecycle engines.
 
 On Linux, `scripts/install-desktop-linux.sh` adds a per-user application menu
-entry from the checkout. The launcher calls `lixity service start --open` to
-open the managed instance on its selected port. Run the script with
+entry from the checkout. It can find an installed uv tool even when the uv tool
+bin directory is outside `PATH`. The launcher calls `lixity service start --open`
+to open the managed instance on its selected port. Run the script with
 `--uninstall` to remove the menu entry and icon.
 
 ### Optional startup at login
@@ -1242,6 +1261,6 @@ The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) describes the
 external-worker boundary and the limited historical CPU experiment. Upstream
 `infer.py` cannot be used directly as a `LIXITY_OCR_WORKER` executable.
 
-The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
-provides a synthetic first-dashboard example and links to interpretation and
-source/PDF workflows.
+The [installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
+includes desktop downloads and a first-session example. It also links to
+interpretation and source/PDF workflows.

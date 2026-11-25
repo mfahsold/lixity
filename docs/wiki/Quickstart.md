@@ -1,21 +1,19 @@
 # Quickstart
 
-Try the [read-only demo in English](https://mfahsold.github.io/lixity/demo/report.html)
-or compare a short passage in the [browser sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?lang=en).
-For a session with your own manuscript, follow the
-[first-session walkthrough](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md).
+## 1. Download and install Lixity
 
-## 1. Installation
-
-Start with the desktop download guide for your computer. It shows what you can
-install and links to the published browser app and CLI.
-[Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+Choose the desktop download for your computer and follow its setup steps.
+[Desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
+[macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos) ·
+[Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows) ·
+[Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
 
 ## 2. Starting the workbench
 
-Open the desktop app from your application menu. To start the published
-browser app, follow the local service instructions.
-[Start Lixity](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#use-the-interactive-workspace)
+Open Lixity from Applications on macOS, the Start menu on Windows or the
+applications menu on Linux. If you chose an AppImage, open it from the folder
+where you saved it. On systems without a compatible desktop build, use the
+[local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install).
 
 ## 3. Opening a manuscript
 
@@ -23,6 +21,10 @@ Connect an existing project, import a copy or start a new manuscript. On the
 desktop welcome screen, **Try the example offline** opens a preview of the
 bundled sample. Confirm its destination to create an editable project.
 [Choose your starting point](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#choose-your-starting-point)
+
+To explore from your browser, try the
+[read-only demo](https://mfahsold.github.io/lixity/demo/report.html) or
+[edit a passage in the sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?lang=en).
 
 ## 4. The three main workspaces
 

@@ -1,4 +1,4 @@
-"""Record verified public desktop releases and render their Pages download links."""
+"""Record qualified public desktop releases and render reviewed download links."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import re
 import sys
 import tempfile
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,14 +25,20 @@ if TYPE_CHECKING:
     from desktop.scripts.verify_desktop_artifacts import DesktopArtifact
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASES = "https://github.com/mfahsold/lixity/releases"
-TEST_BUILDS = "https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build"
+REPOSITORY = "https://github.com/mfahsold/lixity"
+RELEASES = f"{REPOSITORY}/releases"
+TEST_BUILDS = f"{REPOSITORY}/blob/main/desktop/README.md#download-a-test-build"
+TEST_WORKFLOW = f"{REPOSITORY}/actions/workflows/desktop-release.yml"
 CATALOG = Path("docs/desktop-downloads.json")
+TEST_BUILD = Path("docs/desktop-test-build.json")
 GUIDE = Path("docs/guides/installation.html")
 SCHEMA = "lixity-desktop-downloads/1"
+TEST_BUILD_SCHEMA = "lixity-desktop-test-build/1"
 CHECKSUMS = DESKTOP_CHECKSUMS
 TAG = PUBLIC_RELEASE_TAG
 SHA256 = re.compile(r"[0-9a-f]{64}")
+COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
+UTC_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 DOWNLOAD_BLOCK = re.compile(r"(<!-- desktop-downloads:start -->\n).*?(\n<!-- desktop-downloads:end -->)", re.S)
 
 INSTALLER_LABELS = {
@@ -42,6 +49,13 @@ INSTALLER_LABELS = {
     ("x86_64-unknown-linux-gnu", "linux-deb"): "Linux · x64 · Debian package",
     ("x86_64-unknown-linux-gnu", "linux-appimage"): "Linux · x64 · AppImage",
 }
+TEST_TARGETS = {
+    "aarch64-apple-darwin": ("macOS · Apple Silicon", "macos"),
+    "x86_64-apple-darwin": ("macOS · Intel", "macos"),
+    "x86_64-pc-windows-msvc": ("Windows · x64", "windows"),
+    "x86_64-unknown-linux-gnu": ("Linux · x86-64", "linux"),
+}
+PLATFORMS = {"macos": "macOS", "windows": "Windows x64", "linux": "Linux x86-64"}
 
 
 def validate_catalog(catalog: dict[str, Any]) -> None:
@@ -124,13 +138,90 @@ def write_catalog(catalog: dict[str, Any], output: Path) -> None:
         staged.replace(output)
 
 
-def render(catalog: dict[str, Any]) -> str:
+def validate_test_build(test_build: dict[str, Any]) -> None:
+    """Validate one reviewed Actions run separately from public installers."""
+    if (not isinstance(test_build, dict)
+            or test_build.keys() != {"schema_version", "tag", "commit", "run_id", "expires_at", "artifacts", "installers"}
+            or test_build["schema_version"] != TEST_BUILD_SCHEMA):
+        raise ValueError("Invalid desktop test build record")
+    tag, commit, run_id = test_build["tag"], test_build["commit"], test_build["run_id"]
+    if (not isinstance(tag, str) or not TAG.fullmatch(tag)
+            or not isinstance(commit, str) or not COMMIT_SHA.fullmatch(commit)
+            or type(run_id) is not int or run_id <= 0):
+        raise ValueError("Expected a reviewed test version, source commit and Actions run ID")
+    expires_at = test_build["expires_at"]
+    try:
+        expires = datetime.strptime(expires_at, UTC_TIMESTAMP)  # noqa: DTZ007 - compared as a UTC string
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Expected a UTC test archive expiration timestamp") from exc
+    if expires.strftime(UTC_TIMESTAMP) != expires_at:
+        raise ValueError("Expected a UTC test archive expiration timestamp")
+    artifacts = test_build["artifacts"]
+    if (not isinstance(artifacts, dict) or artifacts.keys() != TEST_TARGETS.keys()
+            or any(type(artifact) is not int or artifact <= 0 for artifact in artifacts.values())
+            or len(set(artifacts.values())) != len(TEST_TARGETS)):
+        raise ValueError("Expected a unique test archive ID for each supported target")
+    validate_catalog({"schema_version": SCHEMA, "tag": tag, "installers": test_build["installers"]})
+
+
+def render_platforms(links: Iterable[tuple[str, str]]) -> str:
+    by_platform: dict[str, list[str]] = {platform: [] for platform in PLATFORMS}
+    for target, link in links:
+        by_platform[TEST_TARGETS[target][1]].append(link)
+    sections = []
+    for platform, name in PLATFORMS.items():
+        choices = by_platform[platform]
+        actions = '<div class="desktop-download-actions">' + '\n'.join(choices) + '</div>' if choices else ''
+        sections.append(f'<section class="desktop-download-card" aria-labelledby="{platform}">\n'
+                        f'<h3 id="{platform}">{name}</h3>\n{actions}\n'
+                        f'<p><a href="#{platform}-setup">{name} setup steps</a></p>\n</section>')
+    return '<div class="desktop-download-grid">\n' + '\n'.join(sections) + '\n</div>'
+
+
+def render_verification(installers: list[dict[str, Any]]) -> str:
+    digests = [{key: item[key] for key in ("filename", "bytes", "sha256")} for item in installers]
+    return ('<section id="installer-check" class="notice-box" aria-labelledby="installer-check-heading" hidden>\n'
+            '<h3 id="installer-check-heading">Check the installer</h3>\n'
+            '<p>Choose the downloaded installer. If it came in a ZIP, extract it first. '
+            'Your browser checks the file on this computer.</p>\n'
+            '<label for="installer-check-file">Select the downloaded installer</label>\n'
+            '<input id="installer-check-file" type="file" accept=".dmg,.exe,.msi,.deb,.appimage"/>\n'
+            '<p id="installer-check-status" role="status"></p>\n'
+            f'<script id="installer-check-digests" type="application/json">{json.dumps(digests)}</script>\n'
+            '</section>')
+
+
+def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) -> str:
     validate_catalog(catalog)
     tag = catalog["tag"]
     if tag is None:
+        if test_build is not None:
+            validate_test_build(test_build)
+            run = f'{REPOSITORY}/actions/runs/{test_build["run_id"]}'
+            links = []
+            for target, (label, _) in TEST_TARGETS.items():
+                artifact = test_build["artifacts"][target]
+                links.append((target, f'<a class="ctl primary desktop-test-archive" href="{run}/artifacts/{artifact}">'
+                                      f'{label} test archive (ZIP)</a>'))
+            expires = test_build["expires_at"]
+            login = f'https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F{test_build["run_id"]}'
+            return (f'<p id="desktop-test-downloads">The {test_build["tag"]} downloads are desktop test builds. '
+                    f'<a href="{login}">Sign in to GitHub</a> to download your ZIP, then extract it.</p>\n'
+                    '<p id="desktop-test-expired" hidden>These test archives have expired. '
+                    f'<a href="{TEST_WORKFLOW}">Find another test build</a>.</p>\n'
+                    f'{render_platforms(links)}\n'
+                    f'{render_verification(test_build["installers"])}\n'
+                    '<p>The archive includes the SHA-256 checksums and the setup guide.</p>\n'
+                    f'<p>Download by <time id="desktop-test-expiry" datetime="{expires}">'
+                    f'{expires[:10]}, {expires[11:16]} UTC</time>. '
+                    f'<a href="{run}#artifacts">GitHub Actions run</a> · '
+                    f'<a href="{REPOSITORY}/commit/{test_build["commit"]}">Source commit</a> · '
+                    f'<a href="{TEST_WORKFLOW}">Find another test build</a> · '
+                    '<a href="#install">Alternative installation</a>.</p>')
         return ('<p class="notice-box">Desktop installers are currently available as test builds. '
                 'To start with the published release, <a href="#install">install the local browser app and CLI</a>. '
-                f'To test the desktop app, <a href="{TEST_BUILDS}">sign in to GitHub and find a test build</a>.</p>')
+                f'To test the desktop app, <a href="{TEST_BUILDS}">sign in to GitHub and find a test build</a>.</p>\n'
+                + render_platforms([]))
     installers = sorted(catalog["installers"], key=lambda asset: (
         INSTALLER_LABELS[(asset["target"], asset["kind"])], asset["filename"],
     ))
@@ -139,19 +230,23 @@ def render(catalog: dict[str, Any]) -> str:
         label = INSTALLER_LABELS[(asset["target"], asset["kind"])]
         filename = asset["filename"]
         size = asset["bytes"] / (1024 * 1024)
-        links.append(f'<li><a href="{RELEASES}/download/{tag}/{filename}">{label} '
-                     f'<code>{filename}</code></a> · {size:.1f} MiB</li>')
+        links.append((asset["target"], f'<a class="ctl" href="{RELEASES}/download/{tag}/{filename}">{label} '
+                                       f'<code>{filename}</code> · {size:.1f} MiB</a>'))
     return ('<p>Choose the installer for your computer to run Lixity as a desktop app. '
             f'<a href="{RELEASES}/tag/{tag}">Release {tag}</a> · '
             f'<a href="{RELEASES}/download/{tag}/{CHECKSUMS}">Check SHA-256 sums</a>.</p>\n'
-            '<ul>\n' + '\n'.join(links) + '\n</ul>')
+            f'{render_platforms(links)}\n{render_verification(installers)}')
 
 
 def build(*, check_only: bool, root: Path) -> list[str]:
     guide = root / GUIDE
     content = guide.read_text(encoding="utf-8")
     catalog = json.loads((root / CATALOG).read_text(encoding="utf-8"))
-    replacement = render(catalog)
+    test_path = root / TEST_BUILD
+    test_build = None
+    if isinstance(catalog, dict) and catalog.get("tag") is None and test_path.is_file():
+        test_build = json.loads(test_path.read_text(encoding="utf-8"))
+    replacement = render(catalog, test_build)
     updated, count = DOWNLOAD_BLOCK.subn(lambda match: match[1] + replacement + match[2], content)
     if count != 1:
         raise ValueError("Installation guide must contain one desktop download block")

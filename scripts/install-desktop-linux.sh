@@ -22,10 +22,13 @@ fi
 LIXITY_BIN=""
 if command -v lixity >/dev/null 2>&1; then
     LIXITY_BIN="$(command -v lixity)"
+elif command -v uv >/dev/null 2>&1 && tool_bin="$(uv tool dir --bin 2>/dev/null)" \
+        && [[ "$tool_bin" = /* && -x "$tool_bin/lixity" ]]; then
+    LIXITY_BIN="$tool_bin/lixity"
 elif [ -x "$HOME/.local/bin/lixity" ]; then
     LIXITY_BIN="$HOME/.local/bin/lixity"
 else
-    echo "[ERR] Could not find 'lixity' on PATH or in ~/.local/bin/lixity." >&2
+    echo "[ERR] Could not find 'lixity' on PATH, in the uv tool bin directory, or in ~/.local/bin." >&2
     echo "Install Lixity first (e.g. uv tool install lixity), then re-run this script." >&2
     exit 1
 fi

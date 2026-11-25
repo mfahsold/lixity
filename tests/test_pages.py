@@ -25,6 +25,23 @@ from scripts.stage_pages import stage
 SITE = "https://mfahsold.github.io/lixity/"
 BASH = shutil.which("bash")
 GIT = shutil.which("git")
+PREVIEW_BUILD = {
+    "schema_version": "lixity-desktop-test-build/1",
+    "tag": "v0.9.3",
+    "commit": "a" * 40,
+    "run_id": 12345,
+    "expires_at": "2026-12-25T16:45:28Z",
+    "artifacts": {
+        "aarch64-apple-darwin": 101,
+        "x86_64-apple-darwin": 102,
+        "x86_64-pc-windows-msvc": 103,
+        "x86_64-unknown-linux-gnu": 104,
+    },
+    "installers": [
+        {"target": target, "kind": kind, "filename": filename, "bytes": 2048, "sha256": "a" * 64}
+        for filename, (target, kind) in public_installer_inventory("v0.9.3").items()
+    ],
+}
 
 
 class TestDesktopDownloads(unittest.TestCase):
@@ -52,11 +69,12 @@ class TestDesktopDownloads(unittest.TestCase):
                        checksum_asset, receipt_asset,
                    ]}
         catalog = desktop_downloads.record_catalog(release, artifacts, checksums, qualification)
-        rendered = desktop_downloads.render(catalog)
+        rendered = desktop_downloads.render(catalog, PREVIEW_BUILD)
         for asset in artifacts:
             self.assertIn(f'href="{base}/download/{tag}/{asset.filename}"', rendered)
         self.assertIn(f'href="{base}/download/{tag}/{desktop_downloads.CHECKSUMS}"', rendered)
         self.assertNotIn(desktop_downloads.TEST_BUILDS, rendered)
+        self.assertNotIn("/actions/runs/", rendered)
         catalog_with_old_installer = {**catalog, "installers": [
             {**entry, "filename": entry["filename"].replace("0.10.0", "0.9.1")}
             for entry in catalog["installers"]
@@ -92,10 +110,49 @@ class TestDesktopDownloads(unittest.TestCase):
         self.assertIn('href="#install"', rendered)
         self.assertIn(f'href="{desktop_downloads.TEST_BUILDS}"', rendered)
         self.assertNotIn("/download/", rendered)
+        self.assertNotIn("/artifacts/", rendered)
         guide = (desktop_downloads.ROOT / desktop_downloads.GUIDE).read_text(encoding="utf-8")
         for anchor in ("macos", "windows", "linux"):
             self.assertIn(f'href="#{anchor}"', guide)
             self.assertIn(f'id="{anchor}"', guide)
+
+    def test_test_builds_offer_target_archives_and_published_fallback(self):
+        catalog = {"schema_version": desktop_downloads.SCHEMA, "tag": None, "installers": []}
+        desktop_downloads.validate_test_build(PREVIEW_BUILD)
+        rendered = desktop_downloads.render(catalog, PREVIEW_BUILD)
+        run = "https://github.com/mfahsold/lixity/actions/runs/12345"
+        archive_links = re.findall(r'href="([^" ]+/artifacts/\d+)"', rendered)
+        self.assertCountEqual(archive_links, [f"{run}/artifacts/{asset}" for asset in (101, 102, 103, 104)])
+        for label in ("Apple Silicon", "Intel", "Windows", "Linux", "v0.9.3", "SHA-256"):
+            self.assertIn(label, rendered)
+        self.assertIn("aaaaaaa", rendered)
+        self.assertIn("test build", rendered.lower())
+        self.assertRegex(rendered, r"(?i)sign in to GitHub|GitHub sign-in")
+        self.assertRegex(rendered, r"2026-12-25|25 December 2026|December 25, 2026")
+        self.assertIn('href="#install"', rendered)
+        self.assertNotIn("/releases/download/", rendered)
+        self.assertIn('id="installer-check-file"', rendered)
+        self.assertIn("Lixity_0.9.3_aarch64.dmg", rendered)
+
+    def test_test_build_requires_exact_targets_and_reviewed_metadata(self):
+        artifacts = PREVIEW_BUILD["artifacts"]
+        missing = {key: value for key, value in artifacts.items() if value != 104}
+        invalid_changes = (
+            {"schema_version": "lixity-desktop-test-build/99"},
+            {"commit": "a" * 39},
+            {"run_id": 0},
+            {"run_id": True},
+            {"run_id": "12345"},
+            {"expires_at": "2026-02-30T16:45:28Z"},
+            {"artifacts": missing},
+            {"artifacts": {**missing, "aarch64-unknown-linux-gnu": 104}},
+            {"artifacts": {**artifacts, "aarch64-apple-darwin": 104}},
+            {"artifacts": {**artifacts, "aarch64-apple-darwin": -1}},
+            {"artifacts": {**artifacts, "aarch64-apple-darwin": True}},
+        )
+        for change in invalid_changes:
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                desktop_downloads.validate_test_build({**PREVIEW_BUILD, **change})
 
     def test_only_the_validated_desktop_catalog_is_published(self):
         with tempfile.TemporaryDirectory() as directory:

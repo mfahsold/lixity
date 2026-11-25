@@ -82,7 +82,8 @@ def test_macos_template_is_valid_and_has_explicit_neutral_startup():
     assert template["Label"] == "com.lixity.serve"
 
 
-def test_linux_desktop_launcher_delegates_browser_opening_for_selected_port(tmp_path):
+@pytest.mark.parametrize("use_uv", [False, True], ids=["on-path", "uv-bin-directory"])
+def test_linux_desktop_launcher_delegates_browser_opening_for_selected_port(tmp_path, use_uv):
     bash = shutil.which("bash")
     if not bash or os.name == "nt":
         pytest.skip("Requires a native POSIX Bash")
@@ -94,13 +95,20 @@ def test_linux_desktop_launcher_delegates_browser_opening_for_selected_port(tmp_
         encoding="utf-8",
     )
     executable.chmod(0o755)
+    search = tmp_path / "tool commands" if use_uv else installed
+    if use_uv:
+        search.mkdir()
+        uv = search / "uv"
+        uv.write_text('#!/bin/sh\n[ "$*" = "tool dir --bin" ] || exit 1\nprintf "%s\\n" "$UV_TOOL_BIN_DIR"\n',
+                      encoding="utf-8")
+        uv.chmod(0o755)
     for name in ("update-desktop-database", "xdg-open"):
-        stub = installed / name
+        stub = search / name
         stub.write_text("#!/bin/sh\nexit 97\n", encoding="utf-8")
         stub.chmod(0o755)
     data = tmp_path / "data"
-    env = {**os.environ, "PATH": str(installed) + os.pathsep + os.environ.get("PATH", ""),
-           "XDG_DATA_HOME": str(data), "LIXITY_PORT": "9000"}
+    env = {**os.environ, "PATH": str(search) + os.pathsep + os.defpath, "HOME": str(tmp_path),
+           "UV_TOOL_BIN_DIR": str(installed), "XDG_DATA_HOME": str(data), "LIXITY_PORT": "9000"}
     result = subprocess.run(  # noqa: S603 - local installer and synthetic executable
         [bash, str(SCRIPT.parent / "install-desktop-linux.sh")],
         env=env, capture_output=True, text=True, timeout=10, check=False,

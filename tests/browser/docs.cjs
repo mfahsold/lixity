@@ -1452,7 +1452,8 @@ async function checkSandboxQuotationPairs(page) {
             const locale = route ? route.slice(6, 8) : 'en';
             await expect(page.locator('html')).toHaveAttribute('lang', locale);
             const sandboxLanguage = locale === 'de' ? 'de' : 'en';
-            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'sandbox/index.html?lang=' + sandboxLanguage);
+            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'guides/installation.html');
+            await expect(page.locator('#sandbox-cta')).toHaveAttribute('href', 'sandbox/index.html?lang=' + sandboxLanguage);
             await expect(page.locator('#examples')).toHaveAttribute('href', '#product-tour-preview');
             await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html');
             await expect(page.locator('.language-list a')).toHaveCount(7);
@@ -1494,6 +1495,10 @@ async function checkSandboxQuotationPairs(page) {
           await expect(page).toHaveURL(origin + '/lixity/guides/installation.html#' + anchor);
           await expect(page.locator('#' + anchor)).toBeInViewport();
         }
+        await page.goto(origin + '/lixity/');
+        await page.locator('#download-cta').focus();
+        await page.keyboard.press('Enter');
+        await expect(page).toHaveURL(origin + '/lixity/guides/installation.html');
         await page.goto(origin + '/lixity/');
         await page.locator('#sandbox-cta').click();
         await expect(page).toHaveURL(origin + '/lixity/sandbox/index.html?lang=en');

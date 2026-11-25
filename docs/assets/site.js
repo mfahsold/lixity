@@ -59,3 +59,47 @@ if (languageLinks.length && window.LixitySiteLanguage) {
     });
   }
 }
+
+const desktopTestExpiry = document.getElementById('desktop-test-expiry');
+if (desktopTestExpiry && Date.now() >= Date.parse(desktopTestExpiry.dateTime)) {
+  document.getElementById('desktop-test-downloads').hidden = true;
+  document.querySelectorAll('.desktop-test-archive').forEach(link => { link.hidden = true; });
+  document.getElementById('desktop-test-expired').hidden = false;
+}
+
+const installerCheck = document.getElementById('installer-check');
+if (installerCheck && window.crypto?.subtle) {
+  const input = document.getElementById('installer-check-file');
+  const status = document.getElementById('installer-check-status');
+  const installers = JSON.parse(document.getElementById('installer-check-digests').textContent);
+  const maximumBytes = 256 * 1024 * 1024;
+  let selection = 0;
+  installerCheck.hidden = false;
+  input.addEventListener('change', async () => {
+    const current = ++selection;
+    const file = input.files[0];
+    status.textContent = '';
+    if (!file) return;
+    if (file.size > maximumBytes) {
+      status.textContent = 'For this file size, use the SHA-256 checksum list and verification instructions.';
+      return;
+    }
+    const candidates = installers.filter(item => file.size === item.bytes);
+    if (!candidates.length) {
+      status.textContent = 'This file does not match the expected installer sizes. Extract the ZIP and select its installer.';
+      return;
+    }
+    status.textContent = 'Checking the installer…';
+    try {
+      const hash = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+      if (current !== selection) return;
+      const hex = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+      const match = candidates.find(item => item.sha256 === hex);
+      status.textContent = match
+        ? `Checksum matches ${match.filename}. Continue with its setup steps.`
+        : 'Checksum differs. Download the installer again from this page before opening it.';
+    } catch {
+      if (current === selection) status.textContent = 'Could not read the installer. Try again or use the SHA-256 instructions.';
+    }
+  });
+}

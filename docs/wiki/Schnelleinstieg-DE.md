@@ -1,12 +1,13 @@
 # Lixity kennenlernen
 
+Wähle den Desktop-Download für deinen Rechner und folge den Schritten für dein
+Betriebssystem. Öffne danach Lixity und wähle **Beispiel offline ausprobieren**.
+[Download und Einrichtung (Englisch)](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+
 - [Produktübersicht auf Deutsch](https://mfahsold.github.io/lixity/index-de.html)
 - [Bebilderter Einstieg auf Deutsch](https://mfahsold.github.io/lixity/guides/first-look-de.html)
 - [Deutsche Sandbox mit Beispieltexten](https://mfahsold.github.io/lixity/sandbox/index.html?lang=de)
 - [Metrikreferenz auf Deutsch](https://mfahsold.github.io/lixity/guides/metrics/de.html)
 
-Schau zuerst nach, welche Desktop-Downloads es für dein Betriebssystem gibt.
-Dort findest du auch den Weg zur veröffentlichten Browser-App. Die
-Installationsanleitung und die Anleitung zur ersten Sitzung sind auf Englisch.
-[Desktop-Download und Einrichtung](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
-[Erste Sitzung](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)
+Falls für deinen Rechner keine passende Desktop-Version verfügbar ist, kannst du
+die lokale Browser-App installieren. [Browser-App und Kommandozeile (Englisch)](https://mfahsold.github.io/lixity/guides/installation.html#install)

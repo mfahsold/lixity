@@ -10,6 +10,7 @@ own computer. When a sentence runs long or a phrase repeats, go straight to the
 passage and read it in context. Keep the notes and sources behind a scene close
 by, and choose what to share when the draft is ready.
 
+[Download Lixity for desktop](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
 [Edit a paragraph in the browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html) ·
 [Follow a finding in the read-only demo](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Visit the product website](https://mfahsold.github.io/lixity/)
@@ -40,35 +41,20 @@ on the language. [Language coverage](https://github.com/mfahsold/lixity/blob/mai
 
 ## Install and start
 
-**Desktop app.** Start with the download guide for your operating system and
-processor. It shows the available installer channels and explains how to
-verify a download. The app includes its analysis runtime.
-[Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
-
-**Desktop test builds.** Sign in to GitHub and get a build and its checksum list
-from the same Actions run. Choose a macOS DMG for Apple Silicon or Intel, an
-EXE or MSI for Windows x64, or a DEB or AppImage for Linux x64. Try the bundled
-example before opening a working project.
+Choose your operating system and processor, then follow the download and setup
+steps. The desktop app includes its analysis runtime. Open Lixity from your
+applications menu and choose **Try the example offline** for a first session.
+[Desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
 [macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos)
 · [Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows)
 · [Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
 
-**Browser app and CLI.** Use the published package for terminal workflows or
-when a desktop installer is unavailable. Install
-[uv](https://docs.astral.sh/uv/getting-started/installation/) and run this on
-macOS, Windows or Linux.
+For desktop test builds, sign in to GitHub and check the installer in your
+browser or use the included SHA-256 checksum list.
+[Check an installer](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
 
-```sh
-uv tool install --python 3.12 --managed-python lixity
-```
-
-If the shell cannot find `lixity`, run `uv tool update-shell` and open a new
-terminal. Start the app, then choose **Open Project** or **Analyze a manuscript**.
-
-```sh
-lixity service start --open
-```
-
+For a system without a compatible desktop build, use the published package for
+the [local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install).
 [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
 
 ## Use the analysis engine

@@ -1,12 +1,11 @@
 # Lixity desktop host
 
 The Rust/Tauri v2 app opens the Lixity workspace in an operating-system window.
-It uses the shared manuscript editor, analysis, and research views. The desktop
-app is the intended first install for authors. The download guide shows the
-current installer and test-build availability. The published Python package
-provides the local browser workspace and CLI.
-[Installation guide](../docs/INSTALLATION.md#packaging-direction)
-· [Published releases](https://github.com/mfahsold/lixity/releases)
+It uses the shared manuscript editor, analysis, and research views. Choose your
+platform in the download guide to install it. Desktop downloads currently lead
+to test builds. The app includes the runtime it needs.
+[Download Lixity](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+· [Installation reference](../docs/INSTALLATION.md#download-the-desktop-app)
 
 | Build | Where to find it | How to verify its identity |
 | --- | --- | --- |
@@ -14,9 +13,8 @@ provides the local browser workspace and CLI.
 | Hosted desktop test build | Selected GitHub Actions run | Run source commit, platform target, installer SHA-256 and build manifest |
 | Public desktop installer | Published release and desktop download catalog | Published tag, installer SHA-256, attestation and accepted platform trust evidence |
 
-Use the [test-build route](#download-a-test-build) while the public catalog
-has no verified installer for your platform. The installed app and the
-standalone Python package each own their own runtime.
+The [published browser app and CLI](../docs/INSTALLATION.md#cli-current-release)
+are available as an alternative.
 
 ## Implemented
 
@@ -65,10 +63,25 @@ RPM and Flatpak await installer qualification.
 
 ## Download a test build
 
-Sign in to GitHub, open the desktop-release workflow and select a successful
-run for the commit you want to test. Under **Artifacts**, download the archive
-for your operating system and processor. The workflow keeps these test builds
-for 30 days. [Desktop release builds](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml)
+1. Choose the archive for your computer in the
+   [desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop).
+   Sign in to GitHub to download the ZIP.
+2. Extract it and use the
+   [installer checker](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
+   to compare the installer with the companion SHA-256 list on your computer.
+   On macOS, open the DMG and drag Lixity to **Applications**. On Windows,
+   open the `-setup.exe`. On Debian or Ubuntu, open the `.deb` with a
+   graphical package installer, or run the AppImage using its file properties.
+3. Open Lixity and choose **Try the example offline**.
+   [First session](../docs/ONBOARDING.md)
+
+<details>
+<summary>Find a different test run and identify its files</summary>
+
+To find a different test build, open the desktop-release workflow, choose a
+successful run for the intended commit, and download its archive under
+**Artifacts**. The workflow keeps test builds for 30 days.
+[Desktop release builds](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml)
 · [GitHub artifact download instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)
 
 | Platform | Workflow artifact | Installer files | Setup |
@@ -86,6 +99,16 @@ workflow include a platform-specific offline start guide on the test path.
 
 Keep the run ID, source commit, target and SHA-256 together if you report a
 finding. Different test builds can print the same version.
+
+</details>
+
+To update the installation guide's test links, set `docs/desktop-test-build.json`
+to one reviewed successful run. Match each target to its artifact ID on that run
+and use the earliest expiration of the four archives. Populate `installers`
+from the verified files in the same run, with their exact sizes and SHA-256
+digests. Run `make docs-sync` and `make docs-check`. The public download catalog
+is filled through the separate
+[qualification and publication procedure](#public-desktop-downloads).
 
 ## Local build and verification
 

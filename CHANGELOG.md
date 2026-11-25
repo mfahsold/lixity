@@ -7,6 +7,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Lead the product site and setup guides with platform downloads. Check the
+  desktop installer locally in the browser and keep terminal setup available
+  as a fallback.
+- Find the installed Lixity executable through uv when creating a Linux menu
+  entry outside the tool's executable search path.
+
 ### Fixed
 
 - Keep unsaved voice profile edits open when applying a reviewed audio settings

@@ -1,8 +1,6 @@
 # Install Lixity and open your manuscript
 
-Check [desktop availability](#desktop) for your computer, or install the [published local browser app and CLI](#install). Built-in analysis runs on your computer without a Lixity account.
-
-Want to see the workflow first? [Open a marked sentence in the read-only example](first-look.html#passage). The [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) covers updates, optional tools and troubleshooting.
+Choose your computer below, download Lixity and open it from your applications menu. The desktop app includes its runtime. Built-in analysis runs on your computer.
 
 Updated 25 November 2026
 
@@ -10,15 +8,53 @@ Updated 25 November 2026
 
 ## Desktop downloads
 
-Desktop installers are currently available as test builds. To start with the published release, [install the local browser app and CLI](#install). To test the desktop app, [sign in to GitHub and find a test build](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
+The v0.9.3 downloads are desktop test builds. [Sign in to GitHub](https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F45655881121) to download your ZIP, then extract it.
 
-The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.
-
-For a test build, choose the workflow run for the version or commit you want to test. Check that its artifact is still available, then use the installer and checksum list from that same run.
+These test archives have expired. [Find another test build](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
 
 <a id="macos"></a>
 
 ### macOS
+
+[macOS · Apple Silicon test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043122730)
+
+[macOS · Intel test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043707385)
+
+[macOS setup steps](#macos-setup)
+
+<a id="windows"></a>
+
+### Windows x64
+
+[Windows · x64 test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043787157)
+
+[Windows x64 setup steps](#windows-setup)
+
+<a id="linux"></a>
+
+### Linux x86-64
+
+[Linux · x86-64 test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15044072040)
+
+[Linux x86-64 setup steps](#linux-setup)
+
+<a id="installer-check-heading"></a>
+
+### Check the installer
+
+Choose the downloaded installer. If it came in a ZIP, extract it first. Your browser checks the file on this computer.
+
+Select the downloaded installer
+
+The archive includes the SHA-256 checksums and the setup guide.
+
+Download by 2026-12-25, 16:45 UTC. [GitHub Actions run](https://github.com/mfahsold/lixity/actions/runs/45655881121#artifacts) · [Source commit](https://github.com/mfahsold/lixity/commit/2d55e56408f8e048d5b976cd9802cf4505e57a3f) · [Find another test build](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml) · [Alternative installation](#install).
+
+The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.
+
+<a id="macos-setup"></a>
+
+### Install on macOS
 
 Desktop builds require macOS 12 or later.
 
@@ -28,33 +64,33 @@ Desktop builds require macOS 12 or later.
 
 3. After the copy completes, eject the disk image and open **Applications → Lixity**. Open the app there again for later sessions.
 
-For a test build, [verify the download before opening the DMG](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg). The notes also cover first-launch alerts and the desktop log.
+Test builds use ad hoc signing. If macOS shows a security alert, check its wording and follow the [macOS installation and security guidance](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg).
 
-<a id="windows"></a>
+<a id="windows-setup"></a>
 
-### Windows
+### Install on Windows
 
 1. Check **Settings → System → About → System type**. The current desktop builds target x64 PCs.
 
-2. For a test build, extract `desktop-installers-x86_64-pc-windows-msvc` from the workflow run. Open **Start Here - Windows.html** if present. Compare the installer's SHA-256 with `SHA256SUMS-x86_64-pc-windows-msvc.txt` from the same archive.
+2. In Downloads, extract the ZIP. Open the setup `.exe` to install for your account. **Start Here - Windows.html** accompanies test archives. The MSI is available in English and German for deployment testing.
 
-3. Open the setup `.exe` to install for your account. The MSI is available in English and German for deployment testing.
-
-4. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
+3. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
 
 Windows may flag an unsigned test build as an unknown publisher or unrecognized app. If system policy blocks installation, use the [published browser app and CLI](#install). See the [Windows verification and installation steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test) and [Microsoft’s WebView2 installation options](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution).
 
-<a id="linux"></a>
+<a id="linux-setup"></a>
 
-### Linux
+### Install on Linux
 
-1. Check that `uname -m` reports `x86_64`. The desktop host uses WebKitGTK 4.1 and GTK 3.
+1. Check the system information in your desktop settings for an x86-64 or AMD64 system. Extract the ZIP. **Start Here - Linux.html** accompanies test archives.
 
-2. For a test build, extract `desktop-installers-x86_64-unknown-linux-gnu` from the workflow run. Open **Start Here - Linux.html** if present. In the extracted folder, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`.
-
-3. On Debian or Ubuntu, open the verified `.deb` with your package installer and start **Lixity** from the applications menu. To run the verified `.AppImage` from its folder, allow it to execute in the file's properties and open it.
+2. On Debian or Ubuntu, open the verified `.deb` with your package installer and start **Lixity** from the applications menu. To run the verified `.AppImage` from its folder, allow it to execute in the file's properties and open it.
 
 For Linux testing, use a build whose workflow passed the installed-app runtime check. If an earlier DEB reports a missing ALSA library, see the [Linux troubleshooting steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test). For an AppImage FUSE error, follow the [instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
+
+**SHA-256 verification instructions**
+
+Use the checksum file from the same archive. See the command for [macOS](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg), [Windows](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test), or [Linux](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test).
 
 <a id="desktop-first-launch"></a>
 
@@ -70,6 +106,8 @@ For a test build, use a separate account or test machine. If startup fails, the 
 
 This source guide describes **v0.9.3**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
+**Alternative installation with the terminal**
+
 <a id="requirements"></a>
 
 ## What does the published browser app need?
@@ -77,8 +115,6 @@ This source guide describes **v0.9.3**. Its changes are listed in the source [re
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It supplies managed Python 3.12 and installs Lixity from [PyPI](https://pypi.org/project/lixity/). You can also find the current wheel and its checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
 
 Lixity is open source under AGPL-3.0-or-later. You can write and self-publish with it. A separate commercial license is available for closed-source integrations. [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
-
-<a id="install"></a>
 
 ## Install the published browser app
 
@@ -100,17 +136,15 @@ For Linux or other setups, follow the [official uv installation instructions](ht
 
 ```
 uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
 ```
 
-Open a new terminal, then check the installed package and start the app:
+After installation succeeds, start Lixity from the same terminal:
 
 ```
-lixity --version
-lixity service start --open
+uv tool run lixity service start --open
 ```
 
-If your terminal cannot find `lixity`, check `uv tool list`, run `uv tool update-shell` and open a new terminal. `uv tool dir --bin` shows the executable directory.
+To run `lixity` directly in later terminals, run `uv tool update-shell` once and open a new terminal. Use `uv tool run lixity --version` to check your installed version.
 
 <a id="first-dashboard"></a>
 
@@ -144,7 +178,7 @@ To test unreleased changes, install Git, stop the managed service and replace th
 uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"
 ```
 
-`main` changes over time and unreleased commits can share a version number. Verify the installation, run `lixity service restart --open` to restore recorded launch settings and reload your browser.
+`main` changes over time and unreleased commits can share a version number. Verify the installation, run `uv tool run lixity service restart --open` to restore recorded launch settings and reload your browser.
 
 **Generate an offline HTML report instead**
 
@@ -242,20 +276,18 @@ In Lixity, choose **Help → Check for Updates** to review published desktop ava
 
 See the [desktop download section](#desktop) for available installers and the [desktop update guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#update-a-desktop-test-build) for verification and rollback. Keep manuscript and research folders in their current locations during an app update.
 
-<a id="browser-updates"></a>
-
-### Update the browser and CLI build
+**Update the browser and CLI build**
 
 For a PyPI installation, stop each managed instance before upgrading:
 
 ```
-lixity service stop
+uv tool run lixity service stop
 uv tool upgrade lixity
-lixity --version
-lixity service restart --open
+uv tool run lixity --version
+uv tool run lixity service restart --open
 ```
 
-Use the same port to stop and restart each instance. After restart, reload the browser at the address the service reports. `lixity doctor --port 9000` compares the installed package with the service on port 9000. For an installation pinned to a wheel, install the new release wheel explicitly. See [archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#storage-lifecycle-and-recovery) when sharing research data with older readers.
+Use the same port to stop and restart each instance. After restart, reload the browser at the address the service reports. `uv tool run lixity doctor --port 9000` compares the installed package with the service on port 9000. For an installation pinned to a wheel, install the new release wheel explicitly. See [archive compatibility](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#storage-lifecycle-and-recovery) when sharing research data with older readers.
 
 For removal, stop all managed instances and disable any login-startup entry you configured, then run `uv tool uninstall lixity`. Manuscript folders and research archives remain. See the [complete update/removal reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#updates-and-removal).
 
