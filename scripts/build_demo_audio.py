@@ -28,41 +28,63 @@ SOURCE = ROOT / "samples/first-look.md"
 TARGET = ROOT / "docs/assets/audio/warehouse-4-chapter-1.wav"
 SCHEMA_VERSION = "lixity-demo-audio/1"
 CHAPTER = 1
+REVIEWED_GENERATORS = ("eSpeak NG", "Lixity Qwen")
 
 
-def _reuse_recording(source_sha256: str, spoken_sha256: str) -> None:
-    manifest = TARGET.with_suffix(".json")
+def demo_spoken_text(source: bytes, chapter: int) -> bytes:
+    text = source.decode("utf-8")
+    config, _language = resolve_document_config(text, "en", project_config={})
+    selected, _context = prepare_speech_source(text, language=config.language, mode="chapter", chapter=chapter)
+    return "\n\n".join(cue.text for cue in extract_audio_cues(selected, language="en") if cue.text).encode("utf-8")
+
+
+def _recording_metadata(target: Path, chapter: int) -> dict:
+    manifest = target.with_suffix(".json")
     metadata = json.loads(manifest.read_text(encoding="utf-8"))
     if not isinstance(metadata, dict) or metadata.get("schema_version") != SCHEMA_VERSION:
         raise SystemExit("The recording needs a reviewed demo audio manifest")
     generator = metadata.get("generator")
-    if (type(metadata.get("chapter")) is not int or metadata["chapter"] != CHAPTER
-            or not isinstance(generator, dict) or generator.get("name") != "eSpeak NG"):
-        raise SystemExit("The recording needs reviewed eSpeak NG chapter provenance")
+    if (type(metadata.get("chapter")) is not int or metadata["chapter"] != chapter
+            or not isinstance(generator, dict) or generator.get("name") not in REVIEWED_GENERATORS):
+        raise SystemExit("The recording needs reviewed chapter provenance")
+    return metadata
+
+
+def read_reviewed_recording(target: Path, source: bytes, chapter: int) -> bytes:
+    """Read a demonstration track tied to the complete manuscript and spoken chapter."""
+    metadata = _recording_metadata(target, chapter)
+    audio = target.read_bytes()
+    if (metadata.get("source_sha256") != hashlib.sha256(source).hexdigest()
+            or metadata.get("spoken_text_sha256") != hashlib.sha256(demo_spoken_text(source, chapter)).hexdigest()
+            or metadata.get("audio_sha256") != hashlib.sha256(audio).hexdigest()):
+        raise ValueError("Regenerate and review the synthetic chapter audio before building publications")
+    return audio
+
+
+def _reuse_recording(source_sha256: str, spoken_sha256: str, target: Path, chapter: int) -> None:
+    metadata = _recording_metadata(target, chapter)
     if metadata.get("spoken_text_sha256") != spoken_sha256:
         raise SystemExit("The chapter's spoken text changed. Regenerate and review the recording.")
-    if metadata.get("audio_sha256") != hashlib.sha256(TARGET.read_bytes()).hexdigest():
+    if metadata.get("audio_sha256") != hashlib.sha256(target.read_bytes()).hexdigest():
         raise SystemExit("The WAV differs from the reviewed recording")
     metadata["source_sha256"] = source_sha256
-    FileUtils.atomic_write_if_changed(str(manifest), json.dumps(metadata, indent=2) + "\n")
-    print(f"{TARGET.name}: verified spoken text and WAV for the current manuscript")
+    FileUtils.atomic_write_if_changed(str(target.with_suffix(".json")), json.dumps(metadata, indent=2) + "\n")
+    print(f"{target.name}: verified spoken text and WAV for the current manuscript")
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--chapter", type=int, choices=(1, 2), default=CHAPTER)
     parser.add_argument("--reuse-recording", action="store_true",
                         help="Refresh the manuscript hash after checking the exact spoken text and existing WAV")
     args = parser.parse_args(argv)
+    target = TARGET if args.chapter == CHAPTER else TARGET.with_name(f"warehouse-4-chapter-{args.chapter}.wav")
     source = SOURCE.read_bytes()
-    text = source.decode("utf-8")
-    config, _language = resolve_document_config(text, "en", project_config={})
-    chapter, _context = prepare_speech_source(text, language=config.language, mode="chapter", chapter=CHAPTER)
-    spoken = "\n\n".join(cue.text for cue in extract_audio_cues(chapter, language="en") if cue.text)
-    spoken_bytes = spoken.encode("utf-8")
+    spoken_bytes = demo_spoken_text(source, args.chapter)
     source_sha256 = hashlib.sha256(source).hexdigest()
     spoken_sha256 = hashlib.sha256(spoken_bytes).hexdigest()
     if args.reuse_recording:
-        _reuse_recording(source_sha256, spoken_sha256)
+        _reuse_recording(source_sha256, spoken_sha256, target, args.chapter)
         return
 
     library = ctypes.util.find_library("espeak-ng")
@@ -111,17 +133,17 @@ def main(argv: list[str] | None = None) -> None:
         writer.setparams((1, 2, rate, 0, "NONE", "not compressed"))
         writer.writeframes(pcm)
     content = output.getvalue()
-    TARGET.parent.mkdir(parents=True, exist_ok=True)
-    TARGET.write_bytes(content)
-    metadata = {"schema_version": SCHEMA_VERSION, "chapter": CHAPTER,
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(content)
+    metadata = {"schema_version": SCHEMA_VERSION, "chapter": args.chapter,
                 "source_sha256": source_sha256,
                 "spoken_text_sha256": spoken_sha256,
                 "audio_sha256": hashlib.sha256(content).hexdigest(),
                 "duration_seconds": len(pcm) / (2 * rate),
                 "generator": {"name": "eSpeak NG", "version": version, "voice": "en", "rate": 165},
-                "description": "Synthetic Warehouse 4 chapter one; a functional playback example, not a neural voice-quality demonstration. No human voice reference."}
-    TARGET.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-    print(f"{TARGET.relative_to(ROOT)}: {len(content):,} bytes; {metadata['duration_seconds']:.1f}s; no playback")
+                "description": "Synthetic Warehouse 4 chapter recording using a generic English voice."}
+    target.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    print(f"{target.relative_to(ROOT)}: {len(content):,} bytes; {metadata['duration_seconds']:.1f}s; no playback")
 
 
 if __name__ == "__main__":

@@ -5,23 +5,34 @@ Its six synthetic English chapters come from
 [`samples/first-look.md`](../../samples/first-look.md); the published
 [manuscript](../research/examples/harbour-manuscript.md) contains identical bytes.
 Analysis, research, screenshots and PDF layouts use that same project.
+Mara recognises the number on a torn label as the number she copied on an
+unsigned dispatch receipt. The foreman can dock her wages if the load goes
+missing. Read the six chapters to see what she can put her name to when the
+ledger raises a second question about the same number.
 
 Two curated examples use the same production export and manuscript:
 
-- [Read with context](reader/index.html) combines the six chapters with selected
-  dossier passages, diagrams and images, plus an explicitly selected chapter
-  analysis. Use **Analysis** from the reading page and **Back to reading copy**
-  to return. **Chapter audio** plays the reviewed first-chapter recording made
-  with the generic eSpeak NG English voice.
-- [Companion only](companion/index.html) presents that context without novel or
-  analysis bytes. This example is capped at chapter 3: later entries and their
-  resources are omitted before the website is assembled.
+- [Read with context](reader/index.html) combines the six chapters with ten
+  selected companion entries and a chapter analysis. Use **Analysis** from the
+  reading page and **Back to reading copy** to return. In **Chapter audio**,
+  choose either of the first two chapters to play or download its reviewed
+  synthetic recording. Both use the local Qwen Ryan preset. The Eastern Gate
+  runs for 88 seconds and The Loose Board for 113 seconds. Each recording has a
+  manifest with the manuscript, spoken plan and audio checksums.
+- [Companion only](companion/index.html) presents six selected entries through
+  chapter 3. Its export excludes the manuscript, chapter analysis, chapter audio
+  tracks and all later companion entries and resources.
 
 Both start with no chapters marked as read. **Finished reading through** reveals
 the author's selected notes for that progress; **Open later notes** temporarily
 previews later material within the exported range. Progress stays in the local
 browser. Hiding notes is a reading aid, not content protection: a chapter cap
 must omit later material from the export itself.
+
+The captioned watchman reconstruction is available after chapter 3. The
+transfer counterfoil follows chapter 4, the dispatch receipt follows chapter 5,
+and the receiving-signature note and ledger follow chapter 6. The full reader
+includes all six chapters and its selected chapter analysis from the start.
 
 Start with **Try the draft examples → Check a sticky sentence**. Choose
 **Paragraph details → Explain this passage** to see the 22 function words
@@ -47,15 +58,23 @@ choose **Back to passage** to return there. This author-workspace demo uses the
 production review-mode website export: titles open current entries, explicit
 linked-version controls retain older pins, and **Versions** expands the history
 without switching the displayed entry.
-The case notes connect six claims, three decisions and five exact manuscript
-quotations. Explore conflicting inspection accounts, a qualified witness report,
-an authored cause/effect link and a corrected claim whose earlier manuscript
-links remain pinned. The timeline, diagrams, map and images provide different
-ways into the same case notes.
-Historical map/photo sources have
-[reviewed credits and file hashes](../assets/research/sources.json). People,
-customs records, incidents and journeys are invented; the visuals do not verify
-them, and coordinates are not georeferenced to the map image.
+The project retains nine sources, nine claims, four author decisions and seven
+exact manuscript associations. Eight claims carry dates in the timeline. The
+remaining claim records a future research question in the undated group.
+Compare the conflicting inspection accounts and open the pinned older version
+of the warehouse entry claim. Open **Warehouse 4 exhibit book** for the
+captioned watchman statement and its transcript, the transfer counterfoil,
+and facsimiles of the blue dispatch receipt and office ledger. The watchman
+reports a direction of flight. The statement ends at the basin.
+
+The two public-domain visual references and two fictional document facsimiles
+are available as four retained images. The historical map and harbour view
+have [reviewed credits and file hashes](../assets/research/sources.json).
+The geography view contains nine authored features, including four journeys.
+These include Mara’s walk to the office and a possible cart transfer to the
+station. Use the map to discuss what the text places and what still needs an
+author decision. The historical images give visual setting context. The
+fictional routes are approximate and use independent coordinates.
 
 Open **Character: Mara** in Dossiers to see the saved chapter table and read
 her appearances in context. Download [the same dossier version](warehouse-4-dossier.pdf)
@@ -117,8 +136,12 @@ The destination must not exist; the command never replaces an existing project.
 Open that folder through **Open Project** in the local app. It contains
 `lixity.toml`, the six-chapter manuscript, retained research, immutable revisions,
 manuscript associations and the `readers` publication profile. It uses the normal
-project layout, not a separate demo file format. Keep personal edits in your own
-copy; public regeneration continues to use the reviewed synthetic inputs.
+project layout. Open **Listen and direct** in chapter 3 to inspect the
+paragraph direction on the watchman's answer. The project uses a local Qwen
+Ryan narrator preset, with explicit tempo and paragraph / scene pauses. Export
+the plan without a worker using `lixity audio-export-plan --project
+.artifacts/warehouse-4-project --chapter 3 --timeline`. Keep personal edits in
+your own copy. Public regeneration uses the reviewed synthetic inputs.
 
 For an unwrapped local analysis/research website, use the regular export command:
 
@@ -147,17 +170,19 @@ affect the embedded images, refresh the [screenshots](../screenshots/README.md)
 before rebuilding the examples. The [video guide](../videos/README.md)
 describes recording and encoding.
 
-After changing `samples/first-look.md`, refresh the reviewed chapter-one audio
-provenance before running `make examples`.
+After changing `samples/first-look.md`, check or refresh the provenance for
+both reviewed chapter recordings before running `make examples`.
 
 ```sh
-PYTHONPATH=src .venv/bin/python scripts/build_demo_audio.py --reuse-recording
+PYTHONPATH=src .venv/bin/python scripts/build_demo_audio.py --chapter 1 --reuse-recording
+PYTHONPATH=src .venv/bin/python scripts/build_demo_audio.py --chapter 2 --reuse-recording
 ```
 
-This checks the exact speech text for chapter one and verifies the WAV's
-checksum before recording the new full manuscript checksum. If the speech text
-changes, run the command without `--reuse-recording` on a machine with eSpeak NG
-and review the new clip before building the reader demo.
+Each command checks the chapter’s exact spoken text and the WAV checksum
+before recording the new full manuscript checksum. If the spoken text
+changes, generate and review a new recording for that chapter before building
+the reader demo. Running the command without `--reuse-recording` uses the local
+eSpeak NG engine and writes a new WAV and provenance record.
 
 Follow the [generation and preview procedure](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#generate-and-preview)
 for documentation tests and local review. `scripts/stage_pages.py` verifies

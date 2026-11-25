@@ -274,6 +274,23 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
     await expect(page.locator('#publication-entries article')).toHaveCount(0);
     return;
   }
+  if (reader) {
+    const chapterAudio = page.locator('#publication-audio');
+    await chapterAudio.locator(':scope > summary').click();
+    const recordings = chapterAudio.locator('select');
+    await expect(recordings.locator('option')).toHaveCount(2);
+    const audio = chapterAudio.locator('audio');
+    for (const chapter of [1, 2]) {
+      await recordings.selectOption(String(chapter));
+      await expect(audio).toHaveAttribute('src', /^assets\/audio\/[0-9a-f]{64}\.wav$/);
+      await expect(chapterAudio.locator('a[download]')).toHaveAttribute('download', `chapter-${chapter}.wav`);
+      expect(await audio.evaluate(track => track.paused)).toBe(true);
+      await chapterAudio.locator('.speech-player-controls > button').first().click();
+      await expect.poll(() => audio.evaluate(track => track.currentTime)).toBeGreaterThan(0);
+      await chapterAudio.locator('.speech-player-controls > button').first().click();
+    }
+    await chapterAudio.locator(':scope > summary').click();
+  }
   await page.locator('#publication-progress-reset').click();
   const entries = page.locator('#publication-entries'), contents = page.locator('#publication-contents');
   await expect(entries.locator('article')).toHaveCount(3);
@@ -291,16 +308,19 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
     await page.locator('#publication-progress').selectOption('3');
     await expect(entries.locator('article')).toHaveCount(3);
     await page.locator('#publication-progress-apply').click();
-    await expect(entries.locator('article')).toHaveCount(5);
+    await expect(entries.locator('article')).toHaveCount(6);
+    await expect(entries.getByRole('heading', {name: 'The watchman’s statement', exact: true})).toBeVisible();
+    await expect(entries.locator('video')).toHaveAttribute('src', /^assets\/sources\/[0-9a-f]{64}\.mp4$/);
     await page.locator('#publication-context-search').fill('The receiving signature');
     await expect(entries.locator('article')).toHaveCount(0);
     await page.locator('#publication-context-search').fill('');
-    await expect(entries.locator('article')).toHaveCount(5);
+    await expect(entries.locator('article')).toHaveCount(6);
     if (reader) {
       await page.locator('#publication-preview-open').click();
       await page.locator('#publication-preview-progress').selectOption('6');
       await page.locator('#publication-preview-form button[type=submit]').click();
       await expect(entries).toContainText('A blank signature is an absence, not a name.');
+      await expect(entries.locator('article')).toHaveCount(10);
       await expect(page.locator('#publication-progress')).toHaveValue('3');
       await page.locator('#publication-preview-close').click();
       await expect(entries).not.toContainText('The receiving signature');
@@ -320,6 +340,8 @@ async function checkPublicationExample(page, route, javaScriptEnabled, width, co
 async function checkGeographyInsights(page, geography) {
   await expect(geography).toContainText("Night watchman's walk");
   await expect(geography).toContainText("Customs officer's drive");
+  await expect(geography).toContainText('Mara carries the dispatch');
+  await expect(geography).toContainText('Possible crate transfer');
   const map = geography.locator('.geography-map.leaflet-container');
   await geography.scrollIntoViewIfNeeded();
   await expect(map).toBeVisible();
@@ -327,24 +349,30 @@ async function checkGeographyInsights(page, geography) {
   await expect(geography.locator('[data-geo-basemap]')).toBeHidden();
   await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
   await expect(map.locator('.leaflet-tile')).toHaveCount(0);
-  await expect(geography.locator('li')).toHaveCount(5);
-  await expect(geography.locator('.geography-overview')).toContainText('5 located');
+  await expect(geography.locator('li')).toHaveCount(9);
+  await expect(geography.locator('.geography-overview')).toContainText('9 located');
   await expect(geography.locator('.geography-overview')).toContainText('0 unplaced');
   await expect(geography.locator('.geography-legend')).toContainText('Route');
   const labels = await geography.locator('.geography-sketch text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
   assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
+  const hasTouch = await page.evaluate(() => navigator.maxTouchPoints > 0);
   await withoutRequests(page, 'Map selection, context and framing stay local without tiles or writes', async () => {
-    for (let index = 0; index < 5; index++) {
+    const visibleNumbers = await map.locator('.geography-map-number button:visible').count();
+    assert.ok(visibleNumbers > 0, 'The map offers direct selection');
+    if (!hasTouch) assert.equal(visibleNumbers, 9);
+    for (let index = 0; index < 9; index++) {
       await map.scrollIntoViewIfNeeded();
       const number = map.locator('.geography-map-number button[data-geo-select="' + index + '"]');
-      if (await page.evaluate(() => navigator.maxTouchPoints > 0)) await number.tap();
-      else await number.click();
-      await expect(geography.locator('li').nth(index)).toHaveClass(/is-selected/);
+      const entry = geography.locator('.geography-feature-list li').nth(index);
+      const control = await number.isVisible() ? number : entry.locator('button[data-geo-select]');
+      if (hasTouch) await control.tap();
+      else await control.click();
+      await expect(entry).toHaveClass(/is-selected/);
     }
     for (const index of [0, 1]) {
       await map.scrollIntoViewIfNeeded();
       const point = map.locator('svg [data-geo-select="' + index + '"]');
-      if (await page.evaluate(() => navigator.maxTouchPoints > 0)) await point.tap();
+      if (hasTouch) await point.tap();
       else await point.click();
       await expect(geography.locator('li').nth(index)).toHaveClass(/is-selected/);
     }
@@ -403,14 +431,28 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   }
   await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
   const dossierCards = page.locator('#research-dossiers-list .research-card');
-  await expect(dossierCards).toHaveCount(3);
+  await expect(dossierCards).toHaveCount(4);
+  const exhibits = dossierCards.filter({hasText: 'Warehouse 4 exhibit book'});
+  await exhibits.locator('[data-research-detail=dossier]').click();
+  const exhibitDetails = exhibits.locator('.research-details-body');
+  const video = exhibitDetails.locator('video');
+  await expect(video).toHaveAttribute('src', /^assets\/sources\/[0-9a-f]{64}\.mp4$/);
+  await expect(exhibitDetails).toContainText('When I called, they ran towards the basin.');
+  await expect(exhibitDetails.locator('.dossier-image img')).toHaveCount(2);
+  await Promise.all((await exhibitDetails.locator('.dossier-image img').all()).map(ensureImageDecoded));
+  await video.evaluate(async clip => {
+    clip.muted = true;
+    await clip.play();
+  });
+  await expect.poll(() => video.evaluate(clip => clip.currentTime)).toBeGreaterThan(0);
+  await video.evaluate(clip => clip.pause());
   const character = dossierCards.filter({hasText: 'Character: Mara'});
   await character.locator('[data-research-detail=dossier]').click();
   await expect(character.locator('.research-details-body table')).toContainText('Name mentions');
   await expect(character.locator('.research-details-body')).toContainText('Port Authority Customs Log (synthetic)');
   await expect(character.locator('[data-dossier-pdf-export]')).toHaveCount(0);
   await page.locator('[data-rtab=sources]').click();
-  await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
+  await expect(page.locator('#research-sources-list .research-card')).toHaveCount(9);
   await expect(page.locator('#zotero-box')).not.toHaveAttribute('open', '');
   const zoteroReturn = page.locator('#research-sources-list .research-zotero-link');
   await expect(zoteroReturn).toHaveCount(0);
@@ -422,7 +464,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(source.locator('.research-details-body')).toContainText('circa-1900');
   await page.locator('#r-filter-sources').fill('');
   await page.locator('[data-rtab=dossiers]').click();
-  await expect(dossierCards).toHaveCount(3);
+  await expect(dossierCards).toHaveCount(4);
   const dossier = dossierCards.filter({hasText: 'Warehouse 4 case notes'});
   await dossier.locator('[data-research-detail=dossier]').click();
   const detail = dossier.locator('.research-details-body');
@@ -487,7 +529,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(history.locator('.dossier-geography')).toContainText("Night watchman's walk");
   await page.keyboard.press('Escape');
   await page.locator('[data-rtab=claims]').click();
-  await expect(page.locator('#research-claims-list .research-card')).toHaveCount(6);
+  await expect(page.locator('#research-claims-list .research-card')).toHaveCount(9);
   const claim = page.locator('#research-claims-list .research-card').filter({hasText: 'Attempted warehouse entry'});
   await claim.locator('[data-load-evidence]').click();
   await expect(claim.locator('.claim-evidence-subpanel')).toContainText('synthetic');
@@ -515,7 +557,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#r-link-composer')).toBeHidden();
   await emptyClaim.screenshot({path: path.join(artifacts, `research-empty-evidence-${width}-${colorScheme}.png`)});
   await page.locator('#r-open-timeline').click();
-  await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(5);
+  await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(8);
   await expect(page.locator('#research-claims-timeline .research-timeline-unplaced > li')).toHaveCount(1);
   await expect(page.locator('#research-claims-timeline')).toContainText('present day');
   await page.locator('#research-tab-claims').click();
@@ -537,7 +579,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await page.keyboard.press('Escape');
   await assertReadOnly();
   await page.locator('[data-rtab=decisions]').click();
-  await expect(page.locator('#research-decisions-list .research-card')).toHaveCount(3);
+  await expect(page.locator('#research-decisions-list .research-card')).toHaveCount(4);
   await page.locator('[data-rtab=review]').click();
   await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
   await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
@@ -557,10 +599,12 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(decisionComparison).not.toHaveAttribute('open', '');
   await assertReadOnly();
   const manuscriptReview = page.locator('#research-manuscript-review');
-  await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(5);
+  await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(7);
   await expect(manuscriptReview.locator('blockquote')).toHaveText([
     demoQuote, demoSecondQuote, 'One plank cracked.',
+    'When I called, they ran towards the basin.',
     'The crate was first opened at the customs station at six ten.',
+    'She brought the torn edges together. They did not fit.',
     'Cart seventeen: returned, six forty in the evening.',
   ]);
   const originalReview = manuscriptReviewItem(page);
@@ -754,9 +798,9 @@ async function checkSavedPassageContext(page, width) {
   await expect(context).toContainText('Warehouse 4 case notes');
   const decisions = context.locator('[data-passage-research-decisions]');
   await expect(decisions).not.toHaveAttribute('open', '');
-  await expect(decisions.locator(':scope > summary')).toHaveText('3 decisions in current dossier');
+  await expect(decisions.locator(':scope > summary')).toHaveText('4 decisions in current dossier');
   await decisions.locator(':scope > summary').click();
-  await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(3);
+  await expect(decisions.locator('[data-research-history=decision]')).toHaveCount(4);
   await expect(decisions).toContainText('Keep the inspection at dawn');
   await expect(decisions).toContainText('Move the discovery scene');
   await expect(decisions).toContainText('Leave the receiving signature blank');
@@ -896,7 +940,7 @@ async function checkDemoCapabilities(page, width) {
   const markdown = fs.readFileSync(matrixPath, 'utf8');
   assert.match(markdown, /^# Research Claim-Evidence Matrix: The Crate at Warehouse 4/m);
   assert.match(markdown, /Attempted warehouse entry/);
-  assert.match(markdown, /\*\*Total Evidence Citations:\*\* 8/);
+  assert.match(markdown, /\*\*Total Evidence Citations:\*\* 13/);
   assert.match(markdown, /Warehouse 4 case notes/);
   await expect(matrixButton).toBeEnabled();
   await assertDemoReadOnly(page);
@@ -1240,7 +1284,7 @@ async function checkSandboxQuotationPairs(page) {
       response.writeHead(404); response.end(); return;
     }
     response.writeHead(200, {'Content-Type': {'.pdf': 'application/pdf', '.txt': 'text/plain',
-      '.jpg': 'image/jpeg', '.png': 'image/png'}[path.extname(file)] || 'application/octet-stream'});
+      '.jpg': 'image/jpeg', '.png': 'image/png', '.mp4': 'video/mp4', '.wav': 'audio/wav'}[path.extname(file)] || 'application/octet-stream'});
     response.end(fs.readFileSync(file));
   });
   try {
@@ -1269,7 +1313,7 @@ async function checkSandboxQuotationPairs(page) {
         if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         assert.ok(file.startsWith(root + path.sep));
         assert.ok(fs.existsSync(file), `Missing public asset ${relative}`);
-        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.webp': 'image/webp'}[path.extname(file)];
+        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.mp4': 'video/mp4', '.wav': 'audio/wav', '.webm': 'video/webm', '.webp': 'image/webp'}[path.extname(file)];
         await route.fulfill({contentType, body: fs.readFileSync(file)});
       });
       for (const width of hasTouch ? [320] : [1440, 390, 320]) {

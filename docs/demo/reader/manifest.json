@@ -13,16 +13,25 @@
   },
   "audio": {
     "schema_version": "lixity-reader-audio/1",
-    "source_sha256": "6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc",
+    "source_sha256": "ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0",
     "tracks": [
       {
-        "byte_length": 3002838,
+        "byte_length": 4228364,
         "chapter": 1,
-        "duration_seconds": 68.09056689342404,
-        "file": "assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav",
+        "duration_seconds": 88.09,
+        "file": "assets/audio/3d7a4ed3107cd210eaf8458fd7cc8a332a300124304d96102488f3ba4502b0c4.wav",
         "origin": "imported",
-        "sha256": "9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501",
+        "sha256": "3d7a4ed3107cd210eaf8458fd7cc8a332a300124304d96102488f3ba4502b0c4",
         "title": "The Eastern Gate"
+      },
+      {
+        "byte_length": 5400524,
+        "chapter": 2,
+        "duration_seconds": 112.51,
+        "file": "assets/audio/2888e6c8bcb3e093b7a3eab0e7b6a1de8fb7c22d95d480ebdcff2b0db2a480f5.wav",
+        "origin": "imported",
+        "sha256": "2888e6c8bcb3e093b7a3eab0e7b6a1de8fb7c22d95d480ebdcff2b0db2a480f5",
+        "title": "The Loose Board"
       }
     ]
   },
@@ -33,7 +42,7 @@
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-11-25T18:34:51.212221+00:00",
+  "created_at": "2026-11-25T19:51:09.105258+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
@@ -49,24 +58,40 @@
   "entrypoint": "index.html",
   "files": {
     "analysis.html": {
-      "byte_length": 300968,
-      "sha256": "30c96508a84376fea8e09ba1a0c54e6ffcc19c972919b71f7b765fdba83fe815"
+      "byte_length": 301035,
+      "sha256": "5d02d4a5346b2443e3cbdf1b886ce3dcd09470aaa1e35f4735e9064ea8d11c42"
     },
-    "assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav": {
-      "byte_length": 3002838,
-      "sha256": "9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501"
+    "assets/audio/2888e6c8bcb3e093b7a3eab0e7b6a1de8fb7c22d95d480ebdcff2b0db2a480f5.wav": {
+      "byte_length": 5400524,
+      "sha256": "2888e6c8bcb3e093b7a3eab0e7b6a1de8fb7c22d95d480ebdcff2b0db2a480f5"
+    },
+    "assets/audio/3d7a4ed3107cd210eaf8458fd7cc8a332a300124304d96102488f3ba4502b0c4.wav": {
+      "byte_length": 4228364,
+      "sha256": "3d7a4ed3107cd210eaf8458fd7cc8a332a300124304d96102488f3ba4502b0c4"
     },
     "assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg": {
       "byte_length": 2515979,
       "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
     },
+    "assets/sources/290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4.mp4": {
+      "byte_length": 135736,
+      "sha256": "290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4"
+    },
     "assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg": {
       "byte_length": 2809171,
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
+    "assets/sources/ad16a26f1f48b613137d306ff093ded2db8514ad382bb80b84623ca3729d77c7.png": {
+      "byte_length": 56424,
+      "sha256": "ad16a26f1f48b613137d306ff093ded2db8514ad382bb80b84623ca3729d77c7"
+    },
+    "assets/sources/cad6f1f0f01c4049c533258d9365e71f06e8705c3490e629c555d6ebdb009ff8.png": {
+      "byte_length": 53336,
+      "sha256": "cad6f1f0f01c4049c533258d9365e71f06e8705c3490e629c555d6ebdb009ff8"
+    },
     "index.html": {
-      "byte_length": 1517571,
-      "sha256": "f57512b92ec0dbbcf9f65c974fdede5c013ae80278ae2ab88acc81f02fa9d827"
+      "byte_length": 1528113,
+      "sha256": "384954f170a8f8c566c72b6d2506559e183be4e32f590db14d7610027630017c"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -98,12 +123,12 @@
     }
   },
   "manuscript": {
-    "source_sha256": "6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc"
+    "source_sha256": "ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0"
   },
   "mode": "reader",
   "product_version": "0.9.3",
   "project": {
-    "id": "urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec",
+    "id": "urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
@@ -111,8 +136,8 @@
     "analysis_sections": [
       "chapters"
     ],
-    "entry_count": 6,
-    "identity": "e9d2ec2059ba1f5b7411051f52dd011899963c29afce4f15fc51f1c8b3f31502",
+    "entry_count": 10,
+    "identity": "c873adc6dfafb2a1564c379d333cdf04b138b22c8f698f0d496291484e0cd662",
     "max_chapter": 6,
     "profile": "readers"
   },

@@ -259,6 +259,7 @@
     if (checkbox) checkbox.checked = Boolean(paused && preference(state.root).tiles);
   }
   function stopMap(state) {
+    state.map.off("moveend resize", state.repositionNumbers);
     stopTiles(state);
     if (visibilityObserver) visibilityObserver.unobserve(state.host);
     state.map.remove();
@@ -275,6 +276,47 @@
     var bounds = state.layers.getBounds();
     if (bounds.isValid()) state.map.fitBounds(bounds, {padding: [24, 24], maxZoom: 15, animate: false});
   }
+  function placeMapNumbers(state) {
+    var bounds = state.host.getBoundingClientRect();
+    var size = state.map.getSize();
+    var positions = [[0, 0], [1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1],
+      [2, 0], [-2, 0], [0, -2], [0, 2]];
+    var occupied = state.points.map(function(node) { return node.getBoundingClientRect(); });
+    state.host.querySelectorAll(".leaflet-control").forEach(function(control) {
+      var box = control.getBoundingClientRect();
+      if (box.width && box.height) occupied.push(box);
+    });
+    state.numbers.forEach(function(tooltip) {
+      var node = tooltip.getElement();
+      node.style.translate = "";
+      node.style.visibility = "";
+      delete node.dataset.displaced;
+    });
+    state.numbers.map(function(tooltip) {
+      var node = tooltip.getElement();
+      var anchor = state.map.latLngToContainerPoint(tooltip.getLatLng());
+      return {node: node, box: node.getBoundingClientRect(), anchor: anchor};
+    }).forEach(function(item) {
+      var box = item.box, node = item.node, anchor = item.anchor;
+      var slot = anchor.x >= 0 && anchor.x <= size.x && anchor.y >= 0 && anchor.y <= size.y &&
+        positions.map(function(position) {
+          var x = position[0] * (box.width + 4), y = position[1] * (box.height + 4);
+          return {x: x, y: y, left: box.left + x, right: box.right + x, top: box.top + y, bottom: box.bottom + y};
+        }).find(function(moved) {
+          return moved.left >= bounds.left && moved.right <= bounds.right && moved.top >= bounds.top && moved.bottom <= bounds.bottom &&
+            !occupied.some(function(other) {
+              return moved.left < other.right && moved.right > other.left && moved.top < other.bottom && moved.bottom > other.top;
+            });
+        });
+      // The matching shape and feature list remain selectable when the map is full.
+      if (!slot) { node.style.visibility = "hidden"; return; }
+      occupied.push(slot);
+      if (slot.x || slot.y) {
+        node.style.translate = slot.x + "px " + slot.y + "px";
+        node.dataset.displaced = "";
+      }
+    });
+  }
   function startMap(root) {
     var status = root.querySelector(".geography-map-status"), host = root.querySelector(".geography-map");
     var state;
@@ -289,7 +331,8 @@
       var map = window.L.map(host, {zoomControl: false, scrollWheelZoom: false, minZoom: 0, maxZoom: 19,
         zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false, inertia: false});
       host._geographyMap = map;
-      state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null};
+      state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null, numbers: [], points: []};
+      state.repositionNumbers = placeMapNumbers.bind(null, state);
       maps.set(root, state);
       if (visibilityObserver) visibilityObserver.observe(host);
       map.setView([frame.points[0][1], frame.longitude(frame.points[0][0])], 5, {animate: false});
@@ -318,6 +361,8 @@
         layer.bindTooltip(button, {permanent: true, interactive: true,
           direction: geometry.type === "Polygon" ? "auto" : "top", className: "geography-map-number"});
         var tooltip = layer.getTooltip(); tooltip.getElement().removeAttribute("role");
+        state.numbers.push(tooltip);
+        if (geometry.type === "Point") state.points.push(node);
         // Keep route controls clear of nearby point controls. Area labels face
         // inward; spacing follows the actual mouse/touch button footprint.
         if (geometry.type === "LineString") tooltip.options.offset = window.L.point(0, -Math.ceil(button.offsetHeight / 2));
@@ -334,6 +379,8 @@
       var drawing = host.querySelector(".leaflet-overlay-pane > svg");
       if (drawing) { drawing.setAttribute("role", "group"); drawing.setAttribute("aria-label", label("map_label")); }
       fit(state);
+      state.repositionNumbers();
+      map.on("moveend resize", state.repositionNumbers);
       root.querySelector(".geography-map-tools").hidden = false;
       root.querySelector("[data-geo-basemap]").checked = preference(root).tiles;
       var toggle = root.querySelector("[data-geo-map]");

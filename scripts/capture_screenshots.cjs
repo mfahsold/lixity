@@ -36,10 +36,13 @@ async function main() {
         return;
       }
       const resource = researchFixture[url.pathname + url.search];
-      if (url.pathname === '/api/research/image' && resource && resource.asset_path) {
+      if (['/api/research/image', '/api/research/media'].includes(url.pathname) && resource && resource.asset_path) {
         assert.equal(route.request().method(), 'GET');
         assert.ok(['docs/assets/research/hamburg-free-port-1900.jpg',
-          'docs/assets/research/hamburg-harbour-1890-1900.jpg'].includes(resource.asset_path));
+          'docs/assets/research/hamburg-harbour-1890-1900.jpg',
+          'docs/assets/research/warehouse-4-receipt.png',
+          'docs/assets/research/warehouse-4-ledger.png',
+          'docs/assets/research/warehouse-4-watchman.mp4'].includes(resource.asset_path));
         await route.fulfill({status: 200, contentType: resource.media_type,
           body: fs.readFileSync(path.join(__dirname, '..', resource.asset_path))});
         return;
@@ -431,7 +434,7 @@ async function main() {
         const before = await page.evaluate(() => captureRequests.length);
         await page.locator('#r-filter-dossiers').fill('warehouse');
         assert.equal(await page.evaluate(() => captureRequests.length), before, 'List filtering is local');
-        const card = page.locator('#research-dossiers-list .research-card:visible').first();
+        const card = page.locator('#research-dossiers-list .research-card:visible').filter({hasText: 'Warehouse 4 case notes'});
         await card.locator('[data-research-detail]').click();
         await card.locator('.research-details-body .research-prose').first().waitFor();
         for (const image of await card.locator('.dossier-image img').all()) {

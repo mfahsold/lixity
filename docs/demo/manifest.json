@@ -18,7 +18,7 @@
     "research": true,
     "source_files": true
   },
-  "created_at": "2026-11-25T18:34:50.868413+00:00",
+  "created_at": "2026-11-25T19:51:08.726885+00:00",
   "disclosures": [
     "Contains manuscript prose, analysis and work-marker notes.",
     "Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted.",
@@ -33,6 +33,10 @@
       "byte_length": 2515979,
       "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
     },
+    "assets/sources/290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4.mp4": {
+      "byte_length": 135736,
+      "sha256": "290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4"
+    },
     "assets/sources/3dc1cb5d584640ee1b3c1c3d1b3afff15e3062fbd7548fb1b033cf602af4eb02.txt": {
       "byte_length": 1534,
       "sha256": "3dc1cb5d584640ee1b3c1c3d1b3afff15e3062fbd7548fb1b033cf602af4eb02"
@@ -44,6 +48,22 @@
     "assets/sources/ab266eb9f3ada14cdf115e01c55da06c181a85ffa0c3d22fd5f5a647b68bb25f.txt": {
       "byte_length": 1106,
       "sha256": "ab266eb9f3ada14cdf115e01c55da06c181a85ffa0c3d22fd5f5a647b68bb25f"
+    },
+    "assets/sources/ad16a26f1f48b613137d306ff093ded2db8514ad382bb80b84623ca3729d77c7.png": {
+      "byte_length": 56424,
+      "sha256": "ad16a26f1f48b613137d306ff093ded2db8514ad382bb80b84623ca3729d77c7"
+    },
+    "assets/sources/b5325da27df7040f45cf5c818769cd6830287546ce8dd43e864b0cdb728e27d8.txt": {
+      "byte_length": 346,
+      "sha256": "b5325da27df7040f45cf5c818769cd6830287546ce8dd43e864b0cdb728e27d8"
+    },
+    "assets/sources/c9c95bdcf6fda8b6f7fe5a7ede5cf9f38e8e9a5e75a66098e18c70a70528c4ff.txt": {
+      "byte_length": 774,
+      "sha256": "c9c95bdcf6fda8b6f7fe5a7ede5cf9f38e8e9a5e75a66098e18c70a70528c4ff"
+    },
+    "assets/sources/cad6f1f0f01c4049c533258d9365e71f06e8705c3490e629c555d6ebdb009ff8.png": {
+      "byte_length": 53336,
+      "sha256": "cad6f1f0f01c4049c533258d9365e71f06e8705c3490e629c555d6ebdb009ff8"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -74,53 +94,53 @@
       "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
     },
     "report.html": {
-      "byte_length": 7181814,
-      "sha256": "055eb5ea2ea10cdefe3b7316fb732d9083444e853e4649ba8336bfef89d30ebd"
+      "byte_length": 6548000,
+      "sha256": "0ba72f19bad1917efd36e0a72a8ffdd360c07648f3bbdd36fb2cce3b1361a69c"
     },
     "research.html": {
       "byte_length": 490,
       "sha256": "70ae94240099650341521d1c85a8938be6d24c3952d2b69337b45d4ea73a8d6a"
     },
     "warehouse-4-book.pdf": {
-      "byte_length": 78829,
-      "sha256": "012313e0aa9e25231c3896c58bb7a88196e255bbc8ec56b0ee285115bfab7c47"
+      "byte_length": 85432,
+      "sha256": "5edc8c7ea1568391618995cd59282c2e0c1f530f352caef855e26348c0437da9"
     },
     "warehouse-4-document.pdf": {
-      "byte_length": 65423,
-      "sha256": "ab97754c72b9b231da761839c02a0df1b33626963792759feeb5a09eb25a3296"
+      "byte_length": 70882,
+      "sha256": "2aa0e87015810d3e67273177644f9e837c579f3c92050054c0209f48b8563c02"
     },
     "warehouse-4-dossier.pdf": {
-      "byte_length": 69308,
-      "sha256": "17f2688f0945996f05fecaace1ff1ae46aa47f0426d6330140f5cd8aafbd7c03"
+      "byte_length": 75850,
+      "sha256": "8cdd7c101bec67de8600147b9fbad2bcc14c4e6e98141ec926d77843bbee123a"
     },
     "warehouse-4-editor.pdf": {
-      "byte_length": 76837,
-      "sha256": "2cdd9e4d0d151adcb7bace443a7af7c8763d590a345ed3562de9ad93c27d583e"
+      "byte_length": 82698,
+      "sha256": "965ea55d8f768eccf4b58cdea104b6001dccf68acab9ab7d7621a67cf6a5b994"
     },
     "warehouse-4-report.pdf": {
-      "byte_length": 66687,
-      "sha256": "54ad1473c6beddee37d7faf6b0e7a109f9b0ecc3920908b12f405d2d7e15d4a1"
+      "byte_length": 66695,
+      "sha256": "065ad077279a2f67ec958e73276c2f49959fcc613784869c1557f70621ea7170"
     },
     "warehouse-4-sheet.pdf": {
-      "byte_length": 62652,
-      "sha256": "43fce06b7c252b74d61f3faa4add47d3af8dd31dc2416652af45d77f5198250e"
+      "byte_length": 67952,
+      "sha256": "2683e6c477d565bfe14ca04fcf2717499b8a15f447d98a8ef7130ec4c1ca2725"
     }
   },
   "manuscript": {
     "name": "harbour-manuscript.md",
-    "source_sha256": "6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc"
+    "source_sha256": "ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0"
   },
   "mode": "review",
   "product_version": "0.9.3",
   "project": {
-    "id": "urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec",
+    "id": "urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be",
     "language": "en",
     "title": "The Crate at Warehouse 4"
   },
   "research": {
     "included": true,
-    "revision_count": 61,
-    "snapshot": "60352ab56954c6282d11eed2ee05dd65008261e26a2ab8296ee753a1317e27dc"
+    "revision_count": 100,
+    "snapshot": "ae5b8de62c53ac3a0e46f4b0c57cb6eaf8a097c8774bc7c53ee229687d71449b"
   },
   "schema_version": "lixity-read-only-site/1"
 }

@@ -108,6 +108,10 @@ def _json(value: Any) -> bytes:
     return (json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
 
 
+def _site_data_size(value: Any) -> int:
+    return len(_script_json(value).encode("utf-8"))
+
+
 def _checksum(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
@@ -281,6 +285,7 @@ class _Reads:
     def __init__(self, token: str):
         self.token = token
         self.responses: dict[str, Any] = {}
+        self.aliases: dict[str, str] = {}
         self.size = 0
         self.bytes_by_route: dict[str, int] = {}
 
@@ -291,28 +296,34 @@ class _Reads:
         if companion:
             variants += [{**parameters, "project_token": self.token},
                          {**parameters, "project_token": self.token, "research_token": self.token}]
-        payload_size = len(_json(public))
-        for values in variants:
-            path = "/api/research/" + route
-            if values:
-                path += "?" + urlencode(sorted(values.items()))
-            if path in self.responses:
+        route_path = "/api/research/" + route
+        paths = [route_path + "?" + urlencode(sorted(values.items())) if values else route_path for values in variants]
+        canonical = paths[0]
+        if canonical in self.aliases:
+            return
+        for path in paths:
+            if path in self.responses or path in self.aliases:
                 continue
-            response_bytes = payload_size + len(path)
+            is_canonical = path == canonical
+            entries = self.responses if is_canonical else self.aliases
+            value = public if is_canonical else canonical
+            # Charge the shipped map entry plus its separator, excluding map braces.
+            response_bytes = _site_data_size({path: value}) - 2 + bool(entries)
             attempted = self.size + response_bytes
-            context = {"response_route": "/api/research/" + route,
+            accepted = len(self.responses) + len(self.aliases)
+            context = {"response_route": route_path,
                        "response_parameters": {key: value for key, value in parameters.items()
                                                if key in {"id", "kind", "revision", "dossier_id", "claim_id"}},
-                       "accepted_responses": len(self.responses), "accepted_bytes": self.size,
+                       "accepted_responses": accepted, "accepted_bytes": self.size,
                        "response_bytes": response_bytes, "accepted_by_route_bytes": dict(self.bytes_by_route)}
-            if len(self.responses) >= MAX_SITE_RESPONSES:
-                raise SiteExportLimitError("research_response_count", len(self.responses) + 1,
+            if accepted >= MAX_SITE_RESPONSES:
+                raise SiteExportLimitError("research_response_count", accepted + 1,
                                            MAX_SITE_RESPONSES, unit="count", context=context)
             if attempted > MAX_SITE_DATA_BYTES:
                 raise SiteExportLimitError("research_response_bytes", attempted, MAX_SITE_DATA_BYTES, context=context)
             self.size = attempted
             self.bytes_by_route[route] = self.bytes_by_route.get(route, 0) + response_bytes
-            self.responses[path] = public
+            entries[path] = value
 
 
 def _retain_source(repository: Repository, snapshot: Snapshot, version: SourceVersion,
@@ -530,7 +541,7 @@ def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, t
 
 def _research(repository: Repository, snapshot: Snapshot, text: str, source: Path,
               source_hash: str, analysis: Any, token: str, include_files: bool,
-              files: dict[str, bytes], *, settings: dict[str, Any] | None = None) -> tuple[dict[str, Any], dict[str, str]]:
+              files: dict[str, bytes], *, settings: dict[str, Any] | None = None) -> tuple[_Reads, dict[str, str]]:
     reads = _Reads(token)
     overview = api._project_overview(snapshot, root=repository.root)
     reads.add("status", {"ok": True, "initialized": True, **overview})
@@ -595,7 +606,7 @@ def _research(repository: Repository, snapshot: Snapshot, text: str, source: Pat
             if not isinstance(version, SourceVersion) or version.id in unavailable or version.source_ref.id in unavailable:
                 continue
             _retain_source(repository, snapshot, version, files, resources)
-    return reads.responses, resources
+    return reads, resources
 
 
 def _reader_audio(project: Path, text: str, config: Any, source_hash: str,
@@ -677,10 +688,11 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
     publication = None
     publication_analysis = None
     publication_audio = None
+    reads = _Reads(token)
     if mode == "review":
         analysis = analyze_document(text, config, effective_thresholds, include_evidence=True)
-        responses, resources = (_research(repository, snapshot, text, source, source_hash, analysis, token,
-                                          include_source_files, files, settings=settings) if snapshot else ({}, {}))
+        reads, resources = (_research(repository, snapshot, text, source, source_hash, analysis, token,
+                                      include_source_files, files, settings=settings) if snapshot else (reads, {}))
         selection = resolve_character_settings(None, settings)
         author = validate_author_name(settings.get("author_name", ""))
         reports = supplementary_reports(text, config, analysis, scene_settings=settings.get("scene_analysis"))
@@ -733,7 +745,6 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
             publication["schema_version"] = "lixity-reader-publication/2"
             publication["identity"] = _checksum(_json({key: value for key, value in publication.items()
                                                        if key != "identity"}))
-        responses = {}
         display_title = publication["title"]
         if options.analysis_sections:
             files["analysis.html"], publication_analysis = _reader_analysis(
@@ -741,9 +752,10 @@ def prepare_site(project: str | Path, *, manuscript: str | Path | None = None,
         document = render_publication(publication, reader_document=reading, labels=resolved.labels,
                                       language_key=resolved.key, resources=resources,
                                       analysis_available=bool(options.analysis_sections))
-    envelope = {"schema_version": DATA_SCHEMA, "responses": responses, "resources": resources,
+    envelope = {"schema_version": DATA_SCHEMA, "responses": reads.responses, "resources": resources,
+                **({"response_aliases": reads.aliases} if reads.aliases else {}),
                 **({"publication": publication} if publication is not None else {})}
-    envelope_size = len(_json(envelope))
+    envelope_size = _site_data_size(envelope)
     if envelope_size > MAX_SITE_DATA_BYTES:
         raise SiteExportLimitError("prepared_data_bytes", envelope_size, MAX_SITE_DATA_BYTES)
     SiteData.model_validate(envelope)

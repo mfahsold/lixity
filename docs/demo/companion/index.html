@@ -3989,6 +3989,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .geography-map .leaflet-interactive.is-selected { stroke-width: 5; }
 .geography-map .leaflet-interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .geography-map-number { padding: 0; }
+.geography-map-number[data-displaced]::before { display: none; }
 .geography-map-number button { min-width: 32px; min-height: 32px; padding: .3rem; border: 0; border-radius: inherit; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .geography-map-number button.is-selected { font-weight: var(--weight-strong); background: var(--accent-light); }
 .geography-map-number button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -5296,12 +5297,12 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
 <div id="publication-entries"></div>
 <noscript><p>Enable JavaScript to select reading progress and open the context.</p></noscript></aside></div>
 <details class="panel"><summary>About this synthetic reading example</summary><p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. All content included in a static file remains inspectable; chapter caps remove later material before export.</p><p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. <a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. The ordinary product export has the same reading interface and no visitor counter. To export your own manuscript with private offline reading websites, <a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details><footer><span class="version-badge">Version 0.9.3</span><a class="license-badge" href="#license-terms">Open source · AGPL-3.0</a></footer></div>
-<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A7e8f7abf-9cfe-46de-b515-d6a321213a09\u0026version_id=urn%3Auuid%3Aeebad769-8d01-4fc2-8986-02b81616a91d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3A6fcda4ec-27a1-4f16-bc20-98c3deefa2ec\u0026source_id=urn%3Auuid%3A7e8f7abf-9cfe-46de-b515-d6a321213a09\u0026version_id=urn%3Auuid%3Aeebad769-8d01-4fc2-8986-02b81616a91d":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A4c63ebfb-b3d4-4cb5-bf0c-bb694272d343\u0026version_id=urn%3Auuid%3Abe317795-4268-40b9-b74a-842b37377b4d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3A6fcda4ec-27a1-4f16-bc20-98c3deefa2ec\u0026source_id=urn%3Auuid%3A4c63ebfb-b3d4-4cb5-bf0c-bb694272d343\u0026version_id=urn%3Auuid%3Abe317795-4268-40b9-b74a-842b37377b4d":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec","source_sha256":"6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:983a2315-402e-4ca2-b753-c032da932ed7","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:e49dccac-015d-46ef-a98e-621f9078d205","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:7e8f7abf-9cfe-46de-b515-d6a321213a09/urn:uuid:eebad769-8d01-4fc2-8986-02b81616a91d)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec","source_id":"urn:uuid:7e8f7abf-9cfe-46de-b515-d6a321213a09","source_version_id":"urn:uuid:eebad769-8d01-4fc2-8986-02b81616a91d","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3A6fcda4ec-27a1-4f16-bc20-98c3deefa2ec\u0026source_id=urn%3Auuid%3A7e8f7abf-9cfe-46de-b515-d6a321213a09\u0026version_id=urn%3Auuid%3Aeebad769-8d01-4fc2-8986-02b81616a91d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:e49dccac-015d-46ef-a98e-621f9078d205","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:4c63ebfb-b3d4-4cb5-bf0c-bb694272d343/urn:uuid:be317795-4268-40b9-b74a-842b37377b4d)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec","source_id":"urn:uuid:4c63ebfb-b3d4-4cb5-bf0c-bb694272d343","source_version_id":"urn:uuid:be317795-4268-40b9-b74a-842b37377b4d","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3A6fcda4ec-27a1-4f16-bc20-98c3deefa2ec\u0026source_id=urn%3Auuid%3A4c63ebfb-b3d4-4cb5-bf0c-bb694272d343\u0026version_id=urn%3Auuid%3Abe317795-4268-40b9-b74a-842b37377b4d","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:983a2315-402e-4ca2-b753-c032da932ed7","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:983a2315-402e-4ca2-b753-c032da932ed7","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null}],"identity":"f749620eca39546d761ef502a9f3dd177f6104ea54287a3abb94d1ee4b4d5dee"}}</script>
+<script type="application/json" id="lixity-site-data">{"schema_version":"lixity-read-only-site-data/1","responses":{},"resources":{"/api/site-resource?source_id=urn%3Auuid%3A3b8e0ee4-0510-4179-9d01-59f868691bcc\u0026version_id=urn%3Auuid%3A3443fdd8-8c70-4525-a3d8-ef106bf3dc50":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/research/image?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A3b8e0ee4-0510-4179-9d01-59f868691bcc\u0026version_id=urn%3Auuid%3A3443fdd8-8c70-4525-a3d8-ef106bf3dc50":"assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg","/api/site-resource?source_id=urn%3Auuid%3A280eef35-6f0f-4b51-9703-dded3a9ce350\u0026version_id=urn%3Auuid%3Ac4327a17-d72c-46fd-8089-7cc079e639a7":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/research/image?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A280eef35-6f0f-4b51-9703-dded3a9ce350\u0026version_id=urn%3Auuid%3Ac4327a17-d72c-46fd-8089-7cc079e639a7":"assets/sources/2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d.jpg","/api/site-resource?source_id=urn%3Auuid%3A7cb3ecc4-9627-4d4d-b7a0-34621cc2a378\u0026version_id=urn%3Auuid%3A560c432a-246c-4155-ab7d-db60d4cf14da":"assets/sources/290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4.mp4","/api/research/media?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A7cb3ecc4-9627-4d4d-b7a0-34621cc2a378\u0026version_id=urn%3Auuid%3A560c432a-246c-4155-ab7d-db60d4cf14da":"assets/sources/290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4.mp4"},"publication":{"schema_version":"lixity-reader-publication/1","mode":"companion","profile":"readers","project_id":"urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be","source_sha256":"ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0","title":"Warehouse 4 — a reader's companion","introduction":"Keep this context beside the story. Choose the last chapter you have finished to reveal the notes prepared for that point.","max_chapter":3,"chapters":[{"number":1},{"number":2},{"number":3}],"entries":[{"id":"entry-1","dossier_id":"urn:uuid:c18350f5-c9d3-4ca8-9033-e71e471e45ae","revision":1,"section":"Reader introduction","title":"The harbour around the story","body":"The harbour in this story is an invented place within a real city's visual history. The quay, office and Warehouse 4 belong to the fiction. The old map and harbour view below offer a wider setting, rather than a plan of the characters' movements.","reveal_after_chapter":0,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-2","dossier_id":"urn:uuid:06e3486f-a13c-4838-8d4e-95755608e8bc","revision":3,"section":"Historical map","title":"A map from another time","body":"Circa-1900 reference; not evidence of the invented 1923 incident.\n\n![Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary](lixity:image/urn:uuid:3b8e0ee4-0510-4179-9d01-59f868691bcc/urn:uuid:3443fdd8-8c70-4525-a3d8-ef106bf3dc50)\n\nHamburg free-port area, circa 1900. Richard Krause. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be","source_id":"urn:uuid:3b8e0ee4-0510-4179-9d01-59f868691bcc","source_version_id":"urn:uuid:3443fdd8-8c70-4525-a3d8-ef106bf3dc50","alt":"Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary","url":"/api/research/image?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A3b8e0ee4-0510-4179-9d01-59f868691bcc\u0026version_id=urn%3Auuid%3A3443fdd8-8c70-4525-a3d8-ef106bf3dc50","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-3","dossier_id":"urn:uuid:06e3486f-a13c-4838-8d4e-95755608e8bc","revision":3,"section":"Historical harbour view","title":"The harbour in colour","body":"1890–1900 photochrom reference; not a photograph of the fictional event.\n\n![Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground](lixity:image/urn:uuid:280eef35-6f0f-4b51-9703-dded3a9ce350/urn:uuid:c4327a17-d72c-46fd-8089-7cc079e639a7)\n\nShips in the Harbor, Hamburg, Germany (1890-1900). Library of Congress, Photochrom Print Collection. Public domain.","reveal_after_chapter":0,"citations":[],"images":[{"project_id":"urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be","source_id":"urn:uuid:280eef35-6f0f-4b51-9703-dded3a9ce350","source_version_id":"urn:uuid:c4327a17-d72c-46fd-8089-7cc079e639a7","alt":"Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground","url":"/api/research/image?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A280eef35-6f0f-4b51-9703-dded3a9ce350\u0026version_id=urn%3Auuid%3Ac4327a17-d72c-46fd-8089-7cc079e639a7","availability":"available","media_type":"image/jpeg"}],"media":[],"geography":null},{"id":"entry-4","dossier_id":"urn:uuid:c18350f5-c9d3-4ca8-9033-e71e471e45ae","revision":1,"section":"Reader weather","title":"Light and sound","body":"Light reaches the lock more clearly than the water. Beyond the quay lamp, a sound may remain distinct after its source has disappeared into the mist. Keep that difference in mind as the witnesses describe the night.","reveal_after_chapter":1,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-5","dossier_id":"urn:uuid:c18350f5-c9d3-4ca8-9033-e71e471e45ae","revision":1,"section":"Reader witness limits","title":"What a witness can tell","body":"Seeing a light, hearing an engine and seeing someone board a boat are different observations. The three quay chapters leave gaps between them. The companion does not fill those gaps with an unseen journey.","reveal_after_chapter":3,"citations":[],"images":[],"media":[],"geography":null},{"id":"entry-6","dossier_id":"urn:uuid:e793c675-9b46-49b9-a2b6-eeb016cc202d","revision":4,"section":"Watchman’s statement","title":"The watchman’s statement","body":"Synthetic narration of dialogue from chapter 3. The watchman reports two figures and their direction of flight. The route beyond the basin remains open.\n\n**Transcript.** “For the time being, all I can say is that there were two people by the gate. When I called, they ran towards the basin.”\n\n![Captioned reconstruction of the fictional watchman reporting two figures and their direction of flight.](lixity:media/urn:uuid:7cb3ecc4-9627-4d4d-b7a0-34621cc2a378/urn:uuid:560c432a-246c-4155-ab7d-db60d4cf14da)\n\nSynthetic narration of the chapter 3 dialogue. Read the matching transcript in this section.","reveal_after_chapter":3,"citations":[],"images":[],"media":[{"project_id":"urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be","source_id":"urn:uuid:7cb3ecc4-9627-4d4d-b7a0-34621cc2a378","source_version_id":"urn:uuid:560c432a-246c-4155-ab7d-db60d4cf14da","alt":"Captioned reconstruction of the fictional watchman reporting two figures and their direction of flight.","url":"/api/research/media?project_id=urn%3Auuid%3Aeee21fd9-1d70-4556-9e91-2fd0c26f16be\u0026source_id=urn%3Auuid%3A7cb3ecc4-9627-4d4d-b7a0-34621cc2a378\u0026version_id=urn%3Auuid%3A560c432a-246c-4155-ab7d-db60d4cf14da","availability":"available","media_type":"video/mp4"}],"geography":null}],"identity":"2ff3525d72fa1f255c2a9abd4d20a347d1eb82e7580fb8c931f156c483c73936"}}</script>
 <script>// A prepared website has no server: every API read belongs to its inline snapshot.
 (function () {
   "use strict";
   var readOnly = document.body.dataset.readOnly === "true";
-  var resources = new Map(), responses = new Map(), localResources = new Set();
+  var resources = new Map(), responses = new Map(), responseAliases = new Map(), localResources = new Set();
   var nativeFetch = window.fetch.bind(window);
   var base = new URL(document.baseURI);
 
@@ -5350,6 +5351,11 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
       resources.set(key, relative);
       localResources.add(new URL(relative, base).href);
     });
+    Object.entries(envelope.response_aliases || {}).forEach(function(entry) {
+      var key = entry[0], target = entry[1];
+      if (canonical(key) === key && !responses.has(key) && !resources.has(key) &&
+          typeof target === "string" && responses.has(target)) responseAliases.set(key, target);
+    });
   } catch (_) { /* An absent or invalid snapshot remains closed to all network reads. */ }
 
   window.fetch = async function(input, init) {
@@ -5359,8 +5365,9 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     if (method !== "GET") throw new Error("This website is read-only.");
     var value = typeof input === "string" || input instanceof URL ? String(input) : input.url;
     var key = canonical(value);
-    if (key && responses.has(key)) {
-      var payload = responses.get(key);
+    var responseKey = key && (responseAliases.get(key) || key);
+    if (responseKey && responses.has(responseKey)) {
+      var payload = responses.get(responseKey);
       var markdown = key.startsWith("/api/research/matrix?") && new URL(value, base).searchParams.get("format") === "md";
       return new Response(markdown ? payload.text : JSON.stringify(payload), {
         status: 200, headers: {"Content-Type": markdown ? "text/markdown; charset=utf-8" : "application/json; charset=utf-8"},
@@ -18794,6 +18801,7 @@ window.LixityManuscriptLinks = {
     if (checkbox) checkbox.checked = Boolean(paused && preference(state.root).tiles);
   }
   function stopMap(state) {
+    state.map.off("moveend resize", state.repositionNumbers);
     stopTiles(state);
     if (visibilityObserver) visibilityObserver.unobserve(state.host);
     state.map.remove();
@@ -18810,6 +18818,47 @@ window.LixityManuscriptLinks = {
     var bounds = state.layers.getBounds();
     if (bounds.isValid()) state.map.fitBounds(bounds, {padding: [24, 24], maxZoom: 15, animate: false});
   }
+  function placeMapNumbers(state) {
+    var bounds = state.host.getBoundingClientRect();
+    var size = state.map.getSize();
+    var positions = [[0, 0], [1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1],
+      [2, 0], [-2, 0], [0, -2], [0, 2]];
+    var occupied = state.points.map(function(node) { return node.getBoundingClientRect(); });
+    state.host.querySelectorAll(".leaflet-control").forEach(function(control) {
+      var box = control.getBoundingClientRect();
+      if (box.width && box.height) occupied.push(box);
+    });
+    state.numbers.forEach(function(tooltip) {
+      var node = tooltip.getElement();
+      node.style.translate = "";
+      node.style.visibility = "";
+      delete node.dataset.displaced;
+    });
+    state.numbers.map(function(tooltip) {
+      var node = tooltip.getElement();
+      var anchor = state.map.latLngToContainerPoint(tooltip.getLatLng());
+      return {node: node, box: node.getBoundingClientRect(), anchor: anchor};
+    }).forEach(function(item) {
+      var box = item.box, node = item.node, anchor = item.anchor;
+      var slot = anchor.x >= 0 && anchor.x <= size.x && anchor.y >= 0 && anchor.y <= size.y &&
+        positions.map(function(position) {
+          var x = position[0] * (box.width + 4), y = position[1] * (box.height + 4);
+          return {x: x, y: y, left: box.left + x, right: box.right + x, top: box.top + y, bottom: box.bottom + y};
+        }).find(function(moved) {
+          return moved.left >= bounds.left && moved.right <= bounds.right && moved.top >= bounds.top && moved.bottom <= bounds.bottom &&
+            !occupied.some(function(other) {
+              return moved.left < other.right && moved.right > other.left && moved.top < other.bottom && moved.bottom > other.top;
+            });
+        });
+      // The matching shape and feature list remain selectable when the map is full.
+      if (!slot) { node.style.visibility = "hidden"; return; }
+      occupied.push(slot);
+      if (slot.x || slot.y) {
+        node.style.translate = slot.x + "px " + slot.y + "px";
+        node.dataset.displaced = "";
+      }
+    });
+  }
   function startMap(root) {
     var status = root.querySelector(".geography-map-status"), host = root.querySelector(".geography-map");
     var state;
@@ -18824,7 +18873,8 @@ window.LixityManuscriptLinks = {
       var map = window.L.map(host, {zoomControl: false, scrollWheelZoom: false, minZoom: 0, maxZoom: 19,
         zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false, inertia: false});
       host._geographyMap = map;
-      state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null};
+      state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null, numbers: [], points: []};
+      state.repositionNumbers = placeMapNumbers.bind(null, state);
       maps.set(root, state);
       if (visibilityObserver) visibilityObserver.observe(host);
       map.setView([frame.points[0][1], frame.longitude(frame.points[0][0])], 5, {animate: false});
@@ -18853,6 +18903,8 @@ window.LixityManuscriptLinks = {
         layer.bindTooltip(button, {permanent: true, interactive: true,
           direction: geometry.type === "Polygon" ? "auto" : "top", className: "geography-map-number"});
         var tooltip = layer.getTooltip(); tooltip.getElement().removeAttribute("role");
+        state.numbers.push(tooltip);
+        if (geometry.type === "Point") state.points.push(node);
         // Keep route controls clear of nearby point controls. Area labels face
         // inward; spacing follows the actual mouse/touch button footprint.
         if (geometry.type === "LineString") tooltip.options.offset = window.L.point(0, -Math.ceil(button.offsetHeight / 2));
@@ -18869,6 +18921,8 @@ window.LixityManuscriptLinks = {
       var drawing = host.querySelector(".leaflet-overlay-pane > svg");
       if (drawing) { drawing.setAttribute("role", "group"); drawing.setAttribute("aria-label", label("map_label")); }
       fit(state);
+      state.repositionNumbers();
+      map.on("moveend resize", state.repositionNumbers);
       root.querySelector(".geography-map-tools").hidden = false;
       root.querySelector("[data-geo-basemap]").checked = preference(root).tiles;
       var toggle = root.querySelector("[data-geo-map]");

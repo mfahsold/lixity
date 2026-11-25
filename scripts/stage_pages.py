@@ -93,6 +93,7 @@ PUBLIC_TREES = {
     "examples": {".html", ".pdf", ".md"},
     "research": {".md", ".json", ".txt"},
 }
+DEMO_READER_AUDIO_CHAPTERS = (1, 2)
 
 
 def screenshot_manifest(source: Path) -> list[dict[str, str]]:
@@ -154,15 +155,17 @@ def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str
         if (not approved_analysis or not isinstance(audio, dict)
                 or audio.get("schema_version") != "lixity-reader-audio/1"
                 or audio.get("source_sha256") != data.get("manuscript", {}).get("source_sha256")
-                or not isinstance(audio.get("tracks"), list) or len(audio["tracks"]) != 1):
+                or not isinstance(audio.get("tracks"), list)
+                or len(audio["tracks"]) != len(DEMO_READER_AUDIO_CHAPTERS)):
             raise ValueError("The reader demo requires its reviewed chapter audio scope")
-        track = audio["tracks"][0]
-        if (not isinstance(track, dict) or track.get("chapter") != 1 or track.get("origin") != "imported"
-                or not isinstance(track.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", track["sha256"])
-                or track.get("file") != f"assets/audio/{track['sha256']}.wav"
-                or data["files"].get(track["file"]) != {"sha256": track["sha256"], "byte_length": track.get("byte_length")}):
-            raise ValueError("The reader demo audio does not match its reviewed file inventory")
-        audio_assets.add(track["file"])
+        for chapter, track in zip(DEMO_READER_AUDIO_CHAPTERS, audio["tracks"], strict=True):
+            if (not isinstance(track, dict) or type(track.get("chapter")) is not int
+                    or track["chapter"] != chapter or track.get("origin") != "imported"
+                    or not isinstance(track.get("sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", track["sha256"])
+                    or track.get("file") != f"assets/audio/{track['sha256']}.wav"
+                    or data["files"].get(track["file"]) != {"sha256": track["sha256"], "byte_length": track.get("byte_length")}):
+                raise ValueError("The reader demo audio does not match its reviewed file inventory")
+            audio_assets.add(track["file"])
     if mode is not None and (data.get("mode") != mode
             or not isinstance(data.get("capabilities"), dict)
             or data["capabilities"].get("analysis") is not approved_analysis
@@ -176,7 +179,7 @@ def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str
             or (mode is not None and name == "index.html")
             or (approved_analysis and name == "analysis.html")
             or name in audio_assets
-            or re.fullmatch(r"assets/sources/[0-9a-f]{64}\.(?:jpg|png|txt|pdf)", name)
+            or re.fullmatch(r"assets/sources/[0-9a-f]{64}\.(?:jpg|png|txt|pdf|mp4)", name)
             or re.fullmatch(r"licenses/(?:Lixity-LICENSE|[A-Za-z0-9._-]+\.LICENSE)", name)
         )
         if not approved:

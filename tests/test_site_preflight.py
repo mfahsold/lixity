@@ -15,8 +15,10 @@ def test_response_limit_identifies_first_crossing_without_source_text_or_token(m
     import lixity.site_export as export
 
     reads = export._Reads("private-operational-token")
-    payload = {"text": "Synthetic source sentence."}
-    one = len(export._json(payload)) + len("/api/research/sources?id=synthetic-id")
+    payload = {"text": "Synthetic <source> sentence."}
+    route = r'"/api/research/sources?id=synthetic-id"'
+    one = len(route + r':{"text":"Synthetic \u003csource\u003e sentence."}')
+    alias_size = len(r'"/api/research/sources?id=synthetic-id\u0026research_token=private-operational-token":' + route)
     monkeypatch.setattr(export, "MAX_SITE_DATA_BYTES", one)
     with pytest.raises(export.SiteExportLimitError) as caught:
         reads.add("sources", payload, id="synthetic-id")
@@ -27,8 +29,8 @@ def test_response_limit_identifies_first_crossing_without_source_text_or_token(m
     assert report["limit_bytes"] == one
     assert "first limit crossing" in report["message"]
     assert "total package size is unknown" in report["message"]
-    assert report["observed_bytes"] > one
-    assert report["overflow_bytes"] == report["observed_bytes"] - one
+    assert report["observed_bytes"] == one + alias_size
+    assert report["overflow_bytes"] == alias_size
     assert report["accepted_responses"] == 1
     assert report["response_route"] == "/api/research/sources"
     assert report["response_parameters"] == {"id": "synthetic-id"}
@@ -41,14 +43,31 @@ def test_response_limit_identifies_first_crossing_without_source_text_or_token(m
 def test_response_count_limit_is_distinct_from_byte_limit(monkeypatch):
     import lixity.site_export as export
 
-    monkeypatch.setattr(export, "MAX_SITE_RESPONSES", 1)
+    monkeypatch.setattr(export, "MAX_SITE_RESPONSES", 3)
     reads = export._Reads("operational-token")
     with pytest.raises(export.SiteExportLimitError) as caught:
-        reads.add("status", {"ok": True})
+        reads.add("dossiers", {"ok": True}, companion=True)
     report = caught.value.diagnostic
     assert report["limit"] == "research_response_count"
-    assert report["limit_count"] == 1 and report["observed_count"] == 2
-    assert report["overflow_count"] == 1 and len(reads.responses) == 1
+    assert report["limit_count"] == 3 and report["observed_count"] == 4
+    assert report["overflow_count"] == 1
+    assert len(reads.responses) == 1 and len(reads.aliases) == 2
+
+
+def test_response_aliases_respect_first_prepared_route():
+    import lixity.site_export as export
+
+    reads = export._Reads("prepared")
+    reads.add("dossiers", {"title": "First"})
+    reads.add("dossiers", {"title": "Later"}, companion=True)
+    reads.add("dossiers", {"title": "Conflict"}, research_token=reads.token, companion=True)
+    route = "/api/research/dossiers"
+    assert reads.responses == {route: {"title": "First"}}
+    assert reads.aliases == {
+        route + "?research_token=prepared": route,
+        route + "?project_token=prepared": route,
+        route + "?project_token=prepared&research_token=prepared": route,
+    }
 
 
 def test_cli_preflight_limit_returns_json_and_never_writes(tmp_path, capsys, monkeypatch):

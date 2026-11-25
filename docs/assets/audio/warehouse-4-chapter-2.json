@@ -1,0 +1,22 @@
+{
+  "schema_version": "lixity-demo-audio/1",
+  "chapter": 2,
+  "source_sha256": "ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0",
+  "spoken_text_sha256": "1b7e6da63c2168642bfda0c8117df506c66d883015034209a429ae99e8c8752d",
+  "audio_sha256": "2888e6c8bcb3e093b7a3eab0e7b6a1de8fb7c22d95d480ebdcff2b0db2a480f5",
+  "duration_seconds": 112.51,
+  "generator": {
+    "name": "Lixity Qwen",
+    "version": "0.9.3",
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    "model_revision": "0c0e3051f131929182e2c023b9537f8b1c68adfe",
+    "model_license": "Apache-2.0",
+    "voice": "Ryan",
+    "language": "en",
+    "speed": 1.0,
+    "paragraph_pause_seconds": 0.65,
+    "direction": "Read this fiction in a calm, attentive storyteller voice. Let sentences breathe and give each paragraph a natural cadence.",
+    "human_reference": false
+  },
+  "description": "The Loose Board. Complete second chapter of the fictional Warehouse 4 manuscript, rendered locally by Lixity with the same Qwen CustomVoice preset as chapter one and longer configured paragraph pauses."
+}

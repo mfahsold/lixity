@@ -13,7 +13,9 @@ from hashlib import sha256
 from pathlib import Path
 
 from lixity import __version__
+from scripts.build_demo_audio import read_reviewed_recording
 from scripts.example_project import DEMO_MANUSCRIPT, manuscript_title, reviewed_visual_sources
+from scripts.stage_pages import DEMO_READER_AUDIO_CHAPTERS
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_DIR = ROOT
@@ -237,7 +239,7 @@ def _demo_quick_start(text: str, project: Path) -> str:
         '<a class="ctl" href="#matrix" data-jump="#matrix">Compare chapters 1 and 2</a>'
         '</div>'
         + f'<ul>{draft_examples}</ul>'
-        + '<p>Use <strong>… → Explore passage → Explain measurement</strong> to see what Lixity counted. '
+        + '<p>Use <strong>… → Paragraph details → Explain this passage</strong> to see what Lixity counted. '
         'Compare the rhythm with the <a href="#ch-1" data-jump="#ch-1" data-layer="asl">opening chapter</a>.</p>'
         '<p><a href="../guides/first-look.html">Follow the walkthrough</a>.</p>'
         '<p><a href="../sandbox/index.html">Compare sentence lengths in your own text</a>.</p>'
@@ -283,6 +285,7 @@ def build_research_demo(root: Path, project: Path, *, dossier_pdf: bytes | None 
     restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
                     'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
                     f'img-src \'self\' data: blob:{counter_source}; '
+                    'media-src \'self\' blob:; '
                     'connect-src \'none\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + "</head>", 1)
     pdf_links = [(f"warehouse-4-{layout}.pdf", label) for layout, label in (
@@ -295,6 +298,8 @@ def build_research_demo(root: Path, project: Path, *, dossier_pdf: bytes | None 
     about_paragraphs = [
         "Start in Research with Dossiers: Warehouse 4 case notes connects the customs log, an office discrepancy and exact manuscript quotations. "
         "The preliminary log and its correction disagree about where the crate was opened; claim versions preserve the earlier interpretation. "
+        "Open the Warehouse 4 exhibit book to hear the watchman and inspect the dispatch and ledger. "
+        "The claims timeline places these records alongside the inspection, and the case notes hold four authored journeys. "
         "Review identifies the two quotations still linked to an earlier claim version. Decisions records the author's fictional choices. "
         "These links are explicit associations, not automatic fact checks.",
         "Zotero normally owns bibliography, reading and source notes. Lixity retains selected evidence and authored records for manuscript work. "
@@ -400,20 +405,12 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
     from lixity.speech_artifacts import retain_chapter_audio
 
     manuscript = project / "harbour-manuscript.md"
-    if manuscript.read_bytes() != DEMO_MANUSCRIPT.read_bytes():
+    source = manuscript.read_bytes()
+    if source != DEMO_MANUSCRIPT.read_bytes():
         raise ValueError("Public publications require the reviewed synthetic manuscript")
-    audio_source = BASE_DIR / "docs/assets/audio/warehouse-4-chapter-1.wav"
-    audio = audio_source.read_bytes()
-    provenance = json.loads(audio_source.with_suffix(".json").read_text(encoding="utf-8"))
-    if (provenance.get("schema_version") != "lixity-demo-audio/1" or provenance.get("chapter") != 1
-            or provenance.get("source_sha256") != sha256(manuscript.read_bytes()).hexdigest()
-            or provenance.get("audio_sha256") != sha256(audio).hexdigest()
-            or provenance.get("generator", {}).get("name") != "eSpeak NG"):
-        raise ValueError("Regenerate and review the synthetic chapter audio before building publications")
-    # This is an explicit external recording import into the disposable demo
-    # project. It never uses private author references or a running worker.
-    retain_chapter_audio(project, audio, source_sha256=provenance["source_sha256"],
-                         chapter=1, origin="imported")
+    for chapter in DEMO_READER_AUDIO_CHAPTERS:
+        audio = read_reviewed_recording(BASE_DIR / f"docs/assets/audio/warehouse-4-chapter-{chapter}.wav", source, chapter)
+        retain_chapter_audio(project, audio, source_sha256=sha256(source).hexdigest(), chapter=chapter, origin="imported")
     outputs = {}
     for mode, cap in (("reader", None), ("companion", 3)):
         bundle = prepare_site(project, manuscript=manuscript, mode=mode,
@@ -430,22 +427,21 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
             ("../report.html", "Author workspace"), ("../reader/", "Read with context"),
             ("../companion/", "Companion only"), ("../../guides/first-look.html", "Short tour"),
             ("../../guides/installation.html", "Install app")))
-        notice = ('<details class="panel"><summary>About this synthetic reading example</summary>'
+        introduction = ('<details class="panel"><summary>About this synthetic reading example</summary>'
             '<p>The people, records and incident are invented. Reveal context deliberately with the reading-progress control. '
-            'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>'
-            + ('<p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then '
+            'All content included in a static file remains inspectable; chapter caps remove later material before export.</p>')
+        reader_notes = ('<p>Choose <strong>Analysis</strong> above the reading view for a chapter overview, then '
                '<strong>Back to reading copy</strong> to return. This example includes all six chapters; '
                'the analysis is not hidden by reading progress.</p>'
-               '<p><strong>Chapter audio</strong> contains the complete first chapter, synthesized with the generic '
-               'eSpeak NG English voice and imported through the ordinary chapter-audio path. Press Play to listen '
-               'or download the WAV. This demonstrates the export workflow, not neural voice quality; no human '
-               'voice reference is used and the other five chapters have no audio.</p>' if mode == "reader" else '') +
-            '<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
+               '<p><strong>Chapter audio</strong> contains synthetic readings of the first two chapters. '
+               'Select a chapter and press Play, or download its WAV. The reviewed recordings use a preset voice '
+               'and are linked to the exact manuscript revision.</p>') if mode == "reader" else ""
+        setting_note = ('<p>The map and harbour view are public-domain setting references from circa 1900, not evidence of the fictional 1923 incident. '
             '<a href="../../assets/research/sources.json">Image credits and reviewed provenance</a>. '
             'The ordinary product export has the same reading interface and no visitor counter. '
             'To export your own manuscript with private offline reading websites, '
             '<a href="../../guides/installation.html">install the local Lixity workspace</a>.</p></details>')
-        document = document.replace("<footer>", notice + "<footer>", 1)
+        document = document.replace("<footer>", introduction + reader_notes + setting_note + "<footer>", 1)
         files = {**bundle.files, "index.html": _finalize(document).encode("utf-8")}
         if mode == "reader":
             analysis = files["analysis.html"].decode("utf-8")

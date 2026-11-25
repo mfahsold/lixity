@@ -74,6 +74,8 @@ In [**Research → Dossiers**](../demo/report.html#research-manager), open **War
 
 From an open dossier, **Back to dossier** restores its saved version and reading position after you follow a connection. **Review** also lists the saved quotation; **Go to manuscript passage** follows its exact text match. [Reader guidance](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#reading-paragraphs) covers controls and keyboard shortcuts.
 
+In **Research → Claims**, open the timeline to compare the dated records. The watchman’s report, the dispatch and the corrected inspection belong to different moments. The visit with an unknown date stays separate.
+
 People, events and journeys are fictional. The historical images do not verify them. Maps in this website use local sketches and geographic shapes without requesting online map tiles. [Sources and PDF copies](research-pdf.html) explains retention and saving in the local app.
 
 <a id="reader-analysis"></a>
@@ -94,7 +96,7 @@ Open the [synthetic reading copy](../demo/reader/), choose **Analysis** above th
 
 A reading copy is fixed. Reading progress hides or reveals included notes, though the underlying files remain in the export. In your own export, use a chapter cap to omit later material. **Since 0.8.1:** `--include-audio` adds already recorded chapter WAVs matching the current manuscript, with a shared player and download. It does not start a speech worker or include private voice references. [Audio inclusion and limits](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
-The reader demo includes one synthetic chapter-one recording generated with eSpeak NG 1.51 (`en`, rate 165) and explicitly imported. Use **Chapter audio** to play or download it; it is a workflow example, not an IMS-Toucan quality sample or an author voice. Other chapters remain text-only.
+Open **Chapter audio** to hear the first two chapters in a synthetic English preset voice, or download their WAV files. In the author workspace, open **Research → Dossiers → Warehouse 4 exhibit book** to play the watchman’s captioned statement and read its transcript. The reader and companion reveal the statement after chapter three. The dispatch receipt and ledger appear later in the full reading copy.
 
 <a id="exports"></a>
 

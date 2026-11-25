@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   var readOnly = document.body.dataset.readOnly === "true";
-  var resources = new Map(), responses = new Map(), localResources = new Set();
+  var resources = new Map(), responses = new Map(), responseAliases = new Map(), localResources = new Set();
   var nativeFetch = window.fetch.bind(window);
   var base = new URL(document.baseURI);
 
@@ -51,6 +51,11 @@
       resources.set(key, relative);
       localResources.add(new URL(relative, base).href);
     });
+    Object.entries(envelope.response_aliases || {}).forEach(function(entry) {
+      var key = entry[0], target = entry[1];
+      if (canonical(key) === key && !responses.has(key) && !resources.has(key) &&
+          typeof target === "string" && responses.has(target)) responseAliases.set(key, target);
+    });
   } catch (_) { /* An absent or invalid snapshot remains closed to all network reads. */ }
 
   window.fetch = async function(input, init) {
@@ -60,8 +65,9 @@
     if (method !== "GET") throw new Error("This website is read-only.");
     var value = typeof input === "string" || input instanceof URL ? String(input) : input.url;
     var key = canonical(value);
-    if (key && responses.has(key)) {
-      var payload = responses.get(key);
+    var responseKey = key && (responseAliases.get(key) || key);
+    if (responseKey && responses.has(responseKey)) {
+      var payload = responses.get(responseKey);
       var markdown = key.startsWith("/api/research/matrix?") && new URL(value, base).searchParams.get("format") === "md";
       return new Response(markdown ? payload.text : JSON.stringify(payload), {
         status: 200, headers: {"Content-Type": markdown ? "text/markdown; charset=utf-8" : "application/json; charset=utf-8"},

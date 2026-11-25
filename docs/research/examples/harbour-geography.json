@@ -65,6 +65,57 @@
         "feature_type": "Authored setting extent",
         "time_period": "1923 — fictional scene"
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [9.9945, 53.5416]},
+      "properties": {
+        "label": "Dispatch office — invented location",
+        "description": "The author placed the office nearby so Mara can carry the receipt there. Its position is approximate.",
+        "feature_type": "Fictional building",
+        "time_period": "1923-10-14 — fictional scene"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [10.004, 53.545]},
+      "properties": {
+        "label": "Customs station — invented location",
+        "description": "The signed correction places the opening at the station. The location shown is an author's choice.",
+        "feature_type": "Fictional building",
+        "time_period": "1923-10-15 — fictional scene"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[9.9915, 53.541], [9.9928, 53.5412], [9.9945, 53.5416]]
+      },
+      "properties": {
+        "label": "Mara carries the dispatch — fictional walk",
+        "description": "Ordered scene-planning stops for Mara's walk with the receipt.",
+        "feature_type": "Authored journey",
+        "time_period": "1923-10-14 — fictional scene",
+        "actors": ["Mara"],
+        "transport": "walking",
+        "waypoint_labels": ["Warehouse gate", "Turn by the quay", "Dispatch office"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[9.9945, 53.5416], [9.9961, 53.5422], [10.001, 53.5445], [10.004, 53.545]]
+      },
+      "properties": {
+        "label": "Possible crate transfer — fictional cart route",
+        "description": "An author-supplied route to test against the ledger. The carrier and actual route are unresolved.",
+        "feature_type": "Authored journey hypothesis",
+        "time_period": "1923-10-14 to 1923-10-15 — fictional scene",
+        "transport": "other",
+        "waypoint_labels": ["Dispatch office", "Service turn", "Station approach", "Customs station"]
+      }
     }
   ]
 }

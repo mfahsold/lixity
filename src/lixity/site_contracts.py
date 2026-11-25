@@ -225,4 +225,5 @@ class SiteData(_SiteModel):
     schema_version: Literal["lixity-read-only-site-data/1"]
     responses: dict[str, Any]
     resources: dict[str, str]
+    response_aliases: dict[str, str] = Field(default_factory=dict)
     publication: dict[str, Any] | None = None

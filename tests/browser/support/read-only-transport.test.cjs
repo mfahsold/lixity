@@ -30,7 +30,51 @@ for (const href of ['file:///tmp/site/index.html', 'https://example.test/nested/
     assert.equal(calls.length, 0);
     assert.equal(context.LixitySite.resourceUrl('/api/research/image?id=1'), 'assets/image.png');
   });
+
+  test(`exact alias returns the prepared representation: ${href}`, async () => {
+    const record = '/api/research/record?a=1&b=2';
+    const alias = record + '&project_token=prepared&research_token=prepared';
+    const matrix = '/api/research/matrix?format=md';
+    const {context, calls} = runtime(href, {...data, response_aliases: {
+      [alias]: record,
+      [matrix + '&research_token=prepared']: matrix,
+    }});
+    const response = await context.fetch('/api/research/record?research_token=prepared&b=2&project_token=prepared&a=1');
+    assert.deepEqual(await response.json(), data.responses['/api/research/record?b=2&a=1']);
+    assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
+    const markdown = await context.fetch('/api/research/matrix?research_token=prepared&format=md');
+    assert.equal(await markdown.text(), '# Synthetic matrix');
+    assert.equal(markdown.headers.get('Content-Type'), 'text/markdown; charset=utf-8');
+    await assert.rejects(context.fetch(alias.replace('research_token=prepared', 'research_token=wrong')));
+    await assert.rejects(context.fetch(alias + '&unexpected=1'));
+    await assert.rejects(context.fetch(alias, {method: 'POST'}));
+    assert.equal(calls.length, 0);
+  });
 }
+
+test('aliases cannot chain, shadow entries or target a resource or noncanonical key', async () => {
+  const record = '/api/research/record?a=1&b=2';
+  const alias = record + '&research_token=prepared';
+  const image = '/api/research/image?id=1';
+  const matrix = '/api/research/matrix?format=md';
+  const {context, calls} = runtime('https://example.test/site/index.html', {...data, response_aliases: {
+    [alias]: record,
+    [record]: matrix,
+    [image]: record,
+    [record + '&research_token=chain']: alias,
+    [record + '&research_token=resource']: image,
+    [record + '&research_token=noncanonical']: '/api/research/record?b=2&a=1',
+    [record + '&research_token=external']: 'https://other.test' + record,
+    [record + '&research_token=invalid']: {path: record},
+  }});
+  assert.deepEqual(await (await context.fetch(record)).json(), data.responses['/api/research/record?b=2&a=1']);
+  for (const variant of ['chain', 'resource', 'noncanonical', 'external', 'invalid']) {
+    await assert.rejects(context.fetch(record + '&research_token=' + variant));
+  }
+  assert.equal(calls.length, 0);
+  assert.equal(await (await context.fetch(image)).text(), 'resource');
+  assert.equal(calls.length, 1);
+});
 test('all writes, unknown reads, external URLs and unsafe resources fail closed', async () => {
   const {context, calls} = runtime('https://example.test/site/index.html', data);
   for (const [url, init] of [

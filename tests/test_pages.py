@@ -815,7 +815,7 @@ class TestPublicLanguages(unittest.TestCase):
 
         expected = {
             "dashboard-reader-focus.png": (191, 109),
-            "dashboard-heatmap.png": (173, 83),
+            "dashboard-measurement-focus.png": (173, 83),
             "dashboard-research-dossiers.png": (157, 211),
             "dashboard-editorial.png": (223, 71),
         }

@@ -18,6 +18,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   versioned local Mac disk images.
 - Find the installed Lixity executable through uv when creating a Linux menu
   entry outside the tool's executable search path.
+- Give Mara a decision about what she signs in the Warehouse 4 demo. Add a
+  dispatch receipt, an office ledger, a captioned witness statement and two
+  authored journeys. The reader plays two chapter recordings and reveals
+  selected research as readers progress.
+- Lead the seven product pages with review in the manuscript and connect the
+  research card to the Warehouse 4 source exercise.
+- Store each prepared research response once in a static review export while
+  preserving its exact token-bound routes.
+- Keep map numbers from blocking nearby features at narrow widths. Keep every
+  feature selectable in the list when the map has room for fewer numbers.
 
 ### Fixed
 

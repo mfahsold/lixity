@@ -507,8 +507,9 @@ introduce another Markdown parser or fetch a missing library from a CDN. Native
 workspaces retain their complete script recipe for interactive content changes.
 
 The embedded `lixity-read-only-site-data/1` response table contains enumerated
-prepared reads. The first-loaded static transport returns these reads without
-a server, rejects mutation and unknown requests, and never falls back to a
+prepared reads. Validated token variants reference their exact prepared response
+so the site stores each payload once. The first-loaded static transport returns
+these reads without a server, rejects mutation and unknown requests, and never falls back to a
 host's `/api`. Shared UI owners suppress unsupported editing and administrative
 actions. Retained media uses explicit bundled-resource mappings; maps start
 with offline geometry, without external tiles or implicit analytics requests.

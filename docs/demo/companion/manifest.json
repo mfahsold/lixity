@@ -7,7 +7,7 @@
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-11-25T18:34:51.273408+00:00",
+  "created_at": "2026-11-25T19:51:09.172801+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
@@ -24,13 +24,17 @@
       "byte_length": 2515979,
       "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
     },
+    "assets/sources/290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4.mp4": {
+      "byte_length": 135736,
+      "sha256": "290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4"
+    },
     "assets/sources/993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64.jpg": {
       "byte_length": 2809171,
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
     "index.html": {
-      "byte_length": 1477014,
-      "sha256": "66253d547b4cb52e893d00e5d137fa214c4275c04923851f8a4498d84694d903"
+      "byte_length": 1481937,
+      "sha256": "5e2e550c2bbd06d58a48e44a75f30f1f79e3b923e20633a3086b04a32b37461c"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
@@ -62,18 +66,18 @@
     }
   },
   "manuscript": {
-    "source_sha256": "6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc"
+    "source_sha256": "ddff8e959fdb012cc71f07e2070172e55b0c1843e174c57b12411c41ffb9efd0"
   },
   "mode": "companion",
   "product_version": "0.9.3",
   "project": {
-    "id": "urn:uuid:6fcda4ec-27a1-4f16-bc20-98c3deefa2ec",
+    "id": "urn:uuid:eee21fd9-1d70-4556-9e91-2fd0c26f16be",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
   "publication": {
-    "entry_count": 5,
-    "identity": "f749620eca39546d761ef502a9f3dd177f6104ea54287a3abb94d1ee4b4d5dee",
+    "entry_count": 6,
+    "identity": "2ff3525d72fa1f255c2a9abd4d20a347d1eb82e7580fb8c931f156c483c73936",
     "max_chapter": 3,
     "profile": "readers"
   },

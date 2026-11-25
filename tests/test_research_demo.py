@@ -107,7 +107,7 @@ def test_example_project_accepts_a_temporary_parent_alias(tmp_path, monkeypatch)
     assert result["project"] == destination
     assert (destination / "harbour-manuscript.md").read_bytes() == example_project.DEMO_MANUSCRIPT.read_bytes()
     links = api.list_manuscript_links(destination)["links"]
-    assert len(links) == 5
+    assert len(links) == 7
     assert {link["anchor"]["source_path"] for link in links} == {"harbour-manuscript.md"}
     assert api.audit(destination)["ok"]
 
@@ -193,7 +193,8 @@ def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_bound
     assert "not evidence of the invented 1923 incident" in dossier["body"]
     features = dossier["geography"]["features"]
     journeys = [feature for feature in features if feature["geometry"]["type"] == "LineString"]
-    assert {feature["properties"]["transport"] for feature in journeys} == {"walking", "driving"}
+    assert len(features) == 9 and len(journeys) == 4
+    assert {feature["properties"]["transport"] for feature in journeys} == {"walking", "driving", "other"}
     assert all("fictional" in feature["properties"]["label"].lower() for feature in journeys)
     for image in dossier["images"]:
         resource = research_fixture[image["url"]]
@@ -202,10 +203,33 @@ def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_bound
     assert api.audit(project)["ok"]
 
 
+def test_research_fixture_keeps_the_watchman_and_document_facsimiles_linked_to_their_bytes(tmp_path, research_fixture):
+    from lixity.speech_direction import direction_state
+
+    project = tmp_path / "research-demo"
+    sources = api.list_sources(project)["sources"]
+    assert len(sources) == 9
+    exhibits = next(item for item in api.list_dossiers(project)["dossiers"] if item["title"] == "Warehouse 4 exhibit book")
+    dossier = api.get_dossier(project, exhibits["id"])
+    resources = [*dossier["images"], *dossier["media"]]
+    assert sorted(item["media_type"] for item in resources) == ["image/png", "image/png", "video/mp4"]
+    for item in resources:
+        fixture = research_fixture[item["url"]]
+        retained = next(source for source in sources if source["id"] == item["source_id"])
+        assert retained["sha256"] == hashlib.sha256((ROOT / fixture["asset_path"]).read_bytes()).hexdigest()
+        assert retained["context"]["genre"] == "Fictional scene exhibit"
+    direction = direction_state(project, project / "harbour-manuscript.md")
+    saved, = direction["directions"]
+    assert not saved["stale"] and saved["pause_after"] == 0.8
+    passage = next(item for item in direction["passages"] if item["anchor"] == saved["anchor"])
+    assert passage["chapter"] == 3
+    assert "When I called, they ran towards the basin." in passage["text"]
+
+
 def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_manuscript(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
     links = research_fixture["/api/research/manuscript-links"]
-    assert len(links["links"]) == 5
+    assert len(links["links"]) == 7
     link = next(item for item in links["links"] if item["anchor"]["quote"] ==
                 "Someone had tried the eastern gate of Warehouse 4.")
     assert link["anchor"]["source_path"] == "harbour-manuscript.md"
@@ -281,7 +305,7 @@ def test_demo_draft_has_mapped_examples_and_observable_drafting_patterns(tmp_pat
 def test_demo_records_source_disagreement_and_preserves_the_earlier_interpretation(tmp_path, research_fixture):
     project = tmp_path / "research-demo"
     claims = api.list_claims(project)["claims"]
-    assert len(claims) == 6
+    assert len(claims) == 9
     inspection = next(item for item in claims if item["title"] == "Where the crate was opened")
     before = api.get_record(project, "claim", inspection["id"], revision=1)
     current = api.get_record(project, "claim", inspection["id"])
@@ -452,10 +476,12 @@ const document = {baseURI: 'https://demo.invalid/demo/report.html', body: {datas
 vm.runInNewContext(runtime, {window, document, URL, Request, Response, Map, Set});
 (async () => {
   const sources = await (await window.fetch('/api/research/sources')).json();
-  assert.equal(sources.sources.length, 4);
+  assert.equal(sources.sources.length, 9);
   const links = await (await window.fetch('/api/research/manuscript-links')).json();
-  assert.equal(links.links.length, 5);
-  const reviewKey = Object.keys(data.responses).find(key => key.startsWith('/api/research/manuscript-review?'));
+  assert.equal(links.links.length, 7);
+  const reviewKey = Object.keys(data.response_aliases || data.responses).find(key =>
+    key.startsWith('/api/research/manuscript-review?') && key.includes('project_token=') && key.includes('research_token='));
+  assert.ok(reviewKey, 'The exact project and research context must be prepared');
   const review = await (await window.fetch(reviewKey)).json();
   assert.ok(review.links.some(link => link.anchor.quote === 'Someone had tried the eastern gate of Warehouse 4.'));
   const matrixKey = Object.keys(data.responses).find(key => key.startsWith('/api/research/matrix?') && key.includes('format=md'));
@@ -537,10 +563,8 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(public_
         assert manifest['capabilities']['analysis'] is (mode == 'reader')
         if mode == 'reader':
             assert manifest['schema_version'] == 'lixity-read-only-site/3'
-            assert len(manifest['audio']['tracks']) == 1
-            assert manifest['audio']['tracks'][0]['chapter'] == 1
-            assert manifest['audio']['tracks'][0]['origin'] == 'imported'
-            assert 'eSpeak NG English voice' in page
+            assert [track['chapter'] for track in manifest['audio']['tracks']] == [1, 2]
+            assert all(track['origin'] == 'imported' for track in manifest['audio']['tracks'])
             for asset in ('speech-player.css', 'speech-player.js', 'reader-audio.js'):
                 assert page.count((ROOT / 'src/lixity/ui/assets' / asset).read_text(encoding='utf-8').strip()) == 1
             assert manifest['publication']['analysis_sections'] == ['chapters']
@@ -571,6 +595,8 @@ def test_public_companion_contains_no_novel_and_actual_cap_omits_late_content(pu
     assert 'The receiving signature' not in companion
     assert 'A blank signature is an absence, not a name.' not in companion
     assert 'No receiving signature had yet been identified' not in companion
+    assert 'Dispatch receipt (authored facsimile)' not in companion
+    assert 'Office ledger (authored facsimile)' not in companion
     capped = prepare_site(root / 'research-demo', manuscript='harbour-manuscript.md',
         mode='reader', publication_profile='readers', max_chapter=3, include_source_files=True)
     public = b'\n'.join(capped.files.values())

@@ -89,6 +89,7 @@ def test_default_site_is_native_analysis_only_and_does_not_copy_project_files(pr
     assert data['schema_version'] == 'lixity-read-only-site-data/1'
     assert data['responses'] == {}
     assert data['resources'] == {}
+    assert 'response_aliases' not in data
     assert not any(name.startswith(('research/', '.git/', '.lixity/')) for name in bundle.files)
 
 
@@ -121,6 +122,22 @@ def test_research_export_preserves_current_and_exact_versions_but_only_cited_sou
     assert bundle.manifest['capabilities']['source_files'] is False
 
 
+def test_research_export_reuses_responses_for_exact_token_variants(project, research):
+    bundle = exporter().prepare_site(project, include_research=True)
+    data = site_data(bundle)
+    page = bundle.files['index.html'].decode()
+    token = re.search(r'data-manuscript-project-token="([0-9a-f]{64})"', page)[1]
+    dossier = '/api/research/dossiers?' + urlencode({'id': research['dossier']})
+    source = '/api/research/sources?' + urlencode({'id': research['source']['source_id']})
+    assert data['response_aliases'][dossier + '&research_token=' + token] == dossier
+    assert data['response_aliases'][dossier + '&project_token=' + token] == dossier
+    assert data['response_aliases'][dossier + '&project_token=' + token + '&research_token=' + token] == dossier
+    assert data['response_aliases'][source + '&research_token=' + token] == source
+    assert source + '&project_token=' + token not in data['response_aliases']
+    assert set(data['response_aliases']).isdisjoint(data['responses'])
+    assert set(data['response_aliases'].values()) <= data['responses'].keys()
+
+
 def test_passage_context_export_matches_native_projection_without_writes(project, research):
     manuscript = project / 'manuscript.md'
     anchor = api.resolve_manuscript_anchor(project, manuscript, query='The eastern gate was open.')
@@ -131,8 +148,7 @@ def test_passage_context_export_matches_native_projection_without_writes(project
     before = file_bytes(project)
     native = api.review_manuscript_links(project, manuscript, language='en', include_context=True)
     bundle = exporter().prepare_site(project, include_research=True)
-    frozen = next(value for key, value in site_data(bundle)['responses'].items()
-                  if key.startswith('/api/research/manuscript-review?'))
+    frozen = response(site_data(bundle), 'manuscript-review')
     for key in ('snapshot', 'source_path', 'current_source_sha256', 'links', 'passage_context'):
         assert frozen[key] == native[key]
     claim = frozen['passage_context']['paragraphs'][0]['groups'][0]['claims'][0]

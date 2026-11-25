@@ -43,7 +43,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
     for key, filename in {
         'image': 'dashboard-light.png',
         'reader_focus': 'dashboard-reader-focus.png',
-        'heatmap': 'dashboard-heatmap.png',
+        'measurement_focus': 'dashboard-measurement-focus.png',
         'research_dossiers': 'dashboard-research-dossiers.png',
         'editorial': 'dashboard-editorial.png',
     }.items():
@@ -76,6 +76,9 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields['passage_guide_language'], fields['passage_guide_path'] = (
             ('de', 'guides/first-look-de.html#beleg') if lang == 'de'
             else ('en', 'guides/first-look.html#passage')
+        )
+        fields['research_guide_path'] = (
+            'guides/first-look-de.html#recherche' if lang == 'de' else 'guides/first-look.html#decision'
         )
         fields['alternates'] = '\n'.join(
             f'<link rel="alternate" hreflang="{code}" href="{page_url(code)}"/>'

@@ -1,6 +1,7 @@
 """Reader publications omit unselected archive data before HTML/media assembly."""
 
 import json
+import re
 from urllib.parse import unquote
 
 import pytest
@@ -328,10 +329,13 @@ def test_total_prepared_envelope_includes_resource_mapping_in_data_budget(public
     prepare_project_settings(root, {'site_publications': profiles}).commit()
     options = {'mode': 'companion', 'publication_profile': 'readers',
                'max_chapter': 1, 'include_source_files': True}
-    prepared = site_data(prepare_site(root, **options))
+    bundle = prepare_site(root, **options)
+    prepared = site_data(bundle)
     assert prepared['resources']
-    complete_size = len(module._json(prepared))
-    assert len(module._json(prepared['publication'])) < complete_size - 1
+    inline = re.search(rb'<script[^>]*id="lixity-site-data"[^>]*>(.*?)</script>', bundle.files['index.html'], re.S)
+    assert inline
+    complete_size = len(inline[1])
+    assert module._site_data_size(prepared['publication']) < complete_size - 1
     monkeypatch.setattr(module, 'MAX_SITE_DATA_BYTES', complete_size - 1)
     with pytest.raises(module.SiteExportLimitError) as caught:
         prepare_site(root, **options)

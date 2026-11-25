@@ -48,6 +48,8 @@ Neutrale punktierte Markierungen und der Knopf mit Buchsymbol **Research** kennz
 
 Am Eröffnungsabsatz führt **… → Paragraph details → Research for this passage** zur gespeicherten Verbindung. Ein Titel öffnet den Eintrag; **Linked version** zeigt die genau verknüpfte frühere Fassung. **Back to passage** führt zum Text zurück. Am Desktop bleibt diese Rückkehr ausgeblendet, solange die Textstelle bereits sichtbar ist. **Dossier alongside** hält das Dossier neben dem Manuskript geöffnet.
 
+Unter **Research → Claims** öffnest du die Zeitleiste. Dort stehen die Abfertigung, die Aussage des Nachtwächters und die korrigierte Inspektion an verschiedenen Zeitpunkten. Der Besuch ohne bekanntes Datum steht separat.
+
 Quellenpassage, Behauptung und kreative Entscheidung sind getrennte Einträge. Eine gespeicherte Verbindung ist keine automatische Faktenprüfung; auch die historischen Bilder beweisen die erfundenen Ereignisse nicht.
 
 <a id="rhythmus"></a>
@@ -92,7 +94,7 @@ Bei der Tempusprüfung können auch Infinitive, Hilfsverben, Zitate und Rückbli
 
 Diese Exporte sind feste Kopien. Der Lesefortschritt blendet bereits enthaltene Inhalte ein oder aus; er ist kein Zugriffsschutz. Eine Kapitelgrenze beim Export lässt spätere Inhalte tatsächlich weg. **Seit 0.8.1:** Mit `--include-audio` können passende vorhandene Kapitelaufnahmen samt Player und WAV-Download mitgegeben werden. Der Export startet keine Sprachsynthese und enthält keine privaten Stimmreferenzen. [Audio-Auswahl und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased).
 
-Die Lesedemo enthält eine künstliche Aufnahme des ersten Kapitels aus eSpeak NG 1.51 (`en`, Tempo 165), die ausdrücklich importiert wurde. Unter **Chapter audio** lässt sie sich abspielen oder herunterladen. Sie zeigt den Ablauf, nicht die Stimmqualität von IMS-Toucan oder eine geklonte Autorenstimme. Die anderen Kapitel bleiben reine Lesetexte.
+Unter **Chapter audio** kannst du die ersten beiden Kapitel mit einer synthetischen englischen Stimme anhören und als WAV herunterladen. Im Arbeitsbereich findest du unter **Research → Dossiers → Warehouse 4 exhibit book** die Aussage des Nachtwächters als untertitelten Clip samt Transkript. Im Roman und im Begleiter erscheint die Aussage nach Kapitel drei. Quittung und Register folgen später in der vollständigen Lesefassung.
 
 <a id="eigenes-manuskript"></a>
 

@@ -196,11 +196,12 @@ _JS_FILES = (
     "teleprompter.js",
 )
 _NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
-# Passage inspection and research editors require workspace controls.
+# Standalone analysis reports have no workspace research or map controls.
 _REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
     "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
     "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
     "research-dossier-drafts.js", "research-revisions.js", "project-overview.js",
+    "vendor/leaflet-1.9.4.min.js", "dossier-geography.js",
     _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
 ))
 _REPORT_CSS_FILES = tuple(

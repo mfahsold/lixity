@@ -15,6 +15,11 @@ from tempfile import TemporaryDirectory
 BASE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BASE_DIR / "src"))
 DEMO_MANUSCRIPT = BASE_DIR / "samples/first-look.md"
+RESEARCH_ASSETS = BASE_DIR / "docs/assets/research"
+WATCHMAN_STATEMENT = (
+    "For the time being, all I can say is that there were two people by the gate. "
+    "When I called, they ran towards the basin."
+)
 
 
 def manuscript_title(text: str, fallback: str = "Manuscript") -> str:
@@ -27,7 +32,7 @@ def reviewed_visual_sources(asset_dir: Path | None = None) -> list[tuple[dict, b
     """Fail closed unless the two reviewed visual references match their manifest."""
     from lixity.research.images import validate_image
 
-    asset_dir = asset_dir or BASE_DIR / "docs/assets/research"
+    asset_dir = asset_dir or RESEARCH_ASSETS
     manifest = json.loads((asset_dir / "sources.json").read_text(encoding="utf-8"))
     expected = {"hamburg-free-port-1900.jpg", "hamburg-harbour-1890-1900.jpg"}
     if {item["filename"] for item in manifest["sources"]} != expected or len(manifest["sources"]) != 2:
@@ -46,14 +51,21 @@ def reviewed_visual_sources(asset_dir: Path | None = None) -> list[tuple[dict, b
 
 def _populate(work_dir: Path) -> dict:
     from lixity.research import api as research_api
+    from lixity.speech_direction import direction_state, save_direction
 
     research_proj = work_dir / "research-demo"
     manuscript_bytes = DEMO_MANUSCRIPT.read_bytes()
-    research_api.init(research_proj, title=manuscript_title(manuscript_bytes.decode("utf-8")), language="en")
+    manuscript_text = manuscript_bytes.decode("utf-8")
+    if any(sentence not in manuscript_text for sentence in WATCHMAN_STATEMENT.split(". ")):
+        raise ValueError("The reviewed synthetic recording must match the watchman’s dialogue")
+    research_api.init(research_proj, title=manuscript_title(manuscript_text), language="en")
     (research_proj / "lixity.toml").write_text(
         'manuscript = "harbour-manuscript.md"\nlanguage = "en"\n'
         'author_name = "Example Author"\n\n[characters.Mara]\n\n[characters.Ivo]\n\n[characters.Hansen]\n\n'
-        '[motif_regexes]\n"For the time being" = \'\\bfor the time being\\b\'\n',
+        '[motif_regexes]\n"For the time being" = \'\\bfor the time being\\b\'\n\n'
+        '[audio]\nschema_version = "lixity-audio-settings/5"\nselected = "narrator"\n\n'
+        '[audio.profiles.narrator]\nname = "Narrator"\nengine = "qwen3"\n'
+        'voice = "Ryan"\nlanguage = "en"\nspeed = 1.0\nparagraph_pause = 0.65\nscene_pause = 1.2\n',
         encoding="utf-8",
     )
     source_text = """## Section 1: Port Authority Log – October 1923
@@ -127,12 +139,6 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         },
         allow_retention=True,
     )
-    research_api.reindex(research_proj)
-    search_res = research_api.search(research_proj, "warehouse customs", limit=1)
-    matches = search_res["hits"]
-    if not matches:
-        raise RuntimeError("Synthetic research source must produce a real passage citation")
-
     def retained_passage(source: dict, phrase: str) -> str:
         return next(passage["id"] for passage in source["passages"] if phrase in passage["verbatim"])
 
@@ -147,6 +153,58 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
     visibility_passage = retained_passage(weather_source, "An engine can remain audible")
     receipt_passage = retained_passage(weather_source, "ledger also lists cart seventeen")
 
+    witness_file = work_dir / "watchman-reconstruction.txt"
+    witness_file.write_text(
+        "## Gate statement\n\n" + WATCHMAN_STATEMENT + "\n\n"
+        "## Scope of the statement\n\n"
+        "The watchman describes people leaving in the direction of the basin. He gives no name, "
+        "boat identification or witnessed boarding. Mara separately describes a light and an engine.\n",
+        encoding="utf-8",
+    )
+    witness_source = research_api.ingest(
+        research_proj, witness_file, title="Watchman’s gate statement (synthetic transcript)",
+        context={
+            "genre": "Fictional witness transcript", "depicted_period": "October 1923",
+            "place": "Eastern gate", "perspective": "Night watchman",
+            "provenance_note": "Adapted from the authored dialogue in Questions on the Quay. The companion clip "
+                               "uses synthetic narration of these words. The interview and its speaker are fictional.",
+            "tags": ["Witness", "Transcript"],
+        },
+        allow_retention=True,
+    )
+    transfer_file = work_dir / "transfer-and-receipt-notes.txt"
+    transfer_file.write_text(
+        "## Transfer counterfoil\n\n"
+        "The transfer sheet records handover after the lid was secured. The crate was handed over still closed. "
+        "The station count belongs to the first opening at 06:10 on 15 October. Departure time and route are absent "
+        "from the retained entries.\n\n"
+        "## Receipt and ledger comparison\n\n"
+        "The office register gives a return entry at 18:40 and a dispatch copied at 20:00 on 14 October. "
+        "Both use seventeen. The label and receipt are cut from similar blue stock, but their torn edges do not fit. "
+        "These observations leave the crate, reused board, and cart identities unresolved.\n\n"
+        "## Morning handover\n\n"
+        "The morning review preserves the line without a receiving signature. Mara can attest to copying the "
+        "dispatch number. The receiving line leaves the carrier unidentified.\n",
+        encoding="utf-8",
+    )
+    transfer_source = research_api.ingest(
+        research_proj, transfer_file, title="Transfer and receipt notes (synthetic)",
+        context={
+            "genre": "Fictional transfer and office record", "depicted_period": "October 1923",
+            "place": "Eastern quay, station and office",
+            "provenance_note": "Author-created notes for the Warehouse 4 example. The time labels and observations "
+                               "describe the fictional record. The exhibit images are authored facsimiles.",
+            "tags": ["Transfer", "Receipt", "Warehouse 4"],
+        },
+        allow_retention=True,
+    )
+    witness_detail = research_api.get_source(research_proj, witness_source["source_id"])
+    transfer_detail = research_api.get_source(research_proj, transfer_source["source_id"])
+    watchman_passage = retained_passage(witness_detail, "When I called, they ran towards the basin")
+    transfer_passage = retained_passage(transfer_detail, "The crate was handed over still closed")
+    comparison_passage = retained_passage(transfer_detail, "their torn edges do not fit")
+    morning_passage = retained_passage(transfer_detail, "The receiving line leaves the carrier unidentified")
+
     # Read-only browser responses below are serialized from this disposable,
     # API-created archive. The dashboard itself is the real controls UI.
     dossier_res = research_api.create_dossier(
@@ -159,11 +217,16 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         "| 20:00 | Mara copies the dispatch | Crate not seen by Mara |\n"
         "| 22:10 | Watchman calls for customs | Two figures leave towards the basin |\n"
         "| Before dawn | Cracked lid bound; crate transferred | Contents still unknown to Mara |\n"
-        "| 15 October, 06:10 | Station inspection counts tobacco | Corrected log entry |\n\n"
+        "| 15 October, 06:10 | Station inspection counts tobacco | Corrected log entry |\n"
+        "| Morning | Mara limits her account to the dispatch she copied | Receiver still unidentified |\n\n"
         "## Accounts to compare\n\n"
         "The preliminary customs entry places the opening beside the gate. The signed follow-up "
         "moves it to the station. Preserve both passages: the correction changes the author’s "
         "working interpretation, not the retained earlier wording. The launch is heard, but boarding is not observed.\n\n"
+        "## Custody and release of information\n\n"
+        "The first three chapters stay with the quay witnesses. The formal note records the crate’s first opening "
+        "at the station. The receipt and ledger then raise a separate office question. Keep the times in the "
+        "fictional counterfoil beside the scene order; the archive chronology groups dated claims by day.\n\n"
         "## Open Questions\n\n"
         "- Who entered the return before Mara copied the dispatch?\n"
         "- Does seventeen identify this crate, a cart, or a reused board?\n"
@@ -218,6 +281,27 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         tags=["Weather", "Setting"],
         evidence_ids=[weather_passage, visibility_passage, receipt_passage, witness_limits],
     )
+    exhibits = research_api.create_dossier(
+        research_proj, title="Warehouse 4 exhibit book",
+        body="Authored facsimiles and witness reconstruction for the fictional Warehouse 4 case. "
+        "Each exhibit helps inspect a particular limit of the case record.\n\n"
+        "## Watchman’s statement\n\n"
+        "Synthetic narration of dialogue from chapter 3. The watchman reports two figures and their direction "
+        "of flight. The route beyond the basin remains open.\n\n"
+        f"**Transcript.** “{WATCHMAN_STATEMENT}”\n\n"
+        "## Transfer counterfoil\n\n"
+        "The transfer records the closed crate moving from the quay to the station and places the count at the "
+        "station. The sheet gives neither an exact departure time nor the cart’s path. Use the corresponding "
+        "claim and the signed correction in the case notes to compare the location of first opening.\n\n"
+        "## Dispatch receipt\n\n"
+        "Mara can say she copied seventeen at eight. The receiving line is empty. The fictional receipt shows "
+        "that limited act of copying and leaves the identity of the load unresolved.\n\n"
+        "## Office ledger\n\n"
+        "Read the 18:40 return against the 20:00 dispatch. Both carry seventeen. An empty signature leaves the "
+        "carrier unidentified, and the register leaves the relationship between the crate and the cart unresolved.",
+        evidence_ids=[watchman_passage, transfer_passage, comparison_passage, morning_passage],
+        tags=["Warehouse", "Facsimiles", "Witness"],
+    )
     image_resources = {}
     for item, visual_bytes in reviewed_visual_sources():
         dossier_current = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
@@ -239,6 +323,50 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         captured_id = attached["capture"]["source_id"]
         image = next(image for image in attached["images"] if image["source_id"] == captured_id)
         image_resources[image["url"]] = {"media_type": "image/jpeg", "asset_path": "docs/assets/research/" + item["filename"]}
+    exhibit_assets = (
+        (
+            "warehouse-4-watchman.mp4", "290bff73d4844591b1f63f53a2857cd20eddc9f0cb0f62d4fce12a0f2ed1cbd4",
+            "Watchman’s statement", "Gate statement (synthetic reconstruction)",
+            "Captioned reconstruction of the fictional watchman reporting two figures and their direction of flight.",
+            "Synthetic narration of the chapter 3 dialogue. Read the matching transcript in this section.",
+            "Authored reconstruction voiced with the local Qwen Aiden preset and captioned in FilmCraft. "
+            "The transcript preserves the stated direction toward the basin.",
+        ),
+        (
+            "warehouse-4-receipt.png", "ad16a26f1f48b613137d306ff093ded2db8514ad382bb80b84623ca3729d77c7",
+            "Dispatch receipt", "Dispatch receipt (authored facsimile)",
+            "Fictional dispatch receipt dated 14 October 1923. Mara entered seventeen at 20:00. The receiving line is blank.",
+            "Mara’s copied dispatch. The blank line leaves the receiver unknown.",
+            "Authored facsimile of a fictional document. Its details are limited to the dispatch copied by Mara.",
+        ),
+        (
+            "warehouse-4-ledger.png", "cad6f1f0f01c4049c533258d9365e71f06e8705c3490e629c555d6ebdb009ff8",
+            "Office ledger", "Office ledger (authored facsimile)",
+            "Fictional ledger dated 14 October 1923. Cart 17 returns at 18:40. A dispatch marked 17 follows at 20:00. The receiving line is blank.",
+            "The return predates the copied dispatch. The missing receiving signature leaves the carrier unidentified.",
+            "Authored facsimile of the fictional office register. The shared number leaves the cart and crate identities unresolved.",
+        ),
+    )
+    current_exhibits = research_api.get_dossier(research_proj, exhibits["dossier_id"])
+    exhibit_snapshot, exhibit_revision = current_exhibits["snapshot"], current_exhibits["revision"]
+    for filename, digest, section, title, alt, caption, provenance in exhibit_assets:
+        content = (RESEARCH_ASSETS / filename).read_bytes()
+        if sha256(content).hexdigest() != digest:
+            raise ValueError(f"Exhibit differs from its reviewed SHA-256: {filename}")
+        attached = research_api.attach_dossier_media(
+            research_proj, exhibits["dossier_id"], content,
+            filename=filename, expected_snapshot=exhibit_snapshot,
+            expected_revision=exhibit_revision, allow_retention=True,
+            section=section, title=title, alt=alt, caption=caption,
+            context={"genre": "Fictional scene exhibit", "depicted_period": "October 1923",
+                     "provenance_note": provenance, "tags": ["Synthetic exhibit", "Warehouse 4"]},
+        )
+        exhibit_snapshot, exhibit_revision = attached["snapshot"], attached["latest_revision"]
+        captured_id = attached["capture"]["source_id"]
+        resource = next(item for item in [*attached["images"], *attached["media"]]
+                        if item["source_id"] == captured_id)
+        image_resources[resource["url"]] = {"media_type": resource["media_type"],
+                                             "asset_path": "docs/assets/research/" + filename}
     research_api.create_claim(
         research_proj,
         title="Reformed customs seal",
@@ -307,6 +435,47 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
         research_proj, claim_id=receipt["claim_id"], passage_id=receipt_passage, relation="contextualizes",
         rationale="The fictional working notebook keeps several explanations open; it does not identify a culprit.",
     )
+    witness_claim = research_api.create_claim(
+        research_proj, title="The watchman’s view ends at the basin",
+        statement="The watchman reports two people by the eastern gate leaving towards the basin. "
+                  "The fictional statement establishes the direction he reports and leaves their later movements unknown.",
+        confidence="evidenced", time_period="1923-10-14", place="Eastern gate",
+        actors=["Night watchman"], dossier_id=exhibits["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=witness_claim["claim_id"], passage_id=watchman_passage, relation="supports",
+        rationale="The retained transcript gives the witness’s limited description of the figures and direction.",
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=witness_claim["claim_id"], passage_id=witness_limits, relation="qualifies",
+        rationale="The customs record separates the watchman’s observation from Mara’s report of light and sound.",
+    )
+    custody = research_api.create_claim(
+        research_proj, title="Custody passes to the customs station",
+        statement="The transfer sheet records handover of the closed crate. The signed inspection counts the "
+                  "contents at the station at 06:10. The cart’s precise route remains unknown.",
+        confidence="evidenced", time_period="1923-10-15", place="Eastern quay and customs station",
+        actors=["Hansen"], dossier_id=exhibits["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=custody["claim_id"], passage_id=transfer_passage, relation="supports",
+        rationale="The fictional counterfoil records the handover between the two locations and leaves the departure time open.",
+    )
+    morning = research_api.create_claim(
+        research_proj, title="The morning review leaves the carrier unidentified",
+        statement="The missing signature leaves the carrier unidentified. Mara’s account establishes the number she copied. "
+                  "The shared paper and number leave the load’s identity open.",
+        confidence="evidenced", time_period="1923-10-15", place="Warehouse office",
+        actors=["Mara", "Hansen", "Foreman"], dossier_id=exhibits["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=morning["claim_id"], passage_id=morning_passage, relation="supports",
+        rationale="The fictional review records what Mara accepts responsibility for and preserves the signature gap.",
+    )
+    research_api.link_evidence(
+        research_proj, claim_id=morning["claim_id"], passage_id=comparison_passage, relation="contextualizes",
+        rationale="The observations explain why the dispatch receipt and ledger number still admit several interpretations.",
+    )
     research_api.create_claim_relation(
         research_proj, lid["claim_id"], inspection["claim_id"], relation="causes",
         rationale="Author interpretation for the scene: securing the damaged lid moves the inspection to the station. This link does not verify causality.",
@@ -314,12 +483,24 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
     manuscript = research_proj / "harbour-manuscript.md"
     manuscript.write_bytes(manuscript_bytes)
     manuscript_hash = sha256(manuscript_bytes).hexdigest()
+    direction = direction_state(research_proj, manuscript)
+    witness_passage = next(passage for passage in direction["passages"]
+                           if passage["chapter"] == 3 and "When I called, they ran towards the basin." in passage["text"])
+    save_direction(
+        research_proj, manuscript,
+        {"anchor": witness_passage["anchor"], "instructions": "Keep the witness matter-of-fact. Let the answer end plainly.",
+         "pause_after": 0.8},
+        expected_source_sha256=direction["source_sha256"], expected_settings_sha256=direction["settings_sha256"],
+        expected_direction_sha256=direction["direction_sha256"],
+    )
     for claim_id, revision, query in (
         (claim_res["claim_id"], 1, "Someone had tried the eastern gate of Warehouse 4."),
         (claim_res["claim_id"], 1, "Fresh scratches crossed the lock"),
         (lid["claim_id"], 1, "One plank cracked."),
         (inspection["claim_id"], 2, "The crate was first opened at the customs station at six ten."),
         (receipt["claim_id"], 1, "Cart seventeen: returned, six forty in the evening."),
+        (witness_claim["claim_id"], 1, "When I called, they ran towards the basin."),
+        (morning["claim_id"], 1, "She brought the torn edges together. They did not fit."),
     ):
         anchor = research_api.resolve_manuscript_anchor(research_proj, manuscript, query=query)
         research_api.link_manuscript_claim(
@@ -358,8 +539,14 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
     research_api.record_decision(
         research_proj, title="Leave the receiving signature blank",
         rationale="The two ledger entries and reused board support a question, not a solved identification.",
-        claim_id=receipt["claim_id"], dossier_ids=[dossier_res["dossier_id"], weather_dossier["dossier_id"]],
-        impact_on_plot="Mara stops the foreman closing the book; the unresolved receiving line ends the story.",
+        claim_id=receipt["claim_id"], dossier_ids=[dossier_res["dossier_id"], exhibits["dossier_id"]],
+        impact_on_plot="Mara takes responsibility for what she copied. The blank receiving line leaves a focused question for the ending.",
+    )
+    research_api.record_decision(
+        research_proj, title="End the witnessed route at the basin",
+        rationale="Let the watchman name a direction and let the engine supply a separate auditory clue. Keep the subsequent movement open.",
+        claim_id=witness_claim["claim_id"], dossier_ids=[dossier_res["dossier_id"], exhibits["dossier_id"]],
+        impact_on_plot="Mara can cross out the escape-by-boat inference. The next scene turns her attention back to the paper trail.",
     )
     from lixity.config import prepare_project_settings
 
@@ -374,13 +561,17 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
                 {"dossier_id": dossier_res["dossier_id"], "revision": current_case["revision"], "section": "Historical harbour view", "title": "The harbour in colour", "reveal_after_chapter": 0},
                 {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader weather", "title": "Light and sound", "reveal_after_chapter": 1},
                 {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader witness limits", "title": "What a witness can tell", "reveal_after_chapter": 3},
+                {"dossier_id": exhibits["dossier_id"], "revision": exhibit_revision, "section": "Watchman’s statement", "title": "The watchman’s statement", "reveal_after_chapter": 3},
+                {"dossier_id": exhibits["dossier_id"], "revision": exhibit_revision, "section": "Transfer counterfoil", "title": "The transfer counterfoil", "reveal_after_chapter": 4},
+                {"dossier_id": exhibits["dossier_id"], "revision": exhibit_revision, "section": "Dispatch receipt", "title": "Mara’s dispatch receipt", "reveal_after_chapter": 5},
                 {"dossier_id": weather_dossier["dossier_id"], "revision": 1, "section": "Reader final clue", "title": "The receiving signature", "reveal_after_chapter": 6},
+                {"dossier_id": exhibits["dossier_id"], "revision": exhibit_revision, "section": "Office ledger", "title": "The two ledger entries", "reveal_after_chapter": 6},
             ],
         }},
         "dossier_collections": {
             "case_records": {
                 "name": "Warehouse Case Files",
-                "dossier_ids": [dossier_res["dossier_id"]],
+                "dossier_ids": [dossier_res["dossier_id"], exhibits["dossier_id"]],
             },
             "setting": {
                 "name": "Atmosphere & Geography",
@@ -403,6 +594,9 @@ The watchman saw the two figures leave towards the basin. Mara saw a launch ligh
             "3": "harbour_investigation",
         },
     }).commit()
+    research_api.reindex(research_proj)
+    if not research_api.search(research_proj, "warehouse customs", limit=1)["hits"]:
+        raise RuntimeError("Synthetic research source must produce a real passage citation")
     return {"project": research_proj, "image_resources": image_resources,
             "primary_claim_id": claim_res["claim_id"], "character_evidence_id": witness_limits}
 

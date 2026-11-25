@@ -63,7 +63,9 @@ class TestDocumentation(unittest.TestCase):
         document = (ROOT / "docs/demo/report.html").read_text(encoding="utf-8")
         data = re.search(r'<script[^>]*id="lixity-site-data"[^>]*>(.*?)</script>', document, re.DOTALL)
         self.assertIsNotNone(data, "The public demo must use the production website transport")
-        fixture = json.loads(data[1])["responses"]
+        envelope = json.loads(data[1])
+        fixture = envelope["responses"]
+        aliases = envelope.get("response_aliases", {})
         project_token = re.search(r'data-manuscript-project-token="([^"]+)"', document)[1]
         research_token = re.search(r'data-research-token="([^"]+)"', document)[1]
         reports = [value for value in fixture.values()
@@ -75,8 +77,9 @@ class TestDocumentation(unittest.TestCase):
                                "id": identifier, "kind": kind, "revision": revision,
                                "research_token": research_token}.items()))
             key = "/api/research/record?" + query
-            self.assertTrue(key in fixture, f"Native passage-context request has no prepared response: {key}")
-            result = fixture[key]
+            response_key = aliases.get(key, key)
+            self.assertIn(response_key, fixture, f"Native passage-context request has no prepared response: {key}")
+            result = fixture[response_key]
             self.assertEqual(result["snapshot"], snapshot)
             self.assertEqual((result["record"]["id"], result["record"]["revision"]),
                              (identifier, revision))

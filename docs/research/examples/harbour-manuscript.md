@@ -21,13 +21,13 @@ She still had an unsigned delivery receipt in her pocket. The foreman had told h
 
 A board moved. Mara turned. The crate tipped towards the drain. She caught its corner and pushed. Her boot slipped. Water entered her shoe. The watchman reached the other side. Together they set it flat.
 
-Something rattled inside. A nail stood proud of the lid. Mara pulled her hand away. Blood marked the wood. The watchman lifted his lamp. A strip of blue paper clung beneath the cord. Most of the label had been torn off. Under it, an older number showed through: seventeen.
+Something rattled inside. A nail stood proud of the lid. Mara pulled her hand away. Blood marked the wood. The watchman lifted his lamp. A strip of blue paper clung beneath the cord. Most of the label had been torn off. Under it, an older number showed through: seventeen. That blue was office stock. She'd copied seventeen last.
 
 Footsteps sounded behind the gate. Mara held up her hand. The watchman stopped. Another step. Then silence. She moved away from the wall. A shadow crossed the lamp. Ivo came round the corner with a coat over his arm.
 
 He put it down. The three of them dragged the crate clear of the water. One plank cracked. The watchman fetched a wedge. Mara kept both hands against the lid. Ivo stared at the paper.
 
-Water ran from the base. He reached for the cord. Mara shifted her foot against the crate. The blue strip lifted, then settled. At its edge she could see another layer of glue, still soft enough to hold his fingerprint.
+Water ran from the base. He reached for the cord. Mara shifted her foot against the crate. The blue strip lifted, then settled. At its edge she could see another layer of glue, still soft enough to hold his fingerprint. Without it, seventeen was just another old number.
 
 "Don't pull it loose," she said.
 
@@ -63,7 +63,7 @@ Ivo lifted his coat. "The foreman needs this gate. There's a cart waiting at the
 
 "Before there was a crate in the way?"
 
-Ivo pulled his coat on. One sleeve caught at the elbow. He worked it free without looking at the officer.
+Ivo pulled his coat on. One sleeve caught at the elbow. He worked it free without looking at the officer. Mara knew the driver at the other gate was paid by the trip. Through the bars she could just make out the sack over his seat. No one had told him he was waiting on customs now.
 
 Hansen bent over the torn label. Mara showed him her hand.
 
@@ -81,7 +81,7 @@ Ivo looked from her pocket to the crate.
 
 "I'll get the key," he said.
 
-Hansen straightened. "Stay here. The watchman has one."
+Hansen straightened. "Stay here. The watchman has one." Ivo stopped with his hand on the latch. Beyond him the waiting horse scraped a shoe on the cobbles.
 
 ## The Customs Note
 
@@ -101,11 +101,11 @@ The office stove had gone cold. Mara held her wet boot towards it while Hansen l
 
 "Your receipt," he said.
 
-She unfolded it. Same blue stock, same narrow border. Her own figures filled the dispatch column. The receiving line was empty.
+She unfolded it. Same blue stock, same narrow border. Her own figures filled the dispatch column. The receiving line was empty. Last winter the foreman had docked a clerk a whole week's wages when a load went missing under his initials. Mara's rent was due on Friday.
 
 It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.
 
-She brought the torn edges together. They did not fit. Hansen watched her try the other corner, then take her hand away. She had wanted the paper to settle it. Instead, there were two forms and only her handwriting to connect them.
+She brought the torn edges together. They did not fit. Hansen watched her try the other corner, then take her hand away. She had wanted the paper to settle it. Instead, there were two forms and only her handwriting to connect them. On the receipt she could prove what she had entered. That was less than she had come to the office hoping to prove.
 
 The foreman had dictated the number while putting on his coat. At eight, she had been thinking about the last ferry and the bread she still needed to buy. She remembered the scratch of her pen, his hand reaching for the key, the office door closing between them.
 
@@ -121,7 +121,7 @@ Hansen said that he might have to check the time with the watchman. He took the 
 
 In the passage outside, a draught moved under the door. Mara waited by the door. Mara watched the clock. Mara waited for Hansen. Then she turned to her notebook.
 
-Mara opened her notebook. She had written that the smugglers escaped by boat. She crossed out the sentence. Beneath it she wrote the number, then the time the foreman had given her. The empty receiving line showed through the thin paper underneath.
+Mara opened her notebook. She had written that the smugglers escaped by boat. She crossed out the sentence. Beneath it she wrote what she had heard after the light had gone, then the number and the time the foreman had given her. Under the notebook leaf, the receipt's empty line made a faint grey rule.
 
 ## Morning Handover
 
@@ -129,7 +129,7 @@ By morning, the customs cart had left pale tracks through the mud. A new seal hu
 
 Mara gave him the receipt. She had checked it so often that the fold was beginning to split.
 
-"An old board," he said. "They get used again."
+"An old board," he said. "They get used again. Put your name in the other column and I'll close the dispatch before the men come in."
 
 "Then show us the book," Hansen said.
 
@@ -139,7 +139,7 @@ Cart seventeen: returned, six forty in the evening. Below it, the same number st
 
 The foreman had brought the book, and she had waited for him, and the clock had struck twice. She is standing there now, she has the receipt in her hand, and she looks down at the return time. Then she drew the book closer.
 
-The earlier entry was squeezed into the margin. Its ink had spread along a crease in the paper; the entries above it had dried cleanly. Mara moved the cup away before the foreman could set it over the figures.
+The earlier entry was squeezed into the margin. Its ink had spread along a crease in the paper; the entries above it had dried cleanly. Mara moved the cup away before the foreman could set it over the figures. Whatever the old board meant, signing the receipt now would put her name under an arrival she had never seen.
 
 Outside, Ivo called that the waiting driver was leaving. The foreman made to close the book.
 
@@ -147,4 +147,4 @@ Mara put her hand on the page.
 
 "Who brought it back?"
 
-He lifted his thumb. There was no signature on that line either.
+He lifted his thumb. There was no signature on that line either. Mara tore the leaf from her notebook and signed beneath the account of what she had entered at eight. She pushed it towards Hansen, together with the receipt. The receiving line stayed blank.
